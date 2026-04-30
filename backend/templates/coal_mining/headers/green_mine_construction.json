@@ -1,0 +1,47 @@
+{
+  "template_id": "TPL_HEADER_GREEN_MINE_CONSTRUCTION_01",
+  "name": "绿色矿山建设",
+  "category": "header",
+  "domain": "coal_mining",
+  "priority": 60,
+  "match_rule": {
+    "strategy": "regex_anchor",
+    "regex": "^(?P<chapter_id>\\d+(?:\\.\\d+)*)\\s*(?P<topic_text>.*(绿色矿山|绿色开采|绿色发展|绿色建设).*)$",
+    "confidence_threshold": 0.75,
+    "fallback_keywords": ["绿色矿山", "绿色开采", "绿色建设"]
+  },
+  "generalized_pattern": "[SECTION] {{chapter_id}} {{topic_text}}",
+  "slots": [
+    {
+      "name": "chapter_id",
+      "description": "章节编号",
+      "type": "String",
+      "is_variable": true,
+      "extraction_pattern": "\\d+(?:\\.\\d+)*"
+    },
+    {
+      "name": "topic_text",
+      "description": "绿色矿山主题文本",
+      "type": "String",
+      "is_anchor": true,
+      "semantic_check": ["绿色矿山", "绿色开采", "绿色建设"],
+      "semantic_category": "green_mine"
+    }
+  ],
+  "semantic_routing": {
+    "standard_code": "SEC_GREEN_MINE_CONSTRUCTION",
+    "category": "Green_Mine",
+    "required_skills": [
+      "skill_clean_production_index",
+      "skill_carbon_emission_calc"
+    ],
+    "context_prompt_ref": ""
+  },
+  "metadata": {
+    "version": "1.0",
+    "tags": ["绿色矿山", "章节标题"],
+    "priority": 60
+  }
+}
+
+

@@ -1,0 +1,43 @@
+{
+  "template_id": "TPL_HEADER_GROUNDWATER_01",
+  "domain": "coal_mining",
+  "category": "Environmental_Impact_Prediction",
+  "description": "地下水环境影响分析章节标题模板",
+  "generalized_pattern": "[SECTION] {{chapter_id}} {{groundwater_topic_text}}",
+  "match_rule": {
+    "strategy": "regex_anchor",
+    "regex": "^(?P<chapter_id>\\d+(\\.\\d+)*)\\s*(?P<groundwater_topic_text>.*(地下水|含水层|疏干).*分析)$",
+    "confidence_threshold": 0.85,
+    "fallback_keywords": ["地下水", "含水层", "疏干", "水文地质"]
+  },
+  "slots": [
+    {
+      "name": "chapter_id",
+      "description": "章节编号",
+      "type": "String",
+      "is_variable": true
+    },
+    {
+      "name": "groundwater_topic_text",
+      "description": "地下水相关主题文本",
+      "type": "String",
+      "is_anchor": true,
+      "semantic_check": ["地下水", "含水层"]
+    }
+  ],
+  "semantic_routing": {
+    "standard_code": "SEC_GROUNDWATER",
+    "category": "Environmental_Impact_Prediction",
+    "required_skills": [
+      "skill_aquifer_analysis",
+      "skill_groundwater_prediction",
+      "skill_dewatering_impact"
+    ],
+    "context_prompt_ref": "prompt_groundwater_analysis_master"
+  },
+  "metadata": {
+    "version": "2.0",
+    "priority": 100,
+    "tags": ["地下水", "含水层", "水文地质", "预测评价", "章节标题"]
+  }
+}

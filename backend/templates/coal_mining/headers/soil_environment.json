@@ -1,0 +1,42 @@
+{
+  "template_id": "TPL_HEADER_SOIL_01",
+  "domain": "coal_mining",
+  "category": "Environmental_Impact_Prediction",
+  "description": "土壤环境影响分析章节标题模板",
+  "generalized_pattern": "[SECTION] {{chapter_id}} {{soil_topic_text}}",
+  "match_rule": {
+    "strategy": "regex_anchor",
+    "regex": "^(?P<chapter_id>\\d+(\\.\\d+)*)\\s*(?P<soil_topic_text>.*(土壤|土地).*分析)$",
+    "confidence_threshold": 0.85,
+    "fallback_keywords": ["土壤", "土地", "土壤环境"]
+  },
+  "slots": [
+    {
+      "name": "chapter_id",
+      "description": "章节编号",
+      "type": "String",
+      "is_variable": true
+    },
+    {
+      "name": "soil_topic_text",
+      "description": "土壤相关主题文本",
+      "type": "String",
+      "is_anchor": true,
+      "semantic_check": ["土壤", "土地"]
+    }
+  ],
+  "semantic_routing": {
+    "standard_code": "SEC_SOIL_ENVIRONMENT",
+    "category": "Environmental_Impact_Prediction",
+    "required_skills": [
+      "skill_soil_quality_assessment",
+      "skill_soil_pollution_prediction"
+    ],
+    "context_prompt_ref": "prompt_soil_analysis_master"
+  },
+  "metadata": {
+    "version": "2.0",
+    "priority": 100,
+    "tags": ["土壤", "土壤环境", "预测评价", "章节标题"]
+  }
+}

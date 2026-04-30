@@ -1,0 +1,49 @@
+{
+  "template_id": "TPL_HEADER_ENGINEERING_ANALYSIS_01",
+  "name": "工程分析与污染源强核算",
+  "category": "header",
+  "domain": "coal_mining",
+  "priority": 90,
+  "match_rule": {
+    "strategy": "regex_anchor",
+    "regex": "^(?P<chapter_id>\\d+(?:\\.\\d+)*)\\s*(?P<topic_text>.*(工程分析|污染源|源强|产排污|排放量|工艺流程|清洁生产).*)$",
+    "confidence_threshold": 0.8,
+    "fallback_keywords": ["工程分析", "污染源", "源强", "产排污", "工艺流程", "清洁生产"]
+  },
+  "generalized_pattern": "[SECTION] {{chapter_id}} {{topic_text}}",
+  "slots": [
+    {
+      "name": "chapter_id",
+      "description": "章节编号",
+      "type": "String",
+      "is_variable": true,
+      "extraction_pattern": "\\d+(?:\\.\\d+)*"
+    },
+    {
+      "name": "topic_text",
+      "description": "工程分析主题文本",
+      "type": "String",
+      "is_anchor": true,
+      "semantic_check": ["工程分析", "污染源", "源强", "工艺流程"],
+      "semantic_category": "engineering_analysis"
+    }
+  ],
+  "semantic_routing": {
+    "standard_code": "SEC_ENGINEERING_ANALYSIS",
+    "category": "Engineering",
+    "required_skills": [
+      "skill_project_meta_extract",
+      "skill_process_flow_parser",
+      "skill_material_balance_table",
+      "skill_redline_compliance_check"
+    ],
+    "context_prompt_ref": ""
+  },
+  "metadata": {
+    "version": "1.0",
+    "tags": ["工程分析", "源强核算", "章节标题"],
+    "priority": 90
+  }
+}
+
+

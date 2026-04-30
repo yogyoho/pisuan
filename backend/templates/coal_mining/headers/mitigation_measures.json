@@ -1,0 +1,47 @@
+{
+  "template_id": "TPL_HEADER_MITIGATION_MEASURES_01",
+  "name": "环境影响减缓/污染防治与生态保护措施",
+  "category": "header",
+  "domain": "coal_mining",
+  "priority": 84,
+  "match_rule": {
+    "strategy": "regex_anchor",
+    "regex": "^(?P<chapter_id>\\d+(?:\\.\\d+)*)\\s*(?P<topic_text>.*(环保措施|污染防治|防治措施|减缓措施|治理措施|生态保护措施|水土保持|环境保护措施).*)$",
+    "confidence_threshold": 0.78,
+    "fallback_keywords": ["防治措施", "治理措施", "环保措施", "生态保护", "水土保持", "减缓"]
+  },
+  "generalized_pattern": "[SECTION] {{chapter_id}} {{topic_text}}",
+  "slots": [
+    {
+      "name": "chapter_id",
+      "description": "章节编号",
+      "type": "String",
+      "is_variable": true,
+      "extraction_pattern": "\\d+(?:\\.\\d+)*"
+    },
+    {
+      "name": "topic_text",
+      "description": "减缓/防治措施主题文本",
+      "type": "String",
+      "is_anchor": true,
+      "semantic_check": ["防治措施", "治理措施", "环保措施", "生态保护", "水土保持", "减缓"],
+      "semantic_category": "mitigation_measures"
+    }
+  ],
+  "semantic_routing": {
+    "standard_code": "SEC_MITIGATION_MEASURES",
+    "category": "Environmental_Protection_Measures",
+    "required_skills": [
+      "skill_regulatory_compliance_check",
+      "skill_redline_compliance_check"
+    ],
+    "context_prompt_ref": ""
+  },
+  "metadata": {
+    "version": "1.0",
+    "tags": ["防治措施", "生态保护", "章节标题"],
+    "priority": 84
+  }
+}
+
+

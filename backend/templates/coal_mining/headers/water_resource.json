@@ -1,0 +1,63 @@
+{
+  "template_id": "TPL_HEADER_WATER_01",
+  "name": "水资源承载力分析章节",
+  "category": "header",
+  "domain": "coal_mining",
+  "priority": 10,
+  
+  "match_rule": {
+    "strategy": "regex_anchor",
+    "regex": "^(?P<chapter_id>\\d+(\\.\\d+)*)\\s*(?P<water_topic_text>.*(水资源|供水|用水).*(承载力|分析|评价))$",
+    "confidence_threshold": 0.85,
+    "fallback_keywords": ["水资源", "承载力", "供水", "用水"]
+  },
+  
+  "generalized_pattern": "[SECTION] {{chapter_id}} {{water_topic_text}}",
+  
+  "slots": [
+    {
+      "name": "chapter_id",
+      "description": "章节编号",
+      "type": "String",
+      "is_variable": true,
+      "is_anchor": false,
+      "extraction_pattern": "\\d+(\\.\\d+)*"
+    },
+    {
+      "name": "water_topic_text",
+      "description": "水资源相关主题文本",
+      "type": "String",
+      "is_variable": true,
+      "is_anchor": true,
+      "semantic_check": ["水资源", "承载力", "供水"],
+      "semantic_category": "water_resource"
+    }
+  ],
+  
+  "semantic_routing": {
+    "standard_code": "SEC_WATER_RESOURCE",
+    "category": "Environmental_Impact_Prediction",
+    "subcategory": "Water_Resource_Analysis",
+    "required_skills": [
+      "skill_water_balance_calc",
+      "skill_aquifer_check"
+    ],
+    "optional_skills": [
+      "skill_groundwater_model"
+    ],
+    "context_prompt_ref": "prompt_water_analysis_master",
+    "expected_subsections": [
+      "供水水源",
+      "需水量分析",
+      "水资源平衡",
+      "水质评价"
+    ]
+  },
+  
+  "metadata": {
+    "version": "2.0",
+    "tags": ["水资源", "预测评价", "章节标题"],
+    "created_at": "2024-12-14T16:00:00Z",
+    "updated_at": "2024-12-14T16:00:00Z"
+  }
+}
