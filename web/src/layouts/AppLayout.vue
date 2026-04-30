@@ -440,7 +440,7 @@ provide('settingsModal', {
         </div>
         <!-- 用户信息组件 -->
         <div class="nav-item user-info">
-          <UserInfoComponent />
+          <UserInfoComponent :show-role="!sidebarCollapsed" />
         </div>
       </div>
     </div>
