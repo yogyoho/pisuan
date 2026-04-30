@@ -330,6 +330,7 @@ provide('settingsModal', {
               <ClipboardList class="icon" size="22" />
             </a-badge>
           </a-tooltip>
+          <span class="nav-text">任务中心</span>
         </div>
         <!-- 用户信息组件 -->
         <div class="nav-item user-info">
