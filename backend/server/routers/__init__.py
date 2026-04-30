@@ -59,3 +59,12 @@ router.include_router(knowledge)  # /api/knowledge/* 知识库管理与检索
 router.include_router(evaluation)  # /api/evaluation/* 知识库评估
 router.include_router(graph)  # /api/graph/* 图谱查询与管理
 router.include_router(workspace_knowledge)  # /api/workspace/knowledge/* 工作区知识文件只读视图
+
+# pisuan 领域工厂定制路由
+from server.routers.domain_factory_router import domain_factory
+from server.routers.section_routing_router import section_routing
+from server.routers.entity_type_router import entity_types
+
+router.include_router(domain_factory)  # /api/domain-factory/* 领域知识工厂
+router.include_router(section_routing)  # /api/section-routing/* 章节路由配置
+router.include_router(entity_types)  # /api/entity-types/* 实体类型管理

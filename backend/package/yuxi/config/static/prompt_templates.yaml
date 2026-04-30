@@ -1,0 +1,145 @@
+# 领域知识工厂 Prompt 模板配置
+# 占位符使用 {变量名} 格式，在运行时替换为实际值
+# 此文件为默认模板，可通过前端"提示词管理"页面覆盖（存储在数据库中）
+
+# 文档信息提取 Prompt
+# 占位符：{variables} 提取字段描述, {content} 文档内容
+extract: |
+  你是一个专业的文档信息提取助手。请从以下文档中提取结构化信息。
+
+  ## 需要提取的字段：
+  {variables}
+
+  ## 文档内容：
+  {content}
+
+  ## 输出要求：
+  请以 JSON 格式返回提取结果，格式如下：
+  {
+    "字段Key": "提取到的值",
+    "_confidence_字段Key": 0.0-1.0之间的置信度
+  }
+
+  注意：
+  1. 只返回 JSON，不要有其他内容
+  2. 如果某个字段在文档中未找到，设置值为 null
+  3. 置信度 1.0 表示非常有把握，0.5 表示不确定
+  4. 只提取文档中明确提到的信息，不要推断
+
+# 段落泛化 Prompt（文本类型）
+# 占位符：{content} 段落文本, {schema_text} Schema 变量提示,
+#         {chapter_hint} 章节路径, {domain_label} 领域标签
+template: |
+  你是一个负责生成环评模板的专家，请将下方段落泛化为模板，使用双层大括号 {插槽名称} 表示可替换变量。
+
+  重要：插槽命名必须统一使用中文名称，格式为 {中文名称}。
+
+  命名示例：
+  - 项目名称：{项目名称}
+  - 行政区域：{行政区域}
+  - 产能数值：{产能数值}
+  - 产能单位：{产能单位}
+  - 保护目标名称：{保护目标名称}
+
+  需要：
+  1. 给出泛化后的文本（保持原文逻辑结构不变）；
+  2. 列出每个插槽的含义及推荐数据来源；
+  3. 如果段落包含判断逻辑（如"因此"、"所以"、"如果...则"、"当...时"等），提取触发该模板的前提条件；
+  4. 严格只输出 JSON，不要输出任何自然语言解释或前后缀文本；
+  5. 严格禁止输出代码块标记（例如 ```json 或 ```）；
+  6. 插槽名称必须统一使用中文，格式为 {中文名称}。
+
+  文本：
+  """
+  {content}
+  """
+
+  Schema 变量提示：
+  {schema_text}
+
+  输出 JSON 结构：
+  {
+    "generalized": "...包含 {产能数值}{产能单位} ...",
+    "slots": [
+       {
+         "name": "插槽中文名称",
+         "type": "类型",
+         "description": "插槽含义描述",
+         "suggested_source": "推荐数据来源"
+       }
+    ],
+    "condition": "IF (条件表达式) == True",
+    "metadata": {
+      "chapter": "{chapter_hint}",
+      "tags": ["{domain_label}"]
+    }
+  }
+
+# Schema 生成 Prompt
+# 占位符：{domain} 领域名称, {content} 文档摘要
+schema_generation: |
+  你是一个专业的领域专家。请根据以下文档内容生成标准化的 Schema 配置。
+
+  ## 文档领域：
+  {domain}
+
+  ## 文档内容摘要：
+  {content}
+
+  ## 要求：
+  1. 识别文档中的关键信息字段
+  2. 为每个字段指定合适的数据类型和控件类型
+  3. 生成符合领域规范的字段命名
+  4. 输出 JSON 格式：
+  {
+    "variables": [
+      {
+        "key": "字段Key",
+        "label": "字段显示名",
+        "data_type": "string|number|boolean|date",
+        "widget": "Input|InputNumber|Select|DatePicker",
+        "unit": "单位",
+        "group": "分组名称",
+        "required": true/false,
+        "prompt": "提取提示词"
+      }
+    ],
+    "chapters": [
+      {"key": "ch1", "title": "章节标题"}
+    ]
+  }
+
+# 章节泛化 Prompt
+# 占位符：{industry} 行业, {report_type} 报告类型,
+#         {title} 章节标题, {content} 章节内容, {standard_codes} 标准代码
+section_generalization: |
+  你是一个专业的环评报告分析助手。请对以下章节进行泛化处理。
+
+  ## 行业领域：
+  {industry}
+
+  ## 报告类型：
+  {report_type}
+
+  ## 章节标题：
+  {title}
+
+  ## 章节内容：
+  {content}
+
+  ## 标准章节代码参考：
+  {standard_codes}
+
+  ## 要求：
+  1. 提取章节的核心内容和结构
+  2. 生成模板化的章节框架
+  3. 识别需要填写的关键参数
+  4. 输出 JSON 格式：
+  {
+    "generalized_content": "泛化后的内容模板",
+    "slots": [
+      {"name": "参数名称", "source": "数据来源", "required": true/false}
+    ],
+    "keywords": ["关键词1", "关键词2"],
+    "related_sections": ["相关章节1", "相关章节2"]
+  }

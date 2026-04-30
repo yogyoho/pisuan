@@ -1,0 +1,46 @@
+{
+  "template_id": "TPL_HEADER_EXECUTIVE_SUMMARY_01",
+  "name": "前言 / 执行摘要 / 内容摘要",
+  "category": "header",
+  "domain": "coal_mining",
+  "priority": 65,
+  "match_rule": {
+    "strategy": "regex_anchor",
+    "regex": "^(?P<chapter_id>\\d+(?:\\.\\d+)*)\\s*(?P<topic_text>\\s*(前\\s*言|内容摘要|执行摘要|Executive\\s*Summary|摘\\s*要|概\\s*述).*)$",
+    "confidence_threshold": 0.76,
+    "fallback_keywords": ["前言", "执行摘要", "内容摘要", "摘要", "概述"]
+  },
+  "generalized_pattern": "[SECTION] {{chapter_id}} {{topic_text}}",
+  "slots": [
+    {
+      "name": "chapter_id",
+      "description": "章节编号（如有）",
+      "type": "String",
+      "is_variable": true,
+      "extraction_pattern": "\\d+(?:\\.\\d+)*"
+    },
+    {
+      "name": "topic_text",
+      "description": "前言/摘要主题文本",
+      "type": "String",
+      "is_anchor": true,
+      "semantic_check": ["前言", "摘要", "执行摘要", "概述"],
+      "semantic_category": "executive_summary"
+    }
+  ],
+  "semantic_routing": {
+    "standard_code": "SEC_EXECUTIVE_SUMMARY",
+    "category": "Report_Summary",
+    "required_skills": [
+      "skill_conclusion_summarizer"
+    ],
+    "context_prompt_ref": ""
+  },
+  "metadata": {
+    "version": "1.0",
+    "tags": ["前言", "摘要", "执行摘要", "章节标题"],
+    "priority": 65
+  }
+}
+
+

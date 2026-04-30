@@ -6,12 +6,12 @@ export const useThemeStore = defineStore('theme', () => {
   // 从 localStorage 读取保存的主题，默认为浅色
   const isDark = ref(localStorage.getItem('theme') === 'dark')
 
-  // 公共主题配置
+  // 公共主题配置 - Ant Design 拂晓蓝主题
   const commonTheme = {
     token: {
       fontFamily:
         "'HarmonyOS Sans SC', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;",
-      colorPrimary: '#24839b',
+      colorPrimary: '#1890ff',
       colorLink: 'var(--main-color)',
       colorLinkHover: 'var(--main-600)',
       colorLinkActive: 'var(--main-800)',

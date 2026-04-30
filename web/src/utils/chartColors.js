@@ -21,27 +21,27 @@ const buildColorPalette = () => {
       return v && v.trim() ? v.trim() : fallback
     }
 
-    // Base chart colors - using new color system
+    // Base chart colors - Ant Design 拂晓蓝主题
     const baseVars = [
-      ['--main-500', '#3996ae'],
+      ['--main-500', '#40a9ff'],
       ['--color-success-500', '#52c41a'],
       ['--color-warning-500', '#faad14'],
       ['--color-error-500', '#ff4d4f'],
       ['--color-accent-500', '#13c2c2']
     ]
 
-    // Extended palette colors
+    // Extended palette colors - 从 know 项目导入
     const paletteVars = [
-      ['--chart-palette-1', '#265C96'],
-      ['--chart-palette-2', '#009485'],
-      ['--chart-palette-3', '#E8A035'],
-      ['--chart-palette-4', '#D64B55'],
-      ['--chart-palette-5', '#7D54C4'],
-      ['--chart-palette-6', '#2D9CDB'],
-      ['--chart-palette-7', '#F28B30'],
-      ['--chart-palette-8', '#65C466'],
-      ['--chart-palette-9', '#C2589E'],
-      ['--chart-palette-10', '#4F4F4F']
+      ['--chart-palette-1', '#40a9ff'],
+      ['--chart-palette-2', '#11cbe3'],
+      ['--chart-palette-3', '#00b8a9'],
+      ['--chart-palette-4', '#f2c94c'],
+      ['--chart-palette-5', '#eb5757'],
+      ['--chart-palette-6', '#2f80ed'],
+      ['--chart-palette-7', '#9b51e0'],
+      ['--chart-palette-8', '#56ccf2'],
+      ['--chart-palette-9', '#6fcf97'],
+      ['--chart-palette-10', '#333333']
     ]
 
     const baseColors = baseVars.map(([n, f]) => pick(n, f))
@@ -56,18 +56,18 @@ const buildColorPalette = () => {
     isInitialized = true
   } catch (e) {
     console.warn('Failed to build color palette from CSS variables, using fallback:', e)
-    // Fallback palette
+    // Fallback palette - Ant Design 拂晓蓝
     colorPalette = [
-      '#3996ae',
+      '#40a9ff',
       '#52c41a',
       '#faad14',
       '#ff4d4f',
       '#13c2c2',
-      '#265C96',
-      '#009485',
-      '#E8A035',
-      '#D64B55',
-      '#7D54C4'
+      '#11cbe3',
+      '#00b8a9',
+      '#f2c94c',
+      '#eb5757',
+      '#2f80ed'
     ]
     isInitialized = true
   }

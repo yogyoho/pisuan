@@ -1,0 +1,49 @@
+{
+  "template_id": "TPL_HEADER_GENERAL_PRINCIPLES_01",
+  "name": "总则/编制依据章节",
+  "category": "header",
+  "domain": "coal_mining",
+  "priority": 100,
+  "match_rule": {
+    "strategy": "regex_anchor",
+    "regex": "^(?P<chapter_id>\\d+(?:\\.\\d+)*)\\s*(?P<topic_text>.*(总\\s*则|编制依据|评价目的|评价原则|环境保护目标).*)$",
+    "confidence_threshold": 0.82,
+    "fallback_keywords": ["总则", "编制依据", "评价目的", "评价原则", "环境保护目标"]
+  },
+  "generalized_pattern": "[SECTION] {{chapter_id}} {{topic_text}}",
+  "slots": [
+    {
+      "name": "chapter_id",
+      "description": "章节编号",
+      "type": "String",
+      "is_variable": true,
+      "is_anchor": false,
+      "extraction_pattern": "\\d+(?:\\.\\d+)*"
+    },
+    {
+      "name": "topic_text",
+      "description": "章节主题文本",
+      "type": "String",
+      "is_variable": true,
+      "is_anchor": true,
+      "semantic_check": ["总则", "编制依据", "评价目的", "评价原则", "环境保护目标"],
+      "semantic_category": "general_principles"
+    }
+  ],
+  "semantic_routing": {
+    "standard_code": "SEC_GENERAL_PRINCIPLES",
+    "category": "General",
+    "required_skills": [
+      "skill_policy_compliance_check",
+      "skill_standard_value_extract"
+    ],
+    "context_prompt_ref": ""
+  },
+  "metadata": {
+    "version": "1.0",
+    "tags": ["总则", "编制依据", "章节标题"],
+    "priority": 100
+  }
+}
+
+

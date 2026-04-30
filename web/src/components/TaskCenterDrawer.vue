@@ -178,6 +178,14 @@ const taskFilterOptions = computed(() => [
         h('span', { class: 'filter-count' }, failedTaskCount.value)
       ]),
     value: 'failed'
+  },
+  {
+    label: () =>
+      h('span', { class: 'task-filter-option' }, [
+        '知识工厂',
+        h('span', { class: 'filter-count' }, tasks.value.filter(t => t.type === 'domain_factory').length)
+      ]),
+    value: 'domain_factory'
   }
 ])
 
@@ -195,7 +203,8 @@ const TASK_TYPE_LABELS = {
   knowledge_index: '文档入库',
   knowledge_graph_index: '图谱构建',
   dataset_generation: '评估集生成',
-  rag_evaluation: 'RAG 评估'
+  rag_evaluation: 'RAG 评估',
+  domain_factory: '知识工厂报告解析'
 }
 
 const isActiveStatus = (status) => Boolean(STATUS_CONFIG[status]) && !STATUS_CONFIG[status].terminal
@@ -210,6 +219,8 @@ const filteredTasks = computed(() => {
       return list.filter((task) => task.status === 'success')
     case 'failed':
       return list.filter((task) => isFailedStatus(task.status))
+    case 'domain_factory':
+      return list.filter((task) => task.type === 'domain_factory')
     default:
       return list
   }

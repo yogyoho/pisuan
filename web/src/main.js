@@ -7,7 +7,7 @@ import router from './router'
 
 import Antd from 'ant-design-vue'
 import 'ant-design-vue/dist/reset.css'
-import '@/assets/css/main.css'
+import '@/assets/css/main.less'
 
 const app = createApp(App)
 const pinia = createPinia()

@@ -1,0 +1,90 @@
+-- ============================================================================
+-- Domain Factory 初始数据导入脚本
+-- 从 standard_code_mapping_list.json 和 standard_code_skills.json 导入数据
+-- ============================================================================
+-- 使用方式：
+--   docker exec -i postgres psql -U postgres -d yuxi_know -f import_domain_factory_data.sql
+-- ============================================================================
+
+BEGIN;
+
+-- ============================================================================
+-- 1. 导入 Standard Code Mappings (从 standard_code_mapping_list.json)
+-- ============================================================================
+
+INSERT INTO domain_factory_standard_code_mappings (standard_code, name, description, payload)
+VALUES
+    ('SEC_GENERAL_PRINCIPLES', '总则/编制依据章节', '报告的开篇，包含规划背景、任务由来、编制依据、法律法规及评价原则',
+     '{"match_rules_regex": ["^1\\s*总\\s*则.*", "^1\\.\\d+(\\.\\d+)*\\s+.*", "^1\\.1\\s*规划背景.*", "^1\\.2\\s*编制依据.*", "^\\d+(\\.\\d+)*\\s*.*环境保护目标.*"], "match_rules_keywords": {"must_include": ["编制", "依据"], "should_include_one_of": ["法律", "法规", "评价目的", "评价原则"], "must_not_include": ["预测", "结论"]}, "context_routing": {"required_knowledge_bases": ["KB_NATIONAL_LAWS", "KB_NINGXIA_LOCAL_REGULATIONS"], "agent_persona": "Policy_Analyst", "planning_strategy": "compliance_check"}, "default_paragraph_flow": ["TPL_PARA_BACKGROUND", "TPL_PARA_LEGAL_BASIS", "TPL_PARA_PROTECTION_TARGETS"]}'::jsonb),
+
+    ('SEC_PLANNING_OVERVIEW', '规划方案概况与分析', '介绍矿区地理位置、规划范围、建设规模、井田划分及主要技术经济指标',
+     '{"match_rules_regex": ["^2\\s*规划方案概况.*", "^2\\.\\d+(\\.\\d+)*\\s+.*", "^2\\.2\\s*.*总体规划.*实施情况.*", "^2\\.3\\s*.*规划方案.*", "^\\d+(\\.\\d+)*\\s*.*井田划分.*"], "match_rules_keywords": {"must_include": ["规划"], "should_include_one_of": ["概况", "规模", "布局", "井田"], "must_not_include": ["环境影响"]}, "context_routing": {"required_knowledge_bases": ["KB_MINING_ENGINEERING", "KB_PROJECT_HISTORY"], "agent_persona": "Mining_Engineer", "planning_strategy": "data_extraction"}, "default_paragraph_flow": ["TPL_PARA_LOCATION", "TPL_PARA_SCALE_CHANGE", "TPL_PARA_LAYOUT"]}'::jsonb),
+
+    ('SEC_ECOLOGICAL_IMPACT', '生态环境影响预测与评价', '针对沉陷、植被破坏、水土流失及敏感目标（如保护区、文物）的影响分析',
+     '{"match_rules_regex": ["^6\\s*.*环境影响.*预测.*", "^6\\.\\d+(\\.\\d+)*\\s+.*", "^6\\.\\d+\\s*.*开采.*沉陷预测.*", "^6\\.2\\s*生态环境影响.*", "^6\\.8\\s*.*自然保护区.*影响.*", "^4\\.4\\s*.*沉陷.*回顾性.*"], "match_rules_keywords": {"must_include": ["生态", "影响"], "should_include_one_of": ["沉陷", "白芨滩", "水土流失", "长城"], "must_not_include": ["大气", "噪声"]}, "semantic_anchors": ["采煤沉陷对地表植被的影响", "对白芨滩国家级自然保护区的影响分析", "明长城及文物古迹保护影响"], "context_routing": {"required_knowledge_bases": ["KB_ECOLOGY", "KB_SENSITIVE_TARGETS", "KB_BAI_JI_TAN_RESERVE"], "agent_persona": "Ecologist", "planning_strategy": "impact_assessment"}, "default_paragraph_flow": ["TPL_PARA_SUBSIDENCE_PREDICT", "TPL_PARA_VEGETATION_IMPACT", "TPL_PARA_PROTECTION_MEASURES"]}'::jsonb),
+
+    ('SEC_WATER_CARRYING_CAPACITY', '水资源承载力分析章节', '基于原文第7章，分析矿区取水来源、用水量及供需平衡',
+     '{"match_rules_regex": ["^7\\s*.*资源.*承载力.*", "^7\\.\\d+(\\.\\d+)*\\s+.*", "^7\\.1\\s*矿区水资源.*", "^7\\.1\\.4\\s*.*供需平衡.*", "^\\d+(\\.\\d+)*\\s*.*用水量.*", "^\\d+(\\.\\d+)*\\s*.*水源.*可供水量.*"], "match_rules_keywords": {"must_include": ["水"], "should_include_one_of": ["承载力", "供需", "平衡", "水源", "鸭子荡"], "must_not_include": ["污染", "废水处理"]}, "semantic_anchors": ["区域水资源条件分析", "生产生活用水供需平衡", "鸭子荡水库供水能力分析"], "context_routing": {"required_knowledge_bases": ["KB_HYDROLOGY", "KB_WATER_RESOURCES_PLAN"], "agent_persona": "Hydrology_Expert", "planning_strategy": "complex_reasoning"}, "default_paragraph_flow": ["TPL_PARA_WATER_RESOURCE_STATUS", "TPL_PARA_WATER_DEMAND_CALC", "TPL_PARA_BALANCE_CONCLUSION"]}'::jsonb),
+
+    ('SEC_ENGINEERING_ANALYSIS', '工程分析与污染源强核算', '分析矿区生产工艺，核算废气、废水、固废、噪声的产生量与排放量（第3章核心）',
+     '{"match_rules_regex": ["^3\\s*.*工程分析.*", "^3\\.\\d+(\\.\\d+)*\\s+.*", "^3\\.2\\s*.*污染源.*", "^\\d+(\\.\\d+)*\\s*.*源强.*核算.*", "^\\d+(\\.\\d+)*\\s*.*清洁生产.*"], "match_rules_keywords": {"must_include": ["工程", "分析"], "should_include_one_of": ["源强", "产排污", "排放量", "工艺流程", "水平衡"], "must_not_include": []}, "context_routing": {"required_knowledge_bases": ["KB_MINING_PROCESS", "KB_POLLUTION_COEFFICIENT"], "agent_persona": "Process_Engineer", "planning_strategy": "calculation_heavy"}, "default_paragraph_flow": ["TPL_PARA_PROCESS_DESC", "TPL_PARA_POLLUTION_CALC", "TPL_PARA_CLEAN_PROD"]}'::jsonb),
+
+    ('SEC_ENV_STATUS_RETROSPECTIVE', '环境现状调查与回顾性评价', '评价区域当前环境质量及上一轮规划实施后的环境影响回顾（第4章）',
+     '{"match_rules_regex": ["^4\\s*.*现状.*评价.*", "^4\\.\\d+(\\.\\d+)*\\s+.*", "^4\\.\\d+\\s*.*回顾性.*", "^\\d+(\\.\\d+)*\\s*.*环境质量.*现状.*", "^\\d+(\\.\\d+)*\\s*.*遗留问题.*"], "match_rules_keywords": {"must_include": ["现状", "评价"], "should_include_one_of": ["回顾", "监测", "超标", "演变", "存在问题"], "must_not_include": ["预测"]}, "context_routing": {"required_knowledge_bases": ["KB_MONITORING_STANDARDS", "KB_HISTORICAL_DATA"], "agent_persona": "Data_Analyst", "planning_strategy": "data_comparison"}, "default_paragraph_flow": ["TPL_PARA_STATUS_ATMOSPHERE", "TPL_PARA_STATUS_WATER", "TPL_PARA_RETROSPECTIVE_ISSUES"]}'::jsonb),
+
+    ('SEC_IMPACT_ATMOSPHERE', '大气环境影响预测', '针对粉尘、燃煤锅炉废气等对空气质量的影响预测（第5章分项）',
+     '{"match_rules_regex": ["^5\\.1\\s*.*大气.*", "^\\d+(\\.\\d+)*\\s*.*环境空气.*影响.*", "^\\d+(\\.\\d+)*\\s*.*PM10.*"], "match_rules_keywords": {"must_include": ["大气", "影响"], "should_include_one_of": ["预测", "浓度", "网格", "防护距离", "锅炉"], "must_not_include": ["水", "声"]}, "context_routing": {"required_knowledge_bases": ["KB_ATMOSPHERE_MODELING", "KB_AIR_QUALITY_STANDARDS"], "agent_persona": "Atmospheric_Expert", "planning_strategy": "model_interpretation"}, "default_paragraph_flow": ["TPL_PARA_METEOROLOGY", "TPL_PARA_AIR_PREDICT_RESULT", "TPL_PARA_BUFFER_ZONE"]}'::jsonb),
+
+    ('SEC_IMPACT_GROUNDWATER', '地下水环境影响预测', '分析采煤导水裂隙、疏干排水对地下水位及水质的影响（第5章核心重点）',
+     '{"match_rules_regex": ["^5\\.2\\s*.*地下水.*", "^\\d+(\\.\\d+)*\\s*.*含水层.*", "^\\d+(\\.\\d+)*\\s*.*导水裂隙.*"], "match_rules_keywords": {"must_include": ["地下水"], "should_include_one_of": ["水位", "疏干", "渗透", "影响半径", "民井"], "must_not_include": ["地表水"]}, "semantic_anchors": ["采煤对地下水流场的影响", "矿井涌水对地下水质的污染风险"], "context_routing": {"required_knowledge_bases": ["KB_HYDROGEOLOGY", "KB_MINING_RISKS"], "agent_persona": "Hydrogeologist", "planning_strategy": "risk_assessment"}, "default_paragraph_flow": ["TPL_PARA_AQUIFER_IMPACT", "TPL_PARA_WATER_LEVEL_DRAWDOWN", "TPL_PARA_WATER_QUALITY_RISK"]}'::jsonb),
+
+    ('SEC_IMPACT_NOISE_SOLID', '声环境与固废影响预测', '噪声叠加影响及矸石处置分析（第5章其他分项）',
+     '{"match_rules_regex": ["^5\\.[3-4]\\s*.*(声|噪声|固体废物|固废).*", "^\\d+(\\.\\d+)*\\s*.*矸石.*"], "match_rules_keywords": {"must_include": ["影响"], "should_include_one_of": ["噪声", "叠加", "固废", "矸石", "危险废物"], "must_not_include": ["大气", "水"]}, "context_routing": {"required_knowledge_bases": ["KB_NOISE_CONTROL", "KB_SOLID_WASTE_DISPOSAL"], "agent_persona": "Env_Engineer", "planning_strategy": "standard_check"}, "default_paragraph_flow": ["TPL_PARA_NOISE_PREDICT", "TPL_PARA_SOLID_DISPOSAL"]}'::jsonb),
+
+    ('SEC_ENV_CARRYING_CAPACITY', '环境承载力综合分析', '除水资源外的大气环境、社会环境承载力分析（第7章剩余部分）',
+     '{"match_rules_regex": ["^7\\.[2-3]\\s*.*承载力.*", "^\\d+(\\.\\d+)*\\s*.*大气环境承载力.*", "^\\d+(\\.\\d+)*\\s*.*碳排放.*"], "match_rules_keywords": {"must_include": ["承载力"], "should_include_one_of": ["大气", "环境容量", "碳达峰", "社会经济"], "must_not_include": ["水资源"]}, "context_routing": {"required_knowledge_bases": ["KB_CARBON_POLICY", "KB_MACRO_ECONOMICS"], "agent_persona": "Sustainability_Consultant", "planning_strategy": "policy_alignment"}, "default_paragraph_flow": ["TPL_PARA_AIR_CAPACITY", "TPL_PARA_CARBON_ANALYSIS"]}'::jsonb),
+
+    ('SEC_MITIGATION_MEASURES', '环境保护对策与措施', '针对各项影响提出的治理方案（第8章），包括产业布局、发展方向、污染防治等',
+     '{"match_rules_regex": ["^8\\s*.*对策.*措施.*", "^8\\s*.*环境保护.*", "^8\\.\\d+(\\.\\d+)*\\s+.*", "^8\\.1\\s*.*产业布局.*", "^8\\.1\\s*.*发展方向.*", "^8\\.1\\s*.*合理性.*分析.*", "^\\d+(\\.\\d+)*\\s*.*污染防治.*", "^\\d+(\\.\\d+)*\\s*.*生态恢复.*"], "match_rules_keywords": {"must_include": [], "should_include_one_of": ["措施", "防治", "治理", "修复", "环保投资", "管理体系", "产业布局", "发展方向", "合理性"], "must_not_include": ["预测", "现状"]}, "semantic_anchors": ["生态环境治理与恢复方案", "矿井水处理及回用措施"], "context_routing": {"required_knowledge_bases": ["KB_REMEDIATION_TECH", "KB_COST_ESTIMATION"], "agent_persona": "Env_Engineer", "planning_strategy": "solution_design"}, "default_paragraph_flow": ["TPL_PARA_WATER_TREATMENT", "TPL_PARA_ECO_RESTORATION", "TPL_PARA_ENV_INVESTMENT"]}'::jsonb),
+
+    ('SEC_ALTERNATIVE_ANALYSIS', '规划方案比选与优化', '从环保角度对比不同方案，提出优化建议（第9章）',
+     '{"match_rules_regex": ["^9\\s*.*(比选|论证).*", "^9\\.\\d+(\\.\\d+)*\\s+.*", "^\\d+(\\.\\d+)*\\s*.*方案优化.*", "^\\d+(\\.\\d+)*\\s*.*替代方案.*"], "match_rules_keywords": {"must_include": ["方案"], "should_include_one_of": ["比选", "调整", "优化", "制约因素"], "must_not_include": []}, "context_routing": {"required_knowledge_bases": ["KB_PLANNING_METHODOLOGY"], "agent_persona": "Planner", "planning_strategy": "comparative_reasoning"}, "default_paragraph_flow": ["TPL_PARA_ALT_COMPARISON", "TPL_PARA_OPTIMIZATION_ADVICE"]}'::jsonb),
+
+    ('SEC_PUBLIC_PARTICIPATION', '公众参与', '公参调查结果及意见采纳情况（第10章）',
+     '{"match_rules_regex": ["^10\\s*.*公众参与.*", "^10\\.\\d+(\\.\\d+)*\\s+.*", "^\\d+(\\.\\d+)*\\s*.*调查结果.*"], "match_rules_keywords": {"must_include": ["公众", "参与"], "should_include_one_of": ["调查", "意见", "采纳", "公示"], "must_not_include": []}, "context_routing": {"required_knowledge_bases": ["KB_PUBLIC_RELATIONS"], "agent_persona": "PR_Specialist", "planning_strategy": "summary_reporting"}, "default_paragraph_flow": ["TPL_PARA_SURVEY_METHOD", "TPL_PARA_OPINION_ADOPTION"]}'::jsonb),
+
+    ('SEC_CONCLUSION', '评价结论与建议', '全本总结，包括可行性结论（第11章）',
+     '{"match_rules_regex": ["^11\\s*.*结论.*", "^11\\.\\d+(\\.\\d+)*\\s+.*", "^\\d+(\\.\\d+)*\\s*.*综合评价.*"], "match_rules_keywords": {"must_include": ["结论"], "should_include_one_of": ["建议", "可行性", "总结", "必须"], "must_not_include": ["预测"]}, "context_routing": {"required_knowledge_bases": ["KB_FINAL_REPORTING"], "agent_persona": "Lead_Auditor", "planning_strategy": "comprehensive_summary"}, "default_paragraph_flow": ["TPL_PARA_MAIN_CONCLUSION", "TPL_PARA_FEASIBILITY_STATEMENT"]}'::jsonb),
+
+    ('SEC_ENV_RISK_ASSESSMENT', '环境风险评价', '分析突发事故（如油库爆炸、污水站泄漏、溃坝）对环境的潜在威胁及应急预案（通常位于第5章或独立章节）',
+     '{"match_rules_regex": ["^5\\.\\d+\\s*.*环境风险.*", "^\\d+(\\.\\d+)*\\s*.*突发环境事件.*", "^\\d+(\\.\\d+)*\\s*.*事故风险.*"], "match_rules_keywords": {"must_include": ["风险"], "should_include_one_of": ["事故", "泄漏", "爆炸", "应急预案", "防范措施"], "must_not_include": ["金融风险", "投资风险"]}, "context_routing": {"required_knowledge_bases": ["KB_EMERGENCY_PLAN", "KB_CHEMICAL_RISK"], "agent_persona": "Safety_Engineer", "planning_strategy": "scenario_simulation"}, "default_paragraph_flow": ["TPL_PARA_RISK_IDENTIFICATION", "TPL_PARA_SOURCE_TERM", "TPL_PARA_EMERGENCY_MEASURES"]}'::jsonb),
+
+    ('SEC_ENV_MANAGEMENT_MONITORING', '环境管理与监测计划', '定义环境管理机构设置、监测点位布置、监测频率及监理方案（通常位于第8章后半部分）',
+     '{"match_rules_regex": ["^8\\.\\d+\\s*.*环境管理.*", "^8\\.\\d+(\\.\\d+)*\\s*.*监测.*", "^\\d+(\\.\\d+)*\\s*.*监测计划.*", "^\\d+(\\.\\d+)*\\s*.*环境监理.*"], "match_rules_keywords": {"must_include": ["监测"], "should_include_one_of": ["计划", "频率", "点位", "管理机构", "监理"], "must_not_include": ["现状监测"]}, "semantic_anchors": ["施工期环境监理方案", "运营期环境跟踪监测计划"], "context_routing": {"required_knowledge_bases": ["KB_MONITORING_SPECS", "KB_MANAGEMENT_NORMS"], "agent_persona": "QA_Manager", "planning_strategy": "table_generation"}, "default_paragraph_flow": ["TPL_PARA_MANAGEMENT_ORG", "TPL_PARA_MONITORING_PLAN_TABLE", "TPL_PARA_SUPERVISION"]}'::jsonb),
+
+    ('SEC_GREEN_MINE_CONSTRUCTION', '绿色矿山建设方案', '针对绿色矿山建设标准提出的具体要求和指标体系（近年环评新增热点）',
+     '{"match_rules_regex": ["^\\d+(\\.\\d+)*\\s*.*绿色矿山.*", "^\\d+(\\.\\d+)*\\s*.*生态文明.*"], "match_rules_keywords": {"must_include": ["绿色矿山"], "should_include_one_of": ["建设", "规划", "指标", "智能化"], "must_not_include": []}, "context_routing": {"required_knowledge_bases": ["KB_GREEN_MINE_STD", "KB_SMART_MINING"], "agent_persona": "Sustainability_Consultant", "planning_strategy": "compliance_check"}, "default_paragraph_flow": ["TPL_PARA_GREEN_MINE_REQ", "TPL_PARA_CONSTRUCTION_PLAN"]}'::jsonb),
+
+    ('SEC_SOCIAL_IMPACT', '社会经济影响分析', '分析征地拆迁、移民安置、就业及对地方经济的影响',
+     '{"match_rules_regex": ["^\\d+(\\.\\d+)*\\s*.*社会环境.*影响.*", "^\\d+(\\.\\d+)*\\s*.*征地.*拆迁.*", "^\\d+(\\.\\d+)*\\s*.*移民安置.*"], "match_rules_keywords": {"must_include": ["社会"], "should_include_one_of": ["经济", "征地", "搬迁", "居民", "文物"], "must_not_include": []}, "context_routing": {"required_knowledge_bases": ["KB_LAND_ACQUISITION", "KB_LOCAL_ECONOMY"], "agent_persona": "Sociologist", "planning_strategy": "sensitive_check"}, "default_paragraph_flow": ["TPL_PARA_LAND_ACQUISITION", "TPL_PARA_RESETTLEMENT", "TPL_PARA_REGIONAL_ECONOMY"]}'::jsonb),
+
+    ('SEC_CUMULATIVE_IMPACT', '累积环境影响评价', '分析矿区多个矿井同时开发产生的叠加效应（规划环评特有章节）',
+     '{"match_rules_regex": ["^\\d+(\\.\\d+)*\\s*.*累积.*影响.*", "^\\d+(\\.\\d+)*\\s*.*叠加.*效应.*"], "match_rules_keywords": {"must_include": ["累积", "影响"], "should_include_one_of": ["时空", "叠加", "承载力变化"], "must_not_include": []}, "semantic_anchors": ["矿区开发时空累积效应分析"], "context_routing": {"required_knowledge_bases": ["KB_CUMULATIVE_ASSESSMENT"], "agent_persona": "System_Analyst", "planning_strategy": "time_series_analysis"}, "default_paragraph_flow": ["TPL_PARA_TIME_CUMULATIVE", "TPL_PARA_SPACE_CUMULATIVE"]}'::jsonb),
+
+    ('SEC_EXECUTIVE_SUMMARY', '前言/执行摘要', '报告最开头的综述部分，概括项目由来和主要结论',
+     '{"match_rules_regex": ["^前\\s*言", "^内容摘要", "^Executive Summary"], "match_rules_keywords": {"must_include": ["前言"], "should_include_one_of": ["由来", "过程", "先行", "主要内容"], "must_not_include": []}, "context_routing": {"required_knowledge_bases": ["KB_PROJECT_BACKGROUND"], "agent_persona": "Editor_in_Chief", "planning_strategy": "summary_extraction"}, "default_paragraph_flow": ["TPL_PARA_PREFACE_ORIGIN", "TPL_PARA_WORK_PROCESS", "TPL_PARA_MAIN_ISSUES"]}'::jsonb),
+
+    ('SEC_ATTACHMENTS', '附件与附图索引', '识别报告末尾的附件列表、审批文号及附图说明',
+     '{"match_rules_regex": ["^附\\s*件", "^附\\s*图", "^附件目录"], "match_rules_keywords": {"must_include": ["附"], "should_include_one_of": ["件", "图", "表", "名单", "文号"], "must_not_include": []}, "context_routing": {"required_knowledge_bases": []}, "agent_persona": "Archivist", "planning_strategy": "list_extraction", "default_paragraph_flow": ["TPL_PARA_ATTACHMENT_LIST"]}'::jsonb)
+ON CONFLICT (standard_code) DO UPDATE SET
+    name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    payload = EXCLUDED.payload,
+    updated_at = CURRENT_TIMESTAMP;
+
+COMMIT;
+
+-- ============================================================================
+-- 验证导入结果
+-- ============================================================================
+SELECT 'domain_factory_standard_code_mappings' as table_name, COUNT(*) as row_count FROM domain_factory_standard_code_mappings;
