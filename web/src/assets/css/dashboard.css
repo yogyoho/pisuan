@@ -18,9 +18,9 @@
   --palette-10: var(--chart-palette-10);
 }
 
-/* Chart Area Gradient - 图表区域渐变 */
+/* Chart Area Gradient - 图表区域渐变 (蓝色主题) */
 .chart-area-gradient-primary {
-  background: linear-gradient(180deg, rgba(57, 150, 174, 0.3) 0%, rgba(57, 150, 174, 0.05) 100%);
+  background: linear-gradient(180deg, rgba(24, 144, 255, 0.3) 0%, rgba(24, 144, 255, 0.05) 100%);
 }
 
 .chart-area-gradient-success {
@@ -35,9 +35,9 @@
   background: linear-gradient(180deg, rgba(245, 34, 45, 0.3) 0%, rgba(245, 34, 45, 0.05) 100%);
 }
 
-/* Chart Shadow Effects - 图表阴影效果 */
+/* Chart Shadow Effects - 图表阴影效果 (蓝色主题) */
 .chart-shadow-primary {
-  box-shadow: 0 4px 12px rgba(57, 150, 174, 0.15);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.15);
 }
 
 .chart-shadow-success {

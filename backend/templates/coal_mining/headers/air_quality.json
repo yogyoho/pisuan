@@ -1,0 +1,62 @@
+{
+  "template_id": "TPL_HEADER_AIR_01",
+  "name": "大气环境影响分析章节",
+  "category": "header",
+  "domain": "coal_mining",
+  "priority": 10,
+  
+  "match_rule": {
+    "strategy": "regex_anchor",
+    "regex": "^(?P<chapter_id>\\d+(\\.\\d+)*)\\s*(?P<air_topic_text>.*(大气|空气|PM2\\.5|TSP).*(环境|影响|分析|评价))$",
+    "confidence_threshold": 0.85,
+    "fallback_keywords": ["大气", "空气", "PM2.5", "TSP", "扬尘"]
+  },
+  
+  "generalized_pattern": "[SECTION] {{chapter_id}} {{air_topic_text}}",
+  
+  "slots": [
+    {
+      "name": "chapter_id",
+      "description": "章节编号",
+      "type": "String",
+      "is_variable": true,
+      "is_anchor": false
+    },
+    {
+      "name": "air_topic_text",
+      "description": "大气环境相关主题文本",
+      "type": "String",
+      "is_variable": true,
+      "is_anchor": true,
+      "semantic_check": ["大气", "空气", "PM2.5", "TSP"],
+      "semantic_category": "air_quality"
+    }
+  ],
+  
+  "semantic_routing": {
+    "standard_code": "SEC_AIR_QUALITY",
+    "category": "Environmental_Impact_Prediction",
+    "subcategory": "Air_Quality_Analysis",
+    "required_skills": [
+      "skill_air_dispersion_model",
+      "skill_pollutant_calc"
+    ],
+    "optional_skills": [
+      "skill_meteorology_analysis"
+    ],
+    "context_prompt_ref": "prompt_air_analysis_master",
+    "expected_subsections": [
+      "气象条件",
+      "污染源分析",
+      "预测模型",
+      "影响评价"
+    ]
+  },
+  
+  "metadata": {
+    "version": "2.0",
+    "tags": ["大气环境", "预测评价", "章节标题"],
+    "created_at": "2024-12-14T16:00:00Z",
+    "updated_at": "2024-12-14T16:00:00Z"
+  }
+}

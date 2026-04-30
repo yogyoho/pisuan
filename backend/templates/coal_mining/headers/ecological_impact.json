@@ -1,0 +1,48 @@
+{
+  "template_id": "TPL_HEADER_ECOLOGICAL_IMPACT_01",
+  "name": "生态环境影响预测与评价",
+  "category": "header",
+  "domain": "coal_mining",
+  "priority": 90,
+  "match_rule": {
+    "strategy": "regex_anchor",
+    "regex": "^(?P<chapter_id>\\d+(?:\\.\\d+)*)\\s*(?P<topic_text>.*(生态|植被|动物|生物多样性|土地利用|水土流失|沉陷).*(影响|预测|评价).*)$",
+    "confidence_threshold": 0.8,
+    "fallback_keywords": ["生态", "影响", "预测", "评价", "沉陷", "水土流失"]
+  },
+  "generalized_pattern": "[SECTION] {{chapter_id}} {{topic_text}}",
+  "slots": [
+    {
+      "name": "chapter_id",
+      "description": "章节编号",
+      "type": "String",
+      "is_variable": true,
+      "extraction_pattern": "\\d+(?:\\.\\d+)*"
+    },
+    {
+      "name": "topic_text",
+      "description": "生态影响主题文本",
+      "type": "String",
+      "is_anchor": true,
+      "semantic_check": ["生态", "影响", "预测", "评价", "沉陷", "水土流失"],
+      "semantic_category": "ecological_impact"
+    }
+  ],
+  "semantic_routing": {
+    "standard_code": "SEC_ECOLOGICAL_IMPACT",
+    "category": "Environmental_Impact_Prediction",
+    "required_skills": [
+      "skill_land_use_stats",
+      "skill_soil_erosion_modulus",
+      "skill_reclamation_plan_extract"
+    ],
+    "context_prompt_ref": ""
+  },
+  "metadata": {
+    "version": "1.0",
+    "tags": ["生态", "影响预测", "章节标题"],
+    "priority": 90
+  }
+}
+
+

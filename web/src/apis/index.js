@@ -60,3 +60,4 @@ export {
  *
  * 注意：API模块已处理权限验证和请求头，使用时无需再手动添加认证头
  */
+export * from './domain_factory_api' // 领域知识工厂 API

@@ -1,0 +1,4104 @@
+{
+  "version": 1,
+  "bugs": [
+    {
+      "id": "bug-001",
+      "timestamp": "2026-07-10T02:26:05.988Z",
+      "error_message": "Wrong reference: HEAD should be HTML",
+      "file": "docs/develop-guides/roadmap.md",
+      "root_cause": "Used \"HEAD\" instead of \"HTML\"",
+      "fix": "Changed HEAD → HTML",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-10T02:26:05.988Z"
+    },
+    {
+      "id": "bug-002",
+      "timestamp": "2026-07-10T02:28:42.401Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/layouts/AppLayout.vue",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 8→5 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-10T02:28:42.401Z"
+    },
+    {
+      "id": "bug-003",
+      "timestamp": "2026-07-10T02:30:18.337Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/model-management/ModelProviderManagePanel.vue",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 9→5 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-10T02:30:18.337Z"
+    },
+    {
+      "id": "bug-004",
+      "timestamp": "2026-07-10T02:35:36.039Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/SettingsModal.vue",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 11→6 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-10T02:35:36.039Z"
+    },
+    {
+      "id": "bug-005",
+      "timestamp": "2026-07-10T02:37:39.334Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/TaskCenterDrawer.vue",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 9→5 lines (4 removed) | Also: <<<<<<< HEAD; const ACTIVE_CLASS_STATUSES = new Set(['pending', ",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-10T02:41:35.695Z"
+    },
+    {
+      "id": "bug-006",
+      "timestamp": "2026-07-10T02:41:58.382Z",
+      "error_message": "CSS fix: rag_evaluation",
+      "file": "web/src/components/TaskCenterDrawer.vue",
+      "root_cause": "rag_evaluation: 'RAG 评估' → 'RAG 评估',",
+      "fix": "Changed rag_evaluation: 'RAG 评估' → 'RAG 评估',",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-10T02:41:58.382Z"
+    },
+    {
+      "id": "bug-007",
+      "timestamp": "2026-07-10T03:10:11.528Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/package/yuxi/storage/postgres/manager.py",
+      "root_cause": "Had \"ALTER TABLE IF EXISTS conversations ADD COLUMN IF",
+      "fix": "Changed to \"ALTER TABLE IF EXISTS skills ALTER COLUMN is_buil",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-10T03:10:11.528Z"
+    },
+    {
+      "id": "bug-008",
+      "timestamp": "2026-07-10T03:04:00.000Z",
+      "error_message": "worker 启动崩在回填查询：asyncpg UndefinedColumnError — column \"run_type\" does not exist（agent_runs）",
+      "file": "backend/package/yuxi/storage/postgres/manager.py",
+      "root_cause": "上游给 agent_runs 加了 run_type 等列，但 manager.py 的 ALTER 块只覆盖最近一批列（agent_slug/conversation_thread_id/created_by_run_id/subagent_thread_relation_id）；run_type、conversation_id、input_message_id、output_message_id、last_event_id 只在 create_all 新建库时存在。pisuan 旧库表已存在但缺这些列，启动迁移的回填 UPDATE 引用 run_type 即崩。",
+      "fix": "manager.py 补 5 个 ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS（run_type VARCHAR(32) NOT NULL DEFAULT 'chat'、conversation_id INTEGER、input_message_id/output_message_id INTEGER、last_event_id VARCHAR(64)）。",
+      "tags": [
+        "upstream-sync",
+        "db-migration",
+        "postgres",
+        "create_all-gap"
+      ],
+      "related_bugs": [
+        "bug-007",
+        "bug-009"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-07-10T03:04:00.000Z"
+    },
+    {
+      "id": "bug-009",
+      "timestamp": "2026-07-10T02:50:00.000Z",
+      "error_message": "worker-dev 反复重启：error: Failed to parse `uv.lock` — TOML parse error at line 934 (`<<<<<<< HEAD`)",
+      "file": "backend/package/uv.lock",
+      "root_cause": "git merge 在两个 uv.lock 留下冲突标记；worker 启动入口跑 uv sync，TOML 解析失败 → 容器崩循环。",
+      "fix": "git checkout --theirs 清掉两个 uv.lock 冲突标记，再在 api-dev 容器里 cd /app/package && uv lock、cd /app && uv lock 重生成（同时应用 deepagents<0.6.8 约束）。",
+      "tags": [
+        "upstream-sync",
+        "merge-conflict",
+        "uv-lock",
+        "worker-crash"
+      ],
+      "related_bugs": [
+        "bug-008"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-07-10T02:50:00.000Z"
+    },
+    {
+      "id": "bug-010",
+      "timestamp": "2026-07-10T05:10:41.293Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/models/chat.py",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 3→5 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-10T05:10:41.293Z"
+    },
+    {
+      "id": "bug-011",
+      "timestamp": "2026-07-10T10:12:46.027Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/package/yuxi/storage/postgres/manager.py",
+      "root_cause": "Had \"    slot_signature VARCHAR(255) NOT NULL DEFAULT ",
+      "fix": "Changed to \"    slot_signature TEXT NOT NULL DEFAULT '",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-10T10:12:46.027Z"
+    },
+    {
+      "id": "bug-012",
+      "timestamp": "2026-07-10T10:04:00.000Z",
+      "error_message": "入库知识库失败: 'MilvusKB' object has no attribute 'files_meta'（领域知识工厂 commit 到 Milvus 库时崩溃，任务转 FAILED，KB 无内容）",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "v0.7.0 移除了 LightRAG 后端（knowledge/__init__.py 只注册 Milvus/Dify/Notion），但领域工厂 commit 流水线 _commit_pipeline_async 与 _reingest 仍按 LightRAG KB 接口写文件记录：直接操作内存字典 kb_instance.files_meta[file_id] 并调用 _persist_file，且 meta 用了 LightRAG 命名的 database_id 而非 kb_id。MilvusKB 无 files_meta（文件记录走 DB knowledge_files 表 + _persist_file_meta），因此在写文件记录处即抛 AttributeError，根本走不到 index_file 回退。",
+      "fix": "将两处（commit ~3899、reingest ~4467）的 kb_instance.files_meta[file_id]={...}+_persist_file 改为构造带 kb_id 的 file_meta 并调用 kb_instance._persist_file_meta(file_id, file_meta)（基类方法，写 knowledge_files 表）。之后 hasattr(_ingest_structured_document) 对 Milvus 为假，自动走 kb_manager.index_file 回退，成功入库。验证：伊宁矿区报告 commit→COMMITTED，Milvus 库 236 chunks，图谱 2071 节点/2390 关系。",
+      "tags": [
+        "domain-factory",
+        "lightrag-removed",
+        "milvus",
+        "commit",
+        "files_meta",
+        "kb-ingest"
+      ],
+      "related_bugs": [
+        "bug-011",
+        "bug-013"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-07-10T10:04:00.000Z"
+    },
+    {
+      "id": "bug-013",
+      "timestamp": "2026-07-10T10:15:00.000Z",
+      "error_message": "模板回流失败（不阻断入库）: asyncpg StringDataRightTruncationError: value too long for type character varying(255) — INSERT INTO domain_factory_learned_templates",
+      "file": "backend/package/yuxi/storage/postgres/models_domain_factory.py",
+      "root_cause": "domain_factory_learned_templates.slot_signature 定义为 VARCHAR(255)，但它是段落所有插槽名用 | 拼接的签名，参数密集段落（如区域经济概况）动辄 300~400+ 字符，远超 255 → 每条超限模板 INSERT 被截断报错。该错误被 _save_learned_templates_from_task 的 try/except 吞掉（不阻断入库），导致最有价值的参数型模板静默丢失，learned_templates 长期只剩少量短签名模板。",
+      "fix": "slot_signature 从 String(255) 改为 Text，三处一致：模型 models_domain_factory.py、manager.py 的 raw CREATE、并新增幂等迁移 ALTER TABLE ... ALTER COLUMN slot_signature TYPE TEXT。已对现网库执行 ALTER。验证：同一任务模板回流从 25 → 275（保存/更新 373 个），最长 slot_signature 382 字符正常落库。注意 slot_signature 仍在唯一约束内，TEXT 上 btree 唯一索引对现实长度（<2704B）安全。",
+      "tags": [
+        "domain-factory",
+        "postgres",
+        "varchar-truncation",
+        "learned-templates",
+        "silent-data-loss"
+      ],
+      "related_bugs": [
+        "bug-012"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-07-10T10:15:00.000Z"
+    },
+    {
+      "id": "bug-014",
+      "timestamp": "2026-07-10T11:04:07.437Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/package/yuxi/storage/postgres/manager.py",
+      "root_cause": "Had \"    slot_signature VARCHAR(255) NOT NULL DEFAULT ",
+      "fix": "Changed to \"    slot_signature TEXT NOT NULL DEFAULT '",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-10T11:04:07.437Z"
+    },
+    {
+      "id": "bug-015",
+      "timestamp": "2026-07-10T11:35:28.549Z",
+      "error_message": "Wrong reference: plugins should be knowledge",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Used \"plugins\" instead of \"knowledge\"",
+      "fix": "Changed plugins → knowledge",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-10T11:35:28.549Z"
+    },
+    {
+      "id": "bug-016",
+      "timestamp": "2026-07-10T11:43:00.000Z",
+      "error_message": "分章节提取失败（不阻断）: cannot access local variable 'domain_code' where it is not associated with a value",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "ETL 流水线在 :718 调用 extract_by_chapter(paragraphs, domain_code=domain_code)，但 domain_code 直到 :755 才赋值，使用先于定义 → UnboundLocalError，被 try/except 吞掉（非阻断），导致按章节局部变量提取永远失效、base_info 缺章节级数据。",
+      "fix": "未修（非阻断，数据质量问题）。方案：将 :754-755 的 domain_for_extract/domain_code 定义移到 :716 分章节提取块之前。",
+      "tags": [
+        "domain-factory",
+        "unbound-variable",
+        "chapter-extraction",
+        "silent-data-loss",
+        "non-blocking"
+      ],
+      "related_bugs": [
+        "bug-015"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-07-10T11:43:00.000Z"
+    },
+    {
+      "id": "bug-017",
+      "timestamp": "2026-07-10T12:34:13.483Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-10T12:34:13.483Z"
+    },
+    {
+      "id": "bug-018",
+      "timestamp": "2026-07-10T12:35:56.075Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 8→5 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-10T12:35:56.075Z"
+    },
+    {
+      "id": "bug-019",
+      "timestamp": "2026-07-10T16:12:16.410Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/package/pyproject.toml",
+      "root_cause": "Had \"docling>=2.68.0\"",
+      "fix": "Changed to \"docling>=2.111.0\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "toml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-10T16:12:16.410Z"
+    },
+    {
+      "id": "bug-020",
+      "timestamp": "2026-07-11T05:35:12.815Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/repositories/domain_factory_repository.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-11T05:35:12.815Z"
+    },
+    {
+      "id": "bug-021",
+      "timestamp": "2026-07-11T05:41:49.262Z",
+      "error_message": "Missing await",
+      "file": "backend/test/unit/storage/test_domain_factory_outline_repo.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-11T05:41:49.262Z"
+    },
+    {
+      "id": "bug-022",
+      "timestamp": "2026-07-11T06:05:58.158Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call | Also: CHAPTER_META_PROMPT = \"\"\"你是煤炭环评报告章节分析专家。为下列章节产出结构化元数据。; 章节标题：{title}",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-11T06:08:19.540Z"
+    },
+    {
+      "id": "bug-023",
+      "timestamp": "2026-07-11T06:09:56.322Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/test/unit/services/test_outline_producer.py",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 8→4 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-11T06:09:56.322Z"
+    },
+    {
+      "id": "bug-024",
+      "timestamp": "2026-07-11T06:16:26.739Z",
+      "error_message": "Missing await",
+      "file": "backend/test/unit/services/test_outline_producer.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-11T06:16:26.739Z"
+    },
+    {
+      "id": "bug-025",
+      "timestamp": "2026-07-11T06:16:52.174Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call | Also: # ========== 阶段2.9: 章节大纲产出 (OUTLINE) ==========; try: | Also: async def _produce_outlines_async(self, task_id: str, domain; \"\"\"commit 阶段：逐章组装大纲 + LLM 归一/散文 → upsert。非阻断由调用方保证。\"\"\"",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 4,
+      "last_seen": "2026-07-11T06:18:18.048Z"
+    },
+    {
+      "id": "bug-026",
+      "timestamp": "2026-07-11T06:19:38.086Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Had \"coal\"",
+      "fix": "Changed to \"domain\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-11T06:19:38.086Z"
+    },
+    {
+      "id": "bug-027",
+      "timestamp": "2026-07-11T06:28:12.033Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/agents/toolkits/buildin/tools.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-11T06:28:12.033Z"
+    },
+    {
+      "id": "bug-028",
+      "timestamp": "2026-07-11T06:36:48.624Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md",
+      "root_cause": "8 lines replaced/restructured",
+      "fix": "Rewrote 12→6 lines (8 removed) | Also: 1. 以章节标题为 query_text 调用 `query_kb`，搜索泛化模板; 2. 提取 `generalized_pattern` 和 `slots` 定义",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-11T06:37:06.137Z"
+    },
+    {
+      "id": "bug-029",
+      "timestamp": "2026-07-11T06:37:11.484Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md",
+      "root_cause": "Had `[OUTLINE]`",
+      "fix": "Changed to `get_chapter_outline`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-11T06:38:03.330Z"
+    },
+    {
+      "id": "bug-030",
+      "timestamp": "2026-07-11T07:27:12.525Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/test/unit/toolkits/test_domain_factory_tools.py",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 4→3 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-11T07:27:12.525Z"
+    },
+    {
+      "id": "bug-031",
+      "timestamp": "2026-07-11T11:03:03.049Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/knowledge/parser/unified.py",
+      "root_cause": "15 lines replaced/restructured",
+      "fix": "Rewrote 19→6 lines (15 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-11T11:03:03.049Z"
+    },
+    {
+      "id": "bug-032",
+      "timestamp": "2026-07-11T12:47:33.773Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/superpowers/specs/2026-07-11-writing-backbone-design.md",
+      "root_cause": "Had `unresolved_refs`",
+      "fix": "Changed to `{{REF:...}}`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-11T12:47:33.773Z"
+    },
+    {
+      "id": "bug-033",
+      "timestamp": "2026-07-11T13:03:06.897Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/test/unit/storage/test_report_repo.py",
+      "root_cause": "Had \"draft\"",
+      "fix": "Changed to \"writing\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-11T13:03:06.897Z"
+    },
+    {
+      "id": "bug-034",
+      "timestamp": "2026-07-11T13:19:31.974Z",
+      "error_message": "Function not marked async",
+      "file": "backend/test/unit/toolkits/test_report_tools.py",
+      "root_cause": "Function uses await but wasn't declared async",
+      "fix": "Added async modifier",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-11T13:19:31.974Z"
+    },
+    {
+      "id": "bug-035",
+      "timestamp": "2026-07-11T13:20:06.970Z",
+      "error_message": "Function not marked async",
+      "file": "backend/package/yuxi/agents/toolkits/buildin/tools.py",
+      "root_cause": "Function uses await but wasn't declared async",
+      "fix": "Added async modifier",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-11T13:20:06.970Z"
+    },
+    {
+      "id": "bug-036",
+      "timestamp": "2026-07-11T13:26:05.516Z",
+      "error_message": "Function not marked async",
+      "file": "backend/test/unit/toolkits/test_report_tools.py",
+      "root_cause": "Function uses await but wasn't declared async",
+      "fix": "Added async modifier",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-11T13:26:05.516Z"
+    },
+    {
+      "id": "bug-037",
+      "timestamp": "2026-07-11T13:33:39.270Z",
+      "error_message": "Incorrect value in code",
+      "file": ".superpowers/sdd/task-4-report.md",
+      "root_cause": "Had `70608272`",
+      "fix": "Changed to `4f76976b`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-11T13:33:41.376Z"
+    },
+    {
+      "id": "bug-038",
+      "timestamp": "2026-07-11T13:41:15.204Z",
+      "error_message": "Missing await",
+      "file": "backend/test/unit/toolkits/test_report_tools.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-11T13:41:15.204Z"
+    },
+    {
+      "id": "bug-039",
+      "timestamp": "2026-07-11T13:42:23.842Z",
+      "error_message": "Function not marked async",
+      "file": "backend/package/yuxi/agents/toolkits/buildin/tools.py",
+      "root_cause": "Function uses await but wasn't declared async",
+      "fix": "Added async modifier",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-11T13:42:23.842Z"
+    },
+    {
+      "id": "bug-040",
+      "timestamp": "2026-07-11T13:42:29.770Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/repositories/domain_factory_repository.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-11T13:42:29.770Z"
+    },
+    {
+      "id": "bug-041",
+      "timestamp": "2026-07-11T15:02:53.456Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/agents/skills/buildin/__init__.py",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 9→16 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-11T15:02:53.456Z"
+    },
+    {
+      "id": "bug-042",
+      "timestamp": "2026-07-11T15:58:26.108Z",
+      "error_message": "Wrong reference: ask_user_question should be agent",
+      "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md",
+      "root_cause": "Used \"ask_user_question\" instead of \"agent\"",
+      "fix": "Changed ask_user_question → agent",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-11T15:58:26.108Z"
+    },
+    {
+      "id": "bug-043",
+      "timestamp": "2026-07-12T00:37:09.825Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Had 'lightrag'",
+      "fix": "Changed to 'milvus'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-07-12T00:38:54.360Z"
+    },
+    {
+      "id": "bug-044",
+      "timestamp": "2026-07-12T00:38:52.242Z",
+      "error_message": "Wrong reference: db_id should be kb_id",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Used \"db_id\" instead of \"kb_id\"",
+      "fix": "Changed db_id → kb_id",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-12T00:38:52.242Z"
+    },
+    {
+      "id": "bug-045",
+      "timestamp": "2026-07-12T01:07:18.464Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/knowledge/base.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-12T01:07:18.464Z"
+    },
+    {
+      "id": "bug-046",
+      "timestamp": "2026-07-12T01:21:48.839Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call | Also: async def _upload_original_to_minio(; self, kb_id: str, file_id: str, storage_path: str, file_name",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-12T01:24:28.405Z"
+    },
+    {
+      "id": "bug-047",
+      "timestamp": "2026-07-12T01:22:07.627Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 24→29 lines (3 removed) | Also: \"file_type\": \"md\",; \"path\": markdown_url,",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 4,
+      "last_seen": "2026-07-12T01:24:38.006Z"
+    },
+    {
+      "id": "bug-048",
+      "timestamp": "2026-07-12T09:54:18.554Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 8→11 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-12T09:54:18.554Z"
+    },
+    {
+      "id": "bug-049",
+      "timestamp": "2026-07-12T10:44:39.203Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/repositories/domain_factory_repository.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-12T10:44:39.203Z"
+    },
+    {
+      "id": "bug-050",
+      "timestamp": "2026-07-12T10:44:46.614Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/agents/toolkits/buildin/tools.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-12T10:44:46.614Z"
+    },
+    {
+      "id": "bug-051",
+      "timestamp": "2026-07-12T11:42:04.266Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/repositories/domain_factory_repository.py",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 9→9 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-12T11:42:04.266Z"
+    },
+    {
+      "id": "bug-052",
+      "timestamp": "2026-07-12T12:47:43.553Z",
+      "error_message": "Wrong return value",
+      "file": "backend/package/yuxi/agents/backends/composite.py",
+      "root_cause": "Was returning: _BackendScope.from_runtime(runtime).create_backend",
+      "fix": "Now returns: backend",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-12T12:47:43.553Z"
+    },
+    {
+      "id": "bug-053",
+      "timestamp": "2026-07-12T13:38:55.801Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/agents/backends/composite.py",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 15→22 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-12T13:38:55.801Z"
+    },
+    {
+      "id": "bug-054",
+      "timestamp": "2026-07-12T14:24:26.034Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/agents/backends/composite.py",
+      "root_cause": "20 lines replaced/restructured",
+      "fix": "Rewrote 36→18 lines (20 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-12T14:24:26.034Z"
+    },
+    {
+      "id": "bug-055",
+      "timestamp": "2026-07-12T14:24:54.393Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/agents/backends/sandbox/backend.py",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 9→3 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-12T14:24:54.393Z"
+    },
+    {
+      "id": "bug-056",
+      "timestamp": "2026-07-13T01:24:29.290Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/superpowers/specs/2026-07-13-coal-eia-writer-v2-design.md",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 6→9 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T01:24:29.290Z"
+    },
+    {
+      "id": "bug-057",
+      "timestamp": "2026-07-13T03:02:59.363Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/repositories/agent_repository.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T03:02:59.363Z"
+    },
+    {
+      "id": "bug-058",
+      "timestamp": "2026-07-13T03:05:54.239Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/agents/toolkits/buildin/tools.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T03:05:54.239Z"
+    },
+    {
+      "id": "bug-059",
+      "timestamp": "2026-07-13T03:06:10.974Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/agents/toolkits/buildin/tools.py",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 5→11 lines (2 removed) | Also: \"\"\"合并 done 章节 + 解析 {{REF}} + 写沙箱,返回成稿信息。\"\"\"; from yuxi.services.ref_resolver import resolve_ref",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-13T03:06:42.387Z"
+    },
+    {
+      "id": "bug-060",
+      "timestamp": "2026-07-13T03:06:22.346Z",
+      "error_message": "Wrong return value",
+      "file": "backend/package/yuxi/agents/toolkits/buildin/tools.py",
+      "root_cause": "Was returning: {\"error\": \"status=done 时 content_md 不能为空\"}",
+      "fix": "Now returns: {\"error\": f\"无效 status: {status}，合法值: {', '.join(so",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T03:06:22.346Z"
+    },
+    {
+      "id": "bug-061",
+      "timestamp": "2026-07-13T03:06:28.812Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/package/yuxi/services/ref_resolver.py",
+      "root_cause": "Had \"\\*\\*(表[\\d\\-\\.]+)\\s*[^*\\n]*\\*\\*\"",
+      "fix": "Changed to \"\\{\\{MISSING:([^}]+)\\}\\}\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T03:06:28.812Z"
+    },
+    {
+      "id": "bug-062",
+      "timestamp": "2026-07-13T04:20:05.880Z",
+      "error_message": "Missing await",
+      "file": "backend/test/unit/agents/toolkits/buildin/test_tools.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call | Also: @pytest.mark.asyncio; async def test_lookup_subsidence_params_no_kb_available():",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-13T04:20:14.035Z"
+    },
+    {
+      "id": "bug-063",
+      "timestamp": "2026-07-13T10:26:10.100Z",
+      "error_message": "Function not marked async",
+      "file": "backend/test/unit/services/test_slot_validation_service.py",
+      "root_cause": "Function uses await but wasn't declared async",
+      "fix": "Added async modifier | Also: @pytest.mark.asyncio; async def test_validate_slots_returns_structured_report():",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-13T10:27:23.364Z"
+    },
+    {
+      "id": "bug-064",
+      "timestamp": "2026-07-13T10:27:53.736Z",
+      "error_message": "Function not marked async",
+      "file": "backend/package/yuxi/services/slot_validation_service.py",
+      "root_cause": "Function uses await but wasn't declared async",
+      "fix": "Added async modifier",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T10:27:53.736Z"
+    },
+    {
+      "id": "bug-065",
+      "timestamp": "2026-07-13T10:41:25.192Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/services/slot_validation_service.py",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 24→34 lines (2 removed) | Also: \"\"\"检查 slot.type 和 entity.type 是否一致。无 entity_ref 时跳; entity_type = entity_schema.get(\"type\", \"string\")",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-13T10:41:33.287Z"
+    },
+    {
+      "id": "bug-066",
+      "timestamp": "2026-07-13T11:03:11.501Z",
+      "error_message": "Missing await",
+      "file": "backend/test/unit/services/test_commit_pipeline_status.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call | Also: @pytest.mark.asyncio; async def test_outline_failure_marks_commit_partial():",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-13T11:04:43.845Z"
+    },
+    {
+      "id": "bug-067",
+      "timestamp": "2026-07-13T11:03:53.428Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T11:03:53.428Z"
+    },
+    {
+      "id": "bug-068",
+      "timestamp": "2026-07-13T11:30:18.394Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/views/DomainFactoryView.vue",
+      "root_cause": "12 lines replaced/restructured",
+      "fix": "Rewrote 14→23 lines (12 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T11:30:18.394Z"
+    },
+    {
+      "id": "bug-069",
+      "timestamp": "2026-07-13T11:31:39.124Z",
+      "error_message": "CSS fix: gap, color, font-size",
+      "file": "web/src/views/DomainFactoryView.vue",
+      "root_cause": "gap: 20px → 4px; color: var(--gray-900, #0f172a) → var(--gray-500, #64748b); font-size: 12px → 11px",
+      "fix": "Changed gap: 20px → 4px; color: var(--gray-900, #0f172a) → var(--gray-500, #64748b); font-size: 12px → 11px",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T11:31:39.124Z"
+    },
+    {
+      "id": "bug-070",
+      "timestamp": "2026-07-13T11:40:13.847Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/scripts/governance/fix_existing_graph.py",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 11→70 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T11:40:13.847Z"
+    },
+    {
+      "id": "bug-071",
+      "timestamp": "2026-07-13T19:38:00.000Z",
+      "error_message": "ModuleNotFoundError: No module named 'scripts.governance' — 治理脚本测试导入失败",
+      "file": "backend/test/scripts/test_fix_existing_graph.py",
+      "root_cause": "在 backend/test/scripts/ 创建了 __init__.py。项目 backend/test/ 下各子目录（unit/integration/e2e）都没有 __init__.py，靠 pyproject.toml 的 pythonpath=[\".\",\"package\"] + conftest.py sys.path 注入定位模块。放了 __init__.py 后 pytest prepend 模式把 test 模块解析为 scripts.test_fix_existing_graph，shadowing 掉顶层 scripts/ 包，导致 from scripts.governance.fix_existing_graph import ... 找不到模块。",
+      "fix": "删除 backend/test/scripts/__init__.py。项目测试子目录不需要 __init__.py。",
+      "tags": [
+        "pytest",
+        "import",
+        "namespace-shadowing",
+        "test-structure"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T19:38:00.000Z"
+    },
+    {
+      "id": "bug-072",
+      "timestamp": "2026-07-13T12:03:55.171Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Had \"report_type_code\"",
+      "fix": "Changed to \"),\n                        report_type_code=self.",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T12:03:55.171Z"
+    },
+    {
+      "id": "bug-073",
+      "timestamp": "2026-07-13T12:05:59.808Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/scripts/governance/fix_existing_graph.py",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 7→5 lines (2 removed) | Also: print(f\"归一化 domain 数: {report.normalized_domains}\"; if report.errors:",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-13T12:06:05.764Z"
+    },
+    {
+      "id": "bug-074",
+      "timestamp": "2026-07-13T12:31:30.473Z",
+      "error_message": "Function not marked async",
+      "file": "backend/test/unit/services/test_graph_builder_keys.py",
+      "root_cause": "Function uses await but wasn't declared async",
+      "fix": "Added async modifier",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T12:31:30.473Z"
+    },
+    {
+      "id": "bug-075",
+      "timestamp": "2026-07-13T12:35:30.565Z",
+      "error_message": "CSS fix: grid-template-columns",
+      "file": "web/src/components/domain-factory/DataSourceDashboard.vue",
+      "root_cause": "grid-template-columns: minmax(150px, 1fr) 88px 100px 100px 130px 88px 100px → minmax(150px, 1fr) 120px 140px 130px 150px 88px 140px",
+      "fix": "Changed grid-template-columns: minmax(150px, 1fr) 88px 100px 100px 130px 88px 100px → minmax(150px, 1fr) 120px 140px 130px 150px 88px 140px",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T12:35:30.565Z"
+    },
+    {
+      "id": "bug-076",
+      "timestamp": "2026-07-13T12:47:56.276Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/scripts/governance/fix_existing_graph.py",
+      "root_cause": "Had \"==============================\"",
+      "fix": "Changed to \"回填 ParagraphTemplate key 数: {report.fixed_para_ke",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T12:47:56.276Z"
+    },
+    {
+      "id": "bug-077",
+      "timestamp": "2026-07-13T12:49:06.265Z",
+      "error_message": "Function not marked async",
+      "file": "backend/test/unit/services/test_graph_builder_keys.py",
+      "root_cause": "Function uses await but wasn't declared async",
+      "fix": "Added async modifier",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T12:49:06.265Z"
+    },
+    {
+      "id": "bug-078",
+      "timestamp": "2026-07-13T12:49:24.561Z",
+      "error_message": "Function not marked async",
+      "file": "backend/package/yuxi/services/graph_builder.py",
+      "root_cause": "Function uses await but wasn't declared async",
+      "fix": "Added async modifier",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T12:49:24.561Z"
+    },
+    {
+      "id": "bug-079",
+      "timestamp": "2026-07-13T13:04:52.960Z",
+      "error_message": "Function not marked async",
+      "file": "backend/test/unit/services/test_graph_query_service.py",
+      "root_cause": "Function uses await but wasn't declared async",
+      "fix": "Added async modifier",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T13:04:52.960Z"
+    },
+    {
+      "id": "bug-080",
+      "timestamp": "2026-07-13T13:05:22.499Z",
+      "error_message": "Function not marked async",
+      "file": "backend/package/yuxi/services/graph_query_service.py",
+      "root_cause": "Function uses await but wasn't declared async",
+      "fix": "Added async modifier",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T13:05:22.499Z"
+    },
+    {
+      "id": "bug-081",
+      "timestamp": "2026-07-13T13:53:15.535Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/test/unit/agents/toolkits/buildin/test_tools_graph_integration.py",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 7→10 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T13:53:15.535Z"
+    },
+    {
+      "id": "bug-079",
+      "timestamp": "2026-07-13T21:50:00.000Z",
+      "error_message": "test_list_chapter_keys_falls_back_to_db 跨模块运行时 RuntimeError: Task got Future attached to a different loop",
+      "file": "backend/test/unit/agents/toolkits/buildin/test_tools_graph_integration.py",
+      "root_cause": "patch只在method级别替换GraphQueryService.list_chapter_keys,GraphQueryService()构造器仍创建真实Neo4j driver。driver内部asyncio资源绑定到pytest-asyncio创建的event loop,下个测试用新loop时冲突。fallback路径的DomainFactoryRepository().list_chapter_keys()也用真实PG连接,同样跨loop冲突。",
+      "fix": "改用class-level patch(patch(\"yuxi.services.graph_query_service.GraphQueryService\"))替换整个类,MockSvc.return_value是MagicMock不创建真实driver。fallback测试额外patch.object(tools_mod, \"DomainFactoryRepository\")避免真实PG查询。",
+      "tags": [
+        "pytest",
+        "asyncio",
+        "event-loop",
+        "neo4j-driver",
+        "test-isolation",
+        "mock-pattern"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T21:50:00.000Z"
+    },
+    {
+      "id": "bug-083",
+      "timestamp": "2026-07-13T23:28:49.191Z",
+      "error_message": "Missing error handling in def",
+      "file": "backend/test/unit/services/test_graph_query_service.py",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T23:28:49.191Z"
+    },
+    {
+      "id": "bug-084",
+      "timestamp": "2026-07-14T07:25:00.000Z",
+      "error_message": "Neo4j UserWarning: Expected a result with a single record, but found multiple — get_chapter_outline 遇到多条 ChapterTemplate",
+      "file": "backend/package/yuxi/services/graph_query_service.py",
+      "root_cause": "图谱里'地形地貌'等 7 个章节有 2 条 ChapterTemplate（'通用'分支合并后未去重），get_chapter_outline 的 Cypher MATCH 返回多行，result.single() 触发 Neo4j UserWarning。",
+      "fix": "Cypher 在 MATCH 后加 WITH ch LIMIT 1 确保只对一条 ch 聚合。同步修复治理脚本 merge_general_branch：合并后新增分步去重 Cypher（迁移 HAS_CHILD/REQUIRES_PARAGRAPH_ROLE 到保留节点后 DETACH DELETE 重复节点）。",
+      "tags": [
+        "neo4j",
+        "cypher",
+        "graph-query",
+        "governance",
+        "duplicate-nodes",
+        "single-record-warning"
+      ],
+      "related_bugs": [
+        "bug-070",
+        "bug-073"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T07:25:00.000Z"
+    },
+    {
+      "id": "bug-085",
+      "timestamp": "2026-07-14T00:44:47.893Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/scripts/compliance_check.py",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 5→8 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T00:44:47.893Z"
+    },
+    {
+      "id": "bug-086",
+      "timestamp": "2026-07-14T01:29:02.239Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/package/yuxi/services/graph_builder.py",
+      "root_cause": "Had \"^(\\d+(?:\\.\\d+)*)\\s+(.+)$\"",
+      "fix": "Changed to \"^(\\d+(?:\\.\\d+)*)\\s*(\\S.*)$\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T01:29:02.239Z"
+    },
+    {
+      "id": "bug-087",
+      "timestamp": "2026-07-14T01:29:23.755Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/scripts/governance/fix_existing_graph.py",
+      "root_cause": "Had \"^(\\d+(?:\\.\\d+)*)\\s+(.+)$\"",
+      "fix": "Changed to \"^(\\d+(?:\\.\\d+)*)\\s*(\\S.*)$\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T01:29:23.755Z"
+    },
+    {
+      "id": "bug-088",
+      "timestamp": "2026-07-14T02:21:35.560Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/scripts/seed_standard_chapters.py",
+      "root_cause": "12 lines replaced/restructured",
+      "fix": "Rewrote 15→15 lines (12 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T02:21:35.560Z"
+    },
+    {
+      "id": "bug-089",
+      "timestamp": "2026-07-14T03:03:23.870Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/test/unit/services/test_graph_query_service.py",
+      "root_cause": "Had \"应至少30个章节key,实际{len(keys)}\"",
+      "fix": "Changed to \"应至少13个顶级章节key,实际{len(keys)}\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T03:03:23.870Z"
+    },
+    {
+      "id": "bug-090",
+      "timestamp": "2026-07-14T04:11:18.792Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 5→23 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T04:11:18.792Z"
+    },
+    {
+      "id": "bug-091",
+      "timestamp": "2026-07-14T05:50:27.698Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/superpowers/specs/2026-07-14-knowledge-factory-merge-design.md",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 3→106 lines (2 removed) | Also: **文件**: `scripts/governance/link_standard_chapters; 按章节编号前缀匹配 ETL 子章节到标准章节: | Also: | Phase 1 | HAS_CHILD 关联脚本 + get_templates 递归 | P0; | Phase 2 | 分章节上传（source_report_id + chapter_label",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-07-14T05:54:00.166Z"
+    },
+    {
+      "id": "bug-092",
+      "timestamp": "2026-07-14T08:05:43.750Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/views/DomainFactoryView.vue",
+      "root_cause": "12 lines replaced/restructured",
+      "fix": "Rewrote 14→23 lines (12 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T08:05:43.750Z"
+    },
+    {
+      "id": "bug-093",
+      "timestamp": "2026-07-14T08:05:59.777Z",
+      "error_message": "CSS fix: gap, color, font-size",
+      "file": "web/src/views/DomainFactoryView.vue",
+      "root_cause": "gap: 20px → 4px; color: var(--gray-900, #0f172a) → var(--gray-500); font-size: 12px → 11px",
+      "fix": "Changed gap: 20px → 4px; color: var(--gray-900, #0f172a) → var(--gray-500); font-size: 12px → 11px",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-14T08:10:48.846Z"
+    },
+    {
+      "id": "bug-094",
+      "timestamp": "2026-07-14T08:34:01.357Z",
+      "error_message": "CSS fix: color",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "color: var(--gray-600) → var(--gray-300, #c0c4cc)",
+      "fix": "Changed color: var(--gray-600) → var(--gray-300, #c0c4cc)",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T08:34:01.358Z"
+    },
+    {
+      "id": "bug-095",
+      "timestamp": "2026-07-14T09:37:48.561Z",
+      "error_message": "Null/undefined access in ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check) | Also: const qs = p.template?.quality_score; return qs != null && qs >= 0.7 && !reviewedParagraphIds.valu | Also: const qs = p.template?.quality_score; if (qs != null && qs >= 0.7 && !reviewedParagraphIds.value.h | Also: <span v-if=\"para.classify_type && para.classify_type !== 'he; {{ Math.round(para.template.quality_score * 100) }}%",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 4,
+      "last_seen": "2026-07-14T09:41:51.354Z"
+    },
+    {
+      "id": "bug-096",
+      "timestamp": "2026-07-14T09:38:15.273Z",
+      "error_message": "CSS fix: color",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "color: var(--gray-700) → #ff4d4f",
+      "fix": "Changed color: var(--gray-700) → #ff4d4f",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T09:38:15.273Z"
+    },
+    {
+      "id": "bug-097",
+      "timestamp": "2026-07-14T09:40:13.607Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "21 lines replaced/restructured",
+      "fix": "Rewrote 42→57 lines (21 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T09:40:13.607Z"
+    },
+    {
+      "id": "bug-098",
+      "timestamp": "2026-07-14T09:41:01.014Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "19 lines replaced/restructured",
+      "fix": "Rewrote 31→11 lines (19 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T09:41:01.014Z"
+    },
+    {
+      "id": "bug-099",
+      "timestamp": "2026-07-14T09:43:05.421Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Had \"async () => { reviewedParagraphIds.delete(selecte",
+      "fix": "Changed to \"async () => { reviewedParagraphIds.delete(selecte",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T09:43:05.421Z"
+    },
+    {
+      "id": "bug-100",
+      "timestamp": "2026-07-14T10:06:13.605Z",
+      "error_message": "CSS fix: name, value",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "name: `slot_${idx → slotName,; value: '', → selText,",
+      "fix": "Changed name: `slot_${idx → slotName,; value: '', → selText,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T10:06:13.605Z"
+    },
+    {
+      "id": "bug-101",
+      "timestamp": "2026-07-14T10:06:51.182Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 8→3 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T10:06:51.182Z"
+    },
+    {
+      "id": "bug-102",
+      "timestamp": "2026-07-14T10:26:58.425Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/services/graph_query_service.py",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 42→70 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T10:26:58.425Z"
+    },
+    {
+      "id": "bug-103",
+      "timestamp": "2026-07-14T10:30:36.610Z",
+      "error_message": "Missing await",
+      "file": "backend/test/unit/services/test_graph_query_service.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T10:30:36.610Z"
+    },
+    {
+      "id": "bug-104",
+      "timestamp": "2026-07-14T10:48:24.299Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T10:48:24.299Z"
+    },
+    {
+      "id": "bug-105",
+      "timestamp": "2026-07-14T10:54:13.252Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T10:54:13.252Z"
+    },
+    {
+      "id": "bug-106",
+      "timestamp": "2026-07-14T11:03:48.134Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/package/yuxi/services/graph_builder.py",
+      "root_cause": "Had \"构建知识图谱失败: {exc}\"",
+      "fix": "Changed to \"构建知识图谱失败: {}\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T11:03:48.134Z"
+    },
+    {
+      "id": "bug-107",
+      "timestamp": "2026-07-14T13:37:59.857Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 55→111 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T13:37:59.857Z"
+    },
+    {
+      "id": "bug-108",
+      "timestamp": "2026-07-14T14:03:45.663Z",
+      "error_message": "Missing await",
+      "file": "backend/server/routers/domain_factory_router.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T14:03:45.663Z"
+    },
+    {
+      "id": "bug-109",
+      "timestamp": "2026-07-14T14:14:59.420Z",
+      "error_message": "Wrong condition in logic",
+      "file": "web/src/views/DomainFactoryView.vue",
+      "root_cause": "Condition was: if (tab && ['data', 'workbench'].includes(tab)",
+      "fix": "Changed to: if (tab && ['data', 'workbench', 'outline'].includes(t)",
+      "tags": [
+        "auto-detected",
+        "logic-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T14:14:59.420Z"
+    },
+    {
+      "id": "bug-110",
+      "timestamp": "2026-07-14T15:09:42.246Z",
+      "error_message": "CSS fix: a-spin",
+      "file": "web/src/components/domain-factory/OutlineTemplate.vue",
+      "root_cause": "a-spin: spinning=\"loadingDetail\"> → spinning=\"loadingList\">",
+      "fix": "Changed a-spin: spinning=\"loadingDetail\"> → spinning=\"loadingList\">",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T15:09:42.246Z"
+    },
+    {
+      "id": "bug-111",
+      "timestamp": "2026-07-14T15:10:05.992Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/domain-factory/OutlineTemplate.vue",
+      "root_cause": "33 lines replaced/restructured",
+      "fix": "Rewrote 143→181 lines (33 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T15:10:05.992Z"
+    },
+    {
+      "id": "bug-112",
+      "timestamp": "2026-07-14T15:10:22.447Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/views/DomainOutlineTemplateView.vue",
+      "root_cause": "11 lines replaced/restructured",
+      "fix": "Rewrote 40→51 lines (11 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T15:10:22.447Z"
+    },
+    {
+      "id": "bug-113",
+      "timestamp": "2026-07-14T15:19:29.186Z",
+      "error_message": "Wrong condition in logic",
+      "file": "web/src/views/DomainFactoryView.vue",
+      "root_cause": "Condition was: if (tab && ['data', 'workbench', 'outline'].includes(t)",
+      "fix": "Changed to: if (tab && ['data', 'workbench'].includes(tab)",
+      "tags": [
+        "auto-detected",
+        "logic-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T15:19:29.186Z"
+    },
+    {
+      "id": "bug-114",
+      "timestamp": "2026-07-14T15:27:14.274Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/src/router/index.js",
+      "root_cause": "Had '../components/domain-factory/OutlineTemplate.vue'",
+      "fix": "Changed to '../views/DomainOutlineTemplateView.vue'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-14T15:27:14.274Z"
+    },
+    {
+      "id": "bug-115",
+      "timestamp": "2026-07-15T01:17:00.000Z",
+      "error_message": "对话测试卡死在'现在派 prediction-writer 子智能体编写第5章'：主agent派发子agent后一直不返回",
+      "file": "backend/package/yuxi/services/run_worker.py",
+      "root_cause": "arq WorkerSettings.max_jobs=1 导致死锁：主agent作为arq job占用唯一worker slot，其 dispatch_subagent 把子agent作为另一个arq job入队并同步await其完成；子agent因无slot长期pending(本例pending 12分钟 08:56:43→09:08:40)，主agent持slot等子→经典死锁。max_jobs=1本为防OOM(commit 6d65ee8e 关watchfiles同理)，但与'主agent阻塞等子agent'的派发架构冲突。",
+      "fix": "max_jobs 1→2，允许主+子agent并行。关键：arq WorkerSettings只在worker启动时读一次，改max_jobs必须 docker restart worker-dev 才生效(watchfiles已关6d65ee8e不热重载)。验证：worker 09:08:27重启后子agent 8021a11a于09:08:40启动、09:09:39完成(save_chapter写入7559字到rpt_1ff15e9c59)，死锁解除。但被cancel的主agent 7eaa4532已死，该run未端到端完成，需新起测试验证'主agent存活+子agent并发'场景。权衡：max_jobs=2重新引入OOM风险，需docker stats监控；更彻底修法是子agent改进程内协程执行(不占独立arq slot)。",
+      "tags": [
+        "arq",
+        "worker",
+        "deadlock",
+        "max_jobs",
+        "subagent",
+        "oom",
+        "worker-restart"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-15T01:17:00.000Z"
+    },
+    {
+      "id": "bug-116",
+      "timestamp": "2026-07-15T01:45:00.000Z",
+      "error_message": "prediction-writer 子agent 写完第5章后，outputs/ 目录下找不到成稿——用户不知道内容去哪了",
+      "file": "backend/package/yuxi/agents/toolkits/buildin/tools.py",
+      "root_cause": "save_chapter(tools.py:628) 只写 DB(domain_factory_reports_chapters.content_md)，不写文件——07-12 设计的 C3(save_chapter 顺带写 preview 文件+返 preview_path)未实现，函数无 runtime 参数无文件 I/O。outputs/(/app/saves/outputs/) 是 assemble_report(tools.py:702) 的目标，但本次 run assemble_report 从未被调用(报告仍 writing 非 assembled；/app/saves/outputs/ 无 report_rpt_1c6c7682e1.md)。且子agent 把章节存成 status=writing 而非 done，而 assemble_report 只合并 done 章节→即使补调也会排除该章。主agent fd55cf73 完成时最后一步是重调 create_report 而非 assemble_report。属 cerebrum 2026-07-12 记的 writer 合规 P0 的持续表现(save_chapter 已被调用,但 status 标错+assemble 仍=0)。",
+      "fix": "未修。查证结论：第5章7391字在 DB content_md(rpt_1c6c7682e1, chapter '环境影响识别与评价指标体系', status=writing)。修法：1)写手 save_chapter 完成时标 status=done(非 writing);2)编排者所有章节完成后调 assemble_report→产出 /app/saves/outputs/report_{id}.md。临时取数：SELECT content_md FROM domain_factory_reports_chapters WHERE report_id='rpt_1c6c7682e1'。",
+      "tags": [
+        "writer-compliance",
+        "save_chapter",
+        "assemble_report",
+        "outputs",
+        "report-status",
+        "db-only",
+        "dead-code-C3"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-15T01:45:00.000Z"
+    },
+    {
+      "id": "bug-117",
+      "timestamp": "2026-07-15T03:00:20.789Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/agents/skills/buildin/prediction-writer/SKILL.md",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 5→7 lines (2 removed) | Also: ### Step 4: 保存; save_chapter(report_id, canonical_chapter_key, con",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-15T03:00:24.725Z"
+    },
+    {
+      "id": "bug-118",
+      "timestamp": "2026-07-15T03:00:26.397Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/package/yuxi/agents/skills/buildin/regulation-writer/SKILL.md",
+      "root_cause": "Had \"review\"",
+      "fix": "Changed to \"done\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-15T03:00:26.397Z"
+    },
+    {
+      "id": "bug-119",
+      "timestamp": "2026-07-15T03:10:11.895Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 12→15 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-15T03:10:11.895Z"
+    },
+    {
+      "id": "bug-120",
+      "timestamp": "2026-07-15T09:34:37.809Z",
+      "error_message": "Wrong reference: ensure_chapter_writer_subagent should be ensure_regulation_writer_subagent",
+      "file": "backend/server/utils/lifespan.py",
+      "root_cause": "Used \"ensure_chapter_writer_subagent\" instead of \"ensure_regulation_writer_subagent\"",
+      "fix": "Changed ensure_chapter_writer_subagent → ensure_regulation_writer_subagent",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-15T09:34:37.809Z"
+    },
+    {
+      "id": "bug-121",
+      "timestamp": "2026-07-15T09:34:47.043Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md",
+      "root_cause": "14 lines replaced/restructured",
+      "fix": "Rewrote 17→5 lines (14 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-15T09:34:47.043Z"
+    },
+    {
+      "id": "bug-122",
+      "timestamp": "2026-07-15T09:34:56.648Z",
+      "error_message": "Missing await",
+      "file": "backend/test/unit/repositories/test_agent_repository.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-15T09:34:56.648Z"
+    },
+    {
+      "id": "bug-123",
+      "timestamp": "2026-07-16T00:32:56.165Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/test/unit/services/test_parse_markdown_to_paragraphs.py",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 8→12 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T00:32:56.165Z"
+    },
+    {
+      "id": "bug-124",
+      "timestamp": "2026-07-16T01:51:34.397Z",
+      "error_message": "Function not marked async",
+      "file": "backend/server/routers/domain_factory_router.py",
+      "root_cause": "Function uses await but wasn't declared async",
+      "fix": "Added async modifier || 行为验证通过(2026-07-20)：新起环评写作对话(rpt_8000cdf2e6)，regulation-writer save_chapter(总则,done,7306字)→编排者 assemble_report→present_artifacts×2→报告 assembled→outputs/report_rpt_8000cdf2e6.md 14.6KB 真实环评总则内容(280行)。模型在 C3+SKILL铁律下自发合规，P0 端到端闭环。",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T01:51:34.397Z"
+    },
+    {
+      "id": "bug-125",
+      "timestamp": "2026-07-16T01:53:37.144Z",
+      "error_message": "Missing await",
+      "file": "web/src/components/domain-factory/OutlineTemplate.vue",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "已修：SettingsModal.vue import 块补 CircleUser, X（lucide-vue-next），build 通过",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T05:20:41.667310Z"
+    },
+    {
+      "id": "bug-126",
+      "timestamp": "2026-07-16T02:31:54.518Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T02:31:54.518Z"
+    },
+    {
+      "id": "bug-127",
+      "timestamp": "2026-07-16T02:33:09.134Z",
+      "error_message": "Missing await",
+      "file": "backend/server/routers/domain_factory_router.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T02:33:09.134Z"
+    },
+    {
+      "id": "bug-128",
+      "timestamp": "2026-07-16T02:35:40.246Z",
+      "error_message": "Null/undefined access in ",
+      "file": "web/src/components/domain-factory/OutlineTemplate.vue",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T02:35:40.246Z"
+    },
+    {
+      "id": "bug-129",
+      "timestamp": "2026-07-16T02:40:21.390Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/domain-factory/OutlineTemplate.vue",
+      "root_cause": "9 lines replaced/restructured",
+      "fix": "Rewrote 19→9 lines (9 removed) | Also: .panel-header {; display: flex;",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-16T02:41:46.042Z"
+    },
+    {
+      "id": "bug-130",
+      "timestamp": "2026-07-16T02:41:40.046Z",
+      "error_message": "Null/undefined access in ",
+      "file": "web/src/views/DomainOutlineTemplateView.vue",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T02:41:40.046Z"
+    },
+    {
+      "id": "bug-131",
+      "timestamp": "2026-07-16T03:15:08.227Z",
+      "error_message": "Wrong operator: == should be !=",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Used \"==\" instead of \"!=\"",
+      "fix": "Changed operator == → !=",
+      "tags": [
+        "auto-detected",
+        "operator-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T03:15:08.228Z"
+    },
+    {
+      "id": "bug-132",
+      "timestamp": "2026-07-16T03:26:26.234Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 6→3 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T03:26:26.234Z"
+    },
+    {
+      "id": "bug-133",
+      "timestamp": "2026-07-16T03:28:03.087Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/package/yuxi/services/graph_query_service.py",
+      "root_cause": "Had \"child_chapters\"",
+      "fix": "Changed to \"extraction_regex\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T03:28:03.087Z"
+    },
+    {
+      "id": "bug-134",
+      "timestamp": "2026-07-16T03:34:23.332Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T03:34:23.332Z"
+    },
+    {
+      "id": "bug-135",
+      "timestamp": "2026-07-16T03:40:12.384Z",
+      "error_message": "CSS fix: domain",
+      "file": "web/src/components/domain-factory/OutlineTemplate.vue",
+      "root_cause": "domain: 'coal', report_type: 'eia_report' → selectedDomain.value,",
+      "fix": "Changed domain: 'coal', report_type: 'eia_report' → selectedDomain.value,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-07-16T03:40:58.303Z"
+    },
+    {
+      "id": "bug-136",
+      "timestamp": "2026-07-16T03:41:08.156Z",
+      "error_message": "Missing await",
+      "file": "web/src/components/domain-factory/OutlineTemplate.vue",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T03:41:08.156Z"
+    },
+    {
+      "id": "bug-137",
+      "timestamp": "2026-07-16T03:50:24.393Z",
+      "error_message": "CSS fix: padding",
+      "file": "web/src/components/domain-factory/OutlineTemplate.vue",
+      "root_cause": "padding: 24px → 20px",
+      "fix": "Changed padding: 24px → 20px",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T03:50:24.393Z"
+    },
+    {
+      "id": "bug-138",
+      "timestamp": "2026-07-16T03:57:50.836Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/services/graph_query_service.py",
+      "root_cause": "11 lines replaced/restructured",
+      "fix": "Rewrote 34→53 lines (11 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T03:57:50.836Z"
+    },
+    {
+      "id": "bug-139",
+      "timestamp": "2026-07-16T03:58:32.965Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/domain-factory/OutlineTemplate.vue",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 12→26 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T03:58:32.965Z"
+    },
+    {
+      "id": "bug-140",
+      "timestamp": "2026-07-16T03:58:56.476Z",
+      "error_message": "Null/undefined access in ",
+      "file": "web/src/components/domain-factory/OutlineTemplate.vue",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T03:58:56.476Z"
+    },
+    {
+      "id": "bug-141",
+      "timestamp": "2026-07-16T04:04:41.980Z",
+      "error_message": "Missing await",
+      "file": "backend/server/routers/domain_factory_router.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T04:04:41.980Z"
+    },
+    {
+      "id": "bug-142",
+      "timestamp": "2026-07-16T04:05:44.511Z",
+      "error_message": "Null/undefined access in ",
+      "file": "web/src/components/domain-factory/OutlineTemplate.vue",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T04:05:44.511Z"
+    },
+    {
+      "id": "bug-143",
+      "timestamp": "2026-07-16T04:13:11.140Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/domain-factory/OutlineTemplate.vue",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 9→46 lines (3 removed) | Also: <a-tree; v-if=\"filteredChapterTree.length\" | Also: const collectParentKeys = (nodes, into) => {; for (const n of nodes) {",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-07-16T04:15:44.578Z"
+    },
+    {
+      "id": "bug-144",
+      "timestamp": "2026-07-16T04:15:57.507Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/src/components/domain-factory/OutlineTemplate.vue",
+      "root_cause": "Had \"node-title\"",
+      "fix": "Changed to \"node._level === 0 && node.order\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T04:15:57.507Z"
+    },
+    {
+      "id": "bug-145",
+      "timestamp": "2026-07-16T04:16:04.224Z",
+      "error_message": "CSS fix: font-size",
+      "file": "web/src/components/domain-factory/OutlineTemplate.vue",
+      "root_cause": "font-size: 13px → 11px",
+      "fix": "Changed font-size: 13px → 11px",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T04:16:04.224Z"
+    },
+    {
+      "id": "bug-146",
+      "timestamp": "2026-07-16T04:21:36.264Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "15 lines replaced/restructured",
+      "fix": "Rewrote 41→84 lines (15 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T04:21:36.264Z"
+    },
+    {
+      "id": "bug-147",
+      "timestamp": "2026-07-16T04:45:27.995Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/services/graph_query_service.py",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 11→36 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T04:45:27.995Z"
+    },
+    {
+      "id": "bug-148",
+      "timestamp": "2026-07-16T05:18:01.204Z",
+      "error_message": "Significant refactor of ",
+      "file": "../../Users/Lenovo/.claude/plans/delightful-wobbling-dahl.md",
+      "root_cause": "15 lines replaced/restructured",
+      "fix": "Rewrote 28→8 lines (15 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T05:18:01.204Z"
+    },
+    {
+      "id": "bug-149",
+      "timestamp": "2026-07-16T08:11:55.702Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 6→13 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T08:11:55.703Z"
+    },
+    {
+      "id": "bug-150",
+      "timestamp": "2026-07-16T09:43:26.668Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Had \"(?:计算|估算|预测|评价).*(?:公式|模式|方法|如下)[：:]\\s*$\"",
+      "fix": "Changed to \"(?:计算|估算|预测|评价).*?(?:公式|模式|方法|如下)[：:]\\s*$\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-16T09:46:36.934Z"
+    },
+    {
+      "id": "bug-151",
+      "timestamp": "2026-07-16T10:05:46.841Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Had \"^\\**表\\s*\\d[\\d.\\-]*\\**$\"",
+      "fix": "Changed to \"^\\**表\\s*\\d[\\d.\\-]*(?:[（(][^)）]*[)）])?\\**$\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T10:05:46.841Z"
+    },
+    {
+      "id": "bug-152",
+      "timestamp": "2026-07-16T11:22:11.039Z",
+      "error_message": "Missing await",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T11:22:11.040Z"
+    },
+    {
+      "id": "bug-153",
+      "timestamp": "2026-07-16T11:26:11.690Z",
+      "error_message": "Wrong reference: space should be button",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Used \"space\" instead of \"button\"",
+      "fix": "Changed space → button",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T11:26:11.690Z"
+    },
+    {
+      "id": "bug-154",
+      "timestamp": "2026-07-16T11:32:23.204Z",
+      "error_message": "Wrong reference: 80px should be 32px",
+      "file": "web/src/views/DomainFactoryView.vue",
+      "root_cause": "Used \"80px\" instead of \"32px\"",
+      "fix": "Changed 80px → 32px",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T11:32:23.204Z"
+    },
+    {
+      "id": "bug-155",
+      "timestamp": "2026-07-16T11:49:11.686Z",
+      "error_message": "Null/undefined access in ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check) | Also: <a-textarea v-model:value=\"selectedParagraph.content\" :auto-",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-16T11:49:17.625Z"
+    },
+    {
+      "id": "bug-156",
+      "timestamp": "2026-07-16T12:00:22.989Z",
+      "error_message": "CSS fix: max-height",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "max-height: calc(1.5em * 10) → 15em",
+      "fix": "Changed max-height: calc(1.5em * 10) → 15em",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T12:00:22.989Z"
+    },
+    {
+      "id": "bug-157",
+      "timestamp": "2026-07-16T12:57:37.355Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T12:57:37.355Z"
+    },
+    {
+      "id": "bug-158",
+      "timestamp": "2026-07-16T12:58:10.452Z",
+      "error_message": "Missing await",
+      "file": "backend/server/routers/domain_factory_router.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T12:58:10.452Z"
+    },
+    {
+      "id": "bug-159",
+      "timestamp": "2026-07-16T13:01:25.696Z",
+      "error_message": "Missing error handling in unknown",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T13:01:25.696Z"
+    },
+    {
+      "id": "bug-160",
+      "timestamp": "2026-07-16T13:01:55.542Z",
+      "error_message": "Null/undefined access in ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check) | Also: <div v-if=\"validationReport && !validationReport.passed\" cla; ⚠️ 校验未通过（{{ validationReport.summary.total_errors }} 个错误），建议",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-16T13:02:30.176Z"
+    },
+    {
+      "id": "bug-161",
+      "timestamp": "2026-07-16T13:02:01.530Z",
+      "error_message": "Missing guard clause",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "No early return/throw for edge case: !paraId",
+      "fix": "Added guard clause: if (!paraId)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T13:02:01.530Z"
+    },
+    {
+      "id": "bug-162",
+      "timestamp": "2026-07-16T13:02:13.731Z",
+      "error_message": "CSS fix: margin-bottom",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "margin-bottom: 12px → 4px",
+      "fix": "Changed margin-bottom: 12px → 4px",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 4,
+      "last_seen": "2026-07-16T13:07:38.077Z"
+    },
+    {
+      "id": "bug-163",
+      "timestamp": "2026-07-16T13:11:22.957Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 7→4 lines (3 removed) | Also: let result = parameterParagraphs.value; if (showOnlyUnreviewed.value) { | Also: <a-switch v-model:checked=\"showOnlyUnreviewed\" siz; <span style=\"font-size: 11px; color: var(--gray-50",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-07-16T13:11:56.687Z"
+    },
+    {
+      "id": "bug-164",
+      "timestamp": "2026-07-16T13:23:59.535Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Had 'generalize'",
+      "fix": "Changed to 'entities'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 5,
+      "last_seen": "2026-07-16T13:26:59.101Z"
+    },
+    {
+      "id": "bug-165",
+      "timestamp": "2026-07-16T13:24:04.461Z",
+      "error_message": "CSS fix: parse",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "parse: false, generalize: false, entities: false, commit: false → false, entities: false, commit: false",
+      "fix": "Changed parse: false, generalize: false, entities: false, commit: false → false, entities: false, commit: false",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 7,
+      "last_seen": "2026-07-16T13:31:52.624Z"
+    },
+    {
+      "id": "bug-166",
+      "timestamp": "2026-07-16T13:26:25.529Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 8→33 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T13:26:25.529Z"
+    },
+    {
+      "id": "bug-167",
+      "timestamp": "2026-07-16T13:31:58.150Z",
+      "error_message": "Wrong reference: top should be bar",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Used \"top\" instead of \"bar\"",
+      "fix": "Changed top → bar",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T13:31:58.150Z"
+    },
+    {
+      "id": "bug-168",
+      "timestamp": "2026-07-16T13:34:32.747Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "21 lines replaced/restructured",
+      "fix": "Rewrote 27→6 lines (21 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T13:34:32.747Z"
+    },
+    {
+      "id": "bug-169",
+      "timestamp": "2026-07-16T13:43:57.359Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "22 lines replaced/restructured",
+      "fix": "Rewrote 29→5 lines (22 removed) | Also: if (editTab.value === 'json') {; editTab.value = 'form' | Also: <a-button v-if=\"selectedParagraph\" size=\"small\" :t; {{ detailEditMode ? '保存' : 'JSON' }}",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-07-16T13:46:38.183Z"
+    },
+    {
+      "id": "bug-170",
+      "timestamp": "2026-07-16T13:44:26.648Z",
+      "error_message": "Wrong reference: editTab should be jsonEditValue",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Used \"editTab\" instead of \"jsonEditValue\"",
+      "fix": "Changed editTab → jsonEditValue",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T13:44:26.648Z"
+    },
+    {
+      "id": "bug-171",
+      "timestamp": "2026-07-16T13:49:15.331Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Had \"selectedParagraph && reviewedParagraphIds.has(sel",
+      "fix": "Changed to \"selectedParagraph\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T13:49:15.331Z"
+    },
+    {
+      "id": "bug-172",
+      "timestamp": "2026-07-16T13:56:49.957Z",
+      "error_message": "Null/undefined access in ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T13:56:49.957Z"
+    },
+    {
+      "id": "bug-173",
+      "timestamp": "2026-07-16T13:59:08.597Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 7→3 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T13:59:08.597Z"
+    },
+    {
+      "id": "bug-174",
+      "timestamp": "2026-07-16T13:59:57.558Z",
+      "error_message": "CSS fix: padding",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "padding: 16px 20px → 0 20px",
+      "fix": "Changed padding: 16px 20px → 0 20px",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T13:59:57.558Z"
+    },
+    {
+      "id": "bug-175",
+      "timestamp": "2026-07-16T14:06:34.946Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Had \"selectedParagraph\"",
+      "fix": "Changed to \"13\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-16T14:09:12.866Z"
+    },
+    {
+      "id": "bug-176",
+      "timestamp": "2026-07-16T14:21:41.355Z",
+      "error_message": "CSS fix: margin-bottom, X",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "margin-bottom: 4px → 4px\">Slot ({{ selectedParagraph.template.slots.length; X: size=\"12\" /></a-button> → size=\"11\" /></a-button>",
+      "fix": "Changed margin-bottom: 4px → 4px\">Slot ({{ selectedParagraph.template.slots.length; X: size=\"12\" /></a-button> → size=\"11\" /></a-button>",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-16T14:21:50.427Z"
+    },
+    {
+      "id": "bug-177",
+      "timestamp": "2026-07-16T14:27:23.139Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "14 lines replaced/restructured",
+      "fix": "Rewrote 29→13 lines (14 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T14:27:23.139Z"
+    },
+    {
+      "id": "bug-178",
+      "timestamp": "2026-07-16T14:41:33.660Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 9→16 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T14:41:33.660Z"
+    },
+    {
+      "id": "bug-179",
+      "timestamp": "2026-07-16T14:52:34.516Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 6→7 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T14:52:34.516Z"
+    },
+    {
+      "id": "bug-180",
+      "timestamp": "2026-07-16T15:08:24.955Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T15:08:24.955Z"
+    },
+    {
+      "id": "bug-181",
+      "timestamp": "2026-07-16T15:26:04.055Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Had \"loadUnrecognizedEntities(taskDetail?.id)\"",
+      "fix": "Changed to \"font-size: 13px\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-16T15:28:30.901Z"
+    },
+    {
+      "id": "bug-182",
+      "timestamp": "2026-07-16T15:39:01.438Z",
+      "error_message": "Null/undefined access in ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T15:39:01.438Z"
+    },
+    {
+      "id": "bug-183",
+      "timestamp": "2026-07-16T15:39:10.659Z",
+      "error_message": "CSS fix: selectedRowKeys",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "selectedRowKeys: selectedEntities.map(e => e.entity_key || e.name_cn || e.name), → entitySelectedRowKeys,",
+      "fix": "Changed selectedRowKeys: selectedEntities.map(e => e.entity_key || e.name_cn || e.name), → entitySelectedRowKeys,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T15:39:10.659Z"
+    },
+    {
+      "id": "bug-184",
+      "timestamp": "2026-07-16T15:47:31.010Z",
+      "error_message": "Wrong reference: entity_key should be _row_id",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Used \"entity_key\" instead of \"_row_id\"",
+      "fix": "Changed entity_key → _row_id",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T15:47:31.010Z"
+    },
+    {
+      "id": "bug-185",
+      "timestamp": "2026-07-16T15:55:49.568Z",
+      "error_message": "Wrong return value",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Was returning: loadingUnrecognizedEntities.value = true",
+      "fix": "Now returns: if (!force && entitiesLoadedForTask.value === task",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T15:55:49.568Z"
+    },
+    {
+      "id": "bug-186",
+      "timestamp": "2026-07-16T15:56:04.962Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Had \"loadUnrecognizedEntities(taskDetail?.id)\"",
+      "fix": "Changed to \"loadUnrecognizedEntities(taskDetail?.id, true)\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T15:56:04.962Z"
+    },
+    {
+      "id": "bug-187",
+      "timestamp": "2026-07-16T16:04:05.161Z",
+      "error_message": "CSS fix: selectedRowKeys",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "selectedRowKeys: entitySelectedRowKeys, → entitySelectedRowKeys, onChange: onEntitySelectChange",
+      "fix": "Changed selectedRowKeys: entitySelectedRowKeys, → entitySelectedRowKeys, onChange: onEntitySelectChange",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T16:04:05.161Z"
+    },
+    {
+      "id": "bug-188",
+      "timestamp": "2026-07-16T16:04:11.918Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 4→7 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T16:04:11.918Z"
+    },
+    {
+      "id": "bug-189",
+      "timestamp": "2026-07-16T16:04:23.558Z",
+      "error_message": "Wrong return value",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Was returning: if (!force && entitiesLoadedForTask.value === task",
+      "fix": "Now returns: if (!force && entitiesLoadedForTask.value === task",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-16T16:04:23.558Z"
+    },
+    {
+      "id": "bug-190",
+      "timestamp": "2026-07-16T16:10:26.898Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Had \"{ pageSize: 10 }\"",
+      "fix": "Changed to \"{ pageSize: 10, showSizeChanger: true, showTotal:",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-16T16:10:41.018Z"
+    },
+    {
+      "id": "bug-191",
+      "timestamp": "2026-07-17T01:01:17.033Z",
+      "error_message": "Wrong reference: ref should be computed",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Used \"ref\" instead of \"computed\"",
+      "fix": "Changed ref → computed",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T01:01:17.033Z"
+    },
+    {
+      "id": "bug-192",
+      "timestamp": "2026-07-17T01:02:49.192Z",
+      "error_message": "CSS fix: selectedRowKeys",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "selectedRowKeys: entitySelectedRowKeys, onChange: onEntitySelectChange → entitySelectedRowKeys,",
+      "fix": "Changed selectedRowKeys: entitySelectedRowKeys, onChange: onEntitySelectChange → entitySelectedRowKeys,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T01:02:49.192Z"
+    },
+    {
+      "id": "bug-193",
+      "timestamp": "2026-07-17T01:11:48.727Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 3→5 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T01:11:48.727Z"
+    },
+    {
+      "id": "bug-194",
+      "timestamp": "2026-07-17T01:16:02.590Z",
+      "error_message": "Wrong reference: entitySelectedRowKeys should be getSelectedRowKeys",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Used \"entitySelectedRowKeys\" instead of \"getSelectedRowKeys\"",
+      "fix": "Changed entitySelectedRowKeys → getSelectedRowKeys",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T01:16:02.590Z"
+    },
+    {
+      "id": "bug-195",
+      "timestamp": "2026-07-17T01:18:28.476Z",
+      "error_message": "CSS fix: selectedRowKeys",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "selectedRowKeys: getSelectedRowKeys(entities), → selectedEntities.map(e => e._row_id),",
+      "fix": "Changed selectedRowKeys: getSelectedRowKeys(entities), → selectedEntities.map(e => e._row_id),",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-17T01:20:44.885Z"
+    },
+    {
+      "id": "bug-196",
+      "timestamp": "2026-07-17T03:31:45.203Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/server/coal_eia_entity_types.json",
+      "root_cause": "Had \"基础工程实体\"",
+      "fix": "Changed to \"project_basic\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "json"
+      ],
+      "related_bugs": [],
+      "occurrences": 4,
+      "last_seen": "2026-07-17T03:32:36.986Z"
+    },
+    {
+      "id": "bug-197",
+      "timestamp": "2026-07-17T03:33:40.014Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/services/domain_entity_service.py",
+      "root_cause": "12 lines replaced/restructured",
+      "fix": "Rewrote 27→39 lines (12 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T03:33:40.014Z"
+    },
+    {
+      "id": "bug-198",
+      "timestamp": "2026-07-17T03:35:45.425Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Had \"slot-chip-ref\"",
+      "fix": "Changed to \"slot-chip-ref bound\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T03:35:45.425Z"
+    },
+    {
+      "id": "bug-199",
+      "timestamp": "2026-07-17T03:35:54.791Z",
+      "error_message": "CSS fix: color",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "color: #1890ff → var(--gray-400, #bfbfbf)",
+      "fix": "Changed color: #1890ff → var(--gray-400, #bfbfbf)",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T03:35:54.791Z"
+    },
+    {
+      "id": "bug-200",
+      "timestamp": "2026-07-17T03:37:05.555Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/src/views/DomainEntityBuilderView.vue",
+      "root_cause": "Had '基础工程实体'",
+      "fix": "Changed to 'project_basic'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T03:37:05.555Z"
+    },
+    {
+      "id": "bug-201",
+      "timestamp": "2026-07-17T03:38:04.595Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/server/routers/entity_type_router.py",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 19→26 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T03:38:04.595Z"
+    },
+    {
+      "id": "bug-202",
+      "timestamp": "2026-07-17T03:38:09.010Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/repositories/domain_entity_repository.py",
+      "root_cause": "11 lines replaced/restructured",
+      "fix": "Rewrote 26→38 lines (11 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T03:38:09.010Z"
+    },
+    {
+      "id": "bug-203",
+      "timestamp": "2026-07-17T03:46:15.488Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T03:46:15.488Z"
+    },
+    {
+      "id": "bug-204",
+      "timestamp": "2026-07-17T03:50:33.634Z",
+      "error_message": "Missing await",
+      "file": "backend/server/routers/domain_factory_router.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T03:50:33.634Z"
+    },
+    {
+      "id": "bug-205",
+      "timestamp": "2026-07-17T03:50:40.542Z",
+      "error_message": "Missing error handling in unknown",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T03:50:40.542Z"
+    },
+    {
+      "id": "bug-206",
+      "timestamp": "2026-07-17T04:15:16.105Z",
+      "error_message": "Null/undefined access in ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T04:15:16.105Z"
+    },
+    {
+      "id": "bug-207",
+      "timestamp": "2026-07-17T04:22:14.472Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Had \"loadUnrecognizedEntities(taskDetail?.id, true)\"",
+      "fix": "Changed to \"triggerEntityDiscovery\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T04:22:14.472Z"
+    },
+    {
+      "id": "bug-208",
+      "timestamp": "2026-07-17T04:46:45.540Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "21 lines replaced/restructured",
+      "fix": "Rewrote 66→29 lines (21 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T04:46:45.540Z"
+    },
+    {
+      "id": "bug-209",
+      "timestamp": "2026-07-17T05:16:52.697Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "10 lines replaced/restructured",
+      "fix": "Rewrote 61→96 lines (10 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T05:16:52.697Z"
+    },
+    {
+      "id": "bug-210",
+      "timestamp": "2026-07-17T05:26:43.428Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "9 lines replaced/restructured",
+      "fix": "Rewrote 45→57 lines (9 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T05:26:43.428Z"
+    },
+    {
+      "id": "bug-211",
+      "timestamp": "2026-07-17T05:31:44.783Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 11→18 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T05:31:44.783Z"
+    },
+    {
+      "id": "bug-212",
+      "timestamp": "2026-07-17T08:17:06.846Z",
+      "error_message": "Missing error handling in unknown",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T08:17:06.846Z"
+    },
+    {
+      "id": "bug-213",
+      "timestamp": "2026-07-17T08:28:13.815Z",
+      "error_message": "CSS fix: margin-bottom",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "margin-bottom: 4px\">泛化模板</div> → 4px\">泛化模板 <span style=\"font-weight: normal",
+      "fix": "Changed margin-bottom: 4px\">泛化模板</div> → 4px\">泛化模板 <span style=\"font-weight: normal",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T08:28:13.815Z"
+    },
+    {
+      "id": "bug-214",
+      "timestamp": "2026-07-17T08:41:00.902Z",
+      "error_message": "Wrong operator: === should be >=",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Used \"===\" instead of \">=\"",
+      "fix": "Changed operator === → >=",
+      "tags": [
+        "auto-detected",
+        "operator-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T08:41:00.902Z"
+    },
+    {
+      "id": "bug-215",
+      "timestamp": "2026-07-17T08:48:46.291Z",
+      "error_message": "CSS fix: background, border-radius, padding",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "background: #ffa940 → #fff; border-radius: 3px → 6px; padding: 0 2px → 4px",
+      "fix": "Changed background: #ffa940 → #fff; border-radius: 3px → 6px; padding: 0 2px → 4px",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T08:48:46.291Z"
+    },
+    {
+      "id": "bug-216",
+      "timestamp": "2026-07-17T09:39:12.120Z",
+      "error_message": "Missing error handling in unknown",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T09:39:12.120Z"
+    },
+    {
+      "id": "bug-217",
+      "timestamp": "2026-07-17T15:06:11.751Z",
+      "error_message": "Wrong reference: Step should be x",
+      "file": "docs/superpowers/plans/2026-07-17-regulation-library-plan.md",
+      "root_cause": "Used \"Step\" instead of \"x\"",
+      "fix": "Changed Step → x",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-17T15:06:11.751Z"
+    },
+    {
+      "id": "bug-218",
+      "timestamp": "2026-07-20T01:48:58.153Z",
+      "error_message": "CSS fix: margin-top",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "margin-top: 8px\"> → 6px",
+      "fix": "Changed margin-top: 8px\"> → 6px",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T01:48:58.153Z"
+    },
+    {
+      "id": "bug-219",
+      "timestamp": "2026-07-20T02:28:17.591Z",
+      "error_message": "Missing guard clause",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "No early return/throw for edge case: !isResizingTableDetail.value",
+      "fix": "Added guard clause: if (!isResizingTableDetail.value)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T02:28:17.591Z"
+    },
+    {
+      "id": "bug-220",
+      "timestamp": "2026-07-20T02:28:26.221Z",
+      "error_message": "CSS fix: 1",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "1: 原始表格 (默认展开) --> → 原始表格 (可拖拽调整高度) -->",
+      "fix": "Changed 1: 原始表格 (默认展开) --> → 原始表格 (可拖拽调整高度) -->",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T02:28:26.221Z"
+    },
+    {
+      "id": "bug-221",
+      "timestamp": "2026-07-20T02:33:54.131Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/src/utils/kb_utils.js",
+      "root_cause": "Had 'Yuxi'",
+      "fix": "Changed to 'Native'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T02:33:54.131Z"
+    },
+    {
+      "id": "bug-222",
+      "timestamp": "2026-07-20T02:38:17.026Z",
+      "error_message": "CSS fix: background, border, box-shadow",
+      "file": "web/src/views/DomainFactoryView.vue",
+      "root_cause": "background: #fff → var(--gray-0); border: 1px solid var(--gray-150, #e8ecf1) → 1px solid var(--gray-150); box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) → 0 1px 3px rgba(0, 0, 0, 0.04)",
+      "fix": "Changed background: #fff → var(--gray-0); border: 1px solid var(--gray-150, #e8ecf1) → 1px solid var(--gray-150); box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) → 0 1px 3px rgba(0, 0, 0, 0.04)",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 4,
+      "last_seen": "2026-07-20T02:38:38.409Z"
+    },
+    {
+      "id": "bug-223",
+      "timestamp": "2026-07-20T02:38:49.923Z",
+      "error_message": "CSS fix: background",
+      "file": "web/src/views/PromptConfigView.vue",
+      "root_cause": "background: #fff → var(--gray-0)",
+      "fix": "Changed background: #fff → var(--gray-0)",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T02:38:49.923Z"
+    },
+    {
+      "id": "bug-224",
+      "timestamp": "2026-07-20T02:38:53.242Z",
+      "error_message": "Wrong reference: fff should be var",
+      "file": "web/src/views/PromptConfigView.vue",
+      "root_cause": "Used \"fff\" instead of \"var\"",
+      "fix": "Changed fff → var",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T02:38:53.242Z"
+    },
+    {
+      "id": "bug-225",
+      "timestamp": "2026-07-20T02:39:01.691Z",
+      "error_message": "CSS fix: background",
+      "file": "web/src/components/domain-factory/DataSourceDashboard.vue",
+      "root_cause": "background: #fff → var(--gray-0)",
+      "fix": "Changed background: #fff → var(--gray-0)",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 5,
+      "last_seen": "2026-07-20T02:39:22.984Z"
+    },
+    {
+      "id": "bug-226",
+      "timestamp": "2026-07-20T02:39:36.226Z",
+      "error_message": "CSS fix: background",
+      "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+      "root_cause": "background: #fff → var(--gray-0)",
+      "fix": "Changed background: #fff → var(--gray-0)",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 9,
+      "last_seen": "2026-07-20T02:40:42.008Z"
+    },
+    {
+      "id": "bug-227",
+      "timestamp": "2026-07-20T02:41:00.829Z",
+      "error_message": "CSS fix: color, background",
+      "file": "web/src/views/DomainEntityBuilderView.vue",
+      "root_cause": "color: var(--success-color, #52c41a) → var(--color-success-500); background: #f6ffed → var(--color-success-50)",
+      "fix": "Changed color: var(--success-color, #52c41a) → var(--color-success-500); background: #f6ffed → var(--color-success-50)",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T02:41:00.829Z"
+    },
+    {
+      "id": "bug-228",
+      "timestamp": "2026-07-20T03:38:38.985Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/src/views/HomeView.vue",
+      "root_cause": "Had \"subtitle\"",
+      "fix": "Changed to \"subtitle-switch\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T03:38:38.985Z"
+    },
+    {
+      "id": "bug-229",
+      "timestamp": "2026-07-20T03:38:56.087Z",
+      "error_message": "Missing guard clause",
+      "file": "web/src/views/HomeView.vue",
+      "root_cause": "No early return/throw for edge case: subtitleTimer",
+      "fix": "Added guard clause: if (subtitleTimer)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T03:38:56.087Z"
+    },
+    {
+      "id": "bug-230",
+      "timestamp": "2026-07-20T04:16:40.388Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/agents/toolkits/buildin/tools.py",
+      "root_cause": "9 lines replaced/restructured",
+      "fix": "Rewrote 23→11 lines (9 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T04:16:40.388Z"
+    },
+    {
+      "id": "bug-231",
+      "timestamp": "2026-07-20T04:27:19.114Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/agents/toolkits/buildin/tools.py",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 29→59 lines (2 removed) | Also: - writing: 起草中(默认); - done: 终稿锁定",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-20T04:27:47.753Z"
+    },
+    {
+      "id": "bug-124",
+      "timestamp": "2026-07-20T04:38:26.555271Z",
+      "error_message": "环评写作流程无成稿输出：save_chapter status 60% 标错(writing/review)，编排者 75% 跳过 assemble_report（tool_calls 表取证）",
+      "file": "backend/package/yuxi/agents/toolkits/buildin/tools.py + repositories/agent_repository.py + skills/buildin/coal-eia-writer/SKILL.md",
+      "root_cause": "模型合规问题(prompt 已正确，DB 写手 system_prompt 含 done 铁律)。assemble_report 只合并 done→排除 review 完稿；save_chapter 无文件反馈→模型\"产出文件\"先验诱使绕过；编排者 probabilistic 跳过 assemble。",
+      "fix": "A) assemble_report 合并 done+review(语义校正：review=完稿待审)；B) C3: save_chapter 加 runtime+SaveChapterInput schema，done/review 顺带写 preview 文件返 preview_path(对齐产出文件先验)；C) SKILL.md 派发铁律：每次 task 描述必须含 status=done 指令；D) agent_repository 补 3 写手 SYSTEM_PROMPT 默认值(新库)；删 _write_assembled_to_sandbox 死代码。单元测试 13 passed。",
+      "tags": [
+        "writer-compliance",
+        "assemble_report",
+        "save_chapter",
+        "C3",
+        "model-compliance",
+        "eia-writer",
+        "P0"
+      ],
+      "related_bugs": [
+        "bug-116"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T04:38:26.555318Z"
+    },
+    {
+      "id": "bug-233",
+      "timestamp": "2026-07-20T04:40:34.837Z",
+      "error_message": "Function not marked async",
+      "file": "backend/test/unit/toolkits/test_assemble_report_e2e.py",
+      "root_cause": "Function uses await but wasn't declared async",
+      "fix": "Added async modifier",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T04:40:34.837Z"
+    },
+    {
+      "id": "bug-125",
+      "timestamp": "2026-07-20T04:52:12.787745Z",
+      "error_message": "Vue warn: Failed to resolve component X / CircleUser（SettingsModal 图标未渲染）",
+      "file": "web/src/components/SettingsModal.vue",
+      "root_cause": "模板 line 16 用 <X>、line 28 用 <CircleUser>，但 line 167-174 的 lucide-vue-next import 块只导入 Key/Settings/SlidersHorizontal/SquareTerminal/User/Users，漏了 X 和 CircleUser。",
+      "fix": "已修：SettingsModal.vue import 块补 CircleUser, X（lucide-vue-next），build 通过",
+      "tags": [
+        "vue",
+        "missing-import",
+        "lucide-icon",
+        "cosmetic",
+        "walkthrough-found"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T05:20:41.667310Z"
+    },
+    {
+      "id": "bug-126",
+      "timestamp": "2026-07-20T05:20:41.667310Z",
+      "error_message": "COMMIT_PARTIAL/COMMIT_FAILED 任务在任务中心显示为 pending（DOMAIN_FACTORY_STATUS_MAP 缺这两项）",
+      "file": "backend/server/routers/domain_factory_router.py",
+      "root_cause": "DOMAIN_FACTORY_STATUS_MAP 只覆盖 7 个状态，COMMIT_PARTIAL/COMMIT_FAILED 未列；_map_df_status_to_tasker 的 .get(df_status,{}).get(\"status\",\"pending\") 回退为 pending，入库部分失败/失败的任务看起来还在等待。",
+      "fix": "已修：STATUS_MAP 补 COMMIT_PARTIAL(success,100,\"部分阶段有警告\") + COMMIT_FAILED(failed,100,\"入库失败\")。router 解析通过。",
+      "tags": [
+        "domain-factory",
+        "status-mapping",
+        "task-center",
+        "P1"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T05:20:41.667310Z"
+    },
+    {
+      "id": "bug-236",
+      "timestamp": "2026-07-20T05:21:43.890Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/vibe/2026-07-20-eia-system-deep-review.md",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 12→9 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T05:21:43.890Z"
+    },
+    {
+      "id": "bug-237",
+      "timestamp": "2026-07-20T11:02:12.732Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/agents/toolkits/buildin/tools.py",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 26→36 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T11:02:12.732Z"
+    },
+    {
+      "id": "bug-238",
+      "timestamp": "2026-07-20T11:04:12.202Z",
+      "error_message": "Incorrect value in code",
+      "file": "backend/package/yuxi/agents/toolkits/buildin/tools.py",
+      "root_cause": "Had \"图谱查询 list_chapter_keys 失败,回退 DB: {e}\"",
+      "fix": "Changed to \"[graph-degraded] list_chapter_keys 图谱查询失败,回退 DB: ",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-20T11:05:32.640Z"
+    },
+    {
+      "id": "bug-239",
+      "timestamp": "2026-07-20T11:07:35.845Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/test/unit/toolkits/test_graph_fallback_visibility.py",
+      "root_cause": "12 lines replaced/restructured",
+      "fix": "Rewrote 22→8 lines (12 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T11:07:35.845Z"
+    },
+    {
+      "id": "bug-240",
+      "timestamp": "2026-07-20T11:09:44.307Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 6→14 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T11:09:44.307Z"
+    },
+    {
+      "id": "bug-241",
+      "timestamp": "2026-07-20T11:11:53.969Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T11:11:53.969Z"
+    },
+    {
+      "id": "bug-242",
+      "timestamp": "2026-07-20T11:16:50.104Z",
+      "error_message": "Missing await",
+      "file": "backend/package/yuxi/agents/toolkits/buildin/tools.py",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T11:16:50.104Z"
+    },
+    {
+      "id": "bug-127",
+      "timestamp": "2026-07-20T11:19:48.694664Z",
+      "error_message": "get_chapter_outline/get_templates/list_chapter_keys 图谱报错时静默回退 DB，agent/用户无感知",
+      "file": "backend/package/yuxi/agents/toolkits/buildin/tools.py",
+      "root_cause": "三个工具 try graph → except 仅 logger.warning → 回退 DB，返回值无任何降级标记，agent 拿到陈旧 DB 数据不知情。",
+      "fix": "get_chapter_outline 返回加 _source(graph|db|db_fallback) + 图谱报错时加 _degraded_note（让 agent 转告用户）；get_templates/list_chapter_keys 改 [graph-degraded] 可 grep 标记 + 上下文。3 单测 test_graph_fallback_visibility.py。",
+      "tags": [
+        "graph",
+        "fallback",
+        "observability",
+        "P1"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T11:19:48.694664Z"
+    },
+    {
+      "id": "bug-128",
+      "timestamp": "2026-07-20T11:19:48.694664Z",
+      "error_message": "泛化 LLM prompt 未注入实体属性（实体生命周期 Phase 4 缺失）",
+      "file": "backend/package/yuxi/services/domain_factory_service.py",
+      "root_cause": "generalize_paragraphs 调用处传 schema_variables=[]（空），泛化 prompt 拿到\"无特定 Schema 变量\"，slot 完全自由提取不参考已有实体属性。",
+      "fix": "新增 _load_entity_schema_variables(domain_code, max_items=60)：从 DomainEntityRepository.list_all 拍平实体属性为 {key,data_type,label,prompt}（cap 60 控 token），接入泛化调用处。Phase 5（Tab3 批量确认）核实已实现（confirm_proposed_entities + 前端批量按钮）。",
+      "tags": [
+        "entity-lifecycle",
+        "phase4",
+        "generalize",
+        "P2"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T11:19:48.694664Z"
+    },
+    {
+      "id": "bug-129",
+      "timestamp": "2026-07-20T11:19:48.694664Z",
+      "error_message": "写手无查标准限值工具（规范库 §8 缺失）",
+      "file": "backend/package/yuxi/agents/toolkits/buildin/tools.py",
+      "root_cause": "规范库富化产出 standard_indicators 表 + RegDocument 图，但写手只能 query_kb（非结构化 chunks），拿不到权威限值结构化数据，易编造。",
+      "fix": "新增 buildin 工具 lookup_standard_indicator(pollutant, doc_code?) 调 regulation_library.query_indicators 返回限值行；扩展缺失/无匹配/pollutant 必填三路兜底。§7（条款引用匹配）核实已被 compliance-checker skill 覆盖（KB 原文 + 标准引用正确性校验）。3 单测 test_lookup_standard_indicator.py。",
+      "tags": [
+        "regulation-library",
+        "writer-tool",
+        "section8",
+        "P2"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T11:19:48.694664Z"
+    },
+    {
+      "id": "bug-246",
+      "timestamp": "2026-07-20T11:20:35.232Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/vibe/2026-07-20-eia-system-deep-review.md",
+      "root_cause": "8 lines replaced/restructured",
+      "fix": "Rewrote 9→13 lines (8 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-20T11:20:35.232Z"
+    },
+    {
+      "id": "bug-247",
+      "timestamp": "2026-08-19T15:50:23.932Z",
+      "error_message": "Significant refactor of ",
+      "file": ".gitignore",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 7→4 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "unknown"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-19T15:50:23.932Z"
+    },
+    {
+      "id": "bug-248",
+      "timestamp": "2026-08-19T15:50:25.122Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/server/routers/__init__.py",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 8→4 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-19T15:50:25.122Z"
+    },
+    {
+      "id": "bug-249",
+      "timestamp": "2026-08-19T15:54:41.915Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/apis/index.js",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 6→3 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-19T15:54:41.915Z"
+    },
+    {
+      "id": "bug-250",
+      "timestamp": "2026-08-19T15:54:42.886Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/layouts/AppLayout.vue",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 8→5 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-19T15:54:42.886Z"
+    },
+    {
+      "id": "bug-251",
+      "timestamp": "2026-08-19T15:57:04.991Z",
+      "error_message": "Significant refactor of ",
+      "file": "backend/package/yuxi/knowledge/parser/unified.py",
+      "root_cause": "12 lines replaced/restructured",
+      "fix": "Rewrote 26→10 lines (12 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-19T15:57:04.991Z"
+    },
+    {
+      "id": "bug-252",
+      "timestamp": "2026-08-19T15:57:17.618Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/TaskCenterDrawer.vue",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 8→4 lines (4 removed) | Also: <<<<<<< HEAD; =======",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-08-19T15:57:21.069Z"
+    },
+    {
+      "id": "bug-253",
+      "timestamp": "2026-08-19T15:57:22.504Z",
+      "error_message": "CSS fix: rag_evaluation",
+      "file": "web/src/components/TaskCenterDrawer.vue",
+      "root_cause": "rag_evaluation: 'RAG 评估' → 'RAG 评估',",
+      "fix": "Changed rag_evaluation: 'RAG 评估' → 'RAG 评估',",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-19T15:57:22.504Z"
+    }
+  ]
+}
