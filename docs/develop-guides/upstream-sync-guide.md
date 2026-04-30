@@ -29,6 +29,19 @@ pisuan-custom ───→ 领域知识库工厂 + 本地化定制，基于最�
 
 # Linux/macOS
 bash scripts/sync-upstream.sh
+
+### 定时自动同步（Windows 任务计划）
+
+```powershell
+# 注册每日午夜 00:00 自动执行（以管理员身份运行一次即可）
+.\scripts\setup-scheduled-sync.ps1
+
+# 查看/管理任务
+taskschd.msc → 任务计划程序库 → PisuanAutoSync
+```
+
+- 无冲突 → 自动完成，日志写入 `scripts/logs/sync-YYYY-MM-DD.log`
+- 有冲突 → 自动中止，日志记录冲突文件清单，等待人工处理
 ```
 
 ### 手动（当脚本报冲突时）
