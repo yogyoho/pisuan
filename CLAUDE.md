@@ -6,6 +6,75 @@ Yuxi 是一个基于大模型的智能知识库与知识图谱智能体开发平
 架构代码地图见 [ARCHITECTURE.md](ARCHITECTURE.md)。修改不熟悉的模块前，先阅读其中的后端、前端、运行链路和架构不变量说明，再用符号搜索定位具体实现；该文档只维护相对稳定的系统边界，不替代细节文档或源码注释。
 
 ## 开发准则
+## 上游代码同步（双分支策略）
+
+本项目 fork 自 [xerrors/Yuxi](https://github.com/xerrors/Yuxi)，在此基础上进行领域知识库工厂扩展。
+
+- **`main`** → 纯净跟踪 `upstream/main`，禁止直接提交定制代码
+- **`pisuan-custom`** → 所有本地定制（领域工厂 + 品牌 + 主题），定期 rebase 到 main
+
+```bash
+# 上游发新版后执行同步
+.\scripts\sync-upstream.ps1    # Windows
+bash scripts/sync-upstream.sh  # Linux/macOS
+```
+
+详细的冲突解决规则和不可覆盖的定制清单见 [upstream-sync-guide.md](docs/develop-guides/upstream-sync-guide.md)。
+
+**关键约束**：以下文件在任何情况下禁止被上游覆盖：
+- `web/src/views/HomeView.vue` — pisuan 定制 Landing 首页
+- `web/src/views/LoginView.vue` — pisuan 定制登录页
+- `web/src/assets/css/base.css` / `base.dark.css` — 蓝色主题色
+- `backend/package/yuxi/config/static/info.template.yaml` — 华宇页脚
+
+## Commands
+
+```bash
+# 启动（需要 .env 文件）
+make up                    # 全量启动
+make up-lite               # 轻量启动（跳过知识库/图谱/评估等重依赖服务）
+
+# 查看日志
+docker logs api-dev --tail 100
+docker logs worker-dev --tail 100
+make logs
+
+# 后端代码格式化与检查（提交前必须执行）
+make format                # ruff format + ruff check + isort
+
+# 后端测试（在 Docker 容器中执行）
+docker exec api-dev pytest /app/test/unit/test_xxx.py          # 单个单元测试
+docker exec api-dev pytest /app/test/integration/api/           # 集成测试目录
+docker exec api-dev pytest /app/test/ -k "test_name"           # 按名称匹配
+
+# 前端（在 web/ 目录下）
+cd web && pnpm run format   # 格式化
+cd web && pnpm run lint     # Lint 检查
+cd web && pnpm run dev      # 本地开发（Docker 环境中通过热重载自动生效）
+
+# Python 语法验证（快速检查单个文件）
+python -c "import ast; ast.parse(open('path/to/file.py', encoding='utf-8').read()); print('OK')"
+```
+
+## Architecture
+
+后端分两个顶层边界：`backend/server`（HTTP 适配层）和 `backend/package/yuxi`（可复用业务包）。新增业务逻辑优先放 `yuxi` 包中，路由层只做请求解析、认证和响应装配。
+
+关键分层：
+- `server/routers` → HTTP 路由（薄层，按领域拆分，集中注册于 `__init__.py`）
+- `yuxi/services` → 用例层（串联 repositories、agents、knowledge）
+- `yuxi/repositories` → 数据库访问边界（SQLAlchemy，路由不应绕过 repository）
+- `yuxi/knowledge` → 知识库领域（`KnowledgeBaseManager` 分发到 LightRAG/Milvus/Dify 实现）
+- `yuxi/agents` → LangGraph 智能体体系（`BaseAgent` 基类 + `middlewares` 组合能力）
+- `yuxi/storage/postgres` → 数据模型与连接池
+
+前端 `web/src` 结构：
+- `apis` → 唯一后端接口封装位置（组件不直接拼接 URL）
+- `stores` → Pinia 状态
+- `views` → 页面入口，`components` → 可复用界面块
+- `composables` → 可组合逻辑（流式消息、事件订阅等）
+
+## Development Principles
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
