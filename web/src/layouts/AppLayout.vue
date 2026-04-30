@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed, provide, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
-import { GithubOutlined } from '@ant-design/icons-vue'
+
 import {
   BarChart3,
   ClipboardList,
@@ -313,18 +313,6 @@ provide('settingsModal', {
         />
       </div>
       <div class="foo">
-        <div class="github nav-item" @click.stop>
-          <a-tooltip placement="right" :open="sidebarCollapsed ? undefined : false">
-            <template #title>欢迎 Star</template>
-            <a href="https://github.com/xerrors/Yuxi" target="_blank" class="github-link">
-              <GithubOutlined class="icon" />
-              <span class="nav-text">GitHub</span>
-              <span v-if="githubStars > 0" class="github-stars">
-                <span class="star-count">{{ (githubStars / 1000).toFixed(1) }}k</span>
-              </span>
-            </a>
-          </a-tooltip>
-        </div>
         <div
           v-if="userStore.isAdmin"
           class="nav-item task-center"
@@ -442,7 +430,6 @@ div.header,
 
   .sidebar-brand,
   :deep(.conversation-nav-section:not(.sidebar-conversations)),
-  .github,
   .user-info {
     flex-shrink: 0;
   }
@@ -602,50 +589,6 @@ div.header,
       color: var(--main-color);
     }
 
-    &.github {
-      margin-bottom: 8px;
-      &:hover {
-        border-color: transparent;
-      }
-
-      .github-link {
-        display: flex;
-        align-items: center;
-        width: 100%;
-        min-width: 0;
-        color: inherit;
-        text-decoration: none;
-      }
-
-      .icon {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: @sidebar-icon-size;
-        line-height: 1;
-      }
-
-      .github-stars {
-        display: flex;
-        align-items: center;
-        max-width: 48px;
-        margin-left: auto;
-        overflow: hidden;
-        font-size: 12px;
-        color: var(--gray-600);
-        background-color: var(--gray-100);
-        padding: 2px 8px;
-        border-radius: 6px;
-        white-space: nowrap;
-        transition:
-          opacity 0.12s ease,
-          max-width 0.18s ease;
-
-        .star-count {
-          font-weight: 600;
-        }
-      }
-    }
     &.api-docs {
       padding: 10px 12px;
     }
@@ -782,18 +725,11 @@ div.header,
       width: @sidebar-item-height;
       padding: 0 10px;
 
-      .nav-text,
-      .github-stars {
+      .nav-text {
         max-width: 0;
         margin-left: 0;
         opacity: 0;
         pointer-events: none;
-      }
-
-      &.github {
-        .github-link {
-          justify-content: flex-start;
-        }
       }
 
       &.user-info {
