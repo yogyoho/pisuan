@@ -856,6 +856,18 @@ div.header,
       }
     }
 
+    &.task-center {
+      &:hover {
+        background-color: var(--main-20);
+        color: var(--main-color);
+
+        .icon,
+        :deep(.ant-badge) {
+          color: var(--main-color);
+        }
+      }
+    }
+
     &.api-docs {
       padding: 10px 12px;
     }
