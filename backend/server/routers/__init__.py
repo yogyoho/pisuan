@@ -46,8 +46,15 @@ if not _LITE_MODE:
     from server.routers.graph_router import graph
     from server.routers.knowledge_router import knowledge
     from server.routers.knowledge_eval_router import evaluation
+    from server.routers.knowledge_mindmap_router import mindmap
+    from server.routers.domain_factory_router import domain_factory
+    from server.routers.section_routing_router import section_routing
+    from server.routers.entity_type_router import entity_types
 
     # 知识库与图谱能力依赖较重，LITE 模式下跳过这组接口。
     router.include_router(knowledge)  # /api/knowledge/* 知识库管理与检索
     router.include_router(evaluation)  # /api/evaluation/* 知识库评估
     router.include_router(graph)  # /api/graph/* 图谱查询与管理
+    router.include_router(domain_factory)  # /api/domain-factory/* 领域知识工厂
+    router.include_router(section_routing)  # /api/section-routing/* 章节路由配置
+    router.include_router(entity_types)  # /api/entity-types/* 实体类型管理

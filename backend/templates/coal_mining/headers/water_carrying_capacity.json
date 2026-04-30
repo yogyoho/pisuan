@@ -1,0 +1,48 @@
+{
+  "template_id": "TPL_HEADER_WATER_CARRYING_CAPACITY_01",
+  "name": "水资源承载力分析章节",
+  "category": "header",
+  "domain": "coal_mining",
+  "priority": 90,
+  "match_rule": {
+    "strategy": "regex_anchor",
+    "regex": "^(?P<chapter_id>\\d+(?:\\.\\d+)*)\\s*(?P<topic_text>.*(水资源|供水|用水|取水|水平衡).*(承载力|供需|平衡|分析|评价).*)$",
+    "confidence_threshold": 0.82,
+    "fallback_keywords": ["水资源", "承载力", "供需", "平衡", "取水", "用水"]
+  },
+  "generalized_pattern": "[SECTION] {{chapter_id}} {{topic_text}}",
+  "slots": [
+    {
+      "name": "chapter_id",
+      "description": "章节编号",
+      "type": "String",
+      "is_variable": true,
+      "extraction_pattern": "\\d+(?:\\.\\d+)*"
+    },
+    {
+      "name": "topic_text",
+      "description": "水资源承载力主题文本",
+      "type": "String",
+      "is_anchor": true,
+      "semantic_check": ["水资源", "承载力", "供需", "平衡", "取水", "用水"],
+      "semantic_category": "water_carrying_capacity"
+    }
+  ],
+  "semantic_routing": {
+    "standard_code": "SEC_WATER_CARRYING_CAPACITY",
+    "category": "Environmental_Impact_Prediction",
+    "required_skills": [
+      "skill_water_balance_calc",
+      "skill_water_source_reliability",
+      "skill_intake_permit_check"
+    ],
+    "context_prompt_ref": ""
+  },
+  "metadata": {
+    "version": "1.0",
+    "tags": ["水资源", "承载力", "章节标题"],
+    "priority": 90
+  }
+}
+
+

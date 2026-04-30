@@ -15,6 +15,7 @@ export * from './skill_api' // Skills API
 export * from './tool_api' // 工具 API
 export * from './mention_api' // 提及搜索 API
 export * from './user_api' // 用户资源 API
+export * from './domain_factory_api' // 领域知识工厂 API
 
 // 导出基础工具函数
 export {

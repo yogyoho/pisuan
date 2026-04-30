@@ -10,7 +10,9 @@ import {
   FolderKanban,
   PanelLeftClose,
   PanelLeftOpen,
-  MessageCirclePlus
+  MessageCirclePlus,
+  Bot,
+  Layers
 } from 'lucide-vue-next'
 
 import { useConfigStore } from '@/stores/config'
@@ -40,9 +42,10 @@ const { activeCount: activeCountRef, isDrawerOpen } = storeToRefs(taskerStore)
 const { threads, currentThreadId, hasMoreThreads, isLoadingMoreThreads } =
   storeToRefs(chatThreadsStore)
 
-// Add state for GitHub stars
-const githubStars = ref(0)
-const isLoadingStars = ref(false)
+const layoutSettings = reactive({
+  showDebug: false,
+  useTopBar: false // 是否使用顶栏
+})
 
 // Add state for debug modal
 const showDebugModal = ref(false)
@@ -81,21 +84,6 @@ const getRemoteDatabase = async () => {
   }
 }
 
-// Fetch GitHub stars count
-const fetchGithubStars = async () => {
-  try {
-    isLoadingStars.value = true
-    // 公共API，可以直接使用fetch
-    const response = await fetch('https://api.github.com/repos/xerrors/Yuxi')
-    const data = await response.json()
-    githubStars.value = data.stargazers_count
-  } catch (error) {
-    console.error('获取GitHub stars失败:', error)
-  } finally {
-    isLoadingStars.value = false
-  }
-}
-
 onMounted(async () => {
   // 加载信息配置与知识库数据无依赖，可并行
   await Promise.all([infoStore.loadInfoConfig(), getRemoteDatabase()])
@@ -104,7 +92,6 @@ onMounted(async () => {
   if (userStore.isAdmin) {
     await getRemoteConfig()
     taskerStore.loadTasks()
-    fetchGithubStars() // Fetch GitHub stars on mount
   }
 })
 
@@ -161,6 +148,16 @@ const mainList = computed(() => {
       icon: BarChart3,
       activeIcon: BarChart3
     })
+
+    if (!isLiteMode) {
+      items.push({
+        name: '知识工厂',
+        path: '/domain-factory',
+        activePaths: ['/domain-factory'],
+        icon: Layers,
+        activeIcon: Layers
+      })
+    }
   }
 
   return items
@@ -328,30 +325,27 @@ provide('settingsModal', {
             </a>
           </a-tooltip>
         </div>
+        <div
+          v-if="userStore.isAdmin"
+          class="nav-item task-center"
+          :class="{ active: isDrawerOpen }"
+          @click="taskerStore.openDrawer()"
+        >
+          <a-tooltip placement="right">
+            <template #title>任务中心</template>
+            <a-badge
+              :count="activeTaskCount"
+              :overflow-count="99"
+              class="task-center-badge"
+              size="small"
+            >
+              <ClipboardList class="icon" size="22" />
+            </a-badge>
+          </a-tooltip>
+        </div>
         <!-- 用户信息组件 -->
-        <div class="nav-item user-info" @click.stop>
-          <UserInfoComponent :show-role="!sidebarCollapsed">
-            <template v-if="userStore.isAdmin" #actions>
-              <a-tooltip placement="top" title="任务中心">
-                <button
-                  class="user-task-center"
-                  :class="{ active: isDrawerOpen }"
-                  type="button"
-                  aria-label="任务中心"
-                  @click.stop="taskerStore.openDrawer()"
-                >
-                  <a-badge
-                    :count="activeTaskCount"
-                    :overflow-count="99"
-                    class="task-center-badge"
-                    size="small"
-                  >
-                    <ClipboardList class="icon" size="16" />
-                  </a-badge>
-                </button>
-              </a-tooltip>
-            </template>
-          </UserInfoComponent>
+        <div class="nav-item user-info">
+          <UserInfoComponent />
         </div>
       </div>
     </div>
@@ -652,7 +646,6 @@ div.header,
         }
       }
     }
-
     &.api-docs {
       padding: 10px 12px;
     }
@@ -807,6 +800,97 @@ div.header,
         padding: 0;
         :deep(.user-info-actions) {
           display: none;
+        }
+      }
+    }
+  }
+}
+
+.app-layout.use-top-bar {
+  flex-direction: column;
+}
+
+.header.top-bar {
+  flex-direction: row;
+  flex: 0 0 50px;
+  width: 100%;
+  height: 50px;
+  border-right: none;
+  border-bottom: 1px solid var(--main-40);
+  background-color: var(--main-20);
+  padding: 0 20px;
+  gap: 24px;
+
+  .logo {
+    width: fit-content;
+    height: 28px;
+    margin-right: 16px;
+    display: flex;
+    align-items: center;
+
+    a {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    img {
+      width: 28px;
+      height: 28px;
+      margin-right: 8px;
+    }
+  }
+
+  .nav {
+    flex-direction: row;
+    height: auto;
+    gap: 20px;
+  }
+
+  .nav-item {
+    flex-direction: row;
+    width: auto;
+    padding: 4px 16px;
+    margin: 0;
+
+    .icon {
+      margin-right: 8px;
+      font-size: 15px; // 减小图标大小
+      border: none;
+      outline: none;
+
+      &:focus,
+      &:active {
+        border: none;
+        outline: none;
+      }
+    }
+
+    .text {
+      margin-top: 0;
+      font-size: 15px;
+    }
+
+    &.theme-toggle-nav {
+      padding: 8px 12px;
+
+      .theme-toggle-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--gray-1000);
+        transition: color 0.2s ease-in-out;
+        cursor: pointer;
+
+        &:hover {
+          color: var(--main-color);
+        }
+      }
+
+      &.active {
+        .theme-toggle-icon {
+          color: var(--main-color);
         }
       }
     }

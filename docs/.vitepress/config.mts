@@ -6,7 +6,7 @@ import markdownItTaskCheckbox from 'markdown-it-task-checkbox'
 export default defineConfig({
   lang: 'zh-CN',
   title: "Yuxi",
-  description: "语析",
+  description: "EAI-FLow",
   base: '/Yuxi/',
   ignoreDeadLinks: [
     /localhost/,

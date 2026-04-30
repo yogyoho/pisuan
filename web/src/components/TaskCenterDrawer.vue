@@ -178,6 +178,14 @@ const taskFilterOptions = computed(() => [
         h('span', { class: 'filter-count' }, failedTaskCount.value)
       ]),
     value: 'failed'
+  },
+  {
+    label: () =>
+      h('span', { class: 'task-filter-option' }, [
+        '知识工厂',
+        h('span', { class: 'filter-count' }, tasks.value.filter(t => t.type === 'domain_factory').length)
+      ]),
+    value: 'domain_factory'
   }
 ])
 
@@ -190,6 +198,8 @@ const filteredTasks = computed(() => {
       return list.filter((task) => task.status === 'success')
     case 'failed':
       return list.filter((task) => FAILED_STATUSES.has(task.status))
+    case 'domain_factory':
+      return list.filter((task) => task.type === 'domain_factory')
     default:
       return list
   }
@@ -203,7 +213,9 @@ const TASK_TYPE_LABELS = {
   knowledge_ingest: '知识库导入',
   knowledge_rechunks: '文档重新分块',
   graph_task: '图谱处理',
-  agent_job: '智能体任务'
+  agent_job: '智能体任务',
+  domain_factory: '知识工厂报告解析',
+  general: '后台任务',
 }
 
 function taskCardClasses(task) {

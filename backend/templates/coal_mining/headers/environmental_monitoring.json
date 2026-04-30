@@ -1,0 +1,42 @@
+{
+  "template_id": "TPL_HEADER_ENV_MONITORING_01",
+  "domain": "coal_mining",
+  "category": "Environmental_Management",
+  "description": "环境监测章节标题模板",
+  "generalized_pattern": "[SECTION] {{chapter_id}} {{monitoring_topic_text}}",
+  "match_rule": {
+    "strategy": "regex_anchor",
+    "regex": "^(?P<chapter_id>\\d+(\\.\\d+)*)\\s*(?P<monitoring_topic_text>.*(环境监测|监测计划).*)$",
+    "confidence_threshold": 0.85,
+    "fallback_keywords": ["环境监测", "监测计划", "监测方案"]
+  },
+  "slots": [
+    {
+      "name": "chapter_id",
+      "description": "章节编号",
+      "type": "String",
+      "is_variable": true
+    },
+    {
+      "name": "monitoring_topic_text",
+      "description": "环境监测相关主题文本",
+      "type": "String",
+      "is_anchor": true,
+      "semantic_check": ["环境监测", "监测计划"]
+    }
+  ],
+  "semantic_routing": {
+    "standard_code": "SEC_ENV_MONITORING",
+    "category": "Environmental_Management",
+    "required_skills": [
+      "skill_monitoring_plan_design",
+      "skill_monitoring_point_selection"
+    ],
+    "context_prompt_ref": "prompt_monitoring_master"
+  },
+  "metadata": {
+    "version": "2.0",
+    "priority": 100,
+    "tags": ["环境监测", "监测计划", "环境管理", "章节标题"]
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "template_id": "TPL_HEADER_ENV_RISK_ASSESSMENT_01",
+  "name": "环境风险影响分析 / 风险因素识别与防治措施",
+  "category": "header",
+  "domain": "coal_mining",
+  "priority": 82,
+  "match_rule": {
+    "strategy": "regex_anchor",
+    "regex": "^(?P<chapter_id>\\d+(?:\\.\\d+)*)\\s*(?P<topic_text>.*(环境风险|风险影响|风险因素|突发环境事件|应急预案|风险防范).*)$",
+    "confidence_threshold": 0.78,
+    "fallback_keywords": ["环境风险", "风险因素", "风险防范", "应急预案", "突发"]
+  },
+  "generalized_pattern": "[SECTION] {{chapter_id}} {{topic_text}}",
+  "slots": [
+    {
+      "name": "chapter_id",
+      "description": "章节编号",
+      "type": "String",
+      "is_variable": true,
+      "extraction_pattern": "\\d+(?:\\.\\d+)*"
+    },
+    {
+      "name": "topic_text",
+      "description": "环境风险主题文本",
+      "type": "String",
+      "is_anchor": true,
+      "semantic_check": ["环境风险", "风险因素", "应急", "防范"],
+      "semantic_category": "env_risk"
+    }
+  ],
+  "semantic_routing": {
+    "standard_code": "SEC_ENV_RISK_ASSESSMENT",
+    "category": "Environmental_Risk",
+    "required_skills": [
+      "skill_risk_source_identification",
+      "skill_emergency_plan_mapping"
+    ],
+    "context_prompt_ref": ""
+  },
+  "metadata": {
+    "version": "1.0",
+    "tags": ["环境风险", "应急预案", "章节标题"],
+    "priority": 82
+  }
+}
+
+

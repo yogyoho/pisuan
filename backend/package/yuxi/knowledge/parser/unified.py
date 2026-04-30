@@ -56,6 +56,7 @@ class MarkdownParseResult:
     markdown: str
     file_ext: str | None = None
     artifacts: dict[str, Any] = field(default_factory=dict)
+    html: str | None = None  # HTML 格式的文档内容，表格以 HTML 格式保存
 
 
 _docling_converter: DocumentConverter | None = None
@@ -123,8 +124,14 @@ def _parse_data_uri(data_uri: str) -> tuple[bytes, str]:
     return image_data, mime_type
 
 
-def _convert_with_docling(file_path: Path, params: dict | None = None) -> str:
-    """使用 Docling 将 docx/xlsx/pptx 转换为 Markdown。"""
+def _convert_with_docling(file_path: Path, params: dict | None = None) -> tuple[str, str]:
+    """使用 Docling 将文档转换为 Markdown 和 HTML。
+
+    Returns:
+        tuple[str, str]: (markdown_content, html_content)
+        - markdown_content: Markdown 格式的文档内容
+        - html_content: HTML 格式的文档内容（表格以 HTML 格式保存）
+    """
     params = params or {}
     image_bucket, image_prefix = _resolve_image_storage_params(params)
 
@@ -136,6 +143,7 @@ def _convert_with_docling(file_path: Path, params: dict | None = None) -> str:
 
     doc = result.document
 
+    # 处理图片
     if hasattr(doc, "pictures") and doc.pictures:
         replacements: list[str] = []
         for pic in doc.pictures:
@@ -156,9 +164,32 @@ def _convert_with_docling(file_path: Path, params: dict | None = None) -> str:
         markdown = doc.export_to_markdown()
         for replacement in replacements:
             markdown = re.sub(r"<!--\s*image\s*-->", replacement, markdown, count=1)
-        return markdown
 
-    return doc.export_to_markdown()
+        # 同样处理 HTML 导出中的图片
+        html = doc.export_to_html()
+        for filename, image_data in image_refs:
+            try:
+                for replacement in replacements:
+                    if filename in replacement:
+                        url_match = re.search(r'\((https?://[^\)]+)\)', replacement)
+                        if url_match:
+                            image_url = url_match.group(1)
+                            html = re.sub(
+                                rf'src="data:image/[^"]*image_{timestamp}\.{mime_type.split("/")[-1]}"',
+                                f'src="{image_url}"',
+                                html
+                            )
+            except Exception as e:
+                logger.error(f"处理 HTML 图片失败: {e}")
+        return markdown, html
+
+        return markdown, html
+
+    # 无图片情况
+    markdown = doc.export_to_markdown()
+    html = doc.export_to_html()
+
+    return markdown, html
 
 
 def _convert_docx_with_python_docx(file_path: Path) -> str:
@@ -271,10 +302,16 @@ async def parse_image_async(file, params=None):
 
 async def _process_file_to_markdown_core(
     file_path: str, params: dict | None = None
-) -> tuple[str, str | None, dict[str, Any]]:
-    """将不同类型的文件转换为 markdown，支持本地文件和 MinIO 文件。"""
+) -> tuple[str, str | None, dict[str, Any], str | None]:
+    """将不同类型的文件转换为 markdown，支持本地文件和 MinIO 文件。
+
+    Returns:
+        tuple: (markdown_content, file_ext, artifacts, html_content)
+    """
     from yuxi.knowledge.utils.kb_utils import is_minio_url, parse_minio_url
     from yuxi.storage.minio.client import get_minio_client
+
+    html_content = None  # 初始化 HTML 内容
 
     if is_minio_url(file_path):
         logger.debug(f"Downloading file from MinIO: {file_path}")
@@ -326,13 +363,17 @@ async def _process_file_to_markdown_core(
 
         elif file_ext == ".docx":
             try:
-                result = _convert_with_docling(file_path_obj, params=params)
+                markdown_result, html_result = _convert_with_docling(file_path_obj, params=params)
+                result = markdown_result
+                html_content = html_result
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"Docling 解析 DOCX 失败，回退到 python-docx: {file_path_obj.name}, {e}")
                 result = _convert_docx_with_python_docx(file_path_obj)
 
         elif file_ext == ".pptx":
-            result = _convert_with_docling(file_path_obj, params=params)
+            markdown_result, html_result = _convert_with_docling(file_path_obj, params=params)
+            result = markdown_result
+            html_content = html_result
 
         elif file_ext == ".doc":
             from langchain_community.document_loaders import UnstructuredWordDocumentLoader
@@ -413,16 +454,17 @@ async def _process_file_to_markdown_core(
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"Failed to clean up temp file {actual_file_path}: {e}")
 
-    return result, file_ext, artifacts
+    return result, file_ext, artifacts, html_content
 
 
 async def parse_source_to_markdown(source: str, params: dict | None = None) -> MarkdownParseResult:
     """统一入口: 将文件解析为 Markdown（URL 解析已废弃）。"""
-    markdown, file_ext, artifacts = await _process_file_to_markdown_core(source, params=params)
+    markdown, file_ext, artifacts, html = await _process_file_to_markdown_core(source, params=params)
     return MarkdownParseResult(
         markdown=markdown,
         file_ext=file_ext,
         artifacts=artifacts,
+        html=html,
     )
 
 

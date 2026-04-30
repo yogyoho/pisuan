@@ -1,0 +1,42 @@
+{
+  "template_id": "TPL_HEADER_ENV_PROTECTION_01",
+  "domain": "coal_mining",
+  "category": "Environmental_Protection_Measures",
+  "description": "环境保护措施章节标题模板",
+  "generalized_pattern": "[SECTION] {{chapter_id}} {{protection_topic_text}}",
+  "match_rule": {
+    "strategy": "regex_anchor",
+    "regex": "^(?P<chapter_id>\\d+(\\.\\d+)*)\\s*(?P<protection_topic_text>.*(环境保护|污染防治|防治措施).*)$",
+    "confidence_threshold": 0.85,
+    "fallback_keywords": ["环境保护", "污染防治", "防治措施", "保护措施"]
+  },
+  "slots": [
+    {
+      "name": "chapter_id",
+      "description": "章节编号",
+      "type": "String",
+      "is_variable": true
+    },
+    {
+      "name": "protection_topic_text",
+      "description": "环境保护相关主题文本",
+      "type": "String",
+      "is_anchor": true,
+      "semantic_check": ["环境保护", "污染防治", "防治措施"]
+    }
+  ],
+  "semantic_routing": {
+    "standard_code": "SEC_ENV_PROTECTION",
+    "category": "Environmental_Protection_Measures",
+    "required_skills": [
+      "skill_protection_measure_design",
+      "skill_feasibility_analysis"
+    ],
+    "context_prompt_ref": "prompt_protection_measures_master"
+  },
+  "metadata": {
+    "version": "2.0",
+    "priority": 100,
+    "tags": ["环境保护", "污染防治", "防治措施", "章节标题"]
+  }
+}

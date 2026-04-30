@@ -139,6 +139,42 @@ const router = createRouter({
       ]
     },
     {
+      path: '/skills',
+      name: 'skills',
+      redirect: '/extensions'
+    },
+    {
+      path: '/domain-factory',
+      name: 'DomainFactory',
+      component: AppLayout,
+      children: [
+        {
+          path: '',
+          name: 'DomainFactoryMain',
+          component: () => import('../views/DomainFactoryView.vue'),
+          meta: { keepAlive: false, requiresAuth: true, requiresAdmin: true }
+        },
+        {
+          path: 'section-routing',
+          name: 'DomainFactorySectionRouting',
+          component: () => import('../views/SectionRoutingView.vue'),
+          meta: { keepAlive: false, requiresAuth: true, requiresAdmin: true }
+        },
+        {
+          path: 'prompt-config',
+          name: 'DomainFactoryPromptConfig',
+          component: () => import('../views/PromptConfigView.vue'),
+          meta: { keepAlive: false, requiresAuth: true, requiresAdmin: true }
+        },
+        {
+          path: 'standard-code',
+          name: 'DomainFactoryStandardCode',
+          component: () => import('../views/StandardCodeView.vue'),
+          meta: { keepAlive: false, requiresAuth: true, requiresAdmin: true }
+        }
+      ]
+    },
+    {
       path: '/:pathMatch(.*)*',
       name: 'NotFound',
       component: () => import('../views/EmptyView.vue'),
