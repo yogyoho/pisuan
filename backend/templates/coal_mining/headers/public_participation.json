@@ -1,0 +1,46 @@
+{
+  "template_id": "TPL_HEADER_PUBLIC_PARTICIPATION_01",
+  "name": "公众参与",
+  "category": "header",
+  "domain": "coal_mining",
+  "priority": 80,
+  "match_rule": {
+    "strategy": "regex_anchor",
+    "regex": "^(?P<chapter_id>\\d+(?:\\.\\d+)*)\\s*(?P<topic_text>.*(公众参与|信息公开|公示|问卷|座谈|公众意见).*)$",
+    "confidence_threshold": 0.75,
+    "fallback_keywords": ["公众参与", "信息公开", "公示", "公众意见", "问卷"]
+  },
+  "generalized_pattern": "[SECTION] {{chapter_id}} {{topic_text}}",
+  "slots": [
+    {
+      "name": "chapter_id",
+      "description": "章节编号",
+      "type": "String",
+      "is_variable": true,
+      "extraction_pattern": "\\d+(?:\\.\\d+)*"
+    },
+    {
+      "name": "topic_text",
+      "description": "公众参与主题文本",
+      "type": "String",
+      "is_anchor": true,
+      "semantic_check": ["公众参与", "信息公开", "公示", "公众意见", "问卷"],
+      "semantic_category": "public_participation"
+    }
+  ],
+  "semantic_routing": {
+    "standard_code": "SEC_PUBLIC_PARTICIPATION",
+    "category": "Public",
+    "required_skills": [
+      "skill_public_survey_stats"
+    ],
+    "context_prompt_ref": ""
+  },
+  "metadata": {
+    "version": "1.0",
+    "tags": ["公众参与", "信息公开", "章节标题"],
+    "priority": 80
+  }
+}
+
+

@@ -1,0 +1,205 @@
+{
+  "SEC_WATER_RESOURCE": {
+    "category": "Environmental_Impact_Prediction",
+    "subcategory": "Water_Resource_Analysis",
+    "required_skills": [
+      "skill_water_balance_calc",
+      "skill_aquifer_check"
+    ],
+    "optional_skills": [
+      "skill_groundwater_model"
+    ],
+    "context_prompt_ref": "prompt_water_analysis_master",
+    "expected_subsections": [
+      "供水水源",
+      "需水量分析",
+      "水资源平衡",
+      "水质评价"
+    ]
+  },
+  "SEC_AIR_QUALITY": {
+    "category": "Environmental_Impact_Prediction",
+    "subcategory": "Air_Quality_Analysis",
+    "required_skills": [
+      "skill_air_dispersion_model",
+      "skill_pollutant_calc"
+    ],
+    "optional_skills": [
+      "skill_meteorology_analysis"
+    ],
+    "context_prompt_ref": "prompt_air_analysis_master",
+    "expected_subsections": [
+      "气象条件",
+      "污染源分析",
+      "预测模型",
+      "影响评价"
+    ]
+  },
+  "SEC_NOISE": {
+    "category": "Environmental_Impact_Prediction",
+    "subcategory": "Noise_Analysis",
+    "required_skills": [
+      "skill_noise_prediction",
+      "skill_noise_attenuation"
+    ],
+    "optional_skills": [],
+    "context_prompt_ref": "prompt_noise_analysis_master",
+    "expected_subsections": [
+      "噪声源分析",
+      "预测模型",
+      "影响评价",
+      "防护措施"
+    ]
+  },
+  "SEC_ECOLOGY": {
+    "category": "Environmental_Impact_Prediction",
+    "subcategory": "Ecology_Analysis",
+    "required_skills": [
+      "skill_vegetation_survey",
+      "skill_biodiversity_eval"
+    ],
+    "optional_skills": [
+      "skill_habitat_assessment"
+    ],
+    "context_prompt_ref": "prompt_ecology_analysis_master",
+    "expected_subsections": [
+      "生态现状",
+      "影响预测",
+      "生态保护措施",
+      "生态补偿"
+    ]
+  },
+  "SEC_ECOLOGY_ENVIRONMENT": {
+    "category": "Environmental_Impact_Prediction",
+    "subcategory": "Ecology_Environment_Analysis",
+    "required_skills": [
+      "skill_ecology_assessment",
+      "skill_vegetation_analysis",
+      "skill_land_use_check"
+    ],
+    "optional_skills": [],
+    "context_prompt_ref": "prompt_ecology_analysis_master",
+    "expected_subsections": [
+      "植被现状",
+      "土地利用",
+      "生物多样性",
+      "影响评价"
+    ]
+  },
+  "SEC_GROUNDWATER": {
+    "category": "Environmental_Impact_Prediction",
+    "subcategory": "Groundwater_Analysis",
+    "required_skills": [
+      "skill_aquifer_analysis",
+      "skill_groundwater_prediction",
+      "skill_dewatering_impact"
+    ],
+    "optional_skills": [
+      "skill_groundwater_model"
+    ],
+    "context_prompt_ref": "prompt_groundwater_analysis_master",
+    "expected_subsections": [
+      "水文地质条件",
+      "含水层分析",
+      "疏干影响预测",
+      "保护措施"
+    ]
+  },
+  "SEC_SOLID_WASTE": {
+    "category": "Environmental_Impact_Prediction",
+    "subcategory": "Solid_Waste_Analysis",
+    "required_skills": [
+      "skill_waste_classification",
+      "skill_waste_disposal_check",
+      "skill_gangue_utilization"
+    ],
+    "optional_skills": [],
+    "context_prompt_ref": "prompt_solid_waste_analysis_master",
+    "expected_subsections": [
+      "固废产生量",
+      "固废分类",
+      "处置方案",
+      "综合利用"
+    ]
+  },
+  "SEC_NOISE_ENVIRONMENT": {
+    "category": "Environmental_Impact_Prediction",
+    "subcategory": "Noise_Environment_Analysis",
+    "required_skills": [
+      "skill_noise_prediction",
+      "skill_noise_mitigation"
+    ],
+    "optional_skills": [],
+    "context_prompt_ref": "prompt_noise_analysis_master",
+    "expected_subsections": [
+      "噪声源",
+      "预测评价",
+      "防治措施",
+      "达标分析"
+    ]
+  },
+  "SEC_SURFACE_WATER": {
+    "category": "Environmental_Impact_Prediction",
+    "subcategory": "Surface_Water_Analysis",
+    "required_skills": [
+      "skill_surface_water_quality",
+      "skill_water_pollution_prediction"
+    ],
+    "optional_skills": [],
+    "context_prompt_ref": "prompt_surface_water_analysis_master",
+    "expected_subsections": [
+      "地表水现状",
+      "污染源分析",
+      "影响预测",
+      "保护措施"
+    ]
+  },
+  "SEC_SOIL_ENVIRONMENT": {
+    "category": "Environmental_Impact_Prediction",
+    "subcategory": "Soil_Environment_Analysis",
+    "required_skills": [
+      "skill_soil_quality_assessment",
+      "skill_soil_pollution_prediction"
+    ],
+    "optional_skills": [],
+    "context_prompt_ref": "prompt_soil_analysis_master",
+    "expected_subsections": [
+      "土壤现状",
+      "污染源分析",
+      "影响预测",
+      "修复措施"
+    ]
+  },
+  "SEC_ENV_MONITORING": {
+    "category": "Environmental_Management",
+    "subcategory": "Environmental_Monitoring",
+    "required_skills": [
+      "skill_monitoring_plan_design",
+      "skill_monitoring_point_selection"
+    ],
+    "optional_skills": [],
+    "context_prompt_ref": "prompt_monitoring_master",
+    "expected_subsections": [
+      "监测目的",
+      "监测点位",
+      "监测因子",
+      "监测频次"
+    ]
+  },
+  "SEC_ENV_PROTECTION": {
+    "category": "Environmental_Protection_Measures",
+    "subcategory": "Protection_Measures",
+    "required_skills": [
+      "skill_protection_measure_design",
+      "skill_feasibility_analysis"
+    ],
+    "optional_skills": [],
+    "context_prompt_ref": "prompt_protection_measures_master",
+    "expected_subsections": [
+      "污染防治措施",
+      "生态保护措施",
+      "可行性分析",
+      "投资估算"
+    ]
+  }
+}

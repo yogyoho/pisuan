@@ -1,0 +1,43 @@
+{
+  "template_id": "TPL_HEADER_SOLID_WASTE_01",
+  "domain": "coal_mining",
+  "category": "Environmental_Impact_Prediction",
+  "description": "固体废物影响分析章节标题模板",
+  "generalized_pattern": "[SECTION] {{chapter_id}} {{waste_topic_text}}",
+  "match_rule": {
+    "strategy": "regex_anchor",
+    "regex": "^(?P<chapter_id>\\d+(\\.\\d+)*)\\s*(?P<waste_topic_text>.*(固体废物|固废|矸石|煤矸石).*分析)$",
+    "confidence_threshold": 0.85,
+    "fallback_keywords": ["固体废物", "固废", "矸石", "煤矸石"]
+  },
+  "slots": [
+    {
+      "name": "chapter_id",
+      "description": "章节编号",
+      "type": "String",
+      "is_variable": true
+    },
+    {
+      "name": "waste_topic_text",
+      "description": "固体废物相关主题文本",
+      "type": "String",
+      "is_anchor": true,
+      "semantic_check": ["固体废物", "固废", "矸石"]
+    }
+  ],
+  "semantic_routing": {
+    "standard_code": "SEC_SOLID_WASTE",
+    "category": "Environmental_Impact_Prediction",
+    "required_skills": [
+      "skill_waste_classification",
+      "skill_waste_disposal_check",
+      "skill_gangue_utilization"
+    ],
+    "context_prompt_ref": "prompt_solid_waste_analysis_master"
+  },
+  "metadata": {
+    "version": "2.0",
+    "priority": 100,
+    "tags": ["固体废物", "煤矸石", "预测评价", "章节标题"]
+  }
+}

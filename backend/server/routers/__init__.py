@@ -53,6 +53,9 @@ if _KNOWLEDGE_ENABLED:
     from server.routers.knowledge_dashboard_router import knowledge_dashboard
     from server.routers.knowledge_eval_router import evaluation
     from server.routers.knowledge_router import knowledge
+    from server.routers.domain_factory_router import domain_factory
+    from server.routers.section_routing_router import section_routing
+    from server.routers.entity_type_router import entity_types
 
     # 知识库与图谱能力依赖较重，LITE 模式下跳过这组接口。
     router.include_router(knowledge_dashboard)  # /api/dashboard/stats/knowledge 知识域仪表盘
@@ -61,3 +64,6 @@ if _KNOWLEDGE_ENABLED:
     router.include_router(evaluation)  # /api/evaluation/* 知识库评估
     router.include_router(graph)  # /api/graph/* 图谱查询与管理
     router.include_router(workspace_knowledge)  # /api/workspace/knowledge/* 工作区知识文件只读视图
+    router.include_router(domain_factory)  # /api/domain-factory/* 领域知识工厂
+    router.include_router(section_routing)  # /api/section-routing/* 章节路由配置
+    router.include_router(entity_types)  # /api/entity-types/* 实体类型管理

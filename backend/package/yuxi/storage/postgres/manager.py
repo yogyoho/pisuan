@@ -8,9 +8,20 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from psycopg_pool import AsyncConnectionPool
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import declarative_base
 from yuxi.storage.postgres.models_business import AGENT_RUN_TERMINAL_STATUSES, UNVIEWED_RUN_MARKER
 from yuxi.storage.postgres.models_business import Base as BusinessBase
 from yuxi.storage.postgres.models_knowledge import Base as KnowledgeBase
+from yuxi.storage.postgres.models_domain_factory import (
+    Base as DomainFactoryBase,
+    DomainFactoryDomain,
+    DomainFactorySchema,
+    DomainFactoryTask,
+    DomainFactoryContext,
+    DomainFactorySavedSection,
+    DomainFactoryPromptConfig,
+    DomainFactoryStandardCodeMapping,
+)
 from yuxi.utils import logger
 from yuxi.utils.singleton import SingletonMeta
 
@@ -48,6 +59,16 @@ AGENT_RUN_FACT_SCHEMA_STATEMENTS = (
     ),
     "CREATE INDEX IF NOT EXISTS ix_agent_run_attempts_open ON agent_run_attempts(run_id, finished_at)",
 )
+
+# 合并三个 Base
+CombinedBase = declarative_base()
+
+# 继承所有表
+for module in [KnowledgeBase, BusinessBase, DomainFactoryBase]:
+    for table_name in dir(module):
+        table = getattr(module, table_name)
+        if isinstance(table, type) and hasattr(table, "__tablename__"):
+            setattr(CombinedBase, table_name, table)
 
 
 class PostgresManager(metaclass=SingletonMeta):
@@ -154,19 +175,21 @@ class PostgresManager(metaclass=SingletonMeta):
         return checkpointer
 
     async def create_tables(self):
-        """创建所有表（知识库和业务表）"""
+        """创建所有表（知识库、业务数据和领域工厂表）"""
         self._check_initialized()
         async with self.async_engine.begin() as conn:
             await conn.run_sync(KnowledgeBase.metadata.create_all)
             await conn.run_sync(BusinessBase.metadata.create_all)
-        logger.info("PostgreSQL tables created/checked (knowledge + business)")
+            await conn.run_sync(DomainFactoryBase.metadata.create_all)
+        logger.info("PostgreSQL tables created/checked (knowledge + business + domain_factory)")
 
     async def create_business_tables(self):
-        """创建所有业务数据表"""
+        """创建所有业务数据表和领域工厂表"""
         self._check_initialized()
         async with self.async_engine.begin() as conn:
             await conn.run_sync(BusinessBase.metadata.create_all)
-        logger.info("PostgreSQL business tables created/checked")
+            await conn.run_sync(DomainFactoryBase.metadata.create_all)
+        logger.info("PostgreSQL business tables + domain_factory tables created/checked")
 
     async def drop_tables(self):
         """删除所有表（慎用！）"""
@@ -174,7 +197,8 @@ class PostgresManager(metaclass=SingletonMeta):
         async with self.async_engine.begin() as conn:
             await conn.run_sync(BusinessBase.metadata.drop_all)
             await conn.run_sync(KnowledgeBase.metadata.drop_all)
-        logger.info("PostgreSQL tables dropped")
+            await conn.run_sync(DomainFactoryBase.metadata.drop_all)
+        logger.info("PostgreSQL tables dropped (business + knowledge + domain_factory)")
 
     async def ensure_knowledge_schema(self):
         """确保知识库 schema 包含所有必要字段"""
@@ -577,6 +601,8 @@ class PostgresManager(metaclass=SingletonMeta):
             "ALTER TABLE IF EXISTS conversations ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN NOT NULL DEFAULT FALSE",
             "ALTER TABLE IF EXISTS conversations ADD COLUMN IF NOT EXISTS last_viewed_run_id VARCHAR(64)",
             "ALTER TABLE IF EXISTS mcp_servers ADD COLUMN IF NOT EXISTS env JSONB",
+            # Domain Factory: 添加 HTML 格式的文档内容列
+            "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS raw_html TEXT",
             """
             CREATE TABLE IF NOT EXISTS agent_envs (
                 id SERIAL PRIMARY KEY,
@@ -984,6 +1010,91 @@ class PostgresManager(metaclass=SingletonMeta):
             ON agent_run_requests(uid, agent_slug, conversation_thread_id, status, created_at, id)
             """,
             "CREATE INDEX IF NOT EXISTS ix_agent_run_requests_dispatched_run_id ON agent_run_requests(dispatched_run_id)",  # noqa: E501
+            # Domain Factory tables
+            "CREATE TABLE IF NOT EXISTS domain_factory_domains ("
+            "    id SERIAL PRIMARY KEY,"
+            "    code VARCHAR(64) UNIQUE NOT NULL,"
+            "    name VARCHAR(128) NOT NULL,"
+            "    description TEXT,"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+            ")",
+            "CREATE TABLE IF NOT EXISTS domain_factory_schema ("
+            "    id SERIAL PRIMARY KEY,"
+            "    domain_id INTEGER REFERENCES domain_factory_domains(id) ON DELETE CASCADE UNIQUE,"
+            "    variables JSONB NOT NULL DEFAULT '[]',"
+            "    chapters JSONB NOT NULL DEFAULT '[]',"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+            ")",
+            "CREATE TABLE IF NOT EXISTS domain_factory_tasks ("
+            "    id VARCHAR(64) PRIMARY KEY,"
+            "    domain_id INTEGER REFERENCES domain_factory_domains(id),"
+            "    file_name VARCHAR(255) NOT NULL,"
+            "    storage_path VARCHAR(1024) NOT NULL,"
+            "    status VARCHAR(32) NOT NULL DEFAULT 'UPLOADED',"
+            "    document_type VARCHAR(64) DEFAULT '通用',"
+            "    ai_confidence INTEGER,"
+            "    uploaded_by VARCHAR(64),"
+            "    reviewer VARCHAR(64),"
+            "    error_message TEXT,"
+            "    base_info JSONB,"
+            "    structured_data JSONB,"
+            "    template_payload JSONB,"
+            "    form_schema_snapshot JSONB,"
+            "    source_paragraphs JSONB,"
+            "    raw_markdown TEXT,"
+            "    template_metadata JSONB,"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    committed_at TIMESTAMP"
+            ")",
+            "CREATE INDEX IF NOT EXISTS idx_df_tasks_domain ON domain_factory_tasks(domain_id)",
+            "CREATE INDEX IF NOT EXISTS idx_df_tasks_status ON domain_factory_tasks(status)",
+            "CREATE TABLE IF NOT EXISTS domain_factory_contexts ("
+            "    id SERIAL PRIMARY KEY,"
+            "    domain_code VARCHAR(64) NOT NULL,"
+            "    report_type VARCHAR(64) NOT NULL,"
+            "    section_tree_json JSONB DEFAULT '[]',"
+            "    routing_rules_json JSONB DEFAULT '{}',"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    UNIQUE(domain_code, report_type)"
+            ")",
+            "CREATE TABLE IF NOT EXISTS domain_factory_saved_sections ("
+            "    id VARCHAR(64) PRIMARY KEY,"
+            "    domain_id VARCHAR(64) NOT NULL,"
+            "    report_type_id VARCHAR(64),"
+            "    filename VARCHAR(255),"
+            "    section_tree_json JSONB DEFAULT '[]',"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+            ")",
+            "CREATE INDEX IF NOT EXISTS idx_df_saved_sections_domain ON domain_factory_saved_sections(domain_id)",
+            "CREATE TABLE IF NOT EXISTS domain_factory_prompt_configs ("
+            "    id SERIAL PRIMARY KEY,"
+            "    domain_code VARCHAR(64),"
+            "    prompt_type VARCHAR(32) NOT NULL,"
+            "    template TEXT,"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    UNIQUE(domain_code, prompt_type)"
+            ")",
+            "CREATE TABLE IF NOT EXISTS domain_factory_standard_code_mappings ("
+            "    standard_code VARCHAR(128) PRIMARY KEY,"
+            "    name VARCHAR(255) NOT NULL,"
+            "    description TEXT,"
+            "    payload JSONB,"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+            ")",
+            # Seed default domains if not exist
+            "INSERT INTO domain_factory_domains (code, name, description) VALUES "
+            "('coal', '煤炭采掘', '煤矿/露天矿环评项目') ON CONFLICT (code) DO NOTHING",
+            "INSERT INTO domain_factory_domains (code, name, description) VALUES "
+            "('chem', '石油化工', '化工/精细化工环评项目') ON CONFLICT (code) DO NOTHING",
+            "INSERT INTO domain_factory_domains (code, name, description) VALUES "
+            "('transport', '交通运输', '交通工程与物流园项目') ON CONFLICT (code) DO NOTHING",
         ]
         async with self.async_engine.begin() as conn:
             # 历史未绑定用户的 API Key 会在下方迁移语句里被静默删除，先计数告警

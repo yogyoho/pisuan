@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import { taskerApi } from '@/apis/tasker'
+import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { useUserStore } from '@/stores/user'
 import { parseToShanghai } from '@/utils/time'
 
@@ -31,6 +32,28 @@ const toTask = (raw = {}) => ({
   error: raw.error,
   cancel_requested: raw.cancel_requested || false
 })
+
+// 任务类型标签映射
+const TASK_TYPE_LABELS = {
+  general: '后台任务',
+  manual: '手动任务',
+  knowledge_ingest: '知识库导入',
+  knowledge_rechunks: '文档重新分块',
+  graph_task: '图谱处理',
+  agent_job: '智能体任务',
+  domain_factory: '知识工厂报告解析',
+}
+
+// 知识工厂状态到任务中心状态的映射
+const DOMAIN_FACTORY_STATUS_MAP = {
+  'UPLOADED': { status: 'running', progress: 5, message: '文件已上传，等待处理...' },
+  'PARSING': { status: 'running', progress: 25, message: '正在解析文档...' },
+  'EXTRACTING': { status: 'running', progress: 55, message: '正在提取信息...' },
+  'GENERALIZING': { status: 'running', progress: 80, message: '正在生成槽位模板...' },
+  'WAITING_REVIEW': { status: 'running', progress: 95, message: '信息提取完成，等待人工审核...' },
+  'COMMITTED': { status: 'success', progress: 100, message: '报告已入库完成' },
+  'FAILED': { status: 'failed', progress: 100, message: '执行失败' },
+}
 
 export const useTaskerStore = defineStore('tasker', () => {
   const userStore = useUserStore()
@@ -97,13 +120,54 @@ export const useTaskerStore = defineStore('tasker', () => {
     loading.value = true
     lastError.value = null
     try {
-      const response = await taskerApi.fetchTasks(params)
+      // 获取通用任务
+      const [response, dfResponse] = await Promise.all([
+        taskerApi.fetchTasks(params),
+        domainFactoryApi.getTasksForTaskCenter(params).catch(err => {
+          console.warn('获取知识工厂任务失败:', err)
+          return { tasks: [] }
+        })
+      ])
+
       const taskList = response?.tasks || []
-      summary.value = {
-        ...createDefaultSummary(),
-        ...(response?.summary || {})
+      const dfTasks = dfResponse?.tasks || []
+
+      // 合并知识工厂任务（使用 domain_factory 类型标记）
+      const mergedTasks = [...taskList, ...dfTasks]
+
+      // 更新 summary
+      const statusCounter = {}
+      const typeCounter = {}
+      for (const task of mergedTasks) {
+        statusCounter[task.status] = (statusCounter[task.status] || 0) + 1
+        typeCounter[task.type] = (typeCounter[task.type] || 0) + 1
       }
-      tasks.value = taskList.map(toTask)
+
+      summary.value = {
+        total: mergedTasks.length,
+        filtered_total: mergedTasks.length,
+        status_counts: statusCounter,
+        type_counts: typeCounter,
+      }
+
+      // 合并去重：通用任务和知识工厂任务合并，如果有相同 ID（通过 payload.task_id 判断）则更新
+      const taskMap = new Map()
+      for (const t of taskList) {
+        taskMap.set(t.id, toTask(t))
+      }
+      // 知识工厂任务使用 df_ 前缀的 ID，但关联到原始 task_id
+      for (const t of dfTasks) {
+        const existingTask = taskMap.get(t.id)
+        if (existingTask) {
+          // 更新现有任务的状态
+          const mapped = DOMAIN_FACTORY_STATUS_MAP[t.status] || {}
+          taskMap.set(t.id, { ...existingTask, ...t, ...mapped })
+        } else {
+          taskMap.set(t.id, toTask(t))
+        }
+      }
+
+      tasks.value = Array.from(taskMap.values())
     } catch (error) {
       console.error('加载任务列表失败', error)
       lastError.value = error

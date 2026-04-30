@@ -1,0 +1,44 @@
+{
+  "template_id": "TPL_HEADER_ATTACHMENTS_01",
+  "name": "附件/附录",
+  "category": "header",
+  "domain": "coal_mining",
+  "priority": 75,
+  "match_rule": {
+    "strategy": "regex_anchor",
+    "regex": "^(?P<chapter_id>\\d+(?:\\.\\d+)*)\\s*(?P<topic_text>.*(附件|附录|附表|附图|相关文件|批复|公示材料).*)$",
+    "confidence_threshold": 0.72,
+    "fallback_keywords": ["附件", "附录", "附表", "附图", "批复"]
+  },
+  "generalized_pattern": "[SECTION] {{chapter_id}} {{topic_text}}",
+  "slots": [
+    {
+      "name": "chapter_id",
+      "description": "章节编号",
+      "type": "String",
+      "is_variable": true,
+      "extraction_pattern": "\\d+(?:\\.\\d+)*"
+    },
+    {
+      "name": "topic_text",
+      "description": "附件/附录主题文本",
+      "type": "String",
+      "is_anchor": true,
+      "semantic_check": ["附件", "附录", "附表", "附图", "批复"],
+      "semantic_category": "attachments"
+    }
+  ],
+  "semantic_routing": {
+    "standard_code": "SEC_ATTACHMENTS",
+    "category": "Appendix",
+    "required_skills": [],
+    "context_prompt_ref": ""
+  },
+  "metadata": {
+    "version": "1.0",
+    "tags": ["附件", "附录", "章节标题"],
+    "priority": 75
+  }
+}
+
+

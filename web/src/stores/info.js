@@ -13,9 +13,9 @@ export const useInfoStore = defineStore('info', () => {
   const organization = computed(
     () =>
       infoConfig.value.organization || {
-        name: '',
-        logo: '',
-        avatar: ''
+        name: 'Pisuan-Know',
+        logo: '/favicon.svg',
+        avatar: '/avatar.svg'
       }
   )
 
@@ -23,20 +23,72 @@ export const useInfoStore = defineStore('info', () => {
   const branding = computed(
     () =>
       infoConfig.value.branding || {
-        name: '',
-        title: '',
-        subtitle: '',
+        name: 'Pisuan-Know',
+        title: 'Pisuan-Know',
+        subtitle: '大模型驱动的知识平台，融合知识库与知识图谱',
         subtitles: []
       }
   )
 
+  // 计算属性 - 功能特性
+  const features = computed(
+    () =>
+      infoConfig.value.features || [
+        {
+          label: '知识库',
+          value: '1000+',
+          description: '文档和知识点',
+          icon: 'library'
+        },
+        {
+          label: '智能问答',
+          value: '50+',
+          description: 'AI Agent 能力',
+          icon: 'bot'
+        },
+        {
+          label: '知识图谱',
+          value: '500+',
+          description: '实体关系连接',
+          icon: 'graph'
+        },
+        {
+          label: '扩展技能',
+          value: '20+',
+          description: 'MCP 工具集成',
+          icon: 'extension'
+        }
+      ]
+  )
+
+  const actions = computed(
+    () =>
+      infoConfig.value.actions || [
+        {
+          name: '文档中心',
+          icon: 'docs',
+          url: 'https://xerrors.github.io/Yuxi/'
+        },
+        {
+          name: '演示视频',
+          icon: 'video',
+          url: 'https://www.bilibili.com/video/xxx'
+        },
+        {
+          name: '提交反馈',
+          icon: 'feedback',
+          url: 'https://github.com/xerrors/Yuxi/issues'
+        }
+      ]
+  )
+
   // 计算属性 - 页脚信息
-  const footer = computed(() => ({
-    copyright: '',
-    user_agreement_url: '',
-    privacy_policy_url: '',
-    ...(infoConfig.value.footer || {})
-  }))
+  const footer = computed(
+    () =>
+      infoConfig.value.footer || {
+        copyright: '© 2025 Pisuan-Know All rights reserved'
+      }
+  )
 
   // 动作方法
   function setInfoConfig(newConfig) {
