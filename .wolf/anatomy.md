@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T15:57:22.494Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T16:15:30.699Z
 > Files: 10 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ./
@@ -21,7 +21,7 @@
 
 ## backend/package/yuxi/storage/postgres/
 
-- `manager.py` — PostgreSQL 数据库管理器 - 支持知识库和业务数据 (~18685 tok)
+- `manager.py` — PostgreSQL 数据库管理器 - 支持知识库和业务数据 (~19156 tok)
 
 ## backend/server/routers/
 
