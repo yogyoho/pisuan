@@ -2561,3 +2561,5 @@
 | 23:57 | Edited web/src/components/TaskCenterDrawer.vue | 8→4 lines | ~47 |
 | 23:57 | Edited web/src/components/TaskCenterDrawer.vue | modified switch() | ~119 |
 | 23:57 | Edited web/src/components/TaskCenterDrawer.vue | CSS: domain_factory | ~62 |
+| 23:59 | Edited backend/package/yuxi/storage/postgres/manager.py | 8→5 lines | ~43 |
+| 00:15 | Edited backend/package/yuxi/storage/postgres/manager.py | 2→1 lines | ~28 |

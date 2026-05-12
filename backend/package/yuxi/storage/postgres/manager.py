@@ -14,13 +14,9 @@ from yuxi.storage.postgres.models_business import Base as BusinessBase
 from yuxi.storage.postgres.models_knowledge import Base as KnowledgeBase
 from yuxi.storage.postgres.models_domain_factory import (
     Base as DomainFactoryBase,
-    DomainFactoryDomain,
-    DomainFactorySchema,
-    DomainFactoryTask,
-    DomainFactoryContext,
-    DomainFactorySavedSection,
-    DomainFactoryPromptConfig,
-    DomainFactoryStandardCodeMapping,
+)
+from yuxi.storage.postgres.models_domain_entity import (
+    Base as DomainEntityBase,
 )
 from yuxi.utils import logger
 from yuxi.utils.singleton import SingletonMeta
@@ -60,11 +56,11 @@ AGENT_RUN_FACT_SCHEMA_STATEMENTS = (
     "CREATE INDEX IF NOT EXISTS ix_agent_run_attempts_open ON agent_run_attempts(run_id, finished_at)",
 )
 
-# 合并三个 Base
+# 合并 Base
 CombinedBase = declarative_base()
 
 # 继承所有表
-for module in [KnowledgeBase, BusinessBase, DomainFactoryBase]:
+for module in [KnowledgeBase, BusinessBase, DomainFactoryBase, DomainEntityBase]:
     for table_name in dir(module):
         table = getattr(module, table_name)
         if isinstance(table, type) and hasattr(table, "__tablename__"):
@@ -181,7 +177,8 @@ class PostgresManager(metaclass=SingletonMeta):
             await conn.run_sync(KnowledgeBase.metadata.create_all)
             await conn.run_sync(BusinessBase.metadata.create_all)
             await conn.run_sync(DomainFactoryBase.metadata.create_all)
-        logger.info("PostgreSQL tables created/checked (knowledge + business + domain_factory)")
+            await conn.run_sync(DomainEntityBase.metadata.create_all)
+        logger.info("PostgreSQL tables created/checked (knowledge + business + domain_factory + domain_entity)")
 
     async def create_business_tables(self):
         """创建所有业务数据表和领域工厂表"""
@@ -603,6 +600,9 @@ class PostgresManager(metaclass=SingletonMeta):
             "ALTER TABLE IF EXISTS mcp_servers ADD COLUMN IF NOT EXISTS env JSONB",
             # Domain Factory: 添加 HTML 格式的文档内容列
             "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS raw_html TEXT",
+            # Domain Factory: 清理废弃列和表
+            "ALTER TABLE IF EXISTS domain_factory_tasks DROP COLUMN IF EXISTS structured_data",
+            "DROP TABLE IF EXISTS domain_factory_saved_sections",
             """
             CREATE TABLE IF NOT EXISTS agent_envs (
                 id SERIAL PRIMARY KEY,
@@ -1019,14 +1019,6 @@ class PostgresManager(metaclass=SingletonMeta):
             "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
             "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
             ")",
-            "CREATE TABLE IF NOT EXISTS domain_factory_schema ("
-            "    id SERIAL PRIMARY KEY,"
-            "    domain_id INTEGER REFERENCES domain_factory_domains(id) ON DELETE CASCADE UNIQUE,"
-            "    variables JSONB NOT NULL DEFAULT '[]',"
-            "    chapters JSONB NOT NULL DEFAULT '[]',"
-            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
-            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
-            ")",
             "CREATE TABLE IF NOT EXISTS domain_factory_tasks ("
             "    id VARCHAR(64) PRIMARY KEY,"
             "    domain_id INTEGER REFERENCES domain_factory_domains(id),"
@@ -1039,7 +1031,6 @@ class PostgresManager(metaclass=SingletonMeta):
             "    reviewer VARCHAR(64),"
             "    error_message TEXT,"
             "    base_info JSONB,"
-            "    structured_data JSONB,"
             "    template_payload JSONB,"
             "    form_schema_snapshot JSONB,"
             "    source_paragraphs JSONB,"
@@ -1051,26 +1042,21 @@ class PostgresManager(metaclass=SingletonMeta):
             ")",
             "CREATE INDEX IF NOT EXISTS idx_df_tasks_domain ON domain_factory_tasks(domain_id)",
             "CREATE INDEX IF NOT EXISTS idx_df_tasks_status ON domain_factory_tasks(status)",
-            "CREATE TABLE IF NOT EXISTS domain_factory_contexts ("
+            "CREATE TABLE IF NOT EXISTS domain_factory_learned_templates ("
             "    id SERIAL PRIMARY KEY,"
             "    domain_code VARCHAR(64) NOT NULL,"
-            "    report_type VARCHAR(64) NOT NULL,"
-            "    section_tree_json JSONB DEFAULT '[]',"
-            "    routing_rules_json JSONB DEFAULT '{}',"
+            "    chapter VARCHAR(255) NOT NULL DEFAULT '',"
+            "    generalized TEXT NOT NULL,"
+            "    slots JSONB NOT NULL DEFAULT '[]',"
+            "    slot_signature VARCHAR(255) NOT NULL DEFAULT '',"
+            "    source_count INTEGER NOT NULL DEFAULT 1,"
+            "    sample_original TEXT,"
+            "    metadata JSONB DEFAULT '{}',"
             "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
             "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
-            "    UNIQUE(domain_code, report_type)"
+            "    UNIQUE(domain_code, chapter, slot_signature)"
             ")",
-            "CREATE TABLE IF NOT EXISTS domain_factory_saved_sections ("
-            "    id VARCHAR(64) PRIMARY KEY,"
-            "    domain_id VARCHAR(64) NOT NULL,"
-            "    report_type_id VARCHAR(64),"
-            "    filename VARCHAR(255),"
-            "    section_tree_json JSONB DEFAULT '[]',"
-            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
-            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
-            ")",
-            "CREATE INDEX IF NOT EXISTS idx_df_saved_sections_domain ON domain_factory_saved_sections(domain_id)",
+            "CREATE INDEX IF NOT EXISTS idx_dflt_domain ON domain_factory_learned_templates(domain_code)",
             "CREATE TABLE IF NOT EXISTS domain_factory_prompt_configs ("
             "    id SERIAL PRIMARY KEY,"
             "    domain_code VARCHAR(64),"
@@ -1080,14 +1066,6 @@ class PostgresManager(metaclass=SingletonMeta):
             "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
             "    UNIQUE(domain_code, prompt_type)"
             ")",
-            "CREATE TABLE IF NOT EXISTS domain_factory_standard_code_mappings ("
-            "    standard_code VARCHAR(128) PRIMARY KEY,"
-            "    name VARCHAR(255) NOT NULL,"
-            "    description TEXT,"
-            "    payload JSONB,"
-            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
-            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
-            ")",
             # Seed default domains if not exist
             "INSERT INTO domain_factory_domains (code, name, description) VALUES "
             "('coal', '煤炭采掘', '煤矿/露天矿环评项目') ON CONFLICT (code) DO NOTHING",
@@ -1095,6 +1073,47 @@ class PostgresManager(metaclass=SingletonMeta):
             "('chem', '石油化工', '化工/精细化工环评项目') ON CONFLICT (code) DO NOTHING",
             "INSERT INTO domain_factory_domains (code, name, description) VALUES "
             "('transport', '交通运输', '交通工程与物流园项目') ON CONFLICT (code) DO NOTHING",
+            # Domain Entity Builder: entity schema table + migration for existing installs
+            "CREATE TABLE IF NOT EXISTS domain_entity_schemas ("
+            "    entity_id VARCHAR(64) PRIMARY KEY,"
+            "    entity_key VARCHAR(255) UNIQUE NOT NULL,"
+            "    name_cn VARCHAR(255) NOT NULL,"
+            "    category VARCHAR(128) NOT NULL,"
+            "    domain_code VARCHAR(64) NOT NULL DEFAULT 'coal',"
+            "    value_type VARCHAR(32) NOT NULL DEFAULT 'String',"
+            "    unit VARCHAR(64),"
+            "    is_list_type BOOLEAN DEFAULT FALSE,"
+            "    description TEXT DEFAULT '',"
+            "    synonyms JSONB NOT NULL DEFAULT '[]',"
+            "    properties JSONB NOT NULL DEFAULT '[]',"
+            "    relation_rules JSONB NOT NULL DEFAULT '[]',"
+            "    extra_meta JSONB DEFAULT '{}',"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+            ")",
+            "ALTER TABLE IF EXISTS domain_entity_schemas ADD COLUMN IF NOT EXISTS domain_code VARCHAR(64) NOT NULL DEFAULT 'coal'",
+            "ALTER TABLE IF EXISTS domain_entity_schemas DROP COLUMN IF EXISTS report_types",
+            "CREATE INDEX IF NOT EXISTS idx_des_entity_key ON domain_entity_schemas(entity_key)",
+            "CREATE INDEX IF NOT EXISTS idx_des_category ON domain_entity_schemas(category)",
+            "CREATE INDEX IF NOT EXISTS idx_des_domain_code ON domain_entity_schemas(domain_code)",
+            # Report Types 字典表
+            "CREATE TABLE IF NOT EXISTS report_types ("
+            "    code VARCHAR(64) PRIMARY KEY,"
+            "    name VARCHAR(128) NOT NULL,"
+            "    domain_code VARCHAR(64) NOT NULL,"
+            "    description TEXT,"
+            "    icon VARCHAR(128),"
+            "    is_active BOOLEAN DEFAULT TRUE,"
+            "    sort_order INTEGER DEFAULT 0,"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+            ")",
+            "INSERT INTO report_types (code, name, domain_code, sort_order) VALUES "
+            "('通用', '通用（全部报告类型）', 'coal', 0) ON CONFLICT (code) DO NOTHING",
+            "INSERT INTO report_types (code, name, domain_code, sort_order) VALUES "
+            "('feasibility_report', '可行性研究报告', 'coal', 1) ON CONFLICT (code) DO NOTHING",
+            "INSERT INTO report_types (code, name, domain_code, sort_order) VALUES "
+            "('eia_report', '环境影响评价报告', 'coal', 2) ON CONFLICT (code) DO NOTHING",
         ]
         async with self.async_engine.begin() as conn:
             # 历史未绑定用户的 API Key 会在下方迁移语句里被静默删除，先计数告警
