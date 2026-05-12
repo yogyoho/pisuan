@@ -140,54 +140,7 @@ const demoTaskDetail = (domain = 'coal') => ({
     { id: 'p3', title: '8.2 沉陷预测', content: '经预测，首采区开采后，地表最大下沉值 4500mm，位于井田中部，需留设保护煤柱。', is_title: true, section_path: ['8', '8.2'] },
     { id: 'p4', title: '8.2 沉陷预测', content: '经分析，采煤沉陷对A村和B水库有轻微影响，需采取保护措施。', is_title: false, section_path: ['8', '8.2'] }
   ],
-  schema_snapshot: {
-    variables: [
-      { key: 'Project_Name', label: '项目名称', data_type: 'string', widget: 'Input', unit: '', group: '基础信息', required: true },
-      { key: 'Project_Capacity', label: '设计产能', data_type: 'float', widget: 'InputNumber', unit: 'Mt/a', group: '基础信息', required: true }
-    ],
-    chapters: [
-      { key: 'ch1', title: '1. 总论' },
-      { key: 'ch2', title: '2. 工程概况' },
-      { key: 'ch8-2', title: '8.2 沉陷预测' }
-    ]
-  }
 })
-
-const demoSchema = {
-  variables: [
-    {
-      key: 'Project_Name',
-      label: '项目名称',
-      data_type: 'string',
-      widget: 'Input',
-      unit: '-',
-      group: '基础信息',
-      required: true,
-      prompt: '提取项目全称',
-      source: '',
-      sample: ''
-    },
-    {
-      key: 'Coal_Seam_Thick',
-      label: '煤层厚度',
-      data_type: 'float',
-      widget: 'InputNumber',
-      unit: 'm',
-      group: '工程参数',
-      required: false,
-      prompt: '关注"平均厚度"',
-      source: '',
-      sample: '3.5 - 12.0'
-    }
-  ],
-  chapters: [
-    { key: 'root', title: 'Root', children: [
-      { key: 'chapter-1', title: '1. 总论' },
-      { key: 'chapter-2', title: '2. 工程概况' },
-      { key: 'chapter-8-2', title: '8.2 沉陷预测' }
-    ]}
-  ]
-}
 
 const withDemoFallback = async (requestFn, fallbackFn) => {
   try {
@@ -225,20 +178,6 @@ export const domainFactoryApi = {
 
   deleteDomain: (domainId) =>
     withDemoFallback(() => apiAdminDelete(`/api/domain-factory/domains/${domainId}`), {
-      success: true,
-      demo: true
-    }),
-
-  // ========== Schema ==========
-
-  fetchSchemas: (domainId) =>
-    withDemoFallback(
-      () => apiAdminGet(`/api/domain-factory/domains/${domainId}/schema`),
-      () => demoSchema
-    ),
-
-  saveSchema: (domainId, payload) =>
-    withDemoFallback(() => apiAdminPut(`/api/domain-factory/domains/${domainId}/schema`, payload), {
       success: true,
       demo: true
     }),
@@ -294,10 +233,8 @@ export const domainFactoryApi = {
   // 重新提取未识别实体
   refreshUnrecognizedEntities: (taskId, maxEntities = 20) =>
     withDemoFallback(
-      () => apiAdminGet(`/api/domain-factory/tasks/${taskId}/unrecognized-entities`, {
-        params: { max_entities: maxEntities }
-      }),
-      () => ({ entities: [], grouped: {} })
+      () => apiAdminGet(`/api/domain-factory/tasks/${taskId}/proposed-entities`),
+      () => ({ entities: [], raw_slots: [] })
     ),
 
   retryTask: (taskId) =>
@@ -320,10 +257,15 @@ export const domainFactoryApi = {
 
   getUnrecognizedEntities: (taskId, maxEntities = 20) =>
     withDemoFallback(
-      () => apiAdminGet(`/api/domain-factory/tasks/${taskId}/unrecognized-entities`, {
-        params: { max_entities: maxEntities }
-      }),
-      () => ({ entities: [], grouped: {} })
+      () => apiAdminGet(`/api/domain-factory/tasks/${taskId}/proposed-entities`),
+      () => ({ entities: [], raw_slots: [] })
+    ),
+
+  // 确认并保存建议的实体到实体库
+  confirmProposedEntities: (taskId, entities) =>
+    withDemoFallback(
+      () => apiAdminPost(`/api/domain-factory/tasks/${taskId}/confirm-entities`, { entities }),
+      () => ({ success: true, saved: 0, skipped: 0 })
     ),
 
   // ========== File Upload ==========
@@ -369,8 +311,7 @@ export const domainFactoryApi = {
       () => ({
         config: {
           extract_prompt: '默认文档解析 Prompt',
-          template_prompt: '默认模板泛化 Prompt',
-          schema_generation_prompt: '默认 Schema 生成 Prompt'
+          template_prompt: '默认模板泛化 Prompt'
         }
       })
     ),
@@ -381,161 +322,7 @@ export const domainFactoryApi = {
       demo: true
     }),
 
-  // ========== Section Routing (章节路由配置) ==========
-
-  /**
-   * 获取章节树
-   */
-  getSectionTree: (domain, reportType, isTemplate = true) =>
-    withDemoFallback(
-      () => apiAdminGet('/api/section-routing/sections/tree', {
-        params: { domain, report_type: reportType, is_template: isTemplate }
-      }),
-      () => ({
-        sections: [
-          {
-            code: 'SEC_GENERAL_OVERVIEW',
-            title: '第一章 总论',
-            section_path: '1',
-            level: 1,
-            children: [
-              { code: 'SEC_1_1', title: '1.1 项目背景', section_path: '1.1', level: 2, children: [] },
-              { code: 'SEC_1_2', title: '1.2 编制依据', section_path: '1.2', level: 2, children: [] }
-            ]
-          },
-          {
-            code: 'SEC_PROJECT_ENGINEERING',
-            title: '第二章 工程分析',
-            section_path: '2',
-            level: 1,
-            children: []
-          },
-          {
-            code: 'SEC_ENV_STATUS',
-            title: '第三章 环境现状',
-            section_path: '3',
-            level: 1,
-            children: []
-          }
-        ]
-      })
-    ),
-
-  /**
-   * 获取章节详情
-   */
-  getSectionDetail: (sectionId) =>
-    withDemoFallback(
-      () => apiAdminGet(`/api/section-routing/sections/${sectionId}`),
-      () => ({ id: sectionId, code: 'DEMO', title: '示例章节', level: 1 })
-    ),
-
-  /**
-   * 创建章节
-   */
-  createSection: (sectionData) =>
-    withDemoFallback(
-      () => apiAdminPost('/api/section-routing/sections', sectionData),
-      () => ({ success: true, section: { ...sectionData, id: Date.now() } })
-    ),
-
-  /**
-   * 更新章节
-   */
-  updateSection: (sectionId, sectionData) =>
-    withDemoFallback(
-      () => apiAdminPut(`/api/section-routing/sections/${sectionId}`, sectionData),
-      () => ({ success: true, section: { ...sectionData, id: sectionId } })
-    ),
-
-  /**
-   * 删除章节
-   */
-  deleteSection: (sectionId) =>
-    withDemoFallback(
-      () => apiAdminDelete(`/api/section-routing/sections/${sectionId}`),
-      () => ({ success: true })
-    ),
-
-  /**
-   * 批量获取章节
-   */
-  batchGetSections: (sectionIds) =>
-    withDemoFallback(
-      () => apiAdminPost('/api/section-routing/sections/batch', { section_ids: sectionIds }),
-      () => ({ sections: {}, total: 0, found: 0 })
-    ),
-
-  /**
-   * 获取章节绑定的 StandardCodes
-   */
-  getSectionStandardCodes: (sectionId) =>
-    withDemoFallback(
-      () => apiAdminGet(`/api/section-routing/sections/${sectionId}/standard-codes`),
-      () => ({ codes: [] })
-    ),
-
-  /**
-   * 绑定 StandardCode 到章节
-   */
-  bindStandardCode: (sectionId, standardCode, mountType = 'direct') =>
-    withDemoFallback(
-      () => apiAdminPost(`/api/section-routing/sections/${sectionId}/standard-codes`, {
-        standard_code: standardCode,
-        mount_type: mountType
-      }),
-      () => ({ success: true, message: '绑定成功' })
-    ),
-
-  /**
-   * 解绑 StandardCode
-   */
-  unbindStandardCode: (sectionId, standardCode) =>
-    withDemoFallback(
-      () => apiAdminDelete(`/api/section-routing/sections/${sectionId}/standard-codes/${standardCode}`),
-      () => ({ success: true, message: '解绑成功' })
-    ),
-
-  /**
-   * 匹配 StandardCodes
-   */
-  matchStandardCodes: (title, sectionPath, level, contentSample = null) =>
-    withDemoFallback(
-      () => apiAdminPost('/api/section-routing/standard-codes/match', {
-        title,
-        section_path: sectionPath,
-        level,
-        content_sample: contentSample
-      }),
-      () => ({ matches: [] })
-    ),
-
-  /**
-   * 导出章节配置
-   */
-  exportSections: (domain, reportType) =>
-    withDemoFallback(
-      () => apiAdminGet('/api/section-routing/export', {
-        params: { domain, report_type: reportType }
-      }),
-      () => ({
-        metadata: { domain, report_type: reportType, version: '1.0.0', section_count: 0 },
-        sections: []
-      })
-    ),
-
-  /**
-   * 导入章节配置
-   */
-  importSections: (domain, reportType, sections) =>
-    withDemoFallback(
-      () => apiAdminPost('/api/section-routing/import', { sections }, {
-        params: { domain, report_type: reportType }
-      }),
-      () => ({ imported_count: sections.length, skipped_count: 0, conflicts: [] })
-    ),
-
-  // ========== Context & Section Routing ==========
+  // ========== Contexts ==========
 
   getContexts: () =>
     withDemoFallback(
@@ -551,93 +338,6 @@ export const domainFactoryApi = {
         ]
       })
     ),
-
-  getContextSections: (domainId, reportTypeId) =>
-    withDemoFallback(
-      () => apiAdminGet(`/api/domain-factory/contexts/${domainId}/${reportTypeId}/sections`),
-      () => ({
-        sections: [
-          { code: 'SEC_GENERAL_OVERVIEW', title: '第一章 总论', section_id: 'SEC_GENERAL_OVERVIEW', children: [] },
-          { code: 'SEC_PROJECT_ENGINEERING', title: '第二章 工程分析', section_id: 'SEC_PROJECT_ENGINEERING', children: [] },
-          { code: 'SEC_IMPACT_PREDICTION', title: '第三章 环境影响预测', section_id: 'SEC_IMPACT_PREDICTION', children: [] }
-        ]
-      })
-    ),
-
-  updateContextSections: (domainId, reportTypeId, sections) =>
-    withDemoFallback(
-      () => apiAdminPut(`/api/domain-factory/contexts/${domainId}/${reportTypeId}/sections`, { sections }),
-      { message: 'Demo 模式：未实际保存', sections }
-    ),
-
-  getContextSectionRule: (domainId, reportTypeId, sectionCode) =>
-    withDemoFallback(
-      () => apiAdminGet(`/api/domain-factory/contexts/${domainId}/${reportTypeId}/sections/${sectionCode}`),
-      () => ({
-        rule: {
-          inherit_mode: 'inherit',
-          base_keywords: ['水资源', '供水', '取水'],
-          domain_keyword_groups: [['矿井水', '疏干水', '选煤厂']],
-          skill_id: 'skill_coal_water_balance',
-          schema_diff: {}
-        }
-      })
-    ),
-
-  updateContextSectionRule: (domainId, reportTypeId, sectionCode, rule) =>
-    withDemoFallback(
-      () => apiAdminPut(`/api/domain-factory/contexts/${domainId}/${reportTypeId}/sections/${sectionCode}`, rule),
-      { message: 'Demo 模式：未实际保存', rule }
-    ),
-
-  // ========== Saved Sections ==========
-
-  getSavedSections: (params = {}) =>
-    withDemoFallback(
-      () => apiAdminGet('/api/domain-factory/saved-sections', { params }),
-      () => ({
-        items: [
-          {
-            id: 'demo123',
-            domain_id: 'coal',
-            report_type_id: 'eia',
-            filename: '示例报告.docx',
-            created_at: new Date().toISOString(),
-            section_count: 12
-          }
-        ]
-      })
-    ),
-
-  getSavedSectionDetail: (savedId) =>
-    withDemoFallback(
-      () => apiAdminGet(`/api/domain-factory/saved-sections/${savedId}`),
-      () => ({ id: savedId, sections: [] })
-    ),
-
-  importSavedSection: (savedId, context = {}) =>
-    withDemoFallback(
-      () => apiAdminPost(`/api/domain-factory/saved-sections/${savedId}/import`, context),
-      () => ({
-        message: 'Demo 模式：已导入章节',
-        imported_sections: 12,
-        imported_rules: 12
-      })
-    ),
-
-  // ========== Standard Code Mapping ==========
-
-  getStandardCodeMapping: () =>
-    withDemoFallback(
-      () => apiAdminGet('/api/domain-factory/standard-code-mapping'),
-      () => ({ items: [] })
-    ),
-
-  updateStandardCodeMapping: (payload) =>
-    withDemoFallback(() => apiAdminPut('/api/domain-factory/standard-code-mapping', payload), {
-      message: 'Demo 模式：未实际保存',
-      ...(payload || {})
-    }),
 
   // ========== Task Center Integration ==========
 
@@ -678,3 +378,4 @@ export const domainFactoryApi = {
       })
     )
 }
+

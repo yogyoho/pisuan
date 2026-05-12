@@ -1,20 +1,15 @@
 """Domain Factory 数据访问层 - Repository"""
 
-from datetime import datetime
 from typing import Any
 
-from sqlalchemy import func, select, delete
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import func, select
 
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_domain_factory import (
     DomainFactoryDomain,
-    DomainFactorySchema,
     DomainFactoryTask,
-    DomainFactoryContext,
-    DomainFactorySavedSection,
+    DomainFactoryLearnedTemplate,
     DomainFactoryPromptConfig,
-    DomainFactoryStandardCodeMapping,
 )
 from yuxi.utils.datetime_utils import utc_now_naive
 
@@ -24,25 +19,34 @@ class DomainFactoryRepository:
 
     # ========== Domain ==========
 
-    async def get_domain_by_code(self, code: str) -> DomainFactoryDomain | None:
+    async def count_committed_tasks(self, domain_code: str) -> int:
+        """统计指定领域已 COMMIT 的任务数量"""
+        from yuxi.storage.postgres.models_domain_factory import DomainFactoryDomain, DomainFactoryTask
+
         async with pg_manager.get_async_session_context() as session:
             result = await session.execute(
-                select(DomainFactoryDomain).where(DomainFactoryDomain.code == code)
+                select(func.count(DomainFactoryTask.id))
+                .join(DomainFactoryDomain, DomainFactoryTask.domain_id == DomainFactoryDomain.id)
+                .where(
+                    DomainFactoryDomain.code == domain_code,
+                    DomainFactoryTask.status == "COMMITTED",
+                )
             )
+            return result.scalar() or 0
+
+    async def get_domain_by_code(self, code: str) -> DomainFactoryDomain | None:
+        async with pg_manager.get_async_session_context() as session:
+            result = await session.execute(select(DomainFactoryDomain).where(DomainFactoryDomain.code == code))
             return result.scalar_one_or_none()
 
     async def get_domain_by_id(self, id: int) -> DomainFactoryDomain | None:
         async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(
-                select(DomainFactoryDomain).where(DomainFactoryDomain.id == id)
-            )
+            result = await session.execute(select(DomainFactoryDomain).where(DomainFactoryDomain.id == id))
             return result.scalar_one_or_none()
 
     async def list_domains(self) -> list[dict[str, Any]]:
         async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(
-                select(DomainFactoryDomain).order_by(DomainFactoryDomain.created_at.desc())
-            )
+            result = await session.execute(select(DomainFactoryDomain).order_by(DomainFactoryDomain.created_at.desc()))
             domains = result.scalars().all()
             return [d.to_dict() for d in domains]
 
@@ -54,9 +58,7 @@ class DomainFactoryRepository:
 
     async def update_domain(self, id: int, data: dict[str, Any]) -> DomainFactoryDomain | None:
         async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(
-                select(DomainFactoryDomain).where(DomainFactoryDomain.id == id)
-            )
+            result = await session.execute(select(DomainFactoryDomain).where(DomainFactoryDomain.id == id))
             domain = result.scalar_one_or_none()
             if domain is None:
                 return None
@@ -67,45 +69,18 @@ class DomainFactoryRepository:
 
     async def delete_domain(self, id: int) -> bool:
         async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(
-                select(DomainFactoryDomain).where(DomainFactoryDomain.id == id)
-            )
+            result = await session.execute(select(DomainFactoryDomain).where(DomainFactoryDomain.id == id))
             domain = result.scalar_one_or_none()
             if domain is None:
                 return False
             await session.delete(domain)
         return True
 
-    # ========== Schema ==========
-
-    async def get_schema(self, domain_id: int) -> DomainFactorySchema | None:
-        async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(
-                select(DomainFactorySchema).where(DomainFactorySchema.domain_id == domain_id)
-            )
-            return result.scalar_one_or_none()
-
-    async def upsert_schema(self, domain_id: int, variables: list, chapters: list) -> DomainFactorySchema:
-        async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(
-                select(DomainFactorySchema).where(DomainFactorySchema.domain_id == domain_id)
-            )
-            schema = result.scalar_one_or_none()
-            if schema is None:
-                schema = DomainFactorySchema(domain_id=domain_id, variables=variables, chapters=chapters)
-                session.add(schema)
-            else:
-                schema.variables = variables
-                schema.chapters = chapters
-        return schema
-
     # ========== Task ==========
 
     async def get_task(self, task_id: str) -> DomainFactoryTask | None:
         async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(
-                select(DomainFactoryTask).where(DomainFactoryTask.id == task_id)
-            )
+            result = await session.execute(select(DomainFactoryTask).where(DomainFactoryTask.id == task_id))
             return result.scalar_one_or_none()
 
     async def get_task_with_domain(self, task_id: str) -> DomainFactoryTask | None:
@@ -126,7 +101,11 @@ class DomainFactoryRepository:
             query = (
                 select(DomainFactoryTask)
                 .options(joinedload(DomainFactoryTask.domain))
-                .where(DomainFactoryTask.status.in_(["UPLOADED", "PENDING", "PARSING", "EXTRACTING", "GENERALIZING", "WAITING_REVIEW"]))
+                .where(
+                    DomainFactoryTask.status.in_(
+                        ["UPLOADED", "PENDING", "PARSING", "EXTRACTING", "GENERALIZING", "WAITING_REVIEW"]
+                    )
+                )
                 .order_by(DomainFactoryTask.created_at.desc())
             )
             if domain_id is not None:
@@ -213,133 +192,103 @@ class DomainFactoryRepository:
 
     async def delete_task(self, task_id: str) -> bool:
         async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(
-                select(DomainFactoryTask).where(DomainFactoryTask.id == task_id)
-            )
+            result = await session.execute(select(DomainFactoryTask).where(DomainFactoryTask.id == task_id))
             task = result.scalar_one_or_none()
             if task is None:
                 return False
             await session.delete(task)
         return True
 
-    # ========== Context ==========
-
-    async def get_or_create_context(self, domain_code: str, report_type: str) -> DomainFactoryContext:
+    async def list_pending_tasks_by_domain(self, domain_code: str) -> list[dict[str, Any]]:
         async with pg_manager.get_async_session_context() as session:
+            from sqlalchemy.orm import joinedload
+
             result = await session.execute(
-                select(DomainFactoryContext).where(
-                    DomainFactoryContext.domain_code == domain_code,
-                    DomainFactoryContext.report_type == report_type,
+                select(DomainFactoryTask)
+                .options(joinedload(DomainFactoryTask.domain))
+                .join(DomainFactoryDomain, DomainFactoryTask.domain_id == DomainFactoryDomain.id)
+                .where(
+                    DomainFactoryDomain.code == domain_code,
+                    DomainFactoryTask.status == "WAITING_REVIEW",
                 )
             )
-            ctx = result.scalar_one_or_none()
-            if ctx is None:
-                ctx = DomainFactoryContext(
-                    domain_code=domain_code,
-                    report_type=report_type,
-                    section_tree_json=[],
-                    routing_rules_json={},
-                )
-                session.add(ctx)
-            return ctx
+            tasks = result.unique().scalars().all()
+            return [t.to_summary_dict() for t in tasks]
 
-    async def get_context(self, domain_code: str, report_type: str) -> DomainFactoryContext | None:
-        async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(
-                select(DomainFactoryContext).where(
-                    DomainFactoryContext.domain_code == domain_code,
-                    DomainFactoryContext.report_type == report_type,
-                )
-            )
-            return result.scalar_one_or_none()
+    # ========== Learned Templates ==========
 
-    async def update_context(
+    async def upsert_learned_template(
         self,
         domain_code: str,
-        report_type: str,
-        section_tree: list | None = None,
-        routing_rules: dict | None = None,
-    ) -> DomainFactoryContext | None:
+        chapter: str,
+        generalized: str,
+        slots: list,
+        slot_signature: str,
+        sample_original: str | None = None,
+        metadata: dict | None = None,
+    ) -> DomainFactoryLearnedTemplate:
         async with pg_manager.get_async_session_context() as session:
             result = await session.execute(
-                select(DomainFactoryContext).where(
-                    DomainFactoryContext.domain_code == domain_code,
-                    DomainFactoryContext.report_type == report_type,
+                select(DomainFactoryLearnedTemplate).where(
+                    DomainFactoryLearnedTemplate.domain_code == domain_code,
+                    DomainFactoryLearnedTemplate.chapter == chapter,
+                    DomainFactoryLearnedTemplate.slot_signature == slot_signature,
                 )
             )
-            ctx = result.scalar_one_or_none()
-            if ctx is None:
-                return None
-            if section_tree is not None:
-                ctx.section_tree_json = section_tree
-            if routing_rules is not None:
-                ctx.routing_rules_json = routing_rules
-        return ctx
+            existing = result.scalar_one_or_none()
 
-    async def list_contexts(self) -> list[dict[str, Any]]:
-        async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(select(DomainFactoryContext).order_by(DomainFactoryContext.domain_code))
-            contexts = result.scalars().all()
-            return [c.to_dict() for c in contexts]
-
-    # ========== Saved Sections ==========
-
-    async def get_saved_section(self, section_id: str) -> DomainFactorySavedSection | None:
-        async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(
-                select(DomainFactorySavedSection).where(DomainFactorySavedSection.id == section_id)
-            )
-            return result.scalar_one_or_none()
-
-    async def list_saved_sections(
-        self, domain_id: str | None = None, report_type_id: str | None = None
-    ) -> list[dict[str, Any]]:
-        async with pg_manager.get_async_session_context() as session:
-            query = select(DomainFactorySavedSection).order_by(DomainFactorySavedSection.created_at.desc())
-            if domain_id:
-                query = query.where(DomainFactorySavedSection.domain_id == domain_id)
-            if report_type_id:
-                query = query.where(DomainFactorySavedSection.report_type_id == report_type_id)
-            result = await session.execute(query)
-            sections = result.scalars().all()
-            return [s.to_dict() for s in sections]
-
-    async def save_section(
-        self,
-        section_id: str,
-        domain_id: str,
-        report_type_id: str | None,
-        filename: str | None,
-        section_tree: list,
-    ) -> DomainFactorySavedSection:
-        async with pg_manager.get_async_session_context() as session:
-            existing = await session.execute(
-                select(DomainFactorySavedSection).where(DomainFactorySavedSection.id == section_id)
-            )
-            section = existing.scalar_one_or_none()
-            if section is None:
-                section = DomainFactorySavedSection(
-                    id=section_id,
-                    domain_id=domain_id,
-                    report_type_id=report_type_id,
-                    filename=filename,
-                    section_tree_json=section_tree,
+            if existing is None:
+                template = DomainFactoryLearnedTemplate(
+                    domain_code=domain_code,
+                    chapter=chapter,
+                    generalized=generalized,
+                    slots=slots,
+                    slot_signature=slot_signature,
+                    sample_original=sample_original,
+                    metadata=metadata,
                 )
-                session.add(section)
+                session.add(template)
             else:
-                section.section_tree_json = section_tree
-        return section
+                existing.source_count += 1
+                if len(generalized) > len(existing.generalized or ""):
+                    existing.generalized = generalized
+                if sample_original and len(sample_original) > len(existing.sample_original or ""):
+                    existing.sample_original = sample_original
+                if metadata:
+                    existing.metadata = metadata
+        return existing if existing else template
 
-    async def delete_saved_section(self, section_id: str) -> bool:
+    async def list_learned_templates(self, domain_code: str | None = None, limit: int = 200) -> list[dict[str, Any]]:
+        async with pg_manager.get_async_session_context() as session:
+            query = (
+                select(DomainFactoryLearnedTemplate)
+                .order_by(DomainFactoryLearnedTemplate.source_count.desc())
+                .limit(limit)
+            )
+            if domain_code:
+                query = query.where(DomainFactoryLearnedTemplate.domain_code == domain_code)
+            result = await session.execute(query)
+            templates = result.scalars().all()
+            return [t.to_dict() for t in templates]
+
+    async def delete_learned_template(self, template_id: int) -> bool:
         async with pg_manager.get_async_session_context() as session:
             result = await session.execute(
-                select(DomainFactorySavedSection).where(DomainFactorySavedSection.id == section_id)
+                select(DomainFactoryLearnedTemplate).where(DomainFactoryLearnedTemplate.id == template_id)
             )
-            section = result.scalar_one_or_none()
-            if section is None:
+            template = result.scalar_one_or_none()
+            if template is None:
                 return False
-            await session.delete(section)
+            await session.delete(template)
         return True
+
+    async def count_learned_templates(self, domain_code: str | None = None) -> int:
+        async with pg_manager.get_async_session_context() as session:
+            query = select(func.count(DomainFactoryLearnedTemplate.id))
+            if domain_code:
+                query = query.where(DomainFactoryLearnedTemplate.domain_code == domain_code)
+            result = await session.execute(query)
+            return result.scalar() or 0
 
     # ========== Prompt Config ==========
 
@@ -363,9 +312,7 @@ class DomainFactoryRepository:
             )
             config = result.scalar_one_or_none()
             if config is None:
-                config = DomainFactoryPromptConfig(
-                    domain_code=domain_code, prompt_type=prompt_type, template=template
-                )
+                config = DomainFactoryPromptConfig(domain_code=domain_code, prompt_type=prompt_type, template=template)
                 session.add(config)
             else:
                 config.template = template
@@ -379,183 +326,3 @@ class DomainFactoryRepository:
             result = await session.execute(query)
             configs = result.scalars().all()
             return [c.to_dict() for c in configs]
-
-    # ========== Standard Code Mapping ==========
-
-    async def list_standard_code_mappings(self) -> list[dict[str, Any]]:
-        async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(
-                select(DomainFactoryStandardCodeMapping).order_by(
-                    DomainFactoryStandardCodeMapping.standard_code
-                )
-            )
-            mappings = result.scalars().all()
-            return [
-                {
-                    "standard_code": m.standard_code,
-                    "name": m.name,
-                    "description": m.description,
-                    "payload": m.payload or {},
-                }
-                for m in mappings
-            ]
-
-    async def upsert_standard_code_mappings(self, items: list[dict[str, Any]]) -> bool:
-        async with pg_manager.get_async_session_context() as session:
-            for item in items:
-                standard_code = item.get("standard_code")
-                if not standard_code:
-                    continue
-                result = await session.execute(
-                    select(DomainFactoryStandardCodeMapping).where(
-                        DomainFactoryStandardCodeMapping.standard_code == standard_code
-                    )
-                )
-                mapping = result.scalar_one_or_none()
-                if mapping is None:
-                    mapping = DomainFactoryStandardCodeMapping(
-                        standard_code=standard_code,
-                        name=item.get("name", ""),
-                        description=item.get("description"),
-                        payload=item.get("payload"),
-                    )
-                    session.add(mapping)
-                else:
-                    mapping.name = item.get("name", mapping.name)
-                    mapping.description = item.get("description", mapping.description)
-                    mapping.payload = item.get("payload", mapping.payload)
-        return True
-
-    # ========== Section Metadata (章节元数据) ==========
-
-    async def get_section_by_id(self, section_id: int) -> Any | None:
-        """根据ID获取章节"""
-        async with pg_manager.get_async_session_context() as session:
-            # 尝试从 contexts 表中查找
-            result = await session.execute(
-                select(DomainFactoryContext).where(DomainFactoryContext.id == section_id)
-            )
-            ctx = result.scalar_one_or_none()
-            if ctx:
-                return ctx
-            return None
-
-    async def create_section(
-        self,
-        code: str,
-        title: str,
-        section_path: str,
-        level: int,
-        domain: str,
-        report_type: str,
-        parent_id: int | None = None,
-        standard_code: str | None = None,
-        match_confidence: int | None = None,
-        sort_order: int = 0,
-        template_data: dict[str, Any] | None = None,
-        context_routing: dict[str, Any] | None = None,
-        writing_guidance: dict[str, Any] | None = None,
-        entity_bindings: list[dict[str, Any]] | None = None,
-    ) -> DomainFactoryContext:
-        """创建章节"""
-        async with pg_manager.get_async_session_context() as session:
-            ctx = await session.execute(
-                select(DomainFactoryContext).where(
-                    DomainFactoryContext.domain_code == domain,
-                    DomainFactoryContext.report_type == report_type,
-                )
-            )
-            existing = ctx.scalar_one_or_none()
-            
-            if existing:
-                # 更新现有上下文，添加章节到树中
-                tree = existing.section_tree_json or []
-                new_section = {
-                    "code": code,
-                    "title": title,
-                    "section_path": section_path,
-                    "level": level,
-                    "parent_id": parent_id,
-                    "standard_code": standard_code,
-                    "match_confidence": match_confidence,
-                    "sort_order": sort_order,
-                    "template_data": template_data,
-                    "context_routing": context_routing,
-                    "writing_guidance": writing_guidance,
-                    "entity_bindings": entity_bindings,
-                    "children": [],
-                }
-                tree.append(new_section)
-                existing.section_tree_json = tree
-                return existing
-            else:
-                # 创建新上下文
-                section_tree = [{
-                    "code": code,
-                    "title": title,
-                    "section_path": section_path,
-                    "level": level,
-                    "parent_id": parent_id,
-                    "standard_code": standard_code,
-                    "match_confidence": match_confidence,
-                    "sort_order": sort_order,
-                    "template_data": template_data,
-                    "context_routing": context_routing,
-                    "writing_guidance": writing_guidance,
-                    "entity_bindings": entity_bindings,
-                    "children": [],
-                }]
-                new_ctx = DomainFactoryContext(
-                    domain_code=domain,
-                    report_type=report_type,
-                    section_tree_json=section_tree,
-                    routing_rules_json={},
-                )
-                session.add(new_ctx)
-                return new_ctx
-
-    async def update_section(
-        self,
-        section_id: int,
-        title: str | None = None,
-        section_path: str | None = None,
-        level: int | None = None,
-        parent_id: int | None = None,
-        standard_code: str | None = None,
-        match_confidence: int | None = None,
-        sort_order: int | None = None,
-        template_data: dict[str, Any] | None = None,
-        context_routing: dict[str, Any] | None = None,
-        writing_guidance: dict[str, Any] | None = None,
-        entity_bindings: list[dict[str, Any]] | None = None,
-    ) -> Any | None:
-        """更新章节"""
-        async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(
-                select(DomainFactoryContext).where(DomainFactoryContext.id == section_id)
-            )
-            ctx = result.scalar_one_or_none()
-            if not ctx:
-                return None
-            
-            # 更新 routing_rules_json 中的章节信息
-            routing_rules = ctx.routing_rules_json or {}
-            if title is not None:
-                routing_rules["_update_title"] = title
-            if standard_code is not None:
-                routing_rules["_update_standard_code"] = standard_code
-            ctx.routing_rules_json = routing_rules
-            return ctx
-
-    async def delete_section(self, section_id: int) -> bool:
-        """删除章节"""
-        # 章节存储在 JSON 中，需要更新上下文
-        async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(
-                select(DomainFactoryContext).where(DomainFactoryContext.id == section_id)
-            )
-            ctx = result.scalar_one_or_none()
-            if not ctx:
-                return False
-            # 不删除整个上下文，只标记
-            return True

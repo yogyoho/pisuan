@@ -21,7 +21,6 @@ class DomainFactoryDomain(Base):
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
 
-    schemas = relationship("DomainFactorySchema", back_populates="domain", cascade="all, delete-orphan")
     tasks = relationship("DomainFactoryTask", back_populates="domain", cascade="all, delete-orphan")
 
     def to_dict(self) -> dict[str, Any]:
@@ -33,45 +32,6 @@ class DomainFactoryDomain(Base):
             "created_at": format_utc_datetime(self.created_at),
             "updated_at": format_utc_datetime(self.updated_at),
         }
-
-
-class DomainFactorySchema(Base):
-    """领域知识工厂 - Schema 配置（变量字典 + 章节树）"""
-
-    __tablename__ = "domain_factory_schema"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    domain_id = Column(Integer, ForeignKey("domain_factory_domains.id"), nullable=False, unique=True)
-    variables = Column(JSON, nullable=False, default=list)
-    chapters = Column(JSON, nullable=False, default=list)
-    created_at = Column(DateTime, default=utc_now_naive)
-    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
-
-    domain = relationship("DomainFactoryDomain", back_populates="schemas")
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "id": self.id,
-            "domain_id": self.domain_id,
-            "variables": self.variables or [],
-            "chapters": self.chapters or [],
-            "created_at": format_utc_datetime(self.created_at),
-            "updated_at": format_utc_datetime(self.updated_at),
-        }
-
-
-
-class DomainFactoryStandardCodeMapping(Base):
-    """标准章节代码映射表（SEC_Standard_Code Mapping List）"""
-
-    __tablename__ = "domain_factory_standard_code_mappings"
-
-    standard_code = Column(String(128), primary_key=True)
-    name = Column(String(255), nullable=False)
-    description = Column(Text, nullable=True)
-    payload = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=utc_now_naive)
-    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
 
 
 class DomainFactoryTask(Base):
@@ -94,8 +54,7 @@ class DomainFactoryTask(Base):
     reviewer = Column(String(64), nullable=True)
     error_message = Column(Text, nullable=True)
     base_info = Column(JSON, nullable=True)
-    structured_data = Column(JSON, nullable=True)
-    structured_blocks = Column(JSON, nullable=True)  # 结构化数据块（表格等）
+    structured_blocks = Column(JSON, nullable=True)
     template_payload = Column(JSON, nullable=True)
     form_schema_snapshot = Column(JSON, nullable=True)
     source_paragraphs = Column(JSON, nullable=True)
@@ -134,19 +93,24 @@ class DomainFactoryTask(Base):
         return data
 
 
-class DomainFactoryContext(Base):
-    """领域上下文配置 - 行业 / 报告类型 / 章节路由"""
+class DomainFactoryLearnedTemplate(Base):
+    """领域知识工厂 - 学习到的段落模板"""
 
-    __tablename__ = "domain_factory_contexts"
+    __tablename__ = "domain_factory_learned_templates"
     __table_args__ = (
-        UniqueConstraint("domain_code", "report_type", name="uq_df_context_domain_report_type"),
+        UniqueConstraint("domain_code", "chapter", "slot_signature", name="uq_dflt_domain_chapter_sig"),
+        Index("idx_dflt_chapter", "domain_code", "chapter"),
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     domain_code = Column(String(64), nullable=False, index=True)
-    report_type = Column(String(64), nullable=False)
-    section_tree_json = Column(JSON, nullable=True, default=list)
-    routing_rules_json = Column(JSON, nullable=True, default=dict)
+    chapter = Column(String(255), nullable=False, default="")
+    generalized = Column(Text, nullable=False)
+    slots = Column(JSON, nullable=False, default=list)
+    slot_signature = Column(String(255), nullable=False, default="")
+    source_count = Column(Integer, nullable=False, default=1)
+    sample_original = Column(Text, nullable=True)
+    metadata = Column(JSON, nullable=True, default=dict)
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
 
@@ -154,35 +118,13 @@ class DomainFactoryContext(Base):
         return {
             "id": self.id,
             "domain_code": self.domain_code,
-            "report_type": self.report_type,
-            "section_tree": self.section_tree_json or [],
-            "routing_rules": self.routing_rules_json or {},
-            "created_at": format_utc_datetime(self.created_at),
-            "updated_at": format_utc_datetime(self.updated_at),
-        }
-
-
-class DomainFactorySavedSection(Base):
-    """已保存的章节目录"""
-
-    __tablename__ = "domain_factory_saved_sections"
-    __table_args__ = (Index("idx_df_saved_sections_domain", "domain_id"),)
-
-    id = Column(String(64), primary_key=True)
-    domain_id = Column(String(64), nullable=False, index=True)
-    report_type_id = Column(String(64), nullable=True)
-    filename = Column(String(255), nullable=True)
-    section_tree_json = Column(JSON, nullable=True, default=list)
-    created_at = Column(DateTime, default=utc_now_naive)
-    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "id": self.id,
-            "domain_id": self.domain_id,
-            "report_type_id": self.report_type_id,
-            "filename": self.filename,
-            "section_tree": self.section_tree_json or [],
+            "chapter": self.chapter,
+            "generalized": self.generalized,
+            "slots": self.slots or [],
+            "slot_signature": self.slot_signature,
+            "source_count": self.source_count,
+            "sample_original": self.sample_original,
+            "metadata": self.metadata or {},
             "created_at": format_utc_datetime(self.created_at),
             "updated_at": format_utc_datetime(self.updated_at),
         }
@@ -192,9 +134,7 @@ class DomainFactoryPromptConfig(Base):
     """Prompt 模板配置"""
 
     __tablename__ = "domain_factory_prompt_configs"
-    __table_args__ = (
-        UniqueConstraint("domain_code", "prompt_type", name="uq_df_prompt_domain_type"),
-    )
+    __table_args__ = (UniqueConstraint("domain_code", "prompt_type", name="uq_df_prompt_domain_type"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     domain_code = Column(String(64), nullable=True, index=True)

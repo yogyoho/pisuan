@@ -111,6 +111,30 @@ class TemplateLibrary:
 
     # ---- 变更方法 ----
 
+    def add_templates_from_list(self, templates: list[dict[str, Any]]) -> None:
+        """从外部列表注入模板（如 DB 学习模板）"""
+        if not self._loaded:
+            self.load_templates()
+
+        for tpl in templates:
+            template_id = tpl.get("id")
+            if not template_id:
+                continue
+
+            converted = {
+                "template_id": f"learned_{template_id}",
+                "title": tpl.get("chapter", ""),
+                "generalized_pattern": tpl.get("generalized", ""),
+                "slots": tpl.get("slots", []),
+                "domain": tpl.get("domain_code", ""),
+                "score": tpl.get("source_count", 1),
+                "routing": tpl.get("metadata", {}).get("routing", ""),
+                "source": "learned",
+            }
+            self.templates[converted["template_id"]] = converted
+
+        logger.info(f"从外部注入 {len(templates)} 个学习模板")
+
     def add_template(self, template: dict[str, Any]) -> None:
         """添加或更新模板"""
         tpl_id = template.get("template_id")
