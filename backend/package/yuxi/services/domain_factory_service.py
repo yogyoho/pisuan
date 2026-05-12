@@ -124,90 +124,6 @@ def build_embedding_text(
     return "；".join(parts)
 
 
-DEFAULT_SCHEMA: dict[str, Any] = {
-    "variables": [
-        {
-            "key": "Project_Name",
-            "label": "项目名称",
-            "data_type": "string",
-            "widget": "Input",
-            "unit": "",
-            "group": "基础信息",
-            "required": True,
-            "prompt": "提取项目全称",
-            "source": "",
-            "sample": "",
-        },
-        {
-            "key": "Project_Capacity",
-            "label": "设计产能",
-            "data_type": "float",
-            "widget": "InputNumber",
-            "unit": "Mt/a",
-            "group": "基础信息",
-            "required": True,
-            "prompt": '搜索"设计生产能力""产能"等关键词',
-            "source": "",
-            "sample": "5.0",
-        },
-        {
-            "key": "Project_Type",
-            "label": "建设性质",
-            "data_type": "string",
-            "widget": "Select",
-            "unit": "",
-            "group": "基础信息",
-            "required": True,
-            "prompt": '提取"新建/扩建/技改"等描述',
-            "source": "",
-            "sample": "新建",
-        },
-        {
-            "key": "Eng_Method",
-            "label": "开采方法",
-            "data_type": "string",
-            "widget": "Select",
-            "unit": "",
-            "group": "工程参数",
-            "required": False,
-            "prompt": '提取"综采/充填/露天"等开采工艺',
-            "source": "",
-            "sample": "综采",
-        },
-        {
-            "key": "Eng_Life",
-            "label": "服务年限",
-            "data_type": "integer",
-            "widget": "InputNumber",
-            "unit": "a",
-            "group": "工程参数",
-            "required": False,
-            "prompt": '提取"服务年限/设计寿命"等数字',
-            "source": "",
-            "sample": "25",
-        },
-        {
-            "key": "Spatial_Area",
-            "label": "井田面积",
-            "data_type": "float",
-            "widget": "InputNumber",
-            "unit": "km²",
-            "group": "空间数据",
-            "required": False,
-            "prompt": '提取"井田面积/占地面积"等描述',
-            "source": "",
-            "sample": "",
-        },
-    ],
-    "chapters": [
-        {"key": "ch1", "title": "1. 总论"},
-        {"key": "ch2", "title": "2. 工程概况"},
-        {"key": "ch3", "title": "3. 环境现状与敏感目标"},
-        {"key": "ch4", "title": "4. 预测与评价"},
-    ],
-}
-
-
 def _safe_filename(name: str) -> str:
     sanitized = re.sub(r"[^\w\-.]+", "_", name)
     return sanitized[:180] or "document"
@@ -248,6 +164,9 @@ class DomainTaskDTO:
 class DomainFactoryService:
     """领域知识工厂服务 - 核心业务逻辑"""
 
+    # 类级别共享状态：章节提取任务缓存 (task_id -> task_state)
+    _extract_tasks: dict[str, dict[str, Any]] = {}
+
     def __init__(self):
         self.repo = DomainFactoryRepository()
         self._storage_dir = Path(config.save_dir) / "domain_factory"
@@ -261,8 +180,8 @@ class DomainFactoryService:
         # Prompt 模板缓存
         self._prompt_templates: dict[str, str] | None = None
 
-    def _get_template_matcher(self, domain: str = "coal_mining") -> Any:
-        """获取或创建模板匹配器（延迟加载）"""
+    async def _get_template_matcher(self, domain: str = "coal_mining") -> Any:
+        """获取或创建模板匹配器（延迟加载，含 DB 学习模板）"""
         if self._template_matcher is not None:
             return self._template_matcher
 
@@ -275,10 +194,20 @@ class DomainFactoryService:
             if not templates:
                 templates = library.get_all_templates()
 
-            if templates:
+            # 从 DB 加载学习模板并注入
+            try:
+                domain_code = domain.replace("_mining", "").replace("_", "") or "coal"
+                db_templates = await self.repo.list_learned_templates(domain_code=domain_code)
+                if db_templates:
+                    library.add_templates_from_list(db_templates)
+            except Exception as db_err:
+                logger.warning(f"加载 DB 学习模板失败: {db_err}")
+
+            all_templates = list(library.templates.values())
+            if all_templates:
                 self._template_library = library
-                self._template_matcher = TemplateMatcher(templates)
-                logger.info(f"模板匹配器已加载: {len(templates)} 个模板, domain={domain}")
+                self._template_matcher = TemplateMatcher(all_templates)
+                logger.info(f"模板匹配器已加载: {len(all_templates)} 个模板 (含 DB 学习模板), domain={domain}")
             else:
                 logger.info("模板库为空，跳过模板匹配")
         except Exception as e:
@@ -322,7 +251,7 @@ class DomainFactoryService:
             "文本：\n{content}\n\n"
             "Schema 变量提示：\n{schema_text}\n\n"
             "输出 JSON 结构：\n"
-            '{\n'
+            "{\n"
             '  "generalized": "...包含 {产能数值}{产能单位} ...",\n'
             '  "slots": [\n'
             "     {\n"
@@ -348,7 +277,7 @@ class DomainFactoryService:
             "2. 为每个字段指定合适的数据类型和控件类型\n"
             "3. 生成符合领域规范的字段命名\n"
             "4. 输出 JSON 格式：\n"
-            '{\n'
+            "{\n"
             '  "variables": [\n'
             "    {\n"
             '      "key": "字段Key",\n'
@@ -378,7 +307,7 @@ class DomainFactoryService:
             "2. 生成模板化的章节框架\n"
             "3. 识别需要填写的关键参数\n"
             "4. 输出 JSON 格式：\n"
-            '{\n'
+            "{\n"
             '  "generalized_content": "泛化后的内容模板",\n'
             '  "slots": [\n'
             '    {"name": "参数名称", "source": "数据来源", "required": true/false}\n'
@@ -458,23 +387,83 @@ class DomainFactoryService:
     async def delete_domain(self, domain_id: int) -> bool:
         return await self.repo.delete_domain(domain_id)
 
-    # ========== Schema ==========
+    # ========== Extraction Variables (Entity-driven) ==========
 
-    async def get_schema(self, domain_id: int) -> dict[str, Any]:
-        schema = await self.repo.get_schema(domain_id)
-        if schema:
-            return {
-                "variables": schema.variables or [],
-                "chapters": schema.chapters or [],
+    async def _get_extraction_variables(self, domain_code: str | None = None) -> list[dict[str, Any]]:
+        """从数据库实体库加载提取变量，回退到 JSON 文件。
+
+        实体的属性作为提取字典，指导 LLM 识别文档中的结构化信息。
+        """
+        try:
+            from yuxi.repositories.domain_entity_repository import DomainEntityRepository
+
+            repo = DomainEntityRepository()
+            entities = await repo.list_all(domain_code=domain_code)
+            if entities:
+                return self._convert_db_entities_to_variables(entities)
+        except Exception as e:
+            logger.warning(f"从数据库加载实体变量失败: {e}")
+
+        # 回退到 JSON 文件
+        try:
+            entity_defs = self._entity_matcher.loader.load()
+            if not entity_defs:
+                return []
+            return self._entity_adapter.enhance_schema_variables([], entity_defs)
+        except Exception as e:
+            logger.warning(f"从 JSON 文件加载实体变量失败: {e}")
+            return []
+
+    def _convert_db_entities_to_variables(self, entities: list[dict]) -> list[dict]:
+        """将数据库实体转换为 LLM 提取变量格式"""
+        variables = []
+        for entity in entities:
+            entity_key = entity.get("entity_key", "")
+            name_cn = entity.get("name_cn", "")
+            category = entity.get("category", "")
+            description = entity.get("description", "")
+            value_type = entity.get("value_type", "String")
+            unit = entity.get("unit", "")
+            synonyms = entity.get("synonyms", [])
+
+            var = {
+                "key": entity_key,
+                "label": name_cn,
+                "data_type": value_type.lower() if value_type else "string",
+                "widget": "Input",
+                "unit": unit or "",
+                "group": category or "基础信息",
+                "required": False,
+                "prompt": description,
+                "source": "entity_db",
+                "_entity_id": entity.get("entity_id", ""),
+                "_entity_category": category,
+                "synonyms": synonyms,
             }
-        domain = await self.repo.get_domain_by_id(domain_id)
-        if domain:
-            return DEFAULT_SCHEMA.copy()
-        return {"variables": [], "chapters": []}
+            variables.append(var)
 
-    async def save_schema(self, domain_id: int, variables: list, chapters: list) -> dict[str, Any]:
-        schema = await self.repo.upsert_schema(domain_id, variables, chapters)
-        return schema.to_dict()
+            # 展开子属性为独立变量
+            for prop in entity.get("properties", []):
+                prop_key = prop.get("key", "")
+                if not prop_key:
+                    continue
+                variables.append(
+                    {
+                        "key": f"{entity_key}.{prop_key}",
+                        "label": f"{name_cn} · {prop.get('name_cn', prop_key)}",
+                        "data_type": prop.get("value_type", "String").lower(),
+                        "widget": "Input",
+                        "unit": prop.get("unit", ""),
+                        "group": category or "基础信息",
+                        "required": False,
+                        "prompt": prop.get("description", ""),
+                        "source": "entity_db_prop",
+                        "_entity_id": entity.get("entity_id", ""),
+                        "_entity_category": category,
+                    }
+                )
+
+        return variables
 
     # ========== File Upload ==========
 
@@ -608,7 +597,7 @@ class DomainFactoryService:
 
             # 模板匹配：对标题段落进行模板匹配，附加 template_id / semantic_routing
             try:
-                matcher = service._get_template_matcher()
+                matcher = await service._get_template_matcher()
                 if matcher:
                     matched_count = 0
                     for para in paragraphs:
@@ -657,26 +646,20 @@ class DomainFactoryService:
             # 预加载 prompt 模板（一次查询，全流程复用）
             prompt_templates = await service._load_prompt_templates()
 
-            # 获取领域 Schema，并用实体定义增强变量
-            schema = await service.get_schema(task.domain_id) if task.domain_id else DEFAULT_SCHEMA
-            variables = schema.get("variables", [])
-
-            # 用 entity_meta 增强 Schema 变量：补充 extraction_hint、entity_ref 等字段
-            try:
-                enhanced_vars = self._entity_adapter.enhance_schema_variables(
-                    variables, self._entity_matcher.loader.load()
-                )
-                if len(enhanced_vars) > len(variables):
-                    logger.info(f"实体增强：Schema 变量从 {len(variables)} 增加到 {len(enhanced_vars)}")
-                variables = enhanced_vars
-            except Exception as e:
-                logger.warning(f"实体增强失败，使用原始 Schema: {e}")
+            # 从实体定义生成提取变量（优先从 DB 实体库加载）
+            domain_for_extract = await service.repo.get_domain_by_id(task.domain_id) if task.domain_id else None
+            domain_code = domain_for_extract.code if domain_for_extract else None
+            variables = await self._get_extraction_variables(domain_code)
 
             form_data = {}
             if variables:
                 try:
                     # 构建提取 Prompt
-                    extract_prompt = self._build_extract_prompt(raw_markdown, variables, prompt_template=prompt_templates.get("extract"))
+                    extract_prompt = self._build_extract_prompt(
+                        raw_markdown,
+                        variables,
+                        prompt_template=prompt_templates.get("extract"),
+                    )
                     logger.info(f"开始 LLM 提取，变量数量: {len(variables)}")
 
                     # 调用 LLM
@@ -755,16 +738,11 @@ class DomainFactoryService:
 
             # ========== 段落级泛化（参考源系统 pipeline.py）==========
             # 对每个段落逐一调用 LLM 进行泛化，并回写到段落对象中
-            variables = schema.get("variables", [])
-
             try:
-                # 获取 Schema 变量列表
-                schema_vars = variables if variables else []
-
                 # 对所有段落进行泛化
                 paragraph_results = await self.generalize_paragraphs(
                     paragraphs=paragraphs,
-                    schema_variables=schema_vars,
+                    schema_variables=variables,
                     domain_label=domain_label,
                     max_concurrency=5,
                 )
@@ -836,6 +814,20 @@ class DomainFactoryService:
                 task_id,
                 {
                     "source_paragraphs": paragraphs,
+                },
+            )
+
+            # 收集未识别插槽（泛化结果中没有 entity_ref 的插槽）
+            unrecognized_slots = self._collect_unrecognized_slots(paragraphs)
+            if unrecognized_slots:
+                logger.info(f"收集到 {len(unrecognized_slots)} 个未识别插槽")
+            await service.repo.update_task(
+                task_id,
+                {
+                    "template_metadata": {
+                        "unrecognized_slots": unrecognized_slots,
+                        "domain_code": domain_code,
+                    },
                 },
             )
 
@@ -925,9 +917,6 @@ class DomainFactoryService:
 
         # 中文章节目录模式
         chapter_pattern = re.compile(r"^第([一二三四五六七八九十百千万\d]+)章\s*(.*)$")
-        section_pattern = re.compile(
-            r"^(第[一二三四五六七八九十百千万\d]+章\s*)?第([一二三四五六七八九十百千万\d]+)节\s*(.*)$"
-        )
 
         # 判断是否为表格行的函数
         def is_table_line(text: str) -> bool:
@@ -1455,9 +1444,6 @@ class DomainFactoryService:
             return None
 
         # 提取 Markdown 表格的关键内容用于匹配
-        # 合并前几行的内容作为匹配键
-        sample_content = " ".join(markdown_lines[:3])
-
         for html_table in html_tables:
             # 检查 Markdown 内容是否在 HTML 表格中
             # 提取 HTML 中的文本内容进行比较
@@ -1565,7 +1551,9 @@ class DomainFactoryService:
         else:
             return {"type": "row", "row": cells}
 
-    def _build_extract_prompt(self, markdown_content: str, variables: list, prompt_template: str | None = None) -> list[dict]:
+    def _build_extract_prompt(
+        self, markdown_content: str, variables: list, prompt_template: str | None = None
+    ) -> list[dict]:
         """构建 LLM 提取 Prompt，优先使用数据库中配置的模板"""
         variables_desc = []
         for var in variables:
@@ -1707,7 +1695,9 @@ class DomainFactoryService:
                 result.setdefault("metadata", {"chapter": "", "tags": []})
 
                 logger.info(
-                    f"模板生成成功: generalized 长度={len(result.get('generalized', ''))}, slots数量={len(result.get('slots', []))}"
+                    "模板生成成功: generalized 长度=%d, slots数量=%d",
+                    len(result.get("generalized", "")),
+                    len(result.get("slots", [])),
                 )
                 return result
             else:
@@ -1823,10 +1813,22 @@ class DomainFactoryService:
             # 根据段落类型构建不同的 Prompt
             if is_table and table_format == "markdown":
                 # Markdown 表格类型的段落
-                prompt = self._build_table_generalize_prompt(text, schema_text, chapter_hint, domain_label, prompt_template=template_prompt)
+                prompt = self._build_table_generalize_prompt(
+                    text,
+                    schema_text,
+                    chapter_hint,
+                    domain_label,
+                    prompt_template=template_prompt,
+                )
             else:
                 # 普通文本段落
-                prompt = self._build_text_generalize_prompt(text, schema_text, chapter_hint, domain_label, prompt_template=template_prompt)
+                prompt = self._build_text_generalize_prompt(
+                    text,
+                    schema_text,
+                    chapter_hint,
+                    domain_label,
+                    prompt_template=template_prompt,
+                )
 
             async with semaphore:
                 try:
@@ -1920,7 +1922,8 @@ class DomainFactoryService:
 
         if not prompt:
             # 参考源系统 prompt_templates.py 的 Prompt 模板
-            prompt = """你是一个负责生成环评模板的专家，请将下方段落泛化为模板，使用双层大括号 {插槽名称} 表示可替换变量。
+            prompt = """你是一个负责生成环评模板的专家，\
+请将下方段落泛化为模板，使用双层大括号 {插槽名称} 表示可替换变量。
 
 重要：插槽命名必须统一使用中文名称，格式为 {中文名称}。
 
@@ -1982,6 +1985,7 @@ class DomainFactoryService:
 
 如果没有明确的逻辑条件，condition 字段可以省略或设为 null。"""
 
+        model = None
         try:
             model = select_model()
             logger.debug(f"泛化调用模型={model.model_name}, prompt长度={len(prompt)}字符")
@@ -1996,7 +2000,8 @@ class DomainFactoryService:
                 result.setdefault("metadata", {"chapter": chapter_hint, "tags": []})
                 return self._normalize_template_response(result)
         except Exception as e:
-            logger.warning(f"泛化失败 (模型={getattr(model, 'model_name', 'unknown')}, prompt长度={len(prompt)}): {e}")
+            model_name = getattr(model, "model_name", "unknown") if model else "unknown"
+            logger.warning(f"泛化失败 (模型={model_name}, prompt长度={len(prompt)}): {e}")
 
         return self._generalize_fallback(text, chapter_hint)
 
@@ -2268,10 +2273,10 @@ class DomainFactoryService:
         # 如果仍然无法转换，返回原名称（可能是中文或特殊格式）
         return slot_name
 
-    def _format_schema_variables(self, schema: list[dict[str, Any]]) -> str:
-        """格式化 Schema 变量为提示词文本"""
+    def _format_schema_variables(self, variables: list[dict[str, Any]]) -> str:
+        """格式化实体变量为提示词文本"""
         lines = []
-        for item in schema:
+        for item in variables:
             key = item.get("key", "").strip()
             dtype = item.get("data_type", "")
             label = item.get("label", "") or key
@@ -2296,7 +2301,8 @@ class DomainFactoryService:
             return None
 
         domain = await self.repo.get_domain_by_id(task.domain_id)
-        schema = await self.get_schema(task.domain_id) if domain else DEFAULT_SCHEMA
+        domain_code = domain.code if domain else None
+        variables = await self._get_extraction_variables(domain_code)
 
         return {
             "id": task.id,
@@ -2311,22 +2317,16 @@ class DomainFactoryService:
             "reviewer": task.reviewer,
             "committed_at": utc_isoformat(task.committed_at),
             "error_message": task.error_message,
-            "schema_snapshot": schema,
-            "form_schema": _build_form_schema(schema, task.form_schema_snapshot),
+            "form_schema": _build_form_schema(variables, task.form_schema_snapshot),
             "base_info": task.base_info or {},
-            "structured_data": task.structured_data or {},
             "structured_blocks": task.structured_blocks or [],
             "template": task.template_payload or {},
             "template_metadata": task.template_metadata,
             "source_paragraphs": task.source_paragraphs or [],
             "raw_markdown": task.raw_markdown,
-            "raw_html": getattr(task, "raw_html", None),  # HTML 格式的文档内容
+            "raw_html": getattr(task, "raw_html", None),
             "ingest_task_id": task.ingest_task_id,
             "knowledge_base_id": task.knowledge_base_id,
-            "metadata_options": {
-                "chapters": [ch.get("title", ch) for ch in schema.get("chapters", [])],
-                "tags": ["井工开采", "露天开采", "充填开采", "综采", "综放"],
-            },
         }
 
     async def list_pending_tasks(self, domain_code: str | None = None) -> list[dict[str, Any]]:
@@ -2396,7 +2396,6 @@ class DomainFactoryService:
             # 通用更新
             for field_name in [
                 "base_info",
-                "structured_data",
                 "structured_blocks",
                 "template_payload",
                 "form_schema_snapshot",
@@ -2626,6 +2625,15 @@ class DomainFactoryService:
                 # 图谱构建失败不阻断主流程
                 logger.warning(f"知识图谱构建失败（不阻断入库）: {e}")
 
+            # ========== 阶段2.8: 模板回流 (LEARNED TEMPLATES) ==========
+            try:
+                await context.set_progress(90.0, "正在回写学习模板...")
+                await context.set_message("正在回写学习模板...")
+                learned_count = await service._save_learned_templates_from_task(task_detail)
+                logger.info(f"模板回流: {learned_count} 个段落模板已保存")
+            except Exception as e:
+                logger.warning(f"模板回流失败（不阻断入库）: {e}")
+
             if not knowledge_base_id:
                 logger.warning(f"任务 {task_id} 未指定目标知识库，跳过入库")
 
@@ -2716,7 +2724,6 @@ class DomainFactoryService:
         if structured_blocks:
             parts.append("\n## 结构化数据\n")
             for block in structured_blocks:
-                block_type = block.get("type", "")
                 headers = block.get("headers", [])
                 rows = block.get("rows", [])
                 html_content = block.get("html_content", "")
@@ -2812,17 +2819,18 @@ class DomainFactoryService:
             content = para.get("content", "")
             section_path = para.get("section_path", [])
 
-            # 提取父级章节标题
-            parent_title = ""
-            if section_path and len(section_path) > 1:
-                parent_title = str(section_path[-2])
-
             # 将内容转为纯文本（去除 HTML 标记）
             plain_content = re.sub(r"<[^>]+>", "", content) if content else ""
 
             # 段落正文 chunk
             if plain_content:
                 section_id = para.get("section_id", f"sec_{chunk_idx}")
+
+                # 先临时填入 section_path[-2] 作为父级 ID，后面回填标题
+                parent_section_id = (
+                    ".".join(str(p) for p in section_path[:-1]) if section_path and len(section_path) > 1 else ""
+                )
+
                 chunks.append(
                     {
                         "id": f"{file_id}_chunk_{chunk_idx}",
@@ -2830,7 +2838,8 @@ class DomainFactoryService:
                         "chunk_order_index": chunk_idx,
                         "section_id": section_id,
                         "section_title": title,
-                        "parent_section_title": parent_title,
+                        "parent_section_title": "",
+                        "parent_section_id": parent_section_id,
                         "template": para.get("template"),
                         "slots": para.get("template", {}).get("slots")
                         if isinstance(para.get("template"), dict)
@@ -2846,31 +2855,12 @@ class DomainFactoryService:
                         "title": title,
                         "level": level,
                         "order": chunk_idx,
-                        "parent_section": None,
+                        "parent_section": parent_section_id or None,
                         "path": [str(p) for p in section_path] if section_path else [title],
                         "chunk_indexes": [chunk_idx],
                     }
                 )
                 chunk_idx += 1
-
-            # 泛化模板 chunk（模板单独作为一个 chunk 以提升检索命中率）
-            template = para.get("template", {})
-            if isinstance(template, dict):
-                generalized = template.get("generalized", "")
-                if generalized:
-                    chunks.append(
-                        {
-                            "id": f"{file_id}_tmpl_{chunk_idx}",
-                            "content": f"泛化模板：{generalized}",
-                            "chunk_order_index": chunk_idx,
-                            "section_id": para.get("section_id", f"sec_{chunk_idx}"),
-                            "section_title": f"{title} - 泛化模板",
-                            "parent_section_title": title,
-                            "template": template,
-                            "slots": template.get("slots"),
-                        }
-                    )
-                    chunk_idx += 1
 
         # 构建表格 chunks
         structured_blocks = task_detail.get("structured_blocks", [])
@@ -2898,6 +2888,18 @@ class DomainFactoryService:
                 )
                 chunk_idx += 1
 
+        # 构建 section_id -> section 映射，回填 parent_section_title 和 section summary
+        section_map = {s["section_id"]: s for s in sections}
+        for chunk in chunks:
+            pid = chunk.pop("parent_section_id", "")
+            if pid and pid in section_map:
+                chunk["parent_section_title"] = section_map[pid]["title"]
+        for section in sections:
+            if not section.get("summary") and section.get("chunk_indexes"):
+                first_idx = section["chunk_indexes"][0]
+                if first_idx < len(chunks):
+                    section["summary"] = chunks[first_idx].get("content", "")[:200]
+
         return StructuredDocument(
             file_id=file_id,
             filename=filename,
@@ -2912,6 +2914,43 @@ class DomainFactoryService:
                 "task_id": task_detail.get("task_id", ""),
             },
         )
+
+    async def _save_learned_templates_from_task(self, task_detail: dict[str, Any]) -> int:
+        """从已提交任务中提取高质量模板，回流到学习模板库"""
+        domain_code = task_detail.get("domain", "coal")
+        paragraphs = task_detail.get("source_paragraphs", [])
+        saved = 0
+
+        for para in paragraphs:
+            template = para.get("template", {})
+            if not isinstance(template, dict):
+                continue
+            generalized = template.get("generalized", "")
+            if not generalized or len(generalized) < 20:
+                continue
+
+            slots = template.get("slots", [])
+            slot_names = sorted(s.get("name", "") for s in slots if isinstance(s, dict))
+            slot_signature = "|".join(slot_names)
+            section_path = para.get("section_path", [])
+            chapter = para.get("title", "") or (".".join(str(p) for p in section_path) if section_path else "")
+            sample_original = para.get("original", para.get("content", ""))
+            metadata = template.get("metadata", {})
+
+            await self.repo.upsert_learned_template(
+                domain_code=domain_code,
+                chapter=chapter,
+                generalized=generalized,
+                slots=slots,
+                slot_signature=slot_signature,
+                sample_original=sample_original,
+                metadata=metadata,
+            )
+            saved += 1
+
+        if saved > 0:
+            logger.info(f"模板回流完成: 领域={domain_code}, 保存/更新={saved} 个模板")
+        return saved
 
     async def reingest_task(self, task_id: str, knowledge_base_id: str | None = None) -> dict[str, Any] | None:
         """再入库：重新处理并入库已提交的任务"""
@@ -3229,360 +3268,434 @@ class DomainFactoryService:
             ],
         }
 
-    async def get_context_sections(self, domain_code: str, report_type: str) -> dict[str, Any]:
-        ctx = await self.repo.get_context(domain_code, report_type)
-        if ctx and ctx.section_tree_json:
-            return {"sections": ctx.section_tree_json}
-        return {
-            "sections": [
-                {
-                    "code": "SEC_GENERAL_OVERVIEW",
-                    "title": "第一章 总论",
-                    "section_id": "SEC_GENERAL_OVERVIEW",
-                    "children": [],
-                },
-                {
-                    "code": "SEC_PROJECT_ENGINEERING",
-                    "title": "第二章 工程分析",
-                    "section_id": "SEC_PROJECT_ENGINEERING",
-                    "children": [],
-                },
-                {
-                    "code": "SEC_IMPACT_PREDICTION",
-                    "title": "第三章 环境影响预测",
-                    "section_id": "SEC_IMPACT_PREDICTION",
-                    "children": [],
-                },
-            ]
-        }
-
-    async def update_context_sections(self, domain_code: str, report_type: str, sections: list) -> dict[str, Any]:
-        ctx = await self.repo.get_or_create_context(domain_code, report_type)
-        ctx.section_tree_json = sections
-        await self.repo.update_context(domain_code, report_type, section_tree=sections)
-        return {"sections": sections}
-
-    async def get_context_section_rule(self, domain_code: str, report_type: str, section_code: str) -> dict[str, Any]:
-        ctx = await self.repo.get_context(domain_code, report_type)
-        if ctx and ctx.routing_rules_json:
-            rule = ctx.routing_rules_json.get(section_code, {})
-        else:
-            rule = {
-                "inherit_mode": "inherit",
-                "base_keywords": [],
-                "domain_keyword_groups": [],
-                "skill_id": None,
-                "schema_diff": {},
-            }
-        return {"rule": rule}
-
-    async def update_context_section_rule(
-        self, domain_code: str, report_type: str, section_code: str, rule: dict[str, Any]
-    ) -> dict[str, Any]:
-        ctx = await self.repo.get_or_create_context(domain_code, report_type)
-        routing_rules = dict(ctx.routing_rules_json or {})
-        routing_rules[section_code] = rule
-        await self.repo.update_context(domain_code, report_type, routing_rules=routing_rules)
-        return {"rule": rule}
-
-    # ========== Saved Sections ==========
-
-    async def get_saved_sections(
-        self, domain_id: str | None = None, report_type_id: str | None = None
-    ) -> dict[str, Any]:
-        sections = await self.repo.list_saved_sections(domain_id, report_type_id)
-        return {"items": sections}
-
-    async def get_saved_section_detail(self, section_id: str) -> dict[str, Any] | None:
-        section = await self.repo.get_saved_section(section_id)
-        if not section:
-            return None
-        return section.to_dict()
-
-    async def import_saved_section(self, section_id: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
-        section = await self.repo.get_saved_section(section_id)
-        if not section:
-            return {"message": "Section not found", "imported_sections": 0, "imported_rules": 0}
-        domain_code = (context or {}).get("domain_id", section.domain_id)
-        report_type = (context or {}).get("report_type_id", section.report_type_id)
-        if domain_code and report_type:
-            await self.repo.update_context_sections(domain_code, report_type, section.section_tree_json or [])
-        return {
-            "message": "Import successful",
-            "imported_sections": len(section.section_tree_json or []),
-            "imported_rules": 0,
-        }
-
     # ========== Section Routing ==========
-
-    async def get_context_sections_tree(
-        self, domain_code: str, report_type: str, is_template: bool = True
-    ) -> list[dict[str, Any]]:
-        """获取章节树"""
-        ctx = await self.repo.get_context(domain_code, report_type)
-        if ctx and ctx.section_tree_json:
-            return ctx.section_tree_json
-
-        # 返回默认章节结构
-        return [
-            {
-                "code": "SEC_GENERAL_OVERVIEW",
-                "title": "第一章 总论",
-                "section_path": "1",
-                "level": 1,
-                "children": [
-                    {
-                        "code": "SEC_GENERAL_1_1",
-                        "title": "1.1 项目背景",
-                        "section_path": "1.1",
-                        "level": 2,
-                        "children": [],
-                    },
-                    {
-                        "code": "SEC_GENERAL_1_2",
-                        "title": "1.2 编制依据",
-                        "section_path": "1.2",
-                        "level": 2,
-                        "children": [],
-                    },
-                ],
-            },
-            {
-                "code": "SEC_PROJECT_ENGINEERING",
-                "title": "第二章 工程分析",
-                "section_path": "2",
-                "level": 1,
-                "children": [],
-            },
-            {"code": "SEC_ENV_STATUS", "title": "第三章 环境现状", "section_path": "3", "level": 1, "children": []},
-            {
-                "code": "SEC_IMPACT_PREDICTION",
-                "title": "第四章 环境影响预测",
-                "section_path": "4",
-                "level": 1,
-                "children": [],
-            },
-        ]
-
-    async def get_section_detail(self, section_id: int) -> dict[str, Any] | None:
-        """获取章节详情"""
-        section = await self.repo.get_section_by_id(section_id)
-        if not section:
-            return None
-        return (
-            section.to_dict()
-            if hasattr(section, "to_dict")
-            else {
-                "id": section.id,
-                "code": section.code,
-                "title": section.title,
-                "section_path": section.section_path,
-                "level": section.level,
-                "domain": section.domain,
-                "report_type": section.report_type,
-                "standard_code": getattr(section, "standard_code", None),
-                "match_confidence": getattr(section, "match_confidence", None),
-            }
-        )
-
-    async def create_section(
-        self,
-        code: str,
-        title: str,
-        section_path: str,
-        level: int | None,
-        domain: str,
-        report_type: str,
-        parent_id: int | None = None,
-        standard_code: str | None = None,
-        match_confidence: int | None = None,
-        sort_order: int = 0,
-        template_data: dict[str, Any] | None = None,
-        context_routing: dict[str, Any] | None = None,
-        writing_guidance: dict[str, Any] | None = None,
-        entity_bindings: list[dict[str, Any]] | None = None,
-        user: str | None = None,
-    ) -> dict[str, Any]:
-        """创建章节"""
-        # 计算层级
-        if level is None:
-            level = section_path.count(".") + 1
-
-        section = await self.repo.create_section(
-            code=code,
-            title=title,
-            section_path=section_path,
-            level=level,
-            domain=domain,
-            report_type=report_type,
-            parent_id=parent_id,
-            standard_code=standard_code,
-            match_confidence=match_confidence,
-            sort_order=sort_order,
-            template_data=template_data,
-            context_routing=context_routing,
-            writing_guidance=writing_guidance,
-            entity_bindings=entity_bindings,
-        )
-        return (
-            section.to_dict()
-            if hasattr(section, "to_dict")
-            else {
-                "id": section.id,
-                "code": code,
-                "title": title,
-                "section_path": section_path,
-                "level": level,
-            }
-        )
-
-    async def update_section(
-        self,
-        section_id: int,
-        title: str | None = None,
-        section_path: str | None = None,
-        level: int | None = None,
-        parent_id: int | None = None,
-        standard_code: str | None = None,
-        match_confidence: int | None = None,
-        sort_order: int | None = None,
-        template_data: dict[str, Any] | None = None,
-        context_routing: dict[str, Any] | None = None,
-        writing_guidance: dict[str, Any] | None = None,
-        entity_bindings: list[dict[str, Any]] | None = None,
-    ) -> dict[str, Any] | None:
-        """更新章节"""
-        section = await self.repo.update_section(
-            section_id=section_id,
-            title=title,
-            section_path=section_path,
-            level=level,
-            parent_id=parent_id,
-            standard_code=standard_code,
-            match_confidence=match_confidence,
-            sort_order=sort_order,
-            template_data=template_data,
-            context_routing=context_routing,
-            writing_guidance=writing_guidance,
-            entity_bindings=entity_bindings,
-        )
-        if not section:
-            return None
-        return section.to_dict() if hasattr(section, "to_dict") else {"id": section_id}
-
-    async def delete_section(self, section_id: int) -> bool:
-        """删除章节"""
-        return await self.repo.delete_section(section_id)
-
-    async def batch_get_sections(self, section_ids: list[int]) -> dict[int, dict[str, Any]]:
-        """批量获取章节"""
-        sections = {}
-        for section_id in section_ids:
-            section = await self.repo.get_section_by_id(section_id)
-            if section:
-                sections[section_id] = section.to_dict() if hasattr(section, "to_dict") else {"id": section_id}
-        return sections
-
-    async def get_section_standard_codes(self, section_id: int) -> list[dict[str, Any]]:
-        """获取章节绑定的 StandardCodes"""
-        section = await self.repo.get_section_by_id(section_id)
-        if not section:
-            return []
-        codes = []
-        if hasattr(section, "standard_code") and section.standard_code:
-            codes.append({"standard_code": section.standard_code, "mount_type": "direct"})
-        return codes
-
-    async def bind_section_standard_code(self, section_id: int, standard_code: str, mount_type: str = "direct") -> bool:
-        """绑定 StandardCode 到章节"""
-        section = await self.repo.update_section(section_id, standard_code=standard_code)
-        return section is not None
-
-    async def unbind_section_standard_code(self, section_id: int, standard_code: str) -> bool:
-        """解绑 StandardCode"""
-        section = await self.repo.update_section(section_id, standard_code=None)
-        return section is not None
-
-    async def match_standard_codes(
-        self,
-        title: str,
-        section_path: str,
-        level: int,
-        content_sample: str | None = None,
-    ) -> list[dict[str, Any]]:
-        """匹配 StandardCodes"""
-        # 获取所有 StandardCode 映射
-        mappings = await self.repo.list_standard_code_mappings()
-        matches = []
-
-        title_lower = title.lower()
-        for mapping in mappings:
-            standard_code = mapping.get("standard_code", "")
-            name = mapping.get("name", "")
-            desc = mapping.get("description", "") or ""
-
-            # 简单的关键词匹配
-            score = 0
-            keywords = []
-
-            # 检查标题关键词
-            for keyword in [standard_code.lower(), name.lower(), desc.lower()]:
-                if keyword and keyword in title_lower:
-                    score += 30
-                    keywords.append(keyword[:20])
-
-            # 检查路径层级匹配
-            if level <= 2 and "总论" in title:
-                if "OVERVIEW" in standard_code.upper() or "GENERAL" in standard_code.upper():
-                    score += 20
-            elif level == 2 and "工程" in title:
-                if "ENGINEERING" in standard_code.upper():
-                    score += 20
-
-            if score > 0:
-                matches.append(
-                    {
-                        "standard_code": standard_code,
-                        "name": name,
-                        "confidence": min(score, 100),
-                        "match_reason": f"关键词匹配: {', '.join(keywords[:3])}",
-                        "priority": mapping.get("priority", 50),
-                    }
-                )
-
-        # 按置信度排序
-        matches.sort(key=lambda x: x["confidence"], reverse=True)
-        return matches[:5]
-
-    async def export_sections(self, domain: str, report_type: str) -> dict[str, Any]:
-        """导出章节配置"""
-        from datetime import datetime
-
-        sections = await self.get_context_sections_tree(domain, report_type)
-        return {
-            "metadata": {
-                "domain": domain,
-                "report_type": report_type,
-                "version": "1.0.0",
-                "exported_at": datetime.utcnow().isoformat(),
-                "section_count": len(sections),
-            },
-            "sections": sections,
-        }
-
-    async def import_sections(self, domain: str, report_type: str, sections: list[dict[str, Any]]) -> dict[str, Any]:
-        """导入章节配置"""
-        await self.update_context_sections(domain, report_type, sections)
-        return {"imported_count": len(sections), "skipped_count": 0, "conflicts": []}
 
     # ========== Standard Code Mapping ==========
 
-    async def get_standard_code_mapping(self) -> dict[str, Any]:
-        items = await self.repo.list_standard_code_mappings()
-        return {"items": items}
+    # ========== Entity Evolution（实体进化回路） ==========
 
-    async def update_standard_code_mapping(self, items: list[dict[str, Any]]) -> bool:
-        return await self.repo.upsert_standard_code_mappings(items)
+    def _collect_unrecognized_slots(self, paragraphs: list[dict]) -> list[dict[str, Any]]:
+        """从泛化结果中收集未匹配到实体的插槽"""
+        seen_names: set[str] = set()
+        slots: list[dict[str, Any]] = []
+        for para in paragraphs:
+            template = para.get("template", {})
+            if not isinstance(template, dict):
+                continue
+            for slot in template.get("slots", []):
+                if slot.get("entity_ref"):
+                    continue  # 已匹配，跳过
+                name = slot.get("name", "")
+                if not name or name in seen_names:
+                    continue
+                seen_names.add(name)
+                slots.append(
+                    {
+                        "name": name,
+                        "type": slot.get("type", ""),
+                        "description": slot.get("description", ""),
+                        "data_source": slot.get("data_source", slot.get("suggested_source", "")),
+                        "paragraph_title": para.get("title", ""),
+                        "content_preview": para.get("content", "")[:200],
+                    }
+                )
+        return slots
+
+    async def get_proposed_entities(self, task_id: str) -> dict[str, Any]:
+        """使用 LLM 将未识别插槽整理为新实体建议，供用户确认后保存到实体库
+
+        分两步处理：
+        1. 先匹配已有实体的属性（插槽可能是已有实体缺失的属性）
+        2. 剩余的插槽交给 LLM 判断是独立实体还是某个实体的属性
+        """
+        detail = await self.get_task_detail(task_id)
+        if not detail:
+            return {"entities": [], "message": "任务不存在"}
+
+        template_metadata = detail.get("template_metadata") or {}
+        raw_slots = template_metadata.get("unrecognized_slots", [])
+        if not raw_slots:
+            return {"entities": [], "message": "没有未识别的插槽"}
+
+        domain_code = template_metadata.get("domain_code") or detail.get("domain") or "coal"
+
+        # 获取现有实体完整结构（含属性）
+        existing_entities = await self._get_existing_entities_full(domain_code)
+
+        # 第一步：匹配已有实体的属性
+        property_proposals, remaining_slots = self._match_slots_to_existing_entities(raw_slots, existing_entities)
+
+        # 第二步：剩余插槽交给 LLM 判断
+        entity_proposals = []
+        if remaining_slots:
+            prompt = self._build_entity_proposal_prompt(remaining_slots, existing_entities, domain_code)
+            try:
+                from yuxi.models.chat import select_model
+
+                model = select_model()
+                response = await model.call(prompt)
+                text = response.content if hasattr(response, "content") else str(response)
+                entity_proposals = self._parse_entity_proposal_response(text)
+            except Exception as e:
+                logger.warning(f"LLM 实体建议生成失败: {e}")
+
+        return {
+            "entities": property_proposals + entity_proposals,
+            "raw_slots": raw_slots,
+            "matched_count": len(property_proposals),
+            "new_count": len(entity_proposals),
+            "domain_code": domain_code,
+        }
+
+    async def confirm_proposed_entities(self, task_id: str, entities: list[dict[str, Any]]) -> dict[str, Any]:
+        """将用户确认的实体/属性保存到数据库实体库
+
+        支持两种类型：
+        - new_entity: 创建新实体
+        - add_property: 向已有实体追加属性
+        """
+        detail = await self.get_task_detail(task_id)
+        if not detail:
+            return {"saved": 0, "error": "任务不存在"}
+
+        template_metadata = detail.get("template_metadata") or {}
+        domain_code = template_metadata.get("domain_code") or detail.get("domain") or "coal"
+
+        from yuxi.repositories.domain_entity_repository import DomainEntityRepository
+
+        repo = DomainEntityRepository()
+        saved = 0
+        skipped = 0
+
+        for entity_data in entities:
+            if not entity_data.get("_confirmed"):
+                skipped += 1
+                continue
+
+            suggestion_type = entity_data.get("suggestion_type", "new_entity")
+
+            if suggestion_type == "add_property":
+                # 向已有实体追加属性
+                target_key = entity_data.get("target_entity_key") or entity_data.get("entity_key", "")
+                if not target_key:
+                    skipped += 1
+                    continue
+                existing = await repo.get_by_key(target_key, domain_code=domain_code)
+                if not existing:
+                    logger.warning(f"目标实体不存在: {target_key}")
+                    skipped += 1
+                    continue
+                proposed_prop = entity_data.get("proposed_property", {})
+                if not proposed_prop:
+                    skipped += 1
+                    continue
+                current_props = list(existing.properties or [])
+                # 去重
+                existing_keys = {p.get("key", "") for p in current_props}
+                if proposed_prop.get("key", "") not in existing_keys:
+                    current_props.append(proposed_prop)
+                    await repo.update(existing.entity_id, {"properties": current_props})
+                    saved += 1
+                    logger.info(f"追加属性到 {existing.name_cn}: {proposed_prop.get('name_cn', '')}")
+                else:
+                    skipped += 1
+
+            else:
+                # 创建新实体
+                entity_key = entity_data.get("entity_key", "")
+                name_cn = entity_data.get("name_cn", "")
+                if not entity_key or not name_cn:
+                    skipped += 1
+                    continue
+                existing = await repo.get_by_key(entity_key, domain_code=domain_code)
+                if existing:
+                    logger.info(f"实体已存在，跳过: {entity_key}")
+                    skipped += 1
+                    continue
+                data = {
+                    "entity_id": str(uuid.uuid4()),
+                    "entity_key": entity_key,
+                    "name_cn": name_cn,
+                    "category": entity_data.get("category", "其他"),
+                    "domain_code": domain_code,
+                    "value_type": entity_data.get("value_type", "String"),
+                    "unit": entity_data.get("unit", ""),
+                    "is_list_type": entity_data.get("is_list_type", False),
+                    "description": entity_data.get("description", ""),
+                    "synonyms": entity_data.get("synonyms", []),
+                    "properties": entity_data.get("properties", []),
+                    "relation_rules": [],
+                    "metadata": {
+                        "source": "etl_proposal",
+                        "task_id": task_id,
+                        "confidence": entity_data.get("confidence", 0),
+                    },
+                }
+                await repo.create(data)
+                saved += 1
+                logger.info(f"保存新实体: {name_cn} ({entity_key})")
+
+        # 触发同领域待审核任务的重映射
+        try:
+            remapped = await self._remap_waiting_review_tasks(domain_code)
+            if remapped > 0:
+                logger.info(f"实体确认后重映射: {remapped} 个任务已更新")
+        except Exception as remap_err:
+            logger.warning(f"实体重映射失败（不影响实体保存）: {remap_err}")
+
+        return {"saved": saved, "skipped": skipped}
+
+    async def _remap_waiting_review_tasks(self, domain_code: str) -> int:
+        """对同领域 WAITING_REVIEW 任务重新映射插槽的 entity_ref"""
+        from yuxi.services.entity_meta_service import SlotEntityMapper
+
+        pending_tasks = await self.repo.list_pending_tasks_by_domain(domain_code)
+        if not pending_tasks:
+            return 0
+
+        mapper = SlotEntityMapper()
+        updated = 0
+
+        for task_summary in pending_tasks:
+            task_id = task_summary["id"]
+            task = await self.repo.get_task(task_id)
+            if not task or not task.source_paragraphs:
+                continue
+
+            paragraphs = task.source_paragraphs
+            changed = False
+
+            for para in paragraphs:
+                template = para.get("template", {})
+                if not isinstance(template, dict):
+                    continue
+                raw_slots = template.get("slots", [])
+                if not raw_slots:
+                    continue
+
+                try:
+                    mapped_slots = mapper.map_slots(raw_slots, paragraph_context=para.get("content", ""))
+                except Exception:
+                    continue
+
+                for i, mapped in enumerate(mapped_slots):
+                    if i >= len(raw_slots):
+                        break
+                    old_ref = raw_slots[i].get("entity_ref", "")
+                    new_ref = mapped.get("entity_ref", "")
+                    if new_ref and not old_ref:
+                        raw_slots[i]["entity_ref"] = new_ref
+                        changed = True
+
+            if changed:
+                await self.repo.update_task(task_id, {"source_paragraphs": paragraphs})
+                updated += 1
+
+        if updated > 0:
+            logger.info(f"实体重映射完成: 领域={domain_code}, 更新={updated} 个任务")
+        return updated
+
+    def _match_slots_to_existing_entities(
+        self,
+        raw_slots: list[dict],
+        existing_entities: list[dict],
+    ) -> tuple[list[dict], list[dict]]:
+        """将未识别插槽匹配到已有实体的属性。
+
+        返回 (属性补充建议列表, 剩余未匹配的插槽列表)。
+        匹配规则：插槽名称与实体名称/同义词/已有属性名有交集。
+        """
+        property_proposals: list[dict] = []
+        matched_slot_names: set[str] = set()
+
+        for slot in raw_slots:
+            slot_name = slot.get("name", "")
+            if not slot_name:
+                continue
+
+            # 尝试匹配到已有实体（作为其属性）
+            for entity in existing_entities:
+                entity_name = entity.get("name_cn", "")
+                synonyms = entity.get("synonyms", [])
+                existing_props = entity.get("properties", [])
+                existing_prop_names = {p.get("name_cn", p.get("key", "")) for p in existing_props}
+
+                # 匹配条件：插槽名出现在实体的名称/同义词的上下文中
+                is_related = (
+                    slot_name in entity_name
+                    or entity_name in slot_name
+                    or any(syn in slot_name or slot_name in syn for syn in synonyms)
+                    or slot_name in existing_prop_names
+                )
+
+                if is_related and slot_name not in existing_prop_names:
+                    property_proposals.append(
+                        {
+                            "suggestion_type": "add_property",
+                            "target_entity_id": entity.get("entity_id", ""),
+                            "target_entity_key": entity.get("entity_key", ""),
+                            "target_entity_name": entity.get("name_cn", ""),
+                            "entity_key": entity.get("entity_key", ""),
+                            "name_cn": entity.get("name_cn", ""),
+                            "category": entity.get("category", ""),
+                            "proposed_property": {
+                                "key": re.sub(r"[^a-zA-Z0-9_一-鿿]", "_", slot_name),
+                                "name_cn": slot_name,
+                                "value_type": slot.get("type", "String"),
+                                "description": slot.get("description", ""),
+                            },
+                            "confidence": 0.7,
+                            "context": slot.get("paragraph_title", ""),
+                        }
+                    )
+                    matched_slot_names.add(slot_name)
+                    break
+
+        remaining = [s for s in raw_slots if s.get("name", "") not in matched_slot_names]
+        return property_proposals, remaining
+
+    def _build_entity_proposal_prompt(
+        self,
+        raw_slots: list[dict],
+        existing_entities: list[dict],
+        domain_code: str,
+    ) -> list[dict]:
+        """构建 LLM Prompt：将剩余未识别插槽整理为新实体建议
+
+        关键：传入完整实体结构（含属性），让 LLM 准确区分实体与属性。
+        """
+        slot_lines = []
+        for s in raw_slots:
+            slot_lines.append(
+                f"- 插槽名: {s['name']}"
+                f"  类型: {s.get('type', '未知')}"
+                f"  描述: {s.get('description', '')}"
+                f"  出现段落: {s.get('paragraph_title', '')}"
+            )
+        slots_text = "\n".join(slot_lines)
+
+        # 构建现有实体结构描述（含属性）
+        entity_lines = []
+        for e in existing_entities[:30]:
+            props = e.get("properties", [])
+            prop_desc = ""
+            if props:
+                prop_names = [p.get("name_cn", p.get("key", "")) for p in props[:8]]
+                prop_desc = f"，属性: {', '.join(prop_names)}"
+            synonyms = e.get("synonyms", [])
+            syn_desc = f"，别名: {', '.join(synonyms[:5])}" if synonyms else ""
+            entity_lines.append(
+                f"- {e.get('name_cn', '')} ({e.get('entity_key', '')}) [{e.get('category', '')}]{prop_desc}{syn_desc}"
+            )
+        existing_text = "\n".join(entity_lines) if entity_lines else "无"
+
+        domain_name = {"coal": "煤炭采掘", "chem": "石油化工"}.get(domain_code, domain_code)
+
+        system_prompt = (
+            "你是一个领域知识建模专家。"
+            "你的任务是将 ETL 泛化阶段产生的未识别插槽变量整理为领域实体对象定义。"
+            "\n\n关键概念区分：\n"
+            "【实体对象】是独立存在的概念，有自己的属性，能在知识图谱中作为独立节点。"
+            "例如：煤矿、敏感目标、河流、环保设施、法规标准。\n"
+            "【实体属性】不能独立存在，必须依附于某个实体。"
+            "例如：产能、面积、距离、浓度、服务年限——这些必须属于某个实体。\n\n"
+            "判断规则：\n"
+            "1. 如果插槽描述的是某个已有实体的特征、参数、指标，它应该是该实体的属性，而非新实体\n"
+            "2. 如果插槽代表的是一个可以被独立引用和建立关系的事物，它才应该是新实体\n"
+            "3. 例如「矿区面积」不是实体，它是「矿区」实体的属性；「敏感目标」是实体，因为它可以被独立引用\n"
+            "4. 合并语义相近的插槽（如「占地面积」和「矿区面积」合并为一个属性）\n"
+            "5. 严格按 JSON 数组格式输出"
+        )
+
+        user_prompt = (
+            f"## 行业领域: {domain_name}\n\n"
+            f"## 已有实体结构:\n{existing_text}\n\n"
+            f"## 未识别插槽列表:\n{slots_text}\n\n"
+            "## 输出要求:\n"
+            "对每个插槽判断它应该是新实体还是已有实体的属性补充，输出 JSON 数组：\n"
+            "```json\n"
+            "[\n"
+            "  {\n"
+            '    "suggestion_type": "new_entity",\n'
+            '    "entity_key": "snake_case_key",\n'
+            '    "name_cn": "实体中文名",\n'
+            '    "category": "所属分类",\n'
+            '    "value_type": "String|Numeric|Boolean|Date",\n'
+            '    "unit": "单位（如有）",\n'
+            '    "description": "实体含义描述",\n'
+            '    "synonyms": ["别名1", "别名2"],\n'
+            '    "confidence": 0.8,\n'
+            '    "is_list_type": false,\n'
+            '    "properties": []\n'
+            "  },\n"
+            "  {\n"
+            '    "suggestion_type": "add_property",\n'
+            '    "target_entity_key": "已有实体的 entity_key",\n'
+            '    "target_entity_name": "已有实体名称",\n'
+            '    "proposed_property": {\n'
+            '      "key": "prop_key",\n'
+            '      "name_cn": "属性中文名",\n'
+            '      "value_type": "String|Numeric",\n'
+            '      "description": "属性说明"\n'
+            "    },\n"
+            '    "confidence": 0.8\n'
+            "  }\n"
+            "]\n"
+            "```\n"
+            "只返回 JSON 数组，不要有其他内容。"
+        )
+
+        return [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+
+    def _parse_entity_proposal_response(self, response_text: str) -> list[dict[str, Any]]:
+        """解析 LLM 实体建议响应"""
+        import json
+
+        raw = response_text.strip()
+        # 处理 markdown 代码块
+        if raw.startswith("```"):
+            lines = raw.split("\n")
+            lines = [line for line in lines[1:] if not line.strip().startswith("```")]
+            raw = "\n".join(lines)
+
+        # 提取 JSON 数组
+        json_match = re.search(r"\[[\s\S]*\]", raw)
+        if not json_match:
+            logger.warning(f"无法从实体建议响应中提取 JSON: {response_text[:500]}")
+            return []
+
+        try:
+            result = json.loads(json_match.group())
+            if isinstance(result, list):
+                return result
+            return []
+        except json.JSONDecodeError as e:
+            logger.warning(f"实体建议 JSON 解析失败: {e}")
+            return []
+
+    async def _get_existing_entity_names(self, domain_code: str) -> list[str]:
+        """获取指定领域下现有实体名称列表"""
+        try:
+            from yuxi.repositories.domain_entity_repository import DomainEntityRepository
+
+            repo = DomainEntityRepository()
+            entities = await repo.list_all(domain_code=domain_code)
+            return [e.get("name_cn", "") for e in entities if e.get("name_cn")]
+        except Exception:
+            return []
+
+    async def _get_existing_entities_full(self, domain_code: str) -> list[dict]:
+        """获取指定领域下所有实体的完整结构（含属性、同义词）"""
+        try:
+            from yuxi.repositories.domain_entity_repository import DomainEntityRepository
+
+            repo = DomainEntityRepository()
+            return await repo.list_all(domain_code=domain_code)
+        except Exception:
+            return []
 
 
 def get_domain_factory_service() -> DomainFactoryService:
@@ -3590,9 +3703,8 @@ def get_domain_factory_service() -> DomainFactoryService:
     return DomainFactoryService()
 
 
-def _build_form_schema(schema: dict[str, Any], snapshot: dict[str, Any] | None) -> list[dict[str, Any]]:
-    """根据 Schema 构建表单字段列表，带上 AI 建议值和置信度"""
-    variables = schema.get("variables", [])
+def _build_form_schema(variables: list[dict[str, Any]], snapshot: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """根据实体变量列表构建表单字段列表，带上 AI 建议值和置信度"""
     if not variables:
         return []
 

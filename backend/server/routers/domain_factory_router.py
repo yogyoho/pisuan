@@ -96,44 +96,6 @@ async def delete_domain(
 
 
 # =============================================================================
-# Schema Management
-# =============================================================================
-
-
-@domain_factory.get("/domains/{domain_id}/schema")
-async def get_domain_schema(
-    domain_id: int,
-    current_user: User = Depends(get_admin_user),
-) -> dict[str, Any]:
-    """获取领域 Schema 配置"""
-    try:
-        service = get_domain_factory_service()
-        schema = await service.get_schema(domain_id)
-        return schema
-    except Exception as e:
-        logger.error(f"Failed to get schema for domain {domain_id}: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"获取 Schema 失败: {str(e)}")
-
-
-@domain_factory.put("/domains/{domain_id}/schema")
-async def save_domain_schema(
-    domain_id: int,
-    payload: dict[str, Any] = Body(...),
-    current_user: User = Depends(get_admin_user),
-) -> dict[str, Any]:
-    """保存领域 Schema 配置"""
-    try:
-        variables = payload.get("variables", [])
-        chapters = payload.get("chapters", [])
-        service = get_domain_factory_service()
-        schema = await service.save_schema(domain_id, variables, chapters)
-        return {"success": True, "schema": schema}
-    except Exception as e:
-        logger.error(f"Failed to save schema for domain {domain_id}: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"保存 Schema 失败: {str(e)}")
-
-
-# =============================================================================
 # Data Sources & Tasks
 # =============================================================================
 
@@ -252,10 +214,9 @@ async def commit_task(
         if form_data:
             await service.save_task_step(task_id, {"step": "basic", "payload": form_data})
         if structured_data or template_data:
-            await service.save_task_step(task_id, {
-                "step": "structured",
-                "payload": {"structured_blocks": structured_data}
-            })
+            await service.save_task_step(
+                task_id, {"step": "structured", "payload": {"structured_blocks": structured_data}}
+            )
         if template_data:
             await service.save_task_step(task_id, {"step": "template", "payload": template_data})
 
@@ -263,11 +224,7 @@ async def commit_task(
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
 
-        return {
-            "success": True,
-            "task": task,
-            "ingest_task_id": task.get("ingest_task_id")
-        }
+        return {"success": True, "task": task, "ingest_task_id": task.get("ingest_task_id")}
     except HTTPException:
         raise
     except Exception as e:
@@ -290,11 +247,7 @@ async def reingest_task(
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
 
-        return {
-            "success": True,
-            "task": task,
-            "ingest_task_id": task.get("ingest_task_id")
-        }
+        return {"success": True, "task": task, "ingest_task_id": task.get("ingest_task_id")}
     except HTTPException:
         raise
     except Exception as e:
@@ -340,61 +293,40 @@ async def retry_task(
         raise HTTPException(status_code=500, detail=f"重试任务失败: {str(e)}")
 
 
-@domain_factory.get("/tasks/{task_id}/unrecognized-entities")
-async def get_unrecognized_entities(
+@domain_factory.get("/tasks/{task_id}/proposed-entities")
+async def get_proposed_entities(
     task_id: str,
-    max_entities: int = Query(20),
     current_user: User = Depends(get_admin_user),
 ) -> dict[str, Any]:
-    """获取任务中未识别的实体"""
+    """获取 LLM 整理后的实体建议（从泛化阶段未识别插槽生成）"""
     try:
         service = get_domain_factory_service()
-        detail = await service.get_task_detail(task_id)
-        if not detail:
-            raise HTTPException(status_code=404, detail="任务不存在")
+        result = await service.get_proposed_entities(task_id)
+        return result
+    except Exception as e:
+        logger.error(f"Failed to get proposed entities for {task_id}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取实体建议失败: {str(e)}")
 
-        entities = []
-        grouped = {}
-        base_info = detail.get("base_info", {})
-        schema = detail.get("schema_snapshot", {})
-        variables = schema.get("variables", [])
 
-        for var in variables:
-            key = var.get("key", "")
-            value = base_info.get(key)
-            if value is None or value == "":
-                confidence = base_info.get(f"_confidence_{key}", 0)
-                if confidence < 0.7:
-                    label = var.get("label", key)
-                    category = var.get("group", "其他")
-                    context = base_info.get(f"_context_{key}", "")
-                    suggestion = var.get("suggestion", "")
-
-                    entity = {
-                        "name": label,  # 实体名称使用 label
-                        "category": category,  # 分类
-                        "description": f"字段 {key} 的值未提取",  # 描述
-                        "context": context or f"建议值: {suggestion}" if suggestion else "",  # 上下文
-                        "confidence": confidence,
-                        "keywords": [label],
-                        "examples": [label] if label else [],
-                        "metadata": {
-                            "field_key": key,
-                            "suggestion": suggestion
-                        }
-                    }
-
-                    if category not in grouped:
-                        grouped[category] = []
-                    grouped[category].append(entity)
-                    entities.append(entity)
-
-        return {"entities": entities[:max_entities], "grouped": grouped}
+@domain_factory.post("/tasks/{task_id}/confirm-entities")
+async def confirm_entities(
+    task_id: str,
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """确认并保存建议的实体到实体库"""
+    try:
+        entities = payload.get("entities", [])
+        if not entities:
+            raise HTTPException(status_code=400, detail="entities 不能为空")
+        service = get_domain_factory_service()
+        result = await service.confirm_proposed_entities(task_id, entities)
+        return {"success": True, **result}
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get unrecognized entities for {task_id}: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"获取未识别实体失败: {str(e)}")
+        logger.error(f"Failed to confirm entities for {task_id}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"确认实体失败: {str(e)}")
 
 
 # =============================================================================
@@ -419,12 +351,10 @@ async def upload_file(
             raise HTTPException(status_code=400, detail="文件内容为空")
 
         service = get_domain_factory_service()
-        task_id, storage_path = await service.save_uploaded_file(
-            file_content, file.filename, domain
-        )
+        task_id, storage_path = await service.save_uploaded_file(file_content, file.filename, domain)
 
         uploaded_by = current_user.username if current_user else None
-        task = await service.create_task(
+        await service.create_task(
             domain_code=domain,
             file_name=file.filename,
             file_path=storage_path,
@@ -542,170 +472,6 @@ async def get_contexts(
         raise HTTPException(status_code=500, detail=f"获取上下文配置失败: {str(e)}")
 
 
-@domain_factory.get("/contexts/{domain}/{report_type}/sections")
-async def get_context_sections(
-    domain: str,
-    report_type: str,
-    current_user: User = Depends(get_admin_user),
-) -> dict[str, Any]:
-    """获取指定 (行业, 报告类型) 的章节树"""
-    try:
-        service = get_domain_factory_service()
-        sections = await service.get_context_sections(domain, report_type)
-        return sections
-    except Exception as e:
-        logger.error(f"Failed to get sections for {domain}/{report_type}: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"获取章节失败: {str(e)}")
-
-
-@domain_factory.put("/contexts/{domain}/{report_type}/sections")
-async def update_context_sections(
-    domain: str,
-    report_type: str,
-    payload: dict[str, Any] = Body(...),
-    current_user: User = Depends(get_admin_user),
-) -> dict[str, Any]:
-    """更新指定 (行业, 报告类型) 的章节结构"""
-    try:
-        sections = payload.get("sections", [])
-        service = get_domain_factory_service()
-        result = await service.update_context_sections(domain, report_type, sections)
-        return {"success": True, "sections": result.get("sections", [])}
-    except Exception as e:
-        logger.error(f"Failed to update sections for {domain}/{report_type}: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"更新章节失败: {str(e)}")
-
-
-@domain_factory.get("/contexts/{domain}/{report_type}/sections/{section_code}")
-async def get_context_section_rule(
-    domain: str,
-    report_type: str,
-    section_code: str,
-    current_user: User = Depends(get_admin_user),
-) -> dict[str, Any]:
-    """获取指定章节的路由配置"""
-    try:
-        service = get_domain_factory_service()
-        rule = await service.get_context_section_rule(domain, report_type, section_code)
-        return rule
-    except Exception as e:
-        logger.error(f"Failed to get section rule for {section_code}: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"获取章节路由失败: {str(e)}")
-
-
-@domain_factory.put("/contexts/{domain}/{report_type}/sections/{section_code}")
-async def update_context_section_rule(
-    domain: str,
-    report_type: str,
-    section_code: str,
-    payload: dict[str, Any] = Body(...),
-    current_user: User = Depends(get_admin_user),
-) -> dict[str, Any]:
-    """更新指定章节的路由配置"""
-    try:
-        service = get_domain_factory_service()
-        result = await service.update_context_section_rule(domain, report_type, section_code, payload)
-        return {"success": True, "rule": result.get("rule", {})}
-    except Exception as e:
-        logger.error(f"Failed to update section rule for {section_code}: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"更新章节路由失败: {str(e)}")
-
-
-# =============================================================================
-# Saved Sections
-# =============================================================================
-
-
-@domain_factory.get("/saved-sections")
-async def get_saved_sections(
-    domain_id: str | None = Query(None),
-    report_type_id: str | None = Query(None),
-    current_user: User = Depends(get_admin_user),
-) -> dict[str, Any]:
-    """获取已保存的章节目录列表"""
-    try:
-        service = get_domain_factory_service()
-        sections = await service.get_saved_sections(domain_id, report_type_id)
-        return sections
-    except Exception as e:
-        logger.error(f"Failed to get saved sections: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"获取已保存章节失败: {str(e)}")
-
-
-@domain_factory.get("/saved-sections/{section_id}")
-async def get_saved_section_detail(
-    section_id: str,
-    current_user: User = Depends(get_admin_user),
-) -> dict[str, Any]:
-    """获取已保存章节目录详情"""
-    try:
-        service = get_domain_factory_service()
-        section = await service.get_saved_section_detail(section_id)
-        if not section:
-            raise HTTPException(status_code=404, detail="章节不存在")
-        return section
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to get saved section {section_id}: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"获取章节详情失败: {str(e)}")
-
-
-@domain_factory.post("/saved-sections/{section_id}/import")
-async def import_saved_section(
-    section_id: str,
-    context: dict[str, Any] = Body({}),
-    current_user: User = Depends(get_admin_user),
-) -> dict[str, Any]:
-    """导入已保存的章节目录到配置"""
-    try:
-        service = get_domain_factory_service()
-        result = await service.import_saved_section(section_id, context)
-        return result
-    except Exception as e:
-        logger.error(f"Failed to import saved section {section_id}: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"导入章节失败: {str(e)}")
-
-
-# =============================================================================
-# Standard Code Mapping
-# =============================================================================
-
-
-@domain_factory.get("/standard-code-mapping")
-async def get_standard_code_mapping(
-    current_user: User = Depends(get_admin_user),
-) -> dict[str, Any]:
-    """获取 Standard Code 映射表"""
-    try:
-        service = get_domain_factory_service()
-        mapping = await service.get_standard_code_mapping()
-        return mapping
-    except Exception as e:
-        logger.error(f"Failed to get standard code mapping: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"获取标准代码映射失败: {str(e)}")
-
-
-@domain_factory.put("/standard-code-mapping")
-async def update_standard_code_mapping(
-    payload: dict[str, Any] = Body(...),
-    current_user: User = Depends(get_admin_user),
-) -> dict[str, Any]:
-    """更新 Standard Code 映射表"""
-    try:
-        items = payload.get("items", [])
-        service = get_domain_factory_service()
-        success = await service.update_standard_code_mapping(items)
-        if not success:
-            raise HTTPException(status_code=500, detail="保存标准代码映射失败")
-        return {"success": True, "items": items}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to update standard code mapping: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"更新标准代码映射失败: {str(e)}")
-
-
 # =============================================================================
 # Task Center Integration - 任务中心整合
 # =============================================================================
@@ -783,6 +549,7 @@ async def sync_task_to_task_center(
             raise HTTPException(status_code=404, detail="任务不存在")
 
         from yuxi.services.task_service import tasker as global_tasker
+
         tasks_data = await global_tasker.list_tasks(limit=200)
 
         # 查找并更新对应任务
@@ -828,4 +595,3 @@ def _map_df_status_to_tasker(df_status: str) -> str:
 def _calculate_progress(df_status: str) -> float:
     """根据状态计算进度（兼容旧代码）"""
     return DOMAIN_FACTORY_STATUS_MAP.get(df_status, {}).get("progress", 0.0)
-
