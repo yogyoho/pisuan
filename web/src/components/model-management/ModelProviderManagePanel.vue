@@ -14,7 +14,7 @@ import {
   Video,
   AudioLines,
   FileText,
-  LayersPlus,
+  Layers,
   LoaderCircle,
   Zap
 } from '@lucide/vue'
@@ -1097,7 +1097,7 @@ defineExpose({
                   title="管理员手动添加"
                   aria-label="管理员手动添加"
                 >
-                  <LayersPlus :size="12" />
+                  <Layers :size="12" />
                 </span>
               </span>
               <span class="col-context">

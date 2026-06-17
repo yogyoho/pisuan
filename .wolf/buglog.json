@@ -4163,6 +4163,22 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-08-19T16:26:24.033Z"
+    },
+    {
+      "id": "bug-258",
+      "timestamp": "2026-08-19T16:38:37.244Z",
+      "error_message": "Significant refactor of ",
+      "file": "web/src/components/model-management/ModelProviderManagePanel.vue",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 14→10 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "vue"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-19T16:38:37.244Z"
     }
   ]
 }

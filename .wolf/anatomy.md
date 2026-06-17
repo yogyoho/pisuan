@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T16:37:43.777Z
-> Files: 1 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T16:38:37.238Z
+> Files: 2 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -308,6 +308,10 @@
 
 ## web/src/components/modals/
 
+
+## web/src/components/model-management/
+
+- `ModelProviderManagePanel.vue` — Vue: setup (~14616 tok)
 
 ## web/src/layouts/
 
