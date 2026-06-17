@@ -37,7 +37,7 @@
         <div class="hero-content">
           <div class="hero-badge">
             <Sparkles :size="16" />
-            <span>AI 驱动的知识平台</span>
+            <span>Harness驱动的智能写作平台</span>
           </div>
           <h1 class="title">
             <span class="title-line">{{ infoStore.branding.title }}</span>
@@ -47,7 +47,7 @@
           <div class="hero-actions">
             <button class="button-base primary" @click="goToAgent">
               <Rocket :size="20" />
-              <span>开始体验</span>
+              <span>开始写作</span>
             </button>
             <button class="button-base secondary" @click="goToDomainFactory">
               <Factory :size="20" />

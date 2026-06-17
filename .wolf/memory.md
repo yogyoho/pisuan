@@ -2563,3 +2563,8 @@
 | 23:57 | Edited web/src/components/TaskCenterDrawer.vue | CSS: domain_factory | ~62 |
 | 23:59 | Edited backend/package/yuxi/storage/postgres/manager.py | 8→5 lines | ~43 |
 | 00:15 | Edited backend/package/yuxi/storage/postgres/manager.py | 2→1 lines | ~28 |
+| 00:25 | Edited docs/intro/project-overview.md | 5→1 lines | ~30 |
+| 00:25 | Edited web/src/components/SettingsModal.vue | 8→5 lines | ~16 |
+| 00:25 | Edited web/src/components/UserInfoComponent.vue | reduced (-11 lines) | ~145 |
+| 00:25 | Edited web/src/components/UserInfoComponent.vue | modified if() | ~23 |
+| 00:26 | Edited backend/package/yuxi/agents/skills/buildin/__init__.py | reduced (-20 lines) | ~434 |

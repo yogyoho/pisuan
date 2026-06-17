@@ -8,7 +8,7 @@ import re
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 
 # ---------------------------------------------------------------------------
@@ -144,6 +144,7 @@ class DomainTaskDTO:
     committed_at: str | None
     error_message: str | None = None
     document_type: str | None = None
+    report_type_code: str | None = None
 
     def to_summary(self) -> dict[str, Any]:
         return {
@@ -158,6 +159,7 @@ class DomainTaskDTO:
             "committed_at": self.committed_at,
             "error_message": self.error_message,
             "document_type": self.document_type,
+            "report_type_code": self.report_type_code,
         }
 
 
@@ -233,40 +235,55 @@ class DomainFactoryService:
             "4. 只提取文档中明确提到的信息，不要推断"
         ),
         "template": (
-            "你是一个负责生成环评模板的专家，请将下方段落泛化为模板，使用双层大括号 {插槽名称} 表示可替换变量。\n\n"
-            "重要：插槽命名必须统一使用中文名称，格式为 {中文名称}。\n\n"
+            "你是一个负责生成环评模板的专家，请将下方段落泛化为模板，使用双层大括号 {{插槽名称}} 表示可替换变量。\n\n"
+            "重要：插槽命名必须统一使用中文名称，格式为 {{中文名称}}。\n\n"
             "命名示例：\n"
-            "- 项目名称：{项目名称}\n"
-            "- 行政区域：{行政区域}\n"
-            "- 产能数值：{产能数值}\n"
-            "- 产能单位：{产能单位}\n"
-            "- 保护目标名称：{保护目标名称}\n\n"
+            "- 项目名称：{{项目名称}}\n"
+            "- 行政区域：{{行政区域}}\n"
+            "- 产能数值：{{产能数值}}\n"
+            "- 保护目标名称：{{保护目标名称}}\n\n"
+            "泛化粒度规则：\n"
+            "1. 每个段落提取的 slot 不超过 5 个\n"
+            "2. 固定单位（m、Mt/a、年、度、mm、km、km²、%、mg/L）不作为独立 slot，合并到数值变量中\n"
+            "3. 描述性短语保持原文，不拆分为变量\n"
+            "4. 方向/位置描述保持原样\n"
+            "5. 只提取具有跨项目复用价值的变量\n"
+            "6. 相关数值合并：如\"630～1200m\"合并为{{海拔范围}}，不拆为最小值/最大值/单位\n"
+            "7. 禁止使用\"方位1\"\"特征2\"\"区域1\"等无语义编号命名，每个 slot 必须有明确业务含义\n"
+            "8. 地理描述、环境特征等较长描述文字，如不适合拆为 slot，用 [叙述标记: 描述内容] 标记\n\n"
             "需要：\n"
             "1. 给出泛化后的文本（保持原文逻辑结构不变）；\n"
             "2. 列出每个插槽的含义及推荐数据来源；\n"
             '3. 如果段落包含判断逻辑（如"因此"、"所以"、"如果...则"、"当...时"等），提取触发该模板的前提条件；\n'
             "4. 严格只输出 JSON，不要输出任何自然语言解释或前后缀文本；\n"
             "5. 严格禁止输出代码块标记（例如 ```json 或 ```）；\n"
-            "6. 插槽名称必须统一使用中文，格式为 {中文名称}。\n\n"
+            "6. 插槽名称必须统一使用中文，格式为 {{中文名称}}。\n\n"
             "文本：\n{content}\n\n"
             "Schema 变量提示：\n{schema_text}\n\n"
             "输出 JSON 结构：\n"
-            "{\n"
-            '  "generalized": "...包含 {产能数值}{产能单位} ...",\n'
+            "{{\n"
+            '  "generalized": "...包含 {{产能数值}} ...",\n'
             '  "slots": [\n'
-            "     {\n"
+            "     {{\n"
             '       "name": "插槽中文名称",\n'
             '       "type": "类型",\n'
             '       "description": "插槽含义描述",\n'
             '       "suggested_source": "推荐数据来源"\n'
-            "     }\n"
+            "     }}\n"
+            "  ],\n"
+            '  "narrative_placeholders": [\n'
+            "     {{\n"
+            '       "mark": "叙述标记名称",\n'
+            '       "role": "描述该叙述区的用途",\n'
+            '       "sample": "原文中的参考文本"\n'
+            "     }}\n"
             "  ],\n"
             '  "condition": "IF (条件表达式) == True",\n'
-            '  "metadata": {\n'
+            '  "metadata": {{\n'
             '    "chapter": "{chapter_hint}",\n'
             '    "tags": ["{domain_label}"]\n'
-            "  }\n"
-            "}"
+            "  }}\n"
+            "}}"
         ),
         "schema_generation": (
             "你是一个专业的领域专家。请根据以下文档内容生成标准化的 Schema 配置。\n\n"
@@ -488,6 +505,7 @@ class DomainFactoryService:
         file_path: str,
         uploaded_by: str | None = None,
         document_type: str = "通用",
+        report_type_code: str = "通用",
     ) -> DomainTaskDTO:
         domain = await self.repo.get_domain_by_code(domain_code)
         if not domain:
@@ -502,7 +520,8 @@ class DomainFactoryService:
             uploaded_by=uploaded_by,
         )
         task.document_type = document_type
-        await self.repo.update_task(task_id, {"document_type": document_type})
+        task.report_type_code = report_type_code
+        await self.repo.update_task(task_id, {"document_type": document_type, "report_type_code": report_type_code})
 
         # 注册到任务中心
         try:
@@ -516,6 +535,7 @@ class DomainFactoryService:
                     "domain_name": domain.name,
                     "file_name": file_name,
                     "document_type": document_type,
+                    "report_type_code": report_type_code,
                 },
                 coroutine=self._etl_pipeline_async,
             )
@@ -534,6 +554,7 @@ class DomainFactoryService:
             reviewer=None,
             committed_at=None,
             document_type=document_type,
+            report_type_code=report_type_code,
         )
 
     async def _etl_pipeline_async(self, context) -> dict[str, Any]:
@@ -595,6 +616,61 @@ class DomainFactoryService:
             paragraphs = self._parse_markdown_to_paragraphs(raw_markdown, html_content=raw_html)
             logger.info(f"文档切分完成，共 {len(paragraphs)} 个段落")
 
+            # 段落分类 (CLASSIFY)：将段落分为 heading/table/figure/formula/list/legal_reference/parameter/narrative
+            self.classify_paragraphs(paragraphs)
+            classify_stats = {}
+            for p in paragraphs:
+                ct = p.get("classify_type", "narrative")
+                classify_stats[ct] = classify_stats.get(ct, 0) + 1
+            logger.info(f"段落分类完成: {classify_stats}")
+
+            # parent_title 回填：用 section_path → title 映射补全
+            title_map = {}
+            for p in paragraphs:
+                if p.get("is_title") and p.get("section_path"):
+                    key = tuple(str(s) for s in p["section_path"])
+                    if key not in title_map:
+                        title_map[key] = p.get("title", "")
+            for p in paragraphs:
+                sp = p.get("section_path", [])
+                if len(sp) > 1:
+                    parent_key = tuple(str(s) for s in sp[:-1])
+                    mapped = title_map.get(parent_key)
+                    if mapped:
+                        p["parent_title"] = mapped
+
+            # 法律引用提取 (LEGAL_EXTRACT)：从 legal_reference 段落提取结构化引用
+            legal_refs = self.extract_legal_references(paragraphs)
+            if legal_refs:
+                logger.info(f"法律引用提取完成（场景A）: {len(legal_refs)} 条")
+                # 附加到段落 template 中
+                for p in paragraphs:
+                    if p.get("classify_type") == "legal_reference":
+                        para_refs = [r for r in legal_refs if r.get("source_para_id") == p.get("id")]
+                        if para_refs:
+                            tmpl = p.get("template") or {}
+                            tmpl["legal_references"] = para_refs
+                            p["template"] = tmpl
+
+            # 正文标准引用提取（场景B）：从含标准编号的正文段落用 LLM 提取
+            try:
+                body_refs = await self.extract_legal_references_from_text(paragraphs)
+                if body_refs:
+                    logger.info(f"正文标准引用提取完成（场景B）: {len(body_refs)} 条")
+                    # 附加到对应段落
+                    for ref in body_refs:
+                        pid = ref.get("source_para_id")
+                        if pid:
+                            p = next((x for x in paragraphs if x.get("id") == pid), None)
+                            if p:
+                                tmpl = p.get("template") or {}
+                                refs_list = tmpl.get("legal_references", [])
+                                refs_list.append(ref)
+                                tmpl["legal_references"] = refs_list
+                                p["template"] = tmpl
+            except Exception as body_legal_err:
+                logger.warning(f"正文标准引用提取失败（不阻断）: {body_legal_err}")
+
             # 模板匹配：对标题段落进行模板匹配，附加 template_id / semantic_routing
             try:
                 matcher = await service._get_template_matcher()
@@ -619,8 +695,39 @@ class DomainFactoryService:
 
                     if matched_count > 0:
                         logger.info(f"模板匹配完成: {matched_count}/{len(paragraphs)} 个段落匹配到模板")
+                        # 更新学习模板的 match_count
+                        await service._increment_learned_template_match_counts(paragraphs)
             except Exception as tpl_err:
                 logger.warning(f"模板匹配失败（不阻断 ETL）: {tpl_err}")
+
+            # 公式提取：对 formula 类型段落提取公式结构+变量映射
+            formula_count = self._extract_formulas(paragraphs)
+            if formula_count > 0:
+                logger.info(f"公式提取完成: {formula_count} 个公式")
+
+            # 图片多模态提取：对 figure 类型段落调用 VLM 分析
+            try:
+                figure_count = await self._extract_figures(paragraphs)
+                if figure_count > 0:
+                    logger.info(f"图片多模态提取完成: {figure_count} 张图片")
+            except Exception as fig_err:
+                logger.warning(f"图片多模态提取失败（不阻断）: {fig_err}")
+
+            # 分章节提取：按章节分组对 parameter/narrative 段落做局部变量提取
+            try:
+                chapter_extracts = await self.extract_by_chapter(paragraphs, domain_code=domain_code)
+                if chapter_extracts:
+                    logger.info(f"分章节提取完成: {len(chapter_extracts)} 个章节")
+                    # 合并到 base_info
+                    for _ch, _vars in chapter_extracts.items():
+                        form_data.update(_vars)
+            except Exception as ch_err:
+                logger.warning(f"分章节提取失败（不阻断）: {ch_err}")
+
+            # 表格 Schema 提取：对 table 类型段落提取列定义模板
+            table_schema_count = self._extract_table_schemas(paragraphs)
+            if table_schema_count > 0:
+                logger.info(f"表格 Schema 提取完成: {table_schema_count} 张表格")
 
             # 生成结构化块（包含段落和表格）
             # 如果有 HTML 内容，优先使用 HTML 格式保存表格
@@ -638,85 +745,17 @@ class DomainFactoryService:
             )
 
             await context.set_progress(25.0, "文档解析完成，正在提取信息...")
-            await context.set_message("文档解析完成，正在提取信息...")
+            await context.set_message("文档解析完成，正在泛化...")
 
-            # ========== 阶段2: 提取结构化数据 (EXTRACTING) ==========
-            await service.repo.update_task(task_id, {"status": "EXTRACTING"})
-
-            # 预加载 prompt 模板（一次查询，全流程复用）
+            # ========== 阶段2: 泛化 (GENERALIZING) ==========
+            # 旧的全局 EXTRACT 阶段已废弃：slot 即提取变量，由段落级 GENERALIZE 产出。
+            # 保留 variables 用于前端 form_schema 展示，但不再调用 LLM 全局提取。
             prompt_templates = await service._load_prompt_templates()
-
-            # 从实体定义生成提取变量（优先从 DB 实体库加载）
             domain_for_extract = await service.repo.get_domain_by_id(task.domain_id) if task.domain_id else None
             domain_code = domain_for_extract.code if domain_for_extract else None
-            variables = await self._get_extraction_variables(domain_code)
 
+            await service.repo.update_task(task_id, {"status": "GENERALIZING"})
             form_data = {}
-            if variables:
-                try:
-                    # 构建提取 Prompt
-                    extract_prompt = self._build_extract_prompt(
-                        raw_markdown,
-                        variables,
-                        prompt_template=prompt_templates.get("extract"),
-                    )
-                    logger.info(f"开始 LLM 提取，变量数量: {len(variables)}")
-
-                    # 调用 LLM
-                    model = select_model()
-                    response = await model.call(extract_prompt)
-
-                    extracted_text = response.content if hasattr(response, "content") else str(response)
-                    logger.info(f"LLM 提取响应长度: {len(extracted_text)} 字符")
-
-                    # 解析 LLM 返回的 JSON
-                    extracted_data = self._parse_llm_json_response(extracted_text, variables)
-
-                    # 分离置信度和数据
-                    confidences = {}
-                    for key, value in extracted_data.items():
-                        if key.startswith("_confidence_"):
-                            confidences[key.replace("_confidence_", "")] = value
-                        elif key.startswith("_warning_"):
-                            pass  # 警告信息暂不处理
-                        elif key.startswith("_anchor_"):
-                            pass  # 锚点信息暂不处理
-                        else:
-                            form_data[key] = value
-
-                    # 添加置信度信息
-                    for key, confidence in confidences.items():
-                        form_data[f"_confidence_{key}"] = confidence
-
-                    # 保存提取结果
-                    await service.repo.update_task(
-                        task_id,
-                        {
-                            "form_schema_snapshot": extracted_data,
-                            "base_info": form_data,
-                            "ai_confidence": int(sum(confidences.values()) / len(confidences) * 100)
-                            if confidences
-                            else 75,
-                        },
-                    )
-
-                    logger.info(f"结构化数据提取完成，提取字段数: {len(form_data)}")
-                except Exception as llm_error:
-                    # LLM 调用失败，记录错误但继续执行（优雅降级）
-                    logger.warning(f"LLM 提取失败，使用默认值继续: {llm_error}")
-                    await service.repo.update_task(
-                        task_id,
-                        {
-                            "ai_confidence": 50,
-                            "error_message": f"LLM 提取失败: {str(llm_error)}，请人工填写",
-                        },
-                    )
-            else:
-                logger.warning("Schema 没有定义变量，跳过提取阶段")
-                form_data = {}
-
-            await context.set_progress(55.0, "信息提取完成，正在泛化...")
-            await context.set_message("信息提取完成，正在泛化...")
 
             # ========== 阶段3: 泛化 (GENERALIZING) ==========
             await service.repo.update_task(task_id, {"status": "GENERALIZING"})
@@ -725,24 +764,23 @@ class DomainFactoryService:
             domain = await service.repo.get_domain_by_id(task.domain_id) if task.domain_id else None
             domain_label = domain.name if domain else "通用"
 
-            # 生成全局槽位模板
-            try:
-                template_payload = await self._generate_template(raw_markdown, form_data)
-            except Exception as template_error:
-                logger.warning(f"模板生成失败，使用默认值: {template_error}")
-                template_payload = {
-                    "generalized": raw_markdown[:1000] if raw_markdown else "",
-                    "slots": list(form_data.keys()) if form_data else [],
-                    "metadata": {"chapter": "", "tags": []},
-                }
+            # 全局模板不再单独生成 LLM 调用——前端从段落级 template 聚合
+            template_payload = {
+                "generalized": "",
+                "slots": [],
+                "metadata": {"chapter": "", "tags": []},
+            }
 
             # ========== 段落级泛化（参考源系统 pipeline.py）==========
-            # 对每个段落逐一调用 LLM 进行泛化，并回写到段落对象中
+            # 只对 parameter 型段落调用 LLM 泛化，其他类型跳过
             try:
-                # 对所有段落进行泛化
+                parameter_paragraphs = [p for p in paragraphs if p.get("classify_type") == "parameter"]
+                skipped_count = len(paragraphs) - len(parameter_paragraphs)
+                logger.info(f"泛化过滤: {len(parameter_paragraphs)} 个参数型段落待泛化, {skipped_count} 个段落跳过")
+
                 paragraph_results = await self.generalize_paragraphs(
-                    paragraphs=paragraphs,
-                    schema_variables=variables,
+                    paragraphs=parameter_paragraphs,
+                    schema_variables=[],
                     domain_label=domain_label,
                     max_concurrency=5,
                 )
@@ -781,31 +819,68 @@ class DomainFactoryService:
                         except Exception:
                             pass
 
-                        # 为段落添加泛化字段，前端会读取这些字段展示
-                        # 源系统格式：para["template"] 是包含 generalized、slots 等字段的对象
+                        # 为段落添加泛化字段，前端统一从 para.template 读取
+                        generalized_text = gen_result.get("generalized", "")
                         para["template"] = {
-                            "generalized": gen_result.get("generalized", ""),
+                            "generalized": generalized_text,
                             "original": para.get("content", ""),
                             "slots": raw_slots,
                             "metadata": gen_result.get("metadata", {}),
+                            "quality_score": self.evaluate_template_quality(generalized_text, raw_slots),
                         }
-                        para["original"] = para.get("content", "")
-                        para["generalized"] = gen_result.get("generalized", "")
-                        para["slots"] = raw_slots
-                        para["metadata"] = gen_result.get("metadata", {})
                         if matched_entities:
                             para["matched_entities"] = matched_entities
                         generalized_count += 1
 
-                logger.info(f"段落级泛化完成: 成功 {generalized_count}/{len(paragraphs)} 个段落")
+                logger.info(f"段落级泛化完成: 成功 {generalized_count}/{len(parameter_paragraphs)} 个参数型段落")
             except Exception as para_error:
                 logger.warning(f"段落级泛化失败: {para_error}")
-                # 段落级泛化失败不影响整体流程，继续执行
+
+            # ========== 叙述型段落摘要提取 ==========
+            try:
+                narrative_paragraphs = [p for p in paragraphs if p.get("classify_type") == "narrative"]
+                if narrative_paragraphs:
+                    narrative_results = await self._extract_narrative_summaries(
+                        narrative_paragraphs, domain_label, max_concurrency=5,
+                    )
+                    summarized = 0
+                    for para in narrative_paragraphs:
+                        pid = para.get("id", "")
+                        if pid in narrative_results:
+                            para["template"] = narrative_results[pid]
+                            summarized += 1
+                    logger.info(f"叙述型摘要提取完成: {summarized}/{len(narrative_paragraphs)} 个段落")
+            except Exception as narr_err:
+                logger.warning(f"叙述型摘要提取失败: {narr_err}")
+
+            # 从段落级 slot 值构建 base_info（slot-variable 统一）
+            slot_values = {}
+            for p in paragraphs:
+                tmpl = p.get("template", {})
+                if not isinstance(tmpl, dict):
+                    continue
+                for slot in tmpl.get("slots", []):
+                    if not isinstance(slot, dict):
+                        continue
+                    name = slot.get("name", "")
+                    value = slot.get("value")
+                    if name and value is not None:
+                        slot_values[name] = value
+            if slot_values:
+                form_data.update(slot_values)
+                logger.info(f"从段落 slot 收集到 {len(slot_values)} 个变量值")
+
+            # 计算 AI 置信度
+            total_paras = len([p for p in paragraphs if p.get("classify_type") not in (None, "heading", "narrative")])
+            generalized_paras = len([p for p in paragraphs if p.get("template", {}).get("generalized")])
+            ai_confidence = int((generalized_paras / max(total_paras, 1)) * 100) if total_paras > 0 else 75
 
             await service.repo.update_task(
                 task_id,
                 {
                     "template_payload": template_payload,
+                    "base_info": form_data,
+                    "ai_confidence": ai_confidence,
                 },
             )
 
@@ -830,6 +905,21 @@ class DomainFactoryService:
                     },
                 },
             )
+
+            # 逻辑关系提取：因果链/条件分支/数据引用链
+            logical_relations = {}
+            try:
+                logical_relations = await self.extract_logical_relationships(paragraphs)
+                lr_counts = {k: len(v) for k, v in logical_relations.items() if isinstance(v, list)}
+                if any(lr_counts.values()):
+                    logger.info(f"逻辑关系提取完成: {lr_counts}")
+                    # 附加到 task metadata
+                    await service.repo.update_task(
+                        task_id,
+                        {"logical_relations": logical_relations},
+                    )
+            except Exception as logic_err:
+                logger.warning(f"逻辑关系提取失败（不阻断）: {logic_err}")
 
             await context.set_progress(80.0, "泛化完成，等待人工审核...")
             await context.set_message("泛化完成，等待人工审核...")
@@ -968,6 +1058,12 @@ class DomainFactoryService:
                     is_title = True
                     level = lvl
                     title_text = match.group(1).strip()
+                    # 去掉上游转换器生成的层级编号前缀
+                    # 格式如 "1 3 区域..." 或 "1.1 3.1 自然环境..."
+                    # 第一个编号是层级序号（冗余），第二个是原文编号（保留）
+                    dual_num_match = re.match(r"^(\d+(?:\.\d+)*)\s+(\d+(?:\.\d+)*\s+\S.*)$", title_text)
+                    if dual_num_match:
+                        title_text = dual_num_match.group(2).strip()
                     # 从标题文本中提取章节编号
                     num_match = numbered_pattern.match(title_text)
                     if num_match:
@@ -1196,6 +1292,1178 @@ class DomainFactoryService:
             path_str = "_".join(section_path)
             return f"SEC_{path_str}".upper()
         return f"SEC_{hash(title) % 100000:05d}"
+
+    # ========== 段落分类 (CLASSIFY) ==========
+
+    LEGAL_PATTERNS: ClassVar[list[str]] = [
+        r'《[^》]+》\s*[（(]\s*[A-Z]{1,3}\s*[\d\-]+',
+        r'国务院令第\d+号',
+        r'[环发改工信环办][发办审能源环评]*〔\d{4}〕\d+号',
+        r'《中华人民共和国.+法》',
+        r'《.+条例》',
+        r'《.+规定》',
+        r'(?:GB|HJ|MT|AQ|TB|DL|SL|DZ|CJJ|JGJ|YS|EJ)/?[T/TZ]?[\s\-]*\d+(?:[.\-]\d+)*[-—]\d+',
+        r'《.+标准》',
+        r'《.+规范》',
+        r'《.+导则》',
+        r'《.+办法》',
+    ]
+
+    # 参数型判定：量纲单位模式
+    _UNIT_PATTERNS: ClassVar[list[str]] = [
+        r'\d+(?:\.\d+)?\s*(?:mg/[mNL³]|μg/[mNL³]|g/[mNL³]|kg|t|吨|m[²³]|km[²³]|hm²|亩|公顷|万?m[²³]|',
+        r'mg/m³|μg/m³|g/m³|mg/L|μg/L|g/L|mg/Nm³|',
+        r'dB|dB\(A\)|',
+        r'm[³]/[hd]|万m[³]/[da]|t/d|t/a|万t/a|',
+        r'MW|kW|kV|kPa|MPa|Pa|',
+        r'mm|cm|m|km|',
+        r'%|‰|ppm|',
+        r'℃|°C|',
+        r'万元|亿元|元|',
+        r'hm²|km²|亩',
+        r')',
+    ]
+    _UNIT_RE: ClassVar[str] = r'\d+(?:\.\d+)?\s*(?:mg/[mNL³3]|μg/[mNL³3]|g/[mNL³3]|kg|t|吨|m[²23]|km[²23]|hm2|亩|公顷|mg/L|μg/L|g/L|mg/Nm3|dB|dB\([A]\)|m3/[dha]|t/[da]|MW|kW|kV|kPa|MPa|Pa|mm|cm|km|%|‰|ppm|℃|°C|万元|亿元|元|hm2)'
+
+    # 参数型判定：赋值/比较动词
+    _PARAM_VERBS: ClassVar[list[str]] = [
+        r'(?:为|达|约|超过|不低于|不大于|不超过|等于|约为|高达|低至|介于|范围[为是])\s*[\d.]+',
+        r'[\d.]+\s*(?:[～~—\-]\s*[\d.]+)',
+    ]
+
+    # 参数型判定：slot 名称模式（可复用参数）
+    _SLOT_PATTERNS: ClassVar[list[str]] = [
+        r'(?:面积|距离|长度|宽度|深度|高度|厚度|坡度|浓度|排放量|排放浓度|产能|产量|储量|水量|流量'
+        r'|人口|户数|投资|总投资|预算|费用|温度|湿度|风速|降水量|水位|标高|标段|占地'
+        r'|面积|规模|容量|负荷|效率|利用率|达标率|合格率|回收率|去除率|处理率)',
+    ]
+
+    # 叙述型子类型关键词
+    _NARRATIVE_SUBTYPE_KEYWORDS: ClassVar[dict[str, list[str]]] = {
+        "conclusion": ["结论", "综合结论", "总体结论", "评价结论", "综上所述", "总而言之", "结果表明", "分析表明"],
+        "methodology": ["方法", "采用.*方法", "评价方法", "预测方法", "计算方法", "分析方法", "技术路线", "工作方法", "调查方法"],
+        "summary": ["概况", "综述", "简述", "概述", "基本情况", "总体情况", "项目概况", "区域概况", "现状概况"],
+        "background": ["背景", "由来", "历史", "沿革", "缘起", "目的和意义", "任务来源"],
+    }
+
+    # 表格子类型关键词
+    _TABLE_SUBTYPE_KEYWORDS: ClassVar[dict[str, list[str]]] = {
+        "monitoring": ["监测", "实测", "检测结果", "采样", "现状监测", "验收监测"],
+        "compliance": ["达标", "排放标准", "标准限值", "比较", "对比分析", "达标分析"],
+        "standard_limit": ["标准值", "限值", "标准限值", "排放限值", "质量标准", "控制标准"],
+    }
+
+    def classify_paragraphs(self, paragraphs: list[dict]) -> list[dict]:
+        """段落分类（CLASSIFY 阶段）：将段落分为 heading/table/figure/formula/list/legal_reference/parameter/narrative，并附加子类型标签"""
+        import re as _re
+
+        for para in paragraphs:
+            content = para.get("content", "").strip()
+            title = para.get("title", "")
+            tags = []
+
+            # 1. 标题型
+            if para.get("is_title"):
+                para["classify_type"] = "heading"
+                para["classify_tags"] = tags
+                continue
+
+            # 2. 表格型
+            if para.get("is_table"):
+                para["classify_type"] = "table"
+                tags.append(self._match_table_subtype(content, title))
+                para["classify_tags"] = [t for t in tags if t]
+                continue
+
+            # 3. 图片/示意图型
+            if self._is_figure(content):
+                para["classify_type"] = "figure"
+                para["classify_tags"] = tags
+                continue
+
+            # 4. 公式/计算模型型
+            if self._is_formula(content, title):
+                para["classify_type"] = "formula"
+                para["classify_tags"] = tags
+                continue
+
+            # 5. 列表型
+            if self._is_list_block(content):
+                para["classify_type"] = "list"
+                para["classify_tags"] = tags
+                continue
+
+            # 6. 标准引用型
+            if self._is_legal_reference(content):
+                para["classify_type"] = "legal_reference"
+                tags.append(self._match_legal_subtype(content))
+                para["classify_tags"] = [t for t in tags if t]
+                continue
+
+            # 7. 参数型（细化判定：必须含可量化的参数特征）
+            has_numeric = bool(_re.search(r'\d+(?:\.\d+)?', content))
+            if has_numeric and len(content) < 500:
+                has_unit = bool(_re.search(self._UNIT_RE, content, _re.IGNORECASE))
+                has_param_verb = any(_re.search(p, content) for p in self._PARAM_VERBS)
+                has_slot_name = any(_re.search(p, content) for p in self._SLOT_PATTERNS)
+
+                if has_unit or has_param_verb or has_slot_name:
+                    para["classify_type"] = "parameter"
+                    if has_unit:
+                        tags.append("measurable")
+                    if has_slot_name:
+                        tags.append("reusable")
+                    if not has_unit and not has_slot_name:
+                        tags.append("descriptive")
+                    para["classify_tags"] = tags
+                    continue
+
+            # 8. 叙述性正文
+            para["classify_type"] = "narrative"
+            subtype = self._match_narrative_subtype(content, title)
+            if subtype:
+                tags.append(subtype)
+            para["classify_tags"] = tags
+
+        return paragraphs
+
+    def _match_table_subtype(self, content: str, title: str) -> str:
+        text = f"{title} {content}".lower()
+        for subtype, keywords in self._TABLE_SUBTYPE_KEYWORDS.items():
+            for kw in keywords:
+                if kw in text:
+                    return subtype
+        return "key_value"
+
+    def _match_legal_subtype(self, content: str) -> str:
+        import re as _re
+        if _re.search(r'《中华人民共和国.+法》', content):
+            return "law"
+        if '条例' in content:
+            return "admin_regulation"
+        if _re.search(r'(?:GB|HJ|MT|AQ|TB|DL|SL|DZ)/?[T]?[\s\-]*\d+', content):
+            return "technical_standard"
+        if '规定' in content or '办法' in content:
+            return "ministry_rule"
+        return "general"
+
+    def _match_narrative_subtype(self, content: str, title: str) -> str:
+        import re as _re
+        text = f"{title} {content}"
+        for subtype, keywords in self._NARRATIVE_SUBTYPE_KEYWORDS.items():
+            for kw in keywords:
+                if _re.search(kw, text):
+                    return subtype
+        return ""
+
+    def _is_figure(self, content: str) -> bool:
+        import re as _re
+        if not content:
+            return False
+        if _re.match(r'^!\[.*?\]\(.*?\)$', content):
+            return True
+        if '<!--image-->' in content or '<img ' in content:
+            return True
+        return False
+
+    def _is_formula(self, content: str, title: str = "") -> bool:
+        import re as _re
+        if _re.search(r'\$[^$]+\$', content):
+            return True
+        if _re.search(r'\$\$.+?\$\$', content, _re.DOTALL):
+            return True
+        if '=' in content and _re.search(r'[×÷·∑∫√π]', content):
+            return True
+        formula_title_keywords = ["计算公式", "预测模式", "计算方法", "数学模型"]
+        if any(kw in title for kw in formula_title_keywords):
+            return True
+        return False
+
+    def _is_list_block(self, content: str) -> bool:
+        import re as _re
+        lines = [l.strip() for l in content.split('\n') if l.strip()]
+        if len(lines) < 2:
+            return False
+        numbered = sum(1 for l in lines if _re.match(r'^[（(]\d+[)）]', l)
+                       or _re.match(r'^\d+[.、）)]', l)
+                       or _re.match(r'^[-•]', l))
+        return numbered / len(lines) >= 0.6
+
+    def _is_legal_reference(self, text: str) -> bool:
+        import re as _re
+        return any(_re.search(p, text) for p in self.LEGAL_PATTERNS)
+
+    def _extract_effective_date(self, text: str) -> str | None:
+        """从法律引用文本中提取生效日期"""
+        import re as _re
+        # 匹配日期格式：2015-01-01, 2015年1月1日, 2015.1.1
+        m = _re.search(r'(\d{4})[-年.]\s*(\d{1,2})[-月.]\s*(\d{1,2})', text)
+        if m:
+            return f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+        # 仅年份
+        m = _re.search(r'(\d{4})\s*年(?:发布|施行|实施)', text)
+        if m:
+            return f"{m.group(1)}-01-01"
+        return None
+
+    # ========== 公式提取 ==========
+
+    # 常见物理量符号映射
+    SYMBOL_MAP: ClassVar[dict[str, dict]] = {
+        "C": {"name": "地面浓度", "unit": "mg/m³"},
+        "Q": {"name": "源强", "unit": "mg/s"},
+        "u": {"name": "风速", "unit": "m/s"},
+        "H": {"name": "有效排放高度", "unit": "m"},
+        "LA": {"name": "A声级", "unit": "dB"},
+        "Leq": {"name": "等效声级", "unit": "dB"},
+        "Pi": {"name": "排气速率", "unit": "m³/s"},
+        "Ci": {"name": "污染物浓度", "unit": "mg/m³"},
+        "V": {"name": "体积", "unit": "m³"},
+        "S": {"name": "面积", "unit": "m²"},
+        "L": {"name": "距离/长度", "unit": "m"},
+        "W": {"name": "产能/产量", "unit": "Mt/a"},
+        "T": {"name": "温度", "unit": "℃"},
+        "P": {"name": "压力", "unit": "Pa"},
+        "q": {"name": "流量", "unit": "m³/d"},
+    }
+
+    def _extract_formula_symbols(self, content: str) -> list[str]:
+        """从公式文本中提取变量符号"""
+        import re as _re
+        # LaTeX: 提取 \command{...} 外的单字母/已知多字母变量
+        symbols = []
+        seen = set()
+        # 匹配常见 LaTeX 格式的变量
+        for m in _re.finditer(r'([A-Za-z]{1,3})(?![a-z])', content):
+            sym = m.group(1)
+            if sym in ('frac', 'exp', 'log', 'sin', 'cos', 'tan', 'sqrt', 'sum', 'int', 'min', 'max', 'the', 'not', 'and', 'for'):
+                continue
+            if sym not in seen:
+                symbols.append(sym)
+                seen.add(sym)
+        return symbols
+
+    def extract_formula(self, para: dict) -> dict | None:
+        """提取公式结构 + 变量映射"""
+        import re as _re
+        content = para.get("content", "")
+        if not content:
+            return None
+
+        section_path = para.get("section_path", [])
+        title = para.get("title", "")
+
+        result = {
+            "original": content,
+            "format": "latex" if ("$" in content or "59" in content) else "text",
+            "variables": [],
+            "purpose": self._infer_formula_purpose(title, section_path),
+        }
+
+        symbols = self._extract_formula_symbols(content)
+        for sym in symbols:
+            mapping = self.SYMBOL_MAP.get(sym, {"name": sym, "unit": None})
+            entity_ref = self._symbol_to_entity_ref(sym)
+            result["variables"].append({
+                "symbol": sym,
+                "name": mapping["name"],
+                "unit": mapping["unit"],
+                "entity_ref": entity_ref,
+            })
+
+        return result
+
+    def _infer_formula_purpose(self, title: str, section_path: list) -> str:
+        """从章节标题推断公式用途"""
+        path_str = "/".join(str(p) for p in section_path) if section_path else ""
+        purpose_map = [
+            ("浓度|扩散|落地", "预测污染物浓度分布"),
+            ("噪声|声级", "预测噪声影响范围"),
+            ("涌水量|排水", "预测矿井涌水量"),
+            ("沉降|沉陷|地表移动", "预测地表沉陷范围"),
+            ("预测|估算|计算", "预测计算"),
+        ]
+        combined = f"{title} {path_str}"
+        for pattern, purpose in purpose_map:
+            if re.search(pattern, combined):
+                return purpose
+        return "通用计算"
+
+    def _symbol_to_entity_ref(self, sym: str) -> str:
+        """将符号映射到实体引用 key"""
+        _sym_entity_map = {
+            "C": "ground_concentration",
+            "Q": "emission_rate",
+            "u": "wind_speed",
+            "H": "effective_height",
+            "LA": "noise_level_a",
+            "Leq": "equivalent_noise_level",
+            "q": "water_flow",
+            "W": "production_capacity",
+        }
+        return _sym_entity_map.get(sym, "")
+
+    # ========== 图片多模态提取 ==========
+
+    FIGURE_ANALYSIS_PROMPT: ClassVar[str] = (
+        "分析这张来自环境影响评价报告的图片，识别：\n"
+        "1. 图片类型：流程图 / 位置示意图 / 数据图表 / 照片 / 其他\n"
+        "2. 如果是流程图：提取完整步骤序列（按顺序）\n"
+        "3. 如果是数据图表：描述数据趋势和关键数值\n"
+        "4. 如果是位置示意图：描述空间关系\n"
+        "5. 图片标题/说明文字\n\n"
+        "以 JSON 格式输出，包含 figure_type、caption、steps(流程图时)、data_trend(数据图表时)、spatial_description(位置图时) 字段。"
+    )
+
+    def _extract_image_url(self, content: str) -> str:
+        """从段落内容中提取图片 URL"""
+        import re as _re
+        # Markdown 图片
+        m = _re.search(r'!\[.*?\]\((.*?)\)', content)
+        if m:
+            return m.group(1)
+        # HTML img 标签
+        m = _re.search(r'<img[^>]+src=["\']([^"\']+)["\']', content)
+        if m:
+            return m.group(1)
+        return ""
+
+    async def extract_figure_with_vlm(self, para: dict) -> dict:
+        """用多模态 LLM 提取图片内容"""
+        content = para.get("content", "")
+        image_url = self._extract_image_url(content)
+
+        result = {
+            "figure_type": "unknown",
+            "caption": para.get("title", ""),
+            "url": image_url,
+        }
+
+        if not image_url:
+            return result
+
+        try:
+            from yuxi.models.chat import select_model
+            model = select_model()
+
+            # 尝试多模态调用（需要支持 vision 的模型）
+            if hasattr(model, "call_vision") or hasattr(model, "analyze_image"):
+                fn = getattr(model, "call_vision", None) or getattr(model, "analyze_image")
+                response = await fn(image_url, self.FIGURE_ANALYSIS_PROMPT)
+            else:
+                # 降级：用文本模型描述图片 URL
+                prompt = f"根据以下图片 URL 所在的报告上下文，推断图片类型。\nURL: {image_url}\n章节: {para.get('title', '')}\n{self.FIGURE_ANALYSIS_PROMPT}\n\n注意：你无法看到图片，请根据上下文推断。"
+                response = await model.call(prompt)
+
+            text = response.content if hasattr(response, "content") else str(response)
+            parsed = self._parse_figure_result(text)
+            result.update(parsed)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).debug(f"图片多模态提取失败（不阻断）: {e}")
+
+        return result
+
+    def _parse_figure_result(self, text: str) -> dict:
+        """解析 LLM 返回的图片分析 JSON"""
+        import json
+        import re as _re
+        try:
+            match = _re.search(r'\{[\s\S]*\}', text)
+            if match:
+                data = json.loads(match.group())
+                return {
+                    "figure_type": data.get("figure_type", "unknown"),
+                    "caption": data.get("caption", ""),
+                    "content": data,
+                    "steps": data.get("steps", []),
+                    "data_trend": data.get("data_trend", ""),
+                    "spatial_description": data.get("spatial_description", ""),
+                }
+        except (json.JSONDecodeError, TypeError):
+            pass
+        return {}
+
+    # ========== 图片多模态提取 END ==========
+
+    # ========== 法律引用提取 ==========
+
+    # 9 层分类
+    LEGAL_TYPE_MAP: ClassVar[dict[str, str]] = {
+        "法律": "law",
+        "行政法规": "admin_regulation",
+        "地方性法规": "local_regulation",
+        "部门规章": "ministry_rule",
+        "地方规章": "local_rule",
+        "技术规范": "technical_standard",
+        "相关规划": "national_plan",
+        "项目资料": "project_material",
+    }
+
+    def extract_legal_references(self, paragraphs: list[dict]) -> list[dict]:
+        """从 legal_reference 类型段落中提取结构化法律引用"""
+        import re as _re
+
+        results = []
+        for para in paragraphs:
+            if para.get("classify_type") != "legal_reference":
+                continue
+            refs = self._parse_legal_list(para.get("content", ""), para)
+            results.extend(refs)
+        return results
+
+    def _parse_legal_list(self, text: str, para: dict) -> list[dict]:
+        """解析法律引用列表（编制依据场景）"""
+        import re as _re
+
+        results = []
+        # 匹配模式：《名称》（编号/文号）
+        patterns = [
+            # （N）《名称》（编号）
+            _re.compile(
+                r'[（(]\s*(\d+)\s*[)）]\s*《([^》]+)》\s*'
+                r'(?:[（(]\s*([^）)]+?)\s*[)）])?',
+                _re.DOTALL,
+            ),
+            # 《名称》（编号）
+            _re.compile(
+                r'《([^》]+)》\s*[（(]\s*([^）)]+?)\s*[)）]',
+            ),
+        ]
+
+        # 确定引用层级
+        section_path = para.get("section_path", [])
+        title = para.get("title", "")
+        parent_title = para.get("parent_title", "")
+        scope = "project"
+        ref_type = "technical_standard"
+
+        for line in text.split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+
+            # 尝试匹配
+            matched = False
+            for pat in patterns:
+                m = pat.search(line)
+                if m:
+                    groups = m.groups()
+                    if len(groups) == 3:
+                        _, name, code = groups
+                    elif len(groups) == 2:
+                        name, code = groups
+                    else:
+                        continue
+
+                    # 推断分类
+                    ref_type, scope = self._infer_legal_type(name, code or "")
+
+                    effective_date = self._extract_effective_date(line)
+                    results.append({
+                        "name": (name or "").strip(),
+                        "code": (code or "").strip() or None,
+                        "type": ref_type,
+                        "scope": scope,
+                        "authority": self._infer_authority(name or "", code or ""),
+                        "effective_date": effective_date,
+                        "status": "effective",
+                        "source_para_id": para.get("id"),
+                        "chapter": parent_title or title,
+                    })
+                    matched = True
+                    break
+
+            if not matched:
+                # 单行中可能包含标准编号（如 GB13271-2014）但没有书名号包裹
+                std_match = _re.search(
+                    r'([A-Z]{1,3}[\d.\-]+\s*[-—]\s*\d{4})\s*《?([^》\n,，]+)》?',
+                    line,
+                )
+                if std_match:
+                    code, name = std_match.groups()
+                    ref_type, scope = self._infer_legal_type(name or "", code)
+                    effective_date = self._extract_effective_date(line)
+                    results.append({
+                        "name": (name or "").strip(),
+                        "code": (code or "").strip(),
+                        "type": ref_type,
+                        "scope": scope,
+                        "authority": self._infer_authority(name or "", code),
+                        "effective_date": effective_date,
+                        "status": "effective",
+                        "source_para_id": para.get("id"),
+                        "chapter": parent_title or title,
+                    })
+
+        return results
+
+    def _infer_legal_type(self, name: str, code: str) -> tuple[str, str]:
+        """推断法律引用的类型和范围"""
+        import re as _re
+
+        if "中华人民共和国" in name and name.endswith("法"):
+            return "law", "national"
+        if any(k in name for k in ("条例", "规定")):
+            if "省" in name or "市" in name:
+                return "admin_regulation", "regional"
+            return "admin_regulation", "national"
+        if "国务院" in name or "令" in code:
+            return "admin_regulation", "national"
+        if _re.match(r'^[A-Z]{1,3}[\d.\-]+', code):
+            return "technical_standard", "national"
+        if "规划" in name:
+            if "省" in name or "市" in name:
+                return "national_plan", "regional"
+            return "national_plan", "national"
+        return "technical_standard", "national"
+
+    def _infer_authority(self, name: str, code: str) -> str:
+        """推断制定机关"""
+        import re as _re
+
+        if "中华人民共和国" in name:
+            return "全国人大"
+        if "国务院" in name:
+            return "国务院"
+        authority_map = {
+            "HJ": "生态环境部",
+            "GB": "国家标准化管理委员会",
+            "MT": "煤炭工业出版社",
+            "AQ": "应急管理部",
+            "TB": "交通运输部",
+            "DL": "国家能源局",
+            "SL": "水利部",
+        }
+        for prefix, auth in authority_map.items():
+            if code.startswith(prefix):
+                return auth
+        return ""
+
+    # ========== 法律引用提取 END ==========
+
+    # ========== 正文标准引用 LLM 提取（场景B） ==========
+
+    LEGAL_EXTRACT_PROMPT = """分析以下段落中引用的标准/法规/规范，提取：
+
+1. 标准编号（如 HJ2.2-2018, GB13271-2014）
+2. 标准名称
+3. 引用类型：applicability（适用性判定）/ compliance（合规性验证）/ classification（分类定级）
+4. 引用上下文（摘录原文中的关键句，不超过100字）
+
+严格按 JSON 数组格式输出，不要输出其他内容：
+[{"code": "标准编号", "name": "标准名称", "usage": "引用类型", "context": "引用上下文"}]
+
+如果没有引用标准，输出空数组 []"""
+
+    async def extract_legal_references_from_text(self, paragraphs: list[dict]) -> list[dict]:
+        """场景B：从正文段落中用 LLM 提取标准引用
+
+        仅对 parameter/narrative 类型、且包含标准编号模式的段落调用。
+        """
+        import re as _re
+
+        # 筛选含标准编号模式的正文段落（排除已经是 legal_reference 的）
+        std_code_pattern = _re.compile(r'[A-Z]{1,3}[\d.\-]+\s*[-—]\s*\d{4}')
+        target_paragraphs = []
+        for para in paragraphs:
+            if para.get("classify_type") in ("legal_reference", "heading", "table", "figure", "formula"):
+                continue
+            content = para.get("content", "")
+            if std_code_pattern.search(content):
+                target_paragraphs.append(para)
+
+        if not target_paragraphs:
+            return []
+
+        # 按章节分组，减少 LLM 调用次数
+        all_results = []
+        try:
+            from yuxi.models.chat import select_model
+
+            model = select_model()
+            # 限制：最多处理 5 个段落，避免过多 LLM 调用
+            for para in target_paragraphs[:5]:
+                content = para.get("content", "")[:500]
+                prompt = f"{self.LEGAL_EXTRACT_PROMPT}\n\n段落内容：\n{content}"
+                try:
+                    response = await model.call(prompt)
+                    text = response.content if hasattr(response, "content") else str(response)
+                    refs = self._parse_legal_extract_response(text, para)
+                    all_results.extend(refs)
+                except Exception as e:
+                    logger.warning(f"正文标准引用提取失败: {e}")
+
+            if all_results:
+                logger.info(f"正文标准引用提取完成: {len(all_results)} 条")
+        except Exception as e:
+            logger.warning(f"正文标准引用提取模块初始化失败: {e}")
+
+        return all_results
+
+    def _parse_legal_extract_response(self, text: str, para: dict) -> list[dict]:
+        """解析 LLM 返回的标准引用 JSON"""
+        import re as _re
+
+        try:
+            # 尝试提取 JSON 数组
+            match = _re.search(r'\[[\s\S]*\]', text)
+            if not match:
+                return []
+            import json
+            items = json.loads(match.group())
+            results = []
+            for item in items:
+                if not isinstance(item, dict) or not item.get("code"):
+                    continue
+                ref_type, scope = self._infer_legal_type(item.get("name", ""), item["code"])
+                results.append({
+                    "name": item.get("name", ""),
+                    "code": item.get("code", ""),
+                    "type": ref_type,
+                    "scope": scope,
+                    "usage": item.get("usage", ""),
+                    "context": item.get("context", ""),
+                    "authority": self._infer_authority(item.get("name", ""), item.get("code", "")),
+                    "effective_date": item.get("effective_date"),
+                    "status": "effective",
+                    "source_para_id": para.get("id"),
+                    "chapter": para.get("parent_title", ""),
+                    "scene": "body_text",
+                })
+            return results
+        except (json.JSONDecodeError, ValueError):
+            return []
+
+    # ========== 正文标准引用 LLM 提取 END ==========
+
+    # ========== 表格 Schema 提取 ==========
+
+    def _extract_formulas(self, paragraphs: list[dict]) -> int:
+        """对 formula 类型段落调用 extract_formula，结果写入 para.template.formula"""
+        count = 0
+        for para in paragraphs:
+            if para.get("classify_type") != "formula":
+                continue
+            result = self.extract_formula(para)
+            if result:
+                tmpl = para.get("template") or {}
+                tmpl["formula"] = result
+                para["template"] = tmpl
+                count += 1
+        return count
+
+    async def _extract_figures(self, paragraphs: list[dict]) -> int:
+        """对 figure 类型段落调用 extract_figure_with_vlm"""
+        count = 0
+        for para in paragraphs:
+            if para.get("classify_type") != "figure":
+                continue
+            result = await self.extract_figure_with_vlm(para)
+            if result and result.get("figure_type") != "unknown":
+                tmpl = para.get("template") or {}
+                tmpl["figure"] = result
+                para["template"] = tmpl
+                count += 1
+        return count
+
+    # ========== 分章节提取 ==========
+
+    # 按 (domain, report_type) 预定义的章节级局部 Schema
+    # 每个章节最多 10-20 个变量，避免全局 149 变量的提取失败问题
+    LOCAL_SCHEMA_MAP: ClassVar[dict[str, dict[str, dict]]] = {
+        "coal.eia_construction": {
+            "3.1": {  # 自然环境概况
+                "地理位置": {"data_type": "text"},
+                "地貌类型": {"data_type": "text", "type": "enum",
+                             "vocabulary": ["丘陵", "平原", "山地", "高原", "盆地", "沙漠", "戈壁"]},
+                "海拔范围": {"data_type": "text", "unit": "m"},
+                "气候类型": {"data_type": "text"},
+                "年均温": {"data_type": "number", "unit": "℃"},
+                "年均降水量": {"data_type": "number", "unit": "mm"},
+                "主要河流": {"data_type": "text"},
+                "年平均风速": {"data_type": "number", "unit": "m/s"},
+                "主导风向": {"data_type": "text"},
+            },
+            "3.2": {  # 社会经济概况
+                "行政区划": {"data_type": "text"},
+                "人口数量": {"data_type": "number", "unit": "万人"},
+                "GDP": {"data_type": "number", "unit": "亿元"},
+                "主要产业": {"data_type": "text"},
+            },
+            "1.1": {  # 规划背景
+                "项目名称": {"data_type": "text", "entity_ref": "project_name"},
+                "建设单位": {"data_type": "text", "entity_ref": "construction_unit"},
+                "设计产能": {"data_type": "number", "unit": "Mt/a", "entity_ref": "design_capacity"},
+                "开采方式": {"data_type": "text", "type": "enum",
+                             "vocabulary": ["井工", "露天", "井工+露天"],
+                             "entity_ref": "mining_type"},
+                "矿区面积": {"data_type": "number", "unit": "km²", "entity_ref": "mine_area"},
+            },
+        },
+        "coal.eia_planning": {
+            "3.1": {
+                "地理位置": {"data_type": "text"},
+                "地貌类型": {"data_type": "text", "type": "enum",
+                             "vocabulary": ["丘陵", "平原", "山地", "高原", "盆地"]},
+                "海拔范围": {"data_type": "text", "unit": "m"},
+                "气候类型": {"data_type": "text"},
+                "主要河流": {"data_type": "text"},
+            },
+            "1.1": {
+                "项目名称": {"data_type": "text", "entity_ref": "project_name"},
+                "规划面积": {"data_type": "number", "unit": "km²"},
+                "规划产能": {"data_type": "number", "unit": "Mt/a"},
+            },
+        },
+    }
+
+    def _get_local_schema(self, chapter_path: str, domain_code: str = "", report_type_code: str = "") -> dict | None:
+        """按章节路径匹配局部提取 Schema"""
+        # 精确匹配 domain.report_type
+        key = f"{domain_code}.{report_type_code}"
+        domain_schemas = self.LOCAL_SCHEMA_MAP.get(key, {})
+        if not domain_schemas:
+            # 回退到同 domain 下任意 report_type
+            for k, v in self.LOCAL_SCHEMA_MAP.items():
+                if k.startswith(f"{domain_code}."):
+                    domain_schemas = v
+                    break
+        if not domain_schemas:
+            return None
+
+        # 匹配章节路径（支持前缀匹配）
+        if chapter_path in domain_schemas:
+            return domain_schemas[chapter_path]
+
+        # 取最后一级编号匹配
+        parts = chapter_path.split(".")
+        for i in range(len(parts), 0, -1):
+            prefix = ".".join(parts[:i])
+            if prefix in domain_schemas:
+                return domain_schemas[prefix]
+
+        return None
+
+    def _group_by_chapter(self, paragraphs: list[dict]) -> dict[str, list[dict]]:
+        """将段落按章节分组"""
+        chapters: dict[str, list[dict]] = {}
+        current_chapter = "0"
+        for para in paragraphs:
+            if para.get("is_title"):
+                sp = para.get("section_path", [])
+                if sp:
+                    current_chapter = str(sp[0]) if len(sp) == 1 else ".".join(str(p) for p in sp[:2])
+                continue
+            if current_chapter not in chapters:
+                chapters[current_chapter] = []
+            chapters[current_chapter].append(para)
+        return chapters
+
+    async def extract_by_chapter(self, paragraphs: list[dict], domain_code: str = "", report_type_code: str = "") -> dict[str, dict]:
+        """按章节分批提取，每批只提取该章节相关的变量"""
+        chapters = self._group_by_chapter(paragraphs)
+        results: dict[str, dict] = {}
+
+        for chapter_path, chapter_paras in chapters.items():
+            local_schema = self._get_local_schema(chapter_path, domain_code, report_type_code)
+            if not local_schema:
+                continue
+
+            # 只用该章节的 parameter 段落作为上下文
+            context_parts = []
+            for p in chapter_paras:
+                ct = p.get("classify_type", "")
+                if ct in ("parameter", "narrative", "list"):
+                    text = p.get("content", "")
+                    if text:
+                        context_parts.append(text[:300])
+            if not context_parts:
+                continue
+
+            context = "\n".join(context_parts)[:2000]
+
+            # 构建 prompt
+            schema_lines = []
+            for name, spec in local_schema.items():
+                dt = spec.get("data_type", "text")
+                unit = f" ({spec['unit']})" if spec.get("unit") else ""
+                schema_lines.append(f'  "{name}": "{dt}{dt}"')
+            schema_text = "{\n" + ",\n".join(schema_lines) + "\n}"
+
+            prompt = (
+                f"从以下章节内容中提取结构化变量值。\n\n"
+                f"章节: {chapter_path}\n"
+                f"需要提取的变量:\n{schema_text}\n\n"
+                f"章节内容:\n{context}\n\n"
+                f"输出 JSON，只包含在文档中明确提到的变量，未找到的不输出。严格只输出 JSON。"
+            )
+
+            try:
+                from yuxi.models.chat import select_model
+                model = select_model()
+                response = await model.call(prompt)
+                text = response.content if hasattr(response, "content") else str(response)
+
+                import json
+                import re
+                match = re.search(r'\{[\s\S]*\}', text)
+                if match:
+                    extracted = json.loads(match.group())
+                    # 过滤 None 值
+                    extracted = {k: v for k, v in extracted.items() if v is not None}
+                    if extracted:
+                        results[chapter_path] = extracted
+            except Exception as e:
+                logger.debug(f"章节 {chapter_path} 提取失败: {e}")
+
+        return results
+
+    # ========== 逻辑关系提取 ==========
+
+    LOGIC_EXTRACT_PROMPT: ClassVar[str] = (
+        "分析以下段落组中的逻辑关系，识别：\n\n"
+        "1. 因果链：哪些段落之间存在因果关系？提取前提->推理->结论的链路。\n"
+        "   格式: {\"causal_chains\": [{\"cause_para_id\": \"p_id\", \"effect_para_id\": \"p_id\", \"relation\": \"描述\"}]}\n\n"
+        "2. 条件分支：是否有条件判断（如果/若/当...时）？提取条件表达式。\n"
+        "   格式: {\"conditions\": [{\"para_id\": \"p_id\", \"expression\": \"条件表达式\", \"consequence\": \"结果描述\"}]}\n\n"
+        "3. 数据引用：段落中引用了哪些数据？数据来源于哪个表格或前文段落？\n"
+        "   格式: {\"data_refs\": [{\"para_id\": \"p_id\", \"source\": \"table_id或para_id\", \"data_fields\": [\"字段名\"]}]}\n\n"
+        "输出合并为一个 JSON 对象，包含 causal_chains、conditions、data_refs 三个数组。严格只输出 JSON。"
+    )
+
+    async def extract_logical_relationships(self, paragraphs: list[dict]) -> dict:
+        """按章节粒度提取段落间的逻辑关系（因果链/条件分支/数据引用）"""
+        chapters = self._group_by_chapter(paragraphs)
+        all_results: dict = {"causal_chains": [], "conditions": [], "data_refs": []}
+
+        for chapter_path, chapter_paras in chapters.items():
+            # 只对有 parameter/含逻辑关键词的章节调用
+            para_texts = []
+            para_ids = []
+            for p in chapter_paras:
+                content = p.get("content", "")
+                if not content:
+                    continue
+                # 筛选含逻辑标志或 parameter 型的段落
+                ct = p.get("classify_type", "")
+                has_logic_kw = any(kw in content for kw in ["因此", "所以", "如果", "若", "当", "则", "需", "导致", "引起", "造成"])
+                if ct == "parameter" or has_logic_kw:
+                    para_texts.append(f"段落ID: {p.get('id', 'p?')}")
+                    para_texts.append(content[:300])
+                    para_ids.append(p.get("id", ""))
+
+            if len(para_texts) < 2:
+                continue
+
+            context = "\n".join(para_texts)[:3000]
+            prompt = f"{self.LOGIC_EXTRACT_PROMPT}\n\n章节: {chapter_path}\n\n段落组:\n{context}"
+
+            try:
+                from yuxi.models.chat import select_model
+                model = select_model()
+                response = await model.call(prompt)
+                text = response.content if hasattr(response, "content") else str(response)
+                parsed = self._parse_logic_response(text, chapter_path)
+                for key in ("causal_chains", "conditions", "data_refs"):
+                    if key in parsed:
+                        all_results[key].extend(parsed[key])
+            except Exception as e:
+                logger.debug(f"章节 {chapter_path} 逻辑关系提取失败: {e}")
+
+        return all_results
+
+    def _parse_logic_response(self, text: str, chapter_path: str) -> dict:
+        """解析 LLM 返回的逻辑关系 JSON"""
+        import json
+        import re
+        result = {"causal_chains": [], "conditions": [], "data_refs": []}
+        try:
+            match = re.search(r'\{[\s\S]*\}', text)
+            if not match:
+                return result
+            data = json.loads(match.group())
+
+            for item in data.get("causal_chains", []):
+                if isinstance(item, dict) and item.get("cause_para_id") and item.get("effect_para_id"):
+                    item["chapter"] = chapter_path
+                    result["causal_chains"].append(item)
+
+            for item in data.get("conditions", []):
+                if isinstance(item, dict) and item.get("expression"):
+                    item["chapter"] = chapter_path
+                    result["conditions"].append(item)
+
+            for item in data.get("data_refs", []):
+                if isinstance(item, dict) and item.get("para_id"):
+                    item["chapter"] = chapter_path
+                    result["data_refs"].append(item)
+        except (json.JSONDecodeError, TypeError):
+            pass
+        return result
+
+    # ========== 逻辑关系提取 END ==========
+
+    def _extract_table_schemas(self, paragraphs: list[dict]) -> int:
+        """对 table 类型段落提取列定义模板（含列角色判定）"""
+        import re as _re
+
+        count = 0
+        for para in paragraphs:
+            if para.get("classify_type") != "table":
+                continue
+            content = para.get("content", "")
+            if not content:
+                continue
+
+            schema = None
+            if content.strip().startswith("<table"):
+                schema = self._extract_html_table_schema(content, para)
+            elif self._is_markdown_table(content):
+                schema = self._extract_markdown_table_schema(content, para)
+
+            if schema:
+                tmpl = para.get("template") or {}
+                tmpl["table_schema"] = schema
+                para["template"] = tmpl
+                count += 1
+
+        return count
+
+    def _is_markdown_table(self, text: str) -> bool:
+        lines = [l.strip() for l in text.split("\n") if l.strip()]
+        table_lines = [l for l in lines if l.startswith("|") and l.endswith("|")]
+        return len(table_lines) >= 2
+
+    def _extract_markdown_table_schema(self, content: str, para: dict) -> dict | None:
+        """从 Markdown 表格提取 schema"""
+        import re as _re
+
+        lines = [l.strip() for l in content.split("\n") if l.strip()]
+        separator_pat = _re.compile(r'^\|[:\-]+\|[:\-]*\|$')
+        data_lines = [l for l in lines if not separator_pat.match(l)]
+
+        if not data_lines:
+            return None
+
+        # 表头
+        header_cells = [c.strip() for c in data_lines[0].strip("|").split("|") if c.strip()]
+        if not header_cells:
+            return None
+
+        # 数据行
+        rows = []
+        for line in data_lines[1:]:
+            cells = [c.strip() for c in line.strip("|").split("|")]
+            row = {}
+            for i, h in enumerate(header_cells):
+                row[h] = cells[i] if i < len(cells) else ""
+            rows.append(row)
+
+        return self._build_table_schema(header_cells, rows, para)
+
+    def _extract_html_table_schema(self, content: str, para: dict) -> dict | None:
+        """从 HTML 表格提取 schema"""
+        try:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(content, "html.parser")
+            table = soup.find("table")
+            if not table:
+                return None
+
+            # 提取表头
+            first_row = table.find("tr")
+            if not first_row:
+                return None
+
+            headers = []
+            for th in first_row.find_all(["th", "td"]):
+                headers.append(th.get_text(strip=True))
+
+            if not headers:
+                return None
+
+            # 提取数据行
+            rows = []
+            for tr in table.find_all("tr")[1:]:
+                cells = [td.get_text(strip=True) for td in tr.find_all(["td", "th"])]
+                row = {}
+                for i, h in enumerate(headers):
+                    row[h] = cells[i] if i < len(cells) else ""
+                if row:
+                    rows.append(row)
+
+            return self._build_table_schema(headers, rows, para)
+        except ImportError:
+            return None
+
+    def _build_table_schema(self, headers: list[str], rows: list[dict], para: dict) -> dict:
+        """构建表格 Schema，含列角色判定"""
+        import re as _re
+
+        section_path = para.get("section_path", [])
+        title = para.get("title", "")
+
+        # 判定表格类型
+        table_type = self._classify_table_type(headers, rows, section_path, title)
+
+        # 判定每列角色
+        columns = []
+        for i, h in enumerate(headers):
+            col_values = [row.get(h, "") for row in rows]
+            role = self._infer_column_role(h, col_values, table_type, section_path)
+
+            col_def = {"name": h, "role": role}
+
+            # 提取单位
+            unit_match = _re.search(r'[\((（](.+?)[\)）]', h)
+            if unit_match:
+                col_def["unit"] = unit_match.group(1)
+
+            # structural/classification 列附加 vocabulary
+            if role in ("structural", "classification") and col_values:
+                vocab = list(dict.fromkeys(col_values))
+                if vocab:
+                    col_def["vocabulary"] = vocab
+
+            columns.append(col_def)
+
+        # 提取 structural_rows（保留非 data/derived 列的行数据）
+        non_data_indices = [i for i, c in enumerate(columns) if c["role"] not in ("data", "derived")]
+        structural_rows = []
+        for row in rows:
+            sr = {}
+            for i in non_data_indices:
+                if i < len(headers):
+                    sr[headers[i]] = row.get(headers[i], "")
+            if sr:
+                structural_rows.append(sr)
+
+        return {
+            "name": self._infer_table_name(headers, title),
+            "table_type": table_type,
+            "columns": columns,
+            "structural_rows": structural_rows,
+            "total_rows": len(rows),
+            "section_path": section_path,
+        }
+
+    def _classify_table_type(self, headers: list[str], rows: list[dict],
+                              section_path: list, title: str) -> str:
+        """判定表格类型"""
+        title_lower = title.lower() if title else ""
+
+        # 键值对表格：2列，第一列看起来像属性名
+        if len(headers) == 2:
+            first_col_values = [row.get(headers[0], "") for row in rows]
+            if all(len(v) < 30 for v in first_col_values):
+                return "key_value"
+
+        # 达标分析表格：含"标准限值"或"达标"
+        header_text = " ".join(headers)
+        if "标准限值" in header_text or "达标" in header_text:
+            return "compliance"
+
+        # 监测数据表格：含"监测点"或"点位"
+        if "监测点" in header_text or "点位" in header_text:
+            return "monitoring"
+
+        # 标准限值表格：标题含"限值"
+        if "限值" in title_lower:
+            return "standard_limit"
+
+        return "general"
+
+    def _infer_column_role(self, col_name: str, col_values: list[str],
+                           table_type: str, section_path: list) -> str:
+        """推断列角色"""
+        name_lower = col_name.lower()
+
+        if table_type == "key_value":
+            return "key"
+
+        # 关键词匹配
+        reference_kw = ["标准", "规范"]
+        derived_kw = ["达标", "占标", "符合", "超标", "标准限值", "评价"]
+        data_kw = ["浓度", "速率", "流量", "值", "结果", "含量", "指数", "排放"]
+        structural_kw = ["监测点", "点位", "污染源", "污染物", "项目", "名称", "类别", "功能", "因子"]
+
+        for kw in reference_kw:
+            if kw in name_lower:
+                return "reference"
+        for kw in derived_kw:
+            if kw in name_lower:
+                return "derived"
+        for kw in data_kw:
+            if kw in name_lower:
+                return "data"
+        for kw in structural_kw:
+            if kw in name_lower:
+                return "structural"
+
+        # 兜底：数值占比高 → data
+        numeric_count = sum(1 for v in col_values if self._is_numeric_value(v))
+        if col_values and numeric_count / len(col_values) > 0.5:
+            return "data"
+        return "structural"
+
+    def _is_numeric_value(self, v: str) -> bool:
+        import re as _re
+        if not v or v in ("-", "—", "/", "N/A"):
+            return False
+        return bool(_re.match(r'^[+-]?[\d.]+$', v.strip()))
+
+    def _infer_table_name(self, headers: list[str], title: str) -> str:
+        if title:
+            return title
+        if headers:
+            return f"表格（{headers[0]}...）"
+        return "未命名表格"
+
+    # ========== 表格 Schema 提取 END ==========
+
+    # ========== 模板质量评估 ==========
+
+    def evaluate_template_quality(self, generalized: str, slots: list[dict]) -> float:
+        """评估模板质量，0~1 分"""
+        import re as _re
+
+        score = 1.0
+        slot_count = len(slots)
+
+        # 1. slot 数量惩罚（>5 开始扣分）
+        if slot_count > 5:
+            score -= 0.1 * (slot_count - 5)
+
+        # 2. 固定单位惩罚
+        for slot in slots:
+            if slot.get("name", "").endswith("单位"):
+                score -= 0.15
+
+        # 3. 无语义编号惩罚（方位1、特征2、区域1）
+        generic_names = new_set = {"方位", "特征", "区域", "描述", "数值", "名称"}
+        for slot in slots:
+            base = _re.sub(r'\d+$', '', slot.get("name", ""))
+            if base in generic_names:
+                score -= 0.2
+
+        # 4. slot 名称过长惩罚
+        for slot in slots:
+            if len(slot.get("name", "")) > 8:
+                score -= 0.1
+
+        # 5. 叙述占位符奖励
+        if generalized and "[" in generalized and "]" in generalized:
+            score += 0.05
+
+        # 6. 枚举型 slot 应有 vocabulary
+        for slot in slots:
+            if slot.get("type") == "enum" and not slot.get("vocabulary"):
+                score -= 0.1
+
+        return max(0, min(1, score))
+
+    # ========== 模板质量评估 END ==========
 
     def _extract_structured_blocks(
         self,
@@ -1738,6 +3006,95 @@ class DomainFactoryService:
 
         return chapters
 
+    # ========== 叙述型段落摘要提取 ==========
+
+    NARRATIVE_SUMMARY_PROMPT = """分析以下段落，提取通用性摘要信息。要求：
+
+1. 提取该段落的核心信息点（1-3个要点）
+2. 判断该段落属于哪种叙述类型：conclusion（结论）/ methodology（方法）/ summary（概况）/ background（背景）/ description（描述）
+3. 提取段落中提到的关键实体名称（如地名、机构名、项目名等）
+
+严格按 JSON 格式输出：
+{{"summary": "一句话摘要（不超过50字）", "key_points": ["要点1", "要点2"], "narrative_type": "类型", "entities": ["实体1", "实体2"]}}"""
+
+    async def _extract_narrative_summaries(
+        self,
+        paragraphs: list[dict],
+        domain_label: str = "",
+        max_concurrency: int = 5,
+    ) -> dict[str, dict]:
+        """对叙述型段落批量提取摘要"""
+        import asyncio
+
+        semaphore = asyncio.Semaphore(max_concurrency)
+
+        async def _summarize_one(para: dict) -> tuple[str, dict]:
+            async with semaphore:
+                pid = para.get("id", "")
+                content = para.get("content", "").strip()
+                title = para.get("title", "")
+                if not content or len(content) < 20:
+                    return pid, {"summary": content[:50], "key_points": [], "narrative_type": "description", "entities": []}
+
+                text_input = f"标题：{title}\n内容：{content}" if title else content
+                try:
+                    result = await self._generalize_text(
+                        text_input,
+                        chapter_hint=domain_label,
+                        prompt=self.NARRATIVE_SUMMARY_PROMPT,
+                    )
+                    # _generalize_text 返回的是泛化结果，我们需要从中提取 JSON
+                    generalized = result.get("generalized", "")
+                    summary_data = self._parse_narrative_json(generalized)
+                    return pid, {
+                        "summary": summary_data.get("summary", content[:50]),
+                        "key_points": summary_data.get("key_points", []),
+                        "narrative_type": summary_data.get("narrative_type", "description"),
+                        "entities": summary_data.get("entities", []),
+                        "original": content,
+                    }
+                except Exception as e:
+                    logger.debug(f"叙述摘要提取失败 para={pid}: {e}")
+                    return pid, {
+                        "summary": content[:50],
+                        "key_points": [],
+                        "narrative_type": "description",
+                        "entities": [],
+                        "original": content,
+                    }
+
+        tasks = [_summarize_one(p) for p in paragraphs]
+        results = await asyncio.gather(*tasks)
+        return dict(results)
+
+    @staticmethod
+    def _parse_narrative_json(text: str) -> dict:
+        """从 LLM 输出中解析叙述摘要 JSON"""
+        import json
+        import re as _re
+
+        # 尝试直接解析
+        text = text.strip()
+        if text.startswith("```"):
+            text = _re.sub(r'^```\w*\n?', '', text)
+            text = _re.sub(r'\n?```$', '', text)
+            text = text.strip()
+
+        try:
+            return json.loads(text)
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+        # 尝试提取 JSON 块
+        m = _re.search(r'\{[^{}]*"summary"[^{}]*\}', text, _re.DOTALL)
+        if m:
+            try:
+                return json.loads(m.group())
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+        return {"summary": text[:50], "key_points": [], "narrative_type": "description", "entities": []}
+
     async def generalize_paragraphs(
         self,
         paragraphs: list[dict[str, Any]],
@@ -2055,6 +3412,17 @@ class DomainFactoryService:
                 normalized_slot["type"] = slot["type"]
             if "attribute" in slot:
                 normalized_slot["attribute"] = slot["attribute"]
+            if "value" in slot:
+                normalized_slot["value"] = slot["value"]
+
+            # slot type 兜底校验
+            _valid_types = {"parameter", "enum", "descriptive", "reference"}
+            st = normalized_slot.get("type", "")
+            if st not in _valid_types:
+                normalized_slot["type"] = "parameter"
+            # enum 类型必须有 vocabulary
+            if normalized_slot["type"] == "enum" and not normalized_slot.get("vocabulary"):
+                normalized_slot["vocabulary"] = slot.get("vocabulary", [])
 
             normalized_slots.append(normalized_slot)
 
@@ -2309,7 +3677,8 @@ class DomainFactoryService:
             "file_name": task.file_name,
             "domain": domain.code if domain else None,
             "domain_label": domain.name if domain else None,
-            "document_type": task.document_type or "通用",
+            "document_type": task.document_type or "",
+            "report_type_code": task.report_type_code or "",
             "status": task.status,
             "ai_confidence": task.ai_confidence,
             "uploaded_at": utc_isoformat(task.created_at),
@@ -2608,6 +3977,15 @@ class DomainFactoryService:
                 domain_label = task_detail.get("domain_label", "")
                 base_info = task_detail.get("base_info", {})
 
+                # 将逻辑关系注入段落的 template 中，供图谱构建使用
+                logical_relations = task_detail.get("logical_relations", {})
+                if isinstance(logical_relations, dict) and any(isinstance(v, list) and v for v in logical_relations.values()):
+                    for para in source_paragraphs:
+                        tmpl = para.get("template") or {}
+                        if isinstance(tmpl, dict):
+                            tmpl["logical_refs"] = logical_relations
+                            para["template"] = tmpl
+
                 if source_paragraphs:
                     graph_stats = graph_builder.build_knowledge_graph(
                         kb_id=knowledge_base_id or "",
@@ -2616,6 +3994,8 @@ class DomainFactoryService:
                         source_paragraphs=source_paragraphs,
                         domain_label=domain_label,
                         base_info=base_info,
+                        domain_code=task_detail.get("domain"),
+                        report_type_code=task_detail.get("report_type_code"),
                     )
                     logger.info(f"知识图谱构建完成: {graph_stats}")
                     graph_builder.close()
@@ -2915,9 +4295,35 @@ class DomainFactoryService:
             },
         )
 
+    async def _increment_learned_template_match_counts(self, paragraphs: list[dict]) -> None:
+        """ETL 匹配阶段后，对被命中的学习模板累加 match_count"""
+        learned_ids: set[int] = set()
+        for para in paragraphs:
+            tpl_id = (para.get("template_match") or {}).get("template_id", "")
+            if tpl_id.startswith("learned_"):
+                try:
+                    learned_ids.add(int(tpl_id.removeprefix("learned_")))
+                except ValueError:
+                    pass
+        if not learned_ids:
+            return
+        from sqlalchemy import text as sa_text
+
+        async with pg_manager.get_async_session_context() as session:
+            await session.execute(
+                sa_text(
+                    "UPDATE domain_factory_learned_templates "
+                    "SET match_count = match_count + 1 "
+                    "WHERE id = ANY(:ids)"
+                ),
+                {"ids": list(learned_ids)},
+            )
+        logger.info(f"学习模板 match_count 更新: {learned_ids}")
+
     async def _save_learned_templates_from_task(self, task_detail: dict[str, Any]) -> int:
         """从已提交任务中提取高质量模板，回流到学习模板库"""
         domain_code = task_detail.get("domain", "coal")
+        report_type_code = task_detail.get("report_type_code")
         paragraphs = task_detail.get("source_paragraphs", [])
         saved = 0
 
@@ -2944,7 +4350,8 @@ class DomainFactoryService:
                 slots=slots,
                 slot_signature=slot_signature,
                 sample_original=sample_original,
-                metadata=metadata,
+                extra_meta=metadata,
+                report_type_code=report_type_code,
             )
             saved += 1
 
@@ -3123,6 +4530,15 @@ class DomainFactoryService:
                 domain_label = task_detail.get("domain_label", "")
                 base_info = task_detail.get("base_info", {})
 
+                                # 将逻辑关系注入段落的 template 中
+                logical_relations = task_detail.get("logical_relations", {})
+                if isinstance(logical_relations, dict) and any(isinstance(v, list) and v for v in logical_relations.values()):
+                    for para in source_paragraphs:
+                        tmpl = para.get("template") or {}
+                        if isinstance(tmpl, dict):
+                            tmpl["logical_refs"] = logical_relations
+                            para["template"] = tmpl
+
                 if source_paragraphs:
                     graph_stats = graph_builder.build_knowledge_graph(
                         kb_id=knowledge_base_id or "",
@@ -3131,6 +4547,8 @@ class DomainFactoryService:
                         source_paragraphs=source_paragraphs,
                         domain_label=domain_label,
                         base_info=base_info,
+                        domain_code=task_detail.get("domain"),
+                        report_type_code=task_detail.get("report_type_code"),
                     )
                     logger.info(f"知识图谱构建完成: {graph_stats}")
                     graph_builder.close()
@@ -3177,7 +4595,30 @@ class DomainFactoryService:
 
     async def retry_task(self, task_id: str) -> dict[str, Any] | None:
         updated_task = await self.repo.update_task(task_id, {"status": "UPLOADED", "error_message": None})
-        return updated_task.to_summary_dict() if updated_task else None
+        if not updated_task:
+            return None
+
+        # 重新提交到 Tasker 队列
+        domain = await self.repo.get_domain_by_id(updated_task.domain_id)
+        domain_code = domain.code if domain else "unknown"
+        try:
+            await tasker.enqueue(
+                name=f"知识工厂: {updated_task.file_name}",
+                task_type="domain_factory",
+                payload={
+                    "task_id": task_id,
+                    "domain_factory_task_id": task_id,
+                    "domain_code": domain_code,
+                    "domain_name": domain.name if domain else "",
+                    "file_name": updated_task.file_name,
+                },
+                coroutine=self._etl_pipeline_async,
+            )
+            logger.info(f"重试任务已注册到 Tasker: {task_id}")
+        except Exception as e:
+            logger.warning(f"重试任务注册 Tasker 失败: {e}")
+
+        return updated_task.to_summary_dict()
 
     # ========== Pipeline Config ==========
 
@@ -3253,19 +4694,158 @@ class DomainFactoryService:
 
     # ========== Context & Section Routing ==========
 
+    async def query_graph_templates(
+        self, domain_code: str = "", report_type_code: str = "", limit: int = 50
+    ) -> dict[str, Any]:
+        """按 (domain, report_type) 查询图谱中的模板数据"""
+        import os
+
+        try:
+            from neo4j import GraphDatabase as Neo4jDriver
+
+            uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+            username = os.getenv("NEO4J_USERNAME", "neo4j")
+            password = os.getenv("NEO4J_PASSWORD", "0123456789")
+
+            driver = Neo4jDriver.driver(uri, auth=(username, password))
+            results = {"sections": [], "templates": [], "table_schemas": []}
+
+            with driver.session() as session:
+                # 查询 Section 节点
+                where_clauses = []
+                if domain_code:
+                    where_clauses.append("d.domain_code = $domain_code")
+                if report_type_code:
+                    where_clauses.append("d.report_type_code = $report_type_code")
+                where_str = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+
+                # Sections
+                sec_result = session.run(
+                    f"""
+                    MATCH (d:Document)-[:HAS_SECTION]->(s:Section)
+                    {where_str}
+                    RETURN s.id as id, s.title as title, s.level as level,
+                           s.section_path_str as path, d.domain_code as domain
+                    ORDER BY s.section_path_str
+                    LIMIT $limit
+                    """,
+                    domain_code=domain_code,
+                    report_type_code=report_type_code,
+                    limit=limit,
+                )
+                results["sections"] = [dict(record) for record in sec_result]
+
+                # ParagraphTemplates
+                tpl_result = session.run(
+                    f"""
+                    MATCH (d:Document)-[:HAS_SECTION]->(s)-[:COMPOSED_OF]->(pt:ParagraphTemplate)
+                    {where_str}
+                    RETURN pt.id as id, pt.text_pattern as pattern,
+                           pt.classify_type as classify_type, pt.hash as hash,
+                           s.title as section_title
+                    LIMIT $limit
+                    """,
+                    domain_code=domain_code,
+                    report_type_code=report_type_code,
+                    limit=limit,
+                )
+                results["templates"] = [dict(record) for record in tpl_result]
+
+                # TableSchemas
+                tbl_result = session.run(
+                    f"""
+                    MATCH (d:Document)-[:HAS_SECTION]->(s)-[:HAS_TABLE_SCHEMA]->(ts:TableSchema)
+                    {where_str}
+                    RETURN ts.id as id, ts.name as name, ts.table_type as table_type,
+                           ts.columns as columns
+                    LIMIT $limit
+                    """,
+                    domain_code=domain_code,
+                    report_type_code=report_type_code,
+                    limit=limit,
+                )
+                results["table_schemas"] = [dict(record) for record in tbl_result]
+
+            driver.close()
+            return results
+        except Exception as e:
+            logger.warning(f"图谱查询失败: {e}")
+            return {"sections": [], "templates": [], "table_schemas": [], "error": str(e)}
+
+    async def query_graph_legal_references(
+        self, scope: str = "", limit: int = 100
+    ) -> dict[str, Any]:
+        """查询图谱中的法律引用，支持按 scope 过滤"""
+        import os
+
+        try:
+            from neo4j import GraphDatabase as Neo4jDriver
+
+            uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+            username = os.getenv("NEO4J_USERNAME", "neo4j")
+            password = os.getenv("NEO4J_PASSWORD", "0123456789")
+
+            driver = Neo4jDriver.driver(uri, auth=(username, password))
+            where_clause = "WHERE lr.scope = $scope" if scope else ""
+
+            with driver.session() as session:
+                result = session.run(
+                    f"""
+                    MATCH (lr:LegalReference)
+                    {where_clause}
+                    RETURN lr.id as id, lr.name as name, lr.code as code,
+                           lr.type as type, lr.scope as scope,
+                           lr.authority as authority, lr.frequency as frequency
+                    ORDER BY lr.frequency DESC
+                    LIMIT $limit
+                    """,
+                    scope=scope,
+                    limit=limit,
+                )
+                refs = [dict(record) for record in result]
+
+            driver.close()
+            return {"legal_references": refs, "total": len(refs)}
+        except Exception as e:
+            logger.warning(f"法律引用查询失败: {e}")
+            return {"legal_references": [], "total": 0, "error": str(e)}
+
     async def get_contexts(self) -> dict[str, Any]:
+        # 统计学习模板和实体数
+        template_count = await self.repo.count_learned_templates()
+        try:
+            from yuxi.repositories.domain_entity_repository import DomainEntityRepository
+            entity_repo = DomainEntityRepository()
+            entity_count = len(await entity_repo.list_all())
+        except Exception:
+            entity_count = 0
+
+        # 从数据库查询领域
+        domains = await self.repo.list_domains()
+
+        # 统计每个领域的已入库任务数
+        committed_count = 0
+        for d in domains:
+            committed_count += await self.repo.count_committed_tasks(d.get("code", ""))
+
+        # 从数据库查询报告类型
+        report_types = await self.repo.list_report_types()
+
+        # 按 domain_code 分组
+        report_types_by_domain: dict[str, list] = {}
+        for rt in report_types:
+            dc = rt.get("domain_code", "")
+            if dc:
+                report_types_by_domain.setdefault(dc, []).append(rt)
+
         return {
-            "domains": [
-                {"id": "global", "code": "global", "name": "通用（Global）"},
-                {"id": "coal", "code": "coal", "name": "煤炭采选业"},
-                {"id": "chem", "code": "chem", "name": "石油化工业"},
-                {"id": "transport", "code": "transport", "name": "交通运输业"},
-            ],
-            "report_types": [
-                {"id": "feasibility", "code": "feasibility_report", "name": "可行性研究报告"},
-                {"id": "eia", "code": "eia_report", "name": "环境影响评价报告"},
-                {"id": "stand-alone", "code": "stand_alone_report", "name": "独立篇章"},
-            ],
+            "domains": domains,
+            "report_types": report_types_by_domain,
+            "stats": {
+                "learned_templates": template_count,
+                "entity_count": entity_count,
+                "committed_tasks": committed_count,
+            },
         }
 
     # ========== Section Routing ==========
@@ -3319,6 +4899,10 @@ class DomainFactoryService:
 
         domain_code = template_metadata.get("domain_code") or detail.get("domain") or "coal"
 
+        # 获取领域名称
+        domain_obj = await self.repo.get_domain_by_code(domain_code) if domain_code else None
+        domain_name_str = domain_obj.name if domain_obj else domain_code or "通用"
+
         # 获取现有实体完整结构（含属性）
         existing_entities = await self._get_existing_entities_full(domain_code)
 
@@ -3328,7 +4912,7 @@ class DomainFactoryService:
         # 第二步：剩余插槽交给 LLM 判断
         entity_proposals = []
         if remaining_slots:
-            prompt = self._build_entity_proposal_prompt(remaining_slots, existing_entities, domain_code)
+            prompt = self._build_entity_proposal_prompt(remaining_slots, existing_entities, domain_name_str)
             try:
                 from yuxi.models.chat import select_model
 
@@ -3436,6 +5020,7 @@ class DomainFactoryService:
                 logger.info(f"保存新实体: {name_cn} ({entity_key})")
 
         # 触发同领域待审核任务的重映射
+        remapped = 0
         try:
             remapped = await self._remap_waiting_review_tasks(domain_code)
             if remapped > 0:
@@ -3443,7 +5028,7 @@ class DomainFactoryService:
         except Exception as remap_err:
             logger.warning(f"实体重映射失败（不影响实体保存）: {remap_err}")
 
-        return {"saved": saved, "skipped": skipped}
+        return {"saved": saved, "skipped": skipped, "remapped": remapped}
 
     async def _remap_waiting_review_tasks(self, domain_code: str) -> int:
         """对同领域 WAITING_REVIEW 任务重新映射插槽的 entity_ref"""
@@ -3558,7 +5143,7 @@ class DomainFactoryService:
         self,
         raw_slots: list[dict],
         existing_entities: list[dict],
-        domain_code: str,
+        domain_name: str = "",
     ) -> list[dict]:
         """构建 LLM Prompt：将剩余未识别插槽整理为新实体建议
 
@@ -3589,7 +5174,7 @@ class DomainFactoryService:
             )
         existing_text = "\n".join(entity_lines) if entity_lines else "无"
 
-        domain_name = {"coal": "煤炭采掘", "chem": "石油化工"}.get(domain_code, domain_code)
+        domain_name = domain_name or "通用"
 
         system_prompt = (
             "你是一个领域知识建模专家。"
