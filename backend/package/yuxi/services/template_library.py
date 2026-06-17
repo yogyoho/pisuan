@@ -128,7 +128,7 @@ class TemplateLibrary:
                 "slots": tpl.get("slots", []),
                 "domain": tpl.get("domain_code", ""),
                 "score": tpl.get("source_count", 1),
-                "routing": tpl.get("metadata", {}).get("routing", ""),
+                "routing": tpl.get("extra_meta", {}).get("routing", ""),
                 "source": "learned",
             }
             self.templates[converted["template_id"]] = converted

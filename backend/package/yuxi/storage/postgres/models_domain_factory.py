@@ -49,6 +49,7 @@ class DomainFactoryTask(Base):
     storage_path = Column(String(1024), nullable=False)
     status = Column(String(32), nullable=False, default="UPLOADED")
     document_type = Column(String(64), nullable=True, default="通用")
+    report_type_code = Column(String(64), nullable=True, default="通用")
     ai_confidence = Column(Integer, nullable=True)
     uploaded_by = Column(String(64), nullable=True)
     reviewer = Column(String(64), nullable=True)
@@ -76,6 +77,7 @@ class DomainFactoryTask(Base):
             "domain": self.domain.code if self.domain else None,
             "domain_label": self.domain.name if self.domain else None,
             "document_type": self.document_type or "通用",
+            "report_type_code": self.report_type_code or "通用",
             "status": self.status,
             "ai_confidence": self.ai_confidence,
             "uploaded_by": self.uploaded_by,
@@ -98,19 +100,21 @@ class DomainFactoryLearnedTemplate(Base):
 
     __tablename__ = "domain_factory_learned_templates"
     __table_args__ = (
-        UniqueConstraint("domain_code", "chapter", "slot_signature", name="uq_dflt_domain_chapter_sig"),
-        Index("idx_dflt_chapter", "domain_code", "chapter"),
+        UniqueConstraint("domain_code", "report_type_code", "chapter", "slot_signature", name="uq_dflt_domain_rt_chapter_sig"),
+        Index("idx_dflt_chapter", "domain_code", "report_type_code", "chapter"),
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     domain_code = Column(String(64), nullable=False, index=True)
+    report_type_code = Column(String(64), nullable=False, default="通用")
     chapter = Column(String(255), nullable=False, default="")
     generalized = Column(Text, nullable=False)
     slots = Column(JSON, nullable=False, default=list)
     slot_signature = Column(String(255), nullable=False, default="")
     source_count = Column(Integer, nullable=False, default=1)
+    match_count = Column(Integer, nullable=False, default=0)
     sample_original = Column(Text, nullable=True)
-    metadata = Column(JSON, nullable=True, default=dict)
+    extra_meta = Column(JSON, nullable=True, default=dict)
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
 
@@ -118,13 +122,15 @@ class DomainFactoryLearnedTemplate(Base):
         return {
             "id": self.id,
             "domain_code": self.domain_code,
+            "report_type_code": self.report_type_code or "通用",
             "chapter": self.chapter,
             "generalized": self.generalized,
             "slots": self.slots or [],
             "slot_signature": self.slot_signature,
             "source_count": self.source_count,
+            "match_count": self.match_count,
             "sample_original": self.sample_original,
-            "metadata": self.metadata or {},
+            "extra_meta": self.extra_meta or {},
             "created_at": format_utc_datetime(self.created_at),
             "updated_at": format_utc_datetime(self.updated_at),
         }
@@ -134,10 +140,11 @@ class DomainFactoryPromptConfig(Base):
     """Prompt 模板配置"""
 
     __tablename__ = "domain_factory_prompt_configs"
-    __table_args__ = (UniqueConstraint("domain_code", "prompt_type", name="uq_df_prompt_domain_type"),)
+    __table_args__ = (UniqueConstraint("domain_code", "report_type_code", "prompt_type", name="uq_df_prompt_domain_rt_type"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     domain_code = Column(String(64), nullable=True, index=True)
+    report_type_code = Column(String(64), nullable=True, default="通用")
     prompt_type = Column(String(32), nullable=False)
     template = Column(Text, nullable=True)
     created_at = Column(DateTime, default=utc_now_naive)
@@ -147,6 +154,7 @@ class DomainFactoryPromptConfig(Base):
         return {
             "id": self.id,
             "domain_code": self.domain_code,
+            "report_type_code": self.report_type_code or "通用",
             "prompt_type": self.prompt_type,
             "template": self.template,
             "created_at": format_utc_datetime(self.created_at),

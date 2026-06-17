@@ -20,6 +20,40 @@ branding:
     - "让智能体可落地，让流程可编排，让协作可扩展"
     - "让数据可沉淀，让能力可复用，让系统可进化"
 
+features:
+  - label: "知识量"
+    value: "2300+"
+    description: "业务人员的参与和支持"
+    icon: "stars"
+  - label: "skills"
+    value: "100+"
+    description: "可扩展和复用的工程经验"
+    icon: "issues"
+  - label: "MCP"
+    value: "20+"
+    description: "可以对接的工具和系统"
+    icon: "commits"
+  - label: "报告种类"
+    value: "5+"
+    description: "可支撑煤炭行业工程报告编写"
+    icon: "license"
+
+actions:
+  - name: "演示视频"
+    icon: "video"
+    url: "https://www.bilibili.com/video/BV1DF14BTETq"
+  - name: "文档中心"
+    icon: "docs"
+    url: "https://xerrors.github.io/Yuxi/"
+  - name: "提交 Issue"
+    icon: "issue"
+    url: "https://github.com/xerrors/Yuxi/issues/new/choose"
+  - name: "开发路线图"
+    icon: "roadmap"
+    url: "https://xerrors.github.io/Yuxi/develop-guides/roadmap.html"
+
+
+
 # 页脚信息
 footer:
   copyright: "© 北京华宇工程有限公司 2026 v1.6.0"

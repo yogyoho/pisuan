@@ -9,8 +9,12 @@ import {
   FileWordOutlined,
   MoreOutlined,
   ReloadOutlined,
-  PlusOutlined
+  PlusOutlined,
+  AuditOutlined,
+  EyeOutlined,
+  RedoOutlined
 } from '@ant-design/icons-vue'
+import { Search } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { useTaskerStore } from '@/stores/tasker'
@@ -35,8 +39,40 @@ const uploadModalVisible = ref(false)
 const uploadFiles = ref([])
 const uploadFileList = ref([])
 const uploading = ref(false)
-const selectedDocumentType = ref('通用')
+const selectedReportType = ref('')
+const reportTypeOptions = ref([])
 const activeTab = ref('pending')
+
+// 批量操作
+const selectedRowKeys = ref([])
+const batchOperating = ref(false)
+
+// 自动刷新
+let refreshTimer = null
+
+const hasActiveTasks = computed(() =>
+  taskList.value.some(t =>
+    ['UPLOADED', 'PARSING', 'EXTRACTING', 'GENERALIZING'].includes(t.status)
+  )
+)
+
+const startAutoRefresh = () => {
+  stopAutoRefresh()
+  refreshTimer = setInterval(() => {
+    if (hasActiveTasks.value) {
+      fetchTasks()
+    } else {
+      stopAutoRefresh()
+    }
+  }, 15000)
+}
+
+const stopAutoRefresh = () => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
+}
 
 // 新增：领域创建
 const showDomainModal = ref(false)
@@ -52,14 +88,6 @@ const markdownContent = ref('')
 const markdownLoading = ref(false)
 const currentTaskId = ref(null)
 
-// 文档类型选项
-const documentTypeOptions = [
-  { label: '通用', value: '通用' },
-  { label: '环境影响评价报告', value: '环境影响评价报告' },
-  { label: '可行性研究报告', value: '可行性研究报告' },
-  { label: '初步设计', value: '初步设计' }
-]
-
 // 状态映射
 const statusMap = {
   UPLOADED: { color: 'var(--gray-400)', text: '已上传' },
@@ -73,6 +101,27 @@ const statusMap = {
 
 // 计算属性
 const pendingCount = computed(() => taskList.value.length)
+
+// 领域选择
+const localDomain = ref('__all__')
+
+watch(() => props.selectedDomain, (val) => {
+  if (val && val !== localDomain.value) {
+    localDomain.value = val
+  }
+})
+
+watch(localDomain, (val) => {
+  fetchTasks(val)
+  fetchHistory(val)
+})
+
+const handleDomainChange = (eventOrValue) => {
+  const value = eventOrValue?.target?.value ?? eventOrValue
+  if (!value || value === localDomain.value) return
+  localDomain.value = value
+  emit('update:domain', value)
+}
 
 const getDomainLabel = (value) => {
   if (!Array.isArray(props.domains)) return value
@@ -90,14 +139,7 @@ const domainOptions = computed(() => {
   return [allOption, ...domainList]
 })
 
-const filteredTasks = computed(() => {
-  if (!searchKeyword.value) return taskList.value
-  const kw = searchKeyword.value.toLowerCase()
-  return taskList.value.filter(t =>
-    t.file_name?.toLowerCase().includes(kw) ||
-    t.domain?.toLowerCase().includes(kw)
-  )
-})
+const filteredTasks = computed(() => taskList.value)
 
 const filteredHistory = computed(() => {
   if (!searchKeyword.value) return historyList.value
@@ -107,12 +149,29 @@ const filteredHistory = computed(() => {
   )
 })
 
+const pendingAllSelected = computed(() =>
+  filteredTasks.value.length > 0 && filteredTasks.value.every(t => selectedRowKeys.value.includes(t.id))
+)
+const pendingPartiallySelected = computed(() =>
+  !pendingAllSelected.value && filteredTasks.value.some(t => selectedRowKeys.value.includes(t.id))
+)
+const handlePendingSelectAll = (e) => {
+  selectedRowKeys.value = e.target.checked ? filteredTasks.value.map(t => t.id) : []
+}
+const togglePendingSelect = (id, checked) => {
+  if (checked) {
+    if (!selectedRowKeys.value.includes(id)) selectedRowKeys.value = [...selectedRowKeys.value, id]
+  } else {
+    selectedRowKeys.value = selectedRowKeys.value.filter(k => k !== id)
+  }
+}
+
 // 获取任务列表
-const fetchTasks = async () => {
+const fetchTasks = async (domain) => {
+  const d = domain !== undefined ? domain : localDomain.value
   taskLoading.value = true
   try {
-    const params = props.selectedDomain && props.selectedDomain !== '__all__'
-      ? { domain: props.selectedDomain } : {}
+    const params = d && d !== '__all__' ? { domain: d } : {}
     const res = await domainFactoryApi.fetchDataSources(params)
     taskList.value = res?.pending || res?.items || []
   } catch (e) {
@@ -124,14 +183,15 @@ const fetchTasks = async () => {
 }
 
 // 获取历史记录
-const fetchHistory = async () => {
+const fetchHistory = async (domain) => {
+  const d = domain !== undefined ? domain : localDomain.value
   historyLoading.value = true
   try {
     const params = {
       keyword: searchKeyword.value || undefined
     }
-    if (props.selectedDomain && props.selectedDomain !== '__all__') {
-      params.domain = props.selectedDomain
+    if (d && d !== '__all__') {
+      params.domain = d
     }
     const res = await domainFactoryApi.fetchHistory(params)
     historyList.value = res?.items || []
@@ -146,6 +206,33 @@ const fetchHistory = async () => {
 const refresh = () => {
   fetchTasks()
   fetchHistory()
+  if (hasActiveTasks.value) startAutoRefresh()
+}
+
+// 批量操作
+const handleBatchDelete = async () => {
+  if (!selectedRowKeys.value.length) return
+  try {
+    await Modal.confirm({
+      title: `确认删除选中的 ${selectedRowKeys.value.length} 个任务？`,
+      content: '删除后将无法恢复。'
+    })
+    batchOperating.value = true
+    let ok = 0
+    for (const id of selectedRowKeys.value) {
+      try {
+        await domainFactoryApi.deleteDataSource(id)
+        ok++
+      } catch (e) { /* skip */ }
+    }
+    message.success(`已删除 ${ok} 个任务`)
+    selectedRowKeys.value = []
+    refresh()
+    emit('domains-refreshed')
+  } catch (e) { /* cancelled */ }
+  finally {
+    batchOperating.value = false
+  }
 }
 
 // 打开任务
@@ -227,11 +314,39 @@ const handleCreateDomain = async () => {
 }
 
 // 上传相关
-const openUploadModal = () => {
+const uploadDomain = ref('')
+const uploadDomainOptions = computed(() => {
+  if (!Array.isArray(props.domains)) return []
+  return props.domains.map(d => ({
+    label: d.name,
+    value: d.code || d.id || d.name
+  }))
+})
+
+const openUploadModal = async () => {
   uploadFiles.value = []
   uploadFileList.value = []
-  selectedDocumentType.value = '通用'
+  uploadDomain.value = props.selectedDomain || (props.domains?.[0]?.code || props.domains?.[0]?.id || '')
+  selectedReportType.value = ''
+  await loadReportTypes()
   uploadModalVisible.value = true
+}
+
+const loadReportTypes = async () => {
+  try {
+    const res = await domainFactoryApi.getContexts()
+    const domain = uploadDomain.value || props.selectedDomain || props.domains?.[0]?.code || ''
+    const typesByDomain = res?.report_types || {}
+    const types = typesByDomain[domain] || []
+    reportTypeOptions.value = types.map(t => ({ label: t.name, value: t.code }))
+  } catch {
+    reportTypeOptions.value = []
+  }
+}
+
+const handleUploadDomainChange = async () => {
+  selectedReportType.value = ''
+  await loadReportTypes()
 }
 
 const beforeUpload = (file) => {
@@ -296,8 +411,8 @@ const handleUpload = async () => {
     message.warning('请选择文件')
     return
   }
-  if (!props.selectedDomain || props.selectedDomain === '__all__') {
-    message.warning('请先选择一个领域')
+  if (!uploadDomain.value) {
+    message.warning('请选择行业领域')
     return
   }
 
@@ -306,8 +421,10 @@ const handleUpload = async () => {
     for (const file of uploadFiles.value) {
       const formData = new FormData()
       formData.append('file', file.originFileObj || file)
-      formData.append('domain', props.selectedDomain)
-      formData.append('document_type', selectedDocumentType.value)
+      formData.append('domain', uploadDomain.value)
+      const rtOption = reportTypeOptions.value.find(o => o.value === selectedReportType.value)
+      formData.append('document_type', rtOption?.label || selectedReportType.value)
+      formData.append('report_type_code', selectedReportType.value)
       const result = await domainFactoryApi.uploadSources(formData)
       console.log('上传成功，任务ID:', result?.task_id)
     }
@@ -315,7 +432,7 @@ const handleUpload = async () => {
     uploadModalVisible.value = false
     uploadFiles.value = []
     uploadFileList.value = []
-    selectedDocumentType.value = '通用'
+    selectedReportType.value = ''
 
     setTimeout(() => {
       refresh()
@@ -342,7 +459,7 @@ const formatDate = (isoString) => {
 const formatTime = (isoString) => {
   if (!isoString) return '-'
   try {
-    return dayjs(isoString).format('HH:mm:ss')
+    return dayjs(isoString).format('YYYY-MM-DD HH:mm')
   } catch {
     return isoString
   }
@@ -356,15 +473,12 @@ const getConfidenceColor = (val) => {
   return '#ff4d4f'
 }
 
-// 监听领域变化
-watch(() => props.selectedDomain, () => {
-  if (props.selectedDomain) {
-    refresh()
-  }
-}, { immediate: true })
-
 onMounted(() => {
   refresh()
+})
+
+onBeforeUnmount(() => {
+  stopAutoRefresh()
 })
 
 defineExpose({ refresh })
@@ -394,9 +508,9 @@ defineExpose({ refresh })
         <div class="label">领域筛选</div>
         <div class="domains">
           <a-radio-group
-            :value="props.selectedDomain"
+            :value="localDomain"
             button-style="solid"
-            @change="e => emit('update:domain', e.target.value)"
+            @change="handleDomainChange"
           >
             <a-radio-button
               v-for="domain in domainOptions"
@@ -406,7 +520,7 @@ defineExpose({ refresh })
               {{ domain.label }}
             </a-radio-button>
           </a-radio-group>
-          <a-button type="link" @click="showCreateDomainModal">
+          <a-button type="link" size="small" @click="showCreateDomainModal">
             <PlusOutlined /> 新建领域
           </a-button>
         </div>
@@ -415,130 +529,188 @@ defineExpose({ refresh })
 
     <!-- 待处理任务 -->
     <div class="task-section">
-      <a-card :title="`待处理任务 (${pendingCount})`" :loading="taskLoading">
-        <template #extra>
-          <a-tag color="blue">实时更新</a-tag>
-        </template>
-        <a-table
-          :data-source="filteredTasks"
-          :columns="[
-            { title: '文件名', dataIndex: 'file_name', key: 'file_name' },
-            { title: '所属领域', dataIndex: 'domain_label', key: 'domain_label', width: 140 },
-            { title: '文档类型', dataIndex: 'document_type', key: 'document_type', width: 140 },
-            { title: '上传时间', dataIndex: 'uploaded_at', key: 'uploaded_at', width: 160 },
-            { title: '状态', dataIndex: 'status', key: 'status', width: 120 },
-            { title: 'AI 置信度', dataIndex: 'ai_confidence', key: 'ai_confidence', width: 120 },
-            { title: '操作', key: 'action', width: 180 }
-          ]"
-          row-key="id"
-          :pagination="false"
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.dataIndex === 'uploaded_at'">
-              {{ formatTime(record.uploaded_at) }}
-            </template>
-            <template v-else-if="column.dataIndex === 'status'">
-              <div class="status-dot">
+      <div class="section-header">
+        <div class="section-header__left">
+          <span class="section-title">待处理任务</span>
+          <span class="entry-count">{{ pendingCount }} 项</span>
+          <a-tag v-if="hasActiveTasks" color="blue" class="processing-tag">
+            <span class="pulse-dot"></span> 处理中
+          </a-tag>
+        </div>
+        <div class="section-header__right">
+          <transition name="batch-bar">
+            <div v-if="selectedRowKeys.length > 0" class="batch-bar">
+              <span class="batch-bar__label">
+                已选 <strong>{{ selectedRowKeys.length }}</strong> 项
+              </span>
+              <a-button
+                size="small"
+                danger
+                type="primary"
+                :loading="batchOperating"
+                @click="handleBatchDelete"
+              >
+                <DeleteOutlined /> 批量删除
+              </a-button>
+            </div>
+          </transition>
+        </div>
+      </div>
+      <div class="file-table" role="table">
+        <div class="file-row table-head has-checkbox">
+          <span class="checkbox-cell">
+            <a-checkbox
+              :checked="pendingAllSelected"
+              :indeterminate="pendingPartiallySelected"
+              :disabled="!filteredTasks.length"
+              @change="handlePendingSelectAll"
+            />
+          </span>
+          <span>文件名</span>
+          <span class="col-center">所属领域</span>
+          <span>文档类型</span>
+          <span class="col-center">上传时间</span>
+          <span class="col-center">状态</span>
+          <span class="col-center">AI 置信度</span>
+          <span class="col-action">操作</span>
+        </div>
+        <a-spin v-if="taskLoading" class="list-state" tip="加载中..." />
+        <a-empty v-else-if="!filteredTasks.length" description="暂无待处理任务" class="list-empty" />
+        <template v-for="record in filteredTasks" :key="record.id">
+          <div
+            class="file-row"
+            @click="selectedRowKeys = [record.id]"
+          >
+            <span class="checkbox-cell" @click.stop>
+              <a-checkbox
+                :checked="selectedRowKeys.includes(record.id)"
+                @change="(e) => togglePendingSelect(record.id, e.target.checked)"
+              />
+            </span>
+            <span class="name-cell" :title="record.file_name">
+              <FileTextOutlined style="color: var(--main-500); font-size: 16px; flex-shrink: 0;" />
+              <span class="entry-name">{{ record.file_name }}</span>
+            </span>
+            <span class="col-center">{{ record.domain_label }}</span>
+            <span>{{ record.document_type || record.report_type_name || record.report_type_code || '-' }}</span>
+            <span class="col-center col-time">{{ formatTime(record.uploaded_at) }}</span>
+            <span class="col-center">
+              <span class="status-dot">
                 <span class="dot" :style="{ backgroundColor: statusMap[record.status]?.color || '#999' }"></span>
                 {{ statusMap[record.status]?.text || record.status }}
-              </div>
-            </template>
-            <template v-else-if="column.dataIndex === 'ai_confidence'">
+              </span>
+            </span>
+            <span class="col-center">
               <span v-if="record.ai_confidence">{{ record.ai_confidence }}%</span>
-              <a-tag v-else color="default">-</a-tag>
-            </template>
-            <template v-else-if="column.key === 'action'">
-              <a-space>
-                <a-button
-                  v-if="record.status === 'WAITING_REVIEW'"
-                  type="primary"
-                  size="small"
-                  @click="handleOpenTask(record)"
-                >
-                  校验
-                </a-button>
-                <a-button v-else size="small" disabled>
-                  {{ statusMap[record.status]?.text || '处理中' }}
-                </a-button>
-                <a-button size="small" @click="handleViewMarkdown(record)">
-                  查看
-                </a-button>
-                <a-button
-                  v-if="record.status === 'FAILED'"
-                  size="small"
-                  @click="handleRetryTask(record)"
-                >
-                  重试
-                </a-button>
+              <span v-else class="col-dash">-</span>
+            </span>
+            <span class="col-action" @click.stop>
+              <div class="action-btns">
+                <a-tooltip v-if="record.status === 'WAITING_REVIEW'" title="进入清洗工作台校验">
+                  <a-button type="primary" size="small" @click="handleOpenTask(record)">
+                    校验
+                  </a-button>
+                </a-tooltip>
+                <a-tooltip v-else :title="statusMap[record.status]?.text || '处理中'">
+                  <a-button size="small" disabled>
+                    {{ statusMap[record.status]?.text || '处理中' }}
+                  </a-button>
+                </a-tooltip>
+                <a-tooltip title="查看原文">
+                  <a-button size="small" type="text" class="btn-view" @click="handleViewMarkdown(record)">
+                    <EyeOutlined />
+                  </a-button>
+                </a-tooltip>
+                <a-tooltip v-if="record.status === 'FAILED'" title="重新提取">
+                  <a-button size="small" type="text" @click="handleRetryTask(record)">
+                    <RedoOutlined />
+                  </a-button>
+                </a-tooltip>
                 <a-popconfirm
                   title="确定删除此任务吗？"
                   @confirm="handleDeleteTask(record)"
                 >
-                  <a-button size="small" danger type="text">
-                    <DeleteOutlined />
-                  </a-button>
+                  <a-tooltip title="删除">
+                    <a-button size="small" danger type="text" class="btn-delete">
+                      <DeleteOutlined />
+                    </a-button>
+                  </a-tooltip>
                 </a-popconfirm>
-              </a-space>
-            </template>
-          </template>
-        </a-table>
-      </a-card>
+              </div>
+            </span>
+          </div>
+        </template>
+      </div>
     </div>
 
     <!-- 历史记录 -->
-    <a-card class="history-card" title="已入库历史数据" :loading="historyLoading">
-      <template #extra>
-        <a-input-search
-          v-model:value="searchKeyword"
-          placeholder="搜索文件名..."
-          style="width: 220px"
-          allow-clear
-          @search="fetchHistory"
-        />
-      </template>
-      <a-table
-        :data-source="filteredHistory"
-        :columns="[
-          { title: '文件名', dataIndex: 'file_name', key: 'file_name' },
-          { title: '所属领域', dataIndex: 'domain_label', key: 'domain_label', width: 140 },
-          { title: '文档类型', dataIndex: 'document_type', key: 'document_type', width: 140 },
-          { title: '操作人', dataIndex: 'reviewer', key: 'reviewer', width: 120 },
-          { title: '入库时间', dataIndex: 'committed_at', key: 'committed_at', width: 160 },
-          { title: '置信度', dataIndex: 'ai_confidence', key: 'ai_confidence', width: 120 },
-          { title: '操作', key: 'action', width: 80 }
-        ]"
-        row-key="id"
-        :pagination="{ pageSize: 10 }"
-      >
-        <template #bodyCell="{ column, record }">
-          <template v-if="column.dataIndex === 'committed_at'">
-            {{ formatDate(record.committed_at) }}
-          </template>
-          <template v-else-if="column.dataIndex === 'ai_confidence'">
-            <a-progress
-              v-if="record.ai_confidence"
-              :percent="record.ai_confidence"
-              size="small"
-              :stroke-color="record.ai_confidence > 80 ? '#52c41a' : '#faad14'"
-            />
-            <a-tag v-else color="default">-</a-tag>
-          </template>
-          <template v-else-if="column.key === 'action'">
-            <a-space>
-              <a-button size="small" @click="handleViewMarkdown(record)">查看</a-button>
-              <a-popconfirm
-                title="确定删除此记录吗？"
-                @confirm="handleDeleteTask(record)"
-              >
-                <a-button size="small" danger type="text">
-                  <DeleteOutlined />
-                </a-button>
-              </a-popconfirm>
-            </a-space>
-          </template>
+    <div class="task-section task-section--history">
+      <div class="section-header">
+        <div class="section-header__left">
+          <span class="section-title">已入库历史文档</span>
+          <span class="entry-count">{{ filteredHistory.length }} 项</span>
+        </div>
+        <div class="section-header__right">
+          <a-input
+            v-model:value="searchKeyword"
+            placeholder="搜索文件名..."
+            class="history-search"
+            allow-clear
+            @change="fetchHistory"
+          >
+            <template #prefix><Search :size="14" class="search-icon" /></template>
+          </a-input>
+        </div>
+      </div>
+      <div class="file-table" role="table">
+        <div class="file-row table-head no-checkbox">
+          <span>文件名</span>
+          <span class="col-center">所属领域</span>
+          <span>文档类型</span>
+          <span class="col-center">操作人</span>
+          <span class="col-center">入库时间</span>
+          <span class="col-center">置信度</span>
+          <span class="col-action">操作</span>
+        </div>
+        <a-spin v-if="historyLoading" class="list-state" tip="加载中..." />
+        <a-empty v-else-if="!filteredHistory.length" description="暂无历史数据" class="list-empty" />
+        <template v-for="record in filteredHistory" :key="record.id">
+          <div class="file-row no-checkbox" @click="handleViewMarkdown(record)">
+            <span class="name-cell" :title="record.file_name">
+              <FileTextOutlined style="color: var(--main-500); font-size: 16px; flex-shrink: 0;" />
+              <span class="entry-name">{{ record.file_name }}</span>
+            </span>
+            <span class="col-center">{{ record.domain_label }}</span>
+            <span>{{ record.document_type }}</span>
+            <span class="col-center">{{ record.reviewer || '-' }}</span>
+            <span class="col-center col-time">{{ formatDate(record.committed_at) }}</span>
+            <span class="col-center">
+              <span v-if="record.ai_confidence">{{ record.ai_confidence }}%</span>
+              <span v-else class="col-dash">-</span>
+            </span>
+            <span class="col-action" @click.stop>
+              <div class="action-btns">
+                <a-tooltip title="查看原文">
+                  <a-button size="small" type="text" class="btn-view" @click="handleViewMarkdown(record)">
+                    <EyeOutlined />
+                  </a-button>
+                </a-tooltip>
+                <a-popconfirm
+                  title="确定删除此记录吗？"
+                  @confirm="handleDeleteTask(record)"
+                >
+                  <a-tooltip title="删除">
+                    <a-button size="small" danger type="text" class="btn-delete">
+                      <DeleteOutlined />
+                    </a-button>
+                  </a-tooltip>
+                </a-popconfirm>
+              </div>
+            </span>
+          </div>
         </template>
-      </a-table>
-    </a-card>
+      </div>
+    </div>
 
     <!-- 上传弹窗 -->
     <a-modal
@@ -556,11 +728,20 @@ defineExpose({ refresh })
         </div>
 
         <div class="form-selectors">
-          <a-form-item label="文档类型" required>
+          <a-form-item label="行业领域" required>
             <a-select
-              v-model:value="selectedDocumentType"
-              :options="documentTypeOptions"
-              placeholder="选择文档类型"
+              v-model:value="uploadDomain"
+              :options="uploadDomainOptions"
+              placeholder="选择行业领域"
+              style="width: 100%"
+              @change="handleUploadDomainChange"
+            />
+          </a-form-item>
+          <a-form-item label="报告类型" required>
+            <a-select
+              v-model:value="selectedReportType"
+              :options="reportTypeOptions"
+              placeholder="选择报告类型"
               style="width: 100%"
             />
           </a-form-item>
@@ -672,7 +853,7 @@ defineExpose({ refresh })
   justify-content: space-between;
   padding: 16px 24px;
   background: #fff;
-  border-radius: 12px 12px 0 0;
+  border-radius: 0;
   border-bottom: 1px solid var(--gray-150);
 
   .title {
@@ -713,6 +894,7 @@ defineExpose({ refresh })
   border-radius: 0;
   border-left: none;
   border-right: none;
+  padding: 10px 20px;
 
   :deep(.ant-card-body) {
     padding: 16px 24px;
@@ -731,33 +913,210 @@ defineExpose({ refresh })
       align-items: center;
       flex-wrap: wrap;
       gap: 12px;
+
+      :deep(.ant-radio-button-wrapper) {
+        font-size: 12px;
+        height: 28px;
+        line-height: 26px;
+        padding: 0 12px;
+      }
+
+      :deep(.ant-btn-link) {
+        font-size: 12px;
+        height: 28px;
+        line-height: 28px;
+        padding: 0 8px;
+      }
     }
   }
 }
 
 .task-section {
-  background: #fff;
+  background: var(--gray-0, #fff);
+  margin-bottom: 16px;
 
-  :deep(.ant-card-body) {
-    padding: 0;
+  &--history {
+    margin-top: 24px;
   }
 }
 
-.status-dot {
+.section-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--gray-100, #f1f5f9);
+
+  &__left,
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__right {
+    flex: 0 0 auto;
+  }
+
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900, #0f172a);
+  }
+
+  .entry-count {
+    color: var(--gray-500, #64748b);
+    font-size: 12px;
+  }
+
+  .processing-tag {
+    font-size: 11px;
+  }
+
+  .history-search {
+    width: 240px;
+    display: flex;
+    align-items: center;
+
+    :deep(.ant-input-affix-wrapper) {
+      height: 32px;
+      padding: 0 10px;
+      border: 1px solid var(--gray-150);
+      border-radius: 8px;
+      background-color: var(--gray-0);
+
+      &:hover,
+      &:focus,
+      &.ant-input-affix-wrapper-focused {
+        border-color: var(--gray-200);
+        box-shadow: none;
+      }
+    }
+
+    :deep(.ant-input-prefix) {
+      margin-right: 8px;
+      color: var(--gray-400);
+    }
+
+    :deep(.ant-input) {
+      height: 100%;
+      background-color: transparent;
+      font-size: 13px;
+    }
+  }
+
+  .search-icon {
+    color: var(--gray-400);
+  }
+}
+
+.file-table {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.file-row {
+  display: grid;
+  grid-template-columns: 34px minmax(150px, 1fr) 88px 120px 140px 110px 88px 180px;
+  align-items: center;
   gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 1px solid var(--gray-50, #f8fafc);
+  background: transparent;
+  color: var(--gray-700, #334155);
+  font-size: 13px;
+  text-align: left;
+
+  &:not(.table-head) {
+    cursor: pointer;
+  }
+
+  &:hover:not(.table-head) {
+    background: var(--main-20, #fafcff);
+    color: var(--gray-1000, #0c0d0d);
+  }
+
+  &.no-checkbox {
+    grid-template-columns: minmax(150px, 1fr) 88px 100px 100px 130px 88px 100px;
+  }
+}
+
+.table-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  min-height: 34px;
+  background: var(--gray-25, #fefeff);
+  color: var(--gray-500, #64748b);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.checkbox-cell {
+  display: inline-flex;
+  align-items: center;
+}
+
+.name-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+}
+
+.entry-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.col-center {
+  text-align: center;
+  justify-self: center;
+}
+
+.col-time {
+  font-variant-numeric: tabular-nums;
+}
+
+.col-dash {
+  color: var(--gray-400, #94a3b8);
+}
+
+.col-action {
+  justify-self: start;
+}
+
+.status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 
   .dot {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
   }
 }
 
-.history-card {
-  background: #fff;
-  margin-bottom: 24px;
+.list-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 180px;
+  color: var(--gray-500);
+  width: 100%;
+}
+
+.list-empty {
+  margin-top: 48px;
 }
 
 // 上传弹窗样式
@@ -899,5 +1258,91 @@ defineExpose({ refresh })
     max-height: 60vh;
     overflow-y: auto;
   }
+}
+
+.action-btns {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  :deep(.ant-btn) {
+    font-size: 12px;
+  }
+
+  .btn-delete {
+    border-radius: 4px;
+    color: var(--gray-400, #94a3b8);
+
+    &:hover {
+      color: #ff4d4f;
+      background: rgba(255, 77, 79, 0.06);
+    }
+  }
+
+  .btn-view,
+  .btn-delete {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    color: var(--gray-400, #94a3b8);
+  }
+
+  .btn-view:hover {
+    color: #1677ff;
+    background: rgba(22, 119, 255, 0.06);
+  }
+
+  .btn-delete:hover {
+    color: #ff4d4f;
+    background: rgba(255, 77, 79, 0.06);
+  }
+}
+
+.batch-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px;
+  background: rgba(255, 77, 79, 0.06);
+  border: 1px solid rgba(255, 77, 79, 0.15);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--gray-600, #475569);
+
+  .batch-bar__label strong {
+    color: #ff4d4f;
+    font-weight: 600;
+  }
+}
+
+.batch-bar-enter-active,
+.batch-bar-leave-active {
+  transition: all 0.25s ease;
+}
+
+.batch-bar-enter-from,
+.batch-bar-leave-to {
+  opacity: 0;
+  transform: translateX(8px);
+}
+
+.pulse-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #1677ff;
+  animation: pulse 1.5s ease-in-out infinite;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 </style>
