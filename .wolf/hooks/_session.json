@@ -205,6 +205,12 @@
       "action": "edit",
       "tokens": 434,
       "at": "2026-08-19T16:26:24.029Z"
+    },
+    {
+      "file": "C:/workspace/pisuan/web/src/layouts/AppLayout.vue",
+      "action": "edit",
+      "tokens": 29,
+      "at": "2026-08-19T16:37:43.781Z"
     }
   ],
   "edit_counts": {
@@ -215,7 +221,7 @@
     "docs/.vitepress/config.mts": 1,
     "backend/package/yuxi/storage/postgres/manager.py": 6,
     "web/src/apis/index.js": 1,
-    "web/src/layouts/AppLayout.vue": 1,
+    "web/src/layouts/AppLayout.vue": 2,
     "backend/package/yuxi/knowledge/parser/unified.py": 4,
     "web/src/components/TaskCenterDrawer.vue": 3,
     "docs/intro/project-overview.md": 1,

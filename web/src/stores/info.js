@@ -136,6 +136,8 @@ export const useInfoStore = defineStore('info', () => {
     // 计算属性
     organization,
     branding,
+    features,
+    actions,
     footer,
 
     // 方法
