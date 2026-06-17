@@ -2569,3 +2569,4 @@
 | 00:25 | Edited web/src/components/UserInfoComponent.vue | modified if() | ~23 |
 | 00:26 | Edited backend/package/yuxi/agents/skills/buildin/__init__.py | reduced (-20 lines) | ~434 |
 | 00:37 | Edited web/src/layouts/AppLayout.vue | 6→2 lines | ~27 |
+| 00:38 | Edited web/src/components/model-management/ModelProviderManagePanel.vue | 14→10 lines | ~35 |
