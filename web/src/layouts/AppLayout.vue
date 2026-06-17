@@ -102,6 +102,8 @@ const activeTaskCount = computed(() => activeCountRef.value || 0)
 const activeConversationThreadId = computed(() => {
   return route.path.startsWith('/agent') ? currentThreadId.value : null
 })
+
+const isLiteMode = import.meta.env.VITE_LITE_MODE === 'true'
 const organizationName = computed(() => {
   return infoStore.organization.name || infoStore.branding.name || 'Pisuan'
 })
