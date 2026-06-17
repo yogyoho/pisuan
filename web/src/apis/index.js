@@ -16,6 +16,7 @@ export * from './tool_api' // 工具 API
 export * from './mention_api' // 提及搜索 API
 export * from './user_api' // 用户资源 API
 export * from './domain_factory_api' // 领域知识工厂 API
+export * from './domain_entity_builder_api' // 领域实体构建器 API
 
 // 导出基础工具函数
 export {

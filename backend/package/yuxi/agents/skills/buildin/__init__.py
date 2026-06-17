@@ -54,4 +54,19 @@ BUILTIN_SKILLS: list[BuiltinSkillSpec] = [
         tool_dependencies=["query_kb", "ask_user_question"],
         skill_dependencies=("template-recommender",),
     ),
+    BuiltinSkillSpec(
+        slug="coal-eia-writer",
+        source_dir=_SKILLS_ROOT / "coal-eia-writer",
+        description="编写煤矿行业环境影响评价报告。采用分章写作策略处理大型报告，支持公式/表格/图表图文混排，自动合规校验。",
+        version="2026.05.11",
+        tool_dependencies=["list_kbs", "get_mindmap", "query_kb", "read_file"],
+        skill_dependencies=("template-recommender", "slot-filler", "compliance-checker"),
+    ),
+    BuiltinSkillSpec(
+        slug="compliance-checker",
+        source_dir=_SKILLS_ROOT / "compliance-checker",
+        description="对工程类报告进行政策法规合规性校验。从知识库大纲提取法规清单，逐章比对报告内容与法规要求，输出合规校验报告。",
+        version="2026.05.11",
+        tool_dependencies=["list_kbs", "query_kb", "read_file"],
+    ),
 ]

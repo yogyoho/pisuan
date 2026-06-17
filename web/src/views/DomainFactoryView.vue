@@ -2,9 +2,9 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
+import { DownOutlined, UpOutlined, ExperimentOutlined, ThunderboltOutlined, CloudUploadOutlined, RobotOutlined, AuditOutlined, DatabaseOutlined, RightOutlined } from '@ant-design/icons-vue'
 import DataSourceDashboard from '@/components/domain-factory/DataSourceDashboard.vue'
 import EtlWorkbench from '@/components/domain-factory/EtlWorkbench.vue'
-import SchemaConfigurator from '@/components/domain-factory/SchemaConfigurator.vue'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { useTaskerStore } from '@/stores/tasker'
 
@@ -12,25 +12,20 @@ const route = useRoute()
 const router = useRouter()
 const taskerStore = useTaskerStore()
 
-const activeTab = ref(route.query.tab || 'data')
+const activeTab = ref('data')
 const domains = ref([])
 const selectedDomain = ref('')
 const loadingDomains = ref(false)
 const currentTask = ref(null)
 const dashboardRef = ref(null)
 
-const tabMenu = [
-  { key: 'data', title: '数据源管理', subtitle: '上传入口与任务队列' },
-  { key: 'workbench', title: 'ETL 清洗工作台', subtitle: '双屏校验 · 阶段入库' },
-  { key: 'schema', title: '领域 Schema 配置', subtitle: '变量字典 · 章节树' }
-]
+const heroCollapsed = ref(localStorage.getItem('df_hero_collapsed') === 'true')
+const globalStats = ref({ committed_tasks: 0, entity_count: 0, learned_templates: 0 })
 
-// 高级配置菜单
-const advancedMenu = [
-  { key: 'section-routing', title: '章节路由配置', subtitle: '章节目录 · Skill 路由', path: '/domain-factory/section-routing' },
-  { key: 'prompt-config', title: 'Prompt 模板管理', subtitle: '文档解析 · 模板泛化提示词', path: '/domain-factory/prompt-config' },
-  { key: 'standard-code', title: 'StandardCode 管理', subtitle: '标准代码 · 映射表管理', path: '/domain-factory/standard-code' }
-]
+const toggleHero = () => {
+  heroCollapsed.value = !heroCollapsed.value
+  localStorage.setItem('df_hero_collapsed', String(heroCollapsed.value))
+}
 
 const fetchDomains = async () => {
   loadingDomains.value = true
@@ -49,13 +44,8 @@ const fetchDomains = async () => {
   } catch (error) {
     console.warn(error)
     message.error('加载领域列表失败，使用默认配置')
-    domains.value = [
-      { id: 'coal', name: '煤炭采掘', code: 'coal' },
-      { id: 'chem', name: '石油化工', code: 'chem' }
-    ]
-    if (!selectedDomain.value) {
-      selectedDomain.value = domains.value[0].code
-    }
+    domains.value = []
+    selectedDomain.value = ''
   } finally {
     loadingDomains.value = false
   }
@@ -75,13 +65,11 @@ const handleTaskCompleted = () => {
   currentTask.value = null
   activeTab.value = 'data'
   refreshDashboard()
-  // 同步任务中心
   taskerStore.loadTasks()
 }
 
 const handleTaskUpdated = () => {
   refreshDashboard()
-  // 任务状态更新后同步到任务中心
   if (currentTask.value?.id) {
     domainFactoryApi.syncTaskToTaskCenter(currentTask.value.id).catch(err => {
       console.error('同步任务中心失败:', err)
@@ -93,16 +81,6 @@ const handleTabChange = (key) => {
   activeTab.value = key
 }
 
-const handleSideNavClick = (key) => {
-  activeTab.value = key
-  document.querySelector('.factory-main')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
-
-// 跳转到高级配置页面
-const goToAdvancedConfig = (item) => {
-  router.push(item.path)
-}
-
 const refreshDomains = () => {
   fetchDomains()
 }
@@ -111,83 +89,126 @@ const refreshDashboard = () => {
   dashboardRef.value?.refresh?.()
 }
 
+const fetchStats = async () => {
+  try {
+    const res = await domainFactoryApi.getContexts()
+    if (res?.stats) globalStats.value = res.stats
+  } catch (e) {
+    // 静默失败，不影响主页面
+  }
+}
+
 onMounted(() => {
   fetchDomains()
+  fetchStats()
 })
 
 watch(() => route.query.tab, (tab) => {
-  if (tab && ['data', 'workbench', 'schema'].includes(tab)) {
+  if (tab && ['data', 'workbench'].includes(tab)) {
     activeTab.value = tab
+    router.replace({ query: { ...route.query, tab: undefined } })
   }
-})
-
-watch(activeTab, (tab) => {
-  router.replace({ query: { ...route.query, tab } })
 })
 </script>
 
 <template>
   <div class="domain-factory-view">
-    <div class="factory-layout">
-      <!-- Left Sidebar -->
-      <div class="left-sidebar">
-        <!-- 主导航 -->
-        <aside class="side-nav">
-          <h4>知识工厂</h4>
-          <p class="side-desc">从上传到入库的全链路控制台</p>
-          <div class="side-menu">
-            <button
-              v-for="item in tabMenu"
-              :key="item.key"
-              class="side-btn"
-              :class="{ active: activeTab === item.key }"
-              @click="handleSideNavClick(item.key)"
-            >
-              <span class="side-title">{{ item.title }}</span>
-              <span class="side-subtitle">{{ item.subtitle }}</span>
-            </button>
+    <div class="factory-main">
+      <!-- 可折叠 Hero 区 -->
+      <div :class="['hero', { collapsed: heroCollapsed }]">
+        <transition name="hero-expand">
+          <div v-if="!heroCollapsed" class="hero-content">
+            <div class="hero-text">
+              <div class="badge">
+                <ExperimentOutlined style="margin-right: 4px;" />Domain Knowledge Factory
+              </div>
+              <h1>人机协同的领域知识工厂</h1>
+              <p class="desc">
+                AI 负责粗加工，专家完成精加工，最终将高质量数据入库 LightRAG / SQL /
+                图谱，确保「入库即精品」。
+              </p>
+            </div>
+            <div class="hero-illustration">
+              <div class="pipeline-visual">
+                <div class="pipeline-node">
+                  <div class="node-icon-wrap upload"><CloudUploadOutlined /></div>
+                  <div class="node-body">
+                    <span class="node-title">上传</span>
+                    <span class="node-desc">报告文档</span>
+                  </div>
+                </div>
+                <div class="pipeline-arrow"><RightOutlined /></div>
+                <div class="pipeline-node accent">
+                  <div class="node-icon-wrap ai"><RobotOutlined /></div>
+                  <div class="node-body">
+                    <span class="node-title">AI 提取</span>
+                    <span class="node-desc">智能泛化</span>
+                  </div>
+                </div>
+                <div class="pipeline-arrow"><RightOutlined /></div>
+                <div class="pipeline-node">
+                  <div class="node-icon-wrap review"><AuditOutlined /></div>
+                  <div class="node-body">
+                    <span class="node-title">专家审核</span>
+                    <span class="node-desc">精校数据</span>
+                  </div>
+                </div>
+                <div class="pipeline-arrow"><RightOutlined /></div>
+                <div class="pipeline-node success">
+                  <div class="node-icon-wrap store"><DatabaseOutlined /></div>
+                  <div class="node-body">
+                    <span class="node-title">入库</span>
+                    <span class="node-desc">知识精品</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </aside>
-
-        <!-- 高级配置导航 -->
-        <aside class="schema-config-nav">
-          <h4>高级配置</h4>
-          <button
-            v-for="item in advancedMenu"
-            :key="item.key"
-            class="side-btn secondary"
-            @click="goToAdvancedConfig(item)"
-          >
-            <span class="side-title">{{ item.title }}</span>
-            <span class="side-subtitle">{{ item.subtitle }}</span>
-          </button>
-        </aside>
-      </div>
-
-      <!-- Main Content -->
-      <div class="factory-main">
-        <div class="hero">
-          <div>
-            <p class="badge">Domain Knowledge Factory</p>
-            <h1>人机协同的领域知识工厂</h1>
-            <p class="desc">
-              AI 负责粗加工，专家完成精加工，最终将高质量数据入库 LightRAG / SQL /
-              图谱，确保「入库即精品」。
-            </p>
+        </transition>
+        <div class="hero-bar">
+          <div class="hero-stats">
+            <span class="hero-stat">
+              <DatabaseOutlined style="margin-right: 4px" />
+              <strong>{{ globalStats.committed_tasks }}</strong> 已入库
+            </span>
+            <span class="hero-stat">
+              <ExperimentOutlined style="margin-right: 4px" />
+              <strong>{{ globalStats.entity_count }}</strong> 实体
+            </span>
+            <span class="hero-stat">
+              <ThunderboltOutlined style="margin-right: 4px" />
+              <strong>{{ globalStats.learned_templates }}</strong> 学习模板
+            </span>
           </div>
+          <span class="hero-toggle" @click="toggleHero">
+            <component :is="heroCollapsed ? DownOutlined : UpOutlined" />
+            {{ heroCollapsed ? '展开简介' : '收起' }}
+          </span>
           <div class="hero-actions">
-            <a-button type="primary" size="large" @click="activeTab = 'data'">上传新报告</a-button>
-            <a-button size="large" @click="activeTab = 'schema'">配置领域 Schema</a-button>
+            <a-button size="small" class="hero-nav-btn" @click="router.push('/domain-factory/prompt-config')">
+              <ThunderboltOutlined /> Prompt 管理
+            </a-button>
+            <a-button size="small" class="hero-nav-btn" @click="router.push('/domain-factory/entity-builder')">
+              实体构建器
+            </a-button>
           </div>
         </div>
+      </div>
 
+      <div class="factory-tabs-wrapper">
         <a-tabs
           v-model:activeKey="activeTab"
           size="large"
           @change="handleTabChange"
           class="factory-tabs"
         >
-          <a-tab-pane key="data" tab="数据源管理 · 上传与任务队列">
+          <a-tab-pane key="data" tab="数据源管理">
+            <template #tab>
+              <span class="tab-label">
+                <span class="tab-dot data"></span>数据源管理
+                <span class="tab-hint">上传与任务队列</span>
+              </span>
+            </template>
             <DataSourceDashboard
               ref="dashboardRef"
               :domains="domains"
@@ -198,18 +219,18 @@ watch(activeTab, (tab) => {
               @domains-refreshed="refreshDomains"
             />
           </a-tab-pane>
-          <a-tab-pane key="workbench" tab="ETL 清洗工作台 · 双屏校验">
+          <a-tab-pane key="workbench" tab="ETL 清洗工作台">
+            <template #tab>
+              <span class="tab-label">
+                <span class="tab-dot workbench"></span>ETL 清洗工作台
+                <span class="tab-hint">双屏校验</span>
+              </span>
+            </template>
             <EtlWorkbench
               :task="currentTask"
               @task-completed="handleTaskCompleted"
               @task-updated="handleTaskUpdated"
-            />
-          </a-tab-pane>
-          <a-tab-pane key="schema" tab="领域 Schema 配置 · 数据字典">
-            <SchemaConfigurator
-              :domains="domains"
-              :selected-domain="selectedDomain"
-              @update:domain="handleDomainChange"
+              @navigate-to-data-sources="activeTab = 'data'"
             />
           </a-tab-pane>
         </a-tabs>
@@ -220,168 +241,295 @@ watch(activeTab, (tab) => {
 
 <style lang="less" scoped>
 .domain-factory-view {
-  padding: 32px 32px 80px;
+  padding: 24px 28px 80px;
   min-height: 100%;
-  background: linear-gradient(180deg, #f5f7fb 0%, #ffffff 120%);
-
-  .factory-layout {
-    display: grid;
-    grid-template-columns: 280px 1fr;
-    gap: 24px;
-  }
-
-  .left-sidebar {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    position: sticky;
-    height: fit-content;
-  }
-
-  .side-nav,
-  .schema-config-nav {
-    background: #fff;
-    border: 1px solid var(--gray-150);
-    border-radius: 12px;
-    padding: 24px;
-    height: fit-content;
-
-    h4 {
-      margin: 0;
-      font-size: 18px;
-    }
-  }
-
-  .side-nav {
-    .side-desc {
-      margin: 4px 0 16px;
-      color: var(--gray-500);
-      font-size: 13px;
-    }
-
-    .side-menu {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-  }
-
-  .schema-config-nav {
-    h4 {
-      margin: 0 0 12px 0;
-    }
-
-    .side-btn + .side-btn {
-      margin-top: 8px;
-    }
-  }
-
-  .side-btn {
-    border: 1px solid var(--gray-150);
-    background: #fff;
-    border-radius: 10px;
-    padding: 12px 14px;
-    text-align: left;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    transition: all 0.2s ease;
-    width: 100%;
-
-    &.active {
-      border-color: var(--main-color);
-      background: rgba(22, 119, 255, 0.08);
-    }
-
-    &:hover {
-      border-color: var(--main-200);
-    }
-
-    &.secondary {
-      border-style: dashed;
-      border-color: var(--gray-200);
-      background: #fafafa;
-
-      &:hover {
-        border-color: var(--main-color);
-        background: #f5f7ff;
-      }
-    }
-
-    .side-title {
-      font-weight: 600;
-      font-size: 13px;
-    }
-
-    .side-subtitle {
-      font-size: 11px;
-      color: var(--gray-500);
-      margin-top: 2px;
-    }
-  }
+  background: var(--gray-50, #f5f7fb);
 
   .factory-main {
-    min-height: 100%;
+    max-width: 100%;
+    margin: 0 auto;
   }
 
   .hero {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    padding: 32px;
-    border-radius: 20px;
-    background:
-      radial-gradient(circle at top right, rgba(22, 119, 255, 0.12), transparent 40%),
-      #fff;
-    border: 1px solid var(--gray-150);
-    margin-bottom: 24px;
+    border-radius: 16px;
+    background: #fff;
+    border: 1px solid var(--gray-150, #e8ecf1);
+    margin-bottom: 20px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 
-    .badge {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--main-color);
-      margin-bottom: 8px;
+    &.collapsed {
+      border-radius: 12px;
+
+      .hero-bar {
+        padding: 8px 24px;
+      }
     }
 
-    h1 {
-      margin: 0;
-      font-size: 32px;
-      font-weight: 700;
-    }
-
-    .desc {
-      margin-top: 8px;
-      color: var(--gray-600);
-      max-width: 640px;
-    }
-
-    .hero-actions {
+    .hero-content {
       display: flex;
-      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 32px 12px;
+      gap: 40px;
+      background:
+        radial-gradient(ellipse at top right, rgba(22, 119, 255, 0.06), transparent 50%),
+        linear-gradient(135deg, #fafcff 0%, #fff 100%);
+    }
+
+    .hero-text {
+      flex: 1;
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--main-color, #1677ff);
+        background: rgba(22, 119, 255, 0.08);
+        padding: 2px 10px;
+        border-radius: 999px;
+        margin-bottom: 12px;
+        letter-spacing: 0.3px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--gray-900, #0f172a);
+        letter-spacing: -0.3px;
+      }
+
+      .desc {
+        margin-top: 8px;
+        color: var(--gray-500, #64748b);
+        font-size: 14px;
+        max-width: 520px;
+        line-height: 1.6;
+      }
+    }
+
+    .hero-illustration {
+      flex-shrink: 0;
+
+      .pipeline-visual {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        padding: 16px 24px;
+        background: linear-gradient(135deg, rgba(22, 119, 255, 0.03), rgba(82, 196, 26, 0.03));
+        border-radius: 14px;
+        border: 1px solid var(--gray-100, #f1f5f9);
+      }
+
+      .pipeline-node {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: #fff;
+        border: 1px solid var(--gray-100, #f1f5f9);
+        transition: all 0.2s;
+        min-width: 100px;
+
+        &:hover {
+          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+          transform: translateY(-1px);
+        }
+
+        &.accent {
+          border-color: rgba(22, 119, 255, 0.15);
+          background: rgba(22, 119, 255, 0.02);
+        }
+
+        &.success {
+          border-color: rgba(82, 196, 26, 0.15);
+          background: rgba(82, 196, 26, 0.02);
+        }
+
+        .node-icon-wrap {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          font-size: 18px;
+          flex-shrink: 0;
+
+          &.upload {
+            background: rgba(22, 119, 255, 0.08);
+            color: #1677ff;
+          }
+
+          &.ai {
+            background: rgba(114, 46, 209, 0.08);
+            color: #722ed1;
+          }
+
+          &.review {
+            background: rgba(250, 173, 20, 0.08);
+            color: #d48806;
+          }
+
+          &.store {
+            background: rgba(82, 196, 26, 0.08);
+            color: #389e0d;
+          }
+        }
+
+        .node-body {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+
+          .node-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-800, #1e293b);
+          }
+
+          .node-desc {
+            font-size: 11px;
+            color: var(--gray-400, #94a3b8);
+          }
+        }
+      }
+
+      .pipeline-arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        flex-shrink: 0;
+        color: var(--gray-300, #cbd5e1);
+        font-size: 10px;
+      }
+    }
+
+    .hero-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 32px 10px;
+      border-top: 1px solid var(--gray-100, #f1f5f9);
+
+      .hero-stats {
+        display: flex;
+        gap: 20px;
+      }
+
+      .hero-stat {
+        font-size: 12px;
+        color: var(--gray-500, #64748b);
+
+        strong {
+          color: var(--gray-900, #0f172a);
+          font-weight: 600;
+        }
+      }
+
+      .hero-toggle {
+        font-size: 12px;
+        color: var(--gray-400, #94a3b8);
+        cursor: pointer;
+        user-select: none;
+        transition: color 0.2s;
+
+        &:hover { color: var(--main-color, #1677ff); }
+      }
+
+      .hero-actions {
+        display: flex;
+        gap: 8px;
+
+        .hero-nav-btn {
+          border-radius: 6px;
+          font-size: 13px;
+          color: var(--gray-600, #475569);
+          border-color: var(--gray-200, #e2e8f0);
+
+          &:hover {
+            color: var(--main-color, #1677ff);
+            border-color: var(--main-color, #1677ff);
+          }
+        }
+      }
     }
   }
 
-  .factory-tabs {
-    background: transparent;
+  .factory-tabs-wrapper {
+    background: #fff;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    overflow: hidden;
+  }
 
+  .factory-tabs {
     :deep(.ant-tabs-nav) {
-      margin: 0 0 16px;
-      padding: 0 12px;
+      margin: 0;
+      padding: 0 8px;
+      background: #fff;
+
+      &::before {
+        border-bottom: 1px solid var(--gray-100, #f1f5f9);
+      }
+    }
+
+    :deep(.ant-tabs-tab) {
+      padding: 14px 16px;
+      font-size: 14px;
+
+      .tab-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .tab-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+
+        &.data { background: #1677ff; }
+        &.workbench { background: #722ed1; }
+      }
+
+      .tab-hint {
+        font-size: 12px;
+        color: var(--gray-400, #94a3b8);
+        margin-left: 2px;
+      }
+    }
+
+    :deep(.ant-tabs-content-holder) {
+      padding: 0;
     }
 
     :deep(.ant-tabs-content) {
       background: transparent;
     }
-  }
 
-  @media (max-width: 1080px) {
-    .factory-layout {
-      grid-template-columns: 1fr;
-    }
-
-    .left-sidebar {
-      position: static;
+    :deep(.ant-tabs-tabpane) {
+      padding: 0;
     }
   }
+}
+
+.hero-expand-enter-active,
+.hero-expand-leave-active {
+  transition: all 0.25s ease;
+  overflow: hidden;
+}
+
+.hero-expand-enter-from,
+.hero-expand-leave-to {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 </style>

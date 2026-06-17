@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>领域知识工厂 — 方案A vs 方案B 原型对比</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #f0f2f5; color: #1d1d1f; padding: 24px;
+  }
+  h1 { font-size: 22px; margin-bottom: 24px; color: #141414; text-align: center; }
+  .layout { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; }
+  .plan-card {
+    background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    overflow: hidden; min-width: 860px; max-width: 940px; flex:1;
+  }
+  .plan-header {
+    padding: 14px 20px; font-weight: 700; font-size: 16px; border-bottom: 1px solid #e8e8e8;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .plan-header .badge { font-size: 12px; padding: 2px 10px; border-radius: 10px; font-weight: 600; }
+  .plan-a .badge { background: #e6f7ff; color: #1677ff; }
+  .plan-b .badge { background: #fff7e6; color: #d48806; }
+  .mockup { padding: 0; }
+  /* ---- shared chrome ---- */
+  .topbar { height: 38px; background: #001529; display: flex; align-items: center; padding: 0 16px; color: #fff; font-size: 12px; gap: 8px; }
+  .topbar .logo { font-weight: 700; color: #e6f7ff; font-size: 13px; }
+  .topbar .sep { flex:1; }
+  .topbar .user { color: #ffffffa6; }
+  /* sidebar */
+  .app-body { display: flex; }
+  .sidebar { width: 200px; background: #fafafa; border-right: 1px solid #e8e8e8; min-height: 520px; padding: 12px 0; }
+  .sidebar .nav-item { padding: 8px 20px; font-size: 13px; color: #595959; cursor: default; display: flex; align-items: center; gap: 8px; }
+  .sidebar .nav-item.active { background: #e6f7ff; color: #1677ff; font-weight: 600; border-right: 3px solid #1677ff; }
+  .sidebar .nav-grp { padding: 8px 20px 4px; font-size: 11px; color: #8c8c8c; text-transform: uppercase; letter-spacing: .5px; margin-top: 8px; }
+  /* ---- content area ---- */
+  .content { flex:1; display: flex; flex-direction: column; min-width: 0; }
+  /* tabs bar */
+  .tabs-bar { display: flex; border-bottom: 1px solid #e8e8e8; background: #fff; padding: 0 16px; gap: 0; }
+  .tabs-bar .tab { padding: 10px 18px; font-size: 13px; color: #595959; border-bottom: 2px solid transparent; cursor: default; white-space: nowrap; }
+  .tabs-bar .tab.active { color: #1677ff; border-bottom-color: #1677ff; font-weight: 600; }
+  .tabs-bar .tab-sep { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .tabs-bar .adv-link { font-size: 12px; color: #8c8c8c; padding: 10px 8px; border-bottom: 2px solid transparent; cursor: default; text-decoration: none; }
+  .tabs-bar .adv-link:hover { color: #1677ff; }
+  /* ---- panels ---- */
+  .panel-area { flex:1; padding: 16px; display: flex; gap: 12px; overflow: hidden; }
+  .panel { background: #fff; border: 1px solid #e8e8e8; border-radius: 6px; overflow: hidden; }
+  .panel-hdr { padding: 8px 12px; font-size: 12px; font-weight: 600; color: #8c8c8c; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 6px; }
+  .panel-hdr .dot { width: 6px; height: 6px; border-radius: 50%; background: #1677ff; }
+  /* ---- Plan A specific ---- */
+  .task-queue-mini { width: 240px; flex-shrink: 0; }
+  .task-list-item { padding: 8px 12px; border-bottom: 1px solid #f5f5f5; font-size: 12px; cursor: default; display: flex; flex-direction: column; gap: 3px; }
+  .task-list-item:hover { background: #fafafa; }
+  .task-list-item .name { font-weight: 500; color: #141414; }
+  .task-list-item .meta { font-size: 11px; color: #8c8c8c; display: flex; gap: 8px; }
+  .task-list-item .status { font-size: 11px; padding: 1px 6px; border-radius: 3px; font-weight: 500; }
+  .status-review { background: #fffbe6; color: #d48806; }
+  .status-committed { background: #f6ffed; color: #52c41a; }
+  .status-parsing { background: #e6f7ff; color: #1677ff; }
+  .workbench-main { flex:1; display: flex; flex-direction: column; gap: 10px; }
+  .wizard-steps { display: flex; gap: 0; border-bottom: 1px solid #f0f0f0; padding: 0 12px; }
+  .wizard-step { padding: 8px 14px; font-size: 12px; color: #8c8c8c; border-bottom: 2px solid transparent; }
+  .wizard-step.active { color: #1677ff; border-bottom-color: #1677ff; font-weight: 600; }
+  .wizard-step.done { color: #52c41a; }
+  .editor-area { flex:1; display: flex; gap: 10px; min-height: 0; }
+  .editor-pane { flex:1; background: #fafafa; border: 1px solid #f0f0f0; border-radius: 4px; padding: 10px; font-size: 12px; color: #595959; overflow: hidden; }
+  .editor-pane .placeholder { color: #bfbfbf; font-style: italic; }
+  .quick-schema { width: 220px; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; }
+  .quick-schema .field-row { display: flex; align-items: center; gap: 6px; padding: 4px 8px; background: #fafafa; border-radius: 4px; font-size: 11px; }
+  .quick-schema .field-key { color: #1677ff; font-weight: 600; white-space: nowrap; }
+  .quick-schema .field-label { color: #595959; flex:1; }
+  .quick-schema .add-link { font-size: 11px; color: #1677ff; cursor: default; padding: 4px 8px; text-decoration: none; display: block; }
+  .quick-schema .add-link:hover { text-decoration: underline; }
+  .tag { font-size: 10px; padding: 0 4px; border-radius: 2px; background: #f0f0f0; color: #8c8c8c; }
+  /* ---- Plan B specific ---- */
+  .plan-b .tabs-bar { display: none; }
+  .split-view { flex:1; display: flex; gap: 0; }
+  .left-col { width: 300px; flex-shrink: 0; border-right: 1px solid #e8e8e8; display: flex; flex-direction: column; }
+  .left-sub-header { padding: 8px 12px; font-size: 12px; font-weight: 600; color: #8c8c8c; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+  .left-sub-header .upload-btn { font-size: 11px; padding: 2px 10px; border-radius: 4px; background: #1677ff; color: #fff; border: none; cursor: default; }
+  .filter-row { padding: 8px 12px; display: flex; gap: 6px; align-items: center; border-bottom: 1px solid #f0f0f0; }
+  .filter-row select { font-size: 11px; padding: 2px 6px; border: 1px solid #d9d9d9; border-radius: 4px; background: #fff; }
+  .task-list-scroll { flex:1; overflow-y: auto; }
+  .status-bar { font-size: 11px; color: #8c8c8c; padding: 6px 12px; border-top: 1px solid #f0f0f0; display: flex; gap: 12px; }
+  .right-col { flex:1; display: flex; flex-direction: column; }
+  .right-sub-header { padding: 8px 12px; font-size: 12px; font-weight: 600; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; }
+  .right-sub-header .task-title { color: #141414; }
+  .right-sub-header .task-status { font-size: 10px; padding: 1px 6px; border-radius: 3px; }
+  /* ---- annotations ---- */
+  .annotations { padding: 12px 16px; border-top: 1px solid #f0f0f0; display: flex; flex-wrap: wrap; gap: 8px; }
+  .anno { font-size: 11px; padding: 3px 8px; border-radius: 10px; display: flex; align-items: center; gap: 4px; }
+  .anno.good { background: #f6ffed; color: #52c41a; }
+  .anno.caution { background: #fffbe6; color: #d48806; }
+  .anno.info { background: #e6f7ff; color: #1677ff; }
+  .divider { border-top: 1px dashed #e8e8e8; margin: 8px 0; }
+  .caption { font-size: 12px; color: #8c8c8c; padding: 8px 16px 0; text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>领域知识工厂 — 方案 A vs 方案 B 原型对比</h1>
+
+<div class="layout">
+
+  <!-- ============================== -->
+  <!--           PLAN A               -->
+  <!-- ============================== -->
+  <div class="plan-card plan-a">
+    <div class="plan-header">
+      <span class="badge">方案 A</span> 保持三 Tab · 工作台内嵌任务列表 + Schema 快捷面板
+    </div>
+    <div class="mockup">
+      <div class="topbar"><span class="logo">▣ Pisuan · 领域知识工厂</span><span class="sep"></span><span class="user">admin</span></div>
+      <div class="app-body">
+        <div class="sidebar">
+          <div class="nav-item">🏠 首页</div>
+          <div class="nav-item">💬 智能对话</div>
+          <div class="nav-grp">知识加工</div>
+          <div class="nav-item active">🏭 领域知识工厂</div>
+          <div class="nav-grp">系统管理</div>
+          <div class="nav-item">📊 仪表盘</div>
+          <div class="nav-item">⚙️ 模型配置</div>
+        </div>
+        <div class="content">
+          <!-- Tabs -->
+          <div class="tabs-bar">
+            <span class="tab">数据源管理</span>
+            <span class="tab active">ETL 清洗工作台</span>
+            <span class="tab">领域 Schema 配置</span>
+            <span class="tab-sep">
+              <span class="adv-link">Prompt 模板 ▸</span>
+              <span class="adv-link">实体构建器 ▸</span>
+            </span>
+          </div>
+          <!-- Workbench area -->
+          <div class="panel-area">
+            <!-- NEW: compact task queue -->
+            <div class="panel task-queue-mini">
+              <div class="panel-hdr"><span class="dot"></span>任务队列 <span style="font-weight:400;margin-left:auto;font-size:10px">3 个待审核</span></div>
+              <div class="task-list-item" style="background:#e6f7ff">
+                <span class="name">矿区规划环评报告 v3.docx</span>
+                <span class="meta"><span>煤炭采掘</span><span>2025-03-20</span><span class="status status-review">待审核</span></span>
+              </div>
+              <div class="task-list-item">
+                <span class="name">化工园区二期安评.pdf</span>
+                <span class="meta"><span>石油化工</span><span>2025-03-18</span><span class="status status-review">待审核</span></span>
+              </div>
+              <div class="task-list-item">
+                <span class="name">物流园环评终稿.doc</span>
+                <span class="meta"><span>交通运输</span><span>2025-03-15</span><span class="status status-review">待审核</span></span>
+              </div>
+              <div class="task-list-item" style="color:#8c8c8c">
+                <span class="name">煤矿安全专篇.pdf</span>
+                <span class="meta"><span>煤炭采掘</span><span>2025-03-10</span><span class="status status-committed">已入库</span></span>
+              </div>
+            </div>
+            <!-- Workbench main -->
+            <div class="workbench-main">
+              <div class="wizard-steps">
+                <span class="wizard-step done">① 基础信息 ✓</span>
+                <span class="wizard-step active">② 表格数据</span>
+                <span class="wizard-step">③ 模板泛化</span>
+                <span class="wizard-step">④ 未识别实体</span>
+              </div>
+              <div class="editor-area">
+                <div class="editor-pane">
+                  <div style="font-weight:600;margin-bottom:6px;font-size:12px">原始文档</div>
+                  <div class="placeholder">表格预览区域 ...</div>
+                </div>
+                <div class="editor-pane">
+                  <div style="font-weight:600;margin-bottom:6px;font-size:12px">提取结果 / HTML 编辑器</div>
+                  <div class="placeholder">编辑区域 ...</div>
+                </div>
+              </div>
+            </div>
+            <!-- NEW: quick schema panel -->
+            <div class="panel quick-schema">
+              <div class="panel-hdr"><span class="dot"></span>Schema 快捷编辑</div>
+              <div class="field-row"><span class="field-key">产能</span><span class="field-label">设计生产能力</span><span class="tag">number</span></div>
+              <div class="field-row"><span class="field-key">矿区面积</span><span class="field-label">矿区总面积</span><span class="tag">number</span></div>
+              <div class="field-row"><span class="field-key">服务年限</span><span class="field-label">矿井服务年限</span><span class="tag">number</span></div>
+              <div class="field-row" style="background:#fffbe6"><span class="field-key">+ 新增字段</span><span class="field-label" style="color:#d48806">当前段落缺失</span><span class="tag">—</span></div>
+              <a class="add-link">+ 为当前段落添加变量</a>
+              <div class="divider"></div>
+              <a class="add-link" style="font-weight:600">▸ 打开完整 Schema 配置</a>
+            </div>
+          </div>
+          <!-- Annotations -->
+          <div class="annotations">
+            <span class="anno info">① 左侧内嵌任务队列，审核流程无需切 Tab</span>
+            <span class="anno good">② 右侧 Schema 快捷面板，即时添加/修改变量</span>
+            <span class="anno caution">③ "数据源管理"Tab 仍保留，用于上传和批量管理</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">方案 A：三 Tab 保留，工作台增强为"任务队列 + 审核区 + Schema 面板"三栏</div>
+  </div>
+
+  <!-- ============================== -->
+  <!--           PLAN B               -->
+  <!-- ============================== -->
+  <div class="plan-card plan-b">
+    <div class="plan-header">
+      <span class="badge">方案 B</span> 数据源 + 工作台合并 · 左列表右审核 · Schema 独立
+    </div>
+    <div class="mockup">
+      <div class="topbar"><span class="logo">▣ Pisuan · 领域知识工厂</span><span class="sep"></span><span class="user">admin</span></div>
+      <div class="app-body">
+        <div class="sidebar">
+          <div class="nav-item">🏠 首页</div>
+          <div class="nav-item">💬 智能对话</div>
+          <div class="nav-grp">知识加工</div>
+          <div class="nav-item active">🏭 领域知识工厂</div>
+          <div class="nav-item" style="padding-left:36px;font-size:12px">└ 文档加工</div>
+          <div class="nav-item" style="padding-left:36px;font-size:12px;color:#8c8c8c">   Schema 配置</div>
+          <div class="nav-grp">系统管理</div>
+          <div class="nav-item">📊 仪表盘</div>
+          <div class="nav-item">⚙️ 模型配置</div>
+        </div>
+        <div class="content">
+          <!-- No tabs bar -- merged view has its own sub-header -->
+          <!-- Split: left (task list) + right (workbench) -->
+          <div class="split-view">
+            <!-- Left: merged 数据源 + 任务列表 -->
+            <div class="left-col">
+              <div class="left-sub-header">
+                <span>📋 文档任务</span>
+                <button class="upload-btn">+ 上传文档</button>
+              </div>
+              <div class="filter-row">
+                <select><option>全部领域</option><option>煤炭采掘</option><option>石油化工</option></select>
+                <select><option>全部状态</option><option>待审核</option><option>处理中</option><option>已入库</option></select>
+              </div>
+              <div class="task-list-scroll">
+                <div class="task-list-item" style="background:#e6f7ff">
+                  <span class="name">矿区规划环评报告 v3.docx</span>
+                  <span class="meta"><span>煤炭采掘 · 环评报告</span><span>3/20</span><span class="status status-review">待审核</span></span>
+                </div>
+                <div class="task-list-item">
+                  <span class="name">化工园区二期安评.pdf</span>
+                  <span class="meta"><span>石油化工 · 安评报告</span><span>3/18</span><span class="status status-review">待审核</span></span>
+                </div>
+                <div class="task-list-item">
+                  <span class="name">物流园环评终稿.doc</span>
+                  <span class="meta"><span>交通运输 · 环评报告</span><span>3/15</span><span class="status status-review">待审核</span></span>
+                </div>
+                <div class="task-list-item">
+                  <span class="name">煤矿安全专篇.pdf</span>
+                  <span class="meta"><span>煤炭采掘 · 独立篇章</span><span>3/10</span><span class="status status-committed">已入库</span></span>
+                </div>
+                <div class="task-list-item">
+                  <span class="name">选煤厂环评报告.pdf</span>
+                  <span class="meta"><span>煤炭采掘 · 环评报告</span><span>3/5</span><span class="status status-parsing">解析中</span></span>
+                </div>
+              </div>
+              <div class="status-bar">
+                <span>待审核 <b>3</b></span>
+                <span>处理中 <b>1</b></span>
+                <span>已入库 <b>12</b></span>
+              </div>
+              <!-- upload history toggle -->
+              <div style="padding:6px 12px;font-size:11px;color:#1677ff;border-top:1px solid #f0f0f0;cursor:default">▾ 历史记录</div>
+            </div>
+            <!-- Right: workbench -->
+            <div class="right-col">
+              <div class="right-sub-header">
+                <span class="dot" style="width:6px;height:6px;border-radius:50%;background:#1677ff;display:inline-block"></span>
+                <span class="task-title">矿区规划环评报告 v3.docx</span>
+                <span class="task-status status-review" style="font-size:10px;padding:1px 6px;border-radius:3px;background:#fffbe6;color:#d48806">待审核</span>
+              </div>
+              <div class="wizard-steps">
+                <span class="wizard-step done">① 基础信息 ✓</span>
+                <span class="wizard-step active">② 表格数据</span>
+                <span class="wizard-step">③ 模板泛化</span>
+                <span class="wizard-step">④ 未识别实体</span>
+              </div>
+              <div class="editor-area" style="flex:1; padding:10px; display:flex; gap:10px">
+                <div class="editor-pane"><div class="placeholder">原始文档 / 段落预览 ...</div></div>
+                <div class="editor-pane"><div class="placeholder">提取结果 / HTML 编辑器 ...</div></div>
+              </div>
+              <!-- Schema shortcut link (not inline editor) -->
+              <div style="padding:6px 12px;font-size:11px;color:#8c8c8c;border-top:1px solid #f0f0f0">
+                ⚡ 变量缺失？ <a style="color:#1677ff;cursor:default">打开 Schema 配置 →</a>
+              </div>
+            </div>
+          </div>
+          <!-- Annotations -->
+          <div class="annotations">
+            <span class="anno good">① 上传、列表、审核在一个视图内，零 Tab 切换</span>
+            <span class="anno good">② 左侧支持筛选 + 状态统计，右侧全屏审核</span>
+            <span class="anno info">③ Schema 配置独立为侧边栏子路由，通过链接跳转</span>
+            <span class="anno caution">④ 右侧工作台失去 Schema 内联编辑能力（需跳转）</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">方案 B：数据源 + 工作台合并为"文档加工"视图 · Schema 独立为侧边栏子项</div>
+  </div>
+
+</div>
+
+</body>
+</html>

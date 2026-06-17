@@ -155,21 +155,15 @@ const router = createRouter({
           meta: { keepAlive: false, requiresAuth: true, requiresAdmin: true }
         },
         {
-          path: 'section-routing',
-          name: 'DomainFactorySectionRouting',
-          component: () => import('../views/SectionRoutingView.vue'),
-          meta: { keepAlive: false, requiresAuth: true, requiresAdmin: true }
-        },
-        {
           path: 'prompt-config',
           name: 'DomainFactoryPromptConfig',
           component: () => import('../views/PromptConfigView.vue'),
           meta: { keepAlive: false, requiresAuth: true, requiresAdmin: true }
         },
         {
-          path: 'standard-code',
-          name: 'DomainFactoryStandardCode',
-          component: () => import('../views/StandardCodeView.vue'),
+          path: 'entity-builder',
+          name: 'DomainEntityBuilder',
+          component: () => import('../views/DomainEntityBuilderView.vue'),
           meta: { keepAlive: false, requiresAuth: true, requiresAdmin: true }
         }
       ]

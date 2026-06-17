@@ -524,13 +524,15 @@ class PostgresManager(metaclass=SingletonMeta):
             "    slots JSONB NOT NULL DEFAULT '[]',"
             "    slot_signature VARCHAR(255) NOT NULL DEFAULT '',"
             "    source_count INTEGER NOT NULL DEFAULT 1,"
+            "    match_count INTEGER NOT NULL DEFAULT 0,"
             "    sample_original TEXT,"
-            "    metadata JSONB DEFAULT '{}',"
+            "    extra_meta JSONB DEFAULT '{}',"
             "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
             "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
             "    UNIQUE(domain_code, chapter, slot_signature)"
             ")",
             "CREATE INDEX IF NOT EXISTS idx_dflt_domain ON domain_factory_learned_templates(domain_code)",
+            "ALTER TABLE IF EXISTS domain_factory_learned_templates ADD COLUMN IF NOT EXISTS match_count INTEGER NOT NULL DEFAULT 0",
             "CREATE TABLE IF NOT EXISTS domain_factory_prompt_configs ("
             "    id SERIAL PRIMARY KEY,"
             "    domain_code VARCHAR(64),"
@@ -583,11 +585,11 @@ class PostgresManager(metaclass=SingletonMeta):
             "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
             ")",
             "INSERT INTO report_types (code, name, domain_code, sort_order) VALUES "
-            "('通用', '通用（全部报告类型）', 'coal', 0) ON CONFLICT (code) DO NOTHING",
+            "('通用', '通用（全部报告类型）', 'coal', 0) ON CONFLICT (code, domain_code) DO NOTHING",
             "INSERT INTO report_types (code, name, domain_code, sort_order) VALUES "
-            "('feasibility_report', '可行性研究报告', 'coal', 1) ON CONFLICT (code) DO NOTHING",
+            "('feasibility_report', '可行性研究报告', 'coal', 1) ON CONFLICT (code, domain_code) DO NOTHING",
             "INSERT INTO report_types (code, name, domain_code, sort_order) VALUES "
-            "('eia_report', '环境影响评价报告', 'coal', 2) ON CONFLICT (code) DO NOTHING",
+            "('eia_report', '环境影响评价报告', 'coal', 2) ON CONFLICT (code, domain_code) DO NOTHING",
         ]
         async with self.async_engine.begin() as conn:
             for stmt in stmts:

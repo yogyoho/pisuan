@@ -128,7 +128,7 @@ backend/server/routers/entity_type_router.py
 backend/server/routers/section_routing_router.py
 backend/server/coal_eia_entity_types.json
 backend/server/standard_code_mapping_list.json
-backend/server/standard_code_skills.json
+
 backend/scripts/import_domain_factory_data.sql
 backend/scripts/migrate_domain_factory.sql
 backend/templates/coal_mining/
@@ -139,7 +139,7 @@ backend/templates/coal_mining/
 web/src/views/DomainFactoryView.vue
 web/src/views/PromptConfigView.vue
 web/src/views/SectionRoutingView.vue
-web/src/views/StandardCodeView.vue
+
 web/src/components/domain-factory/
 web/src/apis/domain_factory_api.js
 web/src/apis/entity_type_api.js

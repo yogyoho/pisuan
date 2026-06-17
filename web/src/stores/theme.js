@@ -10,7 +10,7 @@ export const useThemeStore = defineStore('theme', () => {
   const commonTheme = {
     token: {
       fontFamily:
-        "'HarmonyOS Sans SC', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;",
+        '"PingFang SC", "PingFang HK", "Helvetica Neue", Helvetica, "Microsoft Yahei", "微软雅黑", Arial, sans-serif',
       colorPrimary: '#1890ff',
       colorLink: 'var(--main-color)',
       colorLinkHover: 'var(--main-600)',
