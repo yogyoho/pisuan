@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T16:26:24.017Z
-> Files: 4 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T16:37:43.777Z
+> Files: 1 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -77,7 +77,6 @@
 
 ## backend/package/yuxi/agents/skills/buildin/
 
-- `__init__.py` — Declares from (~1085 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/
 
@@ -282,7 +281,6 @@
 
 ## docs/intro/
 
-- `project-overview.md` — 项目简介 (~478 tok)
 
 ## docs/superpowers/plans/
 
@@ -304,8 +302,6 @@
 
 ## web/src/components/
 
-- `SettingsModal.vue` — Vue: setup (~3575 tok)
-- `UserInfoComponent.vue` — Vue: setup (~4674 tok)
 
 ## web/src/components/domain-factory/
 
@@ -315,6 +311,7 @@
 
 ## web/src/layouts/
 
+- `AppLayout.vue` — Vue: 新建对话, setup (~6765 tok)
 
 ## web/src/stores/
 
