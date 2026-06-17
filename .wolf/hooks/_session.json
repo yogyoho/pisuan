@@ -41,6 +41,11 @@
       "count": 1,
       "tokens": 0,
       "first_read": "2026-08-19T15:56:15.622Z"
+    },
+    "C:/workspace/pisuan/web/src/components/model-management/ModelProviderManagePanel.vue": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-08-19T16:38:21.695Z"
     }
   },
   "files_written": [
@@ -211,6 +216,12 @@
       "action": "edit",
       "tokens": 29,
       "at": "2026-08-19T16:37:43.781Z"
+    },
+    {
+      "file": "C:/workspace/pisuan/web/src/components/model-management/ModelProviderManagePanel.vue",
+      "action": "edit",
+      "tokens": 38,
+      "at": "2026-08-19T16:38:37.241Z"
     }
   ],
   "edit_counts": {
@@ -226,10 +237,11 @@
     "web/src/components/TaskCenterDrawer.vue": 3,
     "docs/intro/project-overview.md": 1,
     "web/src/components/SettingsModal.vue": 1,
-    "web/src/components/UserInfoComponent.vue": 2
+    "web/src/components/UserInfoComponent.vue": 2,
+    "web/src/components/model-management/ModelProviderManagePanel.vue": 1
   },
   "anatomy_hits": 0,
-  "anatomy_misses": 8,
+  "anatomy_misses": 9,
   "repeated_reads_warned": 4,
   "cerebrum_warnings": 0,
   "stop_count": 1
