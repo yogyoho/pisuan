@@ -5,15 +5,27 @@
 核心节点：
 - Document：文档样例（根节点）
 - Section：原始章节（骨架，记录真实章节层级）
-- ParagraphTemplate：段落模板（模具，泛化后的文本）
+- ParagraphTemplate：段落模板（模具，泛化后的文本，含 classify_type）
 - Slot：插槽（变量，模板里的挖孔）
+- LegalReference：法律/法规/标准引用
+- EntitySchema：实体定义
+- DomainOutline：领域骨架模板（按 domain × report_type 聚合）
+- ChapterTemplate：章节模板（跨文档聚合，含 rigidity/frequency）
+- ParagraphRole：段落角色（章节内的固定叙述顺序）
 
 关系设计：
 - Document -[HAS_SECTION]-> Section
+- Document -[CONTRIBUTES_TO]-> DomainOutline
 - Section -[HAS_CHILD]-> Section
 - Section -[NEXT_SECTION]-> Section
 - Section -[COMPOSED_OF {order}]-> ParagraphTemplate
+- DomainOutline -[HAS_CHAPTER]-> ChapterTemplate
+- ChapterTemplate -[REQUIRES_PARAGRAPH_ROLE {order}]-> ParagraphRole
+- ParagraphRole -[REALIZED_BY {confidence, frequency}]-> ParagraphTemplate
+- ChapterTemplate -[APPLIES_STANDARD {usage}]-> LegalReference
 - ParagraphTemplate -[HAS_SLOT]-> Slot
+- ParagraphTemplate -[CITES]-> LegalReference
+- Slot -[CONSTRAINS]-> EntitySchema
 """
 
 from __future__ import annotations
@@ -61,6 +73,8 @@ class GraphBuilder:
         source_paragraphs: list[dict[str, Any]],
         domain_label: str | None = None,
         base_info: dict[str, Any] | None = None,
+        domain_code: str | None = None,
+        report_type_code: str | None = None,
     ) -> dict[str, Any]:
         """构建知识图谱
 
@@ -71,6 +85,8 @@ class GraphBuilder:
             source_paragraphs: 源段落列表
             domain_label: 领域标签
             base_info: 基础信息字典
+            domain_code: 领域编码（如 coal、chem）
+            report_type_code: 报告类型编码（如 eia_report）
 
         Returns:
             构建结果统计
@@ -85,7 +101,10 @@ class GraphBuilder:
         try:
             with driver.session() as session:
                 # 步骤1: 创建 Document 节点
-                doc_result = session.execute_write(self._create_document_node, kb_id, doc_id, doc_title, domain_label)
+                doc_result = session.execute_write(
+                    self._create_document_node, kb_id, doc_id, doc_title,
+                    domain_label, domain_code, report_type_code,
+                )
                 stats["nodes_created"] += doc_result.get("nodes", 0)
                 stats["relationships_created"] += doc_result.get("relationships", 0)
 
@@ -101,10 +120,42 @@ class GraphBuilder:
                 stats["nodes_created"] += entity_result.get("nodes", 0)
                 stats["relationships_created"] += entity_result.get("relationships", 0)
 
-                # 步骤3: 构建 EntitySchema 节点，将 Slot 的 entity_ref 关联到实体定义
-                entity_result = session.execute_write(self._build_entity_schema_nodes, kb_id, source_paragraphs)
-                stats["nodes_created"] += entity_result.get("nodes", 0)
-                stats["relationships_created"] += entity_result.get("relationships", 0)
+                # 步骤4: 构建 LegalReference 节点
+                legal_result = session.execute_write(self._build_legal_reference_nodes, kb_id, source_paragraphs)
+                stats["nodes_created"] += legal_result.get("nodes", 0)
+                stats["relationships_created"] += legal_result.get("relationships", 0)
+
+                # 步骤5: 构建 TableSchema 节点
+                table_result = session.execute_write(self._build_table_schema_nodes, kb_id, source_paragraphs)
+                stats["nodes_created"] += table_result.get("nodes", 0)
+                stats["relationships_created"] += table_result.get("relationships", 0)
+
+                # 步骤6: 构建 FormulaTemplate 节点
+                formula_result = session.execute_write(self._build_formula_template_nodes, kb_id, source_paragraphs)
+                stats["nodes_created"] += formula_result.get("nodes", 0)
+                stats["relationships_created"] += formula_result.get("relationships", 0)
+
+                # 步骤7: 构建 ProcessFlow 节点（图片多模态提取结果）
+                flow_result = session.execute_write(self._build_process_flow_nodes, kb_id, source_paragraphs)
+                stats["nodes_created"] += flow_result.get("nodes", 0)
+                stats["relationships_created"] += flow_result.get("relationships", 0)
+
+                # 步骤8: 骨架聚合（DomainOutline / ChapterTemplate）
+                if domain_code and report_type_code:
+                    skeleton_result = session.execute_write(
+                        self._build_skeleton_aggregation,
+                        kb_id, domain_code, report_type_code, doc_id, doc_title, source_paragraphs,
+                    )
+                    stats["nodes_created"] += skeleton_result.get("nodes", 0)
+                    stats["relationships_created"] += skeleton_result.get("relationships", 0)
+
+                # 步骤9: 逻辑关系节点（CausalChain / ConditionRule / DataFlow）
+                # 从 task 的 logical_relations 字段读取（由 ETL pipeline 提取后传入）
+                logical_result = session.execute_write(
+                    self._build_logical_relationship_nodes, kb_id, source_paragraphs, base_info or {},
+                )
+                stats["nodes_created"] += logical_result.get("nodes", 0)
+                stats["relationships_created"] += logical_result.get("relationships", 0)
 
                 logger.info(
                     f"图谱构建完成: 文档 {doc_id}, 节点 {stats['nodes_created']}, 关系 {stats['relationships_created']}"
@@ -120,7 +171,7 @@ class GraphBuilder:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _create_document_node(tx, kb_id, doc_id, doc_title, domain_label) -> dict:
+    def _create_document_node(tx, kb_id, doc_id, doc_title, domain_label, domain_code=None, report_type_code=None) -> dict:
         tx.run(
             """
             MERGE (d:Document {id: $doc_id})
@@ -129,6 +180,8 @@ class GraphBuilder:
                 d.filename = $doc_title,
                 d.title = $doc_title,
                 d.domain = $domain_label,
+                d.domain_code = $domain_code,
+                d.report_type_code = $report_type_code,
                 d.kb_id = $kb_id,
                 d.score = 5,
                 d.created_at = datetime()
@@ -136,12 +189,16 @@ class GraphBuilder:
                 d.filename = COALESCE($doc_title, d.filename),
                 d.title = COALESCE($doc_title, d.title),
                 d.domain = COALESCE($domain_label, d.domain),
+                d.domain_code = COALESCE($domain_code, d.domain_code),
+                d.report_type_code = COALESCE($report_type_code, d.report_type_code),
                 d.kb_id = COALESCE($kb_id, d.kb_id)
             """,
             kb_id=kb_id,
             doc_id=doc_id,
             doc_title=doc_title,
             domain_label=domain_label or "",
+            domain_code=domain_code or "",
+            report_type_code=report_type_code or "",
         )
         return {"nodes": 1, "relationships": 0}
 
@@ -264,6 +321,7 @@ class GraphBuilder:
             template_hash = hashstr(generalized, 12)
 
             if template_id not in created_templates:
+                classify_type = para.get("classify_type", "")
                 tx.run(
                     """
                     MERGE (pt:ParagraphTemplate {id: $template_id})
@@ -272,16 +330,19 @@ class GraphBuilder:
                         pt.text_pattern = $text_pattern,
                         pt.generalized_pattern = $generalized_pattern,
                         pt.hash = $hash,
+                        pt.classify_type = $classify_type,
                         pt.kb_id = $kb_id,
                         pt.created_at = datetime()
                     ON MATCH SET
                         pt.text_pattern = COALESCE($text_pattern, pt.text_pattern),
-                        pt.generalized_pattern = COALESCE($generalized_pattern, pt.generalized_pattern)
+                        pt.generalized_pattern = COALESCE($generalized_pattern, pt.generalized_pattern),
+                        pt.classify_type = COALESCE($classify_type, pt.classify_type)
                     """,
                     template_id=template_id,
                     text_pattern=generalized,
                     generalized_pattern=generalized,
                     hash=template_hash,
+                    classify_type=classify_type,
                     kb_id=kb_id,
                 )
                 nodes_created += 1
@@ -440,6 +501,870 @@ class GraphBuilder:
 
         return {"nodes": nodes_created, "relationships": relationships_created}
 
+    # ------------------------------------------------------------------
+    # 步骤4: LegalReference 节点（法律/法规/标准引用）
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _build_legal_reference_nodes(tx, kb_id: str, source_paragraphs: list[dict[str, Any]]) -> dict:
+        """为 legal_reference 段落中的法律引用创建 LegalReference 节点
+
+        并建立 ParagraphTemplate -[CITES]-> LegalReference 关系。
+        """
+        nodes_created = 0
+        relationships_created = 0
+        created_refs: dict[str, bool] = {}
+
+        for para in source_paragraphs:
+            if para.get("classify_type") != "legal_reference":
+                continue
+
+            template = para.get("template", {})
+            if not isinstance(template, dict):
+                continue
+
+            legal_refs = template.get("legal_references", [])
+            if not isinstance(legal_refs, list):
+                continue
+
+            para_id = para.get("id", "")
+
+            for ref in legal_refs:
+                if not isinstance(ref, dict):
+                    continue
+
+                ref_name = ref.get("name", "")
+                ref_code = ref.get("code", "")
+                if not ref_name:
+                    continue
+
+                # 生成唯一 ID：基于 name + code
+                ref_key = f"{ref_name}_{ref_code}" if ref_code else ref_name
+                ref_id = f"LEGAL_{hashstr(ref_key, 12)}"
+
+                ref_type = ref.get("type", "technical_standard")
+                scope = ref.get("scope", "national")
+                authority = ref.get("authority", "")
+
+                if ref_id not in created_refs:
+                    effective_date = ref.get("effective_date", "")
+                    tx.run(
+                        """
+                        MERGE (lr:LegalReference {id: $ref_id})
+                        ON CREATE SET
+                            lr.id = $ref_id,
+                            lr.name = $name,
+                            lr.code = $code,
+                            lr.type = $type,
+                            lr.scope = $scope,
+                            lr.authority = $authority,
+                            lr.effective_date = $effective_date,
+                            lr.status = 'effective',
+                            lr.superseded_by = null,
+                            lr.kb_id = $kb_id,
+                            lr.frequency = 1,
+                            lr.created_at = datetime()
+                        ON MATCH SET
+                            lr.name = COALESCE($name, lr.name),
+                            lr.code = COALESCE($code, lr.code),
+                            lr.type = COALESCE($type, lr.type),
+                            lr.scope = COALESCE($scope, lr.scope),
+                            lr.authority = COALESCE($authority, lr.authority),
+                            lr.effective_date = COALESCE($effective_date, lr.effective_date),
+                            lr.frequency = lr.frequency + 1
+                        // 时效性检测：同 code 但更新 effective_date → 标记旧版本 superseded
+                        WITH lr
+                        OPTIONAL MATCH (old:LegalReference {code: $code, status: 'effective'})
+                        WHERE old.id <> $ref_id AND old.effective_date < $effective_date
+                        SET old.status = 'superseded', old.superseded_by = $ref_id
+                        """,
+                        ref_id=ref_id,
+                        name=ref_name,
+                        code=ref_code,
+                        type=ref_type,
+                        scope=scope,
+                        authority=authority,
+                        effective_date=effective_date or "",
+                        kb_id=kb_id,
+                    )
+                    nodes_created += 1
+                    created_refs[ref_id] = True
+
+                # 如果有对应的 ParagraphTemplate，建立 CITES 关系
+                if para_id:
+                    tx.run(
+                        """
+                        MATCH (lr:LegalReference {id: $ref_id})
+                        MATCH (s:Section)
+                        WHERE s.kb_id = $kb_id
+                        WITH lr, s
+                        MATCH (s)-[:COMPOSED_OF]->(pt:ParagraphTemplate)
+                        WHERE pt.id STARTS WITH 'TPL_PARA_'
+                        WITH lr, pt
+                        MERGE (pt)-[:CITES]->(lr)
+                        """,
+                        ref_id=ref_id,
+                        kb_id=kb_id,
+                    )
+                    relationships_created += 1
+
+        return {"nodes": nodes_created, "relationships": relationships_created}
+
+    # ------------------------------------------------------------------
+    # 步骤5: TableSchema 节点（表格结构模板）
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _build_table_schema_nodes(tx, kb_id: str, source_paragraphs: list[dict[str, Any]]) -> dict:
+        """为 table 类型段落中的 table_schema 创建 TableSchema 节点"""
+        nodes_created = 0
+        relationships_created = 0
+        created_schemas: dict[str, bool] = {}
+
+        for para in source_paragraphs:
+            if para.get("classify_type") != "table":
+                continue
+
+            template = para.get("template", {})
+            if not isinstance(template, dict):
+                continue
+
+            table_schema = template.get("table_schema")
+            if not isinstance(table_schema, dict):
+                continue
+
+            schema_name = table_schema.get("name", "")
+            table_type = table_schema.get("table_type", "general")
+            columns = table_schema.get("columns", [])
+            if not columns:
+                continue
+
+            schema_id = f"TBL_{hashstr(f'{schema_name}_{table_type}', 12)}"
+
+            if schema_id not in created_schemas:
+                tx.run(
+                    """
+                    MERGE (ts:TableSchema {id: $schema_id})
+                    ON CREATE SET
+                        ts.id = $schema_id,
+                        ts.name = $name,
+                        ts.table_type = $table_type,
+                        ts.columns = $columns,
+                        ts.kb_id = $kb_id,
+                        ts.created_at = datetime()
+                    ON MATCH SET
+                        ts.name = COALESCE($name, ts.name),
+                        ts.columns = COALESCE($columns, ts.columns)
+                    """,
+                    schema_id=schema_id,
+                    name=schema_name,
+                    table_type=table_type,
+                    columns=json.dumps(columns, ensure_ascii=False),
+                    kb_id=kb_id,
+                )
+                nodes_created += 1
+                created_schemas[schema_id] = True
+
+                # 关联到 Section
+                para_id = para.get("id", "")
+                if para_id:
+                    section_path = para.get("section_path", [])
+                    if section_path:
+                        section_path_str = "/".join(str(p) for p in section_path)
+                        tx.run(
+                            """
+                            MATCH (ts:TableSchema {id: $schema_id})
+                            MATCH (s:Section)
+                            WHERE s.section_path_str = $section_path_str AND s.kb_id = $kb_id
+                            MERGE (s)-[:HAS_TABLE_SCHEMA]->(ts)
+                            """,
+                            schema_id=schema_id,
+                            section_path_str=section_path_str,
+                            kb_id=kb_id,
+                        )
+                        relationships_created += 1
+
+        return {"nodes": nodes_created, "relationships": relationships_created}
+
+    # ------------------------------------------------------------------
+    # 步骤8: 骨架聚合（DomainOutline / ChapterTemplate / ParagraphRole）
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _build_skeleton_aggregation(
+        tx, kb_id: str, domain_code: str, report_type_code: str,
+        doc_id: str, doc_title: str, source_paragraphs: list[dict[str, Any]],
+    ) -> dict:
+        """跨文档骨架聚合：创建 DomainOutline / ChapterTemplate / ParagraphRole 节点。
+
+        聚合逻辑：
+        1. 创建或更新 DomainOutline 节点（按 domain × report_type 唯一）
+        2. 从当前文档的 Section 树构建 ChapterTemplate 节点
+        3. 对已存在的 ChapterTemplate 更新 frequency 和 rigidity
+        4. 从 parameter 段落提取 ParagraphRole
+        5. 建立 Document -[CONTRIBUTES_TO]-> DomainOutline 关系
+        """
+        nodes_created = 0
+        relationships_created = 0
+
+        # 1. DomainOutline 节点
+        outline_id = f"OUTLINE_{domain_code}_{report_type_code}"
+        result = tx.run(
+            """
+            MERGE (dol:DomainOutline {id: $outline_id})
+            ON CREATE SET
+                dol.id = $outline_id,
+                dol.domain = $domain_code,
+                dol.report_type = $report_type_code,
+                dol.source_count = 1,
+                dol.last_updated = datetime(),
+                dol.kb_id = $kb_id
+            ON MATCH SET
+                dol.source_count = dol.source_count + 1,
+                dol.last_updated = datetime()
+            RETURN dol.source_count AS sc
+            """,
+            outline_id=outline_id,
+            domain_code=domain_code,
+            report_type_code=report_type_code,
+            kb_id=kb_id,
+        ).single()
+        source_count = result["sc"] if result else 1
+        nodes_created += 1
+
+        # Document -[CONTRIBUTES_TO]-> DomainOutline
+        tx.run(
+            """
+            MATCH (d:Document {id: $doc_id})
+            MATCH (dol:DomainOutline {id: $outline_id})
+            MERGE (d)-[:CONTRIBUTES_TO]->(dol)
+            """,
+            doc_id=doc_id,
+            outline_id=outline_id,
+        )
+        relationships_created += 1
+
+        # 2. 从 Section 树构建 ChapterTemplate 节点
+        # 收集所有标题段落的 section_path → title 映射
+        chapter_map: dict[str, dict] = {}
+        for para in source_paragraphs:
+            if not para.get("is_title"):
+                continue
+            sp = para.get("section_path", [])
+            if not sp:
+                continue
+            section_path_str = "/".join(str(p) for p in sp)
+            title = para.get("title", "")
+            level = len(sp)
+            order_in_parent = sp[-1] if sp else 0
+            try:
+                order_int = int(str(order_in_parent).split(".")[0].split(" ")[0])
+            except (ValueError, IndexError):
+                order_int = 0
+
+            chapter_id = f"CH_{domain_code}_{report_type_code}_{hashstr(section_path_str, 10)}"
+            chapter_map[section_path_str] = {
+                "chapter_id": chapter_id,
+                "title": title,
+                "level": level,
+                "order": order_int,
+                "section_path_str": section_path_str,
+            }
+
+        # 创建 ChapterTemplate 节点并关联到 DomainOutline
+        for sp_str, ch_info in chapter_map.items():
+            chapter_id = ch_info["chapter_id"]
+            title = ch_info["title"]
+            level = ch_info["level"]
+            order = ch_info["order"]
+
+            # 计算 frequency：查询同 outline 下同名章节出现次数
+            rigidity = "flexible"
+            if source_count >= 2:
+                # 在已有 ChapterTemplate 中查找同名章节
+                count_result = tx.run(
+                    """
+                    MATCH (dol:DomainOutline {id: $outline_id})-[:HAS_CHAPTER]->(ch:ChapterTemplate {title: $title})
+                    RETURN count(ch) AS cnt
+                    """,
+                    outline_id=outline_id,
+                    title=title,
+                ).single()
+                existing_count = count_result["cnt"] if count_result else 0
+                freq = (existing_count + 1) / source_count
+                if freq >= 0.9:
+                    rigidity = "rigid"
+                elif freq >= 0.5:
+                    rigidity = "flexible"
+                else:
+                    rigidity = "conditional"
+            else:
+                freq = 1.0
+                rigidity = "rigid"  # 第一篇文档，默认刚性
+
+            tx.run(
+                """
+                MERGE (ch:ChapterTemplate {id: $chapter_id})
+                ON CREATE SET
+                    ch.id = $chapter_id,
+                    ch.title = $title,
+                    ch.level = $level,
+                    ch.order = $order,
+                    ch.rigidity = $rigidity,
+                    ch.frequency = $frequency,
+                    ch.domain = $domain_code,
+                    ch.report_type = $report_type_code,
+                    ch.kb_id = $kb_id,
+                    ch.created_at = datetime()
+                ON MATCH SET
+                    ch.frequency = $frequency,
+                    ch.rigidity = $rigidity
+                """,
+                chapter_id=chapter_id,
+                title=title,
+                level=level,
+                order=order,
+                rigidity=rigidity,
+                frequency=freq,
+                domain_code=domain_code,
+                report_type_code=report_type_code,
+                kb_id=kb_id,
+            )
+            nodes_created += 1
+
+            # DomainOutline -[HAS_CHAPTER]-> ChapterTemplate
+            tx.run(
+                """
+                MATCH (dol:DomainOutline {id: $outline_id})
+                MATCH (ch:ChapterTemplate {id: $chapter_id})
+                MERGE (dol)-[:HAS_CHAPTER]->(ch)
+                """,
+                outline_id=outline_id,
+                chapter_id=chapter_id,
+            )
+            relationships_created += 1
+
+            # 建立 ChapterTemplate 层级关系（HAS_CHILD）
+            sp_parts = sp_str.split("/")
+            if len(sp_parts) > 1:
+                parent_sp_str = "/".join(sp_parts[:-1])
+                if parent_sp_str in chapter_map:
+                    parent_ch_id = chapter_map[parent_sp_str]["chapter_id"]
+                    tx.run(
+                        """
+                        MATCH (parent:ChapterTemplate {id: $parent_id})
+                        MATCH (child:ChapterTemplate {id: $child_id})
+                        MERGE (parent)-[:HAS_CHILD]->(child)
+                        """,
+                        parent_id=parent_ch_id,
+                        child_id=chapter_id,
+                    )
+                    relationships_created += 1
+
+        # 3. ParagraphRole 节点（从 parameter 段落提取段落角色）
+        para_order = 0
+        for para in source_paragraphs:
+            ct = para.get("classify_type", "")
+            if ct not in ("parameter",):
+                continue
+            sp = para.get("section_path", [])
+            if not sp:
+                continue
+
+            # 找到所属 ChapterTemplate
+            sp_str = "/".join(str(p) for p in sp)
+            # 查找最近的章节
+            target_ch_id = None
+            for i in range(len(sp), 0, -1):
+                parent_sp = "/".join(str(p) for p in sp[:i])
+                if parent_sp in chapter_map:
+                    target_ch_id = chapter_map[parent_sp]["chapter_id"]
+                    break
+            if not target_ch_id:
+                continue
+
+            template = para.get("template", {})
+            if not isinstance(template, dict):
+                continue
+
+            # 从 generalized 文本推断角色名称
+            generalized = template.get("generalized", "")
+            if not generalized:
+                continue
+
+            # 角色名称从 section title 或 generalized 首个 slot 推断
+            section_title = para.get("title", "") or para.get("parent_title", "")
+            slots = template.get("slots", [])
+            role_name = section_title
+            if not role_name and slots:
+                role_name = slots[0].get("name", "未知参数") + "描述"
+            if not role_name:
+                role_name = f"参数描述_{para_order}"
+
+            role_id = f"ROLE_{hashstr(f'{target_ch_id}_{role_name}', 10)}"
+            para_order += 1
+
+            required_slots = [s.get("name", "") for s in slots if isinstance(s, dict) and s.get("name")]
+
+            tx.run(
+                """
+                MERGE (pr:ParagraphRole {id: $role_id})
+                ON CREATE SET
+                    pr.id = $role_id,
+                    pr.role = $role_name,
+                    pr.order = $order,
+                    pr.typical_length = $typical_length,
+                    pr.contains_data = true,
+                    pr.required_slots = $required_slots,
+                    pr.kb_id = $kb_id,
+                    pr.created_at = datetime()
+                """,
+                role_id=role_id,
+                role_name=role_name,
+                order=para_order,
+                typical_length=f"{len(para.get('content', ''))}字",
+                required_slots=json.dumps(required_slots, ensure_ascii=False),
+                kb_id=kb_id,
+            )
+            nodes_created += 1
+
+            # ChapterTemplate -[REQUIRES_PARAGRAPH_ROLE {order}]-> ParagraphRole
+            tx.run(
+                """
+                MATCH (ch:ChapterTemplate {id: $chapter_id})
+                MATCH (pr:ParagraphRole {id: $role_id})
+                MERGE (ch)-[r:REQUIRES_PARAGRAPH_ROLE]->(pr)
+                ON CREATE SET r.order = $order
+                """,
+                chapter_id=target_ch_id,
+                role_id=role_id,
+                order=para_order,
+            )
+            relationships_created += 1
+
+            # ParagraphRole -[REALIZED_BY {confidence, frequency}]-> ParagraphTemplate
+            template_data = _normalize_template_data(template)
+            if template_data and template_data.get("generalized"):
+                template_id = _generate_template_id(template_data, para.get("id", ""))
+                quality_score = template.get("quality_score", 0.5)
+                tx.run(
+                    """
+                    MATCH (pr:ParagraphRole {id: $role_id})
+                    MATCH (pt:ParagraphTemplate {id: $template_id})
+                    MERGE (pr)-[r:REALIZED_BY]->(pt)
+                    ON CREATE SET r.confidence = $confidence, r.frequency = 1
+                    ON MATCH SET r.frequency = r.frequency + 1
+                    """,
+                    role_id=role_id,
+                    template_id=template_id,
+                    confidence=quality_score,
+                )
+                relationships_created += 1
+
+        return {"nodes": nodes_created, "relationships": relationships_created}
+
+    # ------------------------------------------------------------------
+    # 步骤9: 逻辑关系节点（CausalChain / ConditionRule / DataFlow）
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _build_logical_relationship_nodes(
+        tx, kb_id: str, source_paragraphs: list[dict[str, Any]], base_info: dict,
+    ) -> dict:
+        """从段落的 logical_relations 元数据创建逻辑关系节点。
+
+        逻辑关系由 ETL pipeline 的 extract_logical_relationships 提取，
+        存储在 task 的 logical_relations 字段中。
+        此方法从段落的 template.logical_refs 读取并写入图谱。
+        """
+        nodes_created = 0
+        relationships_created = 0
+
+        # 从段落中读取逻辑关系（由 ETL 写入 para.template.logical_refs）
+        causal_chains = []
+        conditions = []
+        data_refs = []
+
+        for para in source_paragraphs:
+            template = para.get("template", {})
+            if not isinstance(template, dict):
+                continue
+            lr = template.get("logical_refs", {})
+            if not isinstance(lr, dict):
+                continue
+            for chain in lr.get("causal_chains", []):
+                if isinstance(chain, dict):
+                    chain["source_para_id"] = para.get("id", "")
+                    causal_chains.append(chain)
+            for cond in lr.get("conditions", []):
+                if isinstance(cond, dict):
+                    cond["source_para_id"] = para.get("id", "")
+                    conditions.append(cond)
+            for dref in lr.get("data_refs", []):
+                if isinstance(dref, dict):
+                    dref["source_para_id"] = para.get("id", "")
+                    data_refs.append(dref)
+
+        # 创建因果链节点
+        for chain in causal_chains:
+            cause_id = chain.get("cause_para_id", "")
+            effect_id = chain.get("effect_para_id", "")
+            relation = chain.get("relation", "")
+            if not cause_id or not effect_id:
+                continue
+
+            chain_id = f"CAUSAL_{hashstr(f'{cause_id}_{effect_id}', 10)}"
+            tx.run(
+                """
+                MERGE (cc:CausalChain {id: $chain_id})
+                ON CREATE SET
+                    cc.id = $chain_id,
+                    cc.relation = $relation,
+                    cc.kb_id = $kb_id,
+                    cc.created_at = datetime()
+                """,
+                chain_id=chain_id,
+                relation=relation,
+                kb_id=kb_id,
+            )
+            nodes_created += 1
+
+            # ParagraphTemplate -[CAUSES]-> CausalChain -> ParagraphTemplate
+            # Build para_id -> template_id mapping from source_paragraphs
+            cause_template_id = _find_template_id_for_para(cause_id, source_paragraphs)
+            effect_template_id = _find_template_id_for_para(effect_id, source_paragraphs)
+            if cause_template_id:
+                tx.run(
+                    """
+                    MATCH (cc:CausalChain {id: $chain_id})
+                    MATCH (pt:ParagraphTemplate {id: $template_id})
+                    MERGE (pt)-[:CAUSES]->(cc)
+                    """,
+                    chain_id=chain_id,
+                    template_id=cause_template_id,
+                )
+                relationships_created += 1
+            if effect_template_id:
+                tx.run(
+                    """
+                    MATCH (cc:CausalChain {id: $chain_id})
+                    MATCH (pt:ParagraphTemplate {id: $template_id})
+                    MERGE (cc)-[:CAUSES]->(pt)
+                    """,
+                    chain_id=chain_id,
+                    template_id=effect_template_id,
+                )
+                relationships_created += 1
+
+        # 创建条件分支节点
+        for cond in conditions:
+            expression = cond.get("expression", "")
+            consequence = cond.get("consequence", "")
+            if not expression:
+                continue
+
+            cond_id = f"COND_{hashstr(f'{expression}_{consequence}', 10)}"
+            tx.run(
+                """
+                MERGE (cr:ConditionRule {id: $cond_id})
+                ON CREATE SET
+                    cr.id = $cond_id,
+                    cr.expression = $expression,
+                    cr.consequence = $consequence,
+                    cr.source = 'learned',
+                    cr.frequency = 1,
+                    cr.kb_id = $kb_id,
+                    cr.created_at = datetime()
+                ON MATCH SET
+                    cr.frequency = cr.frequency + 1
+                """,
+                cond_id=cond_id,
+                expression=expression,
+                consequence=consequence,
+                kb_id=kb_id,
+            )
+            nodes_created += 1
+
+            # 关联到 ChapterTemplate
+            source_para_id = cond.get("source_para_id", "")
+            if source_para_id:
+                tx.run(
+                    """
+                    MATCH (cr:ConditionRule {id: $cond_id})
+                    MATCH (s:Section)-[:COMPOSED_OF]->(pt:ParagraphTemplate)
+                    WHERE s.kb_id = $kb_id
+                    WITH cr, s
+                    MATCH (dol:DomainOutline)-[:HAS_CHAPTER]->(ch:ChapterTemplate)
+                    WHERE ch.kb_id = $kb_id
+                    WITH cr, collect(DISTINCT ch) AS chapters
+                    FOREACH (ch IN chapters |
+                        MERGE (ch)-[r:REQUIRED_WHEN]->(cr)
+                        ON CREATE SET r.condition = $expression
+                    )
+                    """,
+                    cond_id=cond_id,
+                    kb_id=kb_id,
+                    expression=expression,
+                )
+                relationships_created += 1
+
+        # 创建数据引用链节点
+        for dref in data_refs:
+            para_id = dref.get("para_id", "")
+            source = dref.get("source", "")
+            data_fields = dref.get("data_fields", [])
+            if not para_id:
+                continue
+
+            flow_id = f"DFLOW_{hashstr(f'{para_id}_{source}', 10)}"
+            tx.run(
+                """
+                MERGE (df:DataFlow {id: $flow_id})
+                ON CREATE SET
+                    df.id = $flow_id,
+                    df.source = $source,
+                    df.data_fields = $data_fields,
+                    df.kb_id = $kb_id,
+                    df.created_at = datetime()
+                """,
+                flow_id=flow_id,
+                source=source,
+                data_fields=json.dumps(data_fields, ensure_ascii=False) if isinstance(data_fields, list) else str(data_fields),
+                kb_id=kb_id,
+            )
+            nodes_created += 1
+
+            # ParagraphTemplate -[DERIVED_FROM]-> TableSchema or ParagraphTemplate
+            if source.startswith("table"):
+                tx.run(
+                    """
+                    MATCH (df:DataFlow {id: $flow_id})
+                    MATCH (ts:TableSchema)
+                    WHERE ts.kb_id = $kb_id
+                    WITH df, ts
+                    LIMIT 1
+                    MERGE (df)-[:SOURCED_FROM]->(ts)
+                    """,
+                    flow_id=flow_id,
+                    kb_id=kb_id,
+                )
+                relationships_created += 1
+
+        return {"nodes": nodes_created, "relationships": relationships_created}
+
+    # ------------------------------------------------------------------
+    # 步骤6: FormulaTemplate 节点（公式结构+变量映射）
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _build_formula_template_nodes(tx, kb_id: str, source_paragraphs: list[dict[str, Any]]) -> dict:
+        """为 formula 类型段落中的公式创建 FormulaTemplate 节点，并建立 USES_VARIABLE 关系到 Slot 节点。"""
+        nodes_created = 0
+        relationships_created = 0
+        created_formulas: dict[str, bool] = {}
+
+        for para in source_paragraphs:
+            if para.get("classify_type") != "formula":
+                continue
+            template = para.get("template", {})
+            if not isinstance(template, dict):
+                continue
+            formula_data = template.get("formula")
+            if not isinstance(formula_data, dict):
+                continue
+
+            original = formula_data.get("original", "")
+            purpose = formula_data.get("purpose", "通用计算")
+            fmt = formula_data.get("format", "text")
+            variables = formula_data.get("variables", [])
+            formula_id = f"FORMULA_{hashstr(original[:200], 12)}"
+
+            if formula_id not in created_formulas:
+                tx.run(
+                    """
+                    MERGE (f:FormulaTemplate {id: $formula_id})
+                    ON CREATE SET
+                        f.id = $formula_id,
+                        f.original = $original,
+                        f.format = $format,
+                        f.purpose = $purpose,
+                        f.kb_id = $kb_id,
+                        f.created_at = datetime()
+                    ON MATCH SET
+                        f.purpose = COALESCE($purpose, f.purpose)
+                    """,
+                    formula_id=formula_id,
+                    original=original[:500],
+                    format=fmt,
+                    purpose=purpose,
+                    kb_id=kb_id,
+                )
+                nodes_created += 1
+                created_formulas[formula_id] = True
+
+                for var in variables:
+                    if not isinstance(var, dict):
+                        continue
+                    sym = var.get("symbol", "")
+                    entity_ref = var.get("entity_ref", "")
+                    var_name = var.get("name", sym)
+                    var_unit = var.get("unit", "")
+                    if entity_ref:
+                        slot_id = f"SLOT_{entity_ref.upper()}"
+                    else:
+                        slot_id = f"SLOT_{var_name.upper().replace(' ', '_')}"
+                    tx.run(
+                        """
+                        MERGE (s:Slot {id: $slot_id})
+                        ON CREATE SET
+                            s.id = $slot_id,
+                            s.name = $var_name,
+                            s.kb_id = $kb_id,
+                            s.created_at = datetime()
+                        """,
+                        slot_id=slot_id,
+                        var_name=var_name,
+                        kb_id=kb_id,
+                    )
+                    nodes_created += 1
+                    tx.run(
+                        """
+                        MATCH (f:FormulaTemplate {id: $formula_id})
+                        MATCH (s:Slot {id: $slot_id})
+                        MERGE (f)-[r:USES_VARIABLE {symbol: $symbol}]->(s)
+                        ON CREATE SET r.unit = $unit
+                        """,
+                        formula_id=formula_id,
+                        slot_id=slot_id,
+                        symbol=sym,
+                        unit=var_unit,
+                    )
+                    relationships_created += 1
+
+                section_path = para.get("section_path", [])
+                if section_path:
+                    section_path_str = "/".join(str(p) for p in section_path)
+                    tx.run(
+                        """
+                        MATCH (f:FormulaTemplate {id: $formula_id})
+                        MATCH (s:Section)
+                        WHERE s.section_path_str = $section_path_str AND s.kb_id = $kb_id
+                        MERGE (s)-[:HAS_FORMULA]->(f)
+                        """,
+                        formula_id=formula_id,
+                        section_path_str=section_path_str,
+                        kb_id=kb_id,
+                    )
+                    relationships_created += 1
+
+        return {"nodes": nodes_created, "relationships": relationships_created}
+
+    # ------------------------------------------------------------------
+    # 步骤7: ProcessFlow 节点（图片多模态提取结果）
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _build_process_flow_nodes(tx, kb_id: str, source_paragraphs: list[dict[str, Any]]) -> dict:
+        """为 figure 类型段落中的多模态提取结果创建 ProcessFlow / ProcessStep 节点"""
+        nodes_created = 0
+        relationships_created = 0
+        created_flows: dict[str, bool] = {}
+
+        for para in source_paragraphs:
+            if para.get("classify_type") != "figure":
+                continue
+            template = para.get("template", {})
+            if not isinstance(template, dict):
+                continue
+            figure_data = template.get("figure")
+            if not isinstance(figure_data, dict):
+                continue
+
+            figure_type = figure_data.get("figure_type", "")
+            steps = figure_data.get("steps", [])
+            caption = figure_data.get("caption", para.get("title", ""))
+            if figure_type != "process_flow" or not steps:
+                continue
+
+            flow_id = f"FLOW_{hashstr(caption[:200], 12)}"
+            if flow_id not in created_flows:
+                tx.run(
+                    """
+                    MERGE (pf:ProcessFlow {id: $flow_id})
+                    ON CREATE SET
+                        pf.id = $flow_id,
+                        pf.name = $caption,
+                        pf.figure_type = $figure_type,
+                        pf.kb_id = $kb_id,
+                        pf.created_at = datetime()
+                    """,
+                    flow_id=flow_id,
+                    caption=caption,
+                    figure_type=figure_type,
+                    kb_id=kb_id,
+                )
+                nodes_created += 1
+                created_flows[flow_id] = True
+
+                for order, step in enumerate(steps, 1):
+                    if isinstance(step, str):
+                        step_name = step
+                        step_type = "unknown"
+                    elif isinstance(step, dict):
+                        step_name = step.get("name", "")
+                        step_type = step.get("type", "unknown")
+                    else:
+                        continue
+                    if not step_name:
+                        continue
+                    step_id = f"STEP_{hashstr(f'{flow_id}_{step_name}', 12)}"
+                    tx.run(
+                        """
+                        MERGE (ps:ProcessStep {id: $step_id})
+                        ON CREATE SET
+                            ps.id = $step_id,
+                            ps.name = $step_name,
+                            ps.type = $step_type,
+                            ps.kb_id = $kb_id,
+                            ps.created_at = datetime()
+                        """,
+                        step_id=step_id,
+                        step_name=step_name,
+                        step_type=step_type,
+                        kb_id=kb_id,
+                    )
+                    nodes_created += 1
+                    tx.run(
+                        """
+                        MATCH (pf:ProcessFlow {id: $flow_id})
+                        MATCH (ps:ProcessStep {id: $step_id})
+                        MERGE (pf)-[r:STEP]->(ps)
+                        ON CREATE SET r.order = $order
+                        """,
+                        flow_id=flow_id,
+                        step_id=step_id,
+                        order=order,
+                    )
+                    relationships_created += 1
+
+                section_path = para.get("section_path", [])
+                if section_path:
+                    section_path_str = "/".join(str(p) for p in section_path)
+                    tx.run(
+                        """
+                        MATCH (pf:ProcessFlow {id: $flow_id})
+                        MATCH (s:Section)
+                        WHERE s.section_path_str = $section_path_str AND s.kb_id = $kb_id
+                        MERGE (s)-[:HAS_PROCESS_FLOW]->(pf)
+                        """,
+                        flow_id=flow_id,
+                        section_path_str=section_path_str,
+                        kb_id=kb_id,
+                    )
+                    relationships_created += 1
+
+        return {"nodes": nodes_created, "relationships": relationships_created}
+
     def close(self):
         """关闭 Neo4j 连接"""
         if self._driver:
@@ -450,6 +1375,16 @@ class GraphBuilder:
 # ======================================================================
 # 模块级辅助函数
 # ======================================================================
+
+
+def _find_template_id_for_para(para_id: str, source_paragraphs: list[dict[str, Any]]) -> str | None:
+    """从 source_paragraphs 中找到段落的 template_id"""
+    for para in source_paragraphs:
+        if para.get("id") == para_id:
+            template_data = _normalize_template_data(para.get("template"))
+            if template_data and template_data.get("generalized"):
+                return _generate_template_id(template_data, para_id)
+    return None
 
 
 def _generate_section_id(section_path: list, doc_id: str) -> str:

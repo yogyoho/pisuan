@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_domain_factory import (
@@ -76,6 +76,19 @@ class DomainFactoryRepository:
             await session.delete(domain)
         return True
 
+    # ========== Report Types ==========
+
+    async def list_report_types(self) -> list[dict[str, Any]]:
+        """查询所有报告类型"""
+        async with pg_manager.get_async_session_context() as session:
+            result = await session.execute(
+                text("SELECT code, name, domain_code, sort_order FROM report_types WHERE is_active = true ORDER BY sort_order")
+            )
+            return [
+                {"code": row.code, "name": row.name, "domain_code": row.domain_code, "sort_order": row.sort_order}
+                for row in result.fetchall()
+            ]
+
     # ========== Task ==========
 
     async def get_task(self, task_id: str) -> DomainFactoryTask | None:
@@ -103,7 +116,7 @@ class DomainFactoryRepository:
                 .options(joinedload(DomainFactoryTask.domain))
                 .where(
                     DomainFactoryTask.status.in_(
-                        ["UPLOADED", "PENDING", "PARSING", "EXTRACTING", "GENERALIZING", "WAITING_REVIEW"]
+                        ["UPLOADED", "PENDING", "PARSING", "EXTRACTING", "GENERALIZING", "WAITING_REVIEW", "FAILED"]
                     )
                 )
                 .order_by(DomainFactoryTask.created_at.desc())
@@ -225,27 +238,32 @@ class DomainFactoryRepository:
         slots: list,
         slot_signature: str,
         sample_original: str | None = None,
-        metadata: dict | None = None,
-    ) -> DomainFactoryLearnedTemplate:
+        extra_meta: dict | None = None,
+        report_type_code: str | None = None,
+    ) -> DomainFactoryLearnedTemplate | None:
         async with pg_manager.get_async_session_context() as session:
+            conditions = [
+                DomainFactoryLearnedTemplate.domain_code == domain_code,
+                DomainFactoryLearnedTemplate.chapter == chapter,
+                DomainFactoryLearnedTemplate.slot_signature == slot_signature,
+            ]
+            if report_type_code:
+                conditions.append(DomainFactoryLearnedTemplate.report_type_code == report_type_code)
             result = await session.execute(
-                select(DomainFactoryLearnedTemplate).where(
-                    DomainFactoryLearnedTemplate.domain_code == domain_code,
-                    DomainFactoryLearnedTemplate.chapter == chapter,
-                    DomainFactoryLearnedTemplate.slot_signature == slot_signature,
-                )
+                select(DomainFactoryLearnedTemplate).where(*conditions)
             )
             existing = result.scalar_one_or_none()
 
             if existing is None:
                 template = DomainFactoryLearnedTemplate(
                     domain_code=domain_code,
+                    report_type_code=report_type_code or "通用",
                     chapter=chapter,
                     generalized=generalized,
                     slots=slots,
                     slot_signature=slot_signature,
                     sample_original=sample_original,
-                    metadata=metadata,
+                    extra_meta=extra_meta,
                 )
                 session.add(template)
             else:
@@ -254,8 +272,8 @@ class DomainFactoryRepository:
                     existing.generalized = generalized
                 if sample_original and len(sample_original) > len(existing.sample_original or ""):
                     existing.sample_original = sample_original
-                if metadata:
-                    existing.metadata = metadata
+                if extra_meta:
+                    existing.extra_meta = extra_meta
         return existing if existing else template
 
     async def list_learned_templates(self, domain_code: str | None = None, limit: int = 200) -> list[dict[str, Any]]:

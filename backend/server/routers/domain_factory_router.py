@@ -339,6 +339,7 @@ async def upload_file(
     file: UploadFile = File(...),
     domain: str = Form(...),
     document_type: str = Form("通用"),
+    report_type_code: str = Form("通用"),
     current_user: User = Depends(get_admin_user),
 ) -> dict[str, Any]:
     """上传文档文件"""
@@ -360,6 +361,7 @@ async def upload_file(
             file_path=storage_path,
             uploaded_by=uploaded_by,
             document_type=document_type,
+            report_type_code=report_type_code,
         )
 
         return {
@@ -367,6 +369,7 @@ async def upload_file(
             "task_id": task_id,
             "file_name": file.filename,
             "domain": domain,
+            "report_type_code": report_type_code,
         }
     except HTTPException:
         raise
@@ -595,3 +598,42 @@ def _map_df_status_to_tasker(df_status: str) -> str:
 def _calculate_progress(df_status: str) -> float:
     """根据状态计算进度（兼容旧代码）"""
     return DOMAIN_FACTORY_STATUS_MAP.get(df_status, {}).get("progress", 0.0)
+
+
+# =============================================================================
+# Graph Query - 图谱查询
+# =============================================================================
+
+
+@domain_factory.get("/graph/templates")
+async def query_graph_templates(
+    domain_code: str = Query("", description="领域编码"),
+    report_type_code: str = Query("", description="报告类型编码"),
+    limit: int = Query(50, description="返回数量限制"),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """按 (domain, report_type) 查询图谱中的模板和骨架数据"""
+    try:
+        service = get_domain_factory_service()
+        result = await service.query_graph_templates(domain_code, report_type_code, limit)
+        return result
+    except Exception as e:
+        logger.error(f"Failed to query graph templates: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"图谱查询失败: {str(e)}")
+
+
+@domain_factory.get("/graph/legal-references")
+async def query_graph_legal_references(
+    domain_code: str = Query("", description="领域编码"),
+    scope: str = Query("", description="适用范围过滤 (national/regional/project)"),
+    limit: int = Query(100, description="返回数量限制"),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """查询图谱中的法律引用，支持按 scope 过滤"""
+    try:
+        service = get_domain_factory_service()
+        result = await service.query_graph_legal_references(scope, limit)
+        return result
+    except Exception as e:
+        logger.error(f"Failed to query legal references: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"法律引用查询失败: {str(e)}")
