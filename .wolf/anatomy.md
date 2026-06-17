@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-05-22T04:59:07.851Z
-> Files: 3 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-06-17T12:31:42.485Z
+> Files: 1 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -179,6 +179,7 @@
 
 ## backend/server/routers/
 
+- `__init__.py` (~792 tok)
 
 ## backend/server/utils/
 
@@ -278,7 +279,6 @@
 
 ## docs/develop-guides/
 
-- `roadmap.md` — 开发路线图 (~2038 tok)
 
 ## docs/superpowers/plans/
 
@@ -291,7 +291,6 @@
 
 ## web/
 
-- `package.json` — Node.js package manifest (~508 tok)
 
 ## web/src/apis/
 
@@ -304,7 +303,6 @@
 
 ## web/src/components/domain-factory/
 
-- `EtlWorkbench.vue` — Vue: setup (~20452 tok)
 
 ## web/src/components/modals/
 

@@ -82,3 +82,10 @@ docs/vibe
 
 .taskr/
 .code-review-graph/
+
+### pisuan custom ignores
+*.rar
+backend/test_pipeline.py
+开发日志.md
+*.sql.bak
+backup_*.sql

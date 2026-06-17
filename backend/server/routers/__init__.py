@@ -46,7 +46,6 @@ if not _LITE_MODE:
     from server.routers.graph_router import graph
     from server.routers.knowledge_router import knowledge
     from server.routers.knowledge_eval_router import evaluation
-    from server.routers.knowledge_mindmap_router import mindmap
     from server.routers.domain_factory_router import domain_factory
     from server.routers.domain_entity_builder_router import domain_entity_builder
 
