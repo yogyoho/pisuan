@@ -157,11 +157,9 @@
                     type="primary"
                     html-type="submit"
                     :loading="loading"
-                    :disabled="isLocked"
                     block
                   >
-                    <span v-if="isLocked">账户已锁定 {{ formatTime(lockRemainingTime) }}</span>
-                    <span v-else>登录</span>
+                    登录
                   </a-button>
                 </a-form-item>
 
@@ -234,7 +232,7 @@ const loginBgImage = computed(() => {
 const brandName = computed(() => {
   const rawName = infoStore.branding?.name ?? ''
   const trimmed = rawName.trim()
-  return trimmed || 'Yuxi-Know'
+  return trimmed || 'Pisuan-Know'
 })
 const brandSubtitle = computed(() => {
   const rawSubtitle = infoStore.branding?.subtitle ?? ''
@@ -261,11 +259,6 @@ const oidcLoading = ref(false)
 const oidcChecking = ref(true)
 const oidcButtonText = ref('OIDC 登录')
 
-// 登录锁定相关状态
-const isLocked = ref(false)
-const lockRemainingTime = ref(0)
-const lockCountdown = ref(null)
-
 // 登录表单
 const loginForm = reactive({
   loginId: '',
@@ -284,49 +277,6 @@ const goHome = () => {
   router.push('/')
 }
 
-// 清理倒计时器
-const clearLockCountdown = () => {
-  if (lockCountdown.value) {
-    clearInterval(lockCountdown.value)
-    lockCountdown.value = null
-  }
-}
-
-// 启动锁定倒计时
-const startLockCountdown = (remainingSeconds) => {
-  clearLockCountdown()
-  isLocked.value = true
-  lockRemainingTime.value = remainingSeconds
-
-  lockCountdown.value = setInterval(() => {
-    lockRemainingTime.value--
-    if (lockRemainingTime.value <= 0) {
-      clearLockCountdown()
-      isLocked.value = false
-      errorMessage.value = ''
-    }
-  }, 1000)
-}
-
-// 格式化时间显示
-const formatTime = (seconds) => {
-  if (seconds < 60) {
-    return `${seconds}秒`
-  } else if (seconds < 3600) {
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = seconds % 60
-    return `${minutes}分${remainingSeconds}秒`
-  } else if (seconds < 86400) {
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    return `${hours}小时${minutes}分钟`
-  } else {
-    const days = Math.floor(seconds / 86400)
-    const hours = Math.floor((seconds % 86400) / 3600)
-    return `${days}天${hours}小时`
-  }
-}
-
 // 密码确认验证
 const validateConfirmPassword = async (rule, value) => {
   if (value === '') {
@@ -339,15 +289,9 @@ const validateConfirmPassword = async (rule, value) => {
 
 // 处理登录
 const handleLogin = async () => {
-  if (isLocked.value) {
-    message.warning(`账户被锁定，请等待 ${formatTime(lockRemainingTime.value)}`)
-    return
-  }
-
   try {
     loading.value = true
     errorMessage.value = ''
-    clearLockCountdown()
 
     await userStore.login({
       loginId: loginForm.loginId,
@@ -372,32 +316,7 @@ const handleLogin = async () => {
     }
   } catch (error) {
     console.error('登录失败:', error)
-
-    if (error.status === 423) {
-      let remainingTime = 0
-      if (error.headers && error.headers.get) {
-        const lockRemainingHeader = error.headers.get('X-Lock-Remaining')
-        if (lockRemainingHeader) {
-          remainingTime = parseInt(lockRemainingHeader)
-        }
-      }
-
-      if (remainingTime === 0) {
-        const lockTimeMatch = error.message.match(/(\d+)\s*秒/)
-        if (lockTimeMatch) {
-          remainingTime = parseInt(lockTimeMatch[1])
-        }
-      }
-
-      if (remainingTime > 0) {
-        startLockCountdown(remainingTime)
-        errorMessage.value = `由于多次登录失败，账户已被锁定 ${formatTime(remainingTime)}`
-      } else {
-        errorMessage.value = error.message || '账户被锁定，请稍后再试'
-      }
-    } else {
-      errorMessage.value = error.message || '登录失败，请检查用户名和密码'
-    }
+    errorMessage.value = error.message || '登录失败，请检查用户名和密码'
   } finally {
     loading.value = false
   }
@@ -522,10 +441,7 @@ onMounted(async () => {
   checkOIDCConfig()
 })
 
-// 组件卸载时清理定时器
-onUnmounted(() => {
-  clearLockCountdown()
-})
+
 </script>
 
 <style lang="less" scoped>

@@ -52,6 +52,14 @@
 <!-- 0.6.2 的内容请放在这里 -->
 - 下放扩展管理权限：普通管理员现在可进入扩展管理并完整管理 Tools、MCP、SubAgent、Skills；同步放开 Skill 管理接口权限并补充权限测试。
 - 调整 Agent 知识库默认选择：未显式配置知识库时默认启用当前用户可访问的全部知识库，显式保存空列表仍表示不启用知识库。
+- 领域知识工厂 Pipeline P2 增强：新增公式提取 （提取公式结构+变量映射+用途推断），GraphBuilder 新增 FormulaTemplate 节点和 USES_VARIABLE 关系；新增图片多模态提取 （支持 vision 模型降级为文本推断），GraphBuilder 新增 ProcessFlow/ProcessStep 节点和 STEP 关系；新增分章节提取 （按 domain×report_type×chapter 预定义局部 Schema，每章节 10-20 变量分批提取）；新增骨架跨文档聚合（DomainOutline/ChapterTemplate/ParagraphRole 节点 + rigidity/frequency 聚合算法 + Document-CONTRIBUTES_TO 关系）；新增逻辑关系提取（因果链 CausalChain、条件分支 ConditionRule、数据引用链 DataFlow）写入图谱；slot type 后端兜底校验（默认 parameter、enum 必须有 vocabulary）。
+- 领域知识工厂 Pipeline 重设计 Phase 1：新增 `report_type_code` 维度到 `domain_factory_tasks`/`domain_factory_learned_templates`/`domain_factory_prompt_configs` 三表；重构 `report_types` 表为 (code, domain_code) 复合唯一键并初始化煤炭/化工/交通三类报告类型数据；上传接口和前端上传弹窗支持报告类型二级联动选择（从 contexts API 动态加载）；`DomainTaskDTO` 新增 `report_type_code` 字段。
+- 领域知识工厂 Pipeline 重设计 Phase 2：新增 CLASSIFY 阶段将段落分为 8 类（heading/table/figure/formula/list/legal_reference/parameter/narrative）；GENERALIZE 阶段仅对 parameter 型段落调用 LLM 泛化，跳过叙述/标题/标准引用等类型；优化泛化 Prompt 增加 slot ≤5 约束、禁止无语义编号命名、叙述占位符双模式；去除根级字段冗余（para.original/generalized/slots），前端统一从 para.template 读取；parent_title 回填用 section_path→title 映射补全。
+- 领域知识工厂 Pipeline 重设计 Phase 3：ETL 工作台新增段落分类标签（8 类彩色标签）和 AI 置信度显示；实现半自动审核模式——置信度计算、一键确认高置信度、仅显示待审核过滤、审核进度条；结构化元数据面板改为模板摘要视图（泛化模板+插槽芯片+元数据），同时保留 JSON 编辑器；Tab 1 和 Tab 2 原文查看器统一支持分类标签。
+- 领域知识工厂 Pipeline 重设计 Phase 4：新增法律引用提取阶段（LEGAL_EXTRACT），从 legal_reference 类型段落中用正则提取结构化法律/法规/标准引用（9 层分类：法律/行政法规/地方性法规/部门规章/地方规章/技术规范/相关规划/项目资料）；自动推断制定机关和适用范围（national/regional）；前端在元数据面板展示法律引用列表。
+- 领域知识工厂 Pipeline 重设计 Phase 5：GraphBuilder 新增 LegalReference 节点和 CITES 关系；ParagraphTemplate 节点增加 classify_type 属性；Document 节点增加 domain_code/report_type_code 属性实现领域隔离；法律引用按 scope 分层写入图谱并自动累计引用频率。
+- 领域知识工厂 Pipeline 补完：废弃旧全局 EXTRACT 阶段（149 变量全 None 的 LLM 调用），改为从段落级 slot 值构建 base_info 实现 slot-variable 统一；废弃全局模板 LLM 生成，前端从段落 template 聚合；新增表格 Schema 提取（列角色判定 key/structural/data/reference/derived + 4 种表格类型 key_value/monitoring/compliance/standard_limit），写入 `para.template.table_schema` 并在 GraphBuilder 中创建 TableSchema 节点；新增模板质量评估函数 `evaluate_template_quality` 自动评分写入 `quality_score`；新增正文标准引用 LLM 提取（场景B），对含标准编号的非 legal_reference 段落用 LLM 提取结构化引用；新增图谱查询 API（`/graph/templates` 按 domain×report_type 查骨架/模板/表格，`/graph/legal-references` 按 scope 过滤法律引用）。
+- 领域知识工厂 Pipeline 重设计 Phase 6：全量移除前端硬编码领域/报告类型数据，所有领域和报告类型均从 PostgreSQL 动态加载；修复 `_build_entity_proposal_prompt` 中 `await` 在非 async 函数中的语法错误；修复文档类型列显示英文编码而非中文名称的问题。
 - 优化评估基准自动生成：仅支持 commonrag/Milvus 知识库，默认参考 chunks 数量改为 1；多 chunk 场景复用知识库向量检索选择相似 chunks，不再对全量 chunks 重新计算 embedding，并移除前端 Embedding 模型选择。
 - 修复知识库文档入库状态回退：当已解析文件缺失 `markdown_file` 解析产物时，索引流程会将文件状态恢复为未解析，便于重新解析而不是停留在索引失败。
 - 优化 Agent 输入框文件 mention：用户级 workspace 文件候选改为从独立 workspace API 递归加载，不再依赖 active thread；插入时仍转换为 `/home/gem/user-data/workspace/` 沙盒虚拟路径，并修复附件上传后未立即刷新 mention 候选的问题。
@@ -70,6 +78,7 @@
 - 实现领域知识工厂知识图谱构建：新增 `GraphBuilder` 服务将结构化数据写入 Neo4j，构建”写作模具库”图谱（Document/Section/ParagraphTemplate/Slot 节点 + HAS_SECTION/HAS_CHILD/NEXT_SECTION/COMPOSED_OF/HAS_SLOT 关系），入库和再入库流水线中自动触发图谱构建，失败不阻断主流程。
 - 领域知识工厂实体元数据系统：新增 `entity_meta_service.py`（EntityMetaLoader/EntityMetaAdapter/EntityMetaMatcher/SlotEntityMapper 四个类），移植 coal_eia_entity_types.json（16 个实体定义），集成到 ETL 流水线——提取阶段用实体增强 Schema 变量，泛化阶段用 SlotEntityMapper 为插槽注入 entity_ref，GraphBuilder Slot 节点写入 entity_ref 属性。
 - 领域知识工厂模板匹配引擎：新增 `template_library.py`（模板库加载/查询）、`template_matcher.py`（正则匹配+语义锚点+置信度计算）、`template_generator.py`（LLM 参考已有模板生成），移植 know 系统 30 个煤炭行业模板 JSON，ETL 解析阶段自动对标题段落进行模板匹配并附加 template_id / semantic_routing。
+- 领域知识工厂 Pipeline 重设计：引入 domain × report_type 二维模板空间，新增段落分类器（CLASSIFY 阶段：标题/标准引用/参数/表格/叙述 五类），泛化只处理参数型段落并限制 slot ≤5，新增编制依据结构化提取和正文标准引用提取，图谱新增 DomainOutline/LegalReference/TableSchema 节点支持骨架聚合和法律引用按 scope 过滤。详细方案见 [pipeline-redesign](../vibe/2026-05-15-pipeline-redesign.md)。
 
 ---
 

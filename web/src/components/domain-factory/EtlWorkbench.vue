@@ -1,17 +1,17 @@
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch, h } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { DeleteOutlined } from '@ant-design/icons-vue'
+import { LeftOutlined, RightOutlined, UpOutlined, DownOutlined } from '@ant-design/icons-vue'
+import { FileText } from 'lucide-vue-next'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { databaseApi } from '@/apis/knowledge_api'
-import { entityTypeApi } from '@/apis/entity_type_api'
 import { useTaskerStore } from '@/stores/tasker'
 
 const props = defineProps({
   task: { type: Object, default: null }
 })
 
-const emit = defineEmits(['task-completed', 'task-updated'])
+const emit = defineEmits(['task-completed', 'task-updated', 'navigate-to-data-sources'])
 
 const taskerStore = useTaskerStore()
 
@@ -19,43 +19,32 @@ const taskerStore = useTaskerStore()
 const loading = ref(false)
 const saving = ref(false)
 const taskDetail = ref(null)
-const formValues = ref({})
-const activeTab = ref('basic')
+const activeTab = ref('parse')
 
 // ========== 段落相关状态 ==========
 const selectedParagraph = ref(null)
-const paragraphJsonDraft = ref('{}')
-const paragraphJsonError = ref('')
+const detailEditMode = ref(false)
+const editTab = ref('form') // 'form' | 'json'
+const jsonEditValue = ref('')
+const chapterFilterKey = ref(null)
 
 // ========== 表格相关状态 ==========
 const structuredBlocks = ref([])
-const structuredJsonDraft = ref('{}')
-const structuredHtmlDraft = ref('')
-const selectedTable = ref(null)
 
-// ========== 模板相关状态 ==========
-const templateDraft = ref({
-  original: '',
-  generalized: '',
-  slots: [],
-  metadata: {
-    chapter: '',
-    tags: []
-  }
-})
-const templateTextarea = ref(null)
-const metadataOptions = ref({
-  chapters: [],
-  tags: []
-})
+// ========== 章节导航 ==========
 const chapterTree = ref([])
 const chapterTreeExpandedKeys = ref([])
-const selectedChapter = ref([])
-const selectedChapterNode = ref(null)
-const chapterParagraphs = ref([])
+const chapterNavCollapsed = ref(false)
+const tableDetailExpanded = ref(true)
+const tableSchemaExpanded = ref(false)
+const tableStructRowsExpanded = ref(false)
+
+// ========== Tab 2 泛化相关 ==========
+const selectedParamPara = ref(null)
 
 // ========== 未识别实体相关 ==========
 const unrecognizedEntities = ref([])
+const rawSlots = ref([])
 const groupedUnrecognizedEntities = ref({})
 const loadingUnrecognizedEntities = ref(false)
 const selectedEntities = ref([])
@@ -63,292 +52,366 @@ const entityCategories = ref([])
 const entityEditModalVisible = ref(false)
 const editingEntity = ref(null)
 const activeEntityCategory = ref('')
+const proposedDomainCode = ref('')
+const matchedCount = ref(0)
+const newCount = ref(0)
 
-// ========== 知识库相关 ==========
+// ========== 半自动审核状态 ==========
+const reviewedParagraphIds = ref(new Set())
+const showOnlyUnreviewed = ref(false)
+
+// ========== 分类筛选 ==========
+const classifyFilter = ref(null)
+
+// ========== 知识库 ==========
 const lightragKnowledgeBases = ref([])
 const selectedKnowledgeBaseId = ref(null)
 const loadingKnowledgeBases = ref(false)
 
-// ========== 添加字段弹窗 ==========
-const addFieldModalVisible = ref(false)
-const newField = ref({
-  key: '',
-  label: '',
-  group: '基础信息',
-  unit: '',
-  type: 'text',
-  widget: 'Input',
-  required: false,
-  sample: ''
-})
+// ========== 步骤完成追踪 ==========
+const stepCompleted = ref({ parse: false, generalize: false, entities: false, commit: false })
+
+// ========== 常量 ==========
+const CLASSIFY_TYPE_MAP = {
+  heading: { label: '标题', color: 'green' },
+  table: { label: '表格', color: 'blue' },
+  formula: { label: '公式', color: 'purple' },
+  figure: { label: '图片', color: 'cyan' },
+  list: { label: '列表', color: 'orange' },
+  legal_reference: { label: '标准引用', color: 'geekblue' },
+  parameter: { label: '参数', color: 'gold' },
+  narrative: { label: '叙述', color: 'default' },
+}
+
+const SLOT_TYPE_MAP = {
+  parameter: { label: '参数型', color: 'blue' },
+  enum: { label: '枚举型', color: 'green' },
+  descriptive: { label: '描述型', color: 'orange' },
+  reference: { label: '引用型', color: 'purple' },
+}
+
+const TABLE_ROLE_MAP = {
+  key: { label: '键', color: 'cyan' },
+  structural: { label: '结构', color: 'blue' },
+  classification: { label: '分类', color: 'geekblue' },
+  data: { label: '数据', color: 'gold' },
+  reference: { label: '引用', color: 'purple' },
+  derived: { label: '派生', color: 'orange' },
+}
+
+const TABLE_TYPE_MAP = {
+  key_value: { label: '键值对', color: 'blue' },
+  monitoring: { label: '监测数据', color: 'green' },
+  compliance: { label: '达标分析', color: 'orange' },
+  standard_limit: { label: '标准限值', color: 'purple' },
+}
+
+const LEGAL_TYPE_MAP = {
+  law: '法律',
+  admin_regulation: '行政法规',
+  local_regulation: '地方性法规',
+  ministry_rule: '部门规章',
+  local_rule: '地方规章',
+  technical_standard: '技术规范',
+  national_plan: '国家规划',
+  local_plan: '地方规划',
+  project_material: '项目资料',
+}
+
+const LEGAL_SCOPE_MAP = {
+  national: { label: '国家', color: 'blue' },
+  regional: { label: '地方', color: 'orange' },
+  project: { label: '项目', color: 'default' },
+}
+
+const SUBTYPE_MAP = {
+  // table
+  key_value: '键值对',
+  monitoring: '监测数据',
+  compliance: '达标分析',
+  standard_limit: '标准限值',
+  // legal_reference
+  law: '法律',
+  admin_regulation: '行政法规',
+  technical_standard: '技术规范',
+  ministry_rule: '部门规章',
+  general: '其他',
+  // parameter
+  measurable: '可量化',
+  reusable: '可复用',
+  descriptive: '描述性',
+  // narrative
+  conclusion: '结论',
+  methodology: '方法',
+  summary: '概况',
+  background: '背景',
+  description: '描述',
+}
+
+const getConfidenceColor = (conf) => {
+  if (conf >= 0.8) return '#52c41a'
+  if (conf >= 0.6) return '#faad14'
+  return '#ff4d4f'
+}
 
 // ========== 计算属性 ==========
-const schemaFields = computed(() => taskDetail.value?.form_schema || [])
-
 const sourceParagraphs = computed(() => taskDetail.value?.source_paragraphs || [])
 
-const fieldGroups = computed(() => {
-  const groups = {}
-  schemaFields.value.forEach(field => {
-    const group = field.group || '其他'
-    if (!groups[group]) groups[group] = []
-    groups[group].push(field)
+const classifyStats = computed(() => {
+  const stats = {}
+  sourceParagraphs.value.forEach(p => {
+    const ct = p.classify_type || 'unknown'
+    stats[ct] = (stats[ct] || 0) + 1
   })
-  return groups
+  return stats
 })
 
-const highlightedTemplate = computed(() => {
-  if (!templateDraft.value || !templateDraft.value.generalized) return ''
-  const generalized = String(templateDraft.value.generalized || '')
-  return generalized.replace(/(\{\{[^}]+\}\})/g, '<mark>$1</mark>')
-})
+const parameterParagraphs = computed(() =>
+  sourceParagraphs.value.filter(p => p.classify_type === 'parameter')
+)
 
-// 解析 Markdown 表格
-// 注意：后端的 _parse_markdown_to_paragraphs 会跳过分隔符行，
-// 所以 source_paragraphs 中的表格行不包含分隔符行，
-// 这里需要正确处理两种情况：包含分隔符行和不包含分隔符行
-const parseMarkdownTable = (md) => {
-  const rawLines = (md || '').split('\n').map(l => l.trim()).filter(l => l)
-  if (rawLines.length < 2) return { columns: [], rows: [] }
-
-  // 过滤掉分隔符行（| --- | --- | 或类似格式）
-  const separatorPattern = /^\|[:\-]+\|[:\-]*\|$/
-  const lines = rawLines.filter(l => !separatorPattern.test(l.trim()))
-  
-  if (lines.length < 1) return { columns: [], rows: [] }
-
-  // 第一行作为表头
-  const headerLine = lines[0]
-  const header = headerLine
-    .replace(/^\|/, '')
-    .replace(/\|$/, '')
-    .split('|')
-    .map(s => s.trim())
-    .filter(s => s)  // 过滤空单元格
-
-  // 其余行作为数据行（不假设第二行是分隔符）
-  const rows = []
-  lines.slice(1).forEach(line => {
-    if (!line.startsWith('|')) return
-    const cols = line
-      .replace(/^\|/, '')
-      .replace(/\|$/, '')
-      .split('|')
-      .map(s => s.trim())
-    if (!cols.length) return
-    const row = {}
-    header.forEach((h, idx) => {
-      const key = h || `col_${idx + 1}`
-      row[key] = cols[idx] ?? ''
-    })
-    rows.push(row)
-  })
-
-  const columns = header.map((h, idx) => {
-    const key = h || `col_${idx + 1}`
-    return { title: h || `列${idx + 1}`, dataIndex: key }
-  })
-
-  return { columns, rows }
-}
-
-// 检测 HTML 表格
-const isHtmlTable = (content) => {
-  return content?.trim().startsWith('<table')
-}
-
-// 检测 Markdown 表格
-const isMarkdownTable = (content) => {
-  if (!content) return false
-  const lines = content.split('\n').filter(l => l.trim())
-  if (lines.length < 2) return false
-  const tableLines = lines.filter(l => {
-    const t = l.trim()
-    return t.startsWith('|') && t.endsWith('|')
-  })
-  return tableLines.length >= 2
-}
-
-// 生成 HTML 表格（格式化缩进）
-const generateTableHtml = (headers, rows) => {
-  if (!headers?.length || !rows?.length) return null
-
-  const escapeHtml = (str) => {
-    if (str === null || str === undefined) return ''
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-  }
-
-  // 生成表头
-  const headerCells = headers.map(h => `    <th>${escapeHtml(h)}</th>`).join('\n')
-  const headerRow = `  <tr>\n${headerCells}\n  </tr>`
-
-  // 生成表格行
-  const bodyRows = rows.map(row => {
-    const cells = headers.map(h => `      <td>${escapeHtml(row[h] ?? '')}</td>`).join('\n')
-    return `    <tr>\n${cells}\n    </tr>`
-  }).join('\n')
-
-  return `<table>
-  <thead>
-${headerRow}
-  </thead>
-  <tbody>
-${bodyRows}
-  </tbody>
-</table>`
-}
-
-// 获取表格列表
-const tableParagraphs = computed(() => {
-  return sourceParagraphs.value.filter(p => {
-    if (p.is_table && p.content) return true
-    if (p.content && typeof p.content === 'string') {
-      const trimmed = p.content.trim()
-      if (trimmed.startsWith('<table')) return true
-      const lines = p.content.split('\n').filter(l => l.trim())
-      const tableLines = lines.filter(l => {
-        const t = l.trim()
-        return t.startsWith('|') && t.endsWith('|')
-      })
-      return tableLines.length >= 2
-    }
-    return false
-  })
-})
-
-// 原始表格
-const originalTables = computed(() => {
-  // 优先从 structured_blocks 获取表格（包含完整的 html_content）
-  if (structuredBlocks.value?.length > 0) {
-    const tableBlocks = structuredBlocks.value.filter(t => t.type === 'table')
-    if (tableBlocks.length > 0) {
-      return tableBlocks.map((t, idx) => {
-        const headers = t.headers || []
-        // 后端返回的 rows 可能是 list[list[str]] 或 list[dict]
-        const rawRows = t.rows || []
-        let rows = rawRows
-        let columns = []
-
-        // 如果 rows 是二维数组（list[list[str]]），需要转换为 list[dict] 格式
-        if (rawRows.length > 0 && Array.isArray(rawRows[0])) {
-          rows = rawRows.map(row => {
-            const rowObj = {}
-            headers.forEach((h, i) => {
-              rowObj[h] = row[i] ?? ''
-            })
-            return rowObj
-          })
-          columns = headers.map(h => ({ title: h, dataIndex: h }))
-        } else if (rawRows.length > 0 && typeof rawRows[0] === 'object') {
-          // 如果已经是 list[dict] 格式
-          const firstRow = rawRows[0] || {}
-          columns = Object.keys(firstRow).map(k => ({ title: k, dataIndex: k }))
-        }
-
-        // 尝试生成 HTML 内容
-        let htmlContent = t.html_content || null
-        if (!htmlContent && rows.length) {
-          // 如果有 headers，使用 headers 生成 HTML
-          if (headers.length) {
-            htmlContent = generateTableHtml(headers, rows)
-          } else if (typeof rows[0] === 'object') {
-            // 如果没有 headers 但 rows 是 dict 格式，尝试从第一行提取 key 作为 headers
-            const firstRow = rows[0]
-            const headerKeys = Object.keys(firstRow)
-            if (headerKeys.length) {
-              const generatedHeaders = headerKeys.map((k, i) => headers[i] || k)
-              htmlContent = generateTableHtml(generatedHeaders, rows)
-            }
-          }
-        }
-
-        return {
-          key: t.key || t.id || `blk_${idx + 1}`,
-          type: t.caption || t.type || `表格 ${idx + 1}`,
-          rows,
-          columns,
-          htmlContent
-        }
-      })
-    }
-  }
-  
-  // 回退：从 source_paragraphs 构建表格
-  const tables = []
-  tableParagraphs.value.forEach((p, idx) => {
-    const isHtml = isHtmlTable(p.content)
-    if (isHtml) {
-      tables.push({
-        key: p.id || `tbl_${idx + 1}`,
-        type: p.title || `表格 ${idx + 1}`,
-        htmlContent: p.content,
-        rows: [],
-        columns: []
-      })
-    } else {
-      const parsed = parseMarkdownTable(p.content)
-      if (parsed.rows.length) {
-        tables.push({
-          key: p.id || `tbl_${idx + 1}`,
-          type: p.title || `表格 ${idx + 1}`,
-          rows: parsed.rows,
-          columns: parsed.columns,
-          htmlContent: null
-        })
+const slotSummary = computed(() => {
+  const map = {}
+  sourceParagraphs.value.forEach(p => {
+    const slots = p.template?.slots || []
+    slots.forEach(s => {
+      if (s.name && s.value != null) {
+        map[s.name] = { value: s.value, type: s.type || 'parameter', unit: s.unit || '', entity_ref: s.entity_ref || '' }
       }
-    }
+    })
   })
-  return tables
+  return map
 })
 
-// ========== 方法 ==========
+const filteredParagraphs = computed(() => {
+  let result = sourceParagraphs.value
+  if (classifyFilter.value) {
+    result = result.filter(p => p.classify_type === classifyFilter.value)
+  }
+  if (chapterFilterKey.value && chapterFilterKey.value !== 'all') {
+    const node = findNodeInTree(chapterTree.value, chapterFilterKey.value)
+    if (node) {
+      const paraIds = new Set(collectChapterParagraphs(node).map(p => p.id))
+      result = result.filter(p => paraIds.has(p.id))
+    }
+  }
+  if (showOnlyUnreviewed.value) {
+    result = result.filter(p => needsReview(p) && !reviewedParagraphIds.value.has(p.id))
+  }
+  return result
+})
 
-// 获取任务详情
+const filteredParamParagraphs = computed(() => {
+  let result = parameterParagraphs.value
+  if (showOnlyUnreviewed.value) {
+    result = result.filter(p => needsReview(p) && !reviewedParagraphIds.value.has(p.id))
+  }
+  return result
+})
+
+const selectedTableBlock = computed(() => {
+  if (!selectedParagraph.value) return null
+  const para = selectedParagraph.value
+  const blocks = structuredBlocks.value || []
+  if (!blocks.length) return null
+  const paraPath = para.section_path || []
+  const paraPathStr = Array.isArray(paraPath) ? paraPath.join('.') : String(paraPath || '')
+  // 按 section_path 匹配
+  if (paraPathStr) {
+    const match = blocks.find(b => b.type === 'table' && (b.section_path === paraPathStr || b.section_path?.join('.') === paraPathStr))
+    if (match) return match
+  }
+  // 按 content 中 <td> 文本匹配
+  const content = para.content || ''
+  const tdTexts = content.match(/<td[^>]*>([^<]+)<\/td>/g)?.slice(0, 3).map(m => m.replace(/<[^>]+>/g, '')) || []
+  if (tdTexts.length) {
+    const match = blocks.find(b => {
+      if (b.type !== 'table') return false
+      const rows = b.rows || []
+      if (!rows.length) return false
+      const firstRow = Array.isArray(rows[0]) ? rows[0] : Object.values(rows[0] || {})
+      return tdTexts.every(t => firstRow.some(c => String(c).includes(t)))
+    })
+    if (match) return match
+  }
+  // fallback: 唯一表格直接返回
+  const tableBlocks = blocks.filter(b => b.type === 'table')
+  if (tableBlocks.length === 1) return tableBlocks[0]
+  return null
+})
+
+const tableBlockColumns = computed(() => {
+  const block = selectedTableBlock.value
+  if (!block?.headers?.length) return []
+  return block.headers.map((h, i) => ({ title: h, dataIndex: `col_${i}`, ellipsis: true }))
+})
+
+const tableBlockRows = computed(() => {
+  const block = selectedTableBlock.value
+  if (!block?.rows?.length || !block?.headers?.length) return []
+  const headers = block.headers
+  return block.rows.map((row, ri) => {
+    const obj = { _key: ri }
+    if (Array.isArray(row)) {
+      headers.forEach((h, i) => { obj[`col_${i}`] = row[i] ?? '' })
+    } else {
+      headers.forEach((h, i) => { obj[`col_${i}`] = row[h] ?? '' })
+    }
+    return obj
+  })
+})
+
+const reviewProgress = computed(() => {
+  const reviewable = sourceParagraphs.value.filter(p => needsReview(p))
+  const reviewed = reviewable.filter(p => reviewedParagraphIds.value.has(p.id))
+  return {
+    total: reviewable.length,
+    reviewed: reviewed.length,
+    percent: reviewable.length ? Math.round(reviewed.length / reviewable.length * 100) : 100
+  }
+})
+
+const highConfidenceCount = computed(() => {
+  return sourceParagraphs.value.filter(p => {
+    const ct = p.classify_type
+    if (!ct || ct === 'heading' || ct === 'narrative') return false
+    const conf = computeParaConfidence(p)
+    return conf >= 0.8 && !reviewedParagraphIds.value.has(p.id)
+  }).length
+})
+
+const domainLabel = computed(() => taskDetail.value?.domain_label || '')
+const reportTypeLabel = computed(() => {
+  const code = taskDetail.value?.report_type_code
+  if (!code || code === '通用') return ''
+  return code
+})
+
+// ========== 置信度 & 审核 ==========
+const computeParaConfidence = (para) => {
+  const ct = para.classify_type
+  if (!ct || ct === 'heading' || ct === 'narrative') return 1.0
+  if (ct === 'table' || ct === 'figure' || ct === 'formula' || ct === 'list') return 0.9
+  const template = para.template || {}
+  const slots = template.slots || []
+  if (ct === 'legal_reference') {
+    return (template.legal_references?.length) ? 0.8 : 0.3
+  }
+  if (!slots.length) return 0.2
+  let score = 1.0
+  if (slots.length > 5) score -= 0.1 * (slots.length - 5)
+  const emptyRatio = slots.filter(s => !s.value && s.value !== 0).length / slots.length
+  score -= 0.3 * emptyRatio
+  const genericNames = new Set(['方位', '特征', '区域', '描述', '数值', '名称'])
+  for (const s of slots) {
+    const base = (s.name || '').replace(/\d+$/, '')
+    if (genericNames.has(base)) score -= 0.1
+  }
+  return Math.max(0, Math.min(1, score))
+}
+
+const isHtmlTable = (str) => typeof str === 'string' && /<table[\s>]/i.test(str)
+
+const needsReview = (para) => {
+  const ct = para.classify_type
+  if (!ct || ct === 'heading' || ct === 'narrative') return false
+  const conf = computeParaConfidence(para)
+  return conf < 0.8
+}
+
+const confirmHighConfidenceAndSave = async () => {
+  let count = 0
+  sourceParagraphs.value.forEach(p => {
+    const conf = computeParaConfidence(p)
+    if (conf >= 0.8 && !reviewedParagraphIds.value.has(p.id) && p.classify_type) {
+      reviewedParagraphIds.value.add(p.id)
+      count++
+    }
+  })
+  if (count === 0) {
+    message.info('没有需要确认的高置信度段落')
+    return
+  }
+  const ok = await doSaveParagraphs()
+  if (ok) message.success(`已确认 ${count} 个高置信度段落并保存`)
+}
+
+// ========== 章节树 ==========
+const buildChapterTree = (paragraphs) => {
+  const treeMap = new Map()
+  const rootNodes = []
+  const titleMap = new Map()
+  paragraphs.forEach(para => {
+    if (!para.is_title || !para.title) return
+    const rawPath = para.section_path || para.path || []
+    const sectionPath = Array.isArray(rawPath) ? rawPath.map(p => String(p)) : [String(rawPath || '')]
+    if (!sectionPath.length || !sectionPath[0]) return
+    const key = sectionPath.join('.')
+    if (!titleMap.has(key)) titleMap.set(key, para.title)
+  })
+  paragraphs.forEach(para => {
+    const rawPath = para.section_path || para.path || []
+    const sectionPath = Array.isArray(rawPath) ? rawPath.map(p => String(p)) : [String(rawPath || '')]
+    if (!sectionPath.length || !sectionPath[0]) {
+      const key = 'uncategorized'
+      if (!treeMap.has(key)) { const node = { key, title: '未分类段落', children: [], paragraphs: [] }; treeMap.set(key, node); rootNodes.push(node) }
+      treeMap.get(key).paragraphs.push(para)
+      return
+    }
+    let currentPath = []
+    sectionPath.forEach((segment) => {
+      currentPath.push(segment)
+      const key = currentPath.join('.')
+      if (!treeMap.has(key)) {
+        const pathTitle = titleMap.get(key) || segment
+        const node = { key, title: pathTitle, children: [], paragraphs: [] }
+        treeMap.set(key, node)
+        if (currentPath.length === 1) rootNodes.push(node)
+        else { const parentKey = currentPath.slice(0, -1).join('.'); const parent = treeMap.get(parentKey); if (parent) parent.children.push(node) }
+      }
+      if (currentPath.length === sectionPath.length) treeMap.get(key).paragraphs.push(para)
+    })
+  })
+  return rootNodes
+}
+
+const collectTreeKeys = (nodes) => {
+  const keys = []
+  const stack = [...nodes]
+  while (stack.length > 0) {
+    const node = stack.pop()
+    if (node?.key) keys.push(node.key)
+    if (Array.isArray(node?.children)) for (let i = node.children.length - 1; i >= 0; i--) stack.push(node.children[i])
+  }
+  return keys
+}
+
+const findNodeInTree = (nodes, targetKey) => {
+  for (const node of nodes || []) {
+    if (node.key === targetKey) return node
+    if (node.children?.length) { const found = findNodeInTree(node.children, targetKey); if (found) return found }
+  }
+  return null
+}
+
+const collectChapterParagraphs = (node) => {
+  const result = [...(node.paragraphs || [])]
+  for (const child of node.children || []) result.push(...collectChapterParagraphs(child))
+  return result
+}
+
+// ========== 加载任务详情 ==========
 const fetchTaskDetail = async (taskId) => {
   loading.value = true
   try {
     const detail = await domainFactoryApi.getTaskDetail(taskId)
     taskDetail.value = detail
-    
-    // 初始化表单值
-    const schema = detail?.form_schema || []
-    const values = {}
-    schema.forEach(field => {
-      if (field.suggestion !== undefined && field.suggestion !== null) {
-        values[field.key] = field.suggestion
-      }
-    })
-    formValues.value = values
-    
-    // 初始化结构化数据
     structuredBlocks.value = detail?.structured_blocks || []
-    
-    // 初始化模板数据
-    const templateOriginal = detail?.template?.original
-    const templateGeneralized = detail?.template?.generalized
-    const templateSlots = detail?.template?.slots || []
-    templateDraft.value = {
-      original: templateOriginal ? String(templateOriginal) : '',
-      generalized: templateGeneralized ? String(templateGeneralized) : '',
-      slots: Array.isArray(templateSlots) ? templateSlots : [],
-      metadata: detail?.template?.metadata || { chapter: '', tags: [] }
-    }
-    metadataOptions.value = detail?.metadata_options || { chapters: [], tags: [] }
-    
-    // 构建章节树
     if (detail?.source_paragraphs?.length > 0) {
       chapterTree.value = buildChapterTree(detail.source_paragraphs)
       chapterTreeExpandedKeys.value = collectTreeKeys(chapterTree.value)
     }
-    
-    // 异步加载未识别实体
-    setTimeout(() => {
-      loadUnrecognizedEntities(taskId).catch(() => {})
-    }, 100)
+    setTimeout(() => { loadUnrecognizedEntities(taskId).catch(() => {}) }, 100)
   } catch (e) {
     console.error('Failed to fetch task detail:', e)
     message.error('加载任务详情失败')
@@ -357,419 +420,100 @@ const fetchTaskDetail = async (taskId) => {
   }
 }
 
-// 构建章节树
-const buildChapterTree = (paragraphs) => {
-  const treeMap = new Map()
-  const rootNodes = []
-
-  paragraphs.forEach(para => {
-    const rawPath = para.section_path || para.path || []
-    const sectionPath = Array.isArray(rawPath) ? rawPath.map(p => String(p)) : [String(rawPath || '')]
-
-    if (!sectionPath.length || !sectionPath[0]) {
-      const key = 'uncategorized'
-      if (!treeMap.has(key)) {
-        const node = { key, title: '未分类段落', children: [], paragraphs: [] }
-        treeMap.set(key, node)
-        rootNodes.push(node)
-      }
-      treeMap.get(key).paragraphs.push(para)
-      return
-    }
-
-    let currentPath = []
-    sectionPath.forEach((segment) => {
-      currentPath.push(segment)
-      const key = currentPath.join('.')
-
-      if (!treeMap.has(key)) {
-        const node = { key, title: segment, children: [], paragraphs: [] }
-        treeMap.set(key, node)
-        if (currentPath.length === 1) {
-          rootNodes.push(node)
-        } else {
-          const parentKey = currentPath.slice(0, -1).join('.')
-          const parent = treeMap.get(parentKey)
-          if (parent) parent.children.push(node)
-        }
-      }
-      if (currentPath.length === sectionPath.length) {
-        treeMap.get(key).paragraphs.push(para)
-        if (para.is_title && para.title) {
-          treeMap.get(key).title = para.title
-        }
-      }
-    })
-  })
-
-  return rootNodes
-}
-
-// 收集树节点所有 key
-const collectTreeKeys = (nodes) => {
-  const keys = []
-  const stack = [...nodes]
-  while (stack.length > 0) {
-    const node = stack.pop()
-    if (node?.key) keys.push(node.key)
-    if (Array.isArray(node?.children) && node.children.length > 0) {
-      for (let i = node.children.length - 1; i >= 0; i--) {
-        stack.push(node.children[i])
-      }
-    }
-  }
-  return keys
-}
-
-// 查找树节点
-const findNodeInTree = (nodes, targetKey) => {
-  for (const node of nodes || []) {
-    if (node.key === targetKey) return node
-    if (node.children?.length) {
-      const found = findNodeInTree(node.children, targetKey)
-      if (found) return found
-    }
-  }
-  return null
-}
-
-// 收集章节下所有段落
-const collectChapterParagraphs = (node) => {
-  if (!node) return []
-  const paras = [...(node.paragraphs || [])]
-  if (node.children?.length) {
-    node.children.forEach(child => {
-      paras.push(...collectChapterParagraphs(child))
-    })
-  }
-  return paras
-}
-
-// 从模板提取插槽
-const extractSlotsFromTemplate = (templateText) => {
-  if (!templateText) return []
-  const slotPattern = /\{\{([^}]+)\}\}/g
-  const slots = new Set()
-  let match
-  while ((match = slotPattern.exec(templateText)) !== null) {
-    const name = (match[1] || '').trim()
-    if (name) slots.add(name)
-  }
-  return Array.from(slots).map(name => ({ name, source: '', status: 'pending' }))
-}
-
-// 处理章节点击
-const handleChapterClick = (selectedKeys) => {
-  if (!selectedKeys?.length) {
-    selectedChapter.value = []
-    selectedChapterNode.value = null
-    chapterParagraphs.value = []
-    templateDraft.value = { original: '', generalized: '', slots: [], metadata: { chapter: '', tags: [] } }
-    return
-  }
-
-  const key = selectedKeys[0]
-  const node = findNodeInTree(chapterTree.value, key)
-  if (!node) return
-
-  selectedChapter.value = [key]
-  selectedChapterNode.value = node
-  chapterParagraphs.value = collectChapterParagraphs(node)
-
-  // 拼接原文
-  const chapterOriginalText = chapterParagraphs.value
-    .map(p => p.is_title && p.title ? String(p.title) : String(p.content || ''))
-    .filter(c => c?.trim())
-    .join('\n\n')
-
-  // 收集段落模板
-  const chapterGeneralizedParts = []
-  const allSlotsMap = new Map()
-  let hasParagraphTemplate = false
-
-  for (const para of chapterParagraphs.value) {
-    const candidate = para.template || para.generalized || null
-    const paraGeneralized = candidate?.generalized || candidate || ''
-    if (paraGeneralized?.trim()) {
-      hasParagraphTemplate = true
-      chapterGeneralizedParts.push(String(paraGeneralized).trim())
-      const paraSlots = candidate?.slots || extractSlotsFromTemplate(String(paraGeneralized))
-      paraSlots.forEach(slot => {
-        const slotName = typeof slot === 'string' ? slot : slot.name || slot
-        if (slotName && !allSlotsMap.has(slotName)) {
-          allSlotsMap.set(slotName, typeof slot === 'string' ? { name: slot, source: '', status: 'pending' } : slot)
-        }
-      })
-    }
-  }
-
-  if (hasParagraphTemplate && chapterGeneralizedParts.length > 0) {
-    templateDraft.value = {
-      original: chapterOriginalText,
-      generalized: chapterGeneralizedParts.join('\n\n'),
-      slots: Array.from(allSlotsMap.values()),
-      metadata: { chapter: node.title, tags: [] }
-    }
-    return
-  }
-
-  // 回退到全局模板
-  if (taskDetail.value?.template) {
-    const globalTemplate = taskDetail.value.template
-    const generalized = String(globalTemplate.generalized || '')
-    let slots = globalTemplate.slots || []
-    if (!slots?.length) slots = extractSlotsFromTemplate(generalized)
-    templateDraft.value = {
-      original: chapterOriginalText || generalized,
-      generalized,
-      slots: Array.isArray(slots) ? slots : [],
-      metadata: globalTemplate.metadata || { chapter: node.title, tags: [] }
-    }
-    return
-  }
-
-  templateDraft.value = {
-    original: chapterOriginalText,
-    generalized: '',
-    slots: [],
-    metadata: { chapter: node.title, tags: [] }
-  }
-}
-
-// 段落点击
+// ========== 段落点击 ==========
 const handleParagraphClick = (para) => {
   selectedParagraph.value = para
-  paragraphJsonDraft.value = JSON.stringify(para, null, 2)
-  paragraphJsonError.value = ''
+  detailEditMode.value = false
+  tableDetailExpanded.value = true
+  tableSchemaExpanded.value = false
+  tableStructRowsExpanded.value = false
 }
 
-// 验证 JSON
-const validateJson = () => {
-  if (!paragraphJsonDraft.value.trim()) {
-    paragraphJsonError.value = ''
-    return false
-  }
-  try {
-    JSON.parse(paragraphJsonDraft.value)
-    paragraphJsonError.value = ''
-    return true
-  } catch (error) {
-    paragraphJsonError.value = `JSON 格式错误: ${error.message}`
-    return false
-  }
-}
-
-// 应用 JSON 修改
-const handleApplyJson = () => {
-  if (!selectedParagraph.value) return
-  if (!validateJson()) {
-    message.error('JSON 格式错误，请修正后再应用')
-    return
-  }
-  try {
-    const updatedPara = JSON.parse(paragraphJsonDraft.value)
-    if (!updatedPara.id) updatedPara.id = selectedParagraph.value.id
-    Object.assign(selectedParagraph.value, updatedPara)
-    
-    if (taskDetail.value?.source_paragraphs) {
-      const index = taskDetail.value.source_paragraphs.findIndex(p => p.id === selectedParagraph.value.id)
-      if (index !== -1) {
-        Object.assign(taskDetail.value.source_paragraphs[index], updatedPara)
+const handleToggleEditMode = async () => {
+  if (detailEditMode.value) {
+    if (editTab.value === 'json') {
+      try {
+        const parsed = JSON.parse(jsonEditValue.value)
+        Object.assign(selectedParagraph.value, parsed)
+      } catch {
+        message.error('JSON 格式错误，请检查')
+        return
       }
     }
-    message.success('JSON 修改已应用到分片')
-  } catch (error) {
-    message.error('应用 JSON 失败: ' + error.message)
-  }
-}
-
-// 重置 JSON
-const handleResetJson = () => {
-  if (selectedParagraph.value) {
-    paragraphJsonDraft.value = JSON.stringify(selectedParagraph.value, null, 2)
-    paragraphJsonError.value = ''
-  }
-}
-
-// 表格点击
-const handleTableClick = (table) => {
-  selectedTable.value = table
-  // 始终设置 structuredHtmlDraft 为字符串，htmlContent 为 null/undefined 时设为空字符串
-  if (table.htmlContent !== undefined && table.htmlContent !== null) {
-    structuredHtmlDraft.value = table.htmlContent
-    structuredJsonDraft.value = ''
-  } else if (table.rows?.length) {
-    structuredJsonDraft.value = JSON.stringify([{ key: table.key, type: table.type, rows: table.rows || [] }], null, 2)
-    structuredHtmlDraft.value = ''
+    await doSaveParagraphs()
+    detailEditMode.value = false
   } else {
-    structuredJsonDraft.value = ''
-    structuredHtmlDraft.value = ''
+    editTab.value = 'form'
+    jsonEditValue.value = JSON.stringify(selectedParagraph.value, null, 2)
+    detailEditMode.value = true
   }
 }
 
-// 格式化 HTML
-const formatHtml = () => {
-  if (!structuredHtmlDraft.value.trim()) {
-    message.warning('没有可格式化的 HTML 内容')
-    return
-  }
-  try {
-    const html = structuredHtmlDraft.value.trim()
-    const formatted = formatHtmlString(html, 2)
-    structuredHtmlDraft.value = formatted
-    message.success('HTML 格式化成功')
-  } catch (e) {
-    message.error('HTML 格式化失败：' + e.message)
-  }
+const handleParamParaClick = (para) => {
+  selectedParamPara.value = para
 }
 
-// HTML 格式化函数
-const formatHtmlString = (html, indentSize = 2) => {
-  let formatted = ''
-  let indent = 0
-  const indentStr = ' '.repeat(indentSize)
-  
-  // 移除多余的空白
-  html = html.replace(/>\s+</g, '><').trim()
-  
-  // 分割标签
-  const tokens = html.split(/(<[^>]+>)/)
-  
-  for (const token of tokens) {
-    if (!token.trim()) continue
-    
-    if (token.match(/^<\/\w/)) {
-      // 闭合标签，减少缩进
-      indent = Math.max(0, indent - 1)
-      formatted += indentStr.repeat(indent) + token + '\n'
-    } else if (token.match(/^<\w[^>]*[^\/]>$/)) {
-      // 开始标签
-      formatted += indentStr.repeat(indent) + token + '\n'
-      indent++
-    } else if (token.match(/^<\w[^>]*\/>$/)) {
-      // 自闭合标签
-      formatted += indentStr.repeat(indent) + token + '\n'
-    } else if (token.trim()) {
-      // 文本内容
-      formatted += indentStr.repeat(indent) + token.trim() + '\n'
-    }
-  }
-  
-  return formatted.trim()
+// ========== Tab 切换 ==========
+const STEP_KEYS = ['parse', 'generalize', 'entities', 'commit']
+const currentStep = computed(() => STEP_KEYS.indexOf(activeTab.value))
+
+const goToStep = (index) => {
+  const key = STEP_KEYS[index]
+  if (!key) return
+  activeTab.value = key
+  if (key === 'parse') selectedParagraph.value = null
+  if (key === 'generalize') selectedParamPara.value = null
 }
 
-// 应用 HTML
-const handleApplyHtml = () => {
-  if (!selectedTable.value) {
-    message.warning('请先选择要编辑的表格')
-    return
-  }
-  if (!structuredHtmlDraft.value.trim()) {
-    message.warning('HTML 内容不能为空')
-    return
-  }
-  if (!structuredHtmlDraft.value.trim().startsWith('<table')) {
-    message.error('HTML 格式错误，必须以 <table 开头')
-    return
-  }
-  selectedTable.value.htmlContent = structuredHtmlDraft.value
-  if (taskDetail.value?.source_paragraphs) {
-    const index = taskDetail.value.source_paragraphs.findIndex(p => p.id === selectedTable.value.key)
-    if (index !== -1) {
-      taskDetail.value.source_paragraphs[index].content = structuredHtmlDraft.value
-    }
-  }
-  message.success('HTML 已应用到表格')
-}
 
-// 保存结构化数据
-const handleSaveStructured = async () => {
-  if (!taskDetail.value?.id) return
+// ========== 保存段落修改 ==========
+const doSaveParagraphs = async () => {
+  if (!taskDetail.value?.id) return false
   saving.value = true
   try {
     await domainFactoryApi.saveTaskStep(taskDetail.value.id, {
       step: 'structured',
       payload: {
+        source_paragraphs: taskDetail.value.source_paragraphs,
         structured_blocks: structuredBlocks.value,
-        source_paragraphs: taskDetail.value.source_paragraphs
       }
     })
-    message.success('表格数据已保存')
+    stepCompleted.value.parse = true
     emit('task-updated')
-  } catch (e) {
+    return true
+  } catch {
     message.error('保存失败')
+    return false
   } finally {
     saving.value = false
   }
 }
 
-// 插入插槽
-const insertSlot = () => {
-  const textarea = templateTextarea.value
-  if (!textarea) return
-  const selectionStart = textarea.selectionStart
-  const selectionEnd = textarea.selectionEnd
-  const selectedText = templateDraft.value.generalized.slice(selectionStart, selectionEnd)
-  Modal.confirm({
-    title: '创建插槽',
-    content: `选择文本：${selectedText || '(未选择)'}`,
-    okText: '创建',
-    cancelText: '取消',
-    onOk: () => {
-      const slotName = window.prompt('输入插槽名称（如 Location_Desc）')
-      if (!slotName) return
-      const before = templateDraft.value.generalized.slice(0, selectionStart)
-      const after = templateDraft.value.generalized.slice(selectionEnd)
-      templateDraft.value.generalized = `${before}{{${slotName}}}${after}`
-      templateDraft.value.slots.push({ name: slotName, source: '', status: 'pending' })
-    }
-  })
-}
-
-// 保存模板
-const handleSaveTemplate = async () => {
-  if (!taskDetail.value?.id) return
-  saving.value = true
-  try {
-    await domainFactoryApi.saveTaskStep(taskDetail.value.id, {
-      step: 'template',
-      payload: templateDraft.value
-    })
-    message.success('模板草稿已保存')
-    emit('task-updated')
-  } catch (e) {
-    message.error('保存失败')
-  } finally {
-    saving.value = false
+// ========== Tab 2: 保存段落泛化 ==========
+const handleSaveParaTemplate = async () => {
+  if (!taskDetail.value?.id || !selectedParamPara.value) return
+  const ok = await doSaveParagraphs()
+  if (ok) {
+    stepCompleted.value.generalize = true
+    reviewedParagraphIds.value.add(selectedParamPara.value.id)
+    message.success('模板修改已保存')
   }
 }
 
-// 保存基础信息
-const handleSave = async () => {
-  if (!taskDetail.value?.id) return
-  saving.value = true
-  try {
-    await domainFactoryApi.saveTaskStep(taskDetail.value.id, {
-      step: 'basic',
-      payload: formValues.value
-    })
-    message.success('基础信息已保存')
-    emit('task-updated')
-  } catch (e) {
-    message.error('保存失败')
-  } finally {
-    saving.value = false
-  }
+// ========== 修改 slot 字段 ==========
+const updateSlotField = (paraId, slotName, field, value) => {
+  const para = sourceParagraphs.value.find(p => p.id === paraId)
+  if (!para?.template?.slots) return
+  const slot = para.template.slots.find(s => s.name === slotName)
+  if (slot) slot[field] = value
 }
 
-// 加载知识库列表
+// ========== 知识库 ==========
 const loadLightragKnowledgeBases = async () => {
   loadingKnowledgeBases.value = true
   try {
     const response = await databaseApi.getDatabases()
-    lightragKnowledgeBases.value = (response.databases || []).filter(
-      db => db.kb_type === 'lightrag' || db.type === 'lightrag'
-    )
+    lightragKnowledgeBases.value = (response.databases || []).filter(db => db.kb_type === 'lightrag' || db.type === 'lightrag')
     if (lightragKnowledgeBases.value.length === 1) {
       selectedKnowledgeBaseId.value = lightragKnowledgeBases.value[0].db_id || lightragKnowledgeBases.value[0].id
     }
@@ -780,7 +524,7 @@ const loadLightragKnowledgeBases = async () => {
   }
 }
 
-// 提交入库
+// ========== 入库 ==========
 const handleCommit = async () => {
   if (!taskDetail.value?.id) return
   if (!selectedKnowledgeBaseId.value) {
@@ -790,9 +534,7 @@ const handleCommit = async () => {
   Modal.confirm({
     title: '确认入库？',
     content: () => {
-      const selectedKB = lightragKnowledgeBases.value.find(
-        kb => (kb.db_id || kb.id) === selectedKnowledgeBaseId.value
-      )
+      const selectedKB = lightragKnowledgeBases.value.find(kb => (kb.db_id || kb.id) === selectedKnowledgeBaseId.value)
       return [
         h('p', { style: 'margin-bottom: 12px' }, '提交后模板将同步至知识图谱，确保已完成校验。'),
         h('p', {}, ['目标知识库：', h('strong', selectedKB?.name || selectedKnowledgeBaseId.value)])
@@ -803,25 +545,25 @@ const handleCommit = async () => {
     onOk: async () => {
       saving.value = true
       try {
-        // 保存所有步骤
-        await domainFactoryApi.saveTaskStep(taskDetail.value.id, { step: 'basic', payload: formValues.value })
         await domainFactoryApi.saveTaskStep(taskDetail.value.id, {
           step: 'structured',
-          payload: { structured_blocks: structuredBlocks.value, source_paragraphs: taskDetail.value.source_paragraphs }
+          payload: {
+            source_paragraphs: taskDetail.value.source_paragraphs,
+            structured_blocks: structuredBlocks.value,
+          }
         })
-        await domainFactoryApi.saveTaskStep(taskDetail.value.id, { step: 'template', payload: templateDraft.value })
-        
+
+        const baseInfo = {}
+        Object.entries(slotSummary.value).forEach(([k, v]) => { baseInfo[k] = v.value })
+
         const result = await domainFactoryApi.commitTask(taskDetail.value.id, {
-          form: formValues.value,
+          form: baseInfo,
           structured: structuredBlocks.value,
-          template: templateDraft.value,
+          source_paragraphs: taskDetail.value.source_paragraphs,
           knowledge_base_id: selectedKnowledgeBaseId.value
         })
 
         if (result?.task?.ingest_task_id) {
-          const selectedKB = lightragKnowledgeBases.value.find(
-            kb => (kb.db_id || kb.id) === selectedKnowledgeBaseId.value
-          )
           taskerStore.registerQueuedTask({
             task_id: result.task.ingest_task_id,
             name: `知识工厂入库: ${taskDetail.value?.file_name || '未知文件'}`,
@@ -830,17 +572,15 @@ const handleCommit = async () => {
             payload: {
               task_id: taskDetail.value.id,
               knowledge_base_id: selectedKnowledgeBaseId.value,
-              knowledge_base_name: selectedKB?.name || '',
-              file_name: taskDetail.value?.file_name || ''
             }
           })
-          message.success('已成功入库，数据正在同步到知识库，请在任务中心查看进度')
-        } else {
-          message.success('已成功入库')
         }
-        emit('task-completed')
+
+        stepCompleted.value.commit = true
+        emit('task-completed', { task_id: taskDetail.value.id, result })
+        message.success('入库任务已提交')
       } catch (e) {
-        message.error('入库失败')
+        message.error('入库失败：' + (e.message || e))
       } finally {
         saving.value = false
       }
@@ -848,714 +588,878 @@ const handleCommit = async () => {
   })
 }
 
-// 加载未识别实体
+// ========== 未识别实体 ==========
+const entityTableColumns = [
+  { title: '类型', key: 'type', width: 80 },
+  { title: '名称', key: 'name_cn', ellipsis: true },
+  { title: '同义词', key: 'synonyms', ellipsis: true },
+  { title: '置信度', key: 'confidence', width: 80 },
+  { title: '操作', key: 'action', width: 120 },
+]
+
 const loadUnrecognizedEntities = async (taskId) => {
   if (!taskId) return
   loadingUnrecognizedEntities.value = true
   try {
-    const res = await domainFactoryApi.getUnrecognizedEntities(taskId, 20)
-    unrecognizedEntities.value = res.entities || []
-    updateGroupedEntities()
+    const result = await domainFactoryApi.getUnrecognizedEntities(taskId)
+    rawSlots.value = result.raw_slots || []
+    matchedCount.value = result.matched_count || 0
+    newCount.value = result.new_count || 0
+    proposedDomainCode.value = result.domain_code || ''
+
+    const entities = result.entities || []
+    unrecognizedEntities.value = entities
+    const groups = {}
+    const cats = new Set()
+    entities.forEach(e => {
+      const cat = e.category || '其他'
+      cats.add(cat)
+      if (!groups[cat]) groups[cat] = []
+      groups[cat].push(e)
+    })
+    groupedUnrecognizedEntities.value = groups
+    entityCategories.value = Array.from(cats)
+    if (cats.size > 0) activeEntityCategory.value = Array.from(cats)[0]
   } catch (e) {
-    console.error('加载未识别实体失败:', e)
+    console.error('加载未识别实体失败', e)
   } finally {
     loadingUnrecognizedEntities.value = false
   }
 }
 
-// 加载实体分类
-const loadEntityCategories = async () => {
-  try {
-    const res = await entityTypeApi.listCategories()
-    entityCategories.value = res.categories || []
-  } catch (e) {
-    entityCategories.value = ['基础工程实体', '敏感目标与空间实体', '环境要素与影响实体', '措施与法规实体', '其他']
-  }
-}
-
-// 更新分组数据
-const updateGroupedEntities = () => {
-  const grouped = {}
-  unrecognizedEntities.value.forEach(entity => {
-    const category = entity.category || '其他'
-    if (!grouped[category]) grouped[category] = []
-    grouped[category].push(entity)
-  })
-  groupedUnrecognizedEntities.value = grouped
-  if (!activeEntityCategory.value && Object.keys(grouped).length > 0) {
-    activeEntityCategory.value = Object.keys(grouped)[0]
-  }
-}
-
-// 打开实体编辑弹窗
-const openEntityEditModal = (entity) => {
-  editingEntity.value = {
-    ...entity,
-    keywords: entity.keywords || [],
-    examples: entity.examples || [entity.name]
-  }
+const openEntityEditModal = (record) => {
+  editingEntity.value = { ...record }
   entityEditModalVisible.value = true
 }
 
-// 保存实体
 const saveEntity = async () => {
-  if (!editingEntity.value?.name) {
-    message.warning('请填写实体名称')
+  if (!editingEntity.value) return
+  const entity = editingEntity.value
+  if (!entity.entity_key || !entity.name_cn) {
+    message.warning('实体名称和 Entity Key 为必填项')
     return
   }
+  entity._confirmed = true
   try {
-    await entityTypeApi.createEntityType({
-      name: editingEntity.value.name,
-      category: editingEntity.value.category || '其他',
-      description: editingEntity.value.description || '',
-      examples: editingEntity.value.examples || [editingEntity.value.name],
-      keywords: editingEntity.value.keywords || [],
-      metadata: editingEntity.value.metadata || {}
-    })
-    message.success('实体已保存到实体类型库')
+    await domainFactoryApi.confirmProposedEntities(taskDetail.value.id, [entity])
     entityEditModalVisible.value = false
-    editingEntity.value = null
-    const index = unrecognizedEntities.value.findIndex(e => e.name === editingEntity.value?.name)
-    if (index !== -1) {
-      unrecognizedEntities.value.splice(index, 1)
-      updateGroupedEntities()
+    message.success(`实体 "${entity.name_cn}" 已保存`)
+    await loadUnrecognizedEntities(taskDetail.value.id)
+  } catch {
+    message.error('保存实体失败')
+  }
+}
+
+const saveEntityDirectly = async (record) => {
+  record._confirmed = true
+  try {
+    const result = await domainFactoryApi.confirmProposedEntities(taskDetail.value.id, [record])
+    message.success(`实体 "${record.name_cn || record.entity_key}" 已保存`)
+    if (result.remapped > 0) {
+      message.info(`${result.remapped} 个待审核任务的 slot 已重新映射`)
     }
-  } catch (e) {
-    message.error('保存实体失败: ' + (e.message || '未知错误'))
+    await loadUnrecognizedEntities(taskDetail.value.id)
+  } catch {
+    message.error('保存失败')
   }
 }
 
-// 直接保存实体
-const saveEntityDirectly = async (entity) => {
-  try {
-    await entityTypeApi.createEntityType({
-      name: entity.name,
-      category: entity.category || '其他',
-      description: entity.description || '',
-      examples: entity.examples || [entity.name],
-      keywords: entity.keywords || [],
-      metadata: entity.metadata || {}
-    })
-    message.success('实体已保存到实体类型库')
-    const index = unrecognizedEntities.value.findIndex(e => e.name === entity.name)
-    if (index !== -1) unrecognizedEntities.value.splice(index, 1)
-    updateGroupedEntities()
-    const selectedIndex = selectedEntities.value.findIndex(e => e.name === entity.name)
-    if (selectedIndex !== -1) selectedEntities.value.splice(selectedIndex, 1)
-  } catch (e) {
-    message.error('保存实体失败: ' + (e.message || '未知错误'))
-  }
-}
-
-// 批量保存
 const batchSaveEntities = async () => {
-  if (!selectedEntities.value.length) {
-    message.warning('请选择要保存的实体')
-    return
-  }
+  if (!selectedEntities.value.length) return
   try {
-    const promises = selectedEntities.value.map(entity =>
-      entityTypeApi.createEntityType({
-        name: entity.name,
-        category: entity.category || '其他',
-        description: entity.description || '',
-        examples: entity.examples || [entity.name],
-        keywords: entity.keywords || [],
-        metadata: entity.metadata || {}
-      })
-    )
-    await Promise.all(promises)
-    message.success(`成功保存 ${selectedEntities.value.length} 个实体到实体类型库`)
-    selectedEntities.value.forEach(entity => {
-      const index = unrecognizedEntities.value.findIndex(e => e.name === entity.name)
-      if (index !== -1) unrecognizedEntities.value.splice(index, 1)
-    })
+    const entities = selectedEntities.value.map(e => ({ ...e, _confirmed: true }))
+    const result = await domainFactoryApi.confirmProposedEntities(taskDetail.value.id, entities)
+    message.success(`已保存 ${result.saved || 0} 个实体`)
+    if (result.remapped > 0) {
+      message.info(`${result.remapped} 个待审核任务的 slot 已重新映射`)
+    }
     selectedEntities.value = []
-    updateGroupedEntities()
-  } catch (e) {
-    message.error('批量保存实体失败: ' + (e.message || '未知错误'))
+    await loadUnrecognizedEntities(taskDetail.value.id)
+    stepCompleted.value.entities = true
+  } catch {
+    message.error('批量保存失败')
   }
 }
 
-// 打开添加字段弹窗
-const openAddFieldModal = () => {
-  newField.value = {
-    key: '',
-    label: '',
-    group: '基础信息',
-    unit: '',
-    type: 'text',
-    widget: 'Input',
-    required: false,
-    sample: selectedParagraph.value?.content?.slice(0, 50) || ''
-  }
-  addFieldModalVisible.value = true
-}
-
-// 确认添加字段
-const handleAddFieldConfirm = () => {
-  if (!newField.value.label) {
-    message.warning('请填写字段标签')
-    return
-  }
-  const key = newField.value.key || newField.value.label.replace(/\s+/g, '_')
-  const exists = schemaFields.value.find(f => f.key === key)
-  if (exists) {
-    message.warning('该字段已存在')
-    return
-  }
-  const anchorId = selectedParagraph.value?.id || null
-  taskDetail.value.form_schema.push({
-    key,
-    label: newField.value.label,
-    type: newField.value.type || 'text',
-    widget: newField.value.widget || 'Input',
-    unit: newField.value.unit || '',
-    group: newField.value.group || '基础信息',
-    required: !!newField.value.required,
-    confidence: 0.5,
-    value: '',
-    source: '人工新增字段（ETL 校验台）',
-    sample: newField.value.sample || '',
-    anchor_id: anchorId
-  })
-  formValues.value[key] = ''
-  addFieldModalVisible.value = false
-  message.success('字段已添加')
-}
-
-// 获取置信度颜色
-const getConfidenceColor = (val) => {
-  if (val === null || val === undefined) return 'var(--gray-400)'
-  if (val >= 0.8) return '#52c41a'
-  if (val >= 0.5) return '#faad14'
-  return '#ff4d4f'
-}
-
-// 滚动到锚点
-const scrollToAnchor = async (id) => {
-  if (!id) return
-  await nextTick()
-  const el = document.querySelector(`[data-anchor="${id}"]`)
-  if (el) {
-    el.classList.add('active')
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    setTimeout(() => el.classList.remove('active'), 800)
-  }
-}
-
-// 监听任务变化
-watch(() => props.task, (newTask) => {
-  if (newTask?.id) {
-    activeTab.value = 'basic'
-    fetchTaskDetail(newTask.id)
-  } else {
-    taskDetail.value = null
-    formValues.value = {}
-  }
-}, { immediate: true })
-
-onMounted(() => {
-  loadLightragKnowledgeBases()
-  loadEntityCategories()
+// ========== 高亮模板中的 slot ==========
+const highlightedGeneralized = computed(() => {
+  const text = selectedParamPara.value?.template?.generalized || ''
+  if (!text) return ''
+  return text.replace(/(\{\{[^}]+\}\})/g, '<mark>$1</mark>')
 })
 
-// 使用 h 函数
-import { h } from 'vue'
+// ========== 生命周期 ==========
+onMounted(async () => {
+  if (props.task?.id) {
+    await fetchTaskDetail(props.task.id)
+  }
+  await loadLightragKnowledgeBases()
+})
+
+watch(() => props.task, async (newTask) => {
+  if (newTask?.id) {
+    activeTab.value = 'parse'
+    selectedParagraph.value = null
+    selectedParamPara.value = null
+    reviewedParagraphIds.value = new Set()
+    stepCompleted.value = { parse: false, generalize: false, entities: false, commit: false }
+    await fetchTaskDetail(newTask.id)
+  }
+}, { deep: true })
 </script>
 
 <template>
-  <div class="etl-workbench">
-    <a-spin :spinning="loading">
-      <div v-if="!taskDetail" class="empty-state">
-        <p>请从「数据源管理」选择一个任务开始处理</p>
+  <div v-if="loading" class="loading-state">
+    <a-spin size="large" tip="加载任务详情..." />
+  </div>
+  <div v-else-if="!taskDetail" class="empty-state">请从左侧选择一个任务</div>
+  <div v-else class="etl-workbench">
+    <!-- ========== Header: 状态栏 ========== -->
+    <div class="workbench-header">
+      <div>
+        <h3>ETL 清洗工作台</h3>
+        <p>{{ taskDetail.file_name }}</p>
       </div>
-      <div v-else>
-        <!-- Header -->
-        <div class="workbench-header">
-          <div>
-            <h3>当前任务：{{ task?.file_name }}</h3>
-            <p>
-              领域：{{ task?.domain_label || task?.domain }} | 步骤：1.基础信息 -> 2.结构化 -> 3.模板泛化 -> 4.未识别实体
-            </p>
-          </div>
-          <a-space>
-            <a-select
-              v-model:value="selectedKnowledgeBaseId"
-              placeholder="选择目标知识库"
-              style="width: 200px"
-              :loading="loadingKnowledgeBases"
-              :options="lightragKnowledgeBases.map(kb => ({ label: kb.name, value: kb.db_id || kb.id }))"
-              allow-clear
-            />
-            <a-button @click="handleSaveTemplate" :disabled="!taskDetail">保存草稿</a-button>
-            <a-button
-              type="primary"
-              danger
-              @click="handleCommit"
-              :disabled="!taskDetail || !selectedKnowledgeBaseId"
-            >确认入库</a-button>
+      <a-space :size="12" class="header-status">
+        <a-tag v-if="domainLabel" color="blue">{{ domainLabel }}</a-tag>
+        <a-tag v-if="reportTypeLabel" color="green">{{ reportTypeLabel }}</a-tag>
+        <span class="status-item">
+          AI 置信度:
+          <span :style="{ color: getConfidenceColor((taskDetail.ai_confidence || 0) / 100), fontWeight: 600 }">
+            {{ taskDetail.ai_confidence || 0 }}%
+          </span>
+        </span>
+        <span class="status-item" v-if="reviewProgress.total > 0">
+          审核:
+          <span :style="{ color: reviewProgress.percent >= 80 ? '#52c41a' : '#faad14', fontWeight: 600 }">
+            {{ reviewProgress.reviewed }}/{{ reviewProgress.total }}
+          </span>
+        </span>
+      </a-space>
+    </div>
+
+    <!-- 步骤流程导航 -->
+    <div class="flow-steps">
+      <div
+        v-for="(step, idx) in [
+          { key: 'parse', title: '结构化元数据校验', icon: 'FileSearch' },
+          { key: 'generalize', title: 'Slot 变量校验', icon: 'Code' },
+          { key: 'entities', title: '实体确认', icon: 'Group' },
+          { key: 'commit', title: '入库确认', icon: 'CloudUpload' },
+        ]"
+        :key="step.key"
+        class="flow-step"
+        :class="{
+          active: activeTab === step.key,
+          done: stepCompleted[step.key],
+          clickable: idx <= currentStep + 1
+        }"
+        @click="idx <= currentStep + 1 && goToStep(idx)"
+      >
+        <span class="flow-step-num">{{ idx + 1 }}</span>
+        <span class="flow-step-title">{{ step.title }}</span>
+        <span v-if="idx < 3" class="flow-step-arrow">›</span>
+      </div>
+    </div>
+
+    <!-- ========== 流程内容面板 ========== -->
+    <div class="flow-panel">
+
+      <!-- ================================================================ -->
+      <!-- Step 1: 结构化元数据校验                                            -->
+      <!-- ================================================================ -->
+      <div v-show="activeTab === 'parse'" class="flow-content">
+        <div class="tab-header-bar">
+          <a-space :size="8">
+            <span class="classify-filter-label">类型筛选:</span>
+            <a-radio-group v-model:value="classifyFilter" size="small" button-style="solid">
+              <a-radio-button :value="null">全部</a-radio-button>
+              <a-radio-button v-for="(info, key) in CLASSIFY_TYPE_MAP" :key="key" :value="key">
+                {{ info.label }} <span class="classify-count">{{ classifyStats[key] || 0 }}</span>
+              </a-radio-button>
+            </a-radio-group>
+          </a-space>
+          <a-space :size="8">
+            <a-switch v-model:checked="showOnlyUnreviewed" size="small" />
+            <span style="font-size: 11px; color: var(--gray-500)">仅待审核</span>
+            <a-button size="small" @click="confirmHighConfidenceAndSave" :loading="saving" :disabled="highConfidenceCount === 0">
+              确认高置信度并保存 ({{ highConfidenceCount }})
+            </a-button>
           </a-space>
         </div>
 
-        <!-- 步骤指示器 -->
-        <a-steps
-          :current="['basic', 'tables', 'templates', 'entities'].indexOf(activeTab)"
-          :items="[{ title: '基础信息' }, { title: '结构化数据' }, { title: '模板泛化' }, { title: '未识别实体' }]"
-          size="small"
-          class="workbench-steps"
-        />
+        <div v-if="reviewProgress.total > 0" class="review-progress">
+          <a-progress :percent="reviewProgress.percent" :stroke-color="reviewProgress.percent >= 80 ? '#52c41a' : '#1677ff'" size="small" :format="() => `${reviewProgress.reviewed}/${reviewProgress.total}`" />
+        </div>
 
-        <!-- Tab 内容 -->
-        <a-tabs v-model:activeKey="activeTab" class="workbench-tabs">
-          <!-- Tab 1: 基础信息提取校验 -->
-          <a-tab-pane key="basic" tab="1. 基础信息提取校验">
-            <a-row :gutter="16">
-              <a-col :span="12">
-                <a-card title="原文查看器" class="paragraph-viewer-card">
-                  <div class="scroll-pane">
-                    <div
-                      v-for="para in sourceParagraphs"
-                      :key="para.id"
-                      class="paragraph"
-                      :class="{ selected: selectedParagraph && selectedParagraph.id === para.id }"
-                      :data-anchor="para.id"
-                      @click="handleParagraphClick(para)"
-                    >
-                      <div class="para-title">
-                        <span>{{ para.title }}</span>
-                        <a-tag v-if="para.is_title" size="small" color="green">标题</a-tag>
-                        <a-tag v-if="para.is_table" size="small" color="blue">表格</a-tag>
-                        <a-tag
-                          v-if="para.section_path?.length"
-                          size="small"
-                          color="default"
-                          class="para-section-tag"
-                        >
-                          路径：{{ Array.isArray(para.section_path) ? para.section_path.join('.') : para.section_path }}
-                        </a-tag>
-                      </div>
-                      <div v-if="isHtmlTable(para.content)" v-html="para.content" class="html-table-container"></div>
-                      <div v-else class="para-content">{{ para.content }}</div>
-                    </div>
-                  </div>
-                </a-card>
-              </a-col>
-              <a-col :span="12">
-                <a-card title="分片JSON数据" class="paragraph-json-card">
-                  <div v-if="selectedParagraph" class="json-editor-wrapper">
-                    <a-textarea
-                      v-model:value="paragraphJsonDraft"
-                      :rows="20"
-                      class="json-editor-textarea"
-                      :class="{ 'json-error': paragraphJsonError }"
-                      placeholder="编辑 JSON 数据..."
-                      @blur="validateJson"
-                    />
-                    <div v-if="paragraphJsonError" class="json-error-message">
-                      <a-alert type="error" :message="paragraphJsonError" show-icon size="small" />
-                    </div>
-                    <div class="json-actions">
-                      <a-button size="small" type="primary" @click="handleApplyJson" :disabled="!!paragraphJsonError">
-                        应用修改
-                      </a-button>
-                      <a-button size="small" @click="handleResetJson">重置</a-button>
-                      <a-button size="small" @click="openAddFieldModal">添加字段</a-button>
-                    </div>
-                  </div>
-                  <div v-else class="json-empty">
-                    <a-empty description="请先选择左侧的段落" :image="false" />
-                  </div>
-                </a-card>
-              </a-col>
-            </a-row>
-
-            <!-- 提取字段列表 -->
-            <a-card title="提取字段" style="margin-top: 16px">
-              <div class="form-content">
-                <div v-if="!schemaFields.length" class="no-schema">
-                  暂无字段配置
+        <a-row :gutter="16" class="parse-row">
+          <!-- 左栏: 章节导航 -->
+          <a-col v-if="chapterTree.length" :span="chapterNavCollapsed ? 1 : 4">
+            <a-card size="small" class="fixed-height-card chapter-nav-card">
+              <template #title>
+                <div v-if="!chapterNavCollapsed" class="chapter-nav-title">
+                  <span style="font-size: 13px">章节导航</span>
                 </div>
-                <div v-else class="schema-groups">
-                  <div v-for="(fields, group) in fieldGroups" :key="group" class="field-group">
-                    <div class="group-title">{{ group }}</div>
-                    <div class="field-list">
-                      <div v-for="field in fields" :key="field.key" class="field-item">
-                        <div class="field-label">
-                          <span>{{ field.label }}</span>
-                          <span v-if="field.required" class="required">*</span>
-                          <span v-if="field.unit" class="unit">{{ field.unit }}</span>
-                        </div>
-                        <div class="field-input">
-                          <a-input
-                            v-if="!field.options"
-                            v-model:value="formValues[field.key]"
-                            :placeholder="field.prompt || field.label"
-                            :status="field.warning ? 'warning' : undefined"
-                          />
-                          <a-select
-                            v-else
-                            v-model:value="formValues[field.key]"
-                            :options="field.options.map(o => ({ label: o, value: o }))"
-                            placeholder="请选择"
-                            style="width: 100%"
-                          />
-                        </div>
-                        <div class="field-meta">
-                          <span
-                            v-if="field.confidence != null"
-                            class="confidence"
-                            :style="{ color: getConfidenceColor(field.confidence) }"
-                          >
-                            置信度: {{ Math.round((field.confidence || 0) * 100) }}%
-                          </span>
-                          <span v-if="field.warning" class="warning-msg">{{ field.warning }}</span>
-                          <span v-if="field.source" class="source-info">{{ field.source }}</span>
-                        </div>
-                      </div>
-                    </div>
+              </template>
+              <template #extra>
+                <a-button type="text" size="small" class="chapter-toggle-btn" @click="chapterNavCollapsed = !chapterNavCollapsed">
+                  <LeftOutlined v-if="!chapterNavCollapsed" style="font-size: 10px" />
+                  <RightOutlined v-else style="font-size: 10px" />
+                </a-button>
+              </template>
+              <div v-if="!chapterNavCollapsed" class="scroll-pane chapter-tree-pane">
+                <a-tree
+                  :tree-data="chapterTree"
+                  :field-names="{ children: 'children', title: 'title', key: 'key' }"
+                  :selected-keys="chapterFilterKey ? [chapterFilterKey] : []"
+                  :default-expand-all="true"
+                  size="small"
+                  :show-line="false"
+                  @select="(keys) => { chapterFilterKey = keys?.[0] || null }"
+                >
+                  <template #title="{ dataRef }">
+                    <span class="chapter-tree-node">{{ dataRef?.title || '未命名' }}</span>
+                  </template>
+                </a-tree>
+                <a-button v-if="chapterFilterKey" type="link" size="small" style="margin-top: 8px; font-size: 11px" @click="chapterFilterKey = null">清除筛选</a-button>
+              </div>
+            </a-card>
+          </a-col>
+
+          <!-- 中栏: 段落列表 -->
+          <a-col :span="(chapterTree.length ? (chapterNavCollapsed ? 11 : 8) : 12)">
+            <a-card size="small" class="paragraph-viewer-card">
+              <template #title><span style="font-size: 13px">段落列表 ({{ filteredParagraphs.length }})</span></template>
+              <div class="scroll-pane">
+                <div
+                  v-for="para in filteredParagraphs"
+                  :key="para.id"
+                  class="paragraph"
+                  :class="{
+                    selected: selectedParagraph && selectedParagraph.id === para.id,
+                    'para-reviewed': reviewedParagraphIds.has(para.id),
+                    'para-needs-review': needsReview(para) && !reviewedParagraphIds.has(para.id)
+                  }"
+                  @click="handleParagraphClick(para)"
+                >
+                  <div class="para-title">
+                    <a-tag v-if="para.classify_type && CLASSIFY_TYPE_MAP[para.classify_type]" size="small" :color="CLASSIFY_TYPE_MAP[para.classify_type].color">
+                      {{ CLASSIFY_TYPE_MAP[para.classify_type].label }}
+                    </a-tag>
+                    <a-tag v-if="para.section_path?.length" size="small" color="default" class="para-section-tag">
+                      {{ Array.isArray(para.section_path) ? para.section_path.join('/') : para.section_path }}
+                    </a-tag>
+                    <a-tag v-for="tag in (para.classify_tags || [])" :key="tag" size="small" color="processing" class="para-subtype-tag">
+                      {{ SUBTYPE_MAP[tag] || tag }}
+                    </a-tag>
+                    <span v-if="para.classify_type && para.classify_type !== 'heading' && para.classify_type !== 'narrative'" class="para-confidence" :style="{ color: getConfidenceColor(computeParaConfidence(para)) }">
+                      {{ Math.round(computeParaConfidence(para) * 100) }}%
+                    </span>
+                    <span v-if="reviewedParagraphIds.has(para.id)" class="para-reviewed-badge">✓</span>
+                  </div>
+                  <div class="para-content">{{ para.title || para.content }}</div>
+                  <div v-if="para.classify_type === 'narrative' && para.template?.summary" class="para-summary">
+                    {{ para.template.summary }}
                   </div>
                 </div>
               </div>
             </a-card>
-          </a-tab-pane>
+          </a-col>
 
-          <!-- Tab 2: 表格提取校验 -->
-          <a-tab-pane key="tables" tab="2. 表格提取校验">
-            <a-row :gutter="16" class="tables-row">
-              <a-col :span="13" class="tables-col">
-                <a-card title="原文表格" class="tables-card">
-                  <div class="scroll-pane">
-                    <div v-if="originalTables.length === 0" class="empty-tables">
-                      <a-empty description="暂无表格数据" :image="false" />
-                    </div>
-                    <div
-                      v-for="table in originalTables"
-                      :key="table.key"
-                      class="table-block"
-                      :class="{ selected: selectedTable && selectedTable.key === table.key }"
-                      @click="handleTableClick(table)"
-                    >
-                      <h4>{{ table.type }} · {{ table.rows?.length || 0 }} 条</h4>
-                      <div v-if="table.htmlContent !== undefined && table.htmlContent !== null" v-html="table.htmlContent" class="html-table-container"></div>
-                      <a-table
-                        v-else-if="table.rows?.length"
-                        :data-source="table.rows"
-                        :pagination="false"
-                        size="small"
-                        :columns="table.columns"
-                      />
-                    </div>
-                  </div>
-                </a-card>
-              </a-col>
-              <a-col :span="11" class="tables-col">
-                <a-card title="HTML 表格预览" class="tables-card">
-                  <div class="json-toolbar">
-                    <span v-if="selectedTable">当前编辑：{{ selectedTable.type }}</span>
-                    <span v-else>请点击左侧表格进行编辑</span>
-                    <a-space>
-                      <a-button size="small" @click="formatHtml" :disabled="!structuredHtmlDraft">格式化</a-button>
-                      <a-button size="small" @click="handleApplyHtml" :disabled="!selectedTable">应用 HTML</a-button>
-                    </a-space>
-                  </div>
-                  <!-- HTML 实时预览 -->
-                  <div v-if="structuredHtmlDraft" class="html-preview-wrapper">
-                    <div class="html-preview-label">预览效果：</div>
-                    <div class="html-preview-content html-table-container" v-html="structuredHtmlDraft"></div>
-                  </div>
-                  <div v-else-if="selectedTable && !structuredHtmlDraft" class="html-preview-empty">
-                    <a-empty description="暂无 HTML 预览" :image="false" />
-                  </div>
-                  <textarea
-                    v-model="structuredHtmlDraft"
-                    class="json-editor"
-                    spellcheck="false"
-                    :placeholder="selectedTable ? '编辑当前表格的 HTML 代码' : '请先选择左侧表格'"
-                  ></textarea>
-                  <div class="panel-actions">
-                    <a-button
-                      type="primary"
-                      @click="handleSaveStructured"
-                      :loading="saving"
-                      :disabled="!selectedTable"
-                    >保存表格数据</a-button>
-                  </div>
-                </a-card>
-              </a-col>
-            </a-row>
-          </a-tab-pane>
-
-          <!-- Tab 3: 模板泛化 -->
-          <a-tab-pane key="templates" tab="3. 模板泛化与插槽编辑">
-            <a-row :gutter="16">
-              <a-col :span="8">
-                <a-card title="目录章节">
-                  <div class="chapter-tree-wrapper">
-                    <a-tree
-                      v-model:selectedKeys="selectedChapter"
-                      v-model:expandedKeys="chapterTreeExpandedKeys"
-                      :tree-data="chapterTree"
-                      :field-names="{ children: 'children', title: 'title', key: 'key' }"
-                      @select="handleChapterClick"
-                    >
-                      <template #title="{ title, dataRef }">
-                        <span>{{ dataRef?.title || title || dataRef?.key || '未命名章节' }}</span>
-                        <a-tag
-                          v-if="dataRef?.paragraphs?.length"
-                          size="small"
-                          color="blue"
-                          style="margin-left: 8px"
-                        >
-                          {{ dataRef.paragraphs.length }} 段
-                        </a-tag>
-                      </template>
-                    </a-tree>
-                  </div>
-                </a-card>
-
-                <a-card title="LLM 自动泛化结果" class="mt16" v-if="selectedChapterNode">
-                  <div class="template-header">
-                    <div>
-                      <h4 style="margin: 0">{{ selectedChapterNode.title }}</h4>
-                      <span style="color: var(--gray-500); font-size: 12px">
-                        共 {{ chapterParagraphs.length }} 个段落
-                      </span>
-                    </div>
-                    <a-space>
-                      <a-button size="small" @click="insertSlot">插入插槽</a-button>
-                      <a-button size="small" @click="() => templateDraft.generalized = templateDraft.original">
-                        恢复原文
-                      </a-button>
-                    </a-space>
-                  </div>
-                  <textarea
-                    ref="templateTextarea"
-                    v-model="templateDraft.generalized"
-                    class="template-textarea"
-                    spellcheck="false"
-                    :placeholder="templateDraft.original ? '编辑模板内容，使用 {{Slot_Name}} 格式插入插槽' : '请先选择包含原文的章节'"
-                  ></textarea>
-                  
-                  <div class="slot-list" v-if="templateDraft.slots?.length">
-                    <div class="slot-row" v-for="slot in templateDraft.slots" :key="slot.name">
-                      <div class="slot-name">{{ slot.name }}</div>
-                      <a-select v-model:value="slot.source" placeholder="选择数据来源" style="flex: 1">
-                        <a-select-option value="空间数据">空间数据</a-select-option>
-                        <a-select-option value="临时变量">临时变量(需补录)</a-select-option>
-                        <a-select-option value="智能体推理">智能体推理生成</a-select-option>
-                      </a-select>
-                    </div>
-                  </div>
-                  <div v-else class="slot-empty">
-                    <a-empty description="暂无插槽，可在模板中使用 {{Slot_Name}} 格式插入" :image="false" />
-                  </div>
-                  
-                  <a-divider />
-                  <a-form layout="vertical">
-                    <a-form-item label="适用章节">
-                      <a-select
-                        v-model:value="templateDraft.metadata.chapter"
-                        :options="metadataOptions.chapters?.map(item => ({ label: item, value: item }))"
-                        show-search
-                        allow-clear
-                      />
-                    </a-form-item>
-                    <a-form-item label="适用场景">
-                      <a-select
-                        v-model:value="templateDraft.metadata.tags"
-                        mode="multiple"
-                        :options="metadataOptions.tags?.map(item => ({ label: item, value: item }))"
-                        allow-clear
-                      />
-                    </a-form-item>
-                  </a-form>
-                  <div class="panel-actions">
-                    <a-button type="primary" @click="handleSaveTemplate" :loading="saving">
-                      保存模板草稿
-                    </a-button>
-                  </div>
-                </a-card>
-
-                <a-card title="LLM 自动泛化结果" class="mt16" v-else>
-                  <a-empty description="请从左侧选择章节以查看和编辑模板" :image="false" />
-                </a-card>
-              </a-col>
-              <a-col :span="16">
-                <a-card title="Diff 预览" v-if="selectedChapterNode">
-                  <div class="diff-view" v-if="templateDraft.original || templateDraft.generalized">
-                    <div class="diff-original">
-                      <h5>原文</h5>
-                      <p v-if="templateDraft.original">{{ templateDraft.original }}</p>
-                      <p v-else class="empty-text">暂无原文数据</p>
-                    </div>
-                    <div class="diff-template">
-                      <h5>模板</h5>
-                      <p v-if="highlightedTemplate" v-html="highlightedTemplate"></p>
-                      <p v-else class="empty-text">暂无模板数据</p>
-                    </div>
-                  </div>
-                  <a-empty v-else description="该章节暂无模板数据" :image="false" />
-                </a-card>
-                <a-card title="Diff 预览" class="mt16" v-else>
-                  <a-empty description="请从左侧选择章节" :image="false" />
-                </a-card>
-              </a-col>
-            </a-row>
-          </a-tab-pane>
-
-          <!-- Tab 4: 未识别实体 -->
-          <a-tab-pane key="entities" tab="4. 未识别实体">
-            <a-card title="未识别实体列表" :loading="loadingUnrecognizedEntities">
+          <!-- 右栏: 类型化详情面板 -->
+          <a-col :span="12">
+            <a-card size="small" class="detail-panel-card">
+              <template #title>
+                <a-space :size="8" align="center">
+                  <span style="font-size: 13px">结构化详情</span>
+                  <a-tag v-if="selectedParagraph?.classify_type && CLASSIFY_TYPE_MAP[selectedParagraph.classify_type]" size="small" :color="CLASSIFY_TYPE_MAP[selectedParagraph.classify_type].color">
+                    {{ CLASSIFY_TYPE_MAP[selectedParagraph.classify_type].label }}
+                  </a-tag>
+                </a-space>
+              </template>
               <template #extra>
-                <a-space>
-                  <a-button size="small" @click="loadUnrecognizedEntities(taskDetail?.id)" :disabled="!taskDetail?.id">
-                    重新提取
+                <a-space :size="4">
+                  <a-button v-if="selectedParagraph" size="small" :type="detailEditMode ? 'primary' : 'default'" @click="handleToggleEditMode">
+                    {{ detailEditMode ? '保存' : '编辑' }}
                   </a-button>
-                  <a-button type="primary" size="small" @click="batchSaveEntities" :disabled="!selectedEntities.length">
-                    批量保存 ({{ selectedEntities.length }})
-                  </a-button>
+                  <a-button v-if="selectedParagraph && reviewedParagraphIds.has(selectedParagraph.id)" size="small" danger :loading="saving" @click="async () => { reviewedParagraphIds.delete(selectedParagraph.id); await doSaveParagraphs() }">撤销审核</a-button>
+                  <a-button v-else-if="selectedParagraph && !detailEditMode" size="small" type="primary" :loading="saving" @click="async () => { reviewedParagraphIds.add(selectedParagraph.id); await doSaveParagraphs() }">确认审核</a-button>
+                  <a-button v-if="selectedParagraph?.classify_type === 'parameter' && selectedParagraph?.template?.generalized" size="small" type="link" @click="activeTab = 'generalize'; selectedParamPara = selectedParagraph">前往 Slot 变量校验 →</a-button>
                 </a-space>
               </template>
 
-              <a-alert
-                v-if="unrecognizedEntities.length === 0 && !loadingUnrecognizedEntities"
-                message="未发现未识别的实体"
-                description="文档中的所有实体都已存在于实体类型库中，或文档中未包含可识别的实体。"
-                type="info"
-                show-icon
-                style="margin-bottom: 16px"
-              />
+              <div v-if="!selectedParagraph" class="detail-empty">
+                <FileText :size="36" :stroke-width="1.2" style="color: var(--gray-300, #c0c4cc)" />
+                <a-empty description="请点击段落查看详情" :image="false" />
+              </div>
 
-              <div v-else>
-                <a-tabs v-model:activeKey="activeEntityCategory" type="card">
-                  <a-tab-pane
-                    v-for="(entities, category) in groupedUnrecognizedEntities"
-                    :key="category"
-                    :tab="`${category} (${entities.length})`"
-                  >
-                    <a-table
-                      :data-source="entities"
-                      :columns="[
-                        { title: '实体名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true },
-                        { title: '分类', dataIndex: 'category', key: 'category', width: 100 },
-                        { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
-                        { title: '上下文', dataIndex: 'context', key: 'context', ellipsis: true, width: 150 },
-                        { title: '置信度', dataIndex: 'confidence', key: 'confidence', width: 80 },
-                        { title: '操作', key: 'action', width: 100 }
-                      ]"
-                      :row-selection="{
-                        selectedRowKeys: selectedEntities.map(e => e.name),
-                        onSelect: (record, selected) => {
-                          if (selected) selectedEntities.push(record)
-                          else {
-                            const idx = selectedEntities.findIndex(e => e.name === record.name)
-                            if (idx !== -1) selectedEntities.splice(idx, 1)
-                          }
-                        }
-                      }"
-                      :pagination="{ pageSize: 10 }"
-                      row-key="name"
-                      size="small"
+              <!-- 编辑模式 -->
+              <div v-else-if="detailEditMode" class="detail-section">
+                <a-radio-group v-model:value="editTab" size="small" button-style="solid" style="margin-bottom: 8px; font-size: 13px">
+                  <a-radio-button value="form">表单编辑</a-radio-button>
+                  <a-radio-button value="json">JSON 编辑</a-radio-button>
+                </a-radio-group>
+
+                <!-- 表单编辑 -->
+                <template v-if="editTab === 'form'">
+                  <div class="detail-label" style="margin-bottom: 4px">编辑内容</div>
+                  <a-textarea v-model:value="selectedParagraph.content" :auto-size="{ minRows: 3, maxRows: 12 }" style="font-size: 13px" />
+                  <div style="margin-top: 8px">
+                    <div class="detail-label" style="margin-bottom: 4px">分类</div>
+                    <a-select
+                      :value="selectedParagraph.classify_type"
+                      @change="(v) => { selectedParagraph.classify_type = v }"
+                      style="width: 100%; font-size: 13px"
                     >
-                      <template #bodyCell="{ column, record }">
-                        <template v-if="column.key === 'confidence'">
-                          <span
-                            :style="{ color: Math.round(record.confidence * 100) >= 80 ? '#52c41a' : Math.round(record.confidence * 100) >= 60 ? '#faad14' : '#ff4d4f' }"
-                          >
-                            {{ Math.round(record.confidence * 100) }}%
-                          </span>
-                        </template>
-                        <template v-else-if="column.key === 'action'">
-                          <a-space>
-                            <a-button type="link" size="small" @click="openEntityEditModal(record)">编辑</a-button>
-                            <a-button type="link" size="small" @click="saveEntityDirectly(record)">保存</a-button>
-                          </a-space>
-                        </template>
-                      </template>
-                    </a-table>
-                  </a-tab-pane>
-                </a-tabs>
+                      <a-select-option v-for="(info, key) in CLASSIFY_TYPE_MAP" :key="key" :value="key">{{ info.label }}</a-select-option>
+                    </a-select>
+                  </div>
+                </template>
+
+                <!-- JSON 编辑 -->
+                <template v-else>
+                  <div class="detail-label" style="margin-bottom: 4px">段落结构化 JSON</div>
+                  <a-textarea v-model:value="jsonEditValue" :auto-size="{ minRows: 8, maxRows: 24 }" style="font-family: monospace; font-size: 12px" />
+                </template>
+              </div>
+
+              <!-- heading 类型 -->
+              <div v-else-if="selectedParagraph.classify_type === 'heading'" class="detail-section">
+                <div class="detail-field"><span class="detail-label">标题</span><span class="detail-value">{{ selectedParagraph.title }}</span></div>
+                <div class="detail-field"><span class="detail-label">章节路径</span><span class="detail-value">{{ Array.isArray(selectedParagraph.section_path) ? selectedParagraph.section_path.join(' / ') : selectedParagraph.section_path }}</span></div>
+                <div class="detail-field" v-if="selectedParagraph.parent_title"><span class="detail-label">父章节</span><span class="detail-value">{{ selectedParagraph.parent_title }}</span></div>
+              </div>
+
+              <!-- legal_reference 类型 -->
+              <div v-else-if="selectedParagraph.classify_type === 'legal_reference'" class="detail-section">
+                <div class="detail-field"><span class="detail-label">原文</span><div class="detail-value detail-text-block">{{ selectedParagraph.content }}</div></div>
+                <a-divider style="margin: 8px 0" />
+                <div class="detail-label" style="margin-bottom: 8px">
+                  法律引用 ({{ selectedParagraph.template?.legal_references?.length || 0 }})
+                </div>
+                <div v-if="selectedParagraph.template?.legal_references?.length" class="legal-ref-list-scroll">
+                  <div v-for="(ref, idx) in selectedParagraph.template.legal_references" :key="idx" class="legal-ref-item">
+                    <div class="legal-ref-header">
+                      <span class="legal-ref-name">{{ ref.name }}</span>
+                      <span v-if="ref.code" class="legal-ref-code">({{ ref.code }})</span>
+                    </div>
+                    <div class="legal-ref-meta">
+                      <a-tag size="small" v-if="ref.type">{{ LEGAL_TYPE_MAP[ref.type] || ref.type }}</a-tag>
+                      <a-tag size="small" v-if="ref.scope" :color="(LEGAL_SCOPE_MAP[ref.scope] || {}).color || 'default'">{{ (LEGAL_SCOPE_MAP[ref.scope] || {}).label || ref.scope }}</a-tag>
+                      <span v-if="ref.authority" class="legal-ref-auth">{{ ref.authority }}</span>
+                      <span v-if="ref.effective_date" class="legal-ref-date">生效: {{ ref.effective_date }}</span>
+                      <a-tag v-if="ref.status && ref.status !== 'effective'" size="small" :color="ref.status === 'superseded' ? 'red' : 'orange'">{{ ref.status }}</a-tag>
+                    </div>
+                  </div>
+                </div>
+                <a-empty v-else description="未提取到法律引用" :image="false" />
+              </div>
+
+              <!-- table 类型 -->
+              <div v-else-if="selectedParagraph.classify_type === 'table'" class="detail-section">
+                <!-- Panel 1: 原始表格 (默认展开) -->
+                <div class="collapse-panel">
+                  <div class="collapse-header" @click="tableDetailExpanded = !tableDetailExpanded">
+                    <span class="collapse-title">原始表格</span>
+                    <UpOutlined v-if="tableDetailExpanded" style="font-size: 10px" />
+                    <DownOutlined v-else style="font-size: 10px" />
+                  </div>
+                  <div v-show="tableDetailExpanded" class="collapse-body">
+                    <div v-if="isHtmlTable(selectedParagraph.content)" v-html="selectedParagraph.content" class="html-table-container"></div>
+                    <div v-else-if="selectedTableBlock?.rows?.length" class="html-table-container">
+                      <a-table
+                        :data-source="tableBlockRows"
+                        :columns="tableBlockColumns"
+                        :pagination="false"
+                        size="small"
+                        bordered
+                        class="structural-rows-table"
+                      />
+                    </div>
+                    <div v-else class="detail-text-block">{{ selectedParagraph.content }}</div>
+                  </div>
+                </div>
+
+                <a-divider style="margin: 6px 0" />
+
+                <!-- Panel 2: 表格 Schema (默认收起) -->
+                <div class="collapse-panel">
+                  <div class="collapse-header" @click="tableSchemaExpanded = !tableSchemaExpanded">
+                    <span class="collapse-title">
+                      表格 Schema
+                      <a-tag v-if="selectedParagraph.template?.table_schema?.table_type" size="small" :color="(TABLE_TYPE_MAP[selectedParagraph.template.table_schema.table_type] || {}).color || 'default'" style="margin-left: 6px">
+                        {{ (TABLE_TYPE_MAP[selectedParagraph.template.table_schema.table_type] || {}).label || selectedParagraph.template.table_schema.table_type }}
+                      </a-tag>
+                      <span v-if="selectedParagraph.template?.table_schema?.columns?.length" class="collapse-meta">{{ selectedParagraph.template.table_schema.columns.length }} 列</span>
+                    </span>
+                    <UpOutlined v-if="tableSchemaExpanded" style="font-size: 10px" />
+                    <DownOutlined v-else style="font-size: 10px" />
+                  </div>
+                  <div v-show="tableSchemaExpanded" class="collapse-body">
+                    <template v-if="selectedParagraph.template?.table_schema">
+                      <div class="table-schema-cols">
+                        <div v-for="(col, ci) in (selectedParagraph.template.table_schema.columns || [])" :key="ci" class="ts-col-item">
+                          <a-tag size="small" :color="(TABLE_ROLE_MAP[col.role] || {}).color || 'default'">{{ (TABLE_ROLE_MAP[col.role] || {}).label || col.role }}</a-tag>
+                          <span class="ts-col-name">{{ col.name }}</span>
+                          <span v-if="col.unit" class="ts-col-unit">({{ col.unit }})</span>
+                          <span v-if="col.vocabulary?.length" class="ts-col-vocab" :title="col.vocabulary.join(', ')">词表: {{ col.vocabulary.slice(0, 3).join('/') }}{{ col.vocabulary.length > 3 ? '...' : '' }}</span>
+                        </div>
+                      </div>
+                    </template>
+                    <a-empty v-else description="未提取到表格 Schema" :image="false" />
+                  </div>
+                </div>
+
+                <a-divider style="margin: 6px 0" />
+
+                <!-- Panel 3: 结构行 (默认收起) -->
+                <div v-if="selectedParagraph.template?.table_schema?.structural_rows?.length" class="collapse-panel">
+                  <div class="collapse-header" @click="tableStructRowsExpanded = !tableStructRowsExpanded">
+                    <span class="collapse-title">
+                      结构行
+                      <span class="collapse-meta">{{ selectedParagraph.template.table_schema.structural_rows.length }} 行</span>
+                    </span>
+                    <UpOutlined v-if="tableStructRowsExpanded" style="font-size: 10px" />
+                    <DownOutlined v-else style="font-size: 10px" />
+                  </div>
+                  <div v-show="tableStructRowsExpanded" class="collapse-body">
+                    <a-table
+                      :data-source="selectedParagraph.template.table_schema.structural_rows"
+                      :columns="Object.keys(selectedParagraph.template.table_schema.structural_rows[0] || {}).map(k => ({ title: k, dataIndex: k, ellipsis: true }))"
+                      :pagination="false"
+                      size="small"
+                      bordered
+                      class="structural-rows-table"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- formula 类型 -->
+              <div v-else-if="selectedParagraph.classify_type === 'formula'" class="detail-section">
+                <div class="detail-field"><span class="detail-label">原文</span><div class="detail-value detail-text-block">{{ selectedParagraph.content }}</div></div>
+                <a-divider style="margin: 8px 0" />
+                <template v-if="selectedParagraph.template?.formula">
+                  <div class="detail-field"><span class="detail-label">用途</span><span class="detail-value">{{ selectedParagraph.template.formula.purpose || '通用计算' }}</span></div>
+                  <div class="detail-field"><span class="detail-label">格式</span><span class="detail-value">{{ selectedParagraph.template.formula.format || 'text' }}</span></div>
+                  <div class="detail-label" style="margin-top: 8px">变量 ({{ (selectedParagraph.template.formula.variables || []).length }})</div>
+                  <div class="formula-vars">
+                    <div v-for="(v, vi) in (selectedParagraph.template.formula.variables || [])" :key="vi" class="formula-var-item">
+                      <span class="formula-var-symbol">{{ v.symbol }}</span>
+                      <span class="formula-var-arrow">→</span>
+                      <span class="formula-var-name">{{ v.name || v.symbol }}</span>
+                      <span v-if="v.unit" class="formula-var-unit">({{ v.unit }})</span>
+                      <span v-if="v.entity_ref" class="formula-var-ref">ref: {{ v.entity_ref }}</span>
+                    </div>
+                  </div>
+                </template>
+                <a-empty v-else description="未提取到公式结构" :image="false" />
+              </div>
+
+              <!-- figure 类型 -->
+              <div v-else-if="selectedParagraph.classify_type === 'figure'" class="detail-section">
+                <div class="detail-field"><span class="detail-label">原文</span><div class="detail-value detail-text-block">{{ selectedParagraph.content }}</div></div>
+                <a-divider style="margin: 8px 0" />
+                <template v-if="selectedParagraph.template?.figure">
+                  <div class="detail-field"><span class="detail-label">图片类型</span><span class="detail-value">{{ selectedParagraph.template.figure.figure_type || 'unknown' }}</span></div>
+                  <div class="detail-field" v-if="selectedParagraph.template.figure.caption"><span class="detail-label">标题</span><span class="detail-value">{{ selectedParagraph.template.figure.caption }}</span></div>
+                  <div v-if="selectedParagraph.template.figure.steps?.length" class="detail-label" style="margin-top: 8px">步骤 ({{ selectedParagraph.template.figure.steps.length }})</div>
+                  <div v-if="selectedParagraph.template.figure.steps?.length" class="formula-vars">
+                    <div v-for="(step, si) in selectedParagraph.template.figure.steps" :key="si" class="formula-var-item">
+                      <span class="step-order">{{ si + 1 }}.</span>
+                      <span>{{ typeof step === 'string' ? step : step.name || JSON.stringify(step) }}</span>
+                    </div>
+                  </div>
+                </template>
+                <a-empty v-else description="未提取到图片信息" :image="false" />
+              </div>
+
+              <!-- parameter 类型 -->
+              <div v-else-if="selectedParagraph.classify_type === 'parameter'" class="detail-section">
+                <div class="detail-label" style="margin-bottom: 4px">原文</div>
+                <div class="detail-text-block">{{ selectedParagraph.content }}</div>
+                <a-divider style="margin: 8px 0" />
+                <template v-if="selectedParagraph.template?.generalized">
+                  <div class="detail-label" style="margin-bottom: 4px">泛化模板</div>
+                  <div class="detail-text-block template-text-box" v-html="selectedParagraph.template.generalized.replace(/(\{\{[^}]+\}\})/g, '<mark>$1</mark>')"></div>
+                  <div v-if="selectedParagraph.template.slots?.length" class="detail-label" style="margin-top: 8px">Slot ({{ selectedParagraph.template.slots.length }})</div>
+                  <div class="slot-chips-list">
+                    <span v-for="slot in (selectedParagraph.template.slots || [])" :key="slot.name" class="slot-chip">
+                      <a-tag :color="(SLOT_TYPE_MAP[slot.type] || {}).color || 'blue'" size="small">{{ slot.name }}</a-tag>
+                      <span v-if="slot.value" class="slot-chip-value">= {{ slot.value }}</span>
+                      <span v-if="slot.entity_ref" class="slot-chip-ref">→ {{ slot.entity_ref }}</span>
+                    </span>
+                  </div>
+                  <div v-if="selectedParagraph.template.quality_score != null" class="detail-field" style="margin-top: 8px">
+                    <span class="detail-label">质量评分</span>
+                    <span class="detail-value" :style="{ color: getConfidenceColor(selectedParagraph.template.quality_score) }">{{ (selectedParagraph.template.quality_score * 100).toFixed(0) }}%</span>
+                  </div>
+                </template>
+                <a-empty v-else description="该参数段落未生成泛化模板" :image="false" />
+              </div>
+
+              <!-- narrative / list / 其他 -->
+              <div v-else class="detail-section">
+                <div class="detail-field">
+                  <span class="detail-label">分类</span>
+                  <span class="detail-value">
+                    {{ selectedParagraph.classify_type || '未分类' }}
+                    <template v-if="selectedParagraph.classify_tags?.length">
+                      <a-tag v-for="tag in selectedParagraph.classify_tags" :key="tag" size="small" color="processing" style="margin-left: 4px">
+                        {{ SUBTYPE_MAP[tag] || tag }}
+                      </a-tag>
+                    </template>
+                  </span>
+                </div>
+
+                <!-- 叙述型摘要 -->
+                <template v-if="selectedParagraph.classify_type === 'narrative' && selectedParagraph.template">
+                  <a-divider style="margin: 8px 0" />
+                  <div v-if="selectedParagraph.template.summary" class="detail-field">
+                    <span class="detail-label">摘要</span>
+                    <div class="detail-value" style="color: var(--gray-800); font-weight: 500">{{ selectedParagraph.template.summary }}</div>
+                  </div>
+                  <div v-if="selectedParagraph.template.key_points?.length" class="detail-field" style="flex-direction: column; align-items: flex-start">
+                    <span class="detail-label" style="margin-bottom: 4px">关键要点</span>
+                    <ul style="margin: 0; padding-left: 16px; font-size: 12px; color: var(--gray-700)">
+                      <li v-for="point in selectedParagraph.template.key_points" :key="point">{{ point }}</li>
+                    </ul>
+                  </div>
+                  <div v-if="selectedParagraph.template.entities?.length" class="detail-field">
+                    <span class="detail-label">关键实体</span>
+                    <div class="detail-value">
+                      <a-tag v-for="ent in selectedParagraph.template.entities" :key="ent" size="small" style="margin: 2px">{{ ent }}</a-tag>
+                    </div>
+                  </div>
+                </template>
+
+                <a-divider style="margin: 8px 0" />
+                <div class="detail-label" style="margin-bottom: 4px">原文</div>
+                <div class="detail-text-block">{{ selectedParagraph.content }}</div>
               </div>
             </a-card>
+          </a-col>
+        </a-row>
 
-            <!-- 编辑实体弹窗 -->
-            <a-modal
-              v-model:open="entityEditModalVisible"
-              title="编辑实体信息"
-              ok-text="保存到实体类型库"
-              cancel-text="取消"
-              @ok="saveEntity"
-              width="600px"
-            >
-              <a-form layout="vertical" v-if="editingEntity">
-                <a-form-item label="实体名称" required>
-                  <a-input v-model:value="editingEntity.name" placeholder="请输入实体名称" />
-                </a-form-item>
+        <!-- 步骤导航 -->
+        <div class="flow-nav">
+          <a-button type="primary" @click="goToStep(1)">下一步：Slot 变量校验 →</a-button>
+        </div>
+      </div>
+
+      <!-- ================================================================ -->
+      <!-- Step 2: Slot 变量校验                                               -->
+      <!-- ================================================================ -->
+      <div v-show="activeTab === 'generalize'" class="flow-content">
+        <a-row :gutter="16" class="generalize-row">
+          <!-- 左栏: parameter 段落列表 -->
+          <a-col :span="6">
+            <a-card size="small" class="fixed-height-card">
+              <template #title><span style="font-size: 12px">参数段落 ({{ filteredParamParagraphs.length }})</span></template>
+              <div class="scroll-pane">
+                <div
+                  v-for="para in filteredParamParagraphs"
+                  :key="para.id"
+                  class="para-item"
+                  :class="{ selected: selectedParamPara && selectedParamPara.id === para.id }"
+                  @click="handleParamParaClick(para)"
+                >
+                  <div class="para-item-header">
+                    <span class="para-item-text">{{ (para.content || '').slice(0, 60) }}{{ (para.content || '').length > 60 ? '...' : '' }}</span>
+                    <span v-if="para.template?.slots?.length" class="para-item-slots">{{ para.template.slots.length }} slot</span>
+                    <span v-if="para.template?.quality_score != null" class="para-item-score" :style="{ color: getConfidenceColor(para.template.quality_score) }">
+                      {{ (para.template.quality_score * 100).toFixed(0) }}%
+                    </span>
+                    <span v-if="reviewedParagraphIds.has(para.id)" class="para-reviewed-badge">✓</span>
+                  </div>
+                </div>
+                <a-empty v-if="!filteredParamParagraphs.length" description="无参数型段落" :image="false" />
+              </div>
+            </a-card>
+          </a-col>
+
+          <!-- 中栏: Diff -->
+          <a-col :span="10">
+            <a-card size="small" class="fixed-height-card">
+              <template #title><span style="font-size: 12px">原文 vs 模板</span></template>
+              <template v-if="selectedParamPara">
+                <div class="diff-section">
+                  <div class="diff-label">原文</div>
+                  <div class="diff-text original-text">{{ selectedParamPara.content }}</div>
+                </div>
+                <div class="diff-section">
+                  <div class="diff-label">泛化模板</div>
+                  <div class="diff-text template-text" v-html="highlightedGeneralized"></div>
+                </div>
+                <div v-if="selectedParamPara.template?.quality_score != null" class="quality-bar">
+                  质量评分:
+                  <span :style="{ color: getConfidenceColor(selectedParamPara.template.quality_score), fontWeight: 600 }">
+                    {{ (selectedParamPara.template.quality_score * 100).toFixed(0) }}%
+                  </span>
+                </div>
+              </template>
+              <a-empty v-else description="请选择左侧段落" :image="false" />
+            </a-card>
+          </a-col>
+
+          <!-- 右栏: Slot 编辑 -->
+          <a-col :span="8">
+            <a-card size="small" class="fixed-height-card">
+              <template #title><span style="font-size: 12px">Slot 编辑</span></template>
+              <template #extra>
+                <a-button size="small" type="primary" @click="handleSaveParaTemplate" :loading="saving" :disabled="!selectedParamPara">保存</a-button>
+              </template>
+              <template v-if="selectedParamPara?.template?.slots?.length">
+                <div class="scroll-pane">
+                  <div v-for="slot in selectedParamPara.template.slots" :key="slot.name" class="slot-edit-card">
+                    <div class="slot-edit-header">
+                      <span class="slot-edit-name">{{ slot.name }}</span>
+                      <a-tag size="small" :color="(SLOT_TYPE_MAP[slot.type] || {}).color || 'blue'">{{ (SLOT_TYPE_MAP[slot.type] || {}).label || slot.type || '参数型' }}</a-tag>
+                    </div>
+                    <div class="slot-edit-row">
+                      <span class="slot-edit-label">type</span>
+                      <a-select v-model:value="slot.type" size="small" style="flex: 1" @change="(v) => updateSlotField(selectedParamPara.id, slot.name, 'type', v)">
+                        <a-select-option value="parameter">参数型</a-select-option>
+                        <a-select-option value="enum">枚举型</a-select-option>
+                        <a-select-option value="descriptive">描述型</a-select-option>
+                        <a-select-option value="reference">引用型</a-select-option>
+                      </a-select>
+                    </div>
+                    <div class="slot-edit-row">
+                      <span class="slot-edit-label">value</span>
+                      <a-select v-if="slot.type === 'enum' && slot.vocabulary?.length" v-model:value="slot.value" size="small" style="flex: 1" @change="(v) => updateSlotField(selectedParamPara.id, slot.name, 'value', v)">
+                        <a-select-option v-for="opt in slot.vocabulary" :key="opt" :value="opt">{{ opt }}</a-select-option>
+                      </a-select>
+                      <a-input v-else v-model:value="slot.value" size="small" style="flex: 1" @change="() => updateSlotField(selectedParamPara.id, slot.name, 'value', slot.value)" />
+                    </div>
+                    <div class="slot-edit-row" v-if="slot.unit">
+                      <span class="slot-edit-label">unit</span>
+                      <span class="slot-edit-readonly">{{ slot.unit }}</span>
+                    </div>
+                    <div class="slot-edit-row" v-if="slot.entity_ref">
+                      <span class="slot-edit-label">ref</span>
+                      <span class="slot-edit-readonly">{{ slot.entity_ref }}</span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+              <a-empty v-else-if="selectedParamPara" description="该段落无 slot" :image="false" />
+              <a-empty v-else description="请选择左侧段落" :image="false" />
+            </a-card>
+          </a-col>
+        </a-row>
+
+        <!-- 步骤导航 -->
+        <div class="flow-nav">
+          <a-button @click="goToStep(0)">← 上一步：结构化元数据校验</a-button>
+          <a-button type="primary" @click="goToStep(2)">下一步：实体确认 →</a-button>
+        </div>
+      </div>
+
+      <!-- ================================================================ -->
+      <!-- Step 3: 实体确认                                                   -->
+      <!-- ================================================================ -->
+      <div v-show="activeTab === 'entities'" class="flow-content">
+        <a-card title="LLM 建议的新实体" :loading="loadingUnrecognizedEntities">
+          <template #extra>
+            <a-space>
+              <a-button size="small" @click="loadUnrecognizedEntities(taskDetail?.id)" :disabled="!taskDetail?.id">重新分析</a-button>
+              <a-button type="primary" size="small" @click="batchSaveEntities" :disabled="!selectedEntities.length">确认并保存 ({{ selectedEntities.length }})</a-button>
+            </a-space>
+          </template>
+
+          <a-alert v-if="unrecognizedEntities.length === 0 && !loadingUnrecognizedEntities" message="未发现新的实体建议" description="泛化阶段产生的所有插槽均已匹配到现有实体，或文档中未包含可识别的实体。" type="success" show-icon style="margin-bottom: 16px" />
+          <a-alert v-else type="info" show-icon style="margin-bottom: 16px">
+            <template #message>
+              检测到 <strong>{{ rawSlots.length }}</strong> 个未识别插槽，
+              其中 <strong>{{ matchedCount }}</strong> 个可归入已有实体，
+              <strong>{{ newCount }}</strong> 个建议为新实体。
+              确认后将保存到实体库，下次提取时自动使用。
+            </template>
+          </a-alert>
+
+          <div v-if="unrecognizedEntities.length > 0">
+            <a-tabs v-model:activeKey="activeEntityCategory" type="card">
+              <a-tab-pane v-for="(entities, category) in groupedUnrecognizedEntities" :key="category" :tab="`${category} (${entities.length})`">
+                <a-table
+                  :data-source="entities"
+                  :columns="entityTableColumns"
+                  :row-selection="{
+                    selectedRowKeys: selectedEntities.map(e => e.entity_key || e.name_cn || e.name),
+                    onSelect: (record, selected) => {
+                      if (selected) selectedEntities.push(record)
+                      else { const key = record.entity_key || record.name_cn; const idx = selectedEntities.findIndex(e => (e.entity_key || e.name_cn) === key); if (idx !== -1) selectedEntities.splice(idx, 1) }
+                    }
+                  }"
+                  :pagination="{ pageSize: 10 }"
+                  row-key="entity_key"
+                  size="small"
+                >
+                  <template #bodyCell="{ column, record }">
+                    <template v-if="column.key === 'type'">
+                      <a-tag v-if="record.suggestion_type === 'add_property'" color="blue">属性补充</a-tag>
+                      <a-tag v-else color="green">新实体</a-tag>
+                    </template>
+                    <template v-else-if="column.key === 'name_cn'">
+                      <template v-if="record.suggestion_type === 'add_property'">{{ record.target_entity_name }} → +{{ record.proposed_property?.name_cn }}</template>
+                      <template v-else>{{ record.name_cn }}</template>
+                    </template>
+                    <template v-else-if="column.key === 'synonyms'">{{ (record.synonyms || []).join('、') }}</template>
+                    <template v-else-if="column.key === 'confidence'">
+                      <span :style="{ color: Math.round((record.confidence || 0) * 100) >= 80 ? '#52c41a' : Math.round((record.confidence || 0) * 100) >= 60 ? '#faad14' : '#ff4d4f' }">{{ Math.round((record.confidence || 0) * 100) }}%</span>
+                    </template>
+                    <template v-else-if="column.key === 'action'">
+                      <a-space>
+                        <a-button type="link" size="small" @click="openEntityEditModal(record)">编辑</a-button>
+                        <a-button type="link" size="small" @click="saveEntityDirectly(record)">确认保存</a-button>
+                      </a-space>
+                    </template>
+                  </template>
+                </a-table>
+              </a-tab-pane>
+            </a-tabs>
+          </div>
+        </a-card>
+
+        <!-- 编辑实体弹窗 -->
+        <a-modal v-model:open="entityEditModalVisible" title="编辑实体定义" ok-text="确认并保存" cancel-text="取消" @ok="saveEntity" width="640px">
+          <a-form layout="vertical" v-if="editingEntity">
+            <a-row :gutter="16">
+              <a-col :span="12">
+                <a-form-item label="实体名称" required><a-input v-model:value="editingEntity.name_cn" placeholder="中文名称" /></a-form-item>
+              </a-col>
+              <a-col :span="12">
+                <a-form-item label="Entity Key" required><a-input v-model:value="editingEntity.entity_key" placeholder="snake_case_key" /></a-form-item>
+              </a-col>
+            </a-row>
+            <a-row :gutter="16">
+              <a-col :span="8">
                 <a-form-item label="分类" required>
-                  <a-select
-                    v-model:value="editingEntity.category"
-                    placeholder="请选择分类"
-                    :options="entityCategories.map(cat => ({ label: cat, value: cat }))"
-                    show-search
-                    allow-clear
-                  />
+                  <a-select v-model:value="editingEntity.category" placeholder="选择分类" :options="entityCategories.map(cat => ({ label: cat, value: cat }))" show-search allow-clear />
                 </a-form-item>
-                <a-form-item label="描述">
-                  <a-textarea v-model:value="editingEntity.description" placeholder="请输入实体描述" :rows="3" />
+              </a-col>
+              <a-col :span="8">
+                <a-form-item label="值类型">
+                  <a-select v-model:value="editingEntity.value_type" placeholder="选择类型">
+                    <a-select-option value="String">String</a-select-option>
+                    <a-select-option value="Numeric">Numeric</a-select-option>
+                    <a-select-option value="Boolean">Boolean</a-select-option>
+                    <a-select-option value="Date">Date</a-select-option>
+                  </a-select>
                 </a-form-item>
-                <a-form-item label="上下文">
-                  <a-textarea :value="editingEntity.context" placeholder="实体出现的上下文" :rows="2" disabled />
-                </a-form-item>
-              </a-form>
-            </a-modal>
-          </a-tab-pane>
-        </a-tabs>
-
-        <!-- 添加字段弹窗 -->
-        <a-modal
-          v-model:open="addFieldModalVisible"
-          title="手动添加领域字段"
-          @ok="handleAddFieldConfirm"
-          :confirm-loading="loading"
-        >
-          <a-form layout="vertical">
-            <a-form-item label="字段标签" required>
-              <a-input v-model:value="newField.label" placeholder="例如：服务年限" />
-            </a-form-item>
-            <a-form-item label="分组">
-              <a-select v-model:value="newField.group" :options="[
-                { label: '基础信息', value: '基础信息' },
-                { label: '工程参数', value: '工程参数' },
-                { label: '空间数据', value: '空间数据' },
-                { label: '其他', value: '其他' }
-              ]" />
-            </a-form-item>
-            <a-form-item label="数据类型">
-              <a-select v-model:value="newField.type" :options="[
-                { label: '文本', value: 'text' },
-                { label: '数字', value: 'number' },
-                { label: '选择', value: 'select' }
-              ]" />
-            </a-form-item>
-            <a-form-item label="控件类型">
-              <a-select v-model:value="newField.widget" :options="[
-                { label: 'Input', value: 'Input' },
-                { label: 'InputNumber', value: 'InputNumber' },
-                { label: 'Select', value: 'Select' },
-                { label: 'Textarea', value: 'Textarea' }
-              ]" />
-            </a-form-item>
-            <a-form-item label="单位">
-              <a-input v-model:value="newField.unit" placeholder="例如：Mt/a, 年, mm" />
-            </a-form-item>
-            <a-form-item>
-              <a-checkbox v-model:checked="newField.required">必填</a-checkbox>
+              </a-col>
+              <a-col :span="8">
+                <a-form-item label="单位"><a-input v-model:value="editingEntity.unit" placeholder="如 Mt/a、mg/m³" /></a-form-item>
+              </a-col>
+            </a-row>
+            <a-form-item label="描述"><a-textarea v-model:value="editingEntity.description" placeholder="实体含义描述" :rows="2" /></a-form-item>
+            <a-form-item label="同义词">
+              <a-select v-model:value="editingEntity.synonyms" mode="tags" placeholder="输入后回车添加" :tokenSeparators="[',', '、']" />
             </a-form-item>
           </a-form>
         </a-modal>
+
+        <!-- 步骤导航 -->
+        <div class="flow-nav">
+          <a-button @click="goToStep(1)">← 上一步：Slot 变量校验</a-button>
+          <a-button type="primary" @click="goToStep(3)">下一步：入库确认 →</a-button>
+        </div>
       </div>
-    </a-spin>
+
+      <!-- ================================================================ -->
+      <!-- Step 4: 入库确认                                                   -->
+      <!-- ================================================================ -->
+      <div v-show="activeTab === 'commit'" class="flow-content">
+        <!-- 统计卡片 -->
+        <a-row :gutter="12" class="stats-row">
+          <a-col :span="4">
+            <a-card size="small" class="stat-card">
+              <div class="stat-value">{{ sourceParagraphs.length }}</div>
+              <div class="stat-label">总段落</div>
+            </a-card>
+          </a-col>
+          <a-col :span="4">
+            <a-card size="small" class="stat-card">
+              <div class="stat-value">{{ classifyStats.parameter || 0 }}</div>
+              <div class="stat-label">参数型</div>
+            </a-card>
+          </a-col>
+          <a-col :span="4">
+            <a-card size="small" class="stat-card">
+              <div class="stat-value">{{ classifyStats.legal_reference || 0 }}</div>
+              <div class="stat-label">标准引用</div>
+            </a-card>
+          </a-col>
+          <a-col :span="4">
+            <a-card size="small" class="stat-card">
+              <div class="stat-value">{{ classifyStats.table || 0 }}</div>
+              <div class="stat-label">表格</div>
+            </a-card>
+          </a-col>
+          <a-col :span="4">
+            <a-card size="small" class="stat-card">
+              <div class="stat-value">{{ classifyStats.formula || 0 }}</div>
+              <div class="stat-label">公式</div>
+            </a-card>
+          </a-col>
+          <a-col :span="4">
+            <a-card size="small" class="stat-card">
+              <div class="stat-value">{{ Object.keys(slotSummary).length }}</div>
+              <div class="stat-label">提取变量</div>
+            </a-card>
+          </a-col>
+        </a-row>
+
+        <!-- 变量汇总 -->
+        <a-card title="变量汇总" size="small" style="margin-top: 16px" v-if="Object.keys(slotSummary).length > 0">
+          <a-table
+            :data-source="Object.entries(slotSummary).map(([k, v]) => ({ key: k, value: v.value, type: v.type, unit: v.unit, entity_ref: v.entity_ref }))"
+            :columns="[
+              { title: '变量名', dataIndex: 'key', ellipsis: true },
+              { title: '值', dataIndex: 'value', ellipsis: true },
+              { title: '类型', dataIndex: 'type', width: 80 },
+              { title: '单位', dataIndex: 'unit', width: 80 },
+              { title: '实体引用', dataIndex: 'entity_ref', ellipsis: true },
+            ]"
+            :pagination="{ pageSize: 15 }"
+            size="small"
+          >
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.dataIndex === 'type'">
+                <a-tag size="small" :color="(SLOT_TYPE_MAP[record.type] || {}).color || 'blue'">{{ (SLOT_TYPE_MAP[record.type] || {}).label || record.type }}</a-tag>
+              </template>
+            </template>
+          </a-table>
+        </a-card>
+
+        <!-- 入库操作 -->
+        <a-card title="入库操作" size="small" style="margin-top: 16px">
+          <a-form layout="vertical">
+            <a-form-item label="目标知识库">
+              <a-select
+                v-model:value="selectedKnowledgeBaseId"
+                placeholder="选择目标知识库"
+                :loading="loadingKnowledgeBases"
+                style="max-width: 400px"
+              >
+                <a-select-option v-for="kb in lightragKnowledgeBases" :key="kb.db_id || kb.id" :value="kb.db_id || kb.id">{{ kb.name }}</a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-form>
+          <div class="commit-actions">
+            <a-button type="primary" size="large" danger @click="handleCommit" :disabled="!selectedKnowledgeBaseId" :loading="saving">
+              确认入库
+            </a-button>
+          </div>
+        </a-card>
+
+        <!-- 步骤导航 -->
+        <div class="flow-nav">
+          <a-button @click="goToStep(2)">← 上一步：实体确认</a-button>
+        </div>
+      </div>
+
+    </div>
   </div>
 </template>
 
@@ -1564,489 +1468,328 @@ import { h } from 'vue'
   margin-top: 16px;
   max-width: 100%;
   overflow-x: hidden;
+  user-select: text;
 
-  // 确保所有子元素不超过容器宽度
-  :deep(.ant-card) {
-    max-width: 100%;
-    overflow: hidden;
-  }
-
-  // 确保表格不会撑开容器
-  :deep(table) {
-    max-width: 100%;
-    table-layout: fixed;
-    word-wrap: break-word;
-  }
+  :deep(.ant-card) { max-width: 100%; overflow: hidden; }
+  :deep(table) { max-width: 100%; table-layout: fixed; word-wrap: break-word; }
 }
 
-.empty-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 400px;
-  color: var(--gray-500);
-  font-size: 14px;
-  background: #fff;
-  border-radius: 12px;
+.loading-state, .empty-state {
+  display: flex; align-items: center; justify-content: center;
+  height: 400px; background: #fff; border-radius: 12px;
 }
+.empty-state { color: var(--gray-500); font-size: 14px; }
 
 .workbench-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #fff;
-  padding: 16px 20px;
-  border-radius: 12px 12px 0 0;
-  border: 1px solid var(--gray-150);
-  border-bottom: none;
-
-  h3 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 600;
-  }
-
-  p {
-    margin: 4px 0 0;
-    color: var(--gray-500);
-    font-size: 13px;
-  }
+  display: flex; align-items: center; justify-content: space-between;
+  background: #fff; padding: 16px 20px;
+  border-radius: 12px 12px 0 0; border: 1px solid var(--gray-150); border-bottom: none;
+  h3 { margin: 0; font-size: 20px; font-weight: 600; }
+  p { margin: 4px 0 0; color: var(--gray-500); font-size: 13px; }
 }
 
-.workbench-steps {
-  background: #fff;
-  padding: 12px 20px;
-  border: 1px solid var(--gray-150);
-  border-top: none;
-  border-radius: 0;
+.header-status {
+  .status-item { font-size: 13px; color: var(--gray-600); }
 }
 
-.workbench-tabs {
-  background: #fff;
-  padding: 16px 20px;
-  border: 1px solid var(--gray-150);
-  border-top: none;
-  border-radius: 0 0 12px 12px;
-  margin-bottom: 24px;
-  max-width: 100%;
-  overflow: hidden;
-
-  :deep(.ant-tabs-nav) {
-    margin-bottom: 16px;
+.flow-steps {
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; padding: 14px 24px;
+  border: 1px solid var(--gray-150); border-top: none;
+  gap: 0;
+}
+.flow-step {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 6px;
+  font-size: 13px; color: var(--gray-500);
+  transition: all 0.2s; cursor: default;
+  &.clickable { cursor: pointer; &:hover { background: var(--gray-50); } }
+  &.active {
+    color: #1677ff; font-weight: 600;
+    .flow-step-num { background: #1677ff; color: #fff; }
   }
-
-  :deep(.ant-tabs-content) {
-    max-width: 100%;
-    overflow-x: hidden;
+  &.done:not(.active) {
+    color: #52c41a;
+    .flow-step-num { background: #52c41a; color: #fff; }
   }
 }
+.flow-step-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--gray-200); color: var(--gray-600);
+  font-size: 11px; font-weight: 600; transition: all 0.2s;
+}
+.flow-step-title { white-space: nowrap; }
+.flow-step-arrow { margin: 0 8px; color: var(--gray-300); font-size: 18px; }
 
-.paragraph-viewer-card,
-.paragraph-json-card,
-.tables-card {
-  height: 500px;
-  display: flex;
-  flex-direction: column;
-
-  :deep(.ant-card-body) {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    min-height: 0;
-  }
+.flow-panel {
+  background: #fff; padding: 16px 20px;
+  border: 1px solid var(--gray-150); border-top: none; border-radius: 0 0 12px 12px;
+  margin-bottom: 24px; max-width: 100%; overflow: hidden;
 }
 
-.scroll-pane {
-  flex: 1;
-  overflow-y: auto;
-  padding-right: 8px;
-  min-height: 0;
+.flow-nav {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 16px; padding-top: 12px;
+  border-top: 1px solid var(--gray-150);
 }
+
+// ========== Tab 1: 结构化元数据校验 ==========
+.tab-header-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 16px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;
+  :deep(.ant-btn) { font-size: 13px; }
+}
+
+.classify-filter-label {
+  font-size: 13px; color: var(--gray-600);
+}
+
+.classify-count {
+  font-size: 10px; color: var(--gray-400); margin-left: 2px;
+}
+
+.tab-header-bar {
+  :deep(.ant-radio-group) { font-size: 13px; }
+  :deep(.ant-radio-button-wrapper) { font-size: 13px; padding: 0 10px; height: 28px; line-height: 28px; }
+}
+
+.review-progress { margin-bottom: 12px; padding: 0 4px; }
+
+.parse-row {
+  padding-top: 8px;
+}
+
+.paragraph-viewer-card {
+  height: 560px; display: flex; flex-direction: column;
+  :deep(.ant-card-body) { flex: 1; display: flex; flex-direction: column; overflow-y: auto; min-height: 0; }
+}
+
+.detail-panel-card {
+  display: flex; flex-direction: column; max-height: 560px;
+  :deep(.ant-card-body) { flex: 1; display: flex; flex-direction: column; overflow-y: auto; min-height: 0; }
+  :deep(.ant-btn) { font-size: 13px; }
+  :deep(.ant-radio-button-wrapper) { font-size: 13px; }
+  :deep(.ant-select-selector) { font-size: 13px; }
+  :deep(.ant-select-item-option-content) { font-size: 13px; }
+}
+
+.fixed-height-card {
+  height: 560px; display: flex; flex-direction: column;
+  :deep(.ant-card-body) { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+}
+
+.chapter-nav-card {
+  transition: all 0.2s;
+  :deep(.ant-card-head) { min-height: 36px; padding: 0 8px; }
+  :deep(.ant-card-head-title) { padding: 6px 0; }
+  :deep(.ant-card-extra) { padding: 6px 0; }
+}
+.chapter-toggle-btn { padding: 0 4px; height: 22px; line-height: 22px; }
+.chapter-tree-pane { padding-right: 0; }
+.chapter-tree-node { font-size: 11px; }
+
+// 章节树缩进减小
+.chapter-tree-pane :deep(.ant-tree) {
+  font-size: 11px; background: transparent;
+  .ant-tree-treenode { padding: 0; margin: 0; }
+  .ant-tree-indent-unit { width: 10px; min-width: 10px; }
+  .ant-tree-switcher { width: 16px; min-width: 16px; }
+  .ant-tree-node-content-wrapper { padding: 1px 4px; min-height: 22px; line-height: 22px; }
+}
+
+.scroll-pane { flex: 1; overflow-y: auto; padding-right: 8px; min-height: 0; }
 
 .paragraph {
-  padding: 12px 0;
-  border-bottom: 1px dashed var(--gray-150);
-  cursor: pointer;
-
-  &.selected {
-    background-color: rgba(24, 144, 255, 0.06);
-    border-left: 3px solid #1890ff;
-    padding-left: 9px;
-  }
+  padding: 10px 8px; border-bottom: 1px dashed var(--gray-150); cursor: pointer;
+  &.selected { background-color: rgba(24, 144, 255, 0.06); border-left: 3px solid #1890ff; padding-left: 5px; }
+  &.para-reviewed { opacity: 0.6; }
+  &.para-reviewed.selected { opacity: 1; }
+  &.para-needs-review { border-left: 3px solid #faad14; padding-left: 5px; }
 
   .para-title {
-    font-weight: 600;
-    margin-bottom: 6px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
-
-    .para-section-tag {
-      font-weight: 400;
-    }
+    display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-bottom: 4px;
+    .para-section-tag { font-weight: 400; font-size: 10px; }
+    .para-subtype-tag { font-size: 10px; padding: 0 4px; line-height: 18px; height: 18px; }
   }
-
-  .para-content {
-    color: var(--gray-700);
-    line-height: 1.6;
-  }
+  .para-confidence { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .para-reviewed-badge { color: #52c41a; font-weight: 700; font-size: 13px; }
+  .para-content { color: var(--gray-700); font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .para-summary { color: var(--gray-500); font-size: 11px; line-height: 1.4; margin-top: 3px; padding-left: 4px; border-left: 2px solid var(--gray-200); }
 }
 
-.json-editor-wrapper {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 0;
-  overflow: hidden;
-
-  .json-editor-textarea {
-    flex: 1;
-    width: 100%;
-    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-    font-size: 12px;
-    line-height: 1.5;
-    background: #0b1120;
-    color: #e5e7eb;
-    border: 1px solid var(--gray-200);
-    border-radius: 8px;
-    resize: none;
-
-    &.json-error {
-      border-color: #ff4d4f;
-    }
-  }
+// 详情面板
+.detail-section {
+  flex: 1; display: flex; flex-direction: column; min-height: 0;
 }
 
-.json-error-message {
-  margin-top: 4px;
+.detail-field {
+  display: flex; gap: 8px; margin-bottom: 6px; font-size: 13px;
+  .detail-label { color: var(--gray-500); min-width: 60px; font-weight: 500; flex-shrink: 0; }
+  .detail-value { color: var(--gray-800); word-break: break-all; }
 }
 
-.json-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
+.detail-label {
+  font-size: 11px; font-weight: 600; color: var(--gray-500);
+  text-transform: uppercase; letter-spacing: 0.5px;
 }
 
-.json-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  flex: 1;
-}
-
-.json-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  font-size: 13px;
-  color: var(--gray-500);
-}
-
-.json-editor {
-  width: 100%;
-  max-width: 100%;
-  min-height: 360px;
-  border: 1px solid var(--gray-200);
-  border-radius: 8px;
-  padding: 12px;
+.detail-text-block {
+  background: var(--gray-50); border: 1px solid var(--gray-150);
+  border-radius: 6px; padding: 8px 10px; font-size: 12px; line-height: 1.6;
+  white-space: pre-wrap; word-break: break-word;
   font-family: 'SFMono-Regular', Consolas, monospace;
-  font-size: 13px;
-  line-height: 1.5;
-  resize: none;
-  overflow-wrap: break-word;
-  word-break: break-word;
+  margin-top: 4px; max-height: 120px; overflow-y: auto;
 }
 
-.table-block {
-  margin-bottom: 16px;
-  padding: 12px;
-  border: 1px solid var(--gray-200);
-  border-radius: 8px;
-  cursor: pointer;
+// 法律引用
+.legal-ref-list-scroll {
+  display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto;
+}
+
+.legal-ref-item {
+  padding: 6px 8px; background: var(--gray-50); border-radius: 4px;
+  .legal-ref-header { margin-bottom: 4px; }
+  .legal-ref-name { font-weight: 500; color: var(--gray-800); font-size: 13px; }
+  .legal-ref-code { color: var(--gray-500); font-size: 11px; margin-left: 4px; }
+  .legal-ref-meta { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .legal-ref-auth { color: var(--gray-400); font-size: 11px; }
+  .legal-ref-date { color: var(--gray-500); font-size: 11px; }
+}
+
+// 表格 Schema
+.table-schema-cols {
+  display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto;
+}
+
+.ts-col-item {
+  display: flex; align-items: center; gap: 6px; font-size: 12px;
+  .ts-col-name { font-weight: 500; }
+  .ts-col-unit { color: var(--gray-500); font-size: 11px; }
+  .ts-col-vocab { color: var(--gray-400); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
+}
+
+.structural-rows-section { margin-top: 12px; }
+.structural-rows-table { :deep(table) { font-size: 11px; } }
+
+// 公式变量
+.formula-vars {
+  display: flex; flex-direction: column; gap: 4px;
+}
+
+.formula-var-item {
+  display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 8px; background: var(--gray-50); border-radius: 4px;
+  .formula-var-symbol { font-family: monospace; font-weight: 600; color: var(--gray-700); min-width: 30px; }
+  .formula-var-arrow { color: var(--gray-400); }
+  .formula-var-name { color: var(--gray-800); }
+  .formula-var-unit { color: var(--gray-500); font-size: 11px; }
+  .formula-var-ref { color: #1890ff; font-size: 11px; margin-left: auto; }
+  .step-order { font-weight: 600; color: var(--gray-500); min-width: 20px; }
+}
+
+// Slot chips (parameter summary)
+.slot-chips-list {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  .slot-chip { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; }
+  .slot-chip-value { color: var(--gray-600); }
+  .slot-chip-ref { color: #1890ff; font-size: 11px; }
+}
+
+.template-text-box { max-height: 100px; }
+
+// ========== Tab 2: Slot 变量校验 ==========
+.generalize-row { padding-top: 8px; }
+
+.para-item {
+  padding: 8px; border: 1px solid var(--gray-100); border-radius: 6px; margin-bottom: 6px; cursor: pointer;
   transition: all 0.2s;
+  &:hover { border-color: var(--gray-300); background: var(--gray-50); }
+  &.selected { border-color: #1890ff; background: rgba(24, 144, 255, 0.06); }
 
-  &:hover {
-    border-color: var(--gray-300);
-    background-color: var(--gray-50);
-  }
+  .para-item-header { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .para-item-text { font-size: 12px; color: var(--gray-700); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .para-item-slots { font-size: 10px; color: var(--gray-500); }
+  .para-item-score { font-size: 11px; font-weight: 600; }
+  .para-reviewed-badge { color: #52c41a; font-weight: 700; font-size: 13px; }
+}
 
-  &.selected {
-    border-color: #1890ff;
-    background-color: rgba(24, 144, 255, 0.06);
+.diff-section {
+  margin-bottom: 12px;
+  .diff-label { font-size: 11px; font-weight: 600; color: var(--gray-500); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .diff-text {
+    padding: 10px; border-radius: 6px; font-size: 13px; line-height: 1.6;
+    white-space: pre-wrap; word-break: break-word;
+    &.original-text { background: var(--gray-50); border: 1px solid var(--gray-150); }
+    &.template-text { background: #f6ffed; border: 1px solid #b7eb8f; }
   }
+}
 
-  h4 {
-    margin: 0 0 12px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--gray-700);
-  }
+.quality-bar {
+  font-size: 13px; color: var(--gray-600); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--gray-100);
+}
+
+// Slot 编辑卡片
+.slot-edit-card {
+  border: 1px solid var(--gray-150); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px;
+  .slot-edit-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .slot-edit-name { font-family: monospace; font-weight: 600; font-size: 13px; color: var(--gray-700); }
+  .slot-edit-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .slot-edit-label { font-size: 11px; color: var(--gray-500); min-width: 36px; }
+  .slot-edit-readonly { font-size: 12px; color: var(--gray-600); }
+}
+
+// ========== Tab 4: 入库确认 ==========
+.stats-row { margin-bottom: 8px; }
+
+.stat-card {
+  text-align: center;
+  .stat-value { font-size: 28px; font-weight: 700; color: var(--gray-800); }
+  .stat-label { font-size: 12px; color: var(--gray-500); margin-top: 4px; }
+}
+
+.commit-actions {
+  display: flex; justify-content: center; padding: 16px 0;
+}
+
+// ========== 通用 ==========
+mark {
+  background: rgba(24, 144, 255, 0.2); padding: 0 2px; border-radius: 4px;
+}
+
+.detail-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  flex: 1; min-height: 200px; gap: 0;
+  :deep(.ant-empty-image) { display: none; }
+  :deep(.ant-empty-description) { margin-top: 2px; }
+}
+
+.json-viewer {
+  flex: 1; margin: 0; padding: 12px;
+  background: var(--gray-50, #fafafa); border: 1px solid var(--gray-150, #e8e8e8);
+  border-radius: 6px; font-size: 12px; line-height: 1.5;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  overflow: auto; white-space: pre-wrap; word-break: break-word;
 }
 
 .html-table-container {
-  margin: 12px 0;
-  overflow-x: auto;
-
+  margin: 8px 0; overflow-x: auto;
   :deep(table) {
-    border-collapse: collapse;
-    width: 100%;
-    font-size: 13px;
-
-    td, th {
-      border: 1px solid #d9d9d9;
-      padding: 8px 12px;
-      text-align: left;
-    }
-
-    th {
-      background-color: #fafafa;
-      font-weight: 600;
-    }
+    border-collapse: collapse; width: 100%; font-size: 13px;
+    td, th { border: 1px solid #d9d9d9; padding: 6px 10px; text-align: left; }
+    th { background-color: #fafafa; font-weight: 600; }
   }
 }
 
-.html-preview-wrapper {
-  margin-bottom: 12px;
-  border: 1px solid var(--gray-200);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.html-preview-label {
-  padding: 8px 12px;
-  background: var(--gray-50);
-  font-size: 12px;
-  color: var(--gray-600);
-  border-bottom: 1px solid var(--gray-200);
-}
-
-.html-preview-content {
-  max-height: 200px;
-  overflow-y: auto;
-  padding: 12px;
-  background: #fff;
-}
-
-.html-preview-empty {
-  padding: 24px 0;
-  margin-bottom: 12px;
-  border: 1px dashed var(--gray-200);
-  border-radius: 8px;
-}
-
-// 表格单元格样式优化 - 移除浏览器默认的 focus outline
-.table-block {
-  :deep(table) {
-    td, th {
-      outline: none;
-
-      &:focus {
-        outline: none;
-      }
-    }
+.collapse-panel {
+  .collapse-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 8px; cursor: pointer; border-radius: 4px;
+    font-size: 12px; font-weight: 600; color: var(--gray-600);
+    background: var(--gray-50, #fafafa); transition: background 0.2s;
+    &:hover { background: var(--gray-100, #f0f0f0); }
+    .collapse-title { display: inline-flex; align-items: center; gap: 4px; }
+    .collapse-meta { font-weight: 400; color: var(--gray-400); font-size: 11px; margin-left: 6px; }
   }
-}
-
-.tables-row {
-  .tables-col {
-    display: flex;
-    flex-direction: column;
-  }
-}
-
-.mt16 {
-  margin-top: 16px;
-}
-
-.chapter-tree-wrapper {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.template-textarea {
-  width: 100%;
-  max-width: 100%;
-  min-height: 150px;
-  border: 1px solid var(--gray-200);
-  border-radius: 8px;
-  padding: 12px;
-  font-family: monospace;
-  font-size: 13px;
-  resize: vertical;
-  margin-top: 12px;
-  overflow-wrap: break-word;
-  word-break: break-word;
-}
-
-.template-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-
-  h4 {
-    margin: 0;
-  }
-}
-
-.slot-list {
-  margin-top: 16px;
-  max-height: 200px;
-  overflow-y: auto;
-
-  .slot-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px;
-    border: 1px solid var(--gray-200);
-    border-radius: 4px;
-    background: var(--gray-50);
-    margin-bottom: 8px;
-
-    .slot-name {
-      font-size: 12px;
-      font-weight: 500;
-      font-family: monospace;
-      color: var(--gray-600);
-      min-width: 120px;
-    }
-  }
-}
-
-.slot-empty {
-  margin-top: 16px;
-  padding: 20px 0;
-}
-
-.diff-view {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  max-width: 100%;
-  overflow: hidden;
-
-  h5 {
-    margin: 0 0 8px;
-    font-weight: 600;
-    color: var(--gray-700);
-  }
-
-  p {
-    background: var(--gray-100);
-    padding: 12px;
-    border-radius: 8px;
-    white-space: pre-wrap;
-    word-break: break-word;
-    line-height: 1.6;
-    margin: 0;
-    max-width: 100%;
-    overflow-wrap: break-word;
-
-    &.empty-text {
-      color: var(--gray-400);
-      font-style: italic;
-      text-align: center;
-    }
-  }
-}
-
-mark {
-  background: rgba(24, 144, 255, 0.2);
-  padding: 0 2px;
-  border-radius: 4px;
-}
-
-.panel-actions {
-  margin-top: 12px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.form-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 20px;
-}
-
-.no-schema {
-  color: var(--gray-400);
-  text-align: center;
-  padding: 40px 0;
-  font-size: 13px;
-}
-
-.schema-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.field-group {
-  .group-title {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--main-color);
-    margin-bottom: 12px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--gray-100);
-  }
-}
-
-.field-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.field-item {
-  .field-label {
-    font-size: 12px;
-    color: var(--gray-700);
-    margin-bottom: 6px;
-
-    .required {
-      color: #ff4d4f;
-      margin-left: 2px;
-    }
-
-    .unit {
-      color: var(--gray-400);
-      margin-left: 4px;
-      font-size: 11px;
-    }
-  }
-
-  .field-meta {
-    font-size: 11px;
-    margin-top: 4px;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    .confidence {
-      font-weight: 500;
-    }
-
-    .warning-msg {
-      color: #faad14;
-    }
-
-    .source-info {
-      color: var(--gray-400);
-      font-size: 10px;
-    }
-  }
-}
-
-.empty-tables {
-  padding: 40px 0;
-  text-align: center;
+  .collapse-body { padding: 8px 0 4px; }
 }
 </style>

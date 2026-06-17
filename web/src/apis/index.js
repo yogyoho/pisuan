@@ -18,6 +18,7 @@ export * from './user_api' // 用户资源 API
 export * from './user_config_api' // 用户配置 API
 export * from './auth_api' // 认证与用户管理 API
 export * from './domain_factory_api' // 领域知识工厂 API
+export * from './domain_entity_builder_api' // 领域实体构建器 API
 
 // 导出基础工具函数
 export {

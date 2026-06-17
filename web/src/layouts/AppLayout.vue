@@ -136,7 +136,7 @@ const activeConversationThreadId = computed(() => {
   return route.path.startsWith('/agent') ? currentThreadId.value : null
 })
 const organizationName = computed(() => {
-  return infoStore.organization.name || infoStore.branding.name || 'Yuxi'
+  return infoStore.organization.name || infoStore.branding.name || 'Pisuan'
 })
 
 // 下面是导航菜单部分，添加智能体项
@@ -299,6 +299,15 @@ watch(
     if (!route.path.startsWith('/agent')) return
     const threadId = typeof route.params.thread_id === 'string' ? route.params.thread_id : null
     chatThreadsStore.setCurrentThreadId(threadId)
+  },
+  { immediate: true }
+)
+
+// 进入知识工厂页面时自动收起侧边栏，离开时自动展开
+watch(
+  () => route.path,
+  (path) => {
+    setSidebarCollapsed(path.startsWith('/domain-factory'))
   },
   { immediate: true }
 )

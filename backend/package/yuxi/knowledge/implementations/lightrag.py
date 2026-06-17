@@ -2,6 +2,7 @@ import asyncio
 import os
 import traceback
 from functools import partial
+from typing import Any
 
 from lightrag import LightRAG, QueryParam
 from lightrag.kg.shared_storage import initialize_pipeline_status
@@ -430,21 +431,13 @@ class LightRagKB(KnowledgeBase):
         db_id: str,
         file_id: str,
         file_path: str,
-        structured_doc: "StructuredDocument",
+        structured_doc,
     ) -> None:
-        """将结构化文档写入 LightRAG，使用去噪与上下文重组的向量化策略
+        """将结构化文档写入 LightRAG，三重存储：正文 + 模板 + 插槽
 
-        相比直接索引 Markdown，此方法：
-        1. 遍历 chunks，提取章节信息
-        2. 对章节标题做去噪（去除编号如 "4.1"、"7.1.2"）
-        3. 构造含行业/报告类型/章节路径的向量化文本，提升检索准确性
-
-        Args:
-            rag: LightRAG 实例
-            db_id: 知识库 ID
-            file_id: 文件 ID
-            file_path: 文件路径（元数据用途）
-            structured_doc: 结构化文档对象
+        1. 正文 Chunk：去噪+上下文重组后的段落原文
+        2. Template_Collection：泛化模板的自然语言描述（可按模板语义检索）
+        3. Slot_Collection：每个插槽的独立描述（可按插槽属性检索）
         """
         from yuxi.services.domain_factory_service import build_embedding_text
 
@@ -457,6 +450,9 @@ class LightRagKB(KnowledgeBase):
         industry = structured_doc.industry
         report_type = structured_doc.report_type
 
+        # 清理已有的 chunks（支持重新入库）
+        await self.delete_file_chunks_only(db_id, file_id)
+
         # 构建 section_id -> section 映射
         section_map: dict[str, dict[str, Any]] = {}
         for section in structured_doc.sections:
@@ -464,8 +460,13 @@ class LightRagKB(KnowledgeBase):
             if sid:
                 section_map[sid] = section
 
-        # 遍历 chunks，构造去噪 + 上下文重组后的文本
-        enriched_parts: list[str] = []
+        # 收集模板和插槽（去重）
+        templates_to_store: dict[str, dict[str, Any]] = {}
+        slots_to_store: dict[str, dict[str, Any]] = {}
+
+        chunk_count = 0
+
+        # ========== 第一步：逐 chunk 写入正文 ==========
         for chunk in structured_doc.chunks:
             content = chunk.get("content", "")
             if not content:
@@ -476,7 +477,6 @@ class LightRagKB(KnowledgeBase):
             section_title = section_info.get("title", "") or chunk.get("section_title", "")
             parent_title = chunk.get("parent_section_title", "")
 
-            # 上下文重组
             embedding_text = build_embedding_text(
                 industry=industry,
                 report_type=report_type,
@@ -484,33 +484,334 @@ class LightRagKB(KnowledgeBase):
                 current_section_title=section_title,
                 content=content,
             )
-            enriched_parts.append(embedding_text)
 
-        if not enriched_parts:
-            logger.warning(f"结构化文档 {file_id} 无有效 chunk，跳过入库")
-            return
+            chunk_id = chunk.get("id", f"{file_id}_chunk_{chunk_count}")
+            chunk_id_short = f"c_{hashstr(chunk_id, 8)}"
 
-        # 使用分隔符拼接，允许 LightRAG 基于分隔符二次切分
-        delimiter = "\n<|YUXI_CHUNK_DELIM|>\n"
-        payload = delimiter.join(enriched_parts)
+            try:
+                await rag.ainsert(
+                    input=embedding_text,
+                    ids=chunk_id_short,
+                    file_paths=file_path,
+                )
+                chunk_count += 1
+            except Exception as e:
+                logger.warning(f"正文 chunk 写入失败: {chunk_id_short}, {e}")
 
-        # 清理已有的 chunks（支持重新入库）
-        await self.delete_file_chunks_only(db_id, file_id)
+            # 收集模板和插槽
+            template_data = chunk.get("template")
+            if template_data and isinstance(template_data, dict):
+                template_id = template_data.get("template_id") or template_data.get("generalized", "")[:30]
+                if template_id and template_id not in templates_to_store:
+                    templates_to_store[template_id] = template_data
 
-        # 写入 LightRAG
-        await rag.ainsert(
-            input=payload,
-            ids=file_id,
-            file_paths=file_path,
-            split_by_character=delimiter,
-            split_by_character_only=False,
-        )
+                for slot in template_data.get("slots", []):
+                    slot_name = slot.get("name", "")
+                    if slot_name:
+                        slot_id = f"SLOT_{slot_name.upper().replace(' ', '_')}"
+                        if slot_id not in slots_to_store:
+                            slots_to_store[slot_id] = {
+                                "slot_id": slot_id,
+                                "slot_name": slot_name,
+                                "template_id": template_id or "",
+                                **slot,
+                            }
+
+        # ========== 第二步：写入 Template_Collection ==========
+        template_count = 0
+        for tpl_id, tpl_data in templates_to_store.items():
+            description = self._generate_template_description(tpl_data)
+            payload = self._render_collection_payload(
+                tag="[TEMPLATE]",
+                identifier=tpl_id,
+                description=description,
+                extra={
+                    "standard_code": (tpl_data.get("semantic_routing") or {}).get("standard_code", ""),
+                    "category": (tpl_data.get("semantic_routing") or {}).get("category", ""),
+                },
+            )
+            storage_id = f"t_{hashstr(f'{tpl_id}_{file_id}', 12)}"
+            try:
+                await rag.ainsert(input=payload, ids=storage_id, file_paths=file_path)
+                template_count += 1
+            except Exception as e:
+                logger.warning(f"模板写入失败: {tpl_id}, {e}")
+
+        # ========== 第三步：写入 Section_Collection ==========
+        section_count = 0
+        for section in structured_doc.sections:
+            section_meta = {
+                **section,
+                "node_type": "section",
+            }
+            display_text = self._render_section_payload(section_meta)
+            sid = section.get("section_id", "").replace(".", "_")
+            storage_id = f"sec_{hashstr(f'{sid}_{file_id}', 12)}"
+            try:
+                await rag.ainsert(input=display_text, ids=storage_id, file_paths=file_path)
+                section_count += 1
+            except Exception as e:
+                logger.warning(f"章节写入失败: {sid}, {e}")
+
+        # ========== 第四步：写入 Slot_Collection ==========
+        slot_count = 0
+        for slot_id, slot_data in slots_to_store.items():
+            description = self._generate_slot_description(slot_data)
+            slot_extra = {
+                "type": slot_data.get("type", "string"),
+                "template_id": slot_data.get("template_id", ""),
+            }
+            if slot_data.get("is_anchor"):
+                slot_extra["anchor"] = "true"
+            if slot_data.get("required"):
+                slot_extra["required"] = "true"
+            payload = self._render_collection_payload(
+                tag="[SLOT]",
+                identifier=slot_data.get("slot_name", ""),
+                description=description,
+                extra=slot_extra,
+            )
+            storage_id = f"s_{hashstr(f'{slot_id}_{file_id}', 12)}"
+            try:
+                await rag.ainsert(input=payload, ids=storage_id, file_paths=file_path)
+                slot_count += 1
+            except Exception as e:
+                logger.warning(f"插槽写入失败: {slot_id}, {e}")
+
         await self._ensure_doc_processed(rag, file_id)
 
         logger.info(
-            f"结构化入库完成: file_id={file_id}, chunks={len(enriched_parts)}, "
-            f"industry={industry}, report_type={report_type}"
+            "结构化入库完成: file_id=%s, chunks=%d, templates=%d, "
+            "sections=%d, slots=%d, industry=%s, report_type=%s",
+            file_id, chunk_count, template_count,
+            section_count, slot_count, industry, report_type,
         )
+
+    # ========== 模板/插槽描述生成 ==========
+
+    def _generate_template_description(self, template_data: dict[str, Any]) -> str:
+        """生成模板的自然语言描述，用于 Template_Collection 语义检索"""
+        parts = []
+
+        semantic_routing = template_data.get("semantic_routing") or {}
+        category = semantic_routing.get("category", "")
+        standard_code = semantic_routing.get("standard_code", "")
+
+        if category:
+            parts.append(f"适用于{category}类别的写作模板")
+        if standard_code:
+            parts.append(f"标准代码：{standard_code}")
+
+        slots = template_data.get("slots") or []
+        if slots:
+            slot_descs = []
+            for s in slots[:5]:
+                name = s.get("name", "")
+                desc = s.get("description", "")
+                if name and desc:
+                    slot_descs.append(f"{name}（{desc}）")
+                elif name:
+                    slot_descs.append(name)
+            if slot_descs:
+                parts.append(f"包含插槽：{', '.join(slot_descs)}")
+
+        generalized = template_data.get("generalized", "")
+        if generalized:
+            pattern_text = generalized.replace("{{", "").replace("}}", "")
+            if len(pattern_text) > 100:
+                pattern_text = pattern_text[:100] + "..."
+            parts.append(f"模板格式：{pattern_text}")
+
+        return "。".join(parts) if parts else "写作模板"
+
+    def _generate_slot_description(self, slot_data: dict[str, Any]) -> str:
+        """生成插槽的自然语言描述，用于 Slot_Collection 语义检索"""
+        parts = []
+
+        description = slot_data.get("description", "")
+        if description:
+            parts.append(description)
+        else:
+            parts.append(f"插槽 {slot_data.get('slot_name', '')}")
+
+        slot_type = slot_data.get("type", "string")
+        parts.append(f"数据类型：{slot_type}")
+
+        required = slot_data.get("required", False)
+        parts.append(f"是否必填：{'是' if required else '否'}")
+
+        is_anchor = slot_data.get("is_anchor", False)
+        if is_anchor:
+            parts.append("这是一个锚点插槽，用于模板匹配的关键字段。")
+
+        constraints = slot_data.get("constraints", [])
+        if constraints:
+            if isinstance(constraints, list):
+                constraint_text = "、".join(f'"{c}"' for c in constraints)
+                parts.append(f"约束条件：必须包含 {constraint_text} 等关键词。")
+            else:
+                parts.append(f"约束条件：{constraints}")
+
+        default_value = slot_data.get("default_value")
+        if default_value:
+            parts.append(f"默认值：{default_value}")
+
+        value = slot_data.get("value")
+        if value:
+            parts.append(f"示例值：{value}")
+
+        data_source = slot_data.get("data_source") or slot_data.get("suggested_source", "")
+        if data_source:
+            parts.append(f"数据来源：{data_source}")
+
+        entity_ref = slot_data.get("entity_ref", "")
+        if entity_ref:
+            parts.append(f"关联实体：{entity_ref}")
+
+        return "\n".join(parts)
+
+    def _render_collection_payload(
+        self,
+        tag: str,
+        identifier: str,
+        description: str,
+        extra: dict[str, str] | None = None,
+    ) -> str:
+        """渲染集合条目的 payload 文本"""
+        header_parts = [f"{tag} {identifier}"]
+        for key, value in (extra or {}).items():
+            if value:
+                header_parts.append(f"[{key.upper()}] {value}")
+        header = " | ".join(header_parts)
+        return f"{header}\n{description}" if header else description
+
+    def _render_section_payload(self, section_meta: dict[str, Any]) -> str:
+        """渲染章节的 payload 文本，用于 Section_Collection 语义检索"""
+        section_id = section_meta.get("section_id", "")
+        title = section_meta.get("title", "")
+        summary = section_meta.get("summary", "")
+
+        info = f"[SECTION] {section_id} {title}".strip()
+
+        count = len(section_meta.get("chunk_indexes", []))
+        if count:
+            info += f" ({count} 段落)"
+
+        if summary:
+            return f"{info}\n{summary}"
+        return info
+
+    # ========== Outline Collection（章节大纲进化） ==========
+
+    async def ingest_outline_collection(
+        self,
+        db_id: str,
+        domain: str,
+        report_type: str,
+        outline_sections: list[dict[str, Any]],
+    ) -> int:
+        """将领域报告大纲写入 Outline_Collection（全量替换策略）
+
+        每个 section 节点（含 writing_guidance 和 entity_bindings）作为独立向量条目，
+        供 Skill 运行时通过 query_kb 查询 [OUTLINE] 标记的条目获取最新大纲。
+
+        Args:
+            db_id: 知识库 ID
+            domain: 领域代码（如 coal）
+            report_type: 报告类型（如 eia）
+            outline_sections: 扁平化的章节列表，每个含 title/level/writing_guidance/entity_bindings
+
+        Returns:
+            写入的条目数量
+        """
+        rag = await self._get_lightrag_instance(db_id)
+        if not rag:
+            raise ValueError(f"Failed to get LightRAG instance for {db_id}")
+
+        try:
+            await rag.initialize_storages()
+        except Exception as e:
+            logger.warning(f"initialize_storages 失败: {e}")
+
+        # 大纲条目使用稳定的 storage_id（基于 domain+report_type+section_path），
+        # 相同 section_path 重写入会覆盖更新；已移除的章节旧条目会被自然稀释
+        outline_file_path = f"outline/{domain}_{report_type}.md"
+
+        count = 0
+        for section in outline_sections:
+            section_path = section.get("section_path", "")
+            title = section.get("title", "")
+            level = section.get("level", 1)
+
+            description = self._generate_outline_description(section)
+            storage_id = f"ol_{hashstr(f'{domain}_{report_type}_{section_path}', 10)}"
+
+            payload = self._render_collection_payload(
+                tag="[OUTLINE]",
+                identifier=f"{section_path} {title}".strip(),
+                description=description,
+                extra={
+                    "domain": domain,
+                    "report_type": report_type,
+                    "level": str(level),
+                    "section_path": section_path,
+                },
+            )
+
+            try:
+                await rag.ainsert(
+                    input=payload,
+                    ids=storage_id,
+                    file_paths=outline_file_path,
+                )
+                count += 1
+            except Exception as e:
+                logger.warning(f"大纲条目写入失败: {section_path} {title}, {e}")
+
+        logger.info(
+            "Outline_Collection 入库完成: domain=%s, report_type=%s, entries=%d",
+            domain, report_type, count,
+        )
+        return count
+
+    def _generate_outline_description(self, section: dict[str, Any]) -> str:
+        """生成章节大纲条目的自然语言描述"""
+        parts = []
+        title = section.get("title", "")
+        if title:
+            parts.append(f"章节：{title}")
+
+        wg = section.get("writing_guidance")
+        if isinstance(wg, dict):
+            overview = wg.get("overview", "")
+            if overview:
+                parts.append(f"概要：{overview}")
+
+            key_points = wg.get("key_points", [])
+            if key_points:
+                pts = "\n".join(f"  - {p}" for p in key_points[:8])
+                parts.append(f"编写要点：\n{pts}")
+
+            content_reqs = wg.get("content_requirements", [])
+            if content_reqs:
+                reqs = "；".join(content_reqs[:6])
+                parts.append(f"内容要求：{reqs}")
+
+            regulations = wg.get("regulations", [])
+            if regulations:
+                regs = "、".join(
+                    r.get("name", str(r)) if isinstance(r, dict) else str(r)
+                    for r in regulations[:5]
+                )
+                parts.append(f"相关法规：{regs}")
+
+        bindings = section.get("entity_bindings")
+        if isinstance(bindings, list) and bindings:
+            names = [b.get("entity_name", "") for b in bindings[:8] if b.get("entity_name")]
+            if names:
+                parts.append(f"关联实体：{', '.join(names)}")
+
+        return "\n".join(parts)
 
     async def update_content(self, db_id: str, file_ids: list[str], params: dict | None = None) -> list[dict]:
         """更新内容 - 根据file_ids重新解析文件并更新向量库"""

@@ -1216,11 +1216,7 @@ const getAuthHeaders = () => {
 }
 
 const openDocLink = () => {
-  window.open(
-    'https://xerrors.github.io/Yuxi/advanced/document-processing.html',
-    '_blank',
-    'noopener'
-  )
+  // 文档处理说明（离线部署环境，不跳转外部链接）
 }
 
 const chunkData = async () => {
