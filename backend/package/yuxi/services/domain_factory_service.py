@@ -713,6 +713,11 @@ class DomainFactoryService:
             except Exception as fig_err:
                 logger.warning(f"图片多模态提取失败（不阻断）: {fig_err}")
 
+            # 章节提取与泛化共用的领域/表单上下文（须在分章节提取之前初始化）
+            domain_for_extract = await service.repo.get_domain_by_id(task.domain_id) if task.domain_id else None
+            domain_code = domain_for_extract.code if domain_for_extract else None
+            form_data = {}
+
             # 分章节提取：按章节分组对 parameter/narrative 段落做局部变量提取
             try:
                 chapter_extracts = await self.extract_by_chapter(paragraphs, domain_code=domain_code)
@@ -751,11 +756,8 @@ class DomainFactoryService:
             # 旧的全局 EXTRACT 阶段已废弃：slot 即提取变量，由段落级 GENERALIZE 产出。
             # 保留 variables 用于前端 form_schema 展示，但不再调用 LLM 全局提取。
             prompt_templates = await service._load_prompt_templates()
-            domain_for_extract = await service.repo.get_domain_by_id(task.domain_id) if task.domain_id else None
-            domain_code = domain_for_extract.code if domain_for_extract else None
 
             await service.repo.update_task(task_id, {"status": "GENERALIZING"})
-            form_data = {}
 
             # ========== 阶段3: 泛化 (GENERALIZING) ==========
             await service.repo.update_task(task_id, {"status": "GENERALIZING"})
@@ -782,7 +784,7 @@ class DomainFactoryService:
                     paragraphs=parameter_paragraphs,
                     schema_variables=[],
                     domain_label=domain_label,
-                    max_concurrency=5,
+                    max_concurrency=10,
                 )
 
                 # 将泛化结果回写到段落中
@@ -841,7 +843,7 @@ class DomainFactoryService:
                 narrative_paragraphs = [p for p in paragraphs if p.get("classify_type") == "narrative"]
                 if narrative_paragraphs:
                     narrative_results = await self._extract_narrative_summaries(
-                        narrative_paragraphs, domain_label, max_concurrency=5,
+                        narrative_paragraphs, domain_label, max_concurrency=10,
                     )
                     summarized = 0
                     for para in narrative_paragraphs:
@@ -3021,7 +3023,7 @@ class DomainFactoryService:
         self,
         paragraphs: list[dict],
         domain_label: str = "",
-        max_concurrency: int = 5,
+        max_concurrency: int = 10,
     ) -> dict[str, dict]:
         """对叙述型段落批量提取摘要"""
         import asyncio
@@ -3100,7 +3102,7 @@ class DomainFactoryService:
         paragraphs: list[dict[str, Any]],
         schema_variables: list[dict[str, Any]],
         domain_label: str = "通用",
-        max_concurrency: int = 5,
+        max_concurrency: int = 10,
     ) -> dict[str, dict[str, Any]]:
         """对分片后的段落逐一进行模板泛化，参考源系统 pipeline.py 的实现
 
