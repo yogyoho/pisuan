@@ -605,7 +605,7 @@ class DomainFactoryService:
                 raise ValueError(f"任务 {task_id} 没有存储路径")
 
             # 解析文档为 Markdown 和 HTML
-            from yuxi.plugins.parser.unified import parse_source_to_markdown
+            from yuxi.knowledge.parser.unified import parse_source_to_markdown
 
             parse_result = await parse_source_to_markdown(file_path)
             raw_markdown = parse_result.markdown
