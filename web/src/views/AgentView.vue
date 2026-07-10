@@ -81,15 +81,22 @@
         </AgentChatComponent>
       </div>
     </div>
+    <AgentEditModal
+      ref="agentEditModalRef"
+      :backend-options="agentBackendOptions"
+      @saved="handleAgentSaved"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { Settings2, ChevronDown, Check } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
+import { agentApi } from '@/apis/agent_api'
 import AgentChatComponent from '@/components/AgentChatComponent.vue'
+import AgentEditModal from '@/components/model-management/AgentEditModal.vue'
 import { isBuiltinAgent, useAgentStore } from '@/stores/agent'
 import { handleChatError } from '@/utils/errorHandler'
 import { generatePixelAvatar } from '@/utils/pixelAvatar'
@@ -99,6 +106,7 @@ import { storeToRefs } from 'pinia'
 
 // 组件引用
 const chatComponentRef = ref(null)
+const agentEditModalRef = ref(null)
 
 // Stores
 const agentStore = useAgentStore()
@@ -112,6 +120,11 @@ const syncingRouteThread = ref(false)
 
 const getRouteThreadId = () => {
   const value = route.params.thread_id
+  return typeof value === 'string' ? value : ''
+}
+
+const getRouteAgentId = () => {
+  const value = route.query.agent_id
   return typeof value === 'string' ? value : ''
 }
 
@@ -137,10 +150,39 @@ const syncSelectedThreadFromRoute = async () => {
   }
 }
 
+const consumeRouteAgentSelection = async () => {
+  const targetAgentId = getRouteAgentId()
+  if (!targetAgentId || getRouteThreadId()) return
+
+  try {
+    if (!agentStore.isInitialized) {
+      await agentStore.initialize()
+    }
+
+    await nextTick()
+    await chatComponentRef.value?.selectThreadFromRoute?.('')
+    await agentStore.selectAgent(targetAgentId)
+  } catch (error) {
+    handleChatError(error, 'load')
+  } finally {
+    const nextQuery = { ...route.query }
+    delete nextQuery.agent_id
+    await router.replace({ name: 'AgentComp', query: nextQuery })
+  }
+}
+
 watch(
   () => route.params.thread_id,
   () => {
     syncSelectedThreadFromRoute()
+  },
+  { immediate: true }
+)
+
+watch(
+  () => route.query.agent_id,
+  () => {
+    consumeRouteAgentSelection()
   },
   { immediate: true }
 )
@@ -185,6 +227,18 @@ const currentAgentLabel = computed(() => {
 })
 
 const agentDropdownOpen = ref(false)
+const agentBackendOptions = ref([])
+const agentBackendsLoaded = ref(false)
+
+const loadAgentBackends = async () => {
+  if (agentBackendsLoaded.value) return
+  const response = await agentApi.getAgentBackends()
+  agentBackendOptions.value = (response.backends || []).map((backend) => ({
+    label: backend.name || backend.backend_id,
+    value: backend.backend_id
+  }))
+  agentBackendsLoaded.value = true
+}
 
 const handleAgentSwitch = async (agentId, hasActiveThread) => {
   if (!agentId || agentId === selectedAgentId.value) return
@@ -201,9 +255,25 @@ const handleAgentSwitch = async (agentId, hasActiveThread) => {
   }
 }
 
-const openAgentManagement = () => {
+const handleAgentSaved = async () => {
+  await agentStore.fetchAgents()
+  if (selectedAgentId.value) {
+    await agentStore.fetchAgentDetail(selectedAgentId.value, true)
+  }
+}
+
+const openAgentManagement = async () => {
   agentDropdownOpen.value = false
-  router.push({ name: 'ModelManageComp', query: { tab: 'agents' } })
+  if (!selectedAgentId.value) {
+    message.warning('请先选择智能体')
+    return
+  }
+  try {
+    await loadAgentBackends()
+    await agentEditModalRef.value?.openEdit(selectedAgentId.value)
+  } catch (error) {
+    message.error(error.message || '打开智能体配置失败')
+  }
 }
 </script>
 

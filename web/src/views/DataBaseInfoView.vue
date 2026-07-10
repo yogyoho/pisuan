@@ -1,6 +1,11 @@
 <template>
   <div class="database-info-container extension-detail-page">
-    <FileDetailModal />
+    <FileDetailModal
+      v-model:open="store.state.fileDetailModalVisible"
+      :kb-id="kbId"
+      :file-id="store.fileDetailFileId"
+      @closed="store.closeFileDetail"
+    />
 
     <FileUploadModal
       v-model:visible="addFilesModalVisible"
@@ -11,225 +16,235 @@
       @success="onFileUploadSuccess"
     />
 
-    <div class="detail-top-bar">
-      <button class="detail-back-btn" type="button" @click="backToDatabase">
-        <ArrowLeft :size="16" />
-        <span>返回</span>
-      </button>
-      <div class="detail-title-area">
-        <div class="detail-icon">
-          <component :is="kbTypeIcon" :size="18" />
-        </div>
-        <div class="detail-title-text">
-          <h2>{{ database.name || '知识库加载中' }}</h2>
-          <span class="detail-subtitle">{{ databaseSubtitle }}</span>
-        </div>
-      </div>
-      <div class="detail-actions">
-        <a-space :size="8">
-          <button
-            type="button"
-            class="lucide-icon-btn extension-panel-action extension-panel-action-secondary"
-            @click="copyDatabaseId"
-          >
-            <Copy :size="14" />
-            <span>复制 ID</span>
-          </button>
-          <button
-            type="button"
-            class="lucide-icon-btn extension-panel-action extension-panel-action-primary"
-            @click="showEditModal"
-          >
-            <Pencil :size="14" />
-            <span>编辑</span>
-          </button>
-        </a-space>
-      </div>
+    <div v-if="detailLoading" class="database-detail-loading">
+      <a-spin tip="加载知识库信息..." />
     </div>
 
-    <div class="database-detail-body">
-      <div class="database-tab-bar" aria-label="知识库功能导航">
-        <nav class="database-tab-list" aria-label="知识库功能标签" role="tablist">
-          <button
-            v-for="tab in visibleTabs"
-            :key="tab.key"
-            type="button"
-            class="database-tab-item"
-            :class="{ active: activeTab === tab.key }"
-            role="tab"
-            :aria-selected="activeTab === tab.key"
-            @click="activeTab = tab.key"
-          >
-            <component :is="tab.icon" :size="17" />
-            <span>{{ tab.label }}</span>
-          </button>
-        </nav>
+    <template v-else>
+      <div class="detail-top-bar">
+        <button class="detail-back-btn" type="button" @click="backToDatabase">
+          <ArrowLeft :size="16" />
+          <span>返回</span>
+        </button>
+        <div class="detail-title-area">
+          <div class="detail-icon">
+            <component :is="kbTypeIcon" :size="18" />
+          </div>
+          <div class="detail-title-text">
+            <h2>{{ database.name || '知识库加载中' }}</h2>
+            <span class="detail-subtitle">{{ databaseSubtitle }}</span>
+          </div>
+        </div>
+        <div class="detail-actions">
+          <a-space :size="8">
+            <button
+              type="button"
+              class="lucide-icon-btn extension-panel-action extension-panel-action-secondary"
+              @click="copyDatabaseId"
+            >
+              <Copy :size="14" />
+              <span>复制 ID</span>
+            </button>
+            <button
+              type="button"
+              class="lucide-icon-btn extension-panel-action extension-panel-action-primary"
+              @click="showEditModal"
+            >
+              <Pencil :size="14" />
+              <span>编辑</span>
+            </button>
+          </a-space>
+        </div>
       </div>
 
-      <main class="database-tab-content">
-        <div v-if="isMilvus" v-show="activeTab === 'filetable'" class="tab-panel file-panel">
-          <div class="file-management-info">
-            <div class="file-info-title">
-              <div class="file-info-title-row">
-                <button
-                  type="button"
-                  class="lucide-icon-btn extension-panel-action extension-panel-action-primary"
-                  @click="showAddFilesModal()"
-                >
-                  <FileUp :size="14" />
-                  <span>上传</span>
-                </button>
-                <button
-                  type="button"
-                  class="lucide-icon-btn extension-panel-action extension-panel-action-secondary"
-                  @click="showCreateFolderModal"
-                >
-                  <FolderPlus :size="14" />
-                  <span>新建文件夹</span>
-                </button>
-              </div>
-            </div>
-            <div class="file-panel-status">
-              <div
-                v-if="pendingParseCount > 0"
-                class="file-stat-card file-stat-action file-stat-summary"
-                @click="confirmBatchParse"
-              >
-                <FileText :size="16" />
-                <div class="file-stat-inline">
-                  <strong>{{ pendingParseCount }}</strong>
-                  <span>待解析</span>
-                </div>
-              </div>
-              <div
-                v-if="pendingIndexCount > 0"
-                class="file-stat-card file-stat-action file-stat-summary"
-                @click="confirmBatchIndex"
-              >
-                <DatabaseIcon :size="16" />
-                <div class="file-stat-inline">
-                  <strong>{{ pendingIndexCount }}</strong>
-                  <span>待入库</span>
-                </div>
-              </div>
-              <div class="file-stat-card file-stat-summary">
-                <FileText :size="16" />
-                <div class="file-stat-inline">
-                  <strong>{{ fileStats.count }}</strong>
-                  <span>文件</span>
-                </div>
-              </div>
-              <div v-if="fileStats.sizeText" class="file-stat-card file-stat-summary">
-                <DatabaseIcon :size="16" />
-                <div class="file-stat-inline">
-                  <strong>{{ fileStats.sizeText }}</strong>
-                  <span>总大小</span>
-                </div>
-              </div>
-              <button
-                type="button"
-                class="file-stat-card file-stat-summary file-stat-repair"
-                :disabled="statsRepairing"
-                :aria-busy="statsRepairing"
-                aria-label="修复缺失的 Chunk/Token 统计"
-                title="修复缺失的 Chunk/Token 统计"
-                @click="repairDatabaseStats"
-              >
-                <LoaderCircle v-if="statsRepairing" :size="16" class="file-stat-spinner" />
-                <DatabaseIcon v-else :size="16" />
-                <div class="file-stat-inline">
-                  <strong>{{ fileStats.chunkText }}</strong>
-                  <span>Chunks</span>
-                </div>
-              </button>
-              <button
-                type="button"
-                class="file-stat-card file-stat-summary file-stat-repair"
-                :disabled="statsRepairing"
-                :aria-busy="statsRepairing"
-                aria-label="修复缺失的 Chunk/Token 统计"
-                title="修复缺失的 Chunk/Token 统计"
-                @click="repairDatabaseStats"
-              >
-                <LoaderCircle v-if="statsRepairing" :size="16" class="file-stat-spinner" />
-                <Hash v-else :size="16" />
-                <div class="file-stat-inline">
-                  <strong>{{ fileStats.tokenText }}</strong>
-                  <span>Tokens</span>
-                </div>
-              </button>
-            </div>
-          </div>
-          <FileTable ref="fileTableRef" />
+      <div class="database-detail-body">
+        <div class="database-tab-bar" aria-label="知识库功能导航">
+          <nav class="database-tab-list" aria-label="知识库功能标签" role="tablist">
+            <button
+              v-for="tab in visibleTabs"
+              :key="tab.key"
+              type="button"
+              class="database-tab-item"
+              :class="{ active: activeTab === tab.key }"
+              role="tab"
+              :aria-selected="activeTab === tab.key"
+              @click="activeTab = tab.key"
+            >
+              <component :is="tab.icon" :size="17" />
+              <span>{{ tab.label }}</span>
+            </button>
+          </nav>
         </div>
 
-        <div v-show="activeTab === 'query'" class="tab-panel query-config-panel">
-          <div class="query-config-layout">
-            <div class="query-test-pane">
-              <QuerySection ref="querySectionRef" :visible="true" @toggle-visible="() => {}" />
-            </div>
-            <aside class="query-config-pane" aria-label="检索配置">
-              <div class="search-config-wrapper">
-                <div class="search-config-header">
-                  <div>
-                    <h3>检索配置</h3>
-                    <p>调整当前知识库的检索参数。</p>
-                  </div>
+        <main class="database-tab-content">
+          <div v-if="isMilvus" v-show="activeTab === 'filetable'" class="tab-panel file-panel">
+            <div class="file-management-info">
+              <div class="file-info-title">
+                <div class="file-info-title-row">
                   <button
                     type="button"
                     class="lucide-icon-btn extension-panel-action extension-panel-action-primary"
-                    :disabled="searchConfigSaving"
-                    @click="handleInlineSearchConfigSave"
+                    @click="showAddFilesModal()"
                   >
-                    <Save :size="14" />
-                    <span>保存</span>
+                    <FileUp :size="14" />
+                    <span>上传</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="lucide-icon-btn extension-panel-action extension-panel-action-secondary"
+                    @click="showCreateFolderModal"
+                  >
+                    <FolderPlus :size="14" />
+                    <span>新建文件夹</span>
                   </button>
                 </div>
-                <div class="search-config-body">
-                  <SearchConfigPanel
-                    ref="searchConfigPanelRef"
-                    :kb-id="kbId"
-                    @save="handleSearchConfigSave"
-                  />
-                </div>
               </div>
-            </aside>
+              <div class="file-panel-status">
+                <button
+                  v-if="pendingParseCount > 0"
+                  type="button"
+                  class="file-stat-card file-stat-action file-stat-summary"
+                  :disabled="store.state.chunkLoading"
+                  @click="confirmBatchParse"
+                >
+                  <FileText :size="16" />
+                  <div class="file-stat-inline">
+                    <strong>{{ pendingParseCount }}</strong>
+                    <span>待解析</span>
+                  </div>
+                </button>
+                <button
+                  v-if="pendingIndexCount > 0"
+                  type="button"
+                  class="file-stat-card file-stat-action file-stat-summary"
+                  :disabled="store.state.chunkLoading"
+                  @click="confirmBatchIndex"
+                >
+                  <DatabaseIcon :size="16" />
+                  <div class="file-stat-inline">
+                    <strong>{{ pendingIndexCount }}</strong>
+                    <span>待入库</span>
+                  </div>
+                </button>
+                <div class="file-stat-card file-stat-summary">
+                  <FileText :size="16" />
+                  <div class="file-stat-inline">
+                    <strong>{{ fileStats.count }}</strong>
+                    <span>文件</span>
+                  </div>
+                </div>
+                <div v-if="fileStats.sizeText" class="file-stat-card file-stat-summary">
+                  <DatabaseIcon :size="16" />
+                  <div class="file-stat-inline">
+                    <strong>{{ fileStats.sizeText }}</strong>
+                    <span>总大小</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  class="file-stat-card file-stat-summary file-stat-repair"
+                  :disabled="statsRepairing"
+                  :aria-busy="statsRepairing"
+                  aria-label="修复缺失的 Chunk/Token 统计"
+                  title="修复缺失的 Chunk/Token 统计"
+                  @click="repairDatabaseStats"
+                >
+                  <LoaderCircle v-if="statsRepairing" :size="16" class="file-stat-spinner" />
+                  <DatabaseIcon v-else :size="16" />
+                  <div class="file-stat-inline">
+                    <strong>{{ fileStats.chunkText }}</strong>
+                    <span>Chunks</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  class="file-stat-card file-stat-summary file-stat-repair"
+                  :disabled="statsRepairing"
+                  :aria-busy="statsRepairing"
+                  aria-label="修复缺失的 Chunk/Token 统计"
+                  title="修复缺失的 Chunk/Token 统计"
+                  @click="repairDatabaseStats"
+                >
+                  <LoaderCircle v-if="statsRepairing" :size="16" class="file-stat-spinner" />
+                  <Hash v-else :size="16" />
+                  <div class="file-stat-inline">
+                    <strong>{{ fileStats.tokenText }}</strong>
+                    <span>Tokens</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+            <FileTable ref="fileTableRef" />
           </div>
-        </div>
 
-        <div v-if="isMilvus && activeTab === 'graph'" class="tab-panel">
-          <KnowledgeGraphSection
-            :visible="true"
-            :active="activeTab === 'graph'"
-            @toggle-visible="() => {}"
-          />
-        </div>
-
-        <div v-if="isMilvus && activeTab === 'mindmap'" class="tab-panel">
-          <MindMapSection v-if="kbId" :kb-id="kbId" ref="mindmapSectionRef" />
-        </div>
-
-        <div v-if="isMilvus && activeTab === 'evaluation'" class="tab-panel">
-          <RAGEvaluationTab
-            v-if="kbId"
-            :kb-id="kbId"
-            @switch-to-benchmarks="activeTab = 'benchmarks'"
-          />
-        </div>
-
-        <div v-if="isMilvus && activeTab === 'benchmarks'" class="tab-panel">
-          <div class="benchmark-management-container">
-            <div class="benchmark-content">
-              <EvaluationBenchmarks
-                v-if="kbId && isEvaluationSupported"
-                :kb-id="kbId"
-                @benchmark-selected="activeTab = 'evaluation'"
-              />
+          <div v-show="activeTab === 'query'" class="tab-panel query-config-panel">
+            <div class="query-config-layout">
+              <div class="query-test-pane">
+                <QuerySection ref="querySectionRef" :visible="true" @toggle-visible="() => {}" />
+              </div>
+              <aside class="query-config-pane" aria-label="检索配置">
+                <div class="search-config-wrapper">
+                  <div class="search-config-header">
+                    <div>
+                      <h3>检索配置</h3>
+                      <p>调整当前知识库的检索参数。</p>
+                    </div>
+                    <button
+                      type="button"
+                      class="lucide-icon-btn extension-panel-action extension-panel-action-primary"
+                      :disabled="searchConfigSaving"
+                      @click="handleInlineSearchConfigSave"
+                    >
+                      <Save :size="14" />
+                      <span>保存</span>
+                    </button>
+                  </div>
+                  <div class="search-config-body">
+                    <SearchConfigPanel
+                      ref="searchConfigPanelRef"
+                      :kb-id="kbId"
+                      @save="handleSearchConfigSave"
+                    />
+                  </div>
+                </div>
+              </aside>
             </div>
           </div>
-        </div>
-      </main>
-    </div>
+
+          <div v-if="isMilvus && activeTab === 'graph'" class="tab-panel">
+            <KnowledgeGraphSection
+              :visible="true"
+              :active="activeTab === 'graph'"
+              @toggle-visible="() => {}"
+            />
+          </div>
+
+          <div v-if="isMilvus && activeTab === 'mindmap'" class="tab-panel">
+            <MindMapSection v-if="kbId" :kb-id="kbId" ref="mindmapSectionRef" />
+          </div>
+
+          <div v-if="isMilvus && activeTab === 'evaluation'" class="tab-panel">
+            <RAGEvaluationTab
+              v-if="kbId"
+              :kb-id="kbId"
+              @switch-to-benchmarks="activeTab = 'benchmarks'"
+            />
+          </div>
+
+          <div v-if="isMilvus && activeTab === 'benchmarks'" class="tab-panel">
+            <div class="benchmark-management-container">
+              <div class="benchmark-content">
+                <EvaluationBenchmarks
+                  v-if="kbId && isEvaluationSupported"
+                  :kb-id="kbId"
+                  @benchmark-selected="activeTab = 'evaluation'"
+                />
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </template>
 
     <a-modal v-model:open="editModalVisible" title="编辑知识库信息" width="700px">
       <template #footer>
@@ -252,6 +267,7 @@
             :name="editForm.name"
             :files="fileList"
             placeholder="请输入知识库描述"
+            action-placement="header"
             :rows="4"
           />
         </a-form-item>
@@ -276,7 +292,11 @@
               </a-tooltip>
             </span>
           </template>
-          <a-select v-model:value="editForm.chunk_preset_id" :options="chunkPresetOptions" />
+          <a-select
+            v-model:value="editForm.chunk_preset_id"
+            :options="chunkPresetOptions"
+            :loading="chunkPresetLoading"
+          />
         </a-form-item>
 
         <template v-if="isDifyKb">
@@ -384,7 +404,8 @@ import ShareConfigForm from '@/components/ShareConfigForm.vue'
 import { databaseApi } from '@/apis/knowledge_api'
 import { departmentApi } from '@/apis/department_api'
 import { authApi } from '@/apis/auth_api'
-import { CHUNK_PRESET_OPTIONS, getChunkPresetDescription } from '@/utils/chunk_presets'
+import { useChunkPresetOptions } from '@/composables/useChunkPresetOptions'
+import { DEFAULT_CHUNK_PRESET_ID } from '@/utils/chunkUtils'
 import { formatFileSize } from '@/utils/file_utils'
 import { getKbTypeIcon, getKbTypeLabel, kbUtils } from '@/utils/kb_utils'
 
@@ -393,6 +414,12 @@ const router = useRouter()
 const store = useDatabaseStore()
 const taskerStore = useTaskerStore()
 const userStore = useUserStore()
+const {
+  chunkPresetSelectOptions: chunkPresetOptions,
+  chunkPresetLoading,
+  loadChunkPresetOptions,
+  getChunkPresetDescription
+} = useChunkPresetOptions()
 
 const kbId = computed(() => store.kbId)
 const database = computed(() => store.database)
@@ -454,8 +481,7 @@ watch(visibleTabs, (nextTabs) => {
 })
 
 const pendingParseCount = computed(() => {
-  const files = store.database.files || {}
-  return Object.values(files).filter((f) => !f.is_folder && f.status === 'uploaded').length
+  return Number(store.database.stats?.pending_parse_count || 0)
 })
 
 const formatStatNumber = (value) => {
@@ -466,23 +492,21 @@ const formatStatNumber = (value) => {
 const formatTokenStatNumber = (value) => {
   const number = Number(value ?? 0)
   if (!Number.isFinite(number)) return '0'
-  if (number > 10000) return `${Math.round(number / 1000)}K`
+  const absNumber = Math.abs(number)
+  if (absNumber > 1024 * 1000) return `${(number / 1_000_000).toFixed(1)} m`
+  if (absNumber >= 1000) return `${Math.round(number / 1000).toLocaleString('zh-CN')} k`
   return number.toLocaleString('zh-CN')
 }
 
 const statsRepairing = ref(false)
 
 const fileStats = computed(() => {
-  const files = Object.values(store.database.files || {}).filter((file) => !file.is_folder)
   const stats = store.database.stats || {}
   const statsFileCount = Number(stats.file_count)
-  const totalSize = files.reduce((sum, file) => {
-    const size = Number(file.file_size ?? file.size ?? 0)
-    return Number.isFinite(size) ? sum + size : sum
-  }, 0)
+  const totalSize = Number(stats.total_size || 0)
 
   return {
-    count: Number.isFinite(statsFileCount) ? statsFileCount : files.length,
+    count: Number.isFinite(statsFileCount) ? statsFileCount : 0,
     sizeText: totalSize > 0 ? formatFileSize(totalSize) : '',
     chunkText: formatStatNumber(stats.chunk_count),
     tokenText: formatTokenStatNumber(stats.token_count)
@@ -515,42 +539,36 @@ const repairDatabaseStats = async () => {
 }
 
 const pendingIndexCount = computed(() => {
-  const files = store.database.files || {}
-  return Object.values(files).filter((f) => {
-    if (f.is_folder) return false
-    return f.status === 'parsed' || f.status === 'error_indexing'
-  }).length
+  return Number(store.database.stats?.pending_index_count || 0)
 })
 
 const confirmBatchParse = () => {
-  const fileIds = Object.values(store.database.files || {})
-    .filter((f) => f.status === 'uploaded')
-    .map((f) => f.file_id)
-
-  if (fileIds.length === 0) return
+  const count = pendingParseCount.value
+  if (count <= 0) {
+    message.info('没有待解析文档')
+    return
+  }
 
   Modal.confirm({
-    title: '批量解析',
-    content: `确定要解析 ${fileIds.length} 个文件吗？`,
-    onOk: () => store.parseFiles(fileIds)
+    title: '解析待解析文件',
+    content: `将提交 ${formatStatNumber(count)} 个待解析文件，任务会在后台按批处理，可在任务中心查看进度。`,
+    okText: '提交解析',
+    cancelText: '取消',
+    onOk: () => store.parsePendingFiles(count)
   })
 }
 
 const confirmBatchIndex = () => {
-  const fileIds = Object.values(store.database.files || {})
-    .filter((f) => {
-      if (f.is_folder) return false
-      return f.status === 'parsed' || f.status === 'error_indexing'
-    })
-    .map((f) => f.file_id)
+  const count = pendingIndexCount.value
+  if (count <= 0) {
+    message.info('没有待入库文档')
+    return
+  }
 
-  if (fileIds.length === 0) return
-
-  Modal.confirm({
-    title: '批量入库',
-    content: `确定要入库 ${fileIds.length} 个文件吗？`,
-    onOk: () => store.indexFiles(fileIds)
-  })
+  const opened = fileTableRef.value?.startPendingIndex?.(count)
+  if (!opened) {
+    message.error('文件列表尚未加载完成，请稍后再试')
+  }
 }
 
 const mindmapSectionRef = ref(null)
@@ -577,6 +595,7 @@ const currentFolderId = ref(null)
 const isFolderUploadMode = ref(false)
 const addFilesMode = ref('file')
 const isInitialLoad = ref(true)
+const detailLoading = ref(true)
 const fileTableRef = ref(null)
 
 const showAddFilesModal = (options = {}) => {
@@ -584,7 +603,8 @@ const showAddFilesModal = (options = {}) => {
   isFolderUploadMode.value = isFolder
   addFilesMode.value = mode
   addFilesModalVisible.value = true
-  currentFolderId.value = null
+  currentFolderId.value =
+    fileTableRef.value?.getCurrentFolderId?.() || store.fileBrowser.parentId || null
 }
 
 const showCreateFolderModal = () => {
@@ -592,28 +612,20 @@ const showCreateFolderModal = () => {
 }
 
 const folderTree = computed(() => {
-  const files = store.database.files || {}
-  const fileList = Object.values(files)
-  const nodeMap = new Map()
   const roots = []
-
-  fileList.forEach((file) => {
-    if (file.is_folder) {
-      const item = { ...file, title: file.filename, value: file.file_id, children: [] }
-      nodeMap.set(file.file_id, item)
+  let currentLevel = roots
+  for (const item of (store.folderBreadcrumbs || [])
+    .slice(1)
+    .filter((node) => !node.is_virtual_folder)) {
+    const node = {
+      file_id: item.file_id,
+      filename: item.filename,
+      is_folder: true,
+      children: []
     }
-  })
-
-  fileList.forEach((file) => {
-    if (file.is_folder && file.parent_id && nodeMap.has(file.parent_id)) {
-      const parent = nodeMap.get(file.parent_id)
-      const child = nodeMap.get(file.file_id)
-      if (parent && child) parent.children.push(child)
-    } else if (file.is_folder && !file.parent_id && nodeMap.has(file.file_id)) {
-      roots.push(nodeMap.get(file.file_id))
-    }
-  })
-
+    currentLevel.push(node)
+    currentLevel = node.children
+  }
   return roots
 })
 
@@ -623,19 +635,24 @@ const onFileUploadSuccess = () => {
 
 const resetFileSelectionState = () => {
   store.selectedRowKeys = []
-  store.selectedFile = null
-  store.state.fileDetailModalVisible = false
+  store.closeFileDetail()
+  store.resetFileBrowser()
 }
 
 watch(
   () => route.params.kbId,
   async (nextKbId) => {
     isInitialLoad.value = true
+    detailLoading.value = true
     store.kbId = nextKbId
     resetFileSelectionState()
     store.stopAutoRefresh()
-    await store.getDatabaseInfo(nextKbId, false)
-    store.startAutoRefresh()
+    try {
+      await store.getDatabaseInfo(nextKbId, false)
+      store.startAutoRefresh()
+    } finally {
+      detailLoading.value = false
+    }
   },
   { immediate: true }
 )
@@ -643,11 +660,9 @@ watch(
 const previousFileCount = ref(0)
 
 watch(
-  () => database.value?.files,
-  (newFiles) => {
-    if (!newFiles) return
-
-    const newFileCount = Object.keys(newFiles).length
+  () => database.value?.stats?.file_count,
+  (newFileCountValue) => {
+    const newFileCount = Number(newFileCountValue || 0)
     const oldFileCount = previousFileCount.value
 
     if (isInitialLoad.value) {
@@ -683,7 +698,7 @@ watch(
 
     previousFileCount.value = newFileCount
   },
-  { deep: true }
+  { deep: false }
 )
 
 const backToDatabase = () => {
@@ -719,7 +734,7 @@ const editForm = reactive({
   name: '',
   description: '',
   auto_generate_questions: false,
-  chunk_preset_id: 'general',
+  chunk_preset_id: DEFAULT_CHUNK_PRESET_ID,
   dify_api_url: '',
   dify_token: '',
   dify_dataset_id: '',
@@ -732,13 +747,9 @@ const rules = {
   name: [{ required: true, message: '请输入知识库名称' }]
 }
 
-const chunkPresetOptions = CHUNK_PRESET_OPTIONS.map(({ label, value }) => ({ label, value }))
 const editPresetDescription = computed(() => getChunkPresetDescription(editForm.chunk_preset_id))
 const fileList = computed(() => {
-  if (!database.value?.files) return []
-  return Object.values(database.value.files)
-    .map((f) => f.filename)
-    .filter(Boolean)
+  return (store.documentFiles || []).map((f) => f.filename).filter(Boolean)
 })
 
 const canEditShareConfig = computed(() => userStore.isSuperAdmin || userStore.isAdmin)
@@ -804,7 +815,8 @@ const showEditModal = () => {
   editForm.description = database.value.description || ''
   editForm.auto_generate_questions =
     database.value.additional_params?.auto_generate_questions || false
-  editForm.chunk_preset_id = database.value.additional_params?.chunk_preset_id || 'general'
+  editForm.chunk_preset_id =
+    database.value.additional_params?.chunk_preset_id || DEFAULT_CHUNK_PRESET_ID
   editForm.dify_api_url = database.value.additional_params?.dify_api_url || ''
   editForm.dify_token = database.value.additional_params?.dify_token || ''
   editForm.dify_dataset_id = database.value.additional_params?.dify_dataset_id || ''
@@ -872,7 +884,7 @@ const handleEditSubmit = () => {
       } else {
         updateData.additional_params = {
           auto_generate_questions: editForm.auto_generate_questions,
-          chunk_preset_id: editForm.chunk_preset_id || 'general'
+          chunk_preset_id: editForm.chunk_preset_id || DEFAULT_CHUNK_PRESET_ID
         }
       }
 
@@ -889,6 +901,7 @@ const deleteDatabase = () => {
 }
 
 onMounted(() => {
+  loadChunkPresetOptions()
   loadDepartments()
   loadUsers()
 })
@@ -920,6 +933,15 @@ onMounted(() => {
   flex-direction: column;
   background: var(--gray-10);
   overflow: hidden;
+}
+
+.database-detail-loading {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gray-10);
 }
 
 .database-tab-bar {
@@ -1184,6 +1206,11 @@ onMounted(() => {
 
   &:hover {
     border-color: var(--color-warning-700);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
   }
 }
 

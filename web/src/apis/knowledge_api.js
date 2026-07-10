@@ -92,7 +92,39 @@ export const databaseApi = {
 // === 文档管理分组 ===
 // =============================================================================
 
+const buildQuery = (params) => {
+  const query = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      query.set(key, String(value))
+    }
+  })
+  return query.toString()
+}
+
 export const documentApi = {
+  /**
+   * 分页获取知识库文档列表
+   * @param {string} kbId - 知识库ID
+   * @param {Object} params - 查询参数
+   * @returns {Promise} - 文档列表
+   */
+  listDocuments: async (kbId, params = {}) => {
+    const query = buildQuery(params)
+    return apiAdminGet(`/api/knowledge/databases/${kbId}/documents${query ? `?${query}` : ''}`)
+  },
+
+  /**
+   * 检查知识库中是否存在指定文件名或相对路径
+   * @param {string} kbId - 知识库ID
+   * @param {string} filename - 文件名或相对路径
+   * @returns {Promise} - 存在性检查结果
+   */
+  documentExists: async (kbId, filename) => {
+    const query = buildQuery({ filename })
+    return apiAdminGet(`/api/knowledge/databases/${kbId}/documents/exists?${query}`)
+  },
+
   /**
    * 创建文件夹
    * @param {string} kbId - 知识库ID
@@ -104,19 +136,6 @@ export const documentApi = {
     return apiAdminPost(`/api/knowledge/databases/${kbId}/folders`, {
       folder_name: folderName,
       parent_id: parentId
-    })
-  },
-
-  /**
-   * 移动文档/文件夹
-   * @param {string} kbId - 知识库ID
-   * @param {string} docId - 文档/文件夹ID
-   * @param {string} newParentId - 新的父文件夹ID
-   * @returns {Promise} - 移动结果
-   */
-  moveDocument: async (kbId, docId, newParentId) => {
-    return apiAdminPut(`/api/knowledge/databases/${kbId}/documents/${docId}/move`, {
-      new_parent_id: newParentId
     })
   },
 
@@ -135,6 +154,20 @@ export const documentApi = {
   },
 
   /**
+   * 将已上传文件添加为知识库文档记录（不解析、不入库）
+   * @param {string} kbId - 知识库ID
+   * @param {Array} items - 已上传文件的 MinIO URL 列表
+   * @param {Object} params - 添加参数
+   * @returns {Promise} - 添加结果
+   */
+  addUploadedDocuments: async (kbId, items, params = {}) => {
+    return apiAdminPost(`/api/knowledge/databases/${kbId}/documents/add`, {
+      items,
+      params
+    })
+  },
+
+  /**
    * 获取文档信息
    * @param {string} kbId - 知识库ID
    * @param {string} docId - 文档ID
@@ -142,6 +175,26 @@ export const documentApi = {
    */
   getDocumentInfo: async (kbId, docId) => {
     return apiAdminGet(`/api/knowledge/databases/${kbId}/documents/${docId}`)
+  },
+
+  /**
+   * 获取文档基本信息
+   * @param {string} kbId - 知识库ID
+   * @param {string} docId - 文档ID
+   * @returns {Promise} - 文档基本信息
+   */
+  getDocumentBasicInfo: async (kbId, docId) => {
+    return apiAdminGet(`/api/knowledge/databases/${kbId}/documents/${docId}/basic`)
+  },
+
+  /**
+   * 获取文档解析内容和分块
+   * @param {string} kbId - 知识库ID
+   * @param {string} docId - 文档ID
+   * @returns {Promise} - 文档内容信息
+   */
+  getDocumentContent: async (kbId, docId) => {
+    return apiAdminGet(`/api/knowledge/databases/${kbId}/documents/${docId}/content`)
   },
 
   /**
@@ -196,6 +249,15 @@ export const documentApi = {
   },
 
   /**
+   * 手动触发全部待解析文档解析
+   * @param {string} kbId - 知识库ID
+   * @returns {Promise} - 解析任务结果
+   */
+  parsePendingDocuments: async (kbId) => {
+    return apiAdminPost(`/api/knowledge/databases/${kbId}/documents/parse-pending`, {})
+  },
+
+  /**
    * 手动触发文档入库
    * @param {string} kbId - 知识库ID
    * @param {Array} fileIds - 文件ID列表
@@ -205,6 +267,18 @@ export const documentApi = {
   indexDocuments: async (kbId, fileIds, params = {}) => {
     return apiAdminPost(`/api/knowledge/databases/${kbId}/documents/index`, {
       file_ids: fileIds,
+      params
+    })
+  },
+
+  /**
+   * 手动触发全部待入库文档入库
+   * @param {string} kbId - 知识库ID
+   * @param {Object} params - 处理参数
+   * @returns {Promise} - 入库任务结果
+   */
+  indexPendingDocuments: async (kbId, params = {}) => {
+    return apiAdminPost(`/api/knowledge/databases/${kbId}/documents/index-pending`, {
       params
     })
   }
@@ -451,6 +525,14 @@ export const typeApi = {
    */
   getKnowledgeBaseTypes: async () => {
     return apiAdminGet('/api/knowledge/types')
+  },
+
+  /**
+   * 获取支持的知识库分块策略
+   * @returns {Promise} - 分块策略列表
+   */
+  getChunkPresets: async () => {
+    return apiAdminGet('/api/knowledge/chunk-presets')
   },
 
   /**

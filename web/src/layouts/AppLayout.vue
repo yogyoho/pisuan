@@ -12,7 +12,8 @@ import {
   PanelLeftOpen,
   MessageCirclePlus,
   Bot,
-  Layers
+  Layers,
+  Search
 } from 'lucide-vue-next'
 
 import { useConfigStore } from '@/stores/config'
@@ -29,6 +30,7 @@ import DebugComponent from '@/components/DebugComponent.vue'
 import TaskCenterDrawer from '@/components/TaskCenterDrawer.vue'
 import SettingsModal from '@/components/SettingsModal.vue'
 import ConversationNavSection from '@/components/ConversationNavSection.vue'
+import ConversationSearchModal from '@/components/ConversationSearchModal.vue'
 
 const configStore = useConfigStore()
 const agentStore = useAgentStore()
@@ -55,6 +57,7 @@ const showSettingsModal = ref(false)
 const settingsInitialTab = ref('')
 
 const { sidebarCollapsed } = storeToRefs(chatUIStore)
+const conversationSearchOpen = ref(false)
 
 // Provide settings modal methods to child components
 const openSettingsModal = (tab) => {
@@ -68,7 +71,6 @@ const handleDebugModalClose = () => {
 }
 
 const getRemoteConfig = async () => {
-  if (!userStore.isAdmin) return
   try {
     await configStore.refreshConfig()
   } catch (error) {
@@ -88,9 +90,9 @@ onMounted(async () => {
   // 加载信息配置与知识库数据无依赖，可并行
   await Promise.all([infoStore.loadInfoConfig(), getRemoteDatabase()])
   await initAgentNavigation()
-  // 仅管理员加载系统配置和任务中心数据
+  await getRemoteConfig()
+  // 仅管理员加载任务中心数据
   if (userStore.isAdmin) {
-    await getRemoteConfig()
     taskerStore.loadTasks()
   }
 })
@@ -143,7 +145,7 @@ const mainList = computed(() => {
     activeIcon: Box
   })
 
-  if (userStore.isAdmin) {
+  if (userStore.isSuperAdmin) {
     items.push({
       name: '数据总览',
       path: '/dashboard',
@@ -165,6 +167,9 @@ const mainList = computed(() => {
   return items
 })
 
+const primaryNavItem = computed(() => mainList.value[0] || null)
+const secondaryNavItems = computed(() => mainList.value.slice(1))
+
 const isNavItemActive = (item) => {
   const activePaths = item.activePaths || [item.path]
   if (item.exactActive) {
@@ -179,6 +184,10 @@ const setSidebarCollapsed = (collapsed) => {
 
 const toggleSidebar = () => {
   setSidebarCollapsed(!sidebarCollapsed.value)
+}
+
+const openConversationSearch = () => {
+  conversationSearchOpen.value = true
 }
 
 const initAgentNavigation = async () => {
@@ -196,6 +205,21 @@ const handleSelectChat = (threadId) => {
   if (!threadId) return
   chatThreadsStore.setCurrentThreadId(threadId)
   router.push({ name: 'AgentCompWithThreadId', params: { thread_id: threadId } })
+}
+
+const handleSearchThreadFound = (thread) => {
+  chatThreadsStore.upsertThread(thread)
+}
+
+const handleSearchSelectThread = (thread) => {
+  if (!thread?.id) return
+  chatThreadsStore.upsertThread(thread)
+  handleSelectChat(thread.id)
+}
+
+const handleCreateConversationFromSearch = () => {
+  chatThreadsStore.setCurrentThreadId(null)
+  router.push({ name: 'AgentComp' })
 }
 
 const handleDeleteChat = async (threadId) => {
@@ -286,9 +310,42 @@ provide('settingsModal', {
         </button>
       </div>
       <div class="nav">
-        <!-- 使用mainList渲染导航项 -->
         <RouterLink
-          v-for="(item, index) in mainList"
+          v-if="primaryNavItem"
+          :to="primaryNavItem.path"
+          class="nav-item"
+          :class="{ active: isNavItemActive(primaryNavItem) }"
+          :active-class="primaryNavItem.action ? '' : 'active'"
+          @click.stop
+        >
+          <a-tooltip placement="right" :open="sidebarCollapsed ? undefined : false">
+            <template #title>{{ primaryNavItem.name }}</template>
+            <component
+              class="icon"
+              :is="
+                isNavItemActive(primaryNavItem) ? primaryNavItem.activeIcon : primaryNavItem.icon
+              "
+              size="18"
+            />
+          </a-tooltip>
+          <span class="nav-text">{{ primaryNavItem.name }}</span>
+        </RouterLink>
+
+        <button
+          type="button"
+          class="nav-item"
+          :class="{ active: conversationSearchOpen }"
+          @click.stop="openConversationSearch"
+        >
+          <a-tooltip placement="right" :open="sidebarCollapsed ? undefined : false">
+            <template #title>搜索对话</template>
+            <Search class="icon" size="18" />
+          </a-tooltip>
+          <span class="nav-text">搜索对话</span>
+        </button>
+
+        <RouterLink
+          v-for="(item, index) in secondaryNavItems"
           :key="index"
           :to="item.path"
           v-show="!item.hidden"
@@ -356,6 +413,14 @@ provide('settingsModal', {
       <component :is="Component" v-else />
     </router-view>
 
+    <ConversationSearchModal
+      v-model:open="conversationSearchOpen"
+      :recent-threads="threads"
+      @select-thread="handleSearchSelectThread"
+      @create-thread="handleCreateConversationFromSearch"
+      @thread-found="handleSearchThreadFound"
+    />
+
     <!-- Debug Modal -->
     <a-modal
       v-model:open="showDebugModal"
@@ -382,10 +447,26 @@ provide('settingsModal', {
 // Less 变量定义
 @sidebar-width: 230px;
 @sidebar-collapsed-width: 56px;
-@sidebar-padding: 6px 8px;
-@sidebar-item-height: 36px;
+@sidebar-padding-y: 6px;
+@sidebar-padding-x: 8px;
+@sidebar-padding: @sidebar-padding-y @sidebar-padding-x;
+@sidebar-border-width: 1px;
+@sidebar-item-height: 32px;
 @sidebar-item-padding-x: 10px;
 @sidebar-icon-size: 16px;
+@brand-avatar-size: 28px;
+@sidebar-collapsed-content-width: @sidebar-collapsed-width - (2 * @sidebar-padding-x) -
+  @sidebar-border-width;
+@sidebar-collapsed-icon-padding-x: (
+  (@sidebar-collapsed-content-width - @sidebar-icon-size - (2 * @sidebar-border-width)) / 2
+);
+@sidebar-collapsed-avatar-padding-x: (
+  (@sidebar-collapsed-content-width - @sidebar-item-height - (2 * @sidebar-border-width)) / 2
+);
+@sidebar-collapsed-brand-padding-x: ((@sidebar-collapsed-content-width - @brand-avatar-size) / 2);
+@sidebar-collapsed-brand-icon-padding-x: (
+  (@sidebar-collapsed-content-width - @sidebar-icon-size) / 2
+);
 
 .app-layout {
   display: flex;
@@ -474,9 +555,9 @@ div.header,
   }
 
   .brand-avatar {
-    flex: 0 0 28px;
-    width: 28px;
-    height: 28px;
+    flex: 0 0 @brand-avatar-size;
+    width: @brand-avatar-size;
+    height: @brand-avatar-size;
     border-radius: 6px;
     object-fit: cover;
   }
@@ -711,14 +792,19 @@ div.header,
     }
 
     .brand-expand-button {
-      flex: 0 0 @sidebar-item-height;
-      justify-content: center;
-      width: @sidebar-item-height;
-      padding: 0 6px;
+      flex: 0 0 100%;
+      justify-content: flex-start;
+      width: 100%;
+      padding: 0;
       border-radius: 8px;
+
+      .brand-avatar-image {
+        margin-left: @sidebar-collapsed-brand-padding-x;
+      }
 
       .brand-expand-icon {
         display: none;
+        margin-left: @sidebar-collapsed-brand-icon-padding-x;
         width: @sidebar-icon-size;
         height: @sidebar-icon-size;
         color: var(--main-color);
@@ -746,8 +832,8 @@ div.header,
 
     .nav-item {
       justify-content: flex-start;
-      width: @sidebar-item-height;
-      padding: 0 10px;
+      width: 100%;
+      padding: 0 @sidebar-collapsed-icon-padding-x;
 
       .nav-text {
         max-width: 0;
@@ -757,7 +843,13 @@ div.header,
       }
 
       &.user-info {
-        padding: 0;
+        padding: 0 @sidebar-collapsed-avatar-padding-x;
+
+        :deep(.user-info-component),
+        :deep(.user-info-dropdown) {
+          justify-content: flex-start;
+        }
+
         :deep(.user-info-actions) {
           display: none;
         }

@@ -92,6 +92,11 @@ export const useTaskerStore = defineStore('tasker', () => {
   const successCount = computed(() => statusCounts.value?.success || 0)
   const totalCount = computed(() => summary.value?.total || 0)
 
+  // 是否存在需要持续轮询的任务：summary 统计或本地乐观登记的活跃任务
+  const hasActiveTasks = computed(
+    () => activeCount.value > 0 || tasks.value.some((task) => ACTIVE_STATUSES.has(task.status))
+  )
+
   function upsertTask(rawTask) {
     if (!rawTask || !rawTask.id) return
     const task = toTask(rawTask)
@@ -108,6 +113,7 @@ export const useTaskerStore = defineStore('tasker', () => {
       tasks.value = []
       summary.value = createDefaultSummary()
       lastError.value = null
+      syncPolling()
       return
     }
 
@@ -168,6 +174,7 @@ export const useTaskerStore = defineStore('tasker', () => {
       summary.value = createDefaultSummary()
     } finally {
       loading.value = false
+      syncPolling()
     }
   }
 
@@ -226,14 +233,17 @@ export const useTaskerStore = defineStore('tasker', () => {
       updated_at: now,
       payload: payload || {}
     })
+    syncPolling()
   }
 
   function openDrawer() {
     isDrawerOpen.value = true
+    syncPolling()
   }
 
   function closeDrawer() {
     isDrawerOpen.value = false
+    syncPolling()
   }
 
   function startPolling(interval = 5000) {
@@ -247,6 +257,16 @@ export const useTaskerStore = defineStore('tasker', () => {
     if (pollingTimer) {
       clearInterval(pollingTimer)
       pollingTimer = null
+    }
+  }
+
+  // 轮询所有权收敛到 store：抽屉打开或存在活跃任务时持续轮询，否则停止，
+  // 修复抽屉关闭后任务角标（activeCount）不再更新的问题。
+  function syncPolling() {
+    if (userStore.isAdmin && (isDrawerOpen.value || hasActiveTasks.value)) {
+      startPolling()
+    } else {
+      stopPolling()
     }
   }
 
@@ -273,8 +293,6 @@ export const useTaskerStore = defineStore('tasker', () => {
     cancelTask,
     deleteTask,
     registerQueuedTask,
-    startPolling,
-    stopPolling,
     reset,
     openDrawer,
     closeDrawer

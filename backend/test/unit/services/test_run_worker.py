@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager
 from types import SimpleNamespace
 
 import pytest
-
 import yuxi.services.run_worker as run_worker
 
 
@@ -37,16 +36,16 @@ class _BytesAsyncIter:
 
 def _build_run() -> SimpleNamespace:
     return SimpleNamespace(
+        id="run-1",
         status="pending",
         request_id="req-1",
-        input_payload={
-            "query": "hello",
-            "config": {"thread_id": "thread-1"},
-            "agent_id": "ChatbotAgent",
-            "image_content": None,
-            "uid": "user-1",
-            "request_id": "req-1",
-        },
+        input_payload={"model_spec": "provider:model"},
+        input_message_id=10,
+        run_type="chat",
+        agent_slug="ChatbotAgent",
+        uid="user-1",
+        conversation_thread_id="thread-1",
+        created_by_run_id=None,
     )
 
 
@@ -67,6 +66,10 @@ def _patch_common(monkeypatch: pytest.MonkeyPatch, run_obj: SimpleNamespace):
         del uid
         return SimpleNamespace(id=1, uid="user-1")
 
+    async def fake_load_input_message(message_id: int | None):
+        assert message_id == 10
+        return SimpleNamespace(content="hello", image_content=None, extra_metadata={})
+
     async def fake_not_cancelled(self):
         del self
         return False
@@ -74,12 +77,66 @@ def _patch_common(monkeypatch: pytest.MonkeyPatch, run_obj: SimpleNamespace):
     monkeypatch.setattr(run_worker.pg_manager, "get_async_session_context", fake_session_ctx)
     monkeypatch.setattr(run_worker, "_get_run", fake_get_run)
     monkeypatch.setattr(run_worker, "_load_user", fake_load_user)
+    monkeypatch.setattr(run_worker, "_load_input_message", fake_load_input_message)
     monkeypatch.setattr(run_worker, "mark_run_running", fake_noop)
     monkeypatch.setattr(run_worker, "clear_cancel_signal", fake_noop)
     monkeypatch.setattr(run_worker, "stream_agent_chat", lambda **kwargs: object())
     monkeypatch.setattr(run_worker.RunContext, "start", fake_noop)
     monkeypatch.setattr(run_worker.RunContext, "close", fake_noop)
     monkeypatch.setattr(run_worker.RunContext, "is_cancelled", fake_not_cancelled)
+
+
+@pytest.mark.asyncio
+async def test_process_agent_run_restores_invocation_meta(monkeypatch: pytest.MonkeyPatch):
+    run_obj = _build_run()
+    _patch_common(monkeypatch, run_obj)
+
+    captured: dict[str, object] = {}
+    events: list[dict] = []
+    terminal_statuses: list[str] = []
+
+    async def fake_load_input_message(message_id: int | None):
+        assert message_id == 10
+        return SimpleNamespace(
+            content="hello",
+            image_content=None,
+            extra_metadata={
+                "source": "agent_call",
+                "agent_invocation_meta": {"trace_id": "trace-1"},
+                "evaluation": {"dataset_name": "legacy-top-level"},
+                "custom_variables": {"system_prompt": "legacy"},
+            },
+        )
+
+    async def fake_append_event(run_id: str, event_type: str, payload: dict, **kwargs):
+        del kwargs
+        events.append({"run_id": run_id, "event_type": event_type, "payload": payload})
+
+    async def fake_mark_terminal(run_id: str, status: str, error_type=None, error_message=None):
+        del run_id, error_type, error_message
+        terminal_statuses.append(status)
+
+    def fake_stream_agent_chat(**kwargs):
+        captured.update(kwargs)
+        return _BytesAsyncIter([b'{"status":"finished","request_id":"req-1","thread_id":"thread-1"}\n'])
+
+    monkeypatch.setattr(run_worker, "_load_input_message", fake_load_input_message)
+    monkeypatch.setattr(run_worker, "append_run_event", fake_append_event)
+    monkeypatch.setattr(run_worker, "mark_run_terminal", fake_mark_terminal)
+    monkeypatch.setattr(run_worker, "stream_agent_chat", fake_stream_agent_chat)
+
+    await run_worker.process_agent_run({"job_try": 1}, "run-1")
+
+    meta = captured["meta"]
+    assert meta["source"] == "agent_call"
+    assert meta["agent_invocation_meta"] == {"trace_id": "trace-1"}
+    assert "evaluation" not in meta
+    assert "custom_variables" not in meta
+    metadata_event = next(event for event in events if event["event_type"] == "metadata")
+    assert metadata_event["payload"]["agent_invocation_meta"] == {"trace_id": "trace-1"}
+    assert "evaluation" not in metadata_event["payload"]
+    assert "custom_variables" not in metadata_event["payload"]
+    assert terminal_statuses == ["completed"]
 
 
 @pytest.mark.asyncio
@@ -154,6 +211,138 @@ async def test_process_agent_run_retryable_error_retries_then_completes(monkeypa
 
 
 @pytest.mark.asyncio
+async def test_process_subagent_run_restores_runtime_context(monkeypatch: pytest.MonkeyPatch):
+    run_obj = _build_run()
+    run_obj.run_type = "subagent"
+    run_obj.agent_slug = "worker"
+    run_obj.conversation_thread_id = "child-thread"
+    run_obj.created_by_run_id = "parent-run"
+    run_obj.input_payload = {
+        "model_spec": "provider:model",
+        "runtime": {
+            "parent_thread_id": "parent-thread",
+            "file_thread_id": "shared-file-thread",
+            "skills_thread_id": "child-thread",
+        },
+    }
+    _patch_common(monkeypatch, run_obj)
+
+    captured: dict[str, object] = {}
+    terminal_statuses: list[str] = []
+
+    async def fake_append_event(run_id: str, event_type: str, payload: dict, **kwargs):
+        del run_id, event_type, payload, kwargs
+
+    async def fake_mark_terminal(run_id: str, status: str, error_type=None, error_message=None):
+        del run_id, error_type, error_message
+        terminal_statuses.append(status)
+
+    def fake_stream_agent_chat(**kwargs):
+        captured.update(kwargs)
+        return _BytesAsyncIter([b'{"status":"finished","request_id":"req-1","thread_id":"child-thread"}\n'])
+
+    monkeypatch.setattr(run_worker, "append_run_event", fake_append_event)
+    monkeypatch.setattr(run_worker, "mark_run_terminal", fake_mark_terminal)
+    monkeypatch.setattr(run_worker, "stream_agent_chat", fake_stream_agent_chat)
+
+    await run_worker.process_agent_run({"job_try": 1}, "run-1")
+
+    meta = captured["meta"]
+    assert meta["run_type"] == "subagent"
+    assert meta["parent_thread_id"] == "parent-thread"
+    assert meta["file_thread_id"] == "shared-file-thread"
+    assert meta["skills_thread_id"] == "child-thread"
+    assert captured["agent_slug"] == "worker"
+    assert captured["thread_id"] == "child-thread"
+    assert captured["input_message"].content == "hello"
+    assert captured["input_message"].langchain_message.content == "hello"
+    assert "image_content" not in captured
+    assert terminal_statuses == ["completed"]
+
+
+@pytest.mark.asyncio
+async def test_process_agent_run_rejects_unknown_run_type(monkeypatch: pytest.MonkeyPatch):
+    run_obj = _build_run()
+    run_obj.run_type = "unknown"
+    _patch_common(monkeypatch, run_obj)
+
+    terminal_errors: list[dict] = []
+
+    async def fake_mark_terminal(run_id: str, status: str, error_type=None, error_message=None):
+        terminal_errors.append(
+            {
+                "run_id": run_id,
+                "status": status,
+                "error_type": error_type,
+                "error_message": error_message,
+            }
+        )
+
+    def fail_stream_agent_chat(**kwargs):
+        del kwargs
+        raise AssertionError("unknown run_type must not enter chat stream")
+
+    monkeypatch.setattr(run_worker, "mark_run_terminal", fake_mark_terminal)
+    monkeypatch.setattr(run_worker, "stream_agent_chat", fail_stream_agent_chat)
+
+    await run_worker.process_agent_run({"job_try": 1}, "run-1")
+
+    assert terminal_errors == [
+        {
+            "run_id": "run-1",
+            "status": "failed",
+            "error_type": "invalid_run_type",
+            "error_message": "不支持的 run_type: unknown",
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_process_agent_run_rejects_invalid_raw_input_message(monkeypatch: pytest.MonkeyPatch):
+    run_obj = _build_run()
+    _patch_common(monkeypatch, run_obj)
+
+    terminal_errors: list[dict] = []
+
+    async def fake_load_input_message(message_id: int | None):
+        assert message_id == 10
+        return SimpleNamespace(
+            content="hello",
+            image_content=None,
+            extra_metadata={"raw_message": {"type": "human", "content": object()}},
+        )
+
+    async def fake_mark_terminal(run_id: str, status: str, error_type=None, error_message=None):
+        terminal_errors.append(
+            {
+                "run_id": run_id,
+                "status": status,
+                "error_type": error_type,
+                "error_message": error_message,
+            }
+        )
+
+    def fail_stream_agent_chat(**kwargs):
+        del kwargs
+        raise AssertionError("invalid input message must not enter chat stream")
+
+    monkeypatch.setattr(run_worker, "_load_input_message", fake_load_input_message)
+    monkeypatch.setattr(run_worker, "mark_run_terminal", fake_mark_terminal)
+    monkeypatch.setattr(run_worker, "stream_agent_chat", fail_stream_agent_chat)
+
+    await run_worker.process_agent_run({"job_try": 1}, "run-1")
+
+    assert terminal_errors == [
+        {
+            "run_id": "run-1",
+            "status": "failed",
+            "error_type": "invalid_input_message",
+            "error_message": "invalid raw_message for chat input message",
+        }
+    ]
+
+
+@pytest.mark.asyncio
 async def test_chunked_event_writer_flushes_loading_chunks_by_thread(monkeypatch: pytest.MonkeyPatch):
     events: list[dict] = []
 
@@ -220,13 +409,13 @@ async def test_chunked_event_writer_flushes_semantic_tool_call_immediately(monke
     ]
 
 
-def test_chunk_thread_id_reads_nested_metadata():
+def test_chunk_thread_id_uses_fallback_for_unstable_nested_metadata():
     assert (
         run_worker._chunk_thread_id(
             {"metadata": {"configurable": {"thread_id": "child-thread"}}},
             "parent-thread",
         )
-        == "child-thread"
+        == "parent-thread"
     )
 
 
@@ -254,12 +443,16 @@ async def test_worker_startup_ensures_builtin_mcp_servers(monkeypatch: pytest.Mo
         del session
         calls.append("init_builtin_skills")
 
+    def fake_start_runtime_sync():
+        calls.append("start_runtime_sync")
+
     monkeypatch.setattr(run_worker.pg_manager, "initialize", fake_initialize)
     monkeypatch.setattr(run_worker.pg_manager, "create_business_tables", fake_create_business_tables)
     monkeypatch.setattr(run_worker.pg_manager, "ensure_business_schema", fake_ensure_business_schema)
     monkeypatch.setattr(run_worker.pg_manager, "get_async_session_context", fake_session_ctx)
     monkeypatch.setattr(run_worker, "ensure_builtin_mcp_servers_in_db", fake_ensure_builtin_mcp_servers_in_db)
     monkeypatch.setattr(run_worker, "init_builtin_skills", fake_init_builtin_skills)
+    monkeypatch.setattr(run_worker.sys_config, "start_runtime_sync", fake_start_runtime_sync)
 
     await run_worker._worker_startup({})
 
@@ -269,4 +462,5 @@ async def test_worker_startup_ensures_builtin_mcp_servers(monkeypatch: pytest.Mo
         "ensure_business_schema",
         "ensure_builtin_mcp_servers_in_db",
         "init_builtin_skills",
+        "start_runtime_sync",
     ]

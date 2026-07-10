@@ -12,7 +12,7 @@
 
 <a href="https://trendshift.io/repositories/24335" target="_blank"><img src="https://trendshift.io/api/badge/repositories/24335" alt="xerrors%2FYuxi | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
-[[项目文档]](https://xerrors.github.io/Yuxi) · [[版本特性]](http://xhslink.com/o/5Y6QWnmjF2d) · [[English]](README.en.md)
+[[项目文档]](https://xerrors.github.io/Yuxi) · [[版本特性]](http://xhslink.com/o/5Y6QWnmjF2d) · [[🇬🇧 English README]](README.en.md)
 
 </div>
 
@@ -24,6 +24,30 @@
 
 导航：[项目介绍](https://xerrors.github.io/Yuxi/) ｜ [快速开始](https://xerrors.github.io/Yuxi/intro/quick-start) ｜ [开发路线图](https://xerrors.github.io/Yuxi/develop-guides/roadmap) | [0.7 版本特性](http://xhslink.com/o/5Y6QWnmjF2d)；最新开发动态，详见 [changelog](https://xerrors.github.io/Yuxi/develop-guides/changelog)。
 
+> 📢 求职：作者为江南大学软件工程博士研究生，研究方向 AI Agent、知识图谱与大模型应用，预计 2027 年毕业，现寻求实习/全职机会，欢迎联系：wenjie.zhang@stu.jiangnan.edu.cn
+
+---
+
+🩷 赞助商
+
+<table>
+  <tr>
+    <td style="width: 220px; padding: 8px 12px 8px 8px; vertical-align: middle;">
+      <img 
+        width="220" 
+        height="64" 
+        alt="7fb163d0fb02740948521dbcaf6191ea" 
+        src="https://xerrors.oss-cn-shanghai.aliyuncs.com/github/image-20260623195812766.png"
+      />
+    </td>
+    <td style="padding: 8px 8px 8px 0; vertical-align: middle;">
+      <p style="margin: 0 0 4px 0;">
+        感谢 <a href="https://sui-xiang.com/">随想AI中转站</a > 对本项目的赞助！
+        随想AI中转站 是一家可靠高效的 API 中继服务提供商，提供 Claude、Codex、Gemini 等的中继服务。注重隐私的中转站·无数据倒卖·无模型掺水，隐私，透明，极速售后。新账户注册每日签到就送 0.5 元测试额度，充值额度 1:1，无需订阅，按量付费。
+      </p >
+    </td>
+  </tr>
+</table>
 
 ![image-20260606190609377](https://xerrors.oss-cn-shanghai.aliyuncs.com/github/image-20260606235615139.png)
 
@@ -43,7 +67,7 @@
 **1. 克隆代码并初始化**
 
 ```bash
-git clone --branch v0.7.0 --depth 1 https://github.com/xerrors/Yuxi.git
+git clone --branch v0.7.1.beta1 --depth 1 https://github.com/xerrors/Yuxi.git
 cd Yuxi
 
 # Linux/macOS
