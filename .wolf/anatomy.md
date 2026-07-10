@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-06-17T12:31:42.485Z
-> Files: 1 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-10T03:10:11.509Z
+> Files: 8 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -167,6 +167,7 @@
 
 ## backend/package/yuxi/storage/postgres/
 
+- `manager.py` — PostgreSQL 数据库管理器 - 支持知识库和业务数据 (~13978 tok)
 
 ## backend/package/yuxi/utils/
 
@@ -179,7 +180,7 @@
 
 ## backend/server/routers/
 
-- `__init__.py` (~792 tok)
+- `__init__.py` (~843 tok)
 
 ## backend/server/utils/
 
@@ -279,6 +280,7 @@
 
 ## docs/develop-guides/
 
+- `roadmap.md` — 开发路线图 (~2293 tok)
 
 ## docs/superpowers/plans/
 
@@ -294,12 +296,15 @@
 
 ## web/src/apis/
 
+- `index.js` — API模块索引文件 (~374 tok)
 
 ## web/src/assets/css/
 
 
 ## web/src/components/
 
+- `SettingsModal.vue` — Vue: setup (~3382 tok)
+- `TaskCenterDrawer.vue` — Vue: setup (~4657 tok)
 
 ## web/src/components/domain-factory/
 
@@ -307,8 +312,13 @@
 ## web/src/components/modals/
 
 
+## web/src/components/model-management/
+
+- `ModelProviderManagePanel.vue` — Vue: setup (~12514 tok)
+
 ## web/src/layouts/
 
+- `AppLayout.vue` — Vue: 创建新对话, setup (~6387 tok)
 
 ## web/src/stores/
 
