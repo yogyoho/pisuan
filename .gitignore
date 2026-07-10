@@ -91,3 +91,14 @@ backend/test_pipeline.py
 开发日志.md
 *.sql.bak
 backup_*.sql
+
+### OpenWolf — 保留协议/配置类，忽略会话态/内部/大文件
+.wolf/token-ledger.json
+.wolf/hooks/
+.wolf/memory.md
+.wolf/buglog.json
+.wolf/suggestions.json
+.wolf/cron-manifest.json
+.wolf/cron-state.json
+.wolf/designqc-report.json
+.wolf/designqc-captures/
