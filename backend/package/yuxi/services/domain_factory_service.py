@@ -3895,15 +3895,14 @@ class DomainFactoryService:
                             knowledge_base_id, file_id, ingest_markdown
                         )
 
-                    # 2. 创建文件记录，直接设为 PARSED 状态
-                    kb_instance.files_meta[file_id] = {
+                    # 2. 创建文件记录，直接设为 PARSED 状态（写入知识库文件表，供 index_file 消费）
+                    file_meta = {
                         "file_id": file_id,
-                        "database_id": knowledge_base_id,
+                        "kb_id": knowledge_base_id,
                         "filename": file_name,
                         "original_filename": file_name,
                         "file_type": "md",
                         "path": f"domain_factory/{task_id}/{file_name}",
-                        "minio_url": "",
                         "markdown_file": markdown_url,
                         "status": FileStatus.PARSED,
                         "content_hash": hashstr(ingest_markdown),
@@ -3912,9 +3911,8 @@ class DomainFactoryService:
                         "processing_params": {},
                         "is_folder": False,
                         "created_by": reviewer,
-                        "created_at": utc_isoformat(),
                     }
-                    await kb_instance._persist_file(file_id)
+                    await kb_instance._persist_file_meta(file_id, file_meta)
 
                     await context.set_progress(50.0, "正在写入知识库...")
                     await context.set_message("正在写入知识库...")
@@ -4465,15 +4463,14 @@ class DomainFactoryService:
                         knowledge_base_id, file_id, ingest_markdown
                     )
 
-                # 2. 创建文件记录，直接设为 PARSED 状态
-                kb_instance.files_meta[file_id] = {
+                # 2. 创建文件记录，直接设为 PARSED 状态（写入知识库文件表，供 index_file 消费）
+                file_meta = {
                     "file_id": file_id,
-                    "database_id": knowledge_base_id,
+                    "kb_id": knowledge_base_id,
                     "filename": file_name,
                     "original_filename": file_name,
                     "file_type": "md",
                     "path": f"domain_factory/reingest_{task_id}/{file_name}",
-                    "minio_url": "",
                     "markdown_file": markdown_url,
                     "status": FileStatus.PARSED,
                     "content_hash": hashstr(ingest_markdown),
@@ -4481,9 +4478,8 @@ class DomainFactoryService:
                     "content_type": "domain_factory",
                     "processing_params": {},
                     "is_folder": False,
-                    "created_at": utc_isoformat(),
                 }
-                await kb_instance._persist_file(file_id)
+                await kb_instance._persist_file_meta(file_id, file_meta)
 
                 await context.set_progress(50.0, "正在写入知识库...")
                 await context.set_message("正在写入知识库...")
