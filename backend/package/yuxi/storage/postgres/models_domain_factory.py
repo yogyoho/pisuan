@@ -110,7 +110,7 @@ class DomainFactoryLearnedTemplate(Base):
     chapter = Column(String(255), nullable=False, default="")
     generalized = Column(Text, nullable=False)
     slots = Column(JSON, nullable=False, default=list)
-    slot_signature = Column(String(255), nullable=False, default="")
+    slot_signature = Column(Text, nullable=False, default="")
     source_count = Column(Integer, nullable=False, default=1)
     match_count = Column(Integer, nullable=False, default=0)
     sample_original = Column(Text, nullable=True)

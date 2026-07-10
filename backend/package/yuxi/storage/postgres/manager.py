@@ -1054,7 +1054,7 @@ class PostgresManager(metaclass=SingletonMeta):
             "    chapter VARCHAR(255) NOT NULL DEFAULT '',"
             "    generalized TEXT NOT NULL,"
             "    slots JSONB NOT NULL DEFAULT '[]',"
-            "    slot_signature VARCHAR(255) NOT NULL DEFAULT '',"
+            "    slot_signature TEXT NOT NULL DEFAULT '',"
             "    source_count INTEGER NOT NULL DEFAULT 1,"
             "    match_count INTEGER NOT NULL DEFAULT 0,"
             "    sample_original TEXT,"
@@ -1065,6 +1065,7 @@ class PostgresManager(metaclass=SingletonMeta):
             ")",
             "CREATE INDEX IF NOT EXISTS idx_dflt_domain ON domain_factory_learned_templates(domain_code)",
             "ALTER TABLE IF EXISTS domain_factory_learned_templates ADD COLUMN IF NOT EXISTS match_count INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE IF EXISTS domain_factory_learned_templates ALTER COLUMN slot_signature TYPE TEXT",
             "CREATE TABLE IF NOT EXISTS domain_factory_prompt_configs ("
             "    id SERIAL PRIMARY KEY,"
             "    domain_code VARCHAR(64),"
