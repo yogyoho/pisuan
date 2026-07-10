@@ -222,6 +222,12 @@
       "action": "edit",
       "tokens": 38,
       "at": "2026-08-19T16:38:37.241Z"
+    },
+    {
+      "file": "C:/workspace/pisuan/backend/package/yuxi/storage/postgres/manager.py",
+      "action": "edit",
+      "tokens": 226,
+      "at": "2026-08-19T16:39:30.539Z"
     }
   ],
   "edit_counts": {
@@ -230,7 +236,7 @@
     "backend/package/yuxi/agents/skills/buildin/__init__.py": 2,
     "backend/package/yuxi/config/static/info.template.yaml": 2,
     "docs/.vitepress/config.mts": 1,
-    "backend/package/yuxi/storage/postgres/manager.py": 6,
+    "backend/package/yuxi/storage/postgres/manager.py": 7,
     "web/src/apis/index.js": 1,
     "web/src/layouts/AppLayout.vue": 2,
     "backend/package/yuxi/knowledge/parser/unified.py": 4,

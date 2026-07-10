@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T16:38:37.238Z
-> Files: 2 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T16:39:30.535Z
+> Files: 1 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -167,6 +167,7 @@
 
 ## backend/package/yuxi/storage/postgres/
 
+- `manager.py` — PostgreSQL 数据库管理器 - 支持知识库和业务数据 (~19387 tok)
 
 ## backend/package/yuxi/utils/
 
@@ -311,11 +312,9 @@
 
 ## web/src/components/model-management/
 
-- `ModelProviderManagePanel.vue` — Vue: setup (~14616 tok)
 
 ## web/src/layouts/
 
-- `AppLayout.vue` — Vue: 新建对话, setup (~6765 tok)
 
 ## web/src/stores/
 
