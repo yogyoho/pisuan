@@ -400,6 +400,12 @@ class PostgresManager(metaclass=SingletonMeta):
             "ALTER TABLE IF EXISTS skills ADD COLUMN IF NOT EXISTS content_hash VARCHAR(128)",
             "ALTER TABLE IF EXISTS skills ALTER COLUMN is_builtin SET DEFAULT FALSE",
             "ALTER TABLE IF EXISTS conversations ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN NOT NULL DEFAULT FALSE",
+            # messages: 上游新增 run_id / request_id / delivery_status，旧库 create_all 不会补列
+            "ALTER TABLE IF EXISTS messages ADD COLUMN IF NOT EXISTS run_id VARCHAR(64)",
+            "ALTER TABLE IF EXISTS messages ADD COLUMN IF NOT EXISTS request_id VARCHAR(64)",
+            "ALTER TABLE IF EXISTS messages ADD COLUMN IF NOT EXISTS delivery_status VARCHAR(32) NOT NULL DEFAULT 'complete'",
+            "CREATE INDEX IF NOT EXISTS ix_messages_run_id ON messages(run_id)",
+            "CREATE INDEX IF NOT EXISTS ix_messages_request_id ON messages(request_id)",
             "ALTER TABLE IF EXISTS mcp_servers ADD COLUMN IF NOT EXISTS env JSONB",
             # Domain Factory: 添加 HTML 格式的文档内容列
             "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS raw_html TEXT",
