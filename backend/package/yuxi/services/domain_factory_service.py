@@ -4320,6 +4320,137 @@ class DomainFactoryService:
             )
         logger.info(f"学习模板 match_count 更新: {learned_ids}")
 
+    @staticmethod
+    def _group_assets_by_chapter(task_detail: dict) -> dict[str, dict]:
+        """按原始章节标题分组 ETL 已抽资产。章节标识取段落 title（去空白），无 title 的归 '未分类'。"""
+        groups: dict[str, dict] = {}
+        for para in task_detail.get("source_paragraphs", []):
+            ch = (para.get("title") or para.get("chapter") or "未分类").strip()
+            g = groups.setdefault(
+                ch,
+                {
+                    "templates": [],
+                    "paragraphs": [],
+                    "legal_refs": [],
+                    "entities": [],
+                    "tables": [],
+                    "formulas": [],
+                    "charts": [],
+                    "figures": [],
+                },
+            )
+            g["paragraphs"].append(para)
+            tmpl = para.get("template") or {}
+            if tmpl.get("generalized") or tmpl.get("slots"):
+                g["templates"].append(tmpl)
+        # 结构化资产按章回填（ETL 抽取产物里若带 chapter/title 则归入对应组）
+        for _key, items, target in (
+            ("legal_references", task_detail.get("legal_references", []), "legal_refs"),
+            ("table_schemas", task_detail.get("table_schemas", []), "tables"),
+            ("formulas", task_detail.get("formulas", []), "formulas"),
+            ("entities", task_detail.get("entities", []), "entities"),
+        ):
+            for item in items or []:
+                ch = (item.get("chapter") or item.get("title") or "未分类").strip()
+                groups.setdefault(
+                    ch,
+                    {
+                        "templates": [],
+                        "paragraphs": [],
+                        "legal_refs": [],
+                        "entities": [],
+                        "tables": [],
+                        "formulas": [],
+                        "charts": [],
+                        "figures": [],
+                    },
+                )[target].append(item)
+        return groups
+
+    @staticmethod
+    def _assemble_deterministic_outline(assets: dict) -> dict:
+        """从分好组的资产确定性组装大纲的 7 个结构化字段。"""
+        slots: list[str] = []
+        for tmpl in assets.get("templates", []):
+            for s in tmpl.get("slots") or []:
+                name = s.get("name") if isinstance(s, dict) else s
+                if name and name not in slots:
+                    slots.append(name)
+        roles = sorted(
+            {p.get("classify_type") for p in assets.get("paragraphs", []) if p.get("classify_type")}
+        )
+        content_requirements = slots + [f"段落类型:{r}" for r in roles]
+
+        regulations = [
+            {
+                "code": r.get("code"),
+                "title": r.get("title"),
+                "effective_date": r.get("effective_date"),
+                "scope": r.get("scope"),
+                "standard_code": r.get("standard_code") or r.get("code"),
+            }
+            for r in assets.get("legal_refs", [])
+        ]
+        entity_bindings = [
+            {
+                "entity_id": e.get("entity_id"),
+                "entity_key": e.get("entity_key"),
+                "role": e.get("role"),
+                "value_type": e.get("value_type"),
+                "unit": e.get("unit"),
+            }
+            for e in assets.get("entities", [])
+        ]
+        expected_tables = [
+            {
+                "table_type": t.get("table_type"),
+                "purpose": t.get("purpose"),
+                "columns": t.get("columns") or [],
+                "standard_code": t.get("standard_code"),
+            }
+            for t in assets.get("tables", [])
+        ]
+        expected_formulas = [
+            {
+                "formula_template": f.get("formula_template"),
+                "variables": f.get("variables") or [],
+                "purpose": f.get("purpose"),
+            }
+            for f in assets.get("formulas", [])
+        ]
+        expected_charts = [
+            {
+                "chart_type": c.get("chart_type"),
+                "purpose": c.get("purpose"),
+                "data_source": c.get("data_source"),
+            }
+            for c in assets.get("charts", [])
+        ]
+        expected_figures = [
+            {
+                "figure_type": fg.get("figure_type"),
+                "purpose": fg.get("purpose"),
+                "generation_hint": fg.get("generation_hint"),
+            }
+            for fg in assets.get("figures", [])
+        ]
+        # writing_example：取最长 sample_original
+        samples = [
+            t.get("sample_original") for t in assets.get("templates", []) if t.get("sample_original")
+        ]
+        writing_example = max(samples, key=len) if samples else None
+
+        return {
+            "content_requirements": content_requirements,
+            "regulations": regulations,
+            "entity_bindings": entity_bindings,
+            "expected_tables": expected_tables,
+            "expected_formulas": expected_formulas,
+            "expected_charts": expected_charts,
+            "expected_figures": expected_figures,
+            "writing_example": writing_example,
+        }
+
     async def _save_learned_templates_from_task(self, task_detail: dict[str, Any]) -> int:
         """从已提交任务中提取高质量模板，回流到学习模板库"""
         domain_code = task_detail.get("domain", "coal")
