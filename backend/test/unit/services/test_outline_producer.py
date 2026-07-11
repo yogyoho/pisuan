@@ -1,6 +1,8 @@
 import asyncio
 from unittest.mock import AsyncMock, patch
 
+import pytest
+
 from yuxi.services.domain_factory_service import DomainFactoryService
 
 
@@ -88,3 +90,43 @@ def test_llm_chapter_meta_parses_json_and_reuses_seed_key():
             )
     assert out["canonical_chapter_key"] == "地下水环境影响预测"
     assert "水位下降" in out["key_points"]
+
+
+@pytest.mark.asyncio
+async def test_produce_outlines_async_writes_rows_and_backfills(monkeypatch):
+    svc = DomainFactoryService.__new__(DomainFactoryService)
+    svc.repo = AsyncMock()
+    svc.repo.list_chapter_keys = AsyncMock(return_value=[])
+    svc.repo.upsert_outline = AsyncMock()
+    svc.repo.backfill_template_chapter_key = AsyncMock(return_value=1)
+    svc.get_task_detail = AsyncMock(
+        return_value={
+            "source_paragraphs": [
+                {
+                    "id": "p1",
+                    "title": "5.2 地下水",
+                    "classify_type": "parameter",
+                    "template": {
+                        "generalized": "水位{{水位值}}",
+                        "slots": [{"name": "水位值"}],
+                        "sample_original": "水位10m",
+                    },
+                },
+            ],
+        }
+    )
+    svc._llm_chapter_meta = AsyncMock(
+        return_value={
+            "canonical_chapter_key": "地下水环境影响预测",
+            "purpose": "p",
+            "overview": "o",
+            "key_points": ["k"],
+            "writing_hints": "h",
+        }
+    )
+    n = await svc._produce_outlines_async("task-1", "coal", "eia_report")
+    assert n == 1
+    svc.repo.upsert_outline.assert_awaited_once()
+    svc.repo.backfill_template_chapter_key.assert_awaited_once_with(
+        "coal", "eia_report", "5.2 地下水", "地下水环境影响预测"
+    )
