@@ -4015,6 +4015,17 @@ class DomainFactoryService:
             except Exception as e:
                 logger.warning(f"模板回流失败（不阻断入库）: {e}")
 
+            # ========== 阶段2.9: 章节大纲产出 (OUTLINE) ==========
+            try:
+                await context.set_progress(92.0, "正在产出章节大纲...")
+                await context.set_message("正在产出章节大纲...")
+                outline_count = await service._produce_outlines_async(
+                    task_id, task_detail.get("domain") or "coal", task_detail.get("report_type_code") or "通用"
+                )
+                logger.info(f"章节大纲产出完成: {outline_count} 章")
+            except Exception as e:
+                logger.warning(f"章节大纲产出失败（不阻断入库）: {e}")
+
             if not knowledge_base_id:
                 logger.warning(f"任务 {task_id} 未指定目标知识库，跳过入库")
 
@@ -4502,6 +4513,39 @@ class DomainFactoryService:
                 "key_points": [],
                 "writing_hints": None,
             }
+
+    async def _produce_outlines_async(self, task_id: str, domain_code: str, report_type_code: str) -> int:
+        """commit 阶段：逐章组装大纲 + LLM 归一/散文 → upsert。非阻断由调用方保证。"""
+        task_detail = await self.get_task_detail(task_id)
+        groups = self._group_assets_by_chapter(task_detail)
+        seed_keys = await self.repo.list_chapter_keys(domain_code, report_type_code)
+        count = 0
+        for chapter_raw, assets in groups.items():
+            deterministic = self._assemble_deterministic_outline(assets)
+            meta = await self._llm_chapter_meta(chapter_raw, deterministic, seed_keys)
+            canonical_key = meta["canonical_chapter_key"]
+            await self.repo.upsert_outline(
+                domain_code=domain_code,
+                report_type_code=report_type_code,
+                canonical_chapter_key=canonical_key,
+                chapter_id=chapter_raw.split()[0] if chapter_raw[:1].isdigit() else None,
+                chapter_title=chapter_raw,
+                purpose=meta.get("purpose"),
+                overview=meta.get("overview"),
+                key_points=meta.get("key_points") or [],
+                **deterministic,
+                writing_hints=meta.get("writing_hints"),
+                source_task_ids=[task_id],
+                source_count=1,
+                prose_based_on_source_count=1,
+            )
+            # 回填 learned_templates.canonical_chapter_key（供 get_templates 检索）
+            await self.repo.backfill_template_chapter_key(domain_code, report_type_code, chapter_raw, canonical_key)
+            if canonical_key not in seed_keys:
+                seed_keys.append(canonical_key)
+            count += 1
+        logger.info(f"章节大纲产出: {count} 章, domain={domain_code}, report_type={report_type_code}")
+        return count
 
     async def _save_learned_templates_from_task(self, task_detail: dict[str, Any]) -> int:
         """从已提交任务中提取高质量模板，回流到学习模板库"""
