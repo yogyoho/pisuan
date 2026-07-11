@@ -173,24 +173,11 @@ def _convert_with_docling(file_path: Path, params: dict | None = None) -> tuple[
         for replacement in replacements:
             markdown = re.sub(r"<!--\s*image\s*-->", replacement, markdown, count=1)
 
-        # 同样处理 HTML 导出中的图片
+        # HTML 导出（表格由 export_to_html 直接产出）。
+        # 注：原此处有一段"HTML 图片 URL 重写"块，引用了未定义的 image_refs/timestamp/mime_type，
+        # 触发 NameError → 回退到 python-docx，丢失了 docling 的表格 HTML 抽取。已移除；
+        # 如需 HTML 内图片 URL 重写，应基于 doc.pictures 正确实现，而非此处的废弃逻辑。
         html = doc.export_to_html()
-        for filename, image_data in image_refs:
-            try:
-                for replacement in replacements:
-                    if filename in replacement:
-                        url_match = re.search(r'\((https?://[^\)]+)\)', replacement)
-                        if url_match:
-                            image_url = url_match.group(1)
-                            html = re.sub(
-                                rf'src="data:image/[^"]*image_{timestamp}\.{mime_type.split("/")[-1]}"',
-                                f'src="{image_url}"',
-                                html
-                            )
-            except Exception as e:
-                logger.error(f"处理 HTML 图片失败: {e}")
-        return markdown, html
-
         return markdown, html
 
     # 无图片情况
