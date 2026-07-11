@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from yuxi.agents.toolkits.registry import ToolExtraMetadata, _all_tool_instances, _extra_registry, tool
 from yuxi.config.options import system_options
+from yuxi.repositories.domain_factory_repository import DomainFactoryRepository
 from yuxi.utils import logger
 from yuxi.utils.paths import (
     CONVERSATION_HISTORY_DIR_NAME,
@@ -523,3 +524,44 @@ def ask_user_question(
         "questions": normalized_questions,
         "answer": answer,
     }
+
+
+GET_CHAPTER_OUTLINE_DESCRIPTION = """
+取某章节的结构化大纲（入库→写作的桥产出）。
+返回 purpose/overview/key_points/content_requirements/regulations/entity_bindings/
+expected_tables/expected_charts/expected_formulas/expected_figures/writing_example/writing_hints。
+writer 写每章前调用此工具获取本章编写蓝图；compliance-checker 用它取 regulations。
+canonical_chapter_key 是归一化章节名（如"地下水环境影响预测"），不是原始章节号。
+"""
+
+
+@tool(
+    category="buildin",
+    tags=["知识工厂", "大纲"],
+    display_name="取章节大纲",
+    description=GET_CHAPTER_OUTLINE_DESCRIPTION,
+)
+async def get_chapter_outline(domain: str, report_type: str, canonical_chapter_key: str) -> dict:
+    """获取指定章节的结构化大纲。"""
+    repo = DomainFactoryRepository()
+    out = await repo.get_outline(domain, report_type, canonical_chapter_key)
+    return out or {"error": f"未找到章节大纲: {domain}/{report_type}/{canonical_chapter_key}（该章可能尚未入库）"}
+
+
+GET_TEMPLATES_DESCRIPTION = """
+取某章节（或全部）的结构化段落模板（来自 learned_templates）。
+返回 [{generalized, slots, chapter, sample_original, standard_code}]。
+template-recommender 用它推荐段落模板；slot-filler 用它取插槽定义。
+"""
+
+
+@tool(
+    category="buildin",
+    tags=["知识工厂", "模板"],
+    display_name="取段落模板",
+    description=GET_TEMPLATES_DESCRIPTION,
+)
+async def get_templates(domain: str, report_type: str, canonical_chapter_key: str | None = None) -> list[dict]:
+    """获取结构化段落模板。"""
+    repo = DomainFactoryRepository()
+    return await repo.list_learned_templates_by_key(domain, report_type, canonical_chapter_key)
