@@ -63,7 +63,7 @@ description: "编写煤矿行业环境影响评价报告。作为编排者派发
 > 1. `get_chapter_outline(domain, report_type, canonical_chapter_key)` 取本章结构化大纲
 > 2. `get_report(report_id)` 取 PPS 参数 + 已完成章节摘要（供交叉引用）
 > 3. `get_templates(canonical_chapter_key)` 取段落模板，填充插槽
-> 4. 缺参数时 `set_pps_param` 补录，或 `ask_user_question` 请求用户
+> 4. 缺参数 → `set_pps_param` 补录能定的；不能定的在返回结果里列出待补参数，由编排者（主 agent）用 `ask_user_question` 向用户确认
 > 5. 写 markdown 正文，交叉引用统一用 `{{REF:chXX/表X-Y}}` 占位符
 > 6. `save_chapter(report_id, canonical_chapter_key, content_md, status="done")` 存档
 

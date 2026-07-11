@@ -263,7 +263,7 @@ class DomainFactoryReportChapter(Base):
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    report_id = Column(String(64), nullable=False, index=True)
+    report_id = Column(String(64), nullable=False)
     canonical_chapter_key = Column(Text, nullable=False)
     chapter_order = Column(Integer, nullable=True)  # outline 序
     title = Column(Text, nullable=True)
@@ -293,7 +293,7 @@ class DomainFactoryReportPps(Base):
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    report_id = Column(String(64), nullable=False, index=True)
+    report_id = Column(String(64), nullable=False)
     entity_key = Column(Text, nullable=False)
     name = Column(Text, nullable=True)
     value = Column(Text, nullable=True)
