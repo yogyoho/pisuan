@@ -373,7 +373,6 @@ class DomainFactoryRepository:
             return row.to_dict() if row else None
 
     async def list_chapter_keys(self, domain_code, report_type_code) -> list[str]:
-        from sqlalchemy import distinct
         from yuxi.storage.postgres.models_domain_factory import DomainFactoryOutline
 
         async with pg_manager.get_async_session_context() as session:
@@ -416,6 +415,19 @@ class DomainFactoryRepository:
             result = await session.execute(query)
             templates = result.scalars().all()
             return [t.to_dict() for t in templates]
+
+    async def list_learned_templates_by_key(
+        self, domain_code, report_type_code, canonical_chapter_key=None
+    ) -> list[dict[str, Any]]:
+        async with pg_manager.get_async_session_context() as session:
+            stmt = select(DomainFactoryLearnedTemplate).where(
+                DomainFactoryLearnedTemplate.domain_code == domain_code,
+                DomainFactoryLearnedTemplate.report_type_code == report_type_code,
+            )
+            if canonical_chapter_key:
+                stmt = stmt.where(DomainFactoryLearnedTemplate.canonical_chapter_key == canonical_chapter_key)
+            result = await session.execute(stmt)
+            return [r.to_dict() for r in result.scalars().all()]
 
     async def delete_learned_template(self, template_id: int) -> bool:
         async with pg_manager.get_async_session_context() as session:
