@@ -24,6 +24,19 @@ GENERAL_PURPOSE_AGENT_DESCRIPTION = (
     "面向没有专用角色约束的一般任务，使用默认运行配置独立完成分析、整理、写作或文件处理。"
 )
 
+CHAPTER_WRITER_AGENT_SLUG = "chapter-writer"
+CHAPTER_WRITER_AGENT_NAME = "章节写手"
+CHAPTER_WRITER_AGENT_DESCRIPTION = (
+    "聚焦单章写作的子智能体，预装报告大纲、模板与章节存档工具，按调用方给定的章节范围产出正文。"
+)
+CHAPTER_WRITER_AGENT_TOOLS = [
+    "get_chapter_outline",
+    "get_report",
+    "get_templates",
+    "set_pps_param",
+    "save_chapter",
+]
+
 WEB_SEARCH_AGENT_SLUG = "web-search"
 WEB_SEARCH_AGENT_NAME = "网页检索"
 WEB_SEARCH_AGENT_DESCRIPTION = "围绕检索目标持续搜索网页，返回带引用来源的摘要资料。"
@@ -251,6 +264,18 @@ class AgentRepository:
             name=GENERAL_PURPOSE_AGENT_NAME,
             description=GENERAL_PURPOSE_AGENT_DESCRIPTION,
             config_context={},
+            is_subagent=True,
+            created_by=created_by,
+        )
+
+    async def ensure_chapter_writer_subagent(self, *, created_by: str | None = None) -> Agent:
+        """幂等注册 chapter-writer 子 agent（聚焦单章写作，预装报告写作工具）。"""
+        return await self._ensure_builtin_agent(
+            slug=CHAPTER_WRITER_AGENT_SLUG,
+            backend_id=SUB_AGENT_BACKEND_ID,
+            name=CHAPTER_WRITER_AGENT_NAME,
+            description=CHAPTER_WRITER_AGENT_DESCRIPTION,
+            config_context={"tools": list(CHAPTER_WRITER_AGENT_TOOLS)},
             is_subagent=True,
             created_by=created_by,
         )
