@@ -428,3 +428,81 @@ async def get_templates(domain: str, report_type: str, canonical_chapter_key: st
     """获取结构化段落模板。"""
     repo = DomainFactoryRepository()
     return await repo.list_learned_templates_by_key(domain, report_type, canonical_chapter_key)
+
+
+CREATE_REPORT_DESCRIPTION = """
+为一篇环评报告创建持久化报告对象。后续所有写作(章节/参数/装配)都针对 report_id 操作,
+支持跨会话点状写作。一次创建,多会话复用。
+"""
+
+
+@tool(
+    category="buildin",
+    tags=["报告"],
+    display_name="创建报告",
+    description=CREATE_REPORT_DESCRIPTION,
+)
+async def create_report(thread_id: str, title: str, domain: str, report_type: str, kb_id: str) -> dict:
+    """为一篇报告创建持久化记录,返回 report_id。"""
+    repo = DomainFactoryRepository()
+    return await repo.create_report(
+        thread_id=thread_id,
+        title=title,
+        domain_code=domain,
+        report_type_code=report_type,
+        kb_id=kb_id,
+        created_by=None,
+    )
+
+
+GET_REPORT_DESCRIPTION = """
+取报告全景快照:status + PPS 参数列表 + 章节注册表(含已完成章摘要,供交叉引用)。
+每章写作前调用一次注入上下文。
+"""
+
+
+@tool(
+    category="buildin",
+    tags=["报告"],
+    display_name="取报告快照",
+    description=GET_REPORT_DESCRIPTION,
+)
+async def get_report(report_id: str) -> dict:
+    """返回 report 的状态、PPS 参数与章节注册表快照。"""
+    repo = DomainFactoryRepository()
+    out = await repo.get_report_snapshot(report_id)
+    return out or {"error": f"报告不存在: {report_id}"}
+
+
+SET_PPS_PARAM_DESCRIPTION = """
+设置/更新一个项目参数(PPS)。entity_key 优先用 get_chapter_outline 返回的 entity_bindings 的 key;
+value_type 取 number|string|enum。设置后全报告复用。
+"""
+
+
+@tool(
+    category="buildin",
+    tags=["报告", "PPS"],
+    display_name="设置项目参数",
+    description=SET_PPS_PARAM_DESCRIPTION,
+)
+async def set_pps_param(
+    report_id: str,
+    entity_key: str,
+    name: str,
+    value: str,
+    value_type: str,
+    unit: str,
+    source: str,
+) -> dict:
+    """新增或更新某报告的一条 PPS 项目参数。"""
+    repo = DomainFactoryRepository()
+    return await repo.upsert_pps_param(
+        report_id=report_id,
+        entity_key=entity_key,
+        name=name,
+        value=value,
+        value_type=value_type,
+        unit=unit,
+        source=source,
+    )
