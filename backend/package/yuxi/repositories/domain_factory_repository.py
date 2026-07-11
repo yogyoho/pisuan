@@ -560,6 +560,28 @@ class DomainFactoryRepository:
             await session.commit()
             return row.to_dict()
 
+    async def lookup_chapter_order(self, report_id, canonical_chapter_key) -> int | None:
+        """从 domain_factory_outlines 推导章节序：查同 domain+report_type 的 outlines，
+        按 id 顺序取 canonical_chapter_key 的出现排名（1-based）；查不到则 None。"""
+        async with pg_manager.get_async_session_context() as session:
+            rpt = (
+                await session.execute(select(DomainFactoryReport).where(DomainFactoryReport.id == report_id))
+            ).scalar_one_or_none()
+            if not rpt:
+                return None
+            rows = (
+                await session.execute(
+                    select(DomainFactoryOutline.canonical_chapter_key)
+                    .where(
+                        DomainFactoryOutline.domain_code == rpt.domain_code,
+                        DomainFactoryOutline.report_type_code == rpt.report_type_code,
+                    )
+                    .order_by(DomainFactoryOutline.id)
+                )
+            ).all()
+            keys = [r[0] for r in rows]
+            return (keys.index(canonical_chapter_key) + 1) if canonical_chapter_key in keys else None
+
     async def list_chapters(self, report_id, status_only=None) -> list[dict]:
         async with pg_manager.get_async_session_context() as session:
             stmt = (
