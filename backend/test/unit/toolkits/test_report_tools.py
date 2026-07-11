@@ -5,21 +5,78 @@ import yuxi.agents.toolkits.buildin.tools as tools_mod
 
 @pytest.mark.asyncio
 async def test_create_report_tool(monkeypatch):
-    monkeypatch.setattr(tools_mod, "DomainFactoryRepository",
-                        lambda: AsyncMock(create_report=AsyncMock(return_value={"id": "rpt_1", "title": "T", "status": "draft"})))
+    monkeypatch.setattr(
+        tools_mod,
+        "DomainFactoryRepository",
+        lambda: AsyncMock(create_report=AsyncMock(return_value={"id": "rpt_1", "title": "T", "status": "draft"})),
+    )
     out = await tools_mod.create_report.ainvoke(
-        {"thread_id": "t1", "title": "T", "domain": "coal", "report_type": "eia_report", "kb_id": "kb_x"})
+        {"thread_id": "t1", "title": "T", "domain": "coal", "report_type": "eia_report", "kb_id": "kb_x"}
+    )
     assert out["id"] == "rpt_1"
 
 
 @pytest.mark.asyncio
 async def test_get_report_and_set_pps_tools(monkeypatch):
     snap = {"id": "rpt_1", "status": "writing", "pps": [], "chapters": [], "registry": []}
-    monkeypatch.setattr(tools_mod, "DomainFactoryRepository",
-                        lambda: AsyncMock(get_report_snapshot=AsyncMock(return_value=snap),
-                                          upsert_pps_param=AsyncMock(return_value={"entity_key": "k", "value": "v"})))
+    monkeypatch.setattr(
+        tools_mod,
+        "DomainFactoryRepository",
+        lambda: AsyncMock(
+            get_report_snapshot=AsyncMock(return_value=snap),
+            upsert_pps_param=AsyncMock(return_value={"entity_key": "k", "value": "v"}),
+        ),
+    )
     rep = await tools_mod.get_report.ainvoke({"report_id": "rpt_1"})
     assert rep["status"] == "writing"
     p = await tools_mod.set_pps_param.ainvoke(
-        {"report_id": "rpt_1", "entity_key": "k", "name": "n", "value": "v", "value_type": "number", "unit": "m", "source": "s"})
+        {
+            "report_id": "rpt_1",
+            "entity_key": "k",
+            "name": "n",
+            "value": "v",
+            "value_type": "number",
+            "unit": "m",
+            "source": "s",
+        }
+    )
     assert p["value"] == "v"
+
+
+@pytest.mark.asyncio
+async def test_save_chapter_tool(monkeypatch):
+    monkeypatch.setattr(
+        tools_mod,
+        "DomainFactoryRepository",
+        lambda: AsyncMock(upsert_chapter=AsyncMock(return_value={"canonical_chapter_key": "k", "status": "done"})),
+    )
+    out = await tools_mod.save_chapter.ainvoke(
+        {
+            "report_id": "rpt_1",
+            "canonical_chapter_key": "k",
+            "title": "T",
+            "content_md": "正文",
+            "summary": "摘",
+            "status": "done",
+        }
+    )
+    assert out["status"] == "done"
+
+
+@pytest.mark.asyncio
+async def test_save_chapter_rejects_done_with_empty_content(monkeypatch):
+    # status=done + 空 content 必须被拒,且不触达 repo
+    repo_mock = AsyncMock()
+    monkeypatch.setattr(tools_mod, "DomainFactoryRepository", lambda: repo_mock)
+    out = await tools_mod.save_chapter.ainvoke(
+        {
+            "report_id": "rpt_1",
+            "canonical_chapter_key": "k",
+            "title": "T",
+            "content_md": "",
+            "summary": "摘",
+            "status": "done",
+        }
+    )
+    assert "error" in out
+    repo_mock.upsert_chapter.assert_not_awaited()  # 被拒,不应触达 repo
