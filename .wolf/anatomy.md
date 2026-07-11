@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-11T06:57:05.330Z
-> Files: 17 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-11T15:13:41.686Z
+> Files: 33 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -38,11 +38,15 @@
 
 ## .superpowers/sdd/
 
-- `task-3-report.md` — Task 3 Report: OutlineProducer — LLM 章节归一 + 散文 (~636 tok)
-- `task-4-report.md` — Task 4 Report: OutlineProducer 编排 + 接入 commit 流水线 + 回填模板 (~780 tok)
-- `task-5-report.md` — Task 5 Report: 两个 buildin 工具 get_chapter_outline / get_templates (~846 tok)
-- `task-6-report.md` — Task 6 Report: 4 个写作 skill 改指向新工具 (~986 tok)
-- `task-7-report.md` — Task 7: 端到端验证 + changelog + OpenWolf 收尾 (~1038 tok)
+- `task-1-report.md` — Task 1 Report: 存储——3 张表 + repository (~701 tok)
+- `task-2-report.md` — Task 2 Report: create_report / get_report / set_pps_param 工具 (~387 tok)
+- `task-3-report.md` — Task 3 Report: save_chapter 工具(懒建 + status) (~554 tok)
+- `task-4-report.md` — Task 4 Report: `{{REF}}` resolver (纯代码) (~609 tok)
+- `task-5-report.md` — Task 5 Report: assemble_report 工具(合并 + 解析 + 写沙箱) (~649 tok)
+- `task-6-report.md` — Task 6 Report: chapter-writer 子 agent 注册 (~423 tok)
+- `task-7-fix-report.md` — Task 7 Fix: canonical_chapter_key Backfill Mismatch (~561 tok)
+- `task-7-report.md` — Task 7 Report: coal-eia-writer SKILL 改为编排者 (~388 tok)
+- `task-8-report.md` — Task 8 Report: 端到端验证 + changelog + OpenWolf 收尾 (~614 tok)
 
 ## backend/
 
@@ -85,11 +89,11 @@
 
 ## backend/package/yuxi/agents/skills/buildin/
 
-- `__init__.py` — Declares from (~942 tok)
+- `__init__.py` — Declares from (~1006 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/
 
-- `SKILL.md` — 煤矿环评报告编写（改指向 get_chapter_outline / get_templates，query_kb 回归自由检索） (~1155 tok)
+- `SKILL.md` — 煤矿环评编排者：create_report→派 chapter-writer 子 agent→assemble_report；保留 PPS 参数参考/富文本规范/章节速查 (~1050 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/compliance-checker/
 
@@ -114,7 +118,7 @@
 
 ## backend/package/yuxi/agents/toolkits/buildin/
 
-- `tools.py` — buildin 工具集（含 **get_chapter_outline** / **get_templates** 入库→写作桥工具） (~4900 tok)
+- `tools.py` — Pydantic: PresentArtifactsInput; 写作侧 5 工具 create_report/get_report/set_pps_param/save_chapter/assemble_report (buildin category) (~5700 tok)
 
 ## backend/package/yuxi/agents/toolkits/debug/
 
@@ -158,6 +162,10 @@
 ## backend/package/yuxi/knowledge/implementations/
 
 
+## backend/package/yuxi/knowledge/parser/
+
+- `unified.py` — Unified parser module for markdown conversion. (~4858 tok)
+
 ## backend/package/yuxi/knowledge/utils/
 
 
@@ -172,18 +180,21 @@
 
 ## backend/package/yuxi/repositories/
 
-- `domain_factory_repository.py` — Domain Factory 数据访问层 - Repository（task CRUD / learned_templates upsert / **outlines: upsert_outline, get_outline, list_chapter_keys, backfill_template_chapter_key, list_learned_templates_by_key**） (~6800 tok)
+- `agent_repository.py` — AgentRepository: is_builtin_agent, resolve_agent_is_subagent, normalize_agent_share_config, user_can, ensure_chapter_writer_subagent (写作侧子 agent 注册) (~6099 tok)
+- `domain_factory_repository.py` — Domain Factory 数据访问层 - Repository + 写作侧 report/chapter/pps CRUD (create_report/get_report_snapshot/upsert_pps_param/upsert_chapter/lookup_chapter_order/list_chapters/mark_assembled) (~8878 tok)
 
 ## backend/package/yuxi/services/
 
-- `domain_factory_service.py` — Domain Factory Service - 领域知识工厂服务层（含 **OutlineProducer**: `_produce_outlines_async` / `_group_assets_by_chapter` / `_assemble_deterministic_outline` / `_llm_chapter_meta`，接入 commit 阶段2.9） (~63500 tok)
+- `domain_factory_service.py` — Domain Factory Service - 领域知识工厂服务层 (~62435 tok)
+- `ref_resolver.py` — {{REF:chXX/表X-Y}} 位置编号解析器。assemble 时扫各章 content_md 现算。 (~557 tok)
 
 ## backend/package/yuxi/storage/minio/
 
 
 ## backend/package/yuxi/storage/postgres/
 
-- `models_domain_factory.py` — 领域工厂 SQLAlchemy 模型（task / learned_templates 含 canonical_chapter_key / **domain_factory_outlines** 含 content_contract/rigidity 占位） (~900 tok)
+- `manager.py` — PostgreSQL 数据库管理器 - 支持知识库和业务数据 (~15286 tok)
+- `models_domain_factory.py` — Domain Factory 模块的 PostgreSQL 数据模型 - 领域知识工厂 ETL 相关表 + 写作侧 report/chapter/pps 三表 (DomainFactoryReport/Chapter/PPS) (~3866 tok)
 
 ## backend/package/yuxi/utils/
 
@@ -199,6 +210,7 @@
 
 ## backend/server/utils/
 
+- `lifespan.py` — lifespan (~1320 tok)
 
 ## backend/templates/coal_mining/
 
@@ -245,6 +257,10 @@
 ## backend/test/unit/plugins/
 
 
+## backend/test/unit/repositories/
+
+- `test_chapter_writer_subagent.py` — test_ensure_chapter_writer_subagent_idempotent (~184 tok)
+
 ## backend/test/unit/routers/
 
 
@@ -253,14 +269,18 @@
 
 ## backend/test/unit/services/
 
-- `test_outline_producer.py` — test_group_assets_by_chapter_buckets_by_chapter, test_assemble_deterministic_outline_fields, test_ll (~1465 tok)
+- `test_outline_producer.py` — test_group_assets_by_chapter_buckets_by_chapter, test_assemble_deterministic_outline_fields, test_ll (~1466 tok)
+- `test_ref_resolver.py` — test_resolve_table_ref_and_flag_unresolved, test_chapters_merged_in_order, test_resolve_section_ref (~355 tok)
 
 ## backend/test/unit/storage/
 
+- `test_domain_factory_outline_repo.py` — test_upsert_and_get_outline, test_list_chapter_keys_and_backfill (~530 tok)
+- `test_report_repo.py` — test_create_report_and_chapter_and_pps (~384 tok)
 
 ## backend/test/unit/toolkits/
 
-- `test_domain_factory_tools.py` — test_get_chapter_outline_tool_returns_dict, test_get_templates_tool_returns_list (~344 tok)
+- `test_domain_factory_tools.py` — test_get_chapter_outline_tool_returns_dict, test_get_templates_tool_returns_list (~330 tok)
+- `test_report_tools.py` — test_create_report_tool, test_get_report_and_set_pps_tools, test_save_chapter_tool, test_save_chapte (~1062 tok)
 
 ## docker/
 
@@ -297,13 +317,15 @@
 
 ## docs/develop-guides/
 
-- `changelog.md` — 版本变更记录 (~10813 tok)
+- `changelog.md` — 版本变更记录 (~10896 tok)
 
 ## docs/superpowers/plans/
 
+- `2026-07-11-writing-backbone.md` — 写作侧确定性骨架 Implementation Plan (子项目 2) (~9895 tok)
 
 ## docs/superpowers/specs/
 
+- `2026-07-11-writing-backbone-design.md` — 写作侧确定性骨架（Sub-project 2）— design (~1627 tok)
 
 ## docs/vibe/
 

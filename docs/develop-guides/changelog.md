@@ -15,6 +15,8 @@
 
 ### 开发记录
 
+- 新增写作侧确定性骨架(子项目2):report/chapter/pps 持久化 + create_report/get_report/set_pps_param/save_chapter/assemble_report 五工具 + {{REF}} 位置编号 resolver(assemble 现算)+ chapter-writer 子 agent;coal-eia-writer 改为编排者,每章派临时子 agent。PPS=项目级实体值(链桥的 entity_bindings)。支撑环评报告跨会话点状写作。详见 [spec](../superpowers/specs/2026-07-11-writing-backbone-design.md)。
+
 - 新增入库→写作的桥：领域工厂 commit 阶段新增 OutlineProducer，把 ETL 已抽资产（learned_templates/法规/表格/公式/图/图谱实体）按章组装 + LLM 归一化，产出结构化章节大纲到 `domain_factory_outlines` 表（purpose/overview/content_requirements/regulations/entity_bindings/expected_tables/charts/formulas/figures/writing_example/hints）；新增 `get_chapter_outline` / `get_templates` 两个 buildin 工具；coal-eia-writer/compliance-checker/template-recommender/slot-filler 四个 skill 改指向新工具，query_kb 回归纯自由检索。章节身份走 LLM 归一化（`canonical_chapter_key`），不依赖已废弃的静态 headers/routing_config。多报告聚合（content_contract/rigidity）schema 预留、开发后置。详见 [设计 spec](../superpowers/specs/2026-07-11-domain-factory-ingest-write-bridge-design.md)。
 
 - 修复领域知识工厂 ETL 提交入库在 v0.7.0 移除 LightRAG 后彻底失效的问题：`_commit_pipeline_async` 与再入库路径仍按已删除的 LightRAG KB 接口写文件记录（内存字典 `files_meta` + `_persist_file` + `database_id` 命名），在 Milvus 库上抛 `'MilvusKB' object has no attribute 'files_meta'` 直接失败、目标知识库无任何内容；改为构造带 `kb_id` 的文件元数据并调用基类 `_persist_file_meta` 落库 `knowledge_files`，再走 `index_file` 标准 Markdown 入库（Milvus 无 `_ingest_structured_document`，`hasattr` 判假自动回退）。同时修复 `domain_factory_learned_templates.slot_signature` 为 `VARCHAR(255)` 导致参数密集段落的插槽签名（300~400+ 字符）INSERT 被截断、模板回流被 `try/except` 吞掉后静默丢失的问题，`slot_signature` 改为 `TEXT`（模型 + 建表 SQL + 幂等迁移 `ALTER COLUMN ... TYPE TEXT`）。验证：真实煤矿规划环评报告提交后 `COMMITTED`，目标 Milvus 知识库落 236 chunk、领域图谱 2071 节点/2390 关系、`learned_templates` 从截断后的 25 条恢复到 275 条。
