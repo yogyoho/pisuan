@@ -1,3 +1,6 @@
+import asyncio
+from unittest.mock import AsyncMock, patch
+
 from yuxi.services.domain_factory_service import DomainFactoryService
 
 
@@ -52,3 +55,36 @@ def test_assemble_deterministic_outline_fields():
     assert out["entity_bindings"][0]["entity_key"] == "groundwater_level"
     assert out["expected_tables"][0]["table_type"] == "standard_limit"
     assert out["writing_example"] == "水位10m"
+
+
+def test_llm_chapter_meta_parses_json_and_reuses_seed_key():
+    svc = DomainFactoryService.__new__(DomainFactoryService)
+    fake_resp = type(
+        "R",
+        (),
+        {
+            "content": '{"canonical_chapter_key":"地下水环境影响预测",'
+            '"purpose":"预测开采对地下水影响",'
+            '"overview":"本章预测...",'
+            '"key_points":["水位下降"],'
+            '"writing_hints":"先水文地质参数"}'
+        },
+    )()
+    with patch(
+        "yuxi.services.domain_factory_service.select_model_lazy",
+        AsyncMock(return_value=type("M", (), {"call": AsyncMock(return_value=fake_resp)})()),
+        create=True,
+    ):
+        # select_model 是函数导入；按实际导入路径 mock（见 Step 3 实现）
+        import yuxi.services.domain_factory_service as mod
+
+        with patch.object(
+            mod, "select_model", return_value=type("M", (), {"call": AsyncMock(return_value=fake_resp)})()
+        ):
+            out = asyncio.run(
+                svc._llm_chapter_meta(
+                    "5.2 地下水环境影响预测", {"content_requirements": ["水位降深"]}, seed_keys=["地下水环境影响预测"]
+                )
+            )
+    assert out["canonical_chapter_key"] == "地下水环境影响预测"
+    assert "水位下降" in out["key_points"]
