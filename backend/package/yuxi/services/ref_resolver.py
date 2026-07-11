@@ -31,7 +31,10 @@ def _build_target_map(chapters: list[dict]) -> dict[str, set[str]]:
 
 def resolve_refs(chapters: list[dict]) -> tuple[str, list[dict]]:
     """按 chapter_order 合并章节,解析 {{REF}}。返回 (merged_markdown, unresolved_refs)。"""
-    ordered = sorted([c for c in chapters if c.get("content_md")], key=lambda c: c.get("chapter_order") or 9999)
+    ordered = sorted(
+        [c for c in chapters if c.get("content_md")],
+        key=lambda c: c["chapter_order"] if c.get("chapter_order") is not None else 9999,
+    )
     merged = "\n\n".join(c["content_md"] for c in ordered)
     targets = _build_target_map(ordered)
     unresolved: list[dict] = []
@@ -43,8 +46,12 @@ def resolve_refs(chapters: list[dict]) -> tuple[str, list[dict]]:
             unresolved.append({"ref": m.group(0), "reason": f"章节 {ch_alias} 未写入"})
             return m.group(0)  # 保留可见占位符
         # 精确或包含匹配目标
-        if target in avail or any(target in t for t in avail):
+        if target in avail:
             return f"见{target}"
+        # 退而求其次:子串匹配(如 "表5-3" 命中 "表5-3 监测结果"),但要求目标串边界
+        partial = [t for t in avail if target in t]
+        if partial:
+            return f"见{partial[0]}"
         unresolved.append({"ref": m.group(0), "reason": f"{ch_alias} 中未找到 {target}"})
         return m.group(0)
 
