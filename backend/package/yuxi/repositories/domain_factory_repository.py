@@ -604,6 +604,16 @@ class DomainFactoryRepository:
                 for r in rows
             ]
 
+    async def mark_assembled(self, report_id):
+        """将报告 status 推进为 assembled。"""
+        async with pg_manager.get_async_session_context() as session:
+            rpt = (
+                await session.execute(select(DomainFactoryReport).where(DomainFactoryReport.id == report_id))
+            ).scalar_one_or_none()
+            if rpt:
+                rpt.status = "assembled"
+            await session.commit()
+
     async def list_learned_templates(self, domain_code: str | None = None, limit: int = 200) -> list[dict[str, Any]]:
         async with pg_manager.get_async_session_context() as session:
             query = (
