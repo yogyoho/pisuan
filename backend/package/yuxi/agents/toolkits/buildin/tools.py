@@ -643,3 +643,40 @@ async def set_pps_param(
         unit=unit,
         source=source,
     )
+
+
+SAVE_CHAPTER_DESCRIPTION = """
+懒建/更新一章。canonical_chapter_key 用 get_chapter_outline 的大纲章节名。
+content_md 为本章 markdown 正文(含 {{REF:chXX/表X-Y}} 交叉引用占位符)。
+status 取 writing|done|skipped;done 时 content_md 不能为空。
+"""
+
+
+@tool(
+    category="buildin",
+    tags=["报告", "章节"],
+    display_name="保存章节",
+    description=SAVE_CHAPTER_DESCRIPTION,
+)
+async def save_chapter(
+    report_id: str,
+    canonical_chapter_key: str,
+    title: str,
+    content_md: str,
+    summary: str,
+    status: str,
+) -> dict:
+    """懒建或更新一章，自动从大纲推导 chapter_order，并校验 done 时不允许空正文。"""
+    if status == "done" and not (content_md or "").strip():
+        return {"error": "status=done 时 content_md 不能为空"}
+    repo = DomainFactoryRepository()
+    order = await repo.lookup_chapter_order(report_id, canonical_chapter_key)
+    return await repo.upsert_chapter(
+        report_id=report_id,
+        canonical_chapter_key=canonical_chapter_key,
+        chapter_order=order,
+        title=title,
+        content_md=content_md,
+        summary=summary,
+        status=status,
+    )
