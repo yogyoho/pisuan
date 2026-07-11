@@ -43,14 +43,8 @@ description: "编写煤矿行业环境影响评价报告。自动从知识库获
 
 1. 调用 `list_kbs` 获取当前对话可用的知识库
 2. 若无可用 KB，告知用户需先在对话设置中关联煤矿领域知识库
-3. 以 "煤矿 环境影响评价 报告大纲 目录结构" 为 query_text 调用 `query_kb`
-4. 从返回结果中筛选包含 `[OUTLINE]` 标记的条目，提取：
-   - 章节标题、编号、层级（level）
-   - 概要（overview）、编写要点（key_points）
-   - 内容要求（content_requirements）
-   - 相关法规（regulations）
-   - 关联实体（entity_bindings）
-5. 若无 `[OUTLINE]` 条目，回退 `get_mindmap` 获取章节树
+3. 调用 `get_mindmap` 获取煤矿环评报告的章节树结构
+4. 将章节树按 level 组织为顶层章节列表，作为后续分章写作的索引
 
 ### 第二步：整理大纲并确认范围
 
@@ -95,6 +89,10 @@ description: "编写煤矿行业环境影响评价报告。自动从知识库获
 
 对每个待写章节：
 
+#### 4.0 取大纲（每章写作前必做）
+
+写每一章前，调用 `get_chapter_outline(domain, report_type, canonical_chapter_key)` 获取本章结构化大纲。`canonical_chapter_key` 是归一化章节名（如"地下水环境影响预测"）；若不确定 key，先用 `get_mindmap` 或询问用户确认章节名。按大纲的 `content_requirements` 与 `expected_tables/charts/formulas/figures` 组织本章；用 `get_templates(canonical_chapter_key)` 拿段落模板填插槽。
+
 #### 4.1 准备上下文
 
 组装本章写作上下文（控制总量）：
@@ -104,9 +102,9 @@ description: "编写煤矿行业环境影响评价报告。自动从知识库获
 
 #### 4.2 获取模板
 
-1. 以章节标题为 query_text 调用 `query_kb`，搜索泛化模板
-2. 提取 `generalized_pattern` 和 `slots` 定义
-3. 若无模板，根据大纲的 key_points 自行组织内容结构
+1. 调用 `get_templates(domain, report_type, canonical_chapter_key)` 获取本章结构化段落模板（直接含 `generalized_pattern`、`slots`、`sample_original`、`standard_code`）
+2. 子章节用各自 `canonical_chapter_key` 再取模板
+3. 若无模板，根据大纲的 `content_requirements` 自行组织内容结构
 
 #### 4.3 收集数据
 
@@ -206,7 +204,7 @@ $$C(x) = C_0 \exp\left(-\frac{Kx}{u}\right)$$
 
 ## 关键约束
 
-- 大纲以知识库 `[OUTLINE]` 查询结果为准
+- 大纲以 `get_chapter_outline` 返回结果为准
 - 编写前必须先获取大纲、初始化 PPS，不可跳过
 - 每章写作前检查 PPS 是否已包含该章所需参数，缺失则先补充
 - 所有数值数据必须有来源，不得编造

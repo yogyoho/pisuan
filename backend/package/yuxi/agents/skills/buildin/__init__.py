@@ -82,14 +82,14 @@ BUILTIN_SKILLS.extend(
             source_dir=_SKILLS_ROOT / "template-recommender",
             description="从领域知识库中智能搜索并推荐报告章节和段落模板，支持按章节递归搜索子章节并合并输出模板与原文引用。",
             version="2026.04.29",
-            tool_dependencies=["list_kbs", "get_mindmap", "query_kb"],
+            tool_dependencies=["list_kbs", "get_mindmap", "query_kb", "get_templates"],
         ),
         BuiltinSkillSpec(
             slug="slot-filler",
             source_dir=_SKILLS_ROOT / "slot-filler",
             description="根据上下文和用户附件智能填充段落模板插槽，给出每个填充数据的置信度，不编造数据，无法填充时提示用户补充。",
             version="2026.04.29",
-            tool_dependencies=["query_kb", "ask_user_question"],
+            tool_dependencies=["query_kb", "ask_user_question", "get_templates"],
             skill_dependencies=("template-recommender",),
         ),
         BuiltinSkillSpec(
@@ -97,7 +97,14 @@ BUILTIN_SKILLS.extend(
             source_dir=_SKILLS_ROOT / "coal-eia-writer",
             description="编写煤矿行业环境影响评价报告。采用分章写作策略处理大型报告，支持公式/表格/图表图文混排，自动合规校验。",
             version="2026.05.11",
-            tool_dependencies=["list_kbs", "get_mindmap", "query_kb", "read_file"],
+            tool_dependencies=[
+                "list_kbs",
+                "get_mindmap",
+                "query_kb",
+                "read_file",
+                "get_chapter_outline",
+                "get_templates",
+            ],
             skill_dependencies=("template-recommender", "slot-filler", "compliance-checker"),
         ),
         BuiltinSkillSpec(
@@ -105,7 +112,12 @@ BUILTIN_SKILLS.extend(
             source_dir=_SKILLS_ROOT / "compliance-checker",
             description="对工程类报告进行政策法规合规性校验。从知识库大纲提取法规清单，逐章比对报告内容与法规要求，输出合规校验报告。",
             version="2026.05.11",
-            tool_dependencies=["list_kbs", "query_kb", "read_file"],
+            tool_dependencies=[
+                "list_kbs",
+                "query_kb",
+                "read_file",
+                "get_chapter_outline",
+            ],
         ),
     ]
 )
