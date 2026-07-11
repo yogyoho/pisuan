@@ -100,7 +100,9 @@ class DomainFactoryLearnedTemplate(Base):
 
     __tablename__ = "domain_factory_learned_templates"
     __table_args__ = (
-        UniqueConstraint("domain_code", "report_type_code", "chapter", "slot_signature", name="uq_dflt_domain_rt_chapter_sig"),
+        UniqueConstraint(
+            "domain_code", "report_type_code", "chapter", "slot_signature", name="uq_dflt_domain_rt_chapter_sig"
+        ),
         Index("idx_dflt_chapter", "domain_code", "report_type_code", "chapter"),
     )
 
@@ -108,6 +110,7 @@ class DomainFactoryLearnedTemplate(Base):
     domain_code = Column(String(64), nullable=False, index=True)
     report_type_code = Column(String(64), nullable=False, default="通用")
     chapter = Column(String(255), nullable=False, default="")
+    canonical_chapter_key = Column(Text, nullable=True, index=True)  # OutlineProducer 回填的归一化章节名
     generalized = Column(Text, nullable=False)
     slots = Column(JSON, nullable=False, default=list)
     slot_signature = Column(Text, nullable=False, default="")
@@ -140,7 +143,9 @@ class DomainFactoryPromptConfig(Base):
     """Prompt 模板配置"""
 
     __tablename__ = "domain_factory_prompt_configs"
-    __table_args__ = (UniqueConstraint("domain_code", "report_type_code", "prompt_type", name="uq_df_prompt_domain_rt_type"),)
+    __table_args__ = (
+        UniqueConstraint("domain_code", "report_type_code", "prompt_type", name="uq_df_prompt_domain_rt_type"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     domain_code = Column(String(64), nullable=True, index=True)
@@ -159,4 +164,73 @@ class DomainFactoryPromptConfig(Base):
             "template": self.template,
             "created_at": format_utc_datetime(self.created_at),
             "updated_at": format_utc_datetime(self.updated_at),
+        }
+
+
+class DomainFactoryOutline(Base):
+    """领域知识工厂 - 章节结构化大纲（writer 的主数据源）"""
+
+    __tablename__ = "domain_factory_outlines"
+    __table_args__ = (
+        UniqueConstraint(
+            "domain_code",
+            "report_type_code",
+            "canonical_chapter_key",
+            name="uq_dfo_domain_rt_key",
+        ),
+        Index("idx_dfo_domain_rt", "domain_code", "report_type_code"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    domain_code = Column(String(64), nullable=False)
+    report_type_code = Column(String(64), nullable=False, default="通用")
+    canonical_chapter_key = Column(Text, nullable=False)
+    chapter_id = Column(String(128), nullable=True)
+    chapter_title = Column(Text, nullable=True)
+    # Tier1 文字
+    purpose = Column(Text, nullable=True)
+    overview = Column(Text, nullable=True)
+    key_points = Column(JSON, nullable=True, default=list)
+    content_requirements = Column(JSON, nullable=True, default=list)
+    regulations = Column(JSON, nullable=True, default=list)
+    entity_bindings = Column(JSON, nullable=True, default=list)
+    writing_example = Column(Text, nullable=True)
+    writing_hints = Column(Text, nullable=True)
+    # Tier1 artifact
+    expected_tables = Column(JSON, nullable=True, default=list)
+    expected_charts = Column(JSON, nullable=True, default=list)
+    expected_formulas = Column(JSON, nullable=True, default=list)
+    expected_figures = Column(JSON, nullable=True, default=list)
+    # Tier2 占位
+    content_contract = Column(JSON, nullable=True, default=list)
+    dependencies = Column(JSON, nullable=True, default=list)
+    # 聚合/来源
+    source_task_ids = Column(JSON, nullable=True, default=list)
+    source_count = Column(Integer, nullable=False, default=1)
+    prose_based_on_source_count = Column(Integer, nullable=True)
+    rigidity = Column(String(16), nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "domain_code": self.domain_code,
+            "report_type_code": self.report_type_code or "通用",
+            "canonical_chapter_key": self.canonical_chapter_key,
+            "chapter_id": self.chapter_id,
+            "chapter_title": self.chapter_title,
+            "purpose": self.purpose,
+            "overview": self.overview,
+            "key_points": self.key_points or [],
+            "content_requirements": self.content_requirements or [],
+            "regulations": self.regulations or [],
+            "entity_bindings": self.entity_bindings or [],
+            "writing_example": self.writing_example,
+            "writing_hints": self.writing_hints,
+            "expected_tables": self.expected_tables or [],
+            "expected_charts": self.expected_charts or [],
+            "expected_formulas": self.expected_formulas or [],
+            "expected_figures": self.expected_figures or [],
+            "source_count": self.source_count,
+            "rigidity": self.rigidity,
         }
