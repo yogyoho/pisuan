@@ -1066,6 +1066,37 @@ class PostgresManager(metaclass=SingletonMeta):
             "CREATE INDEX IF NOT EXISTS idx_dflt_domain ON domain_factory_learned_templates(domain_code)",
             "ALTER TABLE IF EXISTS domain_factory_learned_templates ADD COLUMN IF NOT EXISTS match_count INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE IF EXISTS domain_factory_learned_templates ALTER COLUMN slot_signature TYPE TEXT",
+            "ALTER TABLE IF EXISTS domain_factory_learned_templates ADD COLUMN IF NOT EXISTS canonical_chapter_key TEXT",
+            "CREATE TABLE IF NOT EXISTS domain_factory_outlines ("
+            "    id SERIAL PRIMARY KEY,"
+            "    domain_code VARCHAR(64) NOT NULL,"
+            "    report_type_code VARCHAR(64) NOT NULL DEFAULT '通用',"
+            "    canonical_chapter_key TEXT NOT NULL,"
+            "    chapter_id VARCHAR(128),"
+            "    chapter_title TEXT,"
+            "    purpose TEXT,"
+            "    overview TEXT,"
+            "    key_points JSONB DEFAULT '[]',"
+            "    content_requirements JSONB DEFAULT '[]',"
+            "    regulations JSONB DEFAULT '[]',"
+            "    entity_bindings JSONB DEFAULT '[]',"
+            "    writing_example TEXT,"
+            "    writing_hints TEXT,"
+            "    expected_tables JSONB DEFAULT '[]',"
+            "    expected_charts JSONB DEFAULT '[]',"
+            "    expected_formulas JSONB DEFAULT '[]',"
+            "    expected_figures JSONB DEFAULT '[]',"
+            "    content_contract JSONB DEFAULT '[]',"
+            "    dependencies JSONB DEFAULT '[]',"
+            "    source_task_ids JSONB DEFAULT '[]',"
+            "    source_count INTEGER NOT NULL DEFAULT 1,"
+            "    prose_based_on_source_count INTEGER,"
+            "    rigidity VARCHAR(16),"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    UNIQUE(domain_code, report_type_code, canonical_chapter_key)"
+            ")",
+            "CREATE INDEX IF NOT EXISTS idx_dfo_domain_rt ON domain_factory_outlines(domain_code, report_type_code)",
             "CREATE TABLE IF NOT EXISTS domain_factory_prompt_configs ("
             "    id SERIAL PRIMARY KEY,"
             "    domain_code VARCHAR(64),"
