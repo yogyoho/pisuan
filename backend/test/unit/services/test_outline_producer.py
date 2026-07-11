@@ -128,5 +128,5 @@ async def test_produce_outlines_async_writes_rows_and_backfills(monkeypatch):
     assert n == 1
     svc.repo.upsert_outline.assert_awaited_once()
     svc.repo.backfill_template_chapter_key.assert_awaited_once_with(
-        "coal", "eia_report", "5.2 地下水", "地下水环境影响预测"
+        "coal", "eia_report", ["5.2 地下水"], "地下水环境影响预测"
     )

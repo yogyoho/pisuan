@@ -385,18 +385,20 @@ class DomainFactoryRepository:
             return [r[0] for r in result.all() if r[0]]
 
     async def backfill_template_chapter_key(
-        self, domain_code, report_type_code, chapter_raw, canonical_chapter_key
+        self, domain_code, report_type_code, chapter_identifiers: list[str], canonical_chapter_key
     ) -> int:
         from yuxi.storage.postgres.models_domain_factory import DomainFactoryLearnedTemplate
         from sqlalchemy import update
 
+        if not chapter_identifiers:
+            return 0
         async with pg_manager.get_async_session_context() as session:
             result = await session.execute(
                 update(DomainFactoryLearnedTemplate)
                 .where(
                     DomainFactoryLearnedTemplate.domain_code == domain_code,
                     DomainFactoryLearnedTemplate.report_type_code == report_type_code,
-                    DomainFactoryLearnedTemplate.chapter == chapter_raw,
+                    DomainFactoryLearnedTemplate.chapter.in_(chapter_identifiers),
                 )
                 .values(canonical_chapter_key=canonical_chapter_key)
             )
