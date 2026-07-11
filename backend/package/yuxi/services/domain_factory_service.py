@@ -65,6 +65,7 @@ class StructuredDocument:
 import aiofiles
 
 from yuxi.config import config
+from yuxi.models.chat import select_model
 from yuxi.repositories.domain_factory_repository import DomainFactoryRepository
 from yuxi.services.entity_meta_service import EntityMetaAdapter, EntityMetaMatcher, SlotEntityMapper
 from yuxi.services.task_service import tasker
@@ -4450,6 +4451,57 @@ class DomainFactoryService:
             "expected_figures": expected_figures,
             "writing_example": writing_example,
         }
+
+    CHAPTER_META_PROMPT = """你是煤炭环评报告章节分析专家。为下列章节产出结构化元数据。
+
+章节标题：{title}
+该章已抽出的内容要点：{requirements}
+
+【已存在的规范章节名列表（优先复用，避免新建同义名）】
+{seed_keys}
+
+严格输出 JSON（不要 markdown 围栏）：
+{{
+  "canonical_chapter_key": "规范章节名（优先从上面列表选；都不贴切才新建，用简练通用的中文名，如'地下水环境影响预测'）",
+  "purpose": "1-2 句：本章在环评中的作用与编写目的",
+  "overview": "2-3 句：本章概述",
+  "key_points": ["要点1", "要点2", "要点3-5个"],
+  "writing_hints": "本章专属写作提示（如：先列现状值再列标准值；用表格呈现监测点位）"
+}}
+"""
+
+    async def _llm_chapter_meta(self, chapter_title: str, deterministic: dict, seed_keys: list[str]) -> dict:
+        import json as _json
+        import re as _re
+
+        prompt = self.CHAPTER_META_PROMPT.format(
+            title=chapter_title,
+            requirements=", ".join(deterministic.get("content_requirements", [])[:30]) or "（无）",
+            seed_keys=", ".join(seed_keys) or "（首次，无已有规范名）",
+        )
+        fallback_key = chapter_title
+        try:
+            model = select_model()
+            response = await model.call(prompt)
+            text = response.content if hasattr(response, "content") else str(response)
+            m = _re.search(r"\{[\s\S]*\}", text)
+            if not m:
+                raise ValueError("LLM 未返回 JSON")
+            data = m.group(0)
+            parsed = _json.loads(data)
+            parsed.setdefault("canonical_chapter_key", fallback_key)
+            for k in ("purpose", "overview", "key_points", "writing_hints"):
+                parsed.setdefault(k, [] if k == "key_points" else None)
+            return parsed
+        except Exception as e:
+            logger.warning(f"章节元数据 LLM 调用失败（不阻断）: {e}")
+            return {
+                "canonical_chapter_key": fallback_key,
+                "purpose": None,
+                "overview": None,
+                "key_points": [],
+                "writing_hints": None,
+            }
 
     async def _save_learned_templates_from_task(self, task_detail: dict[str, Any]) -> int:
         """从已提交任务中提取高质量模板，回流到学习模板库"""
