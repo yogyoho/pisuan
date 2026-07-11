@@ -1097,6 +1097,48 @@ class PostgresManager(metaclass=SingletonMeta):
             "    UNIQUE(domain_code, report_type_code, canonical_chapter_key)"
             ")",
             "CREATE INDEX IF NOT EXISTS idx_dfo_domain_rt ON domain_factory_outlines(domain_code, report_type_code)",
+            # Writing-backbone: report / chapter / pps
+            "CREATE TABLE IF NOT EXISTS domain_factory_reports ("
+            "    id VARCHAR(64) PRIMARY KEY,"
+            "    title TEXT NOT NULL,"
+            "    domain_code VARCHAR(64) NOT NULL,"
+            "    report_type_code VARCHAR(64) NOT NULL DEFAULT '通用',"
+            "    kb_id VARCHAR(128),"
+            "    thread_id VARCHAR(64),"
+            "    status VARCHAR(32) NOT NULL DEFAULT 'draft',"
+            "    created_by VARCHAR(64),"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+            ")",
+            "CREATE TABLE IF NOT EXISTS domain_factory_reports_chapters ("
+            "    id SERIAL PRIMARY KEY,"
+            "    report_id VARCHAR(64) NOT NULL,"
+            "    canonical_chapter_key TEXT NOT NULL,"
+            "    chapter_order INTEGER,"
+            "    title TEXT,"
+            "    status VARCHAR(32) NOT NULL DEFAULT 'pending',"
+            "    content_md TEXT,"
+            "    summary TEXT,"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    UNIQUE(report_id, canonical_chapter_key)"
+            ")",
+            "CREATE INDEX IF NOT EXISTS idx_dfrch_report ON domain_factory_reports_chapters(report_id)",
+            "CREATE TABLE IF NOT EXISTS domain_factory_reports_pps ("
+            "    id SERIAL PRIMARY KEY,"
+            "    report_id VARCHAR(64) NOT NULL,"
+            "    entity_key TEXT NOT NULL,"
+            "    name TEXT,"
+            "    value TEXT,"
+            "    value_type VARCHAR(32),"
+            "    unit VARCHAR(64),"
+            "    source TEXT,"
+            "    confidence VARCHAR(32),"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    UNIQUE(report_id, entity_key)"
+            ")",
+            "CREATE INDEX IF NOT EXISTS idx_dfrpps_report ON domain_factory_reports_pps(report_id)",
             "CREATE TABLE IF NOT EXISTS domain_factory_prompt_configs ("
             "    id SERIAL PRIMARY KEY,"
             "    domain_code VARCHAR(64),"
