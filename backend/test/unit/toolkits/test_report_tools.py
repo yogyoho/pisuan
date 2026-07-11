@@ -1,6 +1,19 @@
 import pytest
 from unittest.mock import AsyncMock
+from langgraph.prebuilt.tool_node import ToolRuntime
 import yuxi.agents.toolkits.buildin.tools as tools_mod
+
+
+def _fake_runtime(context=None):
+    """构造测试用 ToolRuntime(最小必填字段)。"""
+    return ToolRuntime(
+        state={},
+        context=context or {},
+        config={},
+        stream_writer=lambda *a, **k: None,
+        tool_call_id="tc_test",
+        store=None,
+    )
 
 
 @pytest.mark.asyncio
@@ -80,3 +93,25 @@ async def test_save_chapter_rejects_done_with_empty_content(monkeypatch):
     )
     assert "error" in out
     repo_mock.upsert_chapter.assert_not_awaited()  # 被拒,不应触达 repo
+
+
+@pytest.mark.asyncio
+async def test_assemble_report_tool(monkeypatch, tmp_path):
+    chapters = [{"chapter_order": 1, "content_md": "# ch1\n正文"}]
+    monkeypatch.setattr(
+        tools_mod,
+        "DomainFactoryRepository",
+        lambda: AsyncMock(
+            list_chapters=AsyncMock(return_value=chapters),
+            mark_assembled=AsyncMock(return_value=None),
+        ),
+    )
+
+    # mock sandbox 写:跳过实际 FS,验证返回结构
+    async def fake_write(*a, **k):
+        return "/home/gem/user-data/outputs/report.md"
+
+    monkeypatch.setattr(tools_mod, "_write_assembled_to_sandbox", fake_write)
+    out = await tools_mod.assemble_report.ainvoke({"report_id": "rpt_1", "runtime": _fake_runtime()})
+    assert out["artifact_path"].endswith("report.md")
+    assert out["unresolved_refs"] == []
