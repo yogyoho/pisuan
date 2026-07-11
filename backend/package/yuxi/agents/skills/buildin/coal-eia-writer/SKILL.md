@@ -1,11 +1,11 @@
 ---
 name: coal-eia-writer
-description: "编写煤矿行业环境影响评价报告。自动从知识库获取报告目录大纲和章节编写要点，采用分章写作策略处理大型报告（700+ 页），支持数学公式、数据表格和图表的图文混排。"
+description: "编写煤矿行业环境影响评价报告。作为编排者派发 chapter-writer 子 agent 逐章写作，通过报告工具维护 PPS/章节状态，支持数学公式、数据表格和图表的图文混排。"
 ---
 
 # 煤矿环评报告编写
 
-根据知识库中积累的煤矿环评报告大纲和段落模板，采用分章生成策略完成一份完整的煤矿行业环境影响评价报告。
+作为**编排者**（orchestrator）完成一份完整的煤矿行业环境影响评价报告：通过报告工具建立报告与 PPS，逐章派发 `chapter-writer` 子 agent 写作，最终装配交付。环评报告通常 700+ 页，采用分章策略控制单次上下文。
 
 ## 适用场景
 
@@ -16,58 +16,85 @@ description: "编写煤矿行业环境影响评价报告。自动从知识库获
 
 ## 核心架构：分章写作 + 共享状态
 
-环评报告通常 700+ 页，超出单次上下文容量。采用以下策略：
-
 ```
 ┌─────────────────────────────┐
-│ 项目参数表 PPS               │  ← 一次提取，每章复用
-│ (项目名称/产能/位置/标准等)   │
+│ 项目参数表 PPS               │  ← create_report 建立后，set_pps_param 补录
+│ (项目名称/产能/位置/标准等)   │     全报告复用，章子 agent 经 get_report 读取
 └──────────┬──────────────────┘
-           │ 注入每章上下文
+           │ get_report(report_id) 取快照
            ▼
 ┌─────────────────────────────┐
-│ 章节注册表                    │
-│ ch01 总论      → ✅ done     │
-│ ch02 项目概况  → ✅ done     │
-│ ch03 环境现状  → 🔄 writing  │
-│ ch04 工程分析  → ⬜ pending  │
+│ 章节注册表 (report.chapters) │  ← save_chapter 写入；status: draft/done
+│ ch01 总论      → done       │
+│ ch02 项目概况  → done       │
+│ ch03 环境现状  → writing    │
+│ ch04 工程分析  → (未建)     │
 │ ...                          │
 └─────────────────────────────┘
 ```
 
-每章的上下文 = PPS + 本章大纲 + 模板 + KB 参考，控制在窗口容量内。
+每章的上下文 = PPS + 本章大纲 + 模板 + KB 参考，由 `chapter-writer` 子 agent 在自己的窗口内组装；编排者只负责建报告、派发、装配。
 
 ## 操作流程
 
-### 第一步：获取报告大纲
+### 第一步：确认知识库与章节范围
 
 1. 调用 `list_kbs` 获取当前对话可用的知识库
 2. 若无可用 KB，告知用户需先在对话设置中关联煤矿领域知识库
-3. 调用 `get_mindmap` 获取煤矿环评报告的章节树结构
-4. 将章节树按 level 组织为顶层章节列表，作为后续分章写作的索引
+3. 与用户确认要编写的章节范围及各章 `canonical_chapter_key`（归一化章节名，如"地下水环境影响预测"）；可参考下方「典型章节与数据来源速查」或 `query_kb` 搜索煤矿环评报告目录
 
 ### 第二步：整理大纲并确认范围
 
-1. 将大纲条目按 level 组织为树形结构
-2. 以缩进列表展示，标注各章节的核心要点和关联法规数量
-3. 询问用户是否需要增删章节或调整范围
+1. 对每个章节，可用 `get_chapter_outline(domain, report_type, canonical_chapter_key)` 查看结构化大纲
+2. 以缩进列表向用户展示章节与核心要点，确认是否需要增删章节或调整范围
 
-### 第三步：初始化项目参数表（PPS）
+### 第三步：建立报告（一次性）
 
-向用户收集基础项目参数，或从用户上传的附件中提取。PPS 包含：
+调用 `create_report(thread_id, title, domain, report_type, kb_id)` 创建报告，返回 `report_id`。
 
-```
-## 项目参数表
+- 后续所有写作、编辑、装配操作都携带 `report_id`
+- 跨会话续接同一份报告也用 `report_id` 索引
+
+### 第四步：逐章写作（派发 chapter-writer 子 agent，可并行）
+
+对每个待写章节，用 `subagent_start`（`slug="chapter-writer"`）派发子 agent，指令模板：
+
+> 写 `[canonical_chapter_key]` 章：
+> 1. `get_chapter_outline(domain, report_type, canonical_chapter_key)` 取本章结构化大纲
+> 2. `get_report(report_id)` 取 PPS 参数 + 已完成章节摘要（供交叉引用）
+> 3. `get_templates(canonical_chapter_key)` 取段落模板，填充插槽
+> 4. 缺参数时 `set_pps_param` 补录，或 `ask_user_question` 请求用户
+> 5. 写 markdown 正文，交叉引用统一用 `{{REF:chXX/表X-Y}}` 占位符
+> 6. `save_chapter(report_id, canonical_chapter_key, content_md, status="done")` 存档
+
+多章可并行派发；派发后用 `subagent_await` 等待各子 agent 完成。
+
+### 第五步：点状编辑（任意会话，按需）
+
+用户请求修改某章或某参数时：
+
+- `get_report(report_id)` 看现状
+- 改参数：直接 `set_pps_param`
+- 改章节正文：派该章 chapter-writer 子 agent（load → edit → `save_chapter`）
+
+### 第六步：装配与交付
+
+所有章节 status=done 后：
+
+1. `assemble_report(report_id)` 合并各章 → 解析 `{{REF:...}}` 占位符 → 写出 artifact
+2. 若返回 `unresolved_refs` 非空 → 修对应章后重 `assemble_report`
+3. `present_artifacts(artifact_path)` 向用户交付
+4.（可选）调用 `compliance-checker` 技能做合规性校验
+
+## PPS 参数构成参考
+
+编排者经 `set_pps_param` 或 `ask_user_question` 收集下列参数，供各章复用。
 
 ### 基本信息类
-- 项目名称
-- 建设单位
+- 项目名称、建设单位
 - 建设地点（省/市/县、地理坐标）
-- 矿井类型（井工/露天）
-- 设计产能（Mt/a）
-- 服务年限
-- 总投资
-- 环评类别（报告书/报告表）
+- 矿井类型（井工/露天）、设计产能（Mt/a）、服务年限
+- 总投资、环评类别（报告书/报告表）
 
 ### 环境标准类
 - 环境空气质量标准（如 GB 3095-2012 二级）
@@ -79,44 +106,11 @@ description: "编写煤矿行业环境影响评价报告。自动从知识库获
 ### 关键参数类
 - 评价等级（大气/水/声/生态/地下水）
 - 评价范围
-- 环境敏感目标清单
-- 主要保护目标
-```
+- 环境敏感目标清单、主要保护目标
 
-将 PPS 以结构化格式保存，后续每章写作时注入上下文。
+## 富文本写作规范
 
-### 第四步：分章生成（逐章执行以下流程）
-
-对每个待写章节：
-
-#### 4.0 取大纲（每章写作前必做）
-
-写每一章前，调用 `get_chapter_outline(domain, report_type, canonical_chapter_key)` 获取本章结构化大纲。`canonical_chapter_key` 是归一化章节名（如"地下水环境影响预测"）；若不确定 key，先用 `get_mindmap` 或询问用户确认章节名。按大纲的 `content_requirements` 与 `expected_tables/charts/formulas/figures` 组织本章；用 `get_templates(canonical_chapter_key)` 拿段落模板填插槽。
-
-#### 4.1 准备上下文
-
-组装本章写作上下文（控制总量）：
-- **PPS 参数表**（~2K 字，全量注入）
-- **本章大纲**：overview + key_points + content_requirements + regulations
-- **章节注册表摘要**：已完成章节的标题和一句话摘要（用于交叉引用）
-
-#### 4.2 获取模板
-
-1. 调用 `get_templates(domain, report_type, canonical_chapter_key)` 获取本章结构化段落模板（直接含 `generalized_pattern`、`slots`、`sample_original`、`standard_code`）
-2. 子章节用各自 `canonical_chapter_key` 再取模板
-3. 若无模板，根据大纲的 `content_requirements` 自行组织内容结构
-
-#### 4.3 收集数据
-
-按优先级收集数据填充模板插槽：
-1. **PPS 参数**：直接取用已确认的项目参数
-2. **用户附件**：使用 `read_file` 读取上传文件，提取数值和事实
-3. **KB 参考数据**：`query_kb` 搜索标准限值、环境本底值、类比项目数据
-4. **缺失数据**：用 `ask_user_question` 请求用户补充
-
-#### 4.4 生成富文本内容
-
-按照以下规范生成各类型内容：
+chapter-writer 子 agent 产出章节正文时遵循以下格式约定（编排者在派发指令中可引用）。
 
 **数学公式**：使用 LaTeX 语法
 ```
@@ -135,10 +129,7 @@ $$C = \frac{Q}{2\pi u \sigma_y \sigma_z} \exp\left(-\frac{y^2}{2\sigma_y^2}\righ
 详见附件：{{REF:ch05/表5-3_大气监测结果}}
 ```
 
-**统计图表**：使用 Charts MCP 工具生成
-1. 准备图表数据（从 KB 或用户附件提取）
-2. 调用 Charts MCP 生成图片
-3. 以 `![图5-1 网格点浓度等值线图](图片URL)` 嵌入
+**统计图表**：使用 Charts MCP 工具生成，以 `![图5-1 网格点浓度等值线图](图片URL)` 嵌入。
 
 **环境模型**：使用模板化的公式+参数格式
 ```markdown
@@ -153,38 +144,14 @@ $$C(x) = C_0 \exp\left(-\frac{Kx}{u}\right)$$
 - K = 0.15 d⁻¹（COD 降解系数，取自导则推荐值）
 - u = {{河流流速}} m/s
 - x = 预测距离（m）
-
-计算结果：在排污口下游 1000m 处，COD 浓度为 {{计算值}} mg/L，满足 GB 3838-2002 III类标准（≤20 mg/L）。
 ```
 
-#### 4.5 保存章节
-
-1. 将生成的章节内容保存为独立文件
-2. 更新章节注册表（标记为 done）
-3. 若写作过程中发现新的项目参数（如从 KB 查到新的标准限值），更新 PPS
-
-#### 4.6 章间交叉引用
-
-引用其他章节内容时使用占位符：
+**章间交叉引用**：引用其他章节内容时使用占位符，不直接硬编码内容
 - 表格引用：`{{REF:ch03/表3-2}}`
 - 图表引用：`{{REF:ch05/图5-1}}`
 - 文字引用：`{{REF:ch02/2.1节 项目基本信息}}`
 
-这些占位符在最终组装时解析替换。
-
-### 第五步：组装完整报告
-
-所有章节完成后：
-
-1. 按大纲顺序合并所有章节文件
-2. 在开头生成目录（基于大纲层级）
-3. 解析所有 `{{REF:...}}` 占位符，替换为实际内容引用
-4. 在末尾附加：
-   - 不确定项清单（标注 `【待确认】` 的内容汇总）
-   - 引用来源列表
-5. 调用 `compliance-checker` 技能进行合规性校验
-6. 根据校验结果修正不合规项
-7. 输出最终完整报告
+占位符在 `assemble_report` 时统一解析替换。
 
 ## 典型章节与数据来源速查
 
@@ -205,10 +172,11 @@ $$C(x) = C_0 \exp\left(-\frac{Kx}{u}\right)$$
 ## 关键约束
 
 - 大纲以 `get_chapter_outline` 返回结果为准
-- 编写前必须先获取大纲、初始化 PPS，不可跳过
-- 每章写作前检查 PPS 是否已包含该章所需参数，缺失则先补充
-- 所有数值数据必须有来源，不得编造
-- 引用标准时注明编号和全称
-- 章间引用使用 `{{REF:...}}` 占位符，不直接硬编码内容
-- 分章保存，每章一个文件，最终组装
-- 依赖 `template-recommender`、`slot-filler`、`compliance-checker` 技能
+- 建报告（`create_report`）是所有写作的前置条件，不可跳过
+- 编排者不亲自写章节正文，一律派 chapter-writer 子 agent
+- PPS 参数经 `set_pps_param` 写入报告；不要手维护本地 markdown
+- 章节正文经 `save_chapter` 存档；不要手维护章节注册表
+- 所有数值数据必须有来源，不得编造；引用标准时注明编号和全称
+- 章间引用使用 `{{REF:...}}` 占位符，由 `assemble_report` 统一解析
+- 最终交付经 `assemble_report` + `present_artifacts`；不要手工拼接文件
+- 依赖 `compliance-checker` 技能做合规校验
