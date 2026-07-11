@@ -1,3 +1,4 @@
+import asyncio
 import os
 import re
 from pathlib import Path
@@ -543,3 +544,44 @@ async def save_chapter(
         summary=summary,
         status=status,
     )
+
+
+ASSEMBLE_REPORT_DESCRIPTION = """
+按 outline 序合并所有 done 章节 + 解析 {{REF}} → 成稿 markdown,写入沙箱 outputs。
+未解析的 {{REF}} 保留为可见占位符并列出。返回 {markdown, artifact_path, unresolved_refs}。
+随后可用 present_artifacts 展示给用户。
+"""
+
+
+async def _write_assembled_to_sandbox(runtime_context, report_id: str, markdown: str) -> str:
+    """将成稿 markdown 写入沙箱 outputs 目录,返回虚拟路径。"""
+    from yuxi.agents.backends.sandbox.paths import sandbox_outputs_dir
+
+    thread_id = getattr(runtime_context, "thread_id", None) or "shared"
+    out_dir = sandbox_outputs_dir(thread_id).resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / f"report_{report_id}.md"
+    await asyncio.to_thread(path.write_text, markdown, "utf-8")
+    return f"/home/gem/user-data/outputs/report_{report_id}.md"
+
+
+@tool(
+    category="buildin",
+    tags=["报告", "装配"],
+    display_name="装配报告",
+    description=ASSEMBLE_REPORT_DESCRIPTION,
+)
+async def assemble_report(report_id: str, runtime: ToolRuntime) -> dict:
+    """合并 done 章节 + 解析 {{REF}} + 写沙箱,返回成稿信息。"""
+    from yuxi.services.ref_resolver import resolve_refs
+
+    repo = DomainFactoryRepository()
+    chapters = await repo.list_chapters(report_id, status_only="done")
+    markdown, unresolved = resolve_refs(chapters)
+    artifact_path = await _write_assembled_to_sandbox(runtime.context, report_id, markdown)
+    await repo.mark_assembled(report_id)
+    return {
+        "markdown": markdown[:500] + ("..." if len(markdown) > 500 else ""),
+        "artifact_path": artifact_path,
+        "unresolved_refs": unresolved,
+    }
