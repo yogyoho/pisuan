@@ -45,5 +45,5 @@ async def test_list_chapter_keys_and_backfill():
     repo = DomainFactoryRepository()
     keys = await repo.list_chapter_keys("coal", "eia_report")
     assert "地下水环境影响预测" in keys
-    n = await repo.backfill_template_chapter_key("coal", "eia_report", "5.2", "地下水环境影响预测")
+    n = await repo.backfill_template_chapter_key("coal", "eia_report", ["5.2"], "地下水环境影响预测")
     assert n >= 0
