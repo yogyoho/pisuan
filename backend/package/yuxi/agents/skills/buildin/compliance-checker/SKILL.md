@@ -24,10 +24,7 @@ description: "对工程类报告（环评、可研等）进行政策法规合规
 ### 第一步：获取大纲与法规清单
 
 1. 调用 `list_kbs` 确认可用知识库
-2. 调用 `query_kb` 搜索 `[OUTLINE]` 大纲条目，提取每个章节的：
-   - 章节标题和编号
-   - `regulations` 字段中的关联法规/标准名称列表
-   - `content_requirements` 内容要求
+2. 对每个章节调用 `get_chapter_outline(domain, report_type, canonical_chapter_key)`，取其 `regulations`（含 `standard_code`）与 `content_requirements`
 3. 汇总生成法规清单（去重），标注每个法规关联的章节
 
 ### 第二步：检索法规原文

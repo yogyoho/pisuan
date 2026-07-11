@@ -27,28 +27,21 @@ description: "从领域知识库中智能搜索并推荐报告章节和段落模
 2. 从思维导图中理解报告的顶层章节组织、父子章节关系、章节编号体系
 3. 若用户提到了具体章节编号或标题，在思维导图中定位该章节节点及其子树
 
-### 第三步：搜索匹配模板
+### 第三步：取段落模板
 
-根据用户需求，分两种搜索策略：
+调用 `get_templates(domain, report_type, canonical_chapter_key)` 获取该章结构化段落模板（直接含 `generalized_pattern`/`slots`/`sample_original`/`standard_code`）。按章节递归：先取本章模板，子章节用各自 `canonical_chapter_key` 再取。根据用户需求分两种调用策略：
 
 **策略 A — 用户指定了具体章节（如"第四章 环境影响预测"、"4.1 大气环境"）：**
-1. 使用章节标题作为 query_text，调用 `query_kb(kb_name, query_text)` 搜索该章节
-2. 从搜索结果中提取该章节的 `section_id`，在思维导图中找到它
-3. 遍历该章节的所有子章节（递归），对每个子章节也执行 `query_kb` 搜索
-4. 确保该章节及其完整子树都被覆盖
+1. 将章节标题归一化为 `canonical_chapter_key`，调用 `get_templates(domain, report_type, canonical_chapter_key)` 取本章模板
+2. 在思维导图中定位该章节节点，遍历其所有子章节（递归），对每个子章节用各自 `canonical_chapter_key` 再取模板
+3. 确保该章节及其完整子树都被覆盖
 
 **策略 B — 用户只给了关键字（如"大气环境影响"、"水资源"）：**
-1. 将关键字组合成搜索短语，调用 `query_kb` 进行语义搜索
-2. 从搜索结果中提取匹配的章节和段落
+1. 在思维导图中按关键字定位匹配章节，归一化为 `canonical_chapter_key`
+2. 对每个匹配章节调用 `get_templates` 取模板
 3. 根据 `section_path` 将结果按章节层级组织
 
-### 第四步：读取原文并提取模板
-
-1. 对搜索命中的每个 chunk，使用 `read_file` 读取知识库虚拟文件系统中的完整原文（路径格式：`/home/gem/kbs/<kb_name>/parsed/<filepath>.md`）
-2. 从 chunk 的 metadata 中提取模板信息（`template_id`、`slots`、`generalized_pattern`）
-3. 若 chunk 携带 `template` 元数据，优先使用；若没有，从原文中识别段落结构
-
-### 第五步：合并输出
+### 第四步：合并输出
 
 按以下 Markdown 格式汇总输出：
 
