@@ -4349,12 +4349,21 @@ class DomainFactoryService:
                     "formulas": [],
                     "charts": [],
                     "figures": [],
+                    "template_chapter_keys": set(),
                 },
             )
             g["paragraphs"].append(para)
             tmpl = para.get("template") or {}
             if tmpl.get("generalized") or tmpl.get("slots"):
                 g["templates"].append(tmpl)
+            # 收集与 _save_learned_templates_from_task 相同的 chapter 标识，供回填精确匹配
+            pk = (para.get("title") or "").strip() or (
+                ".".join(str(s) for s in para.get("section_path", []))
+                if para.get("section_path")
+                else ""
+            )
+            if pk:
+                g["template_chapter_keys"].add(pk)
         # 结构化资产按章回填（ETL 抽取产物里若带 chapter/title 则归入对应组）
         for _key, items, target in (
             ("legal_references", task_detail.get("legal_references", []), "legal_refs"),
@@ -4375,6 +4384,7 @@ class DomainFactoryService:
                         "formulas": [],
                         "charts": [],
                         "figures": [],
+                        "template_chapter_keys": set(),
                     },
                 )[target].append(item)
         return groups
@@ -4540,7 +4550,9 @@ class DomainFactoryService:
                 prose_based_on_source_count=1,
             )
             # 回填 learned_templates.canonical_chapter_key（供 get_templates 检索）
-            await self.repo.backfill_template_chapter_key(domain_code, report_type_code, chapter_raw, canonical_key)
+            await self.repo.backfill_template_chapter_key(
+                domain_code, report_type_code, list(assets.get("template_chapter_keys", [])), canonical_key
+            )
             if canonical_key not in seed_keys:
                 seed_keys.append(canonical_key)
             count += 1
