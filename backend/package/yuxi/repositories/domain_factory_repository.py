@@ -11,7 +11,11 @@ from yuxi.storage.postgres.models_domain_factory import (
     DomainFactoryLearnedTemplate,
     DomainFactoryOutline,
     DomainFactoryPromptConfig,
+    DomainFactoryReport,
+    DomainFactoryReportChapter,
+    DomainFactoryReportPps,
 )
+from yuxi.utils import hashstr
 from yuxi.utils.datetime_utils import utc_now_naive
 
 
@@ -404,6 +408,179 @@ class DomainFactoryRepository:
             )
             await session.commit()
             return result.rowcount or 0
+
+    # ========== Report (writing-backbone) ==========
+
+    async def create_report(self, *, thread_id, title, domain_code, report_type_code, kb_id, created_by) -> dict:
+        import uuid
+
+        rid = f"rpt_{hashstr(thread_id + title + str(uuid.uuid4()), 10)}"
+        async with pg_manager.get_async_session_context() as session:
+            row = DomainFactoryReport(
+                id=rid,
+                title=title,
+                domain_code=domain_code,
+                report_type_code=report_type_code or "通用",
+                kb_id=kb_id,
+                thread_id=thread_id,
+                status="draft",
+                created_by=created_by,
+            )
+            session.add(row)
+            await session.commit()
+        return {"id": rid, "title": title, "status": "draft"}
+
+    async def get_report_snapshot(self, report_id) -> dict | None:
+        async with pg_manager.get_async_session_context() as session:
+            r = (
+                await session.execute(select(DomainFactoryReport).where(DomainFactoryReport.id == report_id))
+            ).scalar_one_or_none()
+            if not r:
+                return None
+            chs = (
+                (
+                    await session.execute(
+                        select(DomainFactoryReportChapter)
+                        .where(DomainFactoryReportChapter.report_id == report_id)
+                        .order_by(DomainFactoryReportChapter.chapter_order)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            pps = (
+                (
+                    await session.execute(
+                        select(DomainFactoryReportPps).where(DomainFactoryReportPps.report_id == report_id)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            return {
+                "id": r.id,
+                "title": r.title,
+                "status": r.status,
+                "report_type_code": r.report_type_code,
+                "domain_code": r.domain_code,
+                "kb_id": r.kb_id,
+                "pps": [p.to_dict() for p in pps],
+                "chapters": [c.to_dict() for c in chs],
+                "registry": [
+                    {"canonical_chapter_key": c.canonical_chapter_key, "title": c.title, "summary": c.summary}
+                    for c in chs
+                    if c.status == "done"
+                ],
+            }
+
+    async def upsert_pps_param(
+        self, *, report_id, entity_key, name, value, value_type, unit, source, confidence=None
+    ) -> dict:
+        async with pg_manager.get_async_session_context() as session:
+            row = (
+                await session.execute(
+                    select(DomainFactoryReportPps).where(
+                        DomainFactoryReportPps.report_id == report_id,
+                        DomainFactoryReportPps.entity_key == entity_key,
+                    )
+                )
+            ).scalar_one_or_none()
+            if row is None:
+                row = DomainFactoryReportPps(
+                    report_id=report_id,
+                    entity_key=entity_key,
+                    name=name,
+                    value=value,
+                    value_type=value_type,
+                    unit=unit,
+                    source=source,
+                    confidence=confidence,
+                )
+                session.add(row)
+            else:
+                row.name, row.value, row.value_type, row.unit, row.source = (
+                    name,
+                    value,
+                    value_type,
+                    unit,
+                    source,
+                )
+                if confidence:
+                    row.confidence = confidence
+            await session.commit()
+            return row.to_dict()
+
+    async def upsert_chapter(
+        self,
+        *,
+        report_id,
+        canonical_chapter_key,
+        chapter_order=None,
+        title=None,
+        content_md=None,
+        summary=None,
+        status="writing",
+    ) -> dict:
+        async with pg_manager.get_async_session_context() as session:
+            row = (
+                await session.execute(
+                    select(DomainFactoryReportChapter).where(
+                        DomainFactoryReportChapter.report_id == report_id,
+                        DomainFactoryReportChapter.canonical_chapter_key == canonical_chapter_key,
+                    )
+                )
+            ).scalar_one_or_none()
+            if row is None:
+                row = DomainFactoryReportChapter(
+                    report_id=report_id,
+                    canonical_chapter_key=canonical_chapter_key,
+                    chapter_order=chapter_order,
+                    title=title,
+                    content_md=content_md,
+                    summary=summary,
+                    status=status,
+                )
+                session.add(row)
+            else:
+                if chapter_order is not None:
+                    row.chapter_order = chapter_order
+                if title is not None:
+                    row.title = title
+                if content_md is not None:
+                    row.content_md = content_md
+                if summary is not None:
+                    row.summary = summary
+                row.status = status
+            # 报告状态推进
+            rpt = (
+                await session.execute(select(DomainFactoryReport).where(DomainFactoryReport.id == report_id))
+            ).scalar_one_or_none()
+            if rpt and rpt.status == "draft":
+                rpt.status = "writing"
+            await session.commit()
+            return row.to_dict()
+
+    async def list_chapters(self, report_id, status_only=None) -> list[dict]:
+        async with pg_manager.get_async_session_context() as session:
+            stmt = (
+                select(DomainFactoryReportChapter)
+                .where(DomainFactoryReportChapter.report_id == report_id)
+                .order_by(DomainFactoryReportChapter.chapter_order)
+            )
+            if status_only:
+                stmt = stmt.where(DomainFactoryReportChapter.status == status_only)
+            rows = (await session.execute(stmt)).scalars().all()
+            return [
+                {
+                    "canonical_chapter_key": r.canonical_chapter_key,
+                    "chapter_order": r.chapter_order,
+                    "title": r.title,
+                    "status": r.status,
+                    "content_md": r.content_md,
+                    "summary": r.summary,
+                }
+                for r in rows
+            ]
 
     async def list_learned_templates(self, domain_code: str | None = None, limit: int = 200) -> list[dict[str, Any]]:
         async with pg_manager.get_async_session_context() as session:

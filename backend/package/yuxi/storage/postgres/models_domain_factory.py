@@ -234,3 +234,82 @@ class DomainFactoryOutline(Base):
             "source_count": self.source_count,
             "rigidity": self.rigidity,
         }
+
+
+class DomainFactoryReport(Base):
+    """写作侧 - 报告根对象"""
+
+    __tablename__ = "domain_factory_reports"
+
+    id = Column(String(64), primary_key=True)
+    title = Column(Text, nullable=False)
+    domain_code = Column(String(64), nullable=False)
+    report_type_code = Column(String(64), nullable=False, default="通用")
+    kb_id = Column(String(128), nullable=True)
+    thread_id = Column(String(64), nullable=True)  # 创建会话溯源
+    status = Column(String(32), nullable=False, default="draft")  # draft|writing|assembled
+    created_by = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
+
+
+class DomainFactoryReportChapter(Base):
+    """写作侧 - 章节注册表（确定性）"""
+
+    __tablename__ = "domain_factory_reports_chapters"
+    __table_args__ = (
+        UniqueConstraint("report_id", "canonical_chapter_key", name="uq_dfrch_report_key"),
+        Index("idx_dfrch_report", "report_id"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    report_id = Column(String(64), nullable=False, index=True)
+    canonical_chapter_key = Column(Text, nullable=False)
+    chapter_order = Column(Integer, nullable=True)  # outline 序
+    title = Column(Text, nullable=True)
+    status = Column(String(32), nullable=False, default="pending")  # pending|writing|done|skipped
+    content_md = Column(Text, nullable=True)
+    summary = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "canonical_chapter_key": self.canonical_chapter_key,
+            "chapter_order": self.chapter_order,
+            "title": self.title,
+            "status": self.status,
+            "summary": self.summary,
+        }
+
+
+class DomainFactoryReportPps(Base):
+    """写作侧 - PPS 项目级参数值"""
+
+    __tablename__ = "domain_factory_reports_pps"
+    __table_args__ = (
+        UniqueConstraint("report_id", "entity_key", name="uq_dfrpps_report_entity"),
+        Index("idx_dfrpps_report", "report_id"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    report_id = Column(String(64), nullable=False, index=True)
+    entity_key = Column(Text, nullable=False)
+    name = Column(Text, nullable=True)
+    value = Column(Text, nullable=True)
+    value_type = Column(String(32), nullable=True)  # number|string|enum
+    unit = Column(String(64), nullable=True)
+    source = Column(Text, nullable=True)
+    confidence = Column(String(32), nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "entity_key": self.entity_key,
+            "name": self.name,
+            "value": self.value,
+            "value_type": self.value_type,
+            "unit": self.unit,
+            "source": self.source,
+        }
