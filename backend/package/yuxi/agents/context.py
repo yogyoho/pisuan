@@ -222,6 +222,16 @@ class BaseContext:
         },
     )
 
+    excluded_tools: list[str] | None = field(
+        default=None,
+        metadata={
+            "name": "排除工具",
+            "description": "从模型可见工具列表中移除的工具名（系统级强制，不让模型看到这些工具）。",
+            "type": "list",
+            "hide": True,
+        },
+    )
+
     summary_threshold: int = field(
         default=DEFAULT_SUMMARY_THRESHOLD_K,
         metadata={

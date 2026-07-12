@@ -19,6 +19,7 @@ from yuxi.agents.context import (
     prepare_agent_runtime_context,
 )
 from yuxi.agents.middlewares import TokenUsageMiddleware, create_summary_middleware, save_attachments_to_fs
+from yuxi.agents.middlewares.excluded_tools import ExcludedToolsMiddleware
 from yuxi.agents.middlewares.skills import SkillsMiddleware
 from yuxi.agents.toolkits.service import resolve_configured_runtime_tools
 
@@ -77,6 +78,7 @@ async def _build_middlewares(context):
         TodoListMiddleware(system_prompt=TODO_MID_PROMPT),
         PatchToolCallsMiddleware(),
         _SubAgentToolFilterMiddleware(),
+        ExcludedToolsMiddleware(getattr(context, "excluded_tools", None)),
         ModelRetryMiddleware(),
         TokenUsageMiddleware(),
     ]

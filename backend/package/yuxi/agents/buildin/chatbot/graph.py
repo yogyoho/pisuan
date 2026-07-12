@@ -18,6 +18,7 @@ from yuxi.agents.middlewares import (
     create_summary_middleware,
     save_attachments_to_fs,
 )
+from yuxi.agents.middlewares.excluded_tools import ExcludedToolsMiddleware
 from yuxi.agents.middlewares.skills import SkillsMiddleware
 from yuxi.agents.middlewares.subagent_task import create_subagent_task_middleware
 from yuxi.agents.toolkits.service import resolve_configured_runtime_tools
@@ -58,6 +59,7 @@ async def _build_middlewares(context):
         ),
         save_attachments_to_fs,
         SkillsMiddleware(),
+        ExcludedToolsMiddleware(getattr(context, "excluded_tools", None)),
     ]
     subagent_middleware = await create_subagent_task_middleware(context)
     if subagent_middleware:
