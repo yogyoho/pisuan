@@ -161,17 +161,24 @@ class _BackendScope:
         )
 
     def create_backend(self) -> CompositeBackend:
+        selected = self.readable_skills
+        if not selected:
+            from yuxi.agents.skills.service import get_skills_root_dir
+            skills_root = get_skills_root_dir()
+            if skills_root.is_dir():
+                selected = list({d.name for d in skills_root.iterdir() if d.is_dir()})
+        skills_route = SelectedSkillsReadonlyBackend(selected_slugs=selected)
         return CustomCompositeBackend(
             default=ProvisionerSandboxBackend(
                 thread_id=self.thread_id,
                 uid=self.uid,
-                readable_skills=self.readable_skills,
+                readable_skills=selected if selected else self.readable_skills,
                 file_thread_id=self.file_thread_id,
                 skills_thread_id=self.skills_thread_id,
             ),
             routes={
-                "/home/gem/skills/": SelectedSkillsReadonlyBackend(selected_slugs=self.readable_skills),
-                "/skills/": SelectedSkillsReadonlyBackend(selected_slugs=self.readable_skills),
+                "/home/gem/skills/": skills_route,
+                "/skills/": skills_route,
             },
             artifacts_root=VIRTUAL_PATH_OUTPUTS,
         )
