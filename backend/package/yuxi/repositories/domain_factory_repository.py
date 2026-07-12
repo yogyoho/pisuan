@@ -26,14 +26,14 @@ _DOMAIN_ALIASES: dict[str, str] = {
     "交通": "transport", "交通运输": "transport", "交通工程": "transport",
 }
 _REPORT_TYPE_ALIASES: dict[str, str] = {
-    "环境影响评价报告": "eia_report", "环境影响评价报告书": "eia_report",
+    "eia": "eia_report", "环境影响评价报告": "eia_report", "环境影响评价报告书": "eia_report",
     "环评报告": "eia_report", "环评": "eia_report",
-    "可行性研究报告": "feasibility_report", "可研报告": "feasibility_report",
-    "地质勘查报告": "geological_exploration", "固体矿物地质勘查报告": "geological_exploration",
-    "土地复垦方案": "land_reclamation", "土地复垦": "land_reclamation",
-    "矿井设计报告": "mine_design", "矿井设计": "mine_design",
-    "安全评价报告": "safety_assessment", "安全评价": "safety_assessment",
-    "水土保持方案": "water_soil_conservation", "水土保持": "water_soil_conservation",
+    "feasibility": "feasibility_report", "可行性研究报告": "feasibility_report", "可研报告": "feasibility_report",
+    "geological": "geological_exploration", "地质勘查报告": "geological_exploration",
+    "reclamation": "land_reclamation", "土地复垦方案": "land_reclamation", "土地复垦": "land_reclamation",
+    "mine_design": "mine_design", "矿井设计报告": "mine_design", "矿井设计": "mine_design",
+    "safety": "safety_assessment", "安全评价报告": "safety_assessment", "安全评价": "safety_assessment",
+    "water_soil": "water_soil_conservation", "水土保持方案": "water_soil_conservation", "水土保持": "water_soil_conservation",
 }
 
 
