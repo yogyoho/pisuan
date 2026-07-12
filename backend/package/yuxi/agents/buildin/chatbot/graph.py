@@ -21,6 +21,7 @@ from yuxi.agents.middlewares import (
     create_memory_middleware,
     create_summary_middleware_from_context,
 )
+from yuxi.agents.middlewares.excluded_tools import ExcludedToolsMiddleware
 from yuxi.agents.middlewares.skills import SkillsMiddleware
 from yuxi.agents.middlewares.subagent_task import create_subagent_task_middleware
 from yuxi.agents.tool_approval import create_tool_approval_middleware, normalize_tool_approval_mode
@@ -43,6 +44,7 @@ async def _build_middlewares(context, backend):
             backend=backend,
         ),
         SkillsMiddleware(),
+        ExcludedToolsMiddleware(getattr(context, "excluded_tools", None)),
     ]
     memory_middleware = await create_memory_middleware(context)
     if memory_middleware:
