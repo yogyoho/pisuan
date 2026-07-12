@@ -396,6 +396,7 @@ GET_CHAPTER_OUTLINE_DESCRIPTION = """
 expected_tables/expected_charts/expected_formulas/expected_figures/writing_example/writing_hints。
 writer 写每章前调用此工具获取本章编写蓝图；compliance-checker 用它取 regulations。
 canonical_chapter_key 是归一化章节名（如"地下水环境影响预测"），不是原始章节号。
+domain/report_type 必须使用数据字典中的 code（用 list_report_types 查询合法值）。
 """
 
 
@@ -409,13 +410,57 @@ async def get_chapter_outline(domain: str, report_type: str, canonical_chapter_k
     """获取指定章节的结构化大纲。"""
     repo = DomainFactoryRepository()
     out = await repo.get_outline(domain, report_type, canonical_chapter_key)
-    return out or {"error": f"未找到章节大纲: {domain}/{report_type}/{canonical_chapter_key}（该章可能尚未入库）"}
+    if out:
+        return out
+    types = await repo.list_report_types(domain)
+    valid_codes = [t["code"] for t in types]
+    return {
+        "error": f"未找到章节大纲: {domain}/{report_type}/{canonical_chapter_key}",
+        "hint": f"该 domain 合法 report_type: {valid_codes}（请用 list_report_types 确认数据字典 code）",
+    }
+
+
+LIST_REPORT_TYPES_DESCRIPTION = """
+查询数据字典 report_types，返回指定领域可用的报告类型 code 列表。
+domain/report_type code 是数据库精确匹配字段，get_chapter_outline / get_templates / create_report 等工具都依赖正确的 code。
+"""
+
+
+@tool(
+    category="buildin",
+    tags=["知识工厂", "数据字典"],
+    display_name="查报告类型",
+    description=LIST_REPORT_TYPES_DESCRIPTION,
+)
+async def list_report_types(domain: str) -> list[dict]:
+    """查询数据字典中指定领域的报告类型 code。"""
+    repo = DomainFactoryRepository()
+    return await repo.list_report_types(domain)
+
+
+LIST_CHAPTER_KEYS_DESCRIPTION = """
+列出某领域+报告类型下所有已入库的章节归一化名（canonical_chapter_key）。
+调用 get_chapter_outline / get_templates 前先用此工具获取合法的 canonical_chapter_key 列表，避免猜测导致空查询。
+"""
+
+
+@tool(
+    category="buildin",
+    tags=["知识工厂", "大纲"],
+    display_name="列出章节",
+    description=LIST_CHAPTER_KEYS_DESCRIPTION,
+)
+async def list_chapter_keys(domain: str, report_type: str) -> list[str]:
+    """列出指定领域+报告类型下所有已入库的 canonical_chapter_key。"""
+    repo = DomainFactoryRepository()
+    return await repo.list_chapter_keys(domain, report_type)
 
 
 GET_TEMPLATES_DESCRIPTION = """
 取某章节（或全部）的结构化段落模板（来自 learned_templates）。
 返回 [{generalized, slots, chapter, sample_original, standard_code}]。
 template-recommender 用它推荐段落模板；slot-filler 用它取插槽定义。
+domain/report_type 必须使用数据字典中的 code（用 list_report_types 查询合法值）。
 """
 
 
@@ -434,6 +479,7 @@ async def get_templates(domain: str, report_type: str, canonical_chapter_key: st
 CREATE_REPORT_DESCRIPTION = """
 为一篇环评报告创建持久化报告对象。后续所有写作(章节/参数/装配)都针对 report_id 操作,
 支持跨会话点状写作。一次创建,多会话复用。
+domain/report_type 必须使用数据字典中的 code（用 list_report_types 查询合法值）。
 """
 
 
@@ -534,6 +580,8 @@ async def save_chapter(
     if status == "done" and not (content_md or "").strip():
         return {"error": "status=done 时 content_md 不能为空"}
     repo = DomainFactoryRepository()
+    if not await repo.report_exists(report_id):
+        return {"error": f"报告 {report_id} 不存在。请先调 create_report 创建报告后再 save_chapter。"}
     order = await repo.lookup_chapter_order(report_id, canonical_chapter_key)
     return await repo.upsert_chapter(
         report_id=report_id,
