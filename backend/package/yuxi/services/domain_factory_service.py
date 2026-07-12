@@ -3678,6 +3678,7 @@ class DomainFactoryService:
         return {
             "id": task.id,
             "file_name": task.file_name,
+            "storage_path": task.storage_path,
             "domain": domain.code if domain else None,
             "domain_label": domain.name if domain else None,
             "document_type": task.document_type or "",
@@ -3823,6 +3824,29 @@ class DomainFactoryService:
             result["ingest_task_id"] = ingest_task_id
         return result
 
+    async def _upload_original_to_minio(
+        self, kb_id: str, file_id: str, storage_path: str, file_name: str
+    ) -> tuple[str, int]:
+        """上传原文件到 MinIO(documents 桶),供 KB 预览/下载。返回 (url, size_bytes);失败返回 ("", 0)。"""
+        try:
+            from yuxi.storage.minio import get_minio_client
+            from yuxi.storage.minio.client import aupload_file_to_minio
+
+            p = Path(storage_path)
+            if not storage_path or not p.exists():
+                return "", 0
+            data = await asyncio.to_thread(p.read_bytes)
+            minio_client = get_minio_client()
+            bucket = minio_client.KB_BUCKETS["documents"]
+            await asyncio.to_thread(minio_client.ensure_bucket_exists, bucket)
+            ext = Path(file_name).suffix.lower() or ".bin"
+            object_name = f"{kb_id}/upload/{file_id}{ext}"
+            url = await aupload_file_to_minio(bucket, object_name, data)
+            return url, len(data)
+        except Exception as e:
+            logger.warning(f"原文件上传 MinIO 失败(不阻断入库): {e}")
+            return "", 0
+
     async def _commit_pipeline_async(self, context) -> dict[str, Any]:
         """入库流水线异步执行（由任务中心调度）
 
@@ -3898,18 +3922,23 @@ class DomainFactoryService:
                             knowledge_base_id, file_id, ingest_markdown
                         )
 
+                    # 上传原文件到 MinIO(供预览/下载,path 指向原文件而非 markdown)
+                    original_url, original_size = await service._upload_original_to_minio(
+                        knowledge_base_id, file_id, task_detail.get("storage_path", ""), file_name
+                    )
+
                     # 2. 创建文件记录，直接设为 PARSED 状态（写入知识库文件表，供 index_file 消费）
                     file_meta = {
                         "file_id": file_id,
                         "kb_id": knowledge_base_id,
                         "filename": file_name,
                         "original_filename": file_name,
-                        "file_type": "md",
-                        "path": markdown_url,
+                        "file_type": Path(file_name).suffix.lower().lstrip(".") or "bin",
+                        "path": original_url or markdown_url,
                         "markdown_file": markdown_url,
                         "status": FileStatus.PARSED,
                         "content_hash": hashstr(ingest_markdown),
-                        "size": len(ingest_markdown),
+                        "size": original_size or len(ingest_markdown),
                         "content_type": "domain_factory",
                         "processing_params": {},
                         "is_folder": False,
@@ -4704,18 +4733,23 @@ class DomainFactoryService:
                         knowledge_base_id, file_id, ingest_markdown
                     )
 
+                # 上传原文件到 MinIO(供预览/下载,path 指向原文件而非 markdown)
+                original_url, original_size = await self._upload_original_to_minio(
+                    knowledge_base_id, file_id, task_detail.get("storage_path", ""), file_name
+                )
+
                 # 2. 创建文件记录，直接设为 PARSED 状态（写入知识库文件表，供 index_file 消费）
                 file_meta = {
                     "file_id": file_id,
                     "kb_id": knowledge_base_id,
                     "filename": file_name,
                     "original_filename": file_name,
-                    "file_type": "md",
-                    "path": markdown_url,
+                    "file_type": Path(file_name).suffix.lower().lstrip(".") or "bin",
+                    "path": original_url or markdown_url,
                     "markdown_file": markdown_url,
                     "status": FileStatus.PARSED,
                     "content_hash": hashstr(ingest_markdown),
-                    "size": len(ingest_markdown),
+                    "size": original_size or len(ingest_markdown),
                     "content_type": "domain_factory",
                     "processing_params": {},
                     "is_folder": False,
