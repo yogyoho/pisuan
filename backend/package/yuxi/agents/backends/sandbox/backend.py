@@ -217,7 +217,13 @@ class ProvisionerSandboxBackend(BaseSandbox):
         return AgentSandboxClient(base_url=sandbox_url, timeout=self._command_timeout_seconds)
 
     def _get_client(self) -> Any:
-        sync_thread_readable_skills(self._skills_thread_id, self._readable_skills)
+        skills_to_sync = self._readable_skills
+        if not skills_to_sync:
+            # 回退:readable_skills 在 runtime 传播时可能丢失,用全部 builtin skills
+            from yuxi.agents.skills.buildin import BUILTIN_SKILLS
+            skills_to_sync = [spec.slug for spec in BUILTIN_SKILLS]
+            logger.warning("readable_skills 为空,回退同步全部 builtin skills")
+        sync_thread_readable_skills(self._skills_thread_id, skills_to_sync)
         connection = self._provider.get(
             self._thread_id,
             uid=self._uid,
