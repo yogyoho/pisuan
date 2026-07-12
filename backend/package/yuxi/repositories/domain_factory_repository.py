@@ -18,6 +18,34 @@ from yuxi.storage.postgres.models_domain_factory import (
 from yuxi.utils import hashstr
 from yuxi.utils.datetime_utils import utc_now_naive
 
+# 中文别名 → DB code 映射（agent 可能传中文名，这里统一归一化）
+_DOMAIN_ALIASES: dict[str, str] = {
+    "煤矿": "coal", "煤炭": "coal", "煤炭采掘": "coal", "煤矿采掘": "coal",
+    "化工": "chem", "石油化工": "chem", "精细化工": "chem",
+    "矿产": "mineral", "矿物": "mineral", "固体矿物": "mineral",
+    "交通": "transport", "交通运输": "transport", "交通工程": "transport",
+}
+_REPORT_TYPE_ALIASES: dict[str, str] = {
+    "环境影响评价报告": "eia_report", "环境影响评价报告书": "eia_report",
+    "环评报告": "eia_report", "环评": "eia_report",
+    "可行性研究报告": "feasibility_report", "可研报告": "feasibility_report",
+    "地质勘查报告": "geological_exploration", "固体矿物地质勘查报告": "geological_exploration",
+    "土地复垦方案": "land_reclamation", "土地复垦": "land_reclamation",
+    "矿井设计报告": "mine_design", "矿井设计": "mine_design",
+    "安全评价报告": "safety_assessment", "安全评价": "safety_assessment",
+    "水土保持方案": "water_soil_conservation", "水土保持": "water_soil_conservation",
+}
+
+
+def _normalize_domain(domain: str) -> str:
+    """归一化 domain：中文别名 → DB code。"""
+    return _DOMAIN_ALIASES.get(domain.strip(), domain.strip())
+
+
+def _normalize_report_type(report_type: str) -> str:
+    """归一化 report_type：中文别名 → DB code。"""
+    return _REPORT_TYPE_ALIASES.get(report_type.strip(), report_type.strip())
+
 
 class DomainFactoryRepository:
     """领域知识工厂数据访问层"""
