@@ -41,6 +41,7 @@ CHAPTER_WRITER_AGENT_TOOLS = [
     "set_pps_param",
     "save_chapter",
 ]
+CHAPTER_WRITER_EXCLUDED_TOOLS = ["write_file", "edit_file"]
 
 WEB_SEARCH_AGENT_SLUG = "web-search"
 WEB_SEARCH_AGENT_NAME = "网页检索"
@@ -256,7 +257,10 @@ class AgentRepository:
             backend_id=SUB_AGENT_BACKEND_ID,
             name=CHAPTER_WRITER_AGENT_NAME,
             description=CHAPTER_WRITER_AGENT_DESCRIPTION,
-            config_context={"tools": list(CHAPTER_WRITER_AGENT_TOOLS)},
+            config_context={
+                "tools": list(CHAPTER_WRITER_AGENT_TOOLS),
+                "excluded_tools": list(CHAPTER_WRITER_EXCLUDED_TOOLS),
+            },
             is_subagent=True,
             created_by=created_by,
         )
