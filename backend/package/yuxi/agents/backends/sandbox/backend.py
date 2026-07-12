@@ -195,6 +195,10 @@ class ProvisionerSandboxBackend(BaseSandbox):
             raise ValueError("uid is required for ProvisionerSandboxBackend")
 
         self._readable_skills = list(readable_skills or [])
+        if not self._readable_skills:
+            from yuxi.agents.skills.buildin import BUILTIN_SKILLS
+            self._readable_skills = [spec.slug for spec in BUILTIN_SKILLS]
+        sync_thread_readable_skills(self._skills_thread_id, self._readable_skills)
         self._provider = get_sandbox_provider()
         self._id = sandbox_id_for_thread(self._file_thread_id, self._skills_thread_id, uid=self._uid)
         self._client: Any | None = None

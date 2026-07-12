@@ -418,7 +418,7 @@ async def get_chapter_outline(domain: str, report_type: str, canonical_chapter_k
     out = await repo.get_outline(domain, report_type, canonical_chapter_key)
     if out:
         return out
-    types = await repo.list_report_types(domain)
+    types = await repo.list_report_types()
     valid_codes = [t["code"] for t in types]
     return {
         "error": f"未找到章节大纲: {domain}/{report_type}/{canonical_chapter_key}",
