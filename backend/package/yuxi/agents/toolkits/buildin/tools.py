@@ -11,7 +11,11 @@ from langgraph.types import Command, interrupt
 from pydantic import BaseModel, Field
 
 from yuxi.agents.toolkits.registry import ToolExtraMetadata, _all_tool_instances, _extra_registry, tool
-from yuxi.repositories.domain_factory_repository import DomainFactoryRepository
+from yuxi.repositories.domain_factory_repository import (
+    DomainFactoryRepository,
+    _normalize_domain,
+    _normalize_report_type,
+)
 from yuxi.utils import logger
 from yuxi.utils.paths import (
     CONVERSATION_HISTORY_DIR_NAME,
@@ -408,6 +412,8 @@ domain/report_type 必须使用数据字典中的 code（用 list_report_types �
 )
 async def get_chapter_outline(domain: str, report_type: str, canonical_chapter_key: str) -> dict:
     """获取指定章节的结构化大纲。"""
+    domain = _normalize_domain(domain)
+    report_type = _normalize_report_type(report_type)
     repo = DomainFactoryRepository()
     out = await repo.get_outline(domain, report_type, canonical_chapter_key)
     if out:
@@ -434,6 +440,7 @@ domain/report_type code 是数据库精确匹配字段，get_chapter_outline / g
 )
 async def list_report_types(domain: str) -> list[dict]:
     """查询数据字典中指定领域的报告类型 code。"""
+    domain = _normalize_domain(domain)
     repo = DomainFactoryRepository()
     return await repo.list_report_types(domain)
 
@@ -451,6 +458,8 @@ LIST_CHAPTER_KEYS_DESCRIPTION = """
     description=LIST_CHAPTER_KEYS_DESCRIPTION,
 )
 async def list_chapter_keys(domain: str, report_type: str) -> list[str]:
+    domain = _normalize_domain(domain)
+    report_type = _normalize_report_type(report_type)
     """列出指定领域+报告类型下所有已入库的 canonical_chapter_key。"""
     repo = DomainFactoryRepository()
     return await repo.list_chapter_keys(domain, report_type)
@@ -472,6 +481,8 @@ domain/report_type 必须使用数据字典中的 code（用 list_report_types �
 )
 async def get_templates(domain: str, report_type: str, canonical_chapter_key: str | None = None) -> list[dict]:
     """获取结构化段落模板。"""
+    domain = _normalize_domain(domain)
+    report_type = _normalize_report_type(report_type)
     repo = DomainFactoryRepository()
     return await repo.list_learned_templates_by_key(domain, report_type, canonical_chapter_key)
 
@@ -490,6 +501,8 @@ domain/report_type 必须使用数据字典中的 code（用 list_report_types �
     description=CREATE_REPORT_DESCRIPTION,
 )
 async def create_report(thread_id: str, title: str, domain: str, report_type: str, kb_id: str) -> dict:
+    domain = _normalize_domain(domain)
+    report_type = _normalize_report_type(report_type)
     """为一篇报告创建持久化记录,返回 report_id。"""
     repo = DomainFactoryRepository()
     return await repo.create_report(
