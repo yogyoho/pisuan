@@ -513,9 +513,9 @@ const loadLightragKnowledgeBases = async () => {
   loadingKnowledgeBases.value = true
   try {
     const response = await databaseApi.getDatabases()
-    lightragKnowledgeBases.value = (response.databases || []).filter(db => db.kb_type === 'lightrag' || db.type === 'lightrag')
+    lightragKnowledgeBases.value = (response.databases || []).filter(db => db.kb_type === 'milvus' || db.type === 'milvus')
     if (lightragKnowledgeBases.value.length === 1) {
-      selectedKnowledgeBaseId.value = lightragKnowledgeBases.value[0].db_id || lightragKnowledgeBases.value[0].id
+      selectedKnowledgeBaseId.value = lightragKnowledgeBases.value[0].kb_id
     }
   } catch (e) {
     console.error('加载知识库列表失败', e)
@@ -534,7 +534,7 @@ const handleCommit = async () => {
   Modal.confirm({
     title: '确认入库？',
     content: () => {
-      const selectedKB = lightragKnowledgeBases.value.find(kb => (kb.db_id || kb.id) === selectedKnowledgeBaseId.value)
+      const selectedKB = lightragKnowledgeBases.value.find(kb => kb.kb_id === selectedKnowledgeBaseId.value)
       return [
         h('p', { style: 'margin-bottom: 12px' }, '提交后模板将同步至知识图谱，确保已完成校验。'),
         h('p', {}, ['目标知识库：', h('strong', selectedKB?.name || selectedKnowledgeBaseId.value)])
@@ -568,7 +568,7 @@ const handleCommit = async () => {
             task_id: result.task.ingest_task_id,
             name: `知识工厂入库: ${taskDetail.value?.file_name || '未知文件'}`,
             task_type: 'domain_factory_commit',
-            message: '数据正在同步到 LightRAG 知识库',
+            message: '数据正在同步到知识库',
             payload: {
               task_id: taskDetail.value.id,
               knowledge_base_id: selectedKnowledgeBaseId.value,
@@ -1442,7 +1442,7 @@ watch(() => props.task, async (newTask) => {
                 :loading="loadingKnowledgeBases"
                 style="max-width: 400px"
               >
-                <a-select-option v-for="kb in lightragKnowledgeBases" :key="kb.db_id || kb.id" :value="kb.db_id || kb.id">{{ kb.name }}</a-select-option>
+                <a-select-option v-for="kb in lightragKnowledgeBases" :key="kb.kb_id" :value="kb.kb_id">{{ kb.name }}</a-select-option>
               </a-select>
             </a-form-item>
           </a-form>
