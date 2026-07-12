@@ -21,7 +21,7 @@ from typing import Any, Literal
 
 from langchain.messages import AIMessage, AIMessageChunk
 from langgraph.types import Command
-from yuxi.agents.base import _json_safe
+from yuxi.agents.base import _auto_present_artifacts, _json_safe
 from yuxi.agents.buildin import agent_manager
 from yuxi.agents.context import build_agent_input_context, normalize_agent_context_config
 from yuxi.agents.state import AgentStatePayload
@@ -1105,6 +1105,10 @@ async def stream_agent_chat(
             agent_state = extract_agent_state(getattr(state, "values", {})) if state else {}
         except Exception:
             agent_state = {}
+
+        # Fallback: auto-register .md outputs as artifacts even when the agent
+        # didn't call present_artifacts, ensuring file visibility for the user.
+        agent_state["artifacts"] = _auto_present_artifacts(thread_id, uid, agent_state.get("artifacts"))
 
         final_signature = _agent_state_signature(agent_state)
         if final_signature and final_signature != last_agent_state_signature:

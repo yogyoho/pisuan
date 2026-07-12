@@ -102,6 +102,34 @@ def _recursion_limit_from_context(context: BaseContext, default: int) -> int:
     return int(value) if isinstance(value, int) and value > 0 else default
 
 
+def _auto_present_artifacts(thread_id: str, uid: str, existing: list[str] | None = None) -> list[str]:
+    """Scan the thread's sandbox outputs dir for .md files and return their virtual paths.
+
+    Acts as a fallback so that agent-generated Markdown files in outputs are
+    visible to the user even when the agent doesn't explicitly call
+    present_artifacts.  Internal sub-directories (conversation_history,
+    large_tool_history, …) are excluded.
+    """
+    from yuxi.agents.backends.sandbox.paths import sandbox_outputs_dir
+    from yuxi.agents.toolkits.buildin.tools import _PRESENT_ARTIFACTS_INTERNAL_DIR_NAMES
+    from yuxi.utils.paths import OUTPUTS_DIR_NAME, VIRTUAL_PATH_PREFIX
+
+    outputs_dir = sandbox_outputs_dir(thread_id)
+    if not outputs_dir.exists():
+        return list(existing or [])
+
+    already_present = set(existing or [])
+    virtual_base = f"/{VIRTUAL_PATH_PREFIX.strip('/')}/{OUTPUTS_DIR_NAME}"
+    for md_file in sorted(outputs_dir.rglob("*.md")):
+        relative = md_file.relative_to(outputs_dir)
+        if relative.parts and relative.parts[0] in _PRESENT_ARTIFACTS_INTERNAL_DIR_NAMES:
+            continue
+        virtual_path = f"{virtual_base}/{relative.as_posix()}"
+        if virtual_path not in already_present:
+            already_present.add(virtual_path)
+    return sorted(already_present)
+
+
 class BaseAgent:
     """
     定义一个基础 Agent 供 各类 graph 继承
@@ -306,6 +334,10 @@ class BaseAgent:
             context=context,
             config=input_config,
         )
+        # Fallback: auto-register .md outputs as artifacts so the frontend
+        # sees them even if the agent didn't explicitly call present_artifacts.
+        if isinstance(msg, dict):
+            msg["artifacts"] = _auto_present_artifacts(context.thread_id, context.uid, msg.get("artifacts"))
         return msg
 
     async def check_checkpointer(self):
