@@ -20,6 +20,7 @@ from yuxi.services.file_preview import (
     OfficePreviewConversionError,
     convert_office_to_pdf,
     detect_media_type,
+    is_ascii_text_file,
     is_binary_preview_type,
     is_office_pdf_preview_file,
     render_preview_payload,
@@ -670,6 +671,19 @@ class KnowledgeBase(ABC):
             file_size = await self._get_minio_file_size(original_path)
         if file_size is not None and int(file_size) > MAX_BINARY_PREVIEW_SIZE_BYTES:
             return {**response, **render_preview_too_large_payload()}
+
+        # ASCII 文本文件(md/txt)→ markdown 编辑器渲染,不走 office→PDF
+        if is_ascii_text_file(file_meta.get("file_type"), filename):
+            raw_content = await self._read_minio_bytes(original_path)
+            return {
+                **response,
+                "content": raw_content,
+                "media_type": "text/markdown",
+                "preview_type": "markdown",
+                "supported": True,
+                "message": None,
+                "binary": False,
+            }
 
         if is_office_pdf_preview_file(filename):
             preview_path = await self._ensure_office_pdf_preview(kb_id, file_id, file_meta)
