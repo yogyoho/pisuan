@@ -187,6 +187,10 @@ class _BackendScope:
                     selected_slugs=list(self.skill_sources),
                     root_dir=thread_skills_root,
                 ),
+                "/home/gem/skills/": SelectedSkillsReadonlyBackend(
+                    selected_slugs=list(self.skill_sources),
+                    root_dir=thread_skills_root,
+                ),
             },
             artifacts_root=VIRTUAL_PATH_OUTPUTS,
         )
