@@ -170,6 +170,7 @@ class _BackendScope:
                 skills_thread_id=self.skills_thread_id,
             ),
             routes={
+                "/home/gem/skills/": SelectedSkillsReadonlyBackend(selected_slugs=self.readable_skills),
                 "/skills/": SelectedSkillsReadonlyBackend(selected_slugs=self.readable_skills),
             },
             artifacts_root=VIRTUAL_PATH_OUTPUTS,
