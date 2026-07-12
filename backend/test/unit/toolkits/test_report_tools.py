@@ -61,7 +61,10 @@ async def test_save_chapter_tool(monkeypatch):
     monkeypatch.setattr(
         tools_mod,
         "DomainFactoryRepository",
-        lambda: AsyncMock(upsert_chapter=AsyncMock(return_value={"canonical_chapter_key": "k", "status": "done"})),
+        lambda: AsyncMock(
+            report_exists=AsyncMock(return_value=True),
+            upsert_chapter=AsyncMock(return_value={"canonical_chapter_key": "k", "status": "done"}),
+        ),
     )
     out = await tools_mod.save_chapter.ainvoke(
         {
@@ -93,6 +96,29 @@ async def test_save_chapter_rejects_done_with_empty_content(monkeypatch):
     )
     assert "error" in out
     repo_mock.upsert_chapter.assert_not_awaited()  # 被拒,不应触达 repo
+
+
+@pytest.mark.asyncio
+async def test_save_chapter_rejects_invalid_report_id(monkeypatch):
+    # report_id 不存在 → error,且不触达 upsert_chapter
+    repo_mock = AsyncMock(
+        report_exists=AsyncMock(return_value=False),
+        lookup_chapter_order=AsyncMock(return_value=1),
+    )
+    monkeypatch.setattr(tools_mod, "DomainFactoryRepository", lambda: repo_mock)
+    out = await tools_mod.save_chapter.ainvoke(
+        {
+            "report_id": "rpt_nonexistent",
+            "canonical_chapter_key": "k",
+            "title": "T",
+            "content_md": "正文",
+            "summary": "摘",
+            "status": "writing",
+        }
+    )
+    assert "error" in out
+    assert "rpt_nonexistent" in out["error"]
+    repo_mock.upsert_chapter.assert_not_awaited()
 
 
 @pytest.mark.asyncio
