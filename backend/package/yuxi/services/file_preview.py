@@ -91,6 +91,18 @@ def is_office_pdf_preview_file(path: str) -> bool:
     return PurePosixPath(path).suffix.lower() in _OFFICE_PDF_PREVIEW_EXTENSIONS
 
 
+def is_ascii_text_file(file_type: str | None, filename: str) -> bool:
+    """ASCII 文本文件(md/txt)→ 用 markdown 编辑器渲染,不走 office→PDF。
+
+    优先看 file_type(领域工厂提交文件 file_type=md 但 filename 可能是 .docx);
+    退回 filename 后缀判断。
+    """
+    ft = (file_type or "").lower()
+    suffix = PurePosixPath(filename or "").suffix.lower()
+    ascii_exts = _MARKDOWN_EXTENSIONS | {".txt"}
+    return ft in {"md", "txt", "markdown", "mdx"} or suffix in ascii_exts
+
+
 def is_binary_preview_type(preview_type: str) -> bool:
     return preview_type in {"image", "pdf"}
 
