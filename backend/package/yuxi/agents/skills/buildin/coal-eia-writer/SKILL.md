@@ -37,6 +37,15 @@ description: "编写煤矿行业环境影响评价报告。作为编排者派发
 
 ## 操作流程
 
+### ⚠️ 关键参数（必须用这些 DB code，不要用中文名）
+
+所有 `get_chapter_outline` / `get_templates` / `create_report` 调用的 domain/report_type 参数必须用以下 DB code 值：
+
+- **domain = `"coal"`**（不是"煤矿"）
+- **report_type = `"eia_report"`**（不是"环境影响评价报告书"）
+
+用错值（如中文）会导致查询返回空结果，agent 退回 LLM 自行编造大纲。
+
 ### 第一步：确认知识库与章节范围
 
 1. 调用 `list_kbs` 获取当前对话可用的知识库
@@ -66,6 +75,7 @@ description: "编写煤矿行业环境影响评价报告。作为编排者派发
 > 4. 缺参数 → `set_pps_param` 补录能定的；不能定的在返回结果里列出待补参数，由编排者（主 agent）用 `ask_user_question` 向用户确认
 > 5. 写 markdown 正文，交叉引用统一用 `{{REF:chXX/表X-Y}}` 占位符
 > 6. `save_chapter(report_id, canonical_chapter_key, content_md, status="done")` 存档
+> ⚠️ 章节正文**必须用 `save_chapter` 存档**，不要用 `write_file` 绕过。`save_chapter` 把章节写入报告 DB（支持跨会话续写 + 确定性装配），`write_file` 只是写沙箱文件不进报告系统。
 
 多章可并行派发；派发后用 `subagent_await` 等待各子 agent 完成。
 
