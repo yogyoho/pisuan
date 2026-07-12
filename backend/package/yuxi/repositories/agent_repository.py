@@ -41,7 +41,7 @@ CHAPTER_WRITER_AGENT_TOOLS = [
     "set_pps_param",
     "save_chapter",
 ]
-CHAPTER_WRITER_EXCLUDED_TOOLS = ["write_file", "edit_file"]
+CHAPTER_WRITER_EXCLUDED_TOOLS = []  # 暂不排除:DeepSeek 对 invalid_tool_call 不兼容
 
 WEB_SEARCH_AGENT_SLUG = "web-search"
 WEB_SEARCH_AGENT_NAME = "网页检索"
