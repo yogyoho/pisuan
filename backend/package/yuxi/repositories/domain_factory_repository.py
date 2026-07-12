@@ -411,6 +411,14 @@ class DomainFactoryRepository:
 
     # ========== Report (writing-backbone) ==========
 
+    async def report_exists(self, report_id) -> bool:
+        """检查 report_id 是否存在于 domain_factory_reports 表。"""
+        async with pg_manager.get_async_session_context() as session:
+            result = await session.execute(
+                select(func.count(DomainFactoryReport.id)).where(DomainFactoryReport.id == report_id)
+            )
+            return (result.scalar() or 0) > 0
+
     async def create_report(self, *, thread_id, title, domain_code, report_type_code, kb_id, created_by) -> dict:
         import uuid
 
