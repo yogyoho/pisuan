@@ -173,22 +173,30 @@ class _BackendScope:
 
     def create_backend(self) -> CompositeBackend:
         thread_skills_root = get_thread_skills_root_dir(self.skills_thread_id)
+        skill_sources = dict(self.skill_sources)
+        if not skill_sources:
+            # 回退：skill_sources 在 context 传播时可能丢失，退化为全部已安装 skills
+            from yuxi.agents.skills.service import get_skills_root_dir
+
+            skills_root = get_skills_root_dir()
+            if skills_root.is_dir():
+                skill_sources = {d.name: str(d) for d in skills_root.iterdir() if d.is_dir()}
         return CustomCompositeBackend(
             default=ProvisionerSandboxBackend(
                 thread_id=self.thread_id,
                 uid=self.uid,
-                readable_skills=list(self.skill_sources),
-                skill_sources=self.skill_sources,
+                readable_skills=list(skill_sources),
+                skill_sources=skill_sources,
                 file_thread_id=self.file_thread_id,
                 skills_thread_id=self.skills_thread_id,
             ),
             routes={
                 "/skills/": SelectedSkillsReadonlyBackend(
-                    selected_slugs=list(self.skill_sources),
+                    selected_slugs=list(skill_sources),
                     root_dir=thread_skills_root,
                 ),
                 "/home/gem/skills/": SelectedSkillsReadonlyBackend(
-                    selected_slugs=list(self.skill_sources),
+                    selected_slugs=list(skill_sources),
                     root_dir=thread_skills_root,
                 ),
             },
