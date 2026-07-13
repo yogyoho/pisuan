@@ -56,14 +56,73 @@ class GraphGovernance:
 
     def merge_general_branch(self, driver) -> None:
         """Step 1: 合并 coal/通用 → coal/eia_report。"""
-        if self.dry_run:
-            return
-        # 实现在 Task 13 补充
-        pass
+        with driver.session() as session:
+            result = session.run(
+                "MATCH (d:DomainOutline {domain:'coal', report_type:'通用'})"
+                "-[:HAS_CHAPTER]->(ch:ChapterTemplate) "
+                "RETURN count(ch) AS cnt"
+            )
+            rec = result.single()
+            count = rec["cnt"] if rec else 0
+
+            if self.dry_run:
+                self.report.merged_branches = count
+                return
+
+            session.run(
+                "MATCH (ch:ChapterTemplate {domain:'coal', report_type:'通用'}) "
+                "SET ch.report_type = 'eia_report'"
+            )
+            session.run(
+                "MATCH (d:DomainOutline {domain:'coal', report_type:'通用'}) "
+                "DETACH DELETE d"
+            )
+            self.report.merged_branches = count
+
+    def clean_titles(self, driver) -> None:
+        """Step 2: 清洗 ChapterTemplate.title。"""
+        with driver.session() as session:
+            result = session.run(
+                "MATCH (ch:ChapterTemplate) WHERE ch.title IS NOT NULL "
+                "RETURN ch.id AS id, ch.title AS title"
+            )
+            for record in result:
+                original = record["title"]
+                cleaned = clean_chapter_title(original)
+                if cleaned != original and not self.dry_run:
+                    session.run(
+                        "MATCH (ch:ChapterTemplate {id:$id}) SET ch.title = $title",
+                        id=record["id"],
+                        title=cleaned,
+                    )
+                if cleaned != original:
+                    self.report.cleaned_titles += 1
+
+    def backfill_keys(self, driver) -> None:
+        """Step 3: 回填 canonical_chapter_key。"""
+        with driver.session() as session:
+            result = session.run(
+                "MATCH (ch:ChapterTemplate) "
+                "WHERE ch.canonical_chapter_key IS NULL OR ch.canonical_chapter_key = '' "
+                "RETURN ch.id AS id, ch.title AS title"
+            )
+            for record in result:
+                key = derive_canonical_key(clean_chapter_title(record["title"]))
+                if key and not self.dry_run:
+                    session.run(
+                        "MATCH (ch:ChapterTemplate {id:$id}) "
+                        "SET ch.canonical_chapter_key = $key",
+                        id=record["id"],
+                        key=key,
+                    )
+                if key:
+                    self.report.fixed_keys += 1
 
     def run_all(self, driver) -> GovernanceReport:
         """执行全部治理步骤。"""
         self.merge_general_branch(driver)
+        self.clean_titles(driver)
+        self.backfill_keys(driver)
         return self.report
 
 

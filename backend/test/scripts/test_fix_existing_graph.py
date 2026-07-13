@@ -45,3 +45,34 @@ def test_derive_canonical_key_from_clean_title():
     assert derive_canonical_key("地形地貌") == "地形地貌"
     assert derive_canonical_key("") == ""
     assert derive_canonical_key("气候气象") == "气候气象"
+
+
+def test_merge_general_branch_executes_cypher_when_not_dry_run():
+    """非 dry-run 模式下执行合并 Cypher"""
+    gov = GraphGovernance(dry_run=False)
+    fake_driver = MagicMock()
+    fake_session = MagicMock()
+    fake_driver.session.return_value.__enter__.return_value = fake_session
+    fake_result = MagicMock()
+    fake_result.single.return_value = {"cnt": 41}
+    fake_result.peek.return_value = True
+    fake_session.run.return_value = fake_result
+
+    gov.merge_general_branch(fake_driver)
+
+    cypher_calls = [str(c) for c in fake_session.run.call_args_list]
+    assert any("report_type" in c and "eia_report" in c for c in cypher_calls)
+
+
+def test_clean_titles_uses_clean_chapter_title():
+    """clean_titles 步骤调用 clean_chapter_title 处理每个 title"""
+    gov = GraphGovernance(dry_run=False)
+    fake_driver = MagicMock()
+    fake_session = MagicMock()
+    fake_driver.session.return_value.__enter__.return_value = fake_session
+    fake_result = MagicMock()
+    fake_result.__iter__ = lambda self: iter([{"id": "ch1", "title": "1.1.1 3.1.1 地形地貌"}])
+    fake_session.run.return_value = fake_result
+
+    gov.clean_titles(fake_driver)
+    assert gov.report.cleaned_titles >= 1
