@@ -26,3 +26,22 @@ def test_report_initialization():
     assert report.merged_branches == 0
     assert report.cleaned_titles == 0
     assert report.errors == []
+
+
+def test_clean_title_dual_numbering():
+    """清洗双编号 title"""
+    from scripts.governance.fix_existing_graph import clean_chapter_title
+
+    assert clean_chapter_title("1.1.1 3.1.1 地形地貌") == "地形地貌"
+    assert clean_chapter_title("3.1.1 地形地貌") == "地形地貌"
+    assert clean_chapter_title("2") == ""
+    assert clean_chapter_title("地形地貌") == "地形地貌"
+
+
+def test_derive_canonical_key_from_clean_title():
+    """从清洗后 title 推导 canonical_chapter_key"""
+    from scripts.governance.fix_existing_graph import derive_canonical_key
+
+    assert derive_canonical_key("地形地貌") == "地形地貌"
+    assert derive_canonical_key("") == ""
+    assert derive_canonical_key("气候气象") == "气候气象"
