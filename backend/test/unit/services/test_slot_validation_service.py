@@ -73,3 +73,44 @@ async def test_conflict_detection_same_slot_same_entity_no_conflict():
     ]
     conflicts = service._detect_conflicts(slot_validations)
     assert len(conflicts) == 0
+
+
+@pytest.mark.asyncio
+async def test_validate_slots_returns_structured_report():
+    """validate_slots 返回 {validated, warnings, conflicts}"""
+    service = SlotValidationService()
+    paragraph_slots = [
+        {
+            "paragraph_id": "p1",
+            "slots": [
+                {"name": "产能", "type": "number", "entity_ref": "项目主体"},
+                {"name": "面积", "type": "number", "entity_ref": "工程参数"},
+            ],
+        },
+        {
+            "paragraph_id": "p2",
+            "slots": [
+                {"name": "面积", "type": "number", "entity_ref": "空间边界"},
+            ],
+        },
+    ]
+    entity_schemas = {
+        "项目主体": {"name": "项目主体", "type": "number"},
+        "工程参数": {"name": "工程参数", "type": "number"},
+        "空间边界": {"name": "空间边界", "type": "number"},
+    }
+    report = await service.validate_slots(paragraph_slots, entity_schemas)
+    assert report["validated"] == 3
+    assert report["warnings"] == 0
+    assert len(report["conflicts"]) == 1
+    assert report["conflicts"][0]["slot_name"] == "面积"
+
+
+@pytest.mark.asyncio
+async def test_validate_slots_empty_input():
+    """空输入返回零计数报告"""
+    service = SlotValidationService()
+    report = await service.validate_slots([], {})
+    assert report["validated"] == 0
+    assert report["warnings"] == 0
+    assert report["conflicts"] == []
