@@ -75,10 +75,16 @@ class GraphQueryService:
     async def get_templates(
         self, domain: str, report_type: str, canonical_key: str
     ) -> list[dict[str, Any]]:
-        """查询某章节下的段落模板,含 Slot 和 LegalReference。"""
+        """查询某章节下的段落模板,含 Slot 和 LegalReference。
+
+        通过先 MATCH ChapterTemplate(domain+report_type+key) 确认该 key 属于
+        指定 domain/report_type,再 MATCH ParagraphTemplate —— 避免多 domain
+        入库后返回其他 domain 的同名章节模板。
+        """
         with self._driver.session() as session:
             result = session.run(
                 """
+                MATCH (ch:ChapterTemplate {domain: $domain, report_type: $rt, canonical_chapter_key: $key})
                 MATCH (pt:ParagraphTemplate {canonical_chapter_key: $key})
                 OPTIONAL MATCH (pt)-[:HAS_SLOT]->(s:Slot)
                 OPTIONAL MATCH (s)-[:CONSTRAINS]->(es:EntitySchema)
@@ -87,6 +93,8 @@ class GraphQueryService:
                        collect(DISTINCT {name: s.name, type: s.type, entity: es.name}) AS slots,
                        collect(DISTINCT {code: lr.code, name: lr.name}) AS refs
                 """,
+                domain=domain,
+                rt=report_type,
                 key=canonical_key,
             )
             templates = []
