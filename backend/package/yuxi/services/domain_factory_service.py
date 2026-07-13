@@ -4661,6 +4661,8 @@ class DomainFactoryService:
             if canonical_key not in seed_keys:
                 seed_keys.append(canonical_key)
             count += 1
+        # LLM 算出的 canonical_chapter_key 已通过 ETL 源头(graph_builder Task 1)写入图谱;
+        # 此处若需 LLM key 覆盖推导 key,需重建 chapter_id——见 GraphBuilder.backfill_canonical_keys
         logger.info(f"章节大纲产出: {count} 章, domain={domain_code}, report_type={report_type_code}")
         return count
 
