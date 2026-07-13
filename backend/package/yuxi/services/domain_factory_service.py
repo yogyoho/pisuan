@@ -4894,8 +4894,8 @@ class DomainFactoryService:
                         source_paragraphs=source_paragraphs,
                         domain_label=domain_label,
                         base_info=base_info,
-                        domain_code=task_detail.get("domain"),
-                        report_type_code=task_detail.get("report_type_code"),
+                        domain_code=self._normalize_domain_for_graph(task_detail.get("domain") or ""),
+                        report_type_code=self._normalize_report_type_for_graph(task_detail.get("report_type_code") or ""),
                     )
                     logger.info(f"知识图谱构建完成: {graph_stats}")
                     graph_builder.close()
