@@ -38,6 +38,58 @@ CHAPTER_WRITER_AGENT_TOOLS = [
 ]
 CHAPTER_WRITER_EXCLUDED_TOOLS = []  # 暂不排除:DeepSeek 对 invalid_tool_call 不兼容
 
+# ========== v1 chapter-writer (deprecated, replaced by 3 specialized writers) ==========
+# 保留旧常量以确保现有 DB 记录向后兼容；新注册调用使用下方新 writer
+
+# ========== v2 specialized writers ==========
+
+REGULATION_WRITER_AGENT_SLUG = "regulation-writer"
+REGULATION_WRITER_AGENT_NAME = "法规标准写手"
+REGULATION_WRITER_AGENT_DESCRIPTION = (
+    "聚焦法规引用与标准化章节写作，负责总则、环境管理、清洁生产、公众参与等模板型章节，"
+    "通过 KB 法规库检索最新标准并自动填入标准编号、限值、导则引用。"
+)
+REGULATION_WRITER_AGENT_TOOLS = [
+    "get_chapter_outline",
+    "get_report",
+    "get_templates",
+    "save_chapter",
+]
+REGULATION_WRITER_EXCLUDED_TOOLS = []
+
+DATA_SURVEY_WRITER_AGENT_SLUG = "data-survey-writer"
+DATA_SURVEY_WRITER_AGENT_NAME = "数据与现状写手"
+DATA_SURVEY_WRITER_AGENT_DESCRIPTION = (
+    "聚焦监测数据整理与现状评价，负责规划概况、环境现状调查、回顾性评价等数据密集型章节，"
+    "从 KB/监测库检索数据填入占位符，缺失数据生成 {{MISSING}} 标记。"
+)
+DATA_SURVEY_WRITER_AGENT_TOOLS = [
+    "get_chapter_outline",
+    "get_report",
+    "get_templates",
+    "set_pps_param",
+    "save_chapter",
+]
+DATA_SURVEY_WRITER_EXCLUDED_TOOLS = []
+
+PREDICTION_WRITER_AGENT_SLUG = "prediction-writer"
+PREDICTION_WRITER_AGENT_NAME = "预测与论证写手"
+PREDICTION_WRITER_AGENT_DESCRIPTION = (
+    "聚焦模型计算与综合论证，负责影响识别、影响预测、承载力分析、综合论证、"
+    "减缓措施和结论章节。预装计算工具 (A 值法/水环境容量/沉陷查表)。"
+)
+PREDICTION_WRITER_AGENT_TOOLS = [
+    "get_chapter_outline",
+    "get_report",
+    "get_templates",
+    "set_pps_param",
+    "save_chapter",
+    "calculate_a_value",
+    "calculate_water_capacity",
+    "lookup_subsidence_params",
+]
+PREDICTION_WRITER_EXCLUDED_TOOLS = []
+
 WEB_SEARCH_AGENT_SLUG = "web-search"
 WEB_SEARCH_AGENT_NAME = "网页检索"
 WEB_SEARCH_AGENT_DESCRIPTION = "围绕检索目标持续搜索网页，返回带引用来源的摘要资料。"
