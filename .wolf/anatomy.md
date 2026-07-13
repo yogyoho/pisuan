@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-13T04:20:33.569Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-13T05:15:12.549Z
 > Files: 65 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
@@ -150,7 +150,7 @@
 
 ## backend/package/yuxi/agents/toolkits/buildin/
 
-- `tools.py` — Pydantic: PresentArtifactsInput (~7630 tok)
+- `tools.py` — Pydantic: PresentArtifactsInput (~7684 tok)
 
 ## backend/package/yuxi/agents/toolkits/debug/
 
