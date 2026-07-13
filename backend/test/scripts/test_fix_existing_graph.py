@@ -75,3 +75,20 @@ def test_clean_titles_uses_clean_chapter_title():
 
     gov.clean_titles(fake_driver)
     assert gov.report.cleaned_titles >= 1
+
+
+def test_backfill_keys_increments_fixed_keys():
+    """backfill_keys 步骤对 canonical_chapter_key 为空的章节回填并计数"""
+    gov = GraphGovernance(dry_run=False)
+    fake_driver = MagicMock()
+    fake_session = MagicMock()
+    fake_driver.session.return_value.__enter__.return_value = fake_session
+    fake_result = MagicMock()
+    fake_result.__iter__ = lambda self: iter([
+        {"id": "ch1", "title": "地形地貌"},
+        {"id": "ch2", "title": "1.1.1 气候气象"},
+    ])
+    fake_session.run.return_value = fake_result
+
+    gov.backfill_keys(fake_driver)
+    assert gov.report.fixed_keys == 2
