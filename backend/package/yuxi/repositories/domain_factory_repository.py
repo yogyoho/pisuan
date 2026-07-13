@@ -26,6 +26,7 @@ _DOMAIN_ALIASES: dict[str, str] = {
     "交通": "transport", "交通运输": "transport", "交通工程": "transport",
 }
 _REPORT_TYPE_ALIASES: dict[str, str] = {
+    "通用": "eia_report",
     "eia": "eia_report", "环境影响评价报告": "eia_report", "环境影响评价报告书": "eia_report",
     "环评报告": "eia_report", "环评": "eia_report",
     "feasibility": "feasibility_report", "可行性研究报告": "feasibility_report", "可研报告": "feasibility_report",
