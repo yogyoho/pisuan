@@ -955,6 +955,25 @@ class DomainFactoryService:
             await context.set_progress(100.0, f"执行失败: {str(e)}")
             return {"error": str(e)}
 
+    def _clean_chapter_title(self, title: str) -> str:
+        """清洗章节标题:去双编号、纯编号返回空。"""
+        import re
+
+        text = (title or "").strip()
+        if not text:
+            return ""
+
+        # 纯编号 → 空(如 "2", "3.1")
+        if re.fullmatch(r"\d+(?:\.\d+)*", text):
+            return ""
+
+        # 双编号去重: "1.1.1 3.1.1 地形地貌" → "3.1.1 地形地貌"
+        dual_match = re.match(r"^(\d+(?:\.\d+)*)\s+(\d+(?:\.\d+)*\s+\S.*)$", text)
+        if dual_match:
+            text = dual_match.group(2).strip()
+
+        return text
+
     def _parse_markdown_to_paragraphs(self, markdown: str, html_content: str | None = None) -> list[dict[str, Any]]:
         """将 Markdown 文本解析为段落列表，按章节组织
 
@@ -1082,7 +1101,9 @@ class DomainFactoryService:
                     # 判断是否为标题（标题通常较短，内容详细）
                     if len(potential_title) < 50 and not potential_title.endswith("。"):
                         is_title = True
-                        title_text = potential_title
+                        title_text = self._clean_chapter_title(potential_title)
+                        if not title_text:
+                            is_title = False  # 清洗后为空(纯编号),不算标题
                         # 计算层级
                         dots = num_part.count(".")
                         level = dots + 1
