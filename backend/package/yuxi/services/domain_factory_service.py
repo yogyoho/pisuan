@@ -3847,6 +3847,19 @@ class DomainFactoryService:
             logger.warning(f"原文件上传 MinIO 失败(不阻断入库): {e}")
             return "", 0
 
+    def _normalize_domain_for_graph(self, domain: str) -> str:
+        """ETL 入图谱前归一化 domain(中文名→code)。"""
+        from yuxi.repositories.domain_factory_repository import _normalize_domain
+
+        return _normalize_domain(domain or "") or (domain or "")
+
+    def _normalize_report_type_for_graph(self, report_type: str) -> str:
+        """ETL 入图谱前归一化 report_type('通用'→'eia_report')。"""
+        from yuxi.repositories.domain_factory_repository import _normalize_report_type
+
+        normalized = _normalize_report_type(report_type or "")
+        return normalized if normalized else (report_type or "")
+
     async def _commit_pipeline_async(self, context) -> dict[str, Any]:
         """入库流水线异步执行（由任务中心调度）
 
@@ -4045,8 +4058,8 @@ class DomainFactoryService:
                         source_paragraphs=source_paragraphs,
                         domain_label=domain_label,
                         base_info=base_info,
-                        domain_code=task_detail.get("domain"),
-                        report_type_code=task_detail.get("report_type_code"),
+                        domain_code=self._normalize_domain_for_graph(task_detail.get("domain") or ""),
+                        report_type_code=self._normalize_report_type_for_graph(task_detail.get("report_type_code") or ""),
                     )
                     logger.info(f"知识图谱构建完成: {graph_stats}")
                     graph_builder.close()
@@ -4085,7 +4098,9 @@ class DomainFactoryService:
                 await context.set_progress(92.0, "正在产出章节大纲...")
                 await context.set_message("正在产出章节大纲...")
                 outline_count = await service._produce_outlines_async(
-                    task_id, task_detail.get("domain") or "coal", task_detail.get("report_type_code") or "通用"
+                    task_id,
+                    service._normalize_domain_for_graph(task_detail.get("domain") or "coal"),
+                    service._normalize_report_type_for_graph(task_detail.get("report_type_code") or "eia_report"),
                 )
                 logger.info(f"章节大纲产出完成: {outline_count} 章")
             except Exception as e:
