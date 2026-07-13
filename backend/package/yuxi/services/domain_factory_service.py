@@ -4053,8 +4053,19 @@ class DomainFactoryService:
                 else:
                     logger.warning(f"任务 {task_id} 无 source_paragraphs，跳过图谱构建")
             except Exception as e:
-                # 图谱构建失败不阻断主流程
-                logger.warning(f"知识图谱构建失败（不阻断入库）: {e}")
+                logger.exception(f"知识图谱构建失败,任务标记 COMMIT_FAILED: {task_id}")
+                await service.repo.update_task(
+                    task_id,
+                    {"status": "COMMIT_FAILED", "error_message": f"图谱构建失败: {e}"},
+                )
+                await context.set_progress(100.0, f"图谱构建失败: {e}")
+                await context.set_message(f"图谱构建失败: {e}")
+                return {
+                    "task_id": task_id,
+                    "status": "COMMIT_FAILED",
+                    "error": f"图谱构建失败: {e}",
+                    "message": "图谱构建失败",
+                }
 
             # ========== 阶段2.8: 模板回流 (LEARNED TEMPLATES) ==========
             try:
