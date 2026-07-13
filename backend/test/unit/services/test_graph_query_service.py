@@ -23,3 +23,28 @@ async def test_list_chapter_keys_unknown_domain_returns_empty():
         assert keys == []
     finally:
         service.close()
+
+
+@pytest.mark.asyncio
+async def test_get_chapter_outline_returns_structure():
+    service = GraphQueryService()
+    try:
+        keys = await service.list_chapter_keys("coal", "eia_report")
+        if not keys:
+            return
+        outline = await service.get_chapter_outline("coal", "eia_report", keys[0])
+        assert outline is not None
+        assert "canonical_chapter_key" in outline
+        assert "title" in outline
+    finally:
+        service.close()
+
+
+@pytest.mark.asyncio
+async def test_get_chapter_outline_not_found_returns_none():
+    service = GraphQueryService()
+    try:
+        outline = await service.get_chapter_outline("coal", "eia_report", "不存在的章节XYZ123")
+        assert outline is None
+    finally:
+        service.close()
