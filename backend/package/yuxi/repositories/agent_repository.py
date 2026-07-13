@@ -336,6 +336,51 @@ class AgentRepository:
             created_by=created_by,
         )
 
+    async def ensure_regulation_writer_subagent(self, *, created_by: str | None = None) -> Agent:
+        """幂等注册 regulation-writer 子 agent（法规引用+模板型章节）。"""
+        return await self._ensure_builtin_agent(
+            slug=REGULATION_WRITER_AGENT_SLUG,
+            backend_id=SUB_AGENT_BACKEND_ID,
+            name=REGULATION_WRITER_AGENT_NAME,
+            description=REGULATION_WRITER_AGENT_DESCRIPTION,
+            config_context={
+                "tools": list(REGULATION_WRITER_AGENT_TOOLS),
+                "excluded_tools": list(REGULATION_WRITER_EXCLUDED_TOOLS),
+            },
+            is_subagent=True,
+            created_by=created_by,
+        )
+
+    async def ensure_data_survey_writer_subagent(self, *, created_by: str | None = None) -> Agent:
+        """幂等注册 data-survey-writer 子 agent（监测数据+现状评价）。"""
+        return await self._ensure_builtin_agent(
+            slug=DATA_SURVEY_WRITER_AGENT_SLUG,
+            backend_id=SUB_AGENT_BACKEND_ID,
+            name=DATA_SURVEY_WRITER_AGENT_NAME,
+            description=DATA_SURVEY_WRITER_AGENT_DESCRIPTION,
+            config_context={
+                "tools": list(DATA_SURVEY_WRITER_AGENT_TOOLS),
+                "excluded_tools": list(DATA_SURVEY_WRITER_EXCLUDED_TOOLS),
+            },
+            is_subagent=True,
+            created_by=created_by,
+        )
+
+    async def ensure_prediction_writer_subagent(self, *, created_by: str | None = None) -> Agent:
+        """幂等注册 prediction-writer 子 agent（模型计算+综合论证）。"""
+        return await self._ensure_builtin_agent(
+            slug=PREDICTION_WRITER_AGENT_SLUG,
+            backend_id=SUB_AGENT_BACKEND_ID,
+            name=PREDICTION_WRITER_AGENT_NAME,
+            description=PREDICTION_WRITER_AGENT_DESCRIPTION,
+            config_context={
+                "tools": list(PREDICTION_WRITER_AGENT_TOOLS),
+                "excluded_tools": list(PREDICTION_WRITER_EXCLUDED_TOOLS),
+            },
+            is_subagent=True,
+            created_by=created_by,
+        )
+
     async def _ensure_builtin_agent(
         self,
         *,
