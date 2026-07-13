@@ -32,12 +32,28 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import uuid
 from typing import Any
 
 from neo4j import GraphDatabase as Neo4jDriver
 
 from yuxi.utils import hashstr, logger
+
+
+def _derive_canonical_key(title: str) -> str:
+    """从章节标题推导 canonical_chapter_key:去所有前导编号,只留纯标题。纯编号返回空。"""
+    text = (title or "").strip()
+    if not text:
+        return ""
+    if re.fullmatch(r"\d+(?:\.\d+)*", text):
+        return ""
+    while True:
+        m = re.match(r"^(\d+(?:\.\d+)*)\s+(.+)$", text)
+        if not m:
+            break
+        text = m.group(2).strip()
+    return text
 
 
 class GraphBuilder:
@@ -763,9 +779,11 @@ class GraphBuilder:
                 order_int = 0
 
             chapter_id = f"CH_{domain_code}_{report_type_code}_{hashstr(section_path_str, 10)}"
+            canonical_key = _derive_canonical_key(title)
             chapter_map[section_path_str] = {
                 "chapter_id": chapter_id,
                 "title": title,
+                "canonical_key": canonical_key,
                 "level": level,
                 "order": order_int,
                 "section_path_str": section_path_str,
@@ -808,8 +826,9 @@ class GraphBuilder:
                 ON CREATE SET
                     ch.id = $chapter_id,
                     ch.title = $title,
+                    ch.canonical_chapter_key = $canonical_key,
                     ch.level = $level,
-                    ch.order = $order,
+                    ch.`order` = $order,
                     ch.rigidity = $rigidity,
                     ch.frequency = $frequency,
                     ch.domain = $domain_code,
@@ -818,10 +837,12 @@ class GraphBuilder:
                     ch.created_at = datetime()
                 ON MATCH SET
                     ch.frequency = $frequency,
-                    ch.rigidity = $rigidity
+                    ch.rigidity = $rigidity,
+                    ch.canonical_chapter_key = COALESCE(ch.canonical_chapter_key, $canonical_key)
                 """,
                 chapter_id=chapter_id,
                 title=title,
+                canonical_key=ch_info["canonical_key"],
                 level=level,
                 order=order,
                 rigidity=rigidity,
