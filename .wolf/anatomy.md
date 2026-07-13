@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-13T03:06:42.365Z
-> Files: 64 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-13T04:20:33.569Z
+> Files: 65 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -150,7 +150,7 @@
 
 ## backend/package/yuxi/agents/toolkits/buildin/
 
-- `tools.py` — Pydantic: PresentArtifactsInput (~7610 tok)
+- `tools.py` — Pydantic: PresentArtifactsInput (~7630 tok)
 
 ## backend/package/yuxi/agents/toolkits/debug/
 
@@ -285,6 +285,10 @@
 
 - `test_excluded_tools.py` — _Request: override, test_sync_filters_excluded_tools, handler, test_async_filters_excluded_tools + 1 (~994 tok)
 
+## backend/test/unit/agents/toolkits/buildin/
+
+- `test_tools.py` — TDD tests for v2 calculation tools and save_chapter state extension. (~1406 tok)
+
 ## backend/test/unit/backends/
 
 
@@ -313,7 +317,7 @@
 ## backend/test/unit/services/
 
 - `test_outline_producer.py` — test_group_assets_by_chapter_buckets_by_chapter, test_assemble_deterministic_outline_fields, test_ll (~1466 tok)
-- `test_ref_resolver.py` — test_resolve_table_ref_and_flag_unresolved, test_chapters_merged_in_order, test_resolve_section_ref (~355 tok)
+- `test_ref_resolver.py` — test_resolve_table_ref_and_flag_unresolved, test_chapters_merged_in_order, test_resolve_section_ref, (~721 tok)
 
 ## backend/test/unit/storage/
 
