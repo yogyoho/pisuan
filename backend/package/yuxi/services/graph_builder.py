@@ -1409,6 +1409,31 @@ class GraphBuilder:
 
         return {"nodes": nodes_created, "relationships": relationships_created}
 
+    def backfill_canonical_keys(self, outline_map: dict, kb_id: str = "") -> int:
+        """用 outline_map({chapter_id: canonical_key}) 更新 ChapterTemplate.canonical_chapter_key。
+
+        供 _produce_outlines_async 在 LLM 算出 key 后回写图谱（LLM key 覆盖 ETL 推导 key）。
+        """
+        if not outline_map:
+            return 0
+        driver = self._get_driver()
+        if not driver:
+            logger.warning("backfill_canonical_keys: Neo4j 未连接，跳过")
+            return 0
+        updated = 0
+        with driver.session() as session:
+            for chapter_id, canonical_key in outline_map.items():
+                if not canonical_key:
+                    continue
+                session.run(
+                    "MATCH (ch:ChapterTemplate {id:$id}) "
+                    "SET ch.canonical_chapter_key = $key",
+                    id=chapter_id, key=canonical_key,
+                )
+                updated += 1
+        logger.info(f"backfill_canonical_keys: 更新 {updated} 个 ChapterTemplate")
+        return updated
+
     def close(self):
         """关闭 Neo4j 连接"""
         if self._driver:
