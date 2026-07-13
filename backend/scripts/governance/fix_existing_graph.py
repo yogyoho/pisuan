@@ -3,7 +3,8 @@
 修复:
 1. 合并 report_type='通用' 分支到 eia_report
 2. 清洗 ChapterTemplate.title 双编号
-3. 回填 canonical_chapter_key
+3. 回填 ChapterTemplate.canonical_chapter_key
+4. 回填 ParagraphTemplate.canonical_chapter_key(通过 Section 反查 ChapterTemplate)
 
 用法:
   python -m scripts.governance.fix_existing_graph --dry-run   # 预览
@@ -41,6 +42,7 @@ def derive_canonical_key(clean_title: str) -> str:
 @dataclass
 class GovernanceReport:
     fixed_keys: int = 0
+    fixed_para_keys: int = 0
     merged_branches: int = 0
     cleaned_titles: int = 0
 
@@ -116,11 +118,55 @@ class GraphGovernance:
                 if key:
                     self.report.fixed_keys += 1
 
+    def backfill_para_keys(self, driver) -> None:
+        """Step 4: 回填 ParagraphTemplate.canonical_chapter_key。
+
+        通过 Section(COMPOSED_OF) 反查所属 ChapterTemplate：
+        Section.title 带双编号(如 '1.1.1 3.1.1 地形地貌')，ChapterTemplate.canonical_chapter_key
+        是纯标题(如 '地形地貌')，用 ENDS WITH 匹配。匹配不到时从 Section/Chapter title 推导。
+        """
+        with driver.session() as session:
+            result = session.run(
+                """
+                MATCH (pt:ParagraphTemplate)
+                WHERE pt.canonical_chapter_key IS NULL OR pt.canonical_chapter_key = ''
+                OPTIONAL MATCH (s:Section)-[:COMPOSED_OF]->(pt)
+                WITH pt, s
+                OPTIONAL MATCH (ch:ChapterTemplate)
+                WHERE ch.canonical_chapter_key IS NOT NULL
+                  AND ch.canonical_chapter_key <> ''
+                  AND s IS NOT NULL
+                  AND s.title ENDS WITH ch.canonical_chapter_key
+                RETURN pt.id AS pt_id,
+                       collect(DISTINCT ch.canonical_chapter_key) AS ch_keys,
+                       collect(DISTINCT ch.title) AS ch_titles
+                """
+            )
+            for record in result:
+                pt_id = record["pt_id"]
+                ch_keys = [k for k in (record["ch_keys"] or []) if k]
+                ch_titles = [t for t in (record["ch_titles"] or []) if t]
+                if ch_keys:
+                    key = ch_keys[0]
+                elif ch_titles:
+                    key = derive_canonical_key(clean_chapter_title(ch_titles[0]))
+                else:
+                    key = ""
+                if key and not self.dry_run:
+                    session.run(
+                        "MATCH (pt:ParagraphTemplate {id:$id}) "
+                        "SET pt.canonical_chapter_key = $key",
+                        id=pt_id, key=key,
+                    )
+                if key:
+                    self.report.fixed_para_keys += 1
+
     def run_all(self, driver) -> GovernanceReport:
         """执行全部治理步骤。"""
         self.merge_general_branch(driver)
         self.clean_titles(driver)
         self.backfill_keys(driver)
+        self.backfill_para_keys(driver)
         return self.report
 
 
@@ -145,6 +191,7 @@ def main():
     print(f"合并'通用'分支章节数: {report.merged_branches}")
     print(f"清洗 title 数: {report.cleaned_titles}")
     print(f"回填 canonical_key 数: {report.fixed_keys}")
+    print(f"回填 ParagraphTemplate key 数: {report.fixed_para_keys}")
     print("==============================")
 
 
