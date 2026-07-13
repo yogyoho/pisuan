@@ -246,7 +246,140 @@ writer 写完章 → save_chapter(status="review")
    · "继续写第7-9章"
 ```
 
-## 8. 实施路线图
+## 8. 知识工厂数据要求
+
+v2 的三层模板策略对知识工厂清洗加工的数据有结构化要求。以下按 v2 功能反推。
+
+### 8.1 数据需求全景
+
+| v2 功能 | 需要什么数据 | 存储表 | 当前状态 |
+|---------|------------|--------|---------|
+| 整章复用 | 完整章节正文 + 表格/公式索引 | `domain_factory_chapters` (新) | ❌ 只有大纲骨架 |
+| 段落模板 | 标准化段落模板 + slot 定义 | `learned_templates` (现有) | ✅ 基本满足 |
+| 计算参数查表 | 沉陷系数、气象参数等预计算结果 | `domain_factory_params` (新) | ❌ 需要专业软件输出 |
+| 监测数据 | 大气/水/噪声历史监测数据 | `domain_factory_monitoring` (新) | ❌ 散落在报告文本中 |
+| 法规库 | 最新标准全文 + 导则技术规范 | KB 文档 (现有) | ⚠️ 需结构化 |
+
+### 8.2 完整章节库 (P0)
+
+**目标**: 同类矿区环评报告全文切分为可复用章节。
+
+```
+输入: 同类矿区环评报告 docx (横城、伊宁等矿区)
+ETL:  识别 Heading 样式 → 按章切分
+      识别表格/公式/图片 → 提取为独立索引
+      识别项目特定参数 → 标记为 {{PPS:...}} 占位符
+      保留论文章节结构 → 去个人身份信息 → 入库
+
+存储: domain_factory_chapters 表
+  - canonical_chapter_key: "大气影响预测"
+  - source_report: "横城矿区环评报告"
+  - content_md: <完整章节正文,含占位符标记>
+  - tables: [{id, number, title, rows}]
+  - formulas: [{id, latex, description}]
+  - figures: [{id, number, title, image_ref}]
+  - placeholders: ["矿区名称", "产能", "监测数据"]
+
+复用逻辑:
+  writer 调 get_templates(canonical_chapter_key)
+  → KB 返回匹配完整章节 (可多个,按相似度排序)
+  → writer 比对 → 选择最优模板 → 替换占位符
+  → 差异部分标注 {{CUSTOM:...}}
+  → 表号/图号按本项目重新编号
+```
+
+### 8.3 计算参数库 (P1)
+
+**目标**: 存储专业软件 (MSPS/EIAProA) 输出，支持按条件查表。
+
+```
+输入: 各矿区软件输出文件
+  - MSPS 地表沉陷预测结果
+  - EIAProA 大气估算模式输出
+  - 水文地质模型计算结果
+
+ETL:  提取关键参数 → 按地质条件/采深/采厚索引
+
+存储: domain_factory_params 表
+  - param_type: "subsidence" | "meteorology" | "water_model"
+  - conditions: {depth: "300-500m", coal_seam: "2-5m", angle: "0-15°"}
+  - values: {max_subsidence: 2.3, radius: 850, ...}
+  - unit: "m"
+  - source: "红石湾煤矿沉陷预测报告 (MSPS v3.2)"
+  - applicable_note: "适用于缓倾斜煤层,采深300-500m"
+
+复用逻辑:
+  writer 调 lookup_subsidence_params({depth, coal_seam, angle})
+  → 模糊匹配 → 返回最接近条件的预计算结果
+  → writer 引用来源 + 标注 "参考 XX 煤矿类似地质条件"
+  → 如无匹配 → 提示用户需委托专业建模
+```
+
+### 8.4 监测数据库 (P2)
+
+**目标**: 从报告表格中提取结构化监测数据。
+
+```
+输入: 报告中的监测表格
+  - 第3章: 大气/水/噪声/土壤监测数据表
+  - 第4章: 历史排放数据表
+  - 第6章: 预测结果表
+
+ETL:  表格识别 → 表头解析 → 行列提取 → 结构化入库
+      难点: 合并单元格、多级表头、跨页表格
+
+存储: domain_factory_monitoring 表
+  - mine_name: "红石湾煤矿"
+  - year: 2023
+  - category: "air" | "water" | "noise" | "soil"
+  - indicator: "PM10"
+  - value: 68
+  - unit: "μg/m³"
+  - standard_limit: 150
+  - compliance: true
+  - source_chapter: "第3章"
+  - source_table: "表3.3-2"
+
+复用逻辑:
+  数据 writer → query_kb("红石湾 2023 PM10 监测")
+  → 结构化返回 → 自动填入 {{MISSING}} 占位符
+  → 本项目数据优先; 无则参考同类矿区数据 (标注来源)
+```
+
+### 8.5 法规库 (P0)
+
+**目标**: 标准编号→全文映射,支持合规校验和模板引用。
+
+```
+输入: 环评常用标准
+  - 环境质量标准 (GB 3095, GB 3838, GB/T 14848, GB 3096...)
+  - 排放标准 (GB 20426, GB 13223, GB 18599...)
+  - 技术导则 (HJ/T 130, HJ 2.2, HJ 610, HJ 19...)
+  - 行业规范 (煤炭工业环评规范, 矿山生态恢复规范...)
+
+ETL:  PDF/docx → 按标准编号切分 → 提取关键段落 → 标注适用范围
+
+存储: KB 文档 (现有 KB 基础设施)
+  - 查询键: 标准编号 (如 "GB 3095-2012")
+  - 内容: 全文 + 关键指标标注
+  - 元数据: {standard_code, version, effective_date, scope}
+
+复用逻辑:
+  法规 writer → query_kb("GB 3095-2012 二级标准 PM10")
+  → 返回: "PM10 年平均 ≤ 70 μg/m³, 24小时平均 ≤ 150 μg/m³"
+  → writer 直接在正文引用 + 自动填入合规校验
+```
+
+### 8.6 优先级汇总
+
+| 优先级 | 数据 | 原因 | 技术难度 |
+|--------|------|------|---------|
+| **P0** | 完整章节库 | v2 最大价值增量 | ⭐⭐ |
+| **P0** | 法规库结构化 | 已有 KB, 需补充 | ⭐ |
+| **P1** | 计算参数库 | 需要软件输出文件 | ⭐⭐⭐ |
+| **P2** | 监测数据库 | 需要高精度表格识别 | ⭐⭐⭐⭐ |
+
+## 9. 实施路线图
 
 ### Phase 1: 3-Writer 拆分 (P0)
 - 废弃 chapter-writer，注册 3 个新 writer (regulation/data-survey/prediction)
@@ -267,11 +400,16 @@ writer 写完章 → save_chapter(status="review")
 - 审批状态管理
 - 驳回→重写流程
 
-### Phase 5: 三层模板 (P2)
+### Phase 5: 知识工厂数据 (P2)
+- 完整章节库 ETL (docx → 结构化切分 → 入库)
+- 监测数据表格识别与提取
+- 法规库结构化补充
+
+### Phase 6: 三层模板 (P2)
 - 整章复用 KB 搜索策略
 - {{CUSTOM}} 差异标注
 
-## 9. 不变量 (设计约束)
+## 10. 不变量 (设计约束)
 
 1. `report_id` 是全局唯一标识，跨会话复用
 2. 所有章节正文经 `save_chapter` 写入，不直接操作文件系统
