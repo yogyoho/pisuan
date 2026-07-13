@@ -127,10 +127,30 @@ class GraphGovernance:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="存量图谱治理")
+    parser = argparse.ArgumentParser(description="存量图谱治理(幂等)")
     parser.add_argument("--dry-run", action="store_true", help="只预览不写入")
+    parser.add_argument("--uri", default="bolt://graph:7687", help="Neo4j URI")
+    parser.add_argument("--user", default="neo4j", help="Neo4j 用户名")
+    parser.add_argument("--password", default="0123456789", help="Neo4j 密码")
     args = parser.parse_args()
+
+    from neo4j import GraphDatabase
+
+    driver = GraphDatabase.driver(args.uri, auth=(args.user, args.password))
+    gov = GraphGovernance(dry_run=args.dry_run)
+
     print(f"模式: {'dry-run(预览)' if args.dry_run else '执行'}")
+    report = gov.run_all(driver)
+    driver.close()
+
+    print("\n========== 治理报告 ==========")
+    print(f"合并'通用'分支章节数: {report.merged_branches}")
+    print(f"清洗 title 数: {report.cleaned_titles}")
+    print(f"回填 canonical_key 数: {report.fixed_keys}")
+    print(f"归一化 domain 数: {report.normalized_domains}")
+    if report.errors:
+        print(f"错误: {report.errors}")
+    print("==============================")
 
 
 if __name__ == "__main__":
