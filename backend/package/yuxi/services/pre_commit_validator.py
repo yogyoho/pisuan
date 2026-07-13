@@ -34,6 +34,25 @@ class PreCommitValidator:
             text_pattern = (tmpl.get("text_pattern") or "").strip()
             if not text_pattern:
                 errors.append(f"段落 {para_id}: text_pattern 为空")
+                continue
+
+            slots = tmpl.get("slots") or []
+            for slot in slots:
+                slot_name = (slot.get("name") or "").strip()
+                if not slot_name:
+                    errors.append(f"段落 {para_id}: slot名称为空")
+                elif slot_name.isdigit():
+                    errors.append(f"段落 {para_id}: slot名称不能为纯数字: {slot_name}")
+
+            if len(slots) > 15:
+                warnings.append(f"段落 {para_id}: slot 数量 {len(slots)} 超过 15")
+
+            seen: set[str] = set()
+            for slot in slots:
+                sig = str(slot.get("name", ""))
+                if sig in seen:
+                    warnings.append(f"段落 {para_id}: 重复 slot 签名: {sig}")
+                seen.add(sig)
 
         return ValidationResult(
             passed=len(errors) == 0, errors=errors, warnings=warnings
