@@ -37,3 +37,37 @@ class GraphQueryService:
                 rt=report_type,
             )
             return [r["key"] for r in result if r["key"]]
+
+    async def get_chapter_outline(
+        self, domain: str, report_type: str, canonical_key: str
+    ) -> dict[str, Any] | None:
+        """查询单个章节大纲,含子章节和段落角色预览。"""
+        with self._driver.session() as session:
+            result = session.run(
+                """
+                MATCH (ch:ChapterTemplate {domain: $domain, report_type: $rt, canonical_chapter_key: $key})
+                OPTIONAL MATCH (ch)-[:HAS_CHILD]->(sub:ChapterTemplate)
+                OPTIONAL MATCH (ch)-[:REQUIRES_PARAGRAPH_ROLE]->(pr:ParagraphRole)
+                RETURN ch.canonical_chapter_key AS key, ch.title AS title,
+                       ch.level AS level, ch.`order` AS `order`,
+                       ch.rigidity AS rigidity, ch.frequency AS frequency,
+                       collect(DISTINCT {title: sub.title, key: sub.canonical_chapter_key}) AS children,
+                       collect(DISTINCT pr.name) AS roles
+                """,
+                domain=domain,
+                rt=report_type,
+                key=canonical_key,
+            )
+            rec = result.single()
+            if rec is None or rec["key"] is None:
+                return None
+            return {
+                "canonical_chapter_key": rec["key"],
+                "title": rec["title"],
+                "level": rec["level"],
+                "order": rec["order"],
+                "rigidity": rec["rigidity"],
+                "frequency": rec["frequency"],
+                "child_chapters": [c for c in rec["children"] if c and c.get("title")],
+                "paragraph_roles": [r for r in (rec["roles"] or []) if r],
+            }
