@@ -3881,6 +3881,28 @@ class DomainFactoryService:
 
         service = get_domain_factory_service()
 
+        # ========== 提交前校验关卡 ==========
+        await context.set_progress(2.0, "正在校验数据...")
+        await context.set_message("正在校验数据...")
+        from yuxi.services.pre_commit_validator import PreCommitValidator
+
+        task_detail = await service.get_task_detail(task_id)
+        validator = PreCommitValidator()
+        validation = await validator.validate(task_detail)
+        if not validation.passed:
+            await service.repo.update_task(
+                task_id,
+                {"status": "COMMIT_FAILED", "error_message": "; ".join(validation.errors)},
+            )
+            await context.set_progress(100.0, "校验失败,已中止入库")
+            await context.set_message("校验失败: " + "; ".join(validation.errors))
+            return {
+                "task_id": task_id,
+                "status": "COMMIT_FAILED",
+                "errors": validation.errors,
+                "message": "提交前校验失败",
+            }
+
         try:
             # ========== 阶段1: 准备 (PREPARING) ==========
             await context.set_progress(5.0, "正在准备入库...")
@@ -3893,8 +3915,7 @@ class DomainFactoryService:
             await context.set_progress(30.0, "正在同步数据到知识库...")
             await context.set_message("正在同步数据到知识库...")
 
-            # 获取任务详情，包含结构化数据和模板
-            task_detail = await service.get_task_detail(task_id)
+            # task_detail 已在提交前校验阶段获取（复用）
 
             kb_ingested = False
             if knowledge_base_id:
