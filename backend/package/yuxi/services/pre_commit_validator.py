@@ -18,6 +18,8 @@ class PreCommitValidator:
 
     async def validate(self, task_detail: dict[str, Any]) -> ValidationResult:
         """校验任务详情,返回 ValidationResult。"""
+        if task_detail is None:
+            return ValidationResult(passed=False, errors=["任务不存在"])
         errors: list[str] = []
         warnings: list[str] = []
 
