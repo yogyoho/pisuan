@@ -77,3 +77,38 @@ async def test_graph_build_failure_marks_commit_failed():
 
     assert any(c.get("status") == "COMMIT_FAILED" for c in update_calls), \
         f"图谱失败应标记 COMMIT_FAILED,实际: {update_calls}"
+
+
+@pytest.mark.asyncio
+async def test_outline_failure_marks_commit_partial():
+    """outline 生成失败(图谱OK) → COMMIT_PARTIAL"""
+    from yuxi.services.domain_factory_service import DomainFactoryService
+
+    payload = {"task_id": "t1", "reviewer": "admin", "knowledge_base_id": None, "ingest_task_id": "ing1"}
+    ctx = _fake_context(payload)
+
+    valid_detail = {
+        "source_paragraphs": [{"id": "p1", "type": "parameter", "template": {"text_pattern": "{{x}}"}}],
+        "domain": "coal",
+        "report_type_code": "eia_report",
+        "file_name": "test.docx",
+    }
+    fake_service = MagicMock()
+    fake_service.get_task_detail = AsyncMock(return_value=valid_detail)
+    fake_service.repo.commit_task = AsyncMock()
+    fake_service._save_learned_templates_from_task = AsyncMock(return_value=1)
+    fake_service._produce_outlines_async = AsyncMock(side_effect=RuntimeError("LLM超时"))
+    update_calls = []
+
+    async def fake_update(tid, data):
+        update_calls.append({"task_id": tid, **data})
+
+    fake_service.repo.update_task = fake_update
+
+    with patch("yuxi.services.domain_factory_service.get_domain_factory_service", return_value=fake_service), \
+         patch("yuxi.services.graph_builder.GraphBuilder.build_knowledge_graph", return_value={"nodes_created": 0, "relationships_created": 0}):
+        await DomainFactoryService()._commit_pipeline_async(ctx)
+
+    final = [c for c in update_calls if c.get("status")]
+    assert any(c["status"] == "COMMIT_PARTIAL" for c in final), \
+        f"outline失败应标记 COMMIT_PARTIAL,实际: {final}"
