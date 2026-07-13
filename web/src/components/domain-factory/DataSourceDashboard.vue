@@ -96,6 +96,8 @@ const statusMap = {
   GENERALIZING: { color: '#722ed1', text: '泛化中' },
   WAITING_REVIEW: { color: '#faad14', text: '待校验' },
   COMMITTED: { color: '#52c41a', text: '已入库' },
+  COMMIT_FAILED: { color: '#ff4d4f', text: '入库失败' },
+  COMMIT_PARTIAL: { color: '#faad14', text: '部分入库' },
   FAILED: { color: '#ff4d4f', text: '失败' }
 }
 
@@ -256,7 +258,7 @@ const handleDeleteTask = async (task) => {
   }
 }
 
-// 重试任务
+// 重试任务（FAILED → 重新提取，重置为 UPLOADED 重跑整个 ETL）
 const handleRetryTask = async (task) => {
   try {
     await domainFactoryApi.retryTask(task.id || task.task_id)
@@ -264,6 +266,17 @@ const handleRetryTask = async (task) => {
     refresh()
   } catch (e) {
     message.error('重试失败')
+  }
+}
+
+// 重新入库（COMMIT_FAILED/COMMIT_PARTIAL → 复用已审核数据重跑 commit pipeline）
+const handleReingestTask = async (task) => {
+  try {
+    await domainFactoryApi.reingestTask(task.id || task.task_id)
+    message.success('已重新提交入库')
+    refresh()
+  } catch {
+    message.error('重新入库失败')
   }
 }
 
@@ -623,6 +636,11 @@ defineExpose({ refresh })
                 </a-tooltip>
                 <a-tooltip v-if="record.status === 'FAILED'" title="重新提取">
                   <a-button size="small" type="text" @click="handleRetryTask(record)">
+                    <RedoOutlined />
+                  </a-button>
+                </a-tooltip>
+                <a-tooltip v-else-if="record.status === 'COMMIT_FAILED' || record.status === 'COMMIT_PARTIAL'" title="重新入库">
+                  <a-button size="small" type="text" @click="handleReingestTask(record)">
                     <RedoOutlined />
                   </a-button>
                 </a-tooltip>
