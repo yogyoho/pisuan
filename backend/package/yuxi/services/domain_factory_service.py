@@ -4068,13 +4068,17 @@ class DomainFactoryService:
                 }
 
             # ========== 阶段2.8: 模板回流 (LEARNED TEMPLATES) ==========
+            pipeline_status = "COMMITTED"
+            partial_errors: list[str] = []
             try:
                 await context.set_progress(90.0, "正在回写学习模板...")
                 await context.set_message("正在回写学习模板...")
                 learned_count = await service._save_learned_templates_from_task(task_detail)
                 logger.info(f"模板回流: {learned_count} 个段落模板已保存")
             except Exception as e:
-                logger.warning(f"模板回流失败（不阻断入库）: {e}")
+                logger.warning(f"模板回流失败(标记PARTIAL): {e}")
+                pipeline_status = "COMMIT_PARTIAL"
+                partial_errors.append(f"模板回流失败: {e}")
 
             # ========== 阶段2.9: 章节大纲产出 (OUTLINE) ==========
             try:
@@ -4085,7 +4089,9 @@ class DomainFactoryService:
                 )
                 logger.info(f"章节大纲产出完成: {outline_count} 章")
             except Exception as e:
-                logger.warning(f"章节大纲产出失败（不阻断入库）: {e}")
+                logger.warning(f"章节大纲产出失败(标记PARTIAL): {e}")
+                pipeline_status = "COMMIT_PARTIAL"
+                partial_errors.append(f"大纲产出失败: {e}")
 
             if not knowledge_base_id:
                 logger.warning(f"任务 {task_id} 未指定目标知识库，跳过入库")
@@ -4098,19 +4104,21 @@ class DomainFactoryService:
             await service.repo.update_task(
                 task_id,
                 {
-                    "status": "COMMITTED",
+                    "status": pipeline_status,
                     "knowledge_base_id": knowledge_base_id,
+                    **({"error_message": "; ".join(partial_errors)} if partial_errors else {}),
                 },
             )
 
-            await context.set_progress(100.0, "入库完成")
-            await context.set_message("入库完成")
+            await context.set_progress(100.0, "入库完成" if pipeline_status == "COMMITTED" else "部分入库完成")
+            await context.set_message("入库完成" if pipeline_status == "COMMITTED" else "部分入库完成")
 
             return {
                 "task_id": task_id,
-                "status": "COMMITTED",
+                "status": pipeline_status,
                 "knowledge_base_id": knowledge_base_id,
                 "kb_ingested": kb_ingested,
+                "partial_errors": partial_errors,
                 "message": "入库流水线执行完成",
             }
 
