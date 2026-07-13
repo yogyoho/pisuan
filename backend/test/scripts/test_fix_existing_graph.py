@@ -92,3 +92,43 @@ def test_backfill_keys_increments_fixed_keys():
 
     gov.backfill_keys(fake_driver)
     assert gov.report.fixed_keys == 2
+
+
+def test_backfill_para_keys_uses_section_lookup():
+    """backfill_para_keys 通过 Section 反查所属 ChapterTemplate 回填"""
+    from scripts.governance.fix_existing_graph import GraphGovernance
+
+    gov = GraphGovernance(dry_run=False)
+    fake_driver = MagicMock()
+    fake_session = MagicMock()
+    fake_driver.session.return_value.__enter__.return_value = fake_session
+    fake_result = MagicMock()
+    fake_result.__iter__ = lambda self: iter([
+        {"pt_id": "pt1", "ch_keys": ["地形地貌"], "ch_titles": []},
+        {"pt_id": "pt2", "ch_keys": [], "ch_titles": ["气候气象"]},
+        {"pt_id": "pt3", "ch_keys": [], "ch_titles": []},
+    ])
+    fake_session.run.return_value = fake_result
+
+    gov.backfill_para_keys(fake_driver)
+    # pt1 有 ch_keys → 回填; pt2 从 title 推导 → 回填; pt3 都没有 → 跳过
+    assert gov.report.fixed_para_keys == 2
+
+
+def test_backfill_para_keys_dry_run_no_write():
+    """dry-run 模式只统计不写入"""
+    from scripts.governance.fix_existing_graph import GraphGovernance
+
+    gov = GraphGovernance(dry_run=True)
+    fake_driver = MagicMock()
+    fake_session = MagicMock()
+    fake_driver.session.return_value.__enter__.return_value = fake_session
+    fake_result = MagicMock()
+    fake_result.__iter__ = lambda self: iter([{"pt_id": "pt1", "ch_keys": ["地形地貌"], "ch_titles": []}])
+    fake_session.run.return_value = fake_result
+
+    gov.backfill_para_keys(fake_driver)
+    assert gov.report.fixed_para_keys == 1  # 统计了
+    # 但不应有 SET 写操作
+    write_calls = [str(c) for c in fake_session.run.call_args_list if "SET pt.canonical" in str(c)]
+    assert len(write_calls) == 0
