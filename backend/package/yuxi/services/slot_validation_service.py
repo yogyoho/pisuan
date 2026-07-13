@@ -30,6 +30,42 @@ class SlotValidationService:
     3. LLM 归类: 用 LLM 把 slot 归到 EntitySchema(替代子串匹配)
     """
 
+    async def validate_slots(
+        self,
+        paragraph_slots: list[dict[str, Any]],
+        entity_schemas: dict[str, dict[str, Any]],
+    ) -> dict[str, Any]:
+        """对多段落的 slot 做整体事后校验。
+
+        Args:
+            paragraph_slots: [{paragraph_id, slots: [{name, type, entity_ref?}]}]
+            entity_schemas: {entity_name: {name, type}}
+
+        Returns:
+            {validated, warnings, conflicts: [{slot_name, message}]}
+        """
+        all_validations: list[SlotValidationResult] = []
+        warnings = 0
+
+        for para in paragraph_slots:
+            for slot in para.get("slots", []):
+                entity_ref = slot.get("entity_ref")
+                entity_schema = entity_schemas.get(entity_ref) if entity_ref else None
+                result = self._check_type_consistency(slot, entity_schema)
+                all_validations.append(result)
+                if result.level == ValidationLevel.WARN:
+                    warnings += 1
+
+        conflicts = self._detect_conflicts(all_validations)
+
+        return {
+            "validated": len(all_validations),
+            "warnings": warnings,
+            "conflicts": [
+                {"slot_name": c.slot_name, "message": c.message} for c in conflicts
+            ],
+        }
+
     def _check_type_consistency(
         self, slot: dict[str, Any], entity_schema: dict[str, Any] | None
     ) -> SlotValidationResult:
