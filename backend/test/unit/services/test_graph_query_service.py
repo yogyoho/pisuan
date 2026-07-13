@@ -117,3 +117,21 @@ async def test_lookup_chapter_order_unknown_returns_none():
         assert order is None
     finally:
         service.close()
+
+
+@pytest.mark.asyncio
+async def test_get_chapter_outline_handles_duplicate_chapters():
+    """图谱里有重复 ChapterTemplate 时取第一条,不报 multiple records warning"""
+    import warnings
+
+    service = GraphQueryService()
+    try:
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            outline = await service.get_chapter_outline("coal", "eia_report", "地形地貌")
+            multi_warnings = [x for x in w if "single record" in str(x.message)]
+        assert outline is not None
+        assert outline.get("canonical_chapter_key") == "地形地貌"
+        assert len(multi_warnings) == 0, "不应报 multiple records warning"
+    finally:
+        service.close()

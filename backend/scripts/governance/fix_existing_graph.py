@@ -70,21 +70,52 @@ class GraphGovernance:
                 return
 
             session.run(
-                "MATCH (ch:ChapterTemplate {domain:'coal', report_type:'通用'}) "
-                "SET ch.report_type = 'eia_report'"
+                "MATCH (ch:ChapterTemplate {domain:'coal', report_type:'通用'}) SET ch.report_type = 'eia_report'"
+            )
+            # 去重:相同 (domain, report_type, canonical_chapter_key) 的 ChapterTemplate 只保留一条。
+            # 分步迁移关系(保留关系类型),再删除重复节点。
+            session.run(
+                """
+                MATCH (ch:ChapterTemplate {domain:'coal', report_type:'eia_report'})
+                WHERE ch.canonical_chapter_key IS NOT NULL AND ch.canonical_chapter_key <> ''
+                WITH ch.canonical_chapter_key AS key, collect(ch) AS nodes
+                WHERE size(nodes) > 1
+                UNWIND nodes[1..] AS dup
+                WITH nodes[0] AS keep, dup
+                MATCH (dup)-[:HAS_CHILD]->(sub:ChapterTemplate)
+                MERGE (keep)-[:HAS_CHILD]->(sub)
+                """
             )
             session.run(
-                "MATCH (d:DomainOutline {domain:'coal', report_type:'通用'}) "
-                "DETACH DELETE d"
+                """
+                MATCH (ch:ChapterTemplate {domain:'coal', report_type:'eia_report'})
+                WHERE ch.canonical_chapter_key IS NOT NULL AND ch.canonical_chapter_key <> ''
+                WITH ch.canonical_chapter_key AS key, collect(ch) AS nodes
+                WHERE size(nodes) > 1
+                UNWIND nodes[1..] AS dup
+                WITH nodes[0] AS keep, dup
+                MATCH (dup)-[:REQUIRES_PARAGRAPH_ROLE]->(pr:ParagraphRole)
+                MERGE (keep)-[:REQUIRES_PARAGRAPH_ROLE]->(pr)
+                """
             )
+            session.run(
+                """
+                MATCH (ch:ChapterTemplate {domain:'coal', report_type:'eia_report'})
+                WHERE ch.canonical_chapter_key IS NOT NULL AND ch.canonical_chapter_key <> ''
+                WITH ch.canonical_chapter_key AS key, collect(ch) AS nodes
+                WHERE size(nodes) > 1
+                UNWIND nodes[1..] AS dup
+                DETACH DELETE dup
+                """
+            )
+            session.run("MATCH (d:DomainOutline {domain:'coal', report_type:'通用'}) DETACH DELETE d")
             self.report.merged_branches = count
 
     def clean_titles(self, driver) -> None:
         """Step 2: 清洗 ChapterTemplate.title。"""
         with driver.session() as session:
             result = session.run(
-                "MATCH (ch:ChapterTemplate) WHERE ch.title IS NOT NULL "
-                "RETURN ch.id AS id, ch.title AS title"
+                "MATCH (ch:ChapterTemplate) WHERE ch.title IS NOT NULL RETURN ch.id AS id, ch.title AS title"
             )
             for record in result:
                 original = record["title"]
@@ -110,8 +141,7 @@ class GraphGovernance:
                 key = derive_canonical_key(clean_chapter_title(record["title"]))
                 if key and not self.dry_run:
                     session.run(
-                        "MATCH (ch:ChapterTemplate {id:$id}) "
-                        "SET ch.canonical_chapter_key = $key",
+                        "MATCH (ch:ChapterTemplate {id:$id}) SET ch.canonical_chapter_key = $key",
                         id=record["id"],
                         key=key,
                     )
@@ -154,9 +184,9 @@ class GraphGovernance:
                     key = ""
                 if key and not self.dry_run:
                     session.run(
-                        "MATCH (pt:ParagraphTemplate {id:$id}) "
-                        "SET pt.canonical_chapter_key = $key",
-                        id=pt_id, key=key,
+                        "MATCH (pt:ParagraphTemplate {id:$id}) SET pt.canonical_chapter_key = $key",
+                        id=pt_id,
+                        key=key,
                     )
                 if key:
                     self.report.fixed_para_keys += 1
