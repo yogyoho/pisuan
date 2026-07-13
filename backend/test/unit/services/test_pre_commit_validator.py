@@ -130,3 +130,12 @@ async def test_slot_quality_duplicate_signature_warns():
     result = await validator.validate(task_detail)
     assert result.passed is True  # 警告不阻塞
     assert any("重复 slot 签名" in w for w in result.warnings)
+
+
+@pytest.mark.asyncio
+async def test_none_task_detail_returns_failed():
+    """task_detail=None → 返回 passed=False,不抛 AttributeError"""
+    validator = PreCommitValidator()
+    result = await validator.validate(None)
+    assert result.passed is False
+    assert any("任务不存在" in e for e in result.errors)
