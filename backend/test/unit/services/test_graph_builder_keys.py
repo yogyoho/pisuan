@@ -107,3 +107,30 @@ async def test_build_knowledge_graph_writes_para_canonical_key():
             assert rec["key"] == "测试章节ParaKeyB", f"应继承所属章节key,实际: {rec['key']}"
     finally:
         driver.close()
+
+
+@pytest.mark.asyncio
+async def test_backfill_canonical_keys_updates_chapter():
+    """GraphBuilder.backfill_canonical_keys 用 outline_map 更新 ChapterTemplate key"""
+    from yuxi.services.graph_builder import GraphBuilder
+
+    driver = GraphDatabase.driver("bolt://graph:7687", auth=("neo4j", "0123456789"))
+    try:
+        with driver.session() as s:
+            s.run("MERGE (ch:ChapterTemplate {id:'ch_test_backfill_llm'}) "
+                  "SET ch.title='测试LLM回写', ch.canonical_chapter_key='', ch.kb_id='kb_test_backfill_llm'")
+
+        builder = GraphBuilder()
+        outline_map = {"ch_test_backfill_llm": "LLM算出的规范名"}
+        updated = builder.backfill_canonical_keys(outline_map)
+        builder.close()
+        assert updated == 1
+
+        with driver.session() as s:
+            rec = s.run("MATCH (ch:ChapterTemplate {id:'ch_test_backfill_llm'}) "
+                        "RETURN ch.canonical_chapter_key AS key").single()
+            assert rec["key"] == "LLM算出的规范名"
+    finally:
+        with driver.session() as s:
+            s.run("MATCH (ch:ChapterTemplate {id:'ch_test_backfill_llm'}) DETACH DELETE ch")
+        driver.close()
