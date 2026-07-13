@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import argparse
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 def clean_chapter_title(title: str) -> str:
@@ -43,8 +43,6 @@ class GovernanceReport:
     fixed_keys: int = 0
     merged_branches: int = 0
     cleaned_titles: int = 0
-    normalized_domains: int = 0
-    errors: list[str] = field(default_factory=list)
 
 
 class GraphGovernance:
@@ -147,9 +145,6 @@ def main():
     print(f"合并'通用'分支章节数: {report.merged_branches}")
     print(f"清洗 title 数: {report.cleaned_titles}")
     print(f"回填 canonical_key 数: {report.fixed_keys}")
-    print(f"归一化 domain 数: {report.normalized_domains}")
-    if report.errors:
-        print(f"错误: {report.errors}")
     print("==============================")
 
 
