@@ -48,3 +48,42 @@ async def test_get_chapter_outline_not_found_returns_none():
         assert outline is None
     finally:
         service.close()
+
+
+@pytest.mark.asyncio
+async def test_get_templates_returns_paragraph_templates():
+    service = GraphQueryService()
+    try:
+        keys = await service.list_chapter_keys("coal", "eia_report")
+        templates = []
+        if keys:
+            templates = await service.get_templates("coal", "eia_report", keys[0])
+        assert isinstance(templates, list)
+        for t in templates:
+            assert "text_pattern" in t
+            assert "slots" in t
+    finally:
+        service.close()
+
+
+@pytest.mark.asyncio
+async def test_lookup_chapter_order_returns_int_or_none():
+    service = GraphQueryService()
+    try:
+        keys = await service.list_chapter_keys("coal", "eia_report")
+        if not keys:
+            return
+        order = await service.lookup_chapter_order("coal", "eia_report", keys[0])
+        assert order is None or isinstance(order, int)
+    finally:
+        service.close()
+
+
+@pytest.mark.asyncio
+async def test_lookup_chapter_order_unknown_returns_none():
+    service = GraphQueryService()
+    try:
+        order = await service.lookup_chapter_order("coal", "eia_report", "不存在XYZ")
+        assert order is None
+    finally:
+        service.close()

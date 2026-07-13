@@ -71,3 +71,62 @@ class GraphQueryService:
                 "child_chapters": [c for c in rec["children"] if c and c.get("title")],
                 "paragraph_roles": [r for r in (rec["roles"] or []) if r],
             }
+
+    async def get_templates(
+        self, domain: str, report_type: str, canonical_key: str
+    ) -> list[dict[str, Any]]:
+        """查询某章节下的段落模板,含 Slot 和 LegalReference。"""
+        with self._driver.session() as session:
+            result = session.run(
+                """
+                MATCH (pt:ParagraphTemplate {canonical_chapter_key: $key})
+                OPTIONAL MATCH (pt)-[:HAS_SLOT]->(s:Slot)
+                OPTIONAL MATCH (s)-[:CONSTRAINS]->(es:EntitySchema)
+                OPTIONAL MATCH (pt)-[:CITES]->(lr:LegalReference)
+                RETURN pt.id AS pt_id, pt.text_pattern AS pattern,
+                       collect(DISTINCT {name: s.name, type: s.type, entity: es.name}) AS slots,
+                       collect(DISTINCT {code: lr.code, name: lr.name}) AS refs
+                """,
+                key=canonical_key,
+            )
+            templates = []
+            for rec in result:
+                pattern = rec["pattern"]
+                if not pattern:
+                    continue
+                slots = [
+                    {"name": s["name"], "type": s["type"], "entity_ref": s["entity"]}
+                    for s in rec["slots"]
+                    if s and s.get("name")
+                ]
+                refs = [
+                    {"code": r["code"], "name": r["name"]}
+                    for r in rec["refs"]
+                    if r and r.get("code")
+                ]
+                templates.append({
+                    "text_pattern": pattern,
+                    "slots": slots,
+                    "legal_references": refs,
+                })
+            return templates
+
+    async def lookup_chapter_order(
+        self, domain: str, report_type: str, canonical_key: str
+    ) -> int | None:
+        """查询章节顺序号。"""
+        with self._driver.session() as session:
+            result = session.run(
+                """
+                MATCH (ch:ChapterTemplate {domain: $domain, report_type: $rt, canonical_chapter_key: $key})
+                RETURN ch.`order` AS `order`
+                """,
+                domain=domain,
+                rt=report_type,
+                key=canonical_key,
+            )
+            rec = result.single()
+            if rec is None:
+                return None
+            order = rec["order"]
+            return int(order) if order is not None else None
