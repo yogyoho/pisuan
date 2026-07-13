@@ -133,11 +133,7 @@ async def test_assemble_report_tool(monkeypatch, tmp_path):
         ),
     )
 
-    # mock sandbox 写:跳过实际 FS,验证返回结构
-    async def fake_write(*a, **k):
-        return "/home/gem/user-data/outputs/report.md"
-
-    monkeypatch.setattr(tools_mod, "_write_assembled_to_sandbox", fake_write)
     out = await tools_mod.assemble_report.ainvoke({"report_id": "rpt_1", "runtime": _fake_runtime()})
-    assert out["artifact_path"].endswith("report.md")
+    # assemble_report 写 config.save_dir/outputs/report_{report_id}.md
+    assert out["artifact_path"].endswith("report_rpt_1.md")
     assert out["unresolved_refs"] == []
