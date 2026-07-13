@@ -43,7 +43,7 @@ async def test_commit_pipeline_rejects_invalid_task():
     with patch("yuxi.services.domain_factory_service.get_domain_factory_service", return_value=fake_service):
         result = await DomainFactoryService()._commit_pipeline_async(ctx)
 
-    assert result.get("status") == "COMMIT_FAILED" or "error" in str(result.get("message", ""))
+    assert result.get("status") == "COMMIT_FAILED"
     assert any(c.get("status") == "COMMIT_FAILED" for c in update_calls)
 
 
