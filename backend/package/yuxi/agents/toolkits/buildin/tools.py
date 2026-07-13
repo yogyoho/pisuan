@@ -411,9 +411,21 @@ domain/report_type 必须使用数据字典中的 code（用 list_report_types �
     description=GET_CHAPTER_OUTLINE_DESCRIPTION,
 )
 async def get_chapter_outline(domain: str, report_type: str, canonical_chapter_key: str) -> dict:
-    """获取指定章节的结构化大纲。"""
+    """获取指定章节的结构化大纲。优先查图谱,回退 DB。"""
+    from yuxi.services.graph_query_service import GraphQueryService
+
     domain = _normalize_domain(domain)
     report_type = _normalize_report_type(report_type)
+    try:
+        graph_svc = GraphQueryService()
+        try:
+            outline = await graph_svc.get_chapter_outline(domain, report_type, canonical_chapter_key)
+            if outline:
+                return outline
+        finally:
+            graph_svc.close()
+    except Exception as e:
+        logger.warning(f"图谱查询 get_chapter_outline 失败,回退 DB: {e}")
     repo = DomainFactoryRepository()
     out = await repo.get_outline(domain, report_type, canonical_chapter_key)
     if out:
@@ -459,9 +471,21 @@ LIST_CHAPTER_KEYS_DESCRIPTION = """
     description=LIST_CHAPTER_KEYS_DESCRIPTION,
 )
 async def list_chapter_keys(domain: str, report_type: str) -> list[str]:
+    """列出指定领域+报告类型下所有已入库的 canonical_chapter_key。优先查图谱,回退 DB。"""
+    from yuxi.services.graph_query_service import GraphQueryService
+
     domain = _normalize_domain(domain)
     report_type = _normalize_report_type(report_type)
-    """列出指定领域+报告类型下所有已入库的 canonical_chapter_key。"""
+    try:
+        graph_svc = GraphQueryService()
+        try:
+            keys = await graph_svc.list_chapter_keys(domain, report_type)
+            if keys:
+                return keys
+        finally:
+            graph_svc.close()
+    except Exception as e:
+        logger.warning(f"图谱查询 list_chapter_keys 失败,回退 DB: {e}")
     repo = DomainFactoryRepository()
     return await repo.list_chapter_keys(domain, report_type)
 
@@ -481,9 +505,22 @@ domain/report_type 必须使用数据字典中的 code（用 list_report_types �
     description=GET_TEMPLATES_DESCRIPTION,
 )
 async def get_templates(domain: str, report_type: str, canonical_chapter_key: str | None = None) -> list[dict]:
-    """获取结构化段落模板。"""
+    """获取结构化段落模板。优先查图谱,回退 DB。"""
+    from yuxi.services.graph_query_service import GraphQueryService
+
     domain = _normalize_domain(domain)
     report_type = _normalize_report_type(report_type)
+    if canonical_chapter_key:
+        try:
+            graph_svc = GraphQueryService()
+            try:
+                templates = await graph_svc.get_templates(domain, report_type, canonical_chapter_key)
+                if templates:
+                    return templates
+            finally:
+                graph_svc.close()
+        except Exception as e:
+            logger.warning(f"图谱查询 get_templates 失败,回退 DB: {e}")
     repo = DomainFactoryRepository()
     return await repo.list_learned_templates_by_key(domain, report_type, canonical_chapter_key)
 
