@@ -194,6 +194,7 @@
 - 收敛 AgentRun 数据模型与输入语义：运行记录统一使用 `agent_slug`、`conversation_thread_id`、`created_by_run_id`、`input_message_id` 等字段，子智能体通过 `subagent_threads` 关系表维护 parent/child conversation 归属；补齐旧库升级时 `agent_runs` 旧字段到新字段、`subagent_threads.subagent_slug/created_by_run_id` 的静默回填与约束收敛，并在创建部分唯一索引前终结重复活跃 run，避免早期分支库保留 nullable schema 或历史重复活跃数据阻塞升级；Agent 状态中的 `subagent_runs` 改为以 `run_id` 作为执行身份，`resume` 请求字段明确为 `Command(resume=...)` 输入载荷。
 - 精简旧链路与失败语义：恢复审批统一走 `POST /api/agent/runs` 的 `resume` 载荷，移除旧 `POST /api/chat/thread/{id}/resume` 流式接口和已废弃的 `chat_service.agent_chat`；子智能体运行缺少必要线程上下文时直接报错，状态查询只在真实缺失或无权访问时返回 404，内部运行记录格式异常返回 500。
 - 统一流式事件线程 ID 提取契约：新增共享 `extract_thread_id` 工具，`BaseAgent`、聊天服务和 run worker 统一只读取规范化事件的一层稳定路径，并通过显式 fallback 处理父线程归属，避免递归扫描嵌套 metadata 导致父/子线程事件路由分歧。
+- 修复 `GraphQueryService.get_chapter_outline` 遇到多条 ChapterTemplate 时 Neo4j 报 "Expected a result with a single record, but found multiple" UserWarning 的问题：Cypher 在 MATCH 后加 `WITH ch LIMIT 1` 确保只对一条 ch 聚合，`result.single()` 不再触发 warning。同步修复治理脚本 `fix_existing_graph.py` 的 `merge_general_branch` 合并"通用"分支后未去重重复 ChapterTemplate 的问题：新增分步去重 Cypher（迁移 HAS_CHILD/REQUIRES_PARAGRAPH_ROLE 关系到保留节点后 DETACH DELETE 重复节点），已对存量图谱执行去重（7 组重复消除，"地形地貌"从 2 条降为 1 条）。
 
 ## v0.7.0 (2026-06-13)
 
