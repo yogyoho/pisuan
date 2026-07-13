@@ -310,6 +310,17 @@ class GraphBuilder:
             section_order_map[parent_path_str].append(section_id)
 
         # 第二遍：创建 ParagraphTemplate 和 Slot 节点
+        # 构建 section_path_str → 标题 映射(用于回填 ParagraphTemplate.canonical_chapter_key)
+        section_title_map: dict[str, str] = {}
+        for para in source_paragraphs:
+            if not para.get("is_title"):
+                continue
+            sp = para.get("section_path") or para.get("path") or []
+            if not sp:
+                continue
+            sp_str = "/".join(str(p) for p in sp)
+            section_title_map[sp_str] = para.get("title", "")
+
         for para in source_paragraphs:
             chunk_id = para.get("id") or ""
             content = para.get("content") or ""
@@ -328,6 +339,15 @@ class GraphBuilder:
             if not target_section_id:
                 continue
 
+            # 推导所属章节的 canonical_chapter_key(从 section_path 反查最近标题)
+            para_canonical_key = ""
+            sp_list = section_path if isinstance(section_path, list) else []
+            for i in range(len(sp_list), 0, -1):
+                parent_sp_str = "/".join(str(p) for p in sp_list[:i])
+                if parent_sp_str in section_title_map:
+                    para_canonical_key = _derive_canonical_key(section_title_map[parent_sp_str])
+                    break
+
             # 创建 ParagraphTemplate 节点
             generalized = template_data.get("generalized") or template_data.get("generalized_pattern") or ""
             if not generalized:
@@ -345,6 +365,7 @@ class GraphBuilder:
                         pt.id = $template_id,
                         pt.text_pattern = $text_pattern,
                         pt.generalized_pattern = $generalized_pattern,
+                        pt.canonical_chapter_key = $canonical_key,
                         pt.hash = $hash,
                         pt.classify_type = $classify_type,
                         pt.kb_id = $kb_id,
@@ -352,11 +373,13 @@ class GraphBuilder:
                     ON MATCH SET
                         pt.text_pattern = COALESCE($text_pattern, pt.text_pattern),
                         pt.generalized_pattern = COALESCE($generalized_pattern, pt.generalized_pattern),
-                        pt.classify_type = COALESCE($classify_type, pt.classify_type)
+                        pt.classify_type = COALESCE($classify_type, pt.classify_type),
+                        pt.canonical_chapter_key = COALESCE(pt.canonical_chapter_key, $canonical_key)
                     """,
                     template_id=template_id,
                     text_pattern=generalized,
                     generalized_pattern=generalized,
+                    canonical_key=para_canonical_key,
                     hash=template_hash,
                     classify_type=classify_type,
                     kb_id=kb_id,
