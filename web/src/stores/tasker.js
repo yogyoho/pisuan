@@ -52,6 +52,8 @@ const DOMAIN_FACTORY_STATUS_MAP = {
   'GENERALIZING': { status: 'running', progress: 80, message: '正在生成槽位模板...' },
   'WAITING_REVIEW': { status: 'running', progress: 95, message: '信息提取完成，等待人工审核...' },
   'COMMITTED': { status: 'success', progress: 100, message: '报告已入库完成' },
+  'COMMIT_FAILED': { status: 'failed', progress: 100, message: '入库失败，请检查后重试' },
+  'COMMIT_PARTIAL': { status: 'running', progress: 95, message: '部分入库完成，大纲生成未完成' },
   'FAILED': { status: 'failed', progress: 100, message: '执行失败' },
 }
 
