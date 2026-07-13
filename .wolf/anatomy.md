@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-13T05:15:12.549Z
-> Files: 65 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-13T05:19:39.507Z
+> Files: 66 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -222,6 +222,7 @@
 - `domain_factory_service.py` — Domain Factory Service - 领域知识工厂服务层 (~62945 tok)
 - `file_preview.py` — OfficePreviewConversionError: is_office_pdf_preview_file, is_ascii_text_file, is_binary_preview_type (~2725 tok)
 - `ref_resolver.py` — {{REF:chXX/表X-Y}} 位置编号解析器。assemble 时扫各章 content_md 现算。 (~626 tok)
+- `run_worker.py` — ARQ worker for agent runs. (~6522 tok)
 
 ## backend/package/yuxi/storage/minio/
 
