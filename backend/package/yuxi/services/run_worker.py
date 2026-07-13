@@ -1218,6 +1218,7 @@ async def _worker_shutdown(ctx):
 
 class WorkerSettings:
     functions = [process_agent_run]
+    max_jobs = 1  # 单任务串行：agent run 内存占用大(~400MB+),并行会触发 OOM
     max_tries = 2
     retry_jobs = True
     # 单任务最长执行时间（秒），可配置：超长图谱构建/深度检索场景需调大，
