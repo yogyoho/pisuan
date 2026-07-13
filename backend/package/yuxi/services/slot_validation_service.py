@@ -59,3 +59,25 @@ class SlotValidationService:
             message=f"类型冲突: slot.type={slot_type}, entity.type={entity_type}",
             entity_ref=entity_schema.get("name"),
         )
+
+    def _detect_conflicts(
+        self, validations: list[SlotValidationResult]
+    ) -> list[SlotValidationResult]:
+        """检测同名 slot 绑定到不同 entity_ref 的冲突。"""
+        slot_entities: dict[str, set[str]] = {}
+        for v in validations:
+            if v.entity_ref is None:
+                continue
+            slot_entities.setdefault(v.slot_name, set()).add(v.entity_ref)
+
+        conflicts: list[SlotValidationResult] = []
+        for slot_name, entities in slot_entities.items():
+            if len(entities) > 1:
+                conflicts.append(
+                    SlotValidationResult(
+                        slot_name=slot_name,
+                        level=ValidationLevel.WARN,
+                        message=f"冲突: slot '{slot_name}' 绑定到多个 entity: {sorted(entities)}",
+                    )
+                )
+        return conflicts
