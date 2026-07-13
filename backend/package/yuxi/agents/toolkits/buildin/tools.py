@@ -781,8 +781,8 @@ async def _write_assembled_to_sandbox(runtime_context, report_id: str, markdown:
     display_name="装配报告",
     description=ASSEMBLE_REPORT_DESCRIPTION,
 )
-async def assemble_report(report_id: str, runtime: ToolRuntime) -> dict:
-    """合并 done 章节 + 解析 {{REF}} + 检测 {{MISSING}} + 写沙箱,返回成稿信息。"""
+async def assemble_report(report_id: str) -> dict:
+    """合并 done 章节 + 解析 {{REF}} + 检测 {{MISSING}} + 写出 artifact,返回成稿信息。"""
     from yuxi.services.ref_resolver import _MISSING_RE, resolve_refs
 
     repo = DomainFactoryRepository()
@@ -797,11 +797,17 @@ async def assemble_report(report_id: str, runtime: ToolRuntime) -> dict:
         if ch_missing:
             missing_by_chapter[ch.get("canonical_chapter_key", "")] = ch_missing
 
-    artifact_path = await _write_assembled_to_sandbox(runtime.context, report_id, markdown)
+    # 写入共享 outputs 目录
+    from pathlib import Path
+    from yuxi import config
+    out_dir = Path(config.save_dir) / "outputs"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    artifact_path = out_dir / f"report_{report_id}.md"
+    artifact_path.write_text(markdown, encoding="utf-8")
     await repo.mark_assembled(report_id)
     return {
         "markdown": markdown[:500] + ("..." if len(markdown) > 500 else ""),
-        "artifact_path": artifact_path,
+        "artifact_path": str(artifact_path),
         "unresolved_refs": unresolved,
         "missing_params": {
             "total": len(missing_params),
