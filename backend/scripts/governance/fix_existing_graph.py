@@ -13,7 +13,29 @@
 from __future__ import annotations
 
 import argparse
+import re
 from dataclasses import dataclass, field
+
+
+def clean_chapter_title(title: str) -> str:
+    """清洗章节标题:去所有前导编号(双编号/单编号),只留纯标题。纯编号返回空。"""
+    text = (title or "").strip()
+    if not text:
+        return ""
+    if re.fullmatch(r"\d+(?:\.\d+)*", text):
+        return ""
+    # 反复去掉前导"数字.数字. "直到剩下纯标题
+    while True:
+        m = re.match(r"^(\d+(?:\.\d+)*)\s+(.+)$", text)
+        if not m:
+            break
+        text = m.group(2).strip()
+    return text
+
+
+def derive_canonical_key(clean_title: str) -> str:
+    """从清洗后的标题推导 canonical_chapter_key(目前等于标题本身)。"""
+    return (clean_title or "").strip()
 
 
 @dataclass
