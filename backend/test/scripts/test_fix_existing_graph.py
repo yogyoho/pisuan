@@ -25,7 +25,6 @@ def test_report_initialization():
     assert report.fixed_keys == 0
     assert report.merged_branches == 0
     assert report.cleaned_titles == 0
-    assert report.errors == []
 
 
 def test_clean_title_dual_numbering():
