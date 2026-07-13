@@ -1,126 +1,137 @@
-<div align="center">
-<h1>语析 Yuxi</h1>
+llama-server -hf unsloth/gemma-4-E4B-it-GGUF:UD-Q4_K_XL -c 8196 --host 0.0.0.0
+让智能体可构建、可编排、可落地
+统一编排 Agent、知识库、图谱与工具链
+让智能体可落地，让流程可编排，让协作可扩展
+让智能体可构建，让知识可连接，让决策可验证
+让数据可沉淀，让能力可复用，让系统可进化
+开源智能体平台套件，融合 RAG 与知识图谱
 
-<p><strong>多租户 Harness + 企业知识库</strong><br/>让企业知识可被智能体检索、推理与交付</p>
+请详细分析C:\workspace\know\目录下知识工厂页面中数据源管理tab页中，文件报告上传后的处理逻辑，目前本系统的文档报告上传后，进行文档解析、提取、泛化过程有问题，表格数据被切碎了。
 
-[![](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=ffffff)](https://github.com/xerrors/Yuxi/blob/main/docker-compose.yml)
-[![](https://img.shields.io/github/issues/xerrors/Yuxi?color=F48D73)](https://github.com/xerrors/Yuxi/issues)
-[![License](https://img.shields.io/github/license/bitcookies/winrar-keygen.svg?logo=github)](https://github.com/xerrors/Yuxi/blob/main/LICENSE)
-[![DeepWiki](https://img.shields.io/badge/DeepWiki-blue.svg)](https://deepwiki.com/xerrors/Yuxi)
-[![Bilibili](https://img.shields.io/badge/知识库演示-00A1D6?logo=bilibili&logoColor=fff)](https://www.bilibili.com/video/BV1erE26iEgv/?share_source=copy_web&vd_source=37b0bdbf95b72ea38b2dc959cfadc4d8)
+请详细分析C:\workspace\know\目录下知识工厂页面中数据源管理tab页中，文件报告上传后的处理逻辑，目前本系统的文档报告上传后，进行文档解析、提取、泛化过程中，模板泛化有问题，请详细分析源系统是如何实现的，参照源系统来修复。先对比两者实现上有啥不同和差异
 
-
-<a href="https://trendshift.io/repositories/24335" target="_blank"><img src="https://trendshift.io/api/badge/repositories/24335" alt="xerrors%2FYuxi | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-
-[[项目文档]](https://xerrors.github.io/Yuxi) · [[版本特性]](http://xhslink.com/o/5Y6QWnmjF2d) · [[🇬🇧 English README]](README.en.md)
-
-</div>
-
-![arch](https://xerrors.oss-cn-shanghai.aliyuncs.com/github/arch.png)
-
-## 简介
-
-语析（Yuxi）是一个基于大模型的智能知识库与知识图谱智能体开发平台。它把 **RAG 检索**、**Milvus 知识库内知识图谱** 与 **LangGraph 多智能体编排** 整合进统一的多租户工作台：管理员配置知识库、模型与权限，用户在类 ChatGPT 的界面中与可挂载 Skills、MCP、子智能体和沙盒工具的智能体对话，并获得带引用来源、知识图谱推理与可交付产物的回答。
-
-导航：[项目介绍](https://xerrors.github.io/Yuxi/) ｜ [快速开始](https://xerrors.github.io/Yuxi/intro/quick-start) ｜ [开发路线图](https://xerrors.github.io/Yuxi/develop-guides/roadmap) | [0.7 版本特性](http://xhslink.com/o/5Y6QWnmjF2d)；最新开发动态，详见 [changelog](https://xerrors.github.io/Yuxi/develop-guides/changelog)。
-
-> 📢 求职：作者为江南大学软件工程博士研究生，研究方向 AI Agent、知识图谱与大模型应用，预计 2027 年毕业，现寻求实习/全职机会，欢迎联系：wenjie.zhang@stu.jiangnan.edu.cn
-
----
-
-🩷 赞助商
-
-<table>
-  <tr>
-    <td style="width: 220px; padding: 8px 12px 8px 8px; vertical-align: middle;">
-      <img 
-        width="220" 
-        height="64" 
-        alt="7fb163d0fb02740948521dbcaf6191ea" 
-        src="https://xerrors.oss-cn-shanghai.aliyuncs.com/github/image-20260623195812766.png"
-      />
-    </td>
-    <td style="padding: 8px 8px 8px 0; vertical-align: middle;">
-      <p style="margin: 0 0 4px 0;">
-        感谢 <a href="https://sui-xiang.com/">随想AI中转站</a > 对本项目的赞助！
-        随想AI中转站 是一家可靠高效的 API 中继服务提供商，提供 Claude、Codex、Gemini 等的中继服务。注重隐私的中转站·无数据倒卖·无模型掺水，隐私，透明，极速售后。新账户注册每日签到就送 0.5 元测试额度，充值额度 1:1，无需订阅，按量付费。
-      </p >
-    </td>
-  </tr>
-</table>
-
-![image-20260606190609377](https://xerrors.oss-cn-shanghai.aliyuncs.com/github/image-20260606235615139.png)
-
-## 技术栈
-
-| 层 | 技术 |
-| --- | --- |
-| 前端 | Vue 3 · Vite · Pinia |
-| 后端 | FastAPI · LangGraph · ARQ (异步 worker) |
-| 存储 | PostgreSQL · Redis · MinIO · Milvus · Neo4j |
-| 文档解析 | MinerU · PaddleX · RapidOCR |
-| 部署 | Docker Compose |
-## 快速开始
-
-**前置要求**：已安装 [Docker](https://docs.docker.com/get-docker/) 与 Docker Compose，并准备至少一个兼容 OpenAI 接口的大模型 API。
-
-**1. 克隆代码并初始化**
-
-```bash
-git clone --branch v0.7.1.beta1 --depth 1 https://github.com/xerrors/Yuxi.git
-cd Yuxi
-
-# Linux/macOS
-./scripts/init.sh
-
-# Windows PowerShell
-.\scripts\init.ps1
-```
-
-**2. 使用 Docker 启动**
-
-```bash
-docker compose up --build
-```
-
-**3. 访问平台**
-
-等待启动完成后，浏览器打开 `http://localhost:5173`，使用初始化时生成的管理员账户登录即可。
-
-> 💡 不需要知识库 / 知识图谱等重依赖时，可使用 `make up-lite` 以 LITE 轻量模式启动，加快冷启动速度。更多部署说明见 [项目文档](https://xerrors.github.io/Yuxi)。
-
-## 致谢
-
-本项目参考并引用了以下优秀开源项目，在此致以诚挚的感谢：
-
-- [LightRAG](https://github.com/HKUDS/LightRAG) - 早期版本曾参考其图谱构建与检索思路；当前 Yuxi 已实现自研 Milvus 知识库/图谱链路以替换历史集成，降低兼容性问题
-- [DeepAgents](https://github.com/langchain-ai/deepagents) - 直接引入作为深度智能体框架
-- [DeerFlow](https://github.com/bytedance/deer-flow) - 参考了其 Sandbox 智能体架构的实现思路
-- [RAGflow](https://github.com/infiniflow/ragflow) - 参考了其文档 Text Chunking 的分块策略
-- [LangGraph](https://github.com/langchain-ai/langgraph) - 多智能体编排框架，本项目的核心架构基础
-- [QwenPaw](https://github.com/agentscope-ai/QwenPaw) - 参考模型配置与个人文件区域设计
-
-## 参与贡献
-
-感谢所有贡献者的支持！
-
-<a href="https://github.com/xerrors/Yuxi/contributors">
-  <img src="https://contrib.rocks/image?repo=xerrors/Yuxi&max=100&columns=10" />
-</a>
+我在本系统领域知识工厂模块中将工程类的报告样例上传，然后进行了文档解析、章节、段落、表格等元素的提取、将段落泛化成模
+  板，然后通过人工校验，保存到lightRAG知识库中，我希望加工后数据可以封装成skills，然后在Agent对话页面中，在报告智能编写
+  过程中被Agent调用。想设计三个skills主要是
+  1.段落模板的智能推荐：根据用户提问中
+  关键字，从相应领域知识库中搜索相应章节和段落，如果给定某某章节和章节标题，就要搜索该章节及其子章节，需要合并输出。
+  2.智能填插槽：如果上文中已经给出了选定的章节及段落模板，那就需要要根据上下文或用户提供附件文件，智能给段落模板中插槽
+  填文字和数据，不允许编造数据，给出每个填充后数据的置信度，填不上的，让用户补充填写。
+  注意：
+   - 智能填槽skill依赖段落模板推荐skill。
+   - 数据不能插槽数据不能编造。
+   - 整个章节模板推荐要将该章节及其子章节和段落合并后完整推荐。
 
 
-## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=xerrors/Yuxi)](https://star-history.com/#xerrors/Yuxi)
+{
+  "id": "p4",
+  "title": "",
+  "content": "伊宁矿区北区位于伊犁盆地北缘，地势东高西低，北高南低，东南部地表起伏不平，东北部稍高但较为平坦，属低山丘陵地貌，海拔标高一般为+630 m～+1200 m，一般相对高差50～150 m。",
+  "is_title": false,
+  "level": 0,
+  "section_path": [
+    "1",
+    "1.1",
+    "1.1.1"
+  ],
+  "section_code": "SEC_1_1.1_1.1.1",
+  "word_count": 93,
+  "char_count": 93,
+  "parent_title": "1",
+  "source": "paragraph",
+  "is_table": false
+}
 
-## 📄 许可证
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+总结一下 Prompt 模板管理的改动：
+
+  改动内容
+
+  1. 新增配置文件 backend/package/yuxi/config/static/prompt_templates.yaml
+
+  - 4 种 prompt 模板：extract、template、schema_generation、section_generalization
+  - 每种模板都有中文注释说明可用的占位符
+  - 与前端 PromptConfigView.vue 的 defaultPrompts 保持同步
+
+  2. 修改 domain_factory_service.py
+
+  - _load_prompt_templates() — 先从 YAML 文件读取，再用数据库记录覆盖
+  - _load_prompts_from_file() — 从 prompt_templates.yaml 加载
+  - _render_prompt() — 统一的占位符替换方法
+  - _build_extract_prompt() — 使用 DB/文件模板替代硬编码
+  - _build_text_generalize_prompt() — 使用 DB/文件模板替代硬编码
+  - generalize_paragraphs() — 预加载模板，一次 DB 查询复用
+  - save_prompt_config() — 保存后清除缓存，下次生效
+
+  数据流
+
+  prompt_templates.yaml (文件默认值)
+          ↓ 覆盖
+  DomainFactoryPromptConfig 表 (用户自定义)
+          ↓ 缓存
+  _render_prompt() 占位符替换
+          ↓
+  ETL 流程实际使用
+
+  现在前端"提示词管理"页面编辑的 prompt 会真正影响文档处理流程。
+
+
 
 ---
 
-<div align="center">
+# 领域知识工厂解析、提取、泛化过程的提示词
 
-**如果这个项目对您有帮助，请不要忘记给我们一个 ⭐️**
+你是一名严谨的领域信息抽取专家，正在处理 {domain_label} 领域的环境影响报告。
+请根据提供的 Schema 变量和章节提示，从下方文本中抽取结构化信息。
 
-</div>
+要求：
+1. 仅输出 JSON，不要包含额外说明，不要输出任何自然语言解释；
+2. 若无法确定某字段的值，请输出 null；
+3. 数值统一转换到对应字段的单位（例如吨/年 -> Mt/a）；
+4. 如果文本包含多个对象，优先选择与当前章节最相关的内容，并在 `candidates` 中给出引用的原文片段；
+5. 仅使用 Schema 中定义的字段；
+6. 严格禁止输出代码块标记（例如 ```json 或 ```），也不要在 JSON 前后添加任何多余字符。
+
+可用 Schema 变量：
+{schema_variables}
+当前章节：{chapter_hint}
+
+文本片段：
+"""
+{paragraph}
+"""
+
+必需输出 JSON，如：
+{{
+  "base_info": {{ ... }}
+}}
+
+---
+
+
+你是一个专业的文档信息提取助手。请从以下文档中提取结构化信息。
+
+## 需要提取的字段：
+{variables}
+
+## 文档内容：
+{content}
+
+## 输出要求：
+请以 JSON 格式返回提取结果，格式如下：
+{
+  "字段Key": "提取到的值",
+  "_confidence_字段Key": 0.0-1.0之间的置信度
+}
+
+注意：
+1. 只返回 JSON，不要有其他内容
+2. 如果某个字段在文档中未找到，设置值为 null
+3. 置信度 1.0 表示非常有把握，0.5 表示不确定
+4. 只提取文档中明确提到的信息，不要推断
+
+
+
+---
+

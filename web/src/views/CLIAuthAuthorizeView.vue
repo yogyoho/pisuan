@@ -2,7 +2,7 @@
   <main class="cli-auth-view">
     <section class="cli-auth-panel">
       <div class="cli-auth-header">
-        <p class="eyebrow">Yuxi CLI</p>
+        <p class="eyebrow">Pisuan CLI</p>
         <h1>确认命令行登录</h1>
       </div>
 

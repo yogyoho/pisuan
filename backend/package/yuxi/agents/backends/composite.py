@@ -161,41 +161,23 @@ class _BackendScope:
         )
 
     def create_backend(self) -> CompositeBackend:
-        selected = self.readable_skills
-        if not selected:
-            from yuxi.agents.skills.service import get_skills_root_dir
-            skills_root = get_skills_root_dir()
-            if skills_root.is_dir():
-                selected = list({d.name for d in skills_root.iterdir() if d.is_dir()})
-        skills_route = SelectedSkillsReadonlyBackend(selected_slugs=selected)
         return CustomCompositeBackend(
             default=ProvisionerSandboxBackend(
                 thread_id=self.thread_id,
                 uid=self.uid,
-                readable_skills=selected if selected else self.readable_skills,
+                readable_skills=self.readable_skills,
                 file_thread_id=self.file_thread_id,
                 skills_thread_id=self.skills_thread_id,
             ),
             routes={
-                "/home/gem/skills/": skills_route,
-                "/skills/": skills_route,
+                "/skills/": SelectedSkillsReadonlyBackend(selected_slugs=self.readable_skills),
             },
             artifacts_root=VIRTUAL_PATH_OUTPUTS,
         )
 
 
 def create_agent_composite_backend(runtime) -> CompositeBackend:
-    backend = _BackendScope.from_runtime(runtime).create_backend()
-    # 强制补 skills 路由(某些 middleware 构造路径不会经过 create_backend 的路由设置)
-    from yuxi.agents.skills.service import get_skills_root_dir
-    skills_root = get_skills_root_dir()
-    if skills_root.is_dir():
-        skills_route = SelectedSkillsReadonlyBackend(
-            selected_slugs=list({d.name for d in skills_root.iterdir() if d.is_dir()})
-        )
-        backend.routes["/home/gem/skills/"] = skills_route
-        backend.sorted_routes = sorted(backend.routes.items(), key=lambda x: len(x[0]), reverse=True)
-    return backend
+    return _BackendScope.from_runtime(runtime).create_backend()
 
 
 def create_agent_filesystem_middleware(

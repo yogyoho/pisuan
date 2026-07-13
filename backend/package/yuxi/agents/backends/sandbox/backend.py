@@ -195,10 +195,6 @@ class ProvisionerSandboxBackend(BaseSandbox):
             raise ValueError("uid is required for ProvisionerSandboxBackend")
 
         self._readable_skills = list(readable_skills or [])
-        if not self._readable_skills:
-            from yuxi.agents.skills.buildin import BUILTIN_SKILLS
-            self._readable_skills = [spec.slug for spec in BUILTIN_SKILLS]
-        sync_thread_readable_skills(self._skills_thread_id, self._readable_skills)
         self._provider = get_sandbox_provider()
         self._id = sandbox_id_for_thread(self._file_thread_id, self._skills_thread_id, uid=self._uid)
         self._client: Any | None = None
@@ -221,13 +217,11 @@ class ProvisionerSandboxBackend(BaseSandbox):
         return AgentSandboxClient(base_url=sandbox_url, timeout=self._command_timeout_seconds)
 
     def _get_client(self) -> Any:
-        skills_to_sync = self._readable_skills
-        if not skills_to_sync:
-            # 回退:readable_skills 在 runtime 传播时可能丢失,用全部 builtin skills
-            from yuxi.agents.skills.buildin import BUILTIN_SKILLS
-            skills_to_sync = [spec.slug for spec in BUILTIN_SKILLS]
-            logger.warning("readable_skills 为空,回退同步全部 builtin skills")
-        sync_thread_readable_skills(self._skills_thread_id, skills_to_sync)
+        logger.warning(
+            "[SKILLS-DEBUG] _get_client: skills_thread_id=%s readable_skills=%s",
+            self._skills_thread_id, self._readable_skills,
+        )
+        sync_thread_readable_skills(self._skills_thread_id, self._readable_skills)
         connection = self._provider.get(
             self._thread_id,
             uid=self._uid,
@@ -345,6 +339,9 @@ class ProvisionerSandboxBackend(BaseSandbox):
             return ReadResult(error=f"Invalid path '{file_path}': {exc}")
         if not _can_read_path(normalized_path):
             return ReadResult(error=_permission_error("read", normalized_path))
+
+        if normalized_path.startswith("/home/gem/skills/"):
+            logger.warning("[SKILLS-DEBUG] SandboxBackend.read() handling skills path: %s", normalized_path)
 
         try:
             if _get_file_type(normalized_path) != "text":
