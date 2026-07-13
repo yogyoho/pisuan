@@ -85,3 +85,48 @@ async def test_slot_quality_too_many_slots_warns():
     result = await validator.validate(task_detail)
     assert result.passed is True  # 警告不阻塞
     assert any("slot 数量" in w for w in result.warnings)
+
+
+@pytest.mark.asyncio
+async def test_slot_quality_pure_digit_name_fails():
+    """slot.name 为纯数字 → 失败"""
+    validator = PreCommitValidator()
+    task_detail = {
+        "source_paragraphs": [
+            {
+                "id": "p1",
+                "type": "parameter",
+                "template": {
+                    "text_pattern": "{{123}}",
+                    "slots": [{"name": "123", "type": "string"}],
+                },
+            }
+        ]
+    }
+    result = await validator.validate(task_detail)
+    assert result.passed is False
+    assert any("纯数字" in e for e in result.errors)
+
+
+@pytest.mark.asyncio
+async def test_slot_quality_duplicate_signature_warns():
+    """同段落两个 slot 同名 → 警告(重复 slot 签名)"""
+    validator = PreCommitValidator()
+    task_detail = {
+        "source_paragraphs": [
+            {
+                "id": "p1",
+                "type": "parameter",
+                "template": {
+                    "text_pattern": "{{矿区}}{{矿区}}",
+                    "slots": [
+                        {"name": "矿区", "type": "string"},
+                        {"name": "矿区", "type": "string"},
+                    ],
+                },
+            }
+        ]
+    }
+    result = await validator.validate(task_detail)
+    assert result.passed is True  # 警告不阻塞
+    assert any("重复 slot 签名" in w for w in result.warnings)
