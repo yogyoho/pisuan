@@ -577,8 +577,9 @@ domain/report_type code 是数据库精确匹配字段，get_chapter_outline / g
 )
 async def list_report_types(domain: str) -> list[dict]:
     """查询数据字典中指定领域的报告类型 code。"""
+    from yuxi.repositories.domain_entity_repository import DomainEntityRepository
     domain = _normalize_domain(domain)
-    repo = DomainFactoryRepository()
+    repo = DomainEntityRepository()
     return await repo.list_report_types(domain)
 
 
@@ -707,8 +708,14 @@ async def set_pps_param(
 
 SAVE_CHAPTER_DESCRIPTION = """
 懒建/更新一章。canonical_chapter_key 用 get_chapter_outline 的大纲章节名。
-content_md 为本章 markdown 正文(含 {{REF:chXX/表X-Y}} 交叉引用占位符)。
-status 取 writing|done|skipped;done 时 content_md 不能为空。
+content_md 为本章 markdown 正文(含 {{REF:chXX/表X-Y}} 交叉引用占位符、{{MISSING:参数}} 数据占位符)。
+status 取:
+  - writing: 起草中(默认)
+  - done: 终稿锁定
+  - skipped: 用户明确跳过
+  - pending_data: 等待用户补充数据后再继续
+  - review: 提交审批(等待组长/用户确认)
+done 时 content_md 不能为空。
 """
 
 
@@ -726,9 +733,14 @@ async def save_chapter(
     summary: str,
     status: str,
 ) -> dict:
-    """懒建或更新一章，自动从大纲推导 chapter_order，并校验 done 时不允许空正文。"""
+    """懒建或更新一章，自动从大纲推导 chapter_order，并校验。status: writing|done|skipped|pending_data|review"""
+    valid_statuses = {"writing", "done", "skipped", "pending_data", "review"}
+    if status not in valid_statuses:
+        return {"error": f"无效 status: {status}，合法值: {', '.join(sorted(valid_statuses))}"}
     if status == "done" and not (content_md or "").strip():
         return {"error": "status=done 时 content_md 不能为空"}
+    if status == "review" and not (content_md or "").strip():
+        return {"error": "status=review 时 content_md 不能为空"}
     repo = DomainFactoryRepository()
     if not await repo.report_exists(report_id):
         return {"error": f"报告 {report_id} 不存在。请先调 create_report 创建报告后再 save_chapter。"}
@@ -770,16 +782,161 @@ async def _write_assembled_to_sandbox(runtime_context, report_id: str, markdown:
     description=ASSEMBLE_REPORT_DESCRIPTION,
 )
 async def assemble_report(report_id: str, runtime: ToolRuntime) -> dict:
-    """合并 done 章节 + 解析 {{REF}} + 写沙箱,返回成稿信息。"""
-    from yuxi.services.ref_resolver import resolve_refs
+    """合并 done 章节 + 解析 {{REF}} + 检测 {{MISSING}} + 写沙箱,返回成稿信息。"""
+    from yuxi.services.ref_resolver import _MISSING_RE, resolve_refs
 
     repo = DomainFactoryRepository()
     chapters = await repo.list_chapters(report_id, status_only="done")
     markdown, unresolved = resolve_refs(chapters)
+
+    # 检测 {{MISSING:...}} 占位符并分组
+    missing_params = sorted(set(_MISSING_RE.findall(markdown)))
+    missing_by_chapter = {}
+    for ch in chapters:
+        ch_missing = list(set(_MISSING_RE.findall(ch.get("content_md") or "")))
+        if ch_missing:
+            missing_by_chapter[ch.get("canonical_chapter_key", "")] = ch_missing
+
     artifact_path = await _write_assembled_to_sandbox(runtime.context, report_id, markdown)
     await repo.mark_assembled(report_id)
     return {
         "markdown": markdown[:500] + ("..." if len(markdown) > 500 else ""),
         "artifact_path": artifact_path,
         "unresolved_refs": unresolved,
+        "missing_params": {
+            "total": len(missing_params),
+            "params": missing_params,
+            "by_chapter": missing_by_chapter,
+        },
     }
+
+
+# ========== v2 计算工具 ==========
+
+CALCULATE_A_VALUE_DESCRIPTION = """
+大气环境容量 A 值法计算。
+
+参数:
+- A: 地理区域总量控制系数 (如 3.5)
+- Ci: 污染物环境质量标准 (mg/m³)
+- Si: 区域面积 (km²)
+
+返回:
+- capacity: 环境容量 (10⁴ t/a)
+- formula: 使用的公式
+- steps: 分步计算过程
+"""
+
+
+@tool(
+    category="buildin",
+    tags=["计算工具", "大气"],
+    display_name="A值法大气容量",
+    description=CALCULATE_A_VALUE_DESCRIPTION,
+)
+async def calculate_a_value(A: float, Ci: float, Si: float) -> dict:
+    """A 值法计算大气环境容量。"""
+    capacity = A * Ci * Si / 10000.0
+    return {
+        "capacity": round(capacity, 4),
+        "unit": "10⁴ t/a",
+        "formula": "C = A × Ci × Si / 10000",
+        "steps": [
+            {"step": "代入数值", "detail": f"C = {A} × {Ci} × {Si} / 10000"},
+            {"step": "计算结果", "detail": f"C = {round(capacity, 4)} (10⁴ t/a)"},
+        ],
+    }
+
+
+CALCULATE_WATER_CAPACITY_DESCRIPTION = """
+一维稳态水质模型水环境容量计算。
+
+参数:
+- C0: 初始浓度 (mg/L)
+- K: 降解系数 (d⁻¹)
+- x: 距离 (m)
+- u: 流速 (m/s)
+
+返回:
+- Cx: 预测点浓度 (mg/L)
+- formula: 使用的公式
+- steps: 分步计算过程
+"""
+
+
+@tool(
+    category="buildin",
+    tags=["计算工具", "水环境"],
+    display_name="一维稳态水质模型",
+    description=CALCULATE_WATER_CAPACITY_DESCRIPTION,
+)
+async def calculate_water_capacity(C0: float, K: float, x: float, u: float) -> dict:
+    """一维稳态水质模型: C(x) = C₀ exp(-Kx/u)"""
+    import math
+    exponent = -K * x / (u * 86400)  # u 从 m/s 转为 m/d
+    Cx = C0 * math.exp(exponent)
+    return {
+        "Cx": round(Cx, 4),
+        "unit": "mg/L",
+        "formula": "C(x) = C₀ × exp(-Kx/u)",
+        "steps": [
+            {"step": "流速单位换算", "detail": f"u = {u} m/s = {u * 86400} m/d"},
+            {"step": "计算指数", "detail": f"-Kx/u = -{K}×{x}/{u*86400} = {exponent:.6f}"},
+            {"step": "代入公式", "detail": f"C({x}) = {C0} × exp({exponent:.6f}) = {round(Cx, 4)}"},
+        ],
+    }
+
+
+LOOKUP_SUBSIDENCE_DESCRIPTION = """
+从知识库查询同类地质条件下的地表沉陷预计算结果（MSPS 软件输出）。
+
+参数:
+- depth: 采深范围描述 (如 "300-500m")
+- coal_seam: 煤层厚度描述 (如 "2-5m")
+- angle: 煤层倾角描述 (如 "0-15°")
+
+返回:
+- matched: 匹配到的预计算结果列表 (null 如果没有匹配)
+- source: 数据来源报告
+- note: 适用性说明
+"""
+
+
+@tool(
+    category="buildin",
+    tags=["计算工具", "沉陷"],
+    display_name="沉陷参数查表",
+    description=LOOKUP_SUBSIDENCE_DESCRIPTION,
+)
+async def lookup_subsidence_params(depth: str, coal_seam: str, angle: str) -> dict:
+    """从 KB 查预计算的沉陷参数。"""
+    from yuxi.knowledge import knowledge_base as kb_manager
+    from yuxi.knowledge.schemas import SearchRequest
+
+    query = f"地表沉陷预测 采深{depth} 煤层{coal_seam} 倾角{angle} MSPS"
+    try:
+        databases = await kb_manager.get_databases_by_type("milvus")
+        if not databases:
+            return {"matched": None, "hint": "知识库中没有可用的监测数据库"}
+
+        request = SearchRequest(
+            kb_id=databases[0]["kb_id"],
+            query=query,
+            limit=3,
+        )
+        results = await kb_manager.search_knowledge(request)
+        if not results:
+            return {
+                "matched": None,
+                "hint": f"未找到匹配的地质条件 ({depth}/{coal_seam}/{angle})，建议委托专业建模",
+            }
+
+        return {
+            "matched": [
+                {"content": r.get("content", "")[:500], "source": r.get("source", ""), "score": r.get("score", 0)}
+                for r in results[:3]
+            ],
+            "note": "以上数据来自同类矿区 MSPS 软件预计算结果，引用时标注来源并注明'参考XX煤矿类似地质条件'",
+        }
+    except Exception as e:
+        return {"matched": None, "error": f"KB 查询失败: {e}"}

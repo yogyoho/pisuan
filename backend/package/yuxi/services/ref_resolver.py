@@ -3,6 +3,7 @@
 import re
 
 _REF_RE = re.compile(r"\{\{REF:([^/]+)/([^}]+)\}\}")
+_MISSING_RE = re.compile(r"\{\{MISSING:([^}]+)\}\}")
 _CAP_TABLE_RE = re.compile(r"\*\*(表[\d\-\.]+)\s*[^*\n]*\*\*")
 _CAP_FIGURE_RE = re.compile(r"!\[(图[\d\-\.]+)[^\]]*\]")
 _CAP_SECTION_RE = re.compile(r"^#{1,6}\s*((?:\d+(?:\.\d+)*)\s+\S.*)$", re.MULTILINE)
