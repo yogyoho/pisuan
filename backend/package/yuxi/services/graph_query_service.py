@@ -38,14 +38,13 @@ class GraphQueryService:
             )
             return [r["key"] for r in result if r["key"]]
 
-    async def get_chapter_outline(
-        self, domain: str, report_type: str, canonical_key: str
-    ) -> dict[str, Any] | None:
+    async def get_chapter_outline(self, domain: str, report_type: str, canonical_key: str) -> dict[str, Any] | None:
         """查询单个章节大纲,含子章节和段落角色预览。"""
         with self._driver.session() as session:
             result = session.run(
                 """
                 MATCH (ch:ChapterTemplate {domain: $domain, report_type: $rt, canonical_chapter_key: $key})
+                WITH ch LIMIT 1
                 OPTIONAL MATCH (ch)-[:HAS_CHILD]->(sub:ChapterTemplate)
                 OPTIONAL MATCH (ch)-[:REQUIRES_PARAGRAPH_ROLE]->(pr:ParagraphRole)
                 RETURN ch.canonical_chapter_key AS key, ch.title AS title,
@@ -72,9 +71,7 @@ class GraphQueryService:
                 "paragraph_roles": [r for r in (rec["roles"] or []) if r],
             }
 
-    async def get_templates(
-        self, domain: str, report_type: str, canonical_key: str
-    ) -> list[dict[str, Any]]:
+    async def get_templates(self, domain: str, report_type: str, canonical_key: str) -> list[dict[str, Any]]:
         """查询某章节下的段落模板,含 Slot 和 LegalReference。
 
         通过先 MATCH ChapterTemplate(domain+report_type+key) 确认该 key 属于
@@ -107,21 +104,17 @@ class GraphQueryService:
                     for s in rec["slots"]
                     if s and s.get("name")
                 ]
-                refs = [
-                    {"code": r["code"], "name": r["name"]}
-                    for r in rec["refs"]
-                    if r and r.get("code")
-                ]
-                templates.append({
-                    "text_pattern": pattern,
-                    "slots": slots,
-                    "legal_references": refs,
-                })
+                refs = [{"code": r["code"], "name": r["name"]} for r in rec["refs"] if r and r.get("code")]
+                templates.append(
+                    {
+                        "text_pattern": pattern,
+                        "slots": slots,
+                        "legal_references": refs,
+                    }
+                )
             return templates
 
-    async def lookup_chapter_order(
-        self, domain: str, report_type: str, canonical_key: str
-    ) -> int | None:
+    async def lookup_chapter_order(self, domain: str, report_type: str, canonical_key: str) -> int | None:
         """查询章节顺序号。"""
         with self._driver.session() as session:
             result = session.run(
