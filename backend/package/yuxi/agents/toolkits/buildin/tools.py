@@ -909,22 +909,17 @@ LOOKUP_SUBSIDENCE_DESCRIPTION = """
     description=LOOKUP_SUBSIDENCE_DESCRIPTION,
 )
 async def lookup_subsidence_params(depth: str, coal_seam: str, angle: str) -> dict:
-    """从 KB 查预计算的沉陷参数。"""
-    from yuxi.knowledge import knowledge_base as kb_manager
-    from yuxi.knowledge.schemas import SearchRequest
-
-    query = f"地表沉陷预测 采深{depth} 煤层{coal_seam} 倾角{angle} MSPS"
+    """从 KB 查预计算的沉陷参数（Phase 5 数据到位后启用 KB 查询）。"""
     try:
+        from yuxi.knowledge import knowledge_base as kb_manager
+
         databases = await kb_manager.get_databases_by_type("milvus")
         if not databases:
-            return {"matched": None, "hint": "知识库中没有可用的监测数据库"}
+            return {"matched": None, "hint": "知识库中没有可用的监测数据库，建议委托专业建模"}
 
-        request = SearchRequest(
-            kb_id=databases[0]["kb_id"],
-            query=query,
-            limit=3,
-        )
-        results = await kb_manager.search_knowledge(request)
+        kb_id = databases[0].get("kb_id")
+        query = f"地表沉陷预测 采深{depth} 煤层{coal_seam} 倾角{angle}"
+        results = await kb_manager.query_kb(kb_id=kb_id, query=query, limit=3)
         if not results:
             return {
                 "matched": None,
@@ -933,10 +928,15 @@ async def lookup_subsidence_params(depth: str, coal_seam: str, angle: str) -> di
 
         return {
             "matched": [
-                {"content": r.get("content", "")[:500], "source": r.get("source", ""), "score": r.get("score", 0)}
-                for r in results[:3]
+                {
+                    "content": (r.get("content") or r.get("text", ""))[:500],
+                    "source": r.get("source", ""),
+                }
+                for r in results[:3] if isinstance(r, dict)
             ],
-            "note": "以上数据来自同类矿区 MSPS 软件预计算结果，引用时标注来源并注明'参考XX煤矿类似地质条件'",
+            "note": "以上数据来自同类矿区 MSPS 软件预计算结果，引用时标注来源",
         }
+    except ImportError:
+        return {"matched": None, "hint": "KB 沉陷参数库尚未就绪（Phase 5 数据基础设施建设中）"}
     except Exception as e:
         return {"matched": None, "error": f"KB 查询失败: {e}"}
