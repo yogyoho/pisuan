@@ -574,7 +574,8 @@ class GraphBuilder:
 
                 ref_name = ref.get("name", "")
                 ref_code = ref.get("code", "")
-                if not ref_name:
+                # Bug3修复: 校验name合法性(长度≤100, 不含表格分隔符)
+                if not ref_name or len(ref_name) > 100 or "|" in ref_name:
                     continue
 
                 # 生成唯一 ID：基于 name + code
@@ -842,6 +843,37 @@ class GraphBuilder:
             else:
                 freq = 1.0
                 rigidity = "rigid"  # 第一篇文档，默认刚性
+
+            # Bug1修复: level=1 且标准章节已存在 → 跳过创建, 后续子章节直接HAS_CHILD到标准章节
+            canonical_key = ch_info.get("canonical_key", "")
+            if level == 1 and domain_code and report_type_code and canonical_key:
+                std_check = tx.run(
+                    """
+                    MATCH (std:ChapterTemplate)
+                    WHERE std.id STARTS WITH $prefix
+                      AND std.level = 1
+                      AND std.canonical_chapter_key = $key
+                    RETURN std.id AS std_id
+                    LIMIT 1
+                    """,
+                    prefix=f"CH_{domain_code}_{report_type_code}_std_",
+                    key=canonical_key,
+                ).single()
+                if std_check:
+                    # 标准章节已存在, 记录映射供后续子章节HAS_CHILD使用
+                    chapter_map[sp_str]["chapter_id"] = std_check["std_id"]
+                    nodes_created += 1
+                    # 建 DomainOutline-HAS_CHAPTER 到标准章节(幂等)
+                    tx.run(
+                        """
+                        MATCH (dol:DomainOutline {id: $outline_id})
+                        MATCH (std:ChapterTemplate {id: $std_id})
+                        MERGE (dol)-[:HAS_CHAPTER]->(std)
+                        """,
+                        outline_id=outline_id,
+                        std_id=std_check["std_id"],
+                    )
+                    continue
 
             tx.run(
                 """
