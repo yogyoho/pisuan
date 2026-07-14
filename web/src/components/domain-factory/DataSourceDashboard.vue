@@ -448,8 +448,9 @@ const handleUpload = async () => {
     selectedReportType.value = ''
 
     setTimeout(() => {
-      refresh()
+      fetchTasks()
       taskerStore.loadTasks()
+      if (hasActiveTasks.value) startAutoRefresh()
     }, 500)
     emit('domains-refreshed')
   } catch (e) {
@@ -861,7 +862,7 @@ defineExpose({ refresh })
 .data-source-dashboard {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0;
   padding: 0;
 }
 
@@ -920,10 +921,10 @@ defineExpose({ refresh })
 
   .domain-toolbar {
     .label {
-      font-size: 14px;
-      font-weight: 600;
+      font-size: 12px;
+      font-weight: 400;
       color: var(--gray-600);
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
 
     .domains {
@@ -933,14 +934,14 @@ defineExpose({ refresh })
       gap: 12px;
 
       :deep(.ant-radio-button-wrapper) {
-        font-size: 12px;
+        font-size: 13px;
         height: 28px;
         line-height: 26px;
         padding: 0 12px;
       }
 
       :deep(.ant-btn-link) {
-        font-size: 12px;
+        font-size: 13px;
         height: 28px;
         line-height: 28px;
         padding: 0 8px;
@@ -1033,6 +1034,7 @@ defineExpose({ refresh })
 .file-table {
   min-height: 0;
   overflow-y: auto;
+  padding: 0 4px;
 }
 
 .file-row {
@@ -1135,6 +1137,8 @@ defineExpose({ refresh })
 
 .list-empty {
   margin-top: 48px;
+  font-size: 13px; 
+  color: var(--gray-600);
 }
 
 // 上传弹窗样式
@@ -1144,7 +1148,7 @@ defineExpose({ refresh })
 
     .instruction-text {
       margin: 0;
-      font-size: 14px;
+      font-size: 13px;
       color: var(--gray-600);
     }
   }
