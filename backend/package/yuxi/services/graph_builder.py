@@ -179,7 +179,7 @@ class GraphBuilder:
                 return stats
 
         except Exception as exc:
-            logger.error(f"构建知识图谱失败: {exc}", exc_info=True)
+            logger.error("构建知识图谱失败: {}", exc, exc_info=True)
             return {"nodes_created": 0, "relationships_created": 0, "error": str(exc)}
 
     # ------------------------------------------------------------------
@@ -904,6 +904,26 @@ class GraphBuilder:
                         child_id=chapter_id,
                     )
                     relationships_created += 1
+
+            # ETL 子章节映射到标准子章节 (level=2 时按标题匹配)
+            if level == 2 and domain_code and report_type_code:
+                std_prefix = f"CH_{domain_code}_{report_type_code}_std_"
+                tx.run(
+                    """
+                    MATCH (etl:ChapterTemplate {id: $etl_id})
+                    MATCH (std:ChapterTemplate)
+                    WHERE std.id STARTS WITH $std_prefix
+                      AND std.level = 2
+                      AND (std.canonical_chapter_key = etl.canonical_chapter_key
+                           OR etl.canonical_chapter_key CONTAINS std.canonical_chapter_key
+                           OR std.canonical_chapter_key CONTAINS etl.canonical_chapter_key)
+                    WITH etl, std LIMIT 1
+                    MERGE (std)-[:HAS_CHILD]->(etl)
+                    SET etl.canonical_chapter_key = std.canonical_chapter_key
+                    """,
+                    etl_id=chapter_id,
+                    std_prefix=std_prefix,
+                )
 
         # 3. ParagraphRole 节点（从 parameter 段落提取段落角色）
         para_order = 0
