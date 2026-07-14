@@ -36,8 +36,51 @@ async def test_get_chapter_outline_returns_structure():
         assert outline is not None
         assert "canonical_chapter_key" in outline
         assert "title" in outline
+        assert "content_contract" in outline, "返回应含 content_contract 字段(可为 None)"
     finally:
         service.close()
+
+
+# ---------------------------------------------------------------------------
+# _derive_content_contract — 纯单元测试(不需要 Neo4j)
+# ---------------------------------------------------------------------------
+
+
+def test_derive_content_contract_from_key_points():
+    """key_points 列表推导出 key_elements"""
+    svc = GraphQueryService.__new__(GraphQueryService)
+    cc = svc._derive_content_contract(
+        key_points=["气候类型", "气温", "降水", "风向风速"],
+        expected_tables=["表3-1 气候特征表"],
+    )
+    assert cc is not None
+    assert cc["key_elements"] == ["气候类型", "气温", "降水", "风向风速"]
+    assert cc["structure_type"] == "narrative_text"
+
+
+def test_derive_content_contract_empty_inputs():
+    """空 key_points 和 expected_tables 返回 None"""
+    svc = GraphQueryService.__new__(GraphQueryService)
+    cc = svc._derive_content_contract(key_points=[], expected_tables=[])
+    assert cc is None
+
+
+def test_derive_content_contract_none_inputs():
+    """None 输入返回 None"""
+    svc = GraphQueryService.__new__(GraphQueryService)
+    cc = svc._derive_content_contract(key_points=None, expected_tables=None)
+    assert cc is None
+
+
+def test_derive_content_contract_with_tables_only():
+    """只有 expected_tables 也能推导(key_elements 为空列表)"""
+    svc = GraphQueryService.__new__(GraphQueryService)
+    cc = svc._derive_content_contract(
+        key_points=[],
+        expected_tables=["表3-1 气候特征表"],
+    )
+    assert cc is not None
+    assert cc["key_elements"] == []
 
 
 @pytest.mark.asyncio
