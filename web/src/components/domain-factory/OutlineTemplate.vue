@@ -1,46 +1,44 @@
 <template>
   <div class="outline-template">
-    <div class="ot-header">
-      <span class="ot-title">大纲模板管理</span>
-      <div class="ot-actions">
-        <a-button size="small" @click="loadList" :loading="loadingList">
-          <template #icon><ReloadOutlined /></template>
-          刷新
-        </a-button>
-        <a-button type="primary" size="small" @click="handleSave" :loading="saving" :disabled="!selectedKey">
-          <template #icon><SaveOutlined /></template>
-          保存
-        </a-button>
-      </div>
-    </div>
-
-    <div class="ot-body">
+    <div class="ot-main-content">
       <!-- 左侧: 章节列表 -->
-      <div class="ot-sidebar">
-        <a-spin :spinning="loadingList">
-          <div
-            v-for="item in chapterList"
-            :key="item.key"
-            class="ot-chapter-item"
-            :class="{ active: item.key === selectedKey }"
-            @click="selectChapter(item.key)"
-          >
-            <span class="ot-chapter-order">{{ item.order }}</span>
-            <span class="ot-chapter-title">{{ item.title }}</span>
-            <span v-if="item.content_contract_summary" class="ot-cc-badge">
-              {{ item.content_contract_summary.total_reports }}报告
-            </span>
-          </div>
-        </a-spin>
+      <div class="ot-left-panel">
+        <div class="ot-panel-header">
+          <span class="ot-panel-title">章节列表</span>
+          <a-button size="small" @click="loadList" :loading="loadingList">
+            <template #icon><ReloadOutlined /></template>
+            刷新
+          </a-button>
+        </div>
+        <div class="ot-chapter-list">
+          <a-spin :spinning="loadingList">
+            <div
+              v-for="item in chapterList"
+              :key="item.key"
+              class="ot-chapter-item"
+              :class="{ active: item.key === selectedKey }"
+              @click="selectChapter(item.key)"
+            >
+              <span class="ot-chapter-order">{{ item.order }}</span>
+              <span class="ot-chapter-title">{{ item.title }}</span>
+              <span v-if="item.content_contract_summary" class="ot-cc-badge">
+                {{ item.content_contract_summary.total_reports }}报告
+              </span>
+            </div>
+          </a-spin>
+        </div>
       </div>
 
-      <!-- 右侧: 章节详情 -->
-      <div class="ot-detail">
-        <a-spin :spinning="loadingDetail">
-          <template v-if="detail">
-            <a-form layout="vertical" :model="detail">
+      <!-- 右侧: 章节详情编辑器 -->
+      <div class="ot-right-panel">
+        <div v-if="!detail" class="ot-empty-state">
+          <a-empty description="请从左侧选择章节进行编辑" />
+        </div>
 
-              <!-- 编写目的 -->
+        <div v-else class="ot-editor">
+          <!-- 基础信息 -->
+          <a-card title="基础信息" size="small" class="ot-editor-section">
+            <a-form :model="detail" layout="vertical">
               <a-form-item label="编写目的">
                 <a-textarea
                   v-model:value="detail.purpose"
@@ -49,7 +47,6 @@
                 />
               </a-form-item>
 
-              <!-- 提取关键字 -->
               <a-form-item label="提取关键字">
                 <a-select
                   v-model:value="detail.key_points"
@@ -59,33 +56,36 @@
                 />
               </a-form-item>
 
-              <!-- 正则表达式 -->
               <a-form-item label="提取正则表达式">
                 <a-input
                   v-model:value="detail.extraction_regex"
                   placeholder="用于从报告中提取该章节内容的正则表达式"
                 />
               </a-form-item>
+            </a-form>
+          </a-card>
 
-              <!-- 内容契约 -->
-              <a-form-item v-if="detail.content_contract" label="内容契约">
-                <div class="ot-contract">
-                  <div class="ot-contract-row">
-                    <span class="ot-contract-label">必写要素 ({{ requiredElements.length }}):</span>
-                    <a-tag v-for="el in requiredElements" :key="el" color="green">{{ el }}</a-tag>
-                  </div>
-                  <div class="ot-contract-row">
-                    <span class="ot-contract-label">可选要素 ({{ optionalElements.length }}):</span>
-                    <a-tag v-for="el in optionalElements" :key="el" color="orange">{{ el }}</a-tag>
-                  </div>
-                  <div class="ot-contract-row">
-                    <span class="ot-contract-label">贡献报告数:</span>
-                    <span>{{ detail.content_contract.total_reports || 0 }}</span>
-                  </div>
-                </div>
-              </a-form-item>
+          <!-- 内容契约 -->
+          <a-card v-if="detail.content_contract" title="内容契约" size="small" class="ot-editor-section">
+            <div class="ot-contract">
+              <div class="ot-contract-row">
+                <span class="ot-contract-label">必写要素 ({{ requiredElements.length }}):</span>
+                <a-tag v-for="el in requiredElements" :key="el" color="green">{{ el }}</a-tag>
+              </div>
+              <div class="ot-contract-row">
+                <span class="ot-contract-label">可选要素 ({{ optionalElements.length }}):</span>
+                <a-tag v-for="el in optionalElements" :key="el" color="orange">{{ el }}</a-tag>
+              </div>
+              <div class="ot-contract-row">
+                <span class="ot-contract-label">贡献报告数:</span>
+                <span>{{ detail.content_contract.total_reports || 0 }}</span>
+              </div>
+            </div>
+          </a-card>
 
-              <!-- 编写提示词 -->
+          <!-- 编写提示 -->
+          <a-card title="编写提示" size="small" class="ot-editor-section">
+            <a-form :model="detail" layout="vertical">
               <a-form-item label="编写提示词">
                 <a-textarea
                   v-model:value="detail.writing_hints"
@@ -94,7 +94,6 @@
                 />
               </a-form-item>
 
-              <!-- 法规标准引用 -->
               <a-form-item label="法规标准引用">
                 <a-select
                   v-model:value="detail.regulations"
@@ -104,7 +103,6 @@
                 />
               </a-form-item>
 
-              <!-- 预期内容 -->
               <a-row :gutter="16">
                 <a-col :span="8">
                   <a-form-item label="预期表格">
@@ -137,21 +135,29 @@
                   </a-form-item>
                 </a-col>
               </a-row>
-
-              <!-- 子章节结构 -->
-              <a-form-item v-if="detail.child_chapters && detail.child_chapters.length" label="子章节结构">
-                <div class="ot-children">
-                  <div v-for="child in detail.child_chapters" :key="child.key" class="ot-child-item">
-                    <span class="ot-child-title">{{ child.title }}</span>
-                    <span class="ot-child-key">{{ child.key }}</span>
-                  </div>
-                </div>
-              </a-form-item>
-
             </a-form>
-          </template>
-          <a-empty v-else description="请从左侧选择章节" />
-        </a-spin>
+          </a-card>
+
+          <!-- 子章节结构 -->
+          <a-card v-if="detail.child_chapters && detail.child_chapters.length" title="子章节结构" size="small" class="ot-editor-section">
+            <div class="ot-children">
+              <div v-for="child in detail.child_chapters" :key="child.key" class="ot-child-item">
+                <span class="ot-child-title">{{ child.title }}</span>
+                <span class="ot-child-key">{{ child.key }}</span>
+              </div>
+            </div>
+          </a-card>
+
+          <!-- 操作按钮 -->
+          <div class="ot-editor-actions">
+            <a-space>
+              <a-button type="primary" @click="handleSave" :loading="saving" :disabled="!selectedKey">
+                <template #icon><SaveOutlined /></template>
+                保存
+              </a-button>
+            </a-space>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -249,44 +255,47 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="less">
 .outline-template {
-  display: flex;
-  flex-direction: column;
   height: 100%;
 }
 
-.ot-header {
+.ot-main-content {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  margin-bottom: 8px;
+  gap: 16px;
+  height: calc(100vh - 200px);
 }
 
-.ot-title {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.ot-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.ot-body {
-  display: flex;
-  gap: 12px;
-  flex: 1;
-  min-height: 0;
-}
-
-.ot-sidebar {
-  width: 240px;
+// ---- Left panel ----
+.ot-left-panel {
+  width: 280px;
   flex-shrink: 0;
-  overflow-y: auto;
-  border-right: 1px solid #f0f0f0;
-  padding-right: 8px;
+  background: var(--gray-0);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  .ot-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    border-bottom: 1px solid var(--gray-100);
+  }
+
+  .ot-panel-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900);
+  }
+
+  .ot-chapter-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
 }
 
 .ot-chapter-item {
@@ -296,34 +305,37 @@ onMounted(() => {
   padding: 8px 12px;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s;
-}
+  transition: background 0.15s;
+  margin-bottom: 2px;
 
-.ot-chapter-item:hover {
-  background: #f5f5f5;
-}
+  &:hover {
+    background: var(--gray-50);
+  }
 
-.ot-chapter-item.active {
-  background: #e6f7ff;
-  color: #1890ff;
-  font-weight: 500;
+  &.active {
+    background: var(--main-20);
+    color: var(--main-color);
+    font-weight: 500;
+
+    .ot-chapter-order {
+      background: var(--main-color);
+      color: #fff;
+    }
+  }
 }
 
 .ot-chapter-order {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
+  min-width: 24px;
   height: 24px;
   border-radius: 4px;
-  background: #f0f0f0;
+  background: var(--gray-100);
   font-size: 12px;
+  font-weight: 600;
   flex-shrink: 0;
-}
-
-.ot-chapter-item.active .ot-chapter-order {
-  background: #1890ff;
-  color: white;
+  color: var(--gray-600);
 }
 
 .ot-chapter-title {
@@ -332,41 +344,68 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--gray-700);
+}
+
+.ot-chapter-item.active .ot-chapter-title {
+  color: var(--main-color);
 }
 
 .ot-cc-badge {
   font-size: 11px;
-  color: #999;
+  color: var(--gray-400);
   flex-shrink: 0;
 }
 
-.ot-detail {
+// ---- Right panel ----
+.ot-right-panel {
   flex: 1;
+  background: var(--gray-0);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   overflow-y: auto;
-  padding: 0 4px;
+  padding: 24px;
+
+  .ot-empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+  }
 }
 
+.ot-editor {
+  .ot-editor-section {
+    margin-bottom: 20px;
+  }
+
+  .ot-editor-actions {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--gray-200);
+  }
+}
+
+// ---- Content sections ----
 .ot-contract {
-  background: #fafafa;
-  border-radius: 6px;
-  padding: 12px;
-}
+  .ot-contract-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 8px;
 
-.ot-contract-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 8px;
-}
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
 
-.ot-contract-row:last-child {
-  margin-bottom: 0;
-}
-
-.ot-contract-label {
-  font-weight: 500;
-  margin-right: 4px;
+  .ot-contract-label {
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--gray-600);
+    margin-right: 4px;
+  }
 }
 
 .ot-children {
@@ -378,17 +417,22 @@ onMounted(() => {
 .ot-child-item {
   display: flex;
   justify-content: space-between;
-  padding: 6px 12px;
-  background: #fafafa;
-  border-radius: 4px;
-}
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-100);
+  border-radius: 6px;
 
-.ot-child-title {
-  font-size: 13px;
-}
+  .ot-child-title {
+    font-size: 13px;
+    color: var(--gray-700);
+    font-weight: 500;
+  }
 
-.ot-child-key {
-  font-size: 12px;
-  color: #999;
+  .ot-child-key {
+    font-size: 12px;
+    color: var(--gray-400);
+    font-family: monospace;
+  }
 }
 </style>
