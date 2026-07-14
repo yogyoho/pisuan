@@ -8,7 +8,7 @@ async def test_list_chapter_keys_returns_distinct_keys():
     try:
         keys = await service.list_chapter_keys("coal", "eia_report")
         assert isinstance(keys, list)
-        assert len(keys) >= 30, f"应至少30个章节key,实际{len(keys)}"
+        assert len(keys) >= 13, f"应至少13个顶级章节key,实际{len(keys)}"
         assert all(isinstance(k, str) and k for k in keys)
         assert len(keys) == len(set(keys)), "章节key不应重复"
     finally:

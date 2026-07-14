@@ -30,8 +30,9 @@ class GraphQueryService:
                 """
                 MATCH (ch:ChapterTemplate {domain: $domain, report_type: $rt})
                 WHERE ch.canonical_chapter_key IS NOT NULL AND ch.canonical_chapter_key <> ''
-                RETURN DISTINCT ch.canonical_chapter_key AS key
-                ORDER BY key
+                  AND ch.level = 1
+                RETURN DISTINCT ch.canonical_chapter_key AS key, ch.`order` AS ord
+                ORDER BY ord
                 """,
                 domain=domain,
                 rt=report_type,
