@@ -3919,7 +3919,9 @@ class DomainFactoryService:
         return list(seen.values())
 
     async def _merge_cross_report_knowledge(self, task_detail: dict) -> dict:
-        """合并当前报告知识到标准13章(聚合 key_points/regulations 到标准子章节)。"""
+        """合并当前报告知识到标准13章(聚合 key_points/regulations + 提取大纲模板 content_contract)。"""
+        import json
+
         from yuxi.services.graph_builder import GraphBuilder
 
         domain = self._normalize_domain_for_graph(task_detail.get("domain") or "coal")
@@ -3933,7 +3935,8 @@ class DomainFactoryService:
             with driver.session() as session:
                 for order in range(1, 14):
                     std_id = f"CH_{domain}_{report_type}_std_{order}"
-                    # 收集该标准章节下所有子章节(含ETL)的 key_points 和 regulations
+
+                    # 1. 聚合 key_points
                     result = session.run(
                         """
                         MATCH (std:ChapterTemplate {id: $std_id})
@@ -3951,7 +3954,6 @@ class DomainFactoryService:
                     all_kp = rec["all_kp"] or []
                     all_reg = rec["all_reg"] or []
                     if all_kp:
-                        import json
                         kp_set: list[str] = []
                         seen_kp: set[str] = set()
                         for kp_json in all_kp:
@@ -3970,6 +3972,60 @@ class DomainFactoryService:
                                 id=std_id, kp=json.dumps(kp_set, ensure_ascii=False),
                             )
                             merged_count += 1
+
+                    # 2. 提取大纲模板: 按报告分组收集子章节, 计算共通/差异
+                    template_result = session.run(
+                        """
+                        MATCH (std:ChapterTemplate {id: $std_id})
+                        OPTIONAL MATCH (std)-[:HAS_CHILD]->(etl:ChapterTemplate)
+                        WHERE NOT etl.id STARTS WITH 'CH_coal_eia_report_std_'
+                          AND etl.canonical_chapter_key IS NOT NULL
+                          AND etl.canonical_chapter_key <> ''
+                        OPTIONAL MATCH (doc:Document)-[:CONTRIBUTES_TO]->()
+                        WITH std, collect(DISTINCT etl.canonical_chapter_key) AS all_sub_keys
+                        RETURN all_sub_keys
+                        """,
+                        std_id=std_id,
+                    )
+                    trec = template_result.single()
+                    if trec is None:
+                        continue
+                    sub_keys = [k for k in (trec["all_sub_keys"] or []) if k]
+                    if not sub_keys:
+                        continue
+
+                    # 统计每个子章节在多少份报告中出现
+                    count_result = session.run(
+                        """
+                        MATCH (std:ChapterTemplate {id: $std_id})-[:HAS_CHILD]->(etl:ChapterTemplate)
+                        WHERE etl.canonical_chapter_key IS NOT NULL AND etl.canonical_chapter_key <> ''
+                        WITH std, etl.canonical_chapter_key AS key, count(DISTINCT etl) AS cnt
+                        RETURN key, cnt ORDER BY key
+                        """,
+                        std_id=std_id,
+                    )
+                    key_counts = {r["key"]: r["cnt"] for r in count_result}
+                    total_docs = session.run(
+                        "MATCH (d:Document) WHERE d.domain_code = $d AND d.report_type_code = $rt RETURN count(DISTINCT d) AS cnt",
+                        d=domain, rt=report_type,
+                    ).single()
+                    doc_count = total_docs["cnt"] if total_docs else 1
+
+                    required = [k for k, c in key_counts.items() if c >= doc_count]
+                    optional = [k for k, c in key_counts.items() if c < doc_count]
+
+                    content_contract = {
+                        "required_elements": sorted(required),
+                        "optional_elements": sorted(optional),
+                        "sub_chapter_counts": key_counts,
+                        "total_reports": doc_count,
+                    }
+                    session.run(
+                        "MATCH (std:ChapterTemplate {id: $id}) SET std.content_contract = $cc",
+                        id=std_id,
+                        cc=json.dumps(content_contract, ensure_ascii=False),
+                    )
+                    merged_count += 1
             return {"status": "ok", "chapters_merged": merged_count}
         finally:
             builder.close()
