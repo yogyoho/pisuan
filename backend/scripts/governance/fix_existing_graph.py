@@ -27,7 +27,7 @@ def clean_chapter_title(title: str) -> str:
         return ""
     # 反复去掉前导"数字.数字. "直到剩下纯标题
     while True:
-        m = re.match(r"^(\d+(?:\.\d+)*)\s+(.+)$", text)
+        m = re.match(r"^(\d+(?:\.\d+)*)\s*(\S.*)$", text)
         if not m:
             break
         text = m.group(2).strip()
