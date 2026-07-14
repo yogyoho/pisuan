@@ -793,6 +793,24 @@ async def save_chapter(
     )
 
 
+def check_content_contract(content_md: str, content_contract: dict | None) -> list[str]:
+    """校验 content_md 是否覆盖 content_contract.key_elements。
+
+    非阻塞软校验:返回缺失要素的 warning 列表(空列表表示全部覆盖)。
+    content_contract 为 None 或无 key_elements 时返回空列表。
+    供 compliance_check 脚本和 save_chapter 可选校验使用。
+    """
+    if not content_contract:
+        return []
+    key_elements = content_contract.get("key_elements") or []
+    if not key_elements:
+        return []
+    missing = [e for e in key_elements if e not in content_md]
+    if missing:
+        return [f"未覆盖要素: {missing}"]
+    return []
+
+
 ASSEMBLE_REPORT_DESCRIPTION = """
 按 outline 序合并所有 done 章节 + 解析 {{REF}} → 成稿 markdown,写入沙箱 outputs。
 未解析的 {{REF}} 保留为可见占位符并列出。返回 {markdown, artifact_path, unresolved_refs}。
