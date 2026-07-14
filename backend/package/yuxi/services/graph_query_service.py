@@ -39,7 +39,11 @@ class GraphQueryService:
             return [r["key"] for r in result if r["key"]]
 
     async def get_chapter_outline(self, domain: str, report_type: str, canonical_key: str) -> dict[str, Any] | None:
-        """查询单个章节大纲,含子章节和段落角色预览。"""
+        """查询单个章节大纲,含子章节和段落角色预览。
+
+        content_contract 字段从图谱节点属性读取(治理回填后存在);
+        节点暂无此属性时返回 None,留好字段位置供后续填充。
+        """
         with self._driver.session() as session:
             result = session.run(
                 """
@@ -50,6 +54,7 @@ class GraphQueryService:
                 RETURN ch.canonical_chapter_key AS key, ch.title AS title,
                        ch.level AS level, ch.`order` AS `order`,
                        ch.rigidity AS rigidity, ch.frequency AS frequency,
+                       ch.content_contract AS content_contract,
                        collect(DISTINCT {title: sub.title, key: sub.canonical_chapter_key}) AS children,
                        collect(DISTINCT pr.name) AS roles
                 """,
@@ -67,9 +72,26 @@ class GraphQueryService:
                 "order": rec["order"],
                 "rigidity": rec["rigidity"],
                 "frequency": rec["frequency"],
+                "content_contract": rec["content_contract"],
                 "child_chapters": [c for c in rec["children"] if c and c.get("title")],
                 "paragraph_roles": [r for r in (rec["roles"] or []) if r],
             }
+
+    @staticmethod
+    def _derive_content_contract(key_points: list[str] | None, expected_tables: list[str] | None) -> dict[str, Any] | None:
+        """从 key_points / expected_tables 推导初始 content_contract。
+
+        供治理脚本回填 content_contract 到图谱节点时使用。
+        两者均为空时返回 None(无推导依据)。
+        """
+        kp = key_points or []
+        et = expected_tables or []
+        if not kp and not et:
+            return None
+        return {
+            "key_elements": list(kp),
+            "structure_type": "narrative_text",
+        }
 
     async def get_templates(self, domain: str, report_type: str, canonical_key: str) -> list[dict[str, Any]]:
         """查询某章节下的段落模板,含 Slot 和 LegalReference。
