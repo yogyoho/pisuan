@@ -64,6 +64,8 @@ class DomainFactoryTask(Base):
     template_metadata = Column(JSON, nullable=True)
     ingest_task_id = Column(String(128), nullable=True)  # 知识库入库任务ID
     knowledge_base_id = Column(String(128), nullable=True)  # 目标知识库ID
+    source_report_id = Column(String(64), nullable=True, index=True)  # 所属源报告(分章上传合并)
+    chapter_label = Column(String(64), nullable=True)  # 章节标签(如"3"/"5")
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
     committed_at = Column(DateTime, nullable=True)
