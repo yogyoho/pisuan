@@ -6,7 +6,6 @@ import { DownOutlined, UpOutlined, ExperimentOutlined, ThunderboltOutlined, Clou
 import { Database, Layers, Zap } from 'lucide-vue-next'
 import DataSourceDashboard from '@/components/domain-factory/DataSourceDashboard.vue'
 import EtlWorkbench from '@/components/domain-factory/EtlWorkbench.vue'
-import OutlineTemplate from '@/components/domain-factory/OutlineTemplate.vue'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { useTaskerStore } from '@/stores/tasker'
 
@@ -106,7 +105,7 @@ onMounted(() => {
 })
 
 watch(() => route.query.tab, (tab) => {
-  if (tab && ['data', 'workbench', 'outline'].includes(tab)) {
+  if (tab && ['data', 'workbench'].includes(tab)) {
     activeTab.value = tab
     router.replace({ query: { ...route.query, tab: undefined } })
   }
@@ -199,6 +198,9 @@ watch(() => route.query.tab, (tab) => {
             <a-button size="small" class="hero-nav-btn" @click="router.push('/domain-factory/prompt-config')">
               <ThunderboltOutlined /> Prompt 管理
             </a-button>
+            <a-button size="small" class="hero-nav-btn" @click="router.push('/domain-factory/outline-template')">
+              大纲模板
+            </a-button>
             <a-button size="small" class="hero-nav-btn" @click="router.push('/domain-factory/entity-builder')">
               实体构建器
             </a-button>
@@ -243,9 +245,6 @@ watch(() => route.query.tab, (tab) => {
               @task-updated="handleTaskUpdated"
               @navigate-to-data-sources="activeTab = 'data'"
             />
-          </a-tab-pane>
-          <a-tab-pane key="outline" tab="大纲模板">
-            <OutlineTemplate />
           </a-tab-pane>
         </a-tabs>
       </div>
