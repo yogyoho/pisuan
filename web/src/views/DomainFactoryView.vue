@@ -3,6 +3,7 @@ import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { DownOutlined, UpOutlined, ExperimentOutlined, ThunderboltOutlined, CloudUploadOutlined, RobotOutlined, AuditOutlined, DatabaseOutlined, RightOutlined } from '@ant-design/icons-vue'
+import { Database, Layers, Zap } from 'lucide-vue-next'
 import DataSourceDashboard from '@/components/domain-factory/DataSourceDashboard.vue'
 import EtlWorkbench from '@/components/domain-factory/EtlWorkbench.vue'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
@@ -167,18 +168,27 @@ watch(() => route.query.tab, (tab) => {
         </transition>
         <div class="hero-bar">
           <div class="hero-stats">
-            <span class="hero-stat">
-              <DatabaseOutlined style="margin-right: 4px" />
-              <strong>{{ globalStats.committed_tasks }}</strong> 已入库
-            </span>
-            <span class="hero-stat">
-              <ExperimentOutlined style="margin-right: 4px" />
-              <strong>{{ globalStats.entity_count }}</strong> 实体
-            </span>
-            <span class="hero-stat">
-              <ThunderboltOutlined style="margin-right: 4px" />
-              <strong>{{ globalStats.learned_templates }}</strong> 学习模板
-            </span>
+            <div class="hero-stat-card">
+              <Database :size="16" />
+              <div class="hero-stat-inline">
+                <strong>{{ globalStats.committed_tasks }}</strong>
+                <span>已入库</span>
+              </div>
+            </div>
+            <div class="hero-stat-card">
+              <Layers :size="16" />
+              <div class="hero-stat-inline">
+                <strong>{{ globalStats.entity_count }}</strong>
+                <span>实体</span>
+              </div>
+            </div>
+            <div class="hero-stat-card">
+              <Zap :size="16" />
+              <div class="hero-stat-inline">
+                <strong>{{ globalStats.learned_templates }}</strong>
+                <span>学习模板</span>
+              </div>
+            </div>
           </div>
           <span class="hero-toggle" @click="toggleHero">
             <component :is="heroCollapsed ? DownOutlined : UpOutlined" />
@@ -304,7 +314,7 @@ watch(() => route.query.tab, (tab) => {
       .desc {
         margin-top: 8px;
         color: var(--gray-500, #64748b);
-        font-size: 14px;
+        font-size: 13px;
         max-width: 520px;
         line-height: 1.6;
       }
@@ -418,16 +428,40 @@ watch(() => route.query.tab, (tab) => {
 
       .hero-stats {
         display: flex;
-        gap: 20px;
+        align-items: center;
+        gap: 8px;
       }
 
-      .hero-stat {
-        font-size: 12px;
-        color: var(--gray-500, #64748b);
+      .hero-stat-card {
+        min-width: 60px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: var(--main-0);
+        border: 1px solid var(--gray-100);
+        color: var(--main-color);
+
+        .hero-stat-inline {
+          display: flex;
+          flex-direction: row;
+          align-items: baseline;
+          gap: 4px;
+        }
 
         strong {
-          color: var(--gray-900, #0f172a);
+          font-size: 14px;
+          line-height: 1.2;
+          color: var(--gray-900);
+          white-space: nowrap;
           font-weight: 600;
+        }
+
+        span {
+          font-size: 11px;
+          color: var(--gray-500);
+          white-space: nowrap;
         }
       }
 
