@@ -146,3 +146,51 @@ async def test_save_chapter_accepts_all_valid_statuses():
                 f"status={status} should be valid, got: {result['error']}"
             )
 
+
+# ========== check_content_contract ==========
+
+
+def test_check_content_contract_all_covered():
+    """所有 key_elements 都在 content_md 中出现 → 返回空 warnings"""
+    from yuxi.agents.toolkits.buildin.tools import check_content_contract
+
+    cc = {"key_elements": ["气候类型", "气温", "降水"]}
+    md = "本区气候类型为温带季风气候,年平均气温12.5℃,年降水量600mm。"
+    warnings = check_content_contract(md, cc)
+    assert warnings == []
+
+
+def test_check_content_contract_missing_elements():
+    """部分 key_elements 未出现 → 返回 warning 列出缺失项"""
+    from yuxi.agents.toolkits.buildin.tools import check_content_contract
+
+    cc = {"key_elements": ["气候类型", "气温", "降水", "风向风速"]}
+    md = "本区气候类型为温带季风气候,年平均气温12.5℃。"
+    warnings = check_content_contract(md, cc)
+    assert len(warnings) == 1
+    assert "降水" in warnings[0]
+    assert "风向风速" in warnings[0]
+
+
+def test_check_content_contract_none_contract():
+    """content_contract 为 None → 返回空列表(无校验依据)"""
+    from yuxi.agents.toolkits.buildin.tools import check_content_contract
+
+    assert check_content_contract("任意内容", None) == []
+
+
+def test_check_content_contract_no_key_elements():
+    """content_contract 无 key_elements → 返回空列表"""
+    from yuxi.agents.toolkits.buildin.tools import check_content_contract
+
+    cc = {"min_word_count": 800}
+    assert check_content_contract("内容", cc) == []
+
+
+def test_check_content_contract_empty_key_elements():
+    """key_elements 为空列表 → 返回空列表"""
+    from yuxi.agents.toolkits.buildin.tools import check_content_contract
+
+    cc = {"key_elements": []}
+    assert check_content_contract("内容", cc) == []
+
