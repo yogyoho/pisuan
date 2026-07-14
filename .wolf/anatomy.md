@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-14T15:20:06.202Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-14T15:28:16.803Z
 > Files: 56 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
@@ -411,7 +411,7 @@
 
 - `DataSourceDashboard.vue` — Vue: setup (~9810 tok)
 - `EtlWorkbench.vue` — Vue: setup (~22711 tok)
-- `OutlineTemplate.vue` — Vue: setup (~3116 tok)
+- `OutlineTemplate.vue` — Vue: setup (~3041 tok)
 
 ## web/src/components/modals/
 
@@ -424,7 +424,7 @@
 
 ## web/src/router/
 
-- `index.js` — Declares router (~2205 tok)
+- `index.js` — Declares router (~2202 tok)
 
 ## web/src/stores/
 

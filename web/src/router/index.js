@@ -169,7 +169,7 @@ const router = createRouter({
         {
           path: 'outline-template',
           name: 'DomainFactoryOutlineTemplate',
-          component: () => import('../components/domain-factory/OutlineTemplate.vue'),
+          component: () => import('../views/DomainOutlineTemplateView.vue'),
           meta: { keepAlive: false, requiresAuth: true, requiresAdmin: true }
         },
         {
