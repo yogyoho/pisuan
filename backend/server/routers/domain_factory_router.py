@@ -340,9 +340,11 @@ async def upload_file(
     domain: str = Form(...),
     document_type: str = Form("通用"),
     report_type_code: str = Form("通用"),
+    source_report_id: str | None = Form(None),
+    chapter_label: str | None = Form(None),
     current_user: User = Depends(get_admin_user),
 ) -> dict[str, Any]:
-    """上传文档文件"""
+    """上传文档文件。支持分章节上传: source_report_id 关联同一报告, chapter_label 标记章节。"""
     try:
         if not file.filename:
             raise HTTPException(status_code=400, detail="文件名不能为空")
@@ -362,6 +364,8 @@ async def upload_file(
             uploaded_by=uploaded_by,
             document_type=document_type,
             report_type_code=report_type_code,
+            source_report_id=source_report_id,
+            chapter_label=chapter_label,
         )
 
         return {
@@ -370,6 +374,8 @@ async def upload_file(
             "file_name": file.filename,
             "domain": domain,
             "report_type_code": report_type_code,
+            "source_report_id": source_report_id,
+            "chapter_label": chapter_label,
         }
     except HTTPException:
         raise

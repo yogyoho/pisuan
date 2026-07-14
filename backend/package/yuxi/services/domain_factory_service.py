@@ -507,10 +507,15 @@ class DomainFactoryService:
         uploaded_by: str | None = None,
         document_type: str = "通用",
         report_type_code: str = "通用",
+        source_report_id: str | None = None,
+        chapter_label: str | None = None,
     ) -> DomainTaskDTO:
         domain = await self.repo.get_domain_by_code(domain_code)
         if not domain:
             raise ValueError(f"Domain not found: {domain_code}")
+
+        if chapter_label and not source_report_id:
+            source_report_id = f"sr_{uuid.uuid4().hex[:12]}"
 
         task_id = str(uuid.uuid4())
         task = await self.repo.create_task(
@@ -522,7 +527,12 @@ class DomainFactoryService:
         )
         task.document_type = document_type
         task.report_type_code = report_type_code
-        await self.repo.update_task(task_id, {"document_type": document_type, "report_type_code": report_type_code})
+        update_data: dict = {"document_type": document_type, "report_type_code": report_type_code}
+        if source_report_id:
+            update_data["source_report_id"] = source_report_id
+        if chapter_label:
+            update_data["chapter_label"] = chapter_label
+        await self.repo.update_task(task_id, update_data)
 
         # 注册到任务中心
         try:
@@ -2449,41 +2459,56 @@ class DomainFactoryService:
     # ========== 模板质量评估 ==========
 
     def evaluate_template_quality(self, generalized: str, slots: list[dict]) -> float:
-        """评估模板质量，0~1 分"""
+        """评估模板质量，0~1 分
+
+        新算法基于正向信号 + 轻微惩罚，使评分能真正区分"好提取"和"差提取"：
+        - 起点 0.5（中性基线）
+        - 正向：slot 有值 +0.15、有实体映射 +0.2、模板含 {{}} 占位符 +0.1
+        - 负向：通用名 -0.05、slots 过多 -0.05/个（>8）、"单位"后缀 -0.05、名称过长 -0.05
+        """
         import re as _re
 
-        score = 1.0
+        if not slots:
+            return 0.0
+
+        score = 0.5
         slot_count = len(slots)
 
-        # 1. slot 数量惩罚（>5 开始扣分）
-        if slot_count > 5:
-            score -= 0.1 * (slot_count - 5)
+        # ---- 正向信号 ----
 
-        # 2. 固定单位惩罚
-        for slot in slots:
-            if slot.get("name", "").endswith("单位"):
-                score -= 0.15
+        # 已填充值的 slot 占比
+        filled = [s for s in slots if s.get("value") or s.get("value") == 0]
+        if filled:
+            score += 0.15 * (len(filled) / slot_count)
 
-        # 3. 无语义编号惩罚（方位1、特征2、区域1）
-        generic_names = new_set = {"方位", "特征", "区域", "描述", "数值", "名称"}
+        # 已映射实体的 slot 占比
+        entity_mapped = [s for s in slots if s.get("entity_ref")]
+        if entity_mapped:
+            score += 0.2 * (len(entity_mapped) / slot_count)
+
+        # 泛化模板包含 {{slot}} 占位符
+        if generalized and "{{" in generalized:
+            score += 0.1
+
+        # ---- 负向信号（轻微惩罚） ----
+
+        # slot 过多
+        if slot_count > 8:
+            score -= 0.05 * (slot_count - 8)
+
+        generic_names = {"方位", "特征", "区域", "描述", "数值", "名称"}
         for slot in slots:
-            base = _re.sub(r'\d+$', '', slot.get("name", ""))
+            name = slot.get("name", "")
+            # 通用名
+            base = _re.sub(r'\d+$', '', name)
             if base in generic_names:
-                score -= 0.2
-
-        # 4. slot 名称过长惩罚
-        for slot in slots:
-            if len(slot.get("name", "")) > 8:
-                score -= 0.1
-
-        # 5. 叙述占位符奖励
-        if generalized and "[" in generalized and "]" in generalized:
-            score += 0.05
-
-        # 6. 枚举型 slot 应有 vocabulary
-        for slot in slots:
-            if slot.get("type") == "enum" and not slot.get("vocabulary"):
-                score -= 0.1
+                score -= 0.05
+            # "单位" 后缀
+            if name.endswith("单位"):
+                score -= 0.05
+            # 名称过长
+            if len(name) > 8:
+                score -= 0.05
 
         return max(0, min(1, score))
 
