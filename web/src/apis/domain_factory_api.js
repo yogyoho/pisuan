@@ -265,6 +265,24 @@ export const domainFactoryApi = {
       demo: true
     }),
 
+  // ========== Outline Templates ==========
+
+  getOutlineTemplates: (params = {}) => {
+    const url = buildUrl('/api/domain-factory/outline-templates', params)
+    return withDemoFallback(() => apiAdminGet(url), () => ({ items: [], total: 0 }))
+  },
+
+  getOutlineTemplate: (chapterKey, params = {}) => {
+    const url = buildUrl(`/api/domain-factory/outline-templates/${encodeURIComponent(chapterKey)}`, params)
+    return withDemoFallback(() => apiAdminGet(url), () => ({}))
+  },
+
+  updateOutlineTemplate: (chapterKey, data) =>
+    withDemoFallback(
+      () => apiAdminPut(`/api/domain-factory/outline-templates/${encodeURIComponent(chapterKey)}`, data),
+      { success: true, demo: true }
+    ),
+
   // ========== Contexts ==========
 
   getContexts: () =>

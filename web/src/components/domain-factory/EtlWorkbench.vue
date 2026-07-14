@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch, h } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { LeftOutlined, RightOutlined, UpOutlined, DownOutlined } from '@ant-design/icons-vue'
-import { FileText, Inbox } from 'lucide-vue-next'
+import { FileText, Inbox, Plus, X } from 'lucide-vue-next'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { databaseApi } from '@/apis/knowledge_api'
 import { useTaskerStore } from '@/stores/tasker'
@@ -275,8 +275,8 @@ const highConfidenceCount = computed(() => {
   return sourceParagraphs.value.filter(p => {
     const ct = p.classify_type
     if (!ct || ct === 'heading' || ct === 'narrative') return false
-    const conf = computeParaConfidence(p)
-    return conf >= 0.8 && !reviewedParagraphIds.value.has(p.id)
+    const qs = p.template?.quality_score
+    return qs != null && qs >= 0.7 && !reviewedParagraphIds.value.has(p.id)
   }).length
 })
 
@@ -288,42 +288,22 @@ const reportTypeLabel = computed(() => {
 })
 
 // ========== 置信度 & 审核 ==========
-const computeParaConfidence = (para) => {
-  const ct = para.classify_type
-  if (!ct || ct === 'heading' || ct === 'narrative') return 1.0
-  if (ct === 'table' || ct === 'figure' || ct === 'formula' || ct === 'list') return 0.9
-  const template = para.template || {}
-  const slots = template.slots || []
-  if (ct === 'legal_reference') {
-    return (template.legal_references?.length) ? 0.8 : 0.3
-  }
-  if (!slots.length) return 0.2
-  let score = 1.0
-  if (slots.length > 5) score -= 0.1 * (slots.length - 5)
-  const emptyRatio = slots.filter(s => !s.value && s.value !== 0).length / slots.length
-  score -= 0.3 * emptyRatio
-  const genericNames = new Set(['方位', '特征', '区域', '描述', '数值', '名称'])
-  for (const s of slots) {
-    const base = (s.name || '').replace(/\d+$/, '')
-    if (genericNames.has(base)) score -= 0.1
-  }
-  return Math.max(0, Math.min(1, score))
-}
 
 const isHtmlTable = (str) => typeof str === 'string' && /<table[\s>]/i.test(str)
 
 const needsReview = (para) => {
   const ct = para.classify_type
   if (!ct || ct === 'heading' || ct === 'narrative') return false
-  const conf = computeParaConfidence(para)
-  return conf < 0.8
+  const qs = para.template?.quality_score
+  if (qs == null) return true
+  return qs < 0.6
 }
 
 const confirmHighConfidenceAndSave = async () => {
   let count = 0
   sourceParagraphs.value.forEach(p => {
-    const conf = computeParaConfidence(p)
-    if (conf >= 0.8 && !reviewedParagraphIds.value.has(p.id) && p.classify_type) {
+    const qs = p.template?.quality_score
+    if (qs != null && qs >= 0.7 && !reviewedParagraphIds.value.has(p.id) && p.classify_type) {
       reviewedParagraphIds.value.add(p.id)
       count++
     }
@@ -440,7 +420,8 @@ const handleToggleEditMode = async () => {
         return
       }
     }
-    await doSaveParagraphs()
+    const saved = await doSaveParagraphs()
+    if (saved) stepCompleted.value.parse = true
     detailEditMode.value = false
   } else {
     editTab.value = 'form'
@@ -478,7 +459,6 @@ const doSaveParagraphs = async () => {
         structured_blocks: structuredBlocks.value,
       }
     })
-    stepCompleted.value.parse = true
     emit('task-updated')
     return true
   } catch {
@@ -506,6 +486,114 @@ const updateSlotField = (paraId, slotName, field, value) => {
   if (!para?.template?.slots) return
   const slot = para.template.slots.find(s => s.name === slotName)
   if (slot) slot[field] = value
+}
+
+const addSlot = (paraId) => {
+  const para = sourceParagraphs.value.find(p => p.id === paraId)
+  if (!para?.template) return
+  if (!para.template.slots) para.template.slots = []
+  const idx = para.template.slots.length + 1
+  const newSlot = {
+    name: `slot_${idx}`,
+    type: 'parameter',
+    value: '',
+    unit: '',
+    entity_ref: '',
+  }
+  para.template.slots.push(newSlot)
+  if (para.template.generalized) {
+    para.template.generalized += ` {{${newSlot.name}}}`
+  }
+}
+
+const removeSlot = (paraId, slotName) => {
+  const para = sourceParagraphs.value.find(p => p.id === paraId)
+  if (!para?.template?.slots) return
+  const idx = para.template.slots.findIndex(s => s.name === slotName)
+  if (idx === -1) return
+  const slot = para.template.slots[idx]
+  const restoreValue = slot.value || ''
+  para.template.slots.splice(idx, 1)
+  if (para.template.generalized) {
+    para.template.generalized = para.template.generalized
+      .replace(new RegExp(`\\{\\{${slotName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\}\\}`, 'g'), restoreValue)
+  }
+}
+
+// ========== 模板文本选中抽取 Slot ==========
+const templateSelection = ref({ text: '', left: 0, top: 0, visible: false })
+
+const onTemplateMouseUp = () => {
+  setTimeout(() => {
+    const sel = window.getSelection()
+    if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+      templateSelection.value = { text: '', left: 0, top: 0, visible: false }
+      return
+    }
+    const selText = sel.toString().trim()
+    const para = selectedParamPara.value
+    if (!para?.template?.generalized) {
+      templateSelection.value = { text: '', left: 0, top: 0, visible: false }
+      return
+    }
+    // 检查选中文字是否在泛化模板区域
+    const range = sel.getRangeAt(0)
+    const container = document.querySelector('.template-text')
+    if (!container || !container.contains(range.commonAncestorContainer)) {
+      templateSelection.value = { text: '', left: 0, top: 0, visible: false }
+      return
+    }
+    // 检查选中文字是否包含已有的 {{slot}} 占位符
+    if (/\{\{.*?\}\}/.test(selText)) {
+      templateSelection.value = { text: '', left: 0, top: 0, visible: false }
+      return
+    }
+    const rect = range.getBoundingClientRect()
+    templateSelection.value = {
+      text: selText,
+      left: rect.left + rect.width / 2,
+      top: rect.top - 40,
+      visible: true,
+    }
+  }, 10)
+}
+
+const extractSlotFromSelection = () => {
+  const para = selectedParamPara.value
+  if (!para?.template) return
+  if (!para.template.slots) para.template.slots = []
+
+  const selText = templateSelection.value.text
+  if (!selText) return
+
+  // 在 generalized 文本中定位并替换选中文字
+  const escaped = selText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(escaped)
+  const match = para.template.generalized.match(regex)
+  if (!match) {
+    message.warning('未在模板中找到选中文字')
+    templateSelection.value = { text: '', left: 0, top: 0, visible: false }
+    return
+  }
+
+  const idx = para.template.slots.length + 1
+  const slotName = `slot_${idx}`
+  para.template.generalized = para.template.generalized.replace(regex, `{{${slotName}}}`)
+
+  para.template.slots.push({
+    name: slotName,
+    type: 'parameter',
+    value: selText,
+    unit: '',
+    entity_ref: '',
+  })
+
+  templateSelection.value = { text: '', left: 0, top: 0, visible: false }
+  message.success(`已抽取 "${selText.slice(0, 20)}${selText.length > 20 ? '...' : ''}" 为 ${slotName}`)
+}
+
+const dismissSelection = () => {
+  templateSelection.value = { text: '', left: 0, top: 0, visible: false }
 }
 
 // ========== 知识库 ==========
@@ -855,8 +943,8 @@ watch(() => props.task, async (newTask) => {
                     <a-tag v-for="tag in (para.classify_tags || [])" :key="tag" size="small" color="processing" class="para-subtype-tag">
                       {{ SUBTYPE_MAP[tag] || tag }}
                     </a-tag>
-                    <span v-if="para.classify_type && para.classify_type !== 'heading' && para.classify_type !== 'narrative'" class="para-confidence" :style="{ color: getConfidenceColor(computeParaConfidence(para)) }">
-                      {{ Math.round(computeParaConfidence(para) * 100) }}%
+                    <span v-if="para.classify_type && para.classify_type !== 'heading' && para.classify_type !== 'narrative' && para.template?.quality_score != null" class="para-confidence" :style="{ color: getConfidenceColor(para.template.quality_score) }">
+                      {{ Math.round(para.template.quality_score * 100) }}%
                     </span>
                     <span v-if="reviewedParagraphIds.has(para.id)" class="para-reviewed-badge">✓</span>
                   </div>
@@ -885,9 +973,9 @@ watch(() => props.task, async (newTask) => {
                   <a-button v-if="selectedParagraph" size="small" :type="detailEditMode ? 'primary' : 'default'" @click="handleToggleEditMode">
                     {{ detailEditMode ? '保存' : '编辑' }}
                   </a-button>
-                  <a-button v-if="selectedParagraph && reviewedParagraphIds.has(selectedParagraph.id)" size="small" danger :loading="saving" @click="async () => { reviewedParagraphIds.delete(selectedParagraph.id); await doSaveParagraphs() }">撤销审核</a-button>
-                  <a-button v-else-if="selectedParagraph && !detailEditMode" size="small" type="primary" :loading="saving" @click="async () => { reviewedParagraphIds.add(selectedParagraph.id); await doSaveParagraphs() }">确认审核</a-button>
-                  <a-button v-if="selectedParagraph?.classify_type === 'parameter' && selectedParagraph?.template?.generalized" size="small" type="link" @click="activeTab = 'generalize'; selectedParamPara = selectedParagraph">前往 Slot 变量校验 →</a-button>
+                  <a-button v-if="selectedParagraph && reviewedParagraphIds.has(selectedParagraph.id)" size="small" danger :loading="saving" @click="async () => { reviewedParagraphIds.delete(selectedParagraph.id); const ok = await doSaveParagraphs(); if (ok) stepCompleted.parse = true }">撤销审核</a-button>
+                  <a-button v-else-if="selectedParagraph && !detailEditMode" size="small" type="primary" :loading="saving" @click="async () => { reviewedParagraphIds.add(selectedParagraph.id); const ok = await doSaveParagraphs(); if (ok) stepCompleted.parse = true }">确认审核</a-button>
+                  <a-button v-if="selectedParagraph?.classify_type === 'parameter' && selectedParagraph?.template?.generalized" size="small" type="link" @click="activeTab = 'generalize'; selectedParamPara = selectedParagraph">前往 → Slot变量校验</a-button>
                 </a-space>
               </template>
 
@@ -1146,7 +1234,7 @@ watch(() => props.task, async (newTask) => {
 
         <!-- 步骤导航 -->
         <div class="flow-nav">
-          <a-button type="primary" @click="goToStep(1)">下一步：Slot 变量校验 →</a-button>
+          <a-button type="primary" @click="goToStep(1)">下一步：Slot 变量校验</a-button>
         </div>
       </div>
 
@@ -1192,7 +1280,16 @@ watch(() => props.task, async (newTask) => {
                 </div>
                 <div class="diff-section">
                   <div class="diff-label">泛化模板</div>
-                  <div class="diff-text template-text" v-html="highlightedGeneralized"></div>
+                  <div class="diff-text template-text" v-html="highlightedGeneralized" @mouseup="onTemplateMouseUp"></div>
+                  <!-- 选中文字抽取 Slot 浮动按钮 -->
+                  <div
+                    v-if="templateSelection.visible"
+                    class="slot-extract-popup"
+                    :style="{ left: templateSelection.left + 'px', top: templateSelection.top + 'px' }"
+                  >
+                    <a-button size="small" type="primary" @click="extractSlotFromSelection">抽取为 Slot</a-button>
+                    <a-button size="small" @click="dismissSelection">取消</a-button>
+                  </div>
                 </div>
                 <div v-if="selectedParamPara.template?.quality_score != null" class="quality-bar">
                   质量评分:
@@ -1218,6 +1315,9 @@ watch(() => props.task, async (newTask) => {
                     <div class="slot-edit-header">
                       <span class="slot-edit-name">{{ slot.name }}</span>
                       <a-tag size="small" :color="(SLOT_TYPE_MAP[slot.type] || {}).color || 'blue'">{{ (SLOT_TYPE_MAP[slot.type] || {}).label || slot.type || '参数型' }}</a-tag>
+                      <a-button type="text" size="small" class="slot-remove-btn" @click="removeSlot(selectedParamPara.id, slot.name)" title="移除此 slot">
+                        <X :size="14" />
+                      </a-button>
                     </div>
                     <div class="slot-edit-row">
                       <span class="slot-edit-label">type</span>
@@ -1254,8 +1354,8 @@ watch(() => props.task, async (newTask) => {
 
         <!-- 步骤导航 -->
         <div class="flow-nav">
-          <a-button @click="goToStep(0)">← 上一步：结构化元数据校验</a-button>
-          <a-button type="primary" @click="goToStep(2)">下一步：实体确认 →</a-button>
+          <a-button @click="goToStep(0)">上一步：结构化元数据校验</a-button>
+          <a-button type="primary" @click="goToStep(2)">下一步：实体确认</a-button>
         </div>
       </div>
 
@@ -1364,8 +1464,8 @@ watch(() => props.task, async (newTask) => {
 
         <!-- 步骤导航 -->
         <div class="flow-nav">
-          <a-button @click="goToStep(1)">← 上一步：Slot 变量校验</a-button>
-          <a-button type="primary" @click="goToStep(3)">下一步：入库确认 →</a-button>
+          <a-button @click="goToStep(1)">上一步：Slot 变量校验</a-button>
+          <a-button type="primary" @click="goToStep(3)">下一步：入库确认</a-button>
         </div>
       </div>
 
@@ -1458,7 +1558,7 @@ watch(() => props.task, async (newTask) => {
 
         <!-- 步骤导航 -->
         <div class="flow-nav">
-          <a-button @click="goToStep(2)">← 上一步：实体确认</a-button>
+          <a-button @click="goToStep(2)">上一步：实体确认</a-button>
         </div>
       </div>
 
@@ -1724,13 +1824,28 @@ watch(() => props.task, async (newTask) => {
 
 .diff-section {
   margin-bottom: 12px;
+  position: relative;
   .diff-label { font-size: 11px; font-weight: 600; color: var(--gray-500); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
   .diff-text {
     padding: 10px; border-radius: 6px; font-size: 13px; line-height: 1.6;
     white-space: pre-wrap; word-break: break-word;
     &.original-text { background: var(--gray-50); border: 1px solid var(--gray-150); }
-    &.template-text { background: #f6ffed; border: 1px solid #b7eb8f; }
+    &.template-text { background: #f6ffed; border: 1px solid #b7eb8f; user-select: text; cursor: text; }
   }
+}
+
+.slot-extract-popup {
+  position: fixed;
+  z-index: 1000;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
 }
 
 .quality-bar {
@@ -1741,7 +1856,11 @@ watch(() => props.task, async (newTask) => {
 .slot-edit-card {
   border: 1px solid var(--gray-150); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px;
   .slot-edit-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-  .slot-edit-name { font-family: monospace; font-weight: 600; font-size: 13px; color: var(--gray-700); }
+  .slot-edit-name { font-family: monospace; font-weight: 600; font-size: 13px; color: var(--gray-700); flex: 1; }
+  .slot-remove-btn {
+    flex-shrink: 0; color: var(--gray-400); padding: 0; width: 22px; height: 22px;
+    &:hover { color: #ff4d4f; background: rgba(255, 77, 79, 0.06); }
+  }
   .slot-edit-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
   .slot-edit-label { font-size: 11px; color: var(--gray-500); min-width: 36px; }
   .slot-edit-readonly { font-size: 12px; color: var(--gray-600); }
@@ -1770,6 +1889,8 @@ mark {
   flex: 1; min-height: 200px; gap: 0;
   :deep(.ant-empty-image) { display: none; }
   :deep(.ant-empty-description) { margin-top: 2px; }
+  
+  color:var(--gray-500); 
 }
 
 .json-viewer {

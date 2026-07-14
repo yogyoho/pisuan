@@ -187,6 +187,78 @@ class GraphQueryService:
             )
             return [r["key"] for r in result if r["key"]]
 
+    async def list_outline_templates(self, domain: str, report_type: str) -> list[dict[str, Any]]:
+        """列出13章大纲模板概要(用于页面左侧列表)。"""
+        with self._driver.session() as session:
+            result = session.run(
+                """
+                MATCH (ch:ChapterTemplate {domain: $domain, report_type: $rt, level: 1})
+                WHERE ch.id STARTS WITH 'CH_' + $domain + '_' + $rt + '_std_'
+                RETURN ch.canonical_chapter_key AS key, ch.title AS title,
+                       ch.`order` AS `order`, ch.purpose AS purpose,
+                       ch.content_contract AS content_contract
+                ORDER BY ch.`order`
+                """,
+                domain=domain, rt=report_type,
+            )
+            items = []
+            for r in result:
+                cc = r["content_contract"]
+                if isinstance(cc, str):
+                    try:
+                        cc = json.loads(cc)
+                    except (json.JSONDecodeError, TypeError):
+                        cc = None
+                items.append({
+                    "key": r["key"],
+                    "title": r["title"],
+                    "order": r["order"],
+                    "purpose_preview": (r["purpose"] or "")[:80],
+                    "content_contract_summary": {
+                        "required_count": len((cc or {}).get("required_elements", [])),
+                        "optional_count": len((cc or {}).get("optional_elements", [])),
+                        "total_reports": (cc or {}).get("total_reports", 0),
+                    } if cc else None,
+                })
+            return items
+
+    async def update_chapter_template(self, domain: str, report_type: str, canonical_key: str, updates: dict[str, Any]) -> bool:
+        """更新标准章节节点的模板字段。"""
+        import json as _json
+
+        allowed_fields = {
+            "purpose", "key_points", "writing_hints", "regulations",
+            "content_contract", "extraction_regex",
+            "expected_tables", "expected_charts", "expected_formulas",
+        }
+        filtered = {k: v for k, v in updates.items() if k in allowed_fields}
+        if not filtered:
+            return False
+
+        set_clauses = []
+        params: dict[str, Any] = {}
+        for field, value in filtered.items():
+            if field in ("key_points", "regulations", "expected_tables", "expected_charts", "expected_formulas", "content_contract"):
+                params[field] = _json.dumps(value, ensure_ascii=False) if isinstance(value, (list, dict)) else value
+            else:
+                params[field] = value
+            set_clauses.append(f"ch.{field} = ${field}")
+
+        with self._driver.session() as session:
+            result = session.run(
+                f"""
+                MATCH (ch:ChapterTemplate)
+                WHERE ch.domain = $domain AND ch.report_type = $rt
+                  AND ch.canonical_chapter_key = $key
+                  AND ch.level = 1
+                  AND ch.id STARTS WITH 'CH_' + $domain + '_' + $rt + '_std_'
+                SET {', '.join(set_clauses)}
+                RETURN ch.id AS id
+                """,
+                domain=domain, rt=report_type, key=canonical_key, **params,
+            )
+            return result.single() is not None
+
     async def lookup_chapter_order(self, domain: str, report_type: str, canonical_key: str) -> int | None:
         """查询章节顺序号。"""
         with self._driver.session() as session:
