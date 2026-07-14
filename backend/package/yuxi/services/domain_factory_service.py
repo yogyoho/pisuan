@@ -3906,6 +3906,74 @@ class DomainFactoryService:
         normalized = _normalize_report_type(report_type or "")
         return normalized if normalized else (report_type or "")
 
+    def _dedup_templates_by_hash(self, templates: list[dict]) -> list[dict]:
+        """按 text_pattern 去重, source_count 累加。"""
+        seen: dict[str, dict] = {}
+        for t in templates:
+            pattern = t.get("text_pattern", "")
+            if pattern in seen:
+                seen[pattern]["source_count"] = seen[pattern].get("source_count", 1) + 1
+            else:
+                t["source_count"] = 1
+                seen[pattern] = t
+        return list(seen.values())
+
+    async def _merge_cross_report_knowledge(self, task_detail: dict) -> dict:
+        """合并当前报告知识到标准13章(聚合 key_points/regulations 到标准子章节)。"""
+        from yuxi.services.graph_builder import GraphBuilder
+
+        domain = self._normalize_domain_for_graph(task_detail.get("domain") or "coal")
+        report_type = self._normalize_report_type_for_graph(task_detail.get("report_type_code") or "eia_report")
+        builder = GraphBuilder()
+        merged_count = 0
+        try:
+            driver = builder._get_driver()
+            if driver is None:
+                return {"status": "skipped", "reason": "no graph driver"}
+            with driver.session() as session:
+                for order in range(1, 14):
+                    std_id = f"CH_{domain}_{report_type}_std_{order}"
+                    # 收集该标准章节下所有子章节(含ETL)的 key_points 和 regulations
+                    result = session.run(
+                        """
+                        MATCH (std:ChapterTemplate {id: $std_id})
+                        OPTIONAL MATCH (std)-[:HAS_CHILD*1..3]->(sub:ChapterTemplate)
+                        WHERE sub.key_points IS NOT NULL
+                        WITH std, collect(DISTINCT sub.key_points) AS all_kp,
+                             collect(DISTINCT sub.regulations) AS all_reg
+                        RETURN all_kp, all_reg
+                        """,
+                        std_id=std_id,
+                    )
+                    rec = result.single()
+                    if rec is None:
+                        continue
+                    all_kp = rec["all_kp"] or []
+                    all_reg = rec["all_reg"] or []
+                    if all_kp:
+                        import json
+                        kp_set: list[str] = []
+                        seen_kp: set[str] = set()
+                        for kp_json in all_kp:
+                            try:
+                                items = json.loads(kp_json) if isinstance(kp_json, str) else kp_json
+                                if isinstance(items, list):
+                                    for item in items:
+                                        if isinstance(item, str) and item not in seen_kp:
+                                            seen_kp.add(item)
+                                            kp_set.append(item)
+                            except (json.JSONDecodeError, TypeError):
+                                continue
+                        if kp_set:
+                            session.run(
+                                "MATCH (std:ChapterTemplate {id: $id}) SET std.key_points = $kp",
+                                id=std_id, kp=json.dumps(kp_set, ensure_ascii=False),
+                            )
+                            merged_count += 1
+            return {"status": "ok", "chapters_merged": merged_count}
+        finally:
+            builder.close()
+
     async def _commit_pipeline_async(self, context) -> dict[str, Any]:
         """入库流水线异步执行（由任务中心调度）
 
@@ -4178,6 +4246,17 @@ class DomainFactoryService:
 
             if not knowledge_base_id:
                 logger.warning(f"任务 {task_id} 未指定目标知识库，跳过入库")
+
+            # ========== 阶段2.10: 跨报告知识合并 (MERGE) ==========
+            try:
+                await context.set_progress(94.0, "正在合并跨报告知识...")
+                await context.set_message("正在合并跨报告知识...")
+                merged = await service._merge_cross_report_knowledge(task_detail)
+                logger.info(f"跨报告合并完成: {merged}")
+            except Exception as e:
+                logger.warning(f"跨报告合并失败(不阻断入库): {e}")
+                pipeline_status = "COMMIT_PARTIAL"
+                partial_errors.append(f"跨报告合并失败: {e}")
 
             # ========== 阶段3: 完成 (COMPLETING) ==========
             await context.set_progress(95.0, "正在完成入库...")
