@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch, h } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { LeftOutlined, RightOutlined, UpOutlined, DownOutlined } from '@ant-design/icons-vue'
-import { FileText } from 'lucide-vue-next'
+import { FileText, Inbox } from 'lucide-vue-next'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { databaseApi } from '@/apis/knowledge_api'
 import { useTaskerStore } from '@/stores/tasker'
@@ -712,7 +712,10 @@ watch(() => props.task, async (newTask) => {
   <div v-if="loading" class="loading-state">
     <a-spin size="large" tip="加载任务详情..." />
   </div>
-  <div v-else-if="!taskDetail" class="empty-state">请从左侧选择一个任务</div>
+  <div v-else-if="!taskDetail" class="empty-state">
+    <Inbox :size="40" :stroke-width="1.2" class="empty-state-icon" />
+    <span>请选择一个待校验的任务</span>
+  </div>
   <div v-else class="etl-workbench">
     <!-- ========== Header: 状态栏 ========== -->
     <div class="workbench-header">
@@ -1478,7 +1481,13 @@ watch(() => props.task, async (newTask) => {
   display: flex; align-items: center; justify-content: center;
   height: 400px; background: #fff; border-radius: 12px;
 }
-.empty-state { color: var(--gray-500); font-size: 14px; }
+.empty-state {
+  flex-direction: column; gap: 12px;
+  color: var(--gray-500); font-size: 13px;
+}
+.empty-state-icon {
+  color: var(--gray-300, #c0c4cc);
+}
 
 .workbench-header {
   display: flex; align-items: center; justify-content: space-between;
