@@ -643,3 +643,79 @@ async def query_graph_legal_references(
     except Exception as e:
         logger.error(f"Failed to query legal references: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"法律引用查询失败: {str(e)}")
+
+
+# ========== 大纲模板管理 ==========
+
+@domain_factory.get("/outline-templates")
+async def list_outline_templates(
+    domain: str = Query("coal"),
+    report_type: str = Query("eia_report"),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """列出13章大纲模板概要"""
+    try:
+        from yuxi.services.graph_query_service import GraphQueryService
+
+        svc = GraphQueryService()
+        try:
+            items = await svc.list_outline_templates(domain, report_type)
+            return {"items": items, "total": len(items)}
+        finally:
+            svc.close()
+    except Exception as e:
+        logger.error(f"Failed to list outline templates: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"大纲模板列表查询失败: {str(e)}")
+
+
+@domain_factory.get("/outline-templates/{chapter_key}")
+async def get_outline_template(
+    chapter_key: str,
+    domain: str = Query("coal"),
+    report_type: str = Query("eia_report"),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """获取单章大纲模板详情"""
+    try:
+        from yuxi.services.graph_query_service import GraphQueryService
+
+        svc = GraphQueryService()
+        try:
+            outline = await svc.get_chapter_outline(domain, report_type, chapter_key)
+            if outline is None:
+                raise HTTPException(status_code=404, detail=f"章节 '{chapter_key}' 不存在")
+            return outline
+        finally:
+            svc.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get outline template: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"大纲模板详情查询失败: {str(e)}")
+
+
+@domain_factory.put("/outline-templates/{chapter_key}")
+async def update_outline_template(
+    chapter_key: str,
+    body: dict = Body(...),
+    domain: str = Query("coal"),
+    report_type: str = Query("eia_report"),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """更新单章大纲模板"""
+    try:
+        from yuxi.services.graph_query_service import GraphQueryService
+
+        svc = GraphQueryService()
+        try:
+            updated = await svc.update_chapter_template(domain, report_type, chapter_key, body)
+            if not updated:
+                raise HTTPException(status_code=404, detail=f"章节 '{chapter_key}' 不存在或无可更新字段")
+            return {"success": True, "chapter_key": chapter_key}
+        finally:
+            svc.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update outline template: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"大纲模板更新失败: {str(e)}")
