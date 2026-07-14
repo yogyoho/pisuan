@@ -4074,6 +4074,28 @@ class DomainFactoryService:
                     await context.set_message(f"入库失败: {e}")
                     return {"error": f"知识库入库失败: {e}"}
 
+            # ========== 阶段2.4b: slot 事后校验 (新增) ==========
+            try:
+                from yuxi.services.slot_validation_service import SlotValidationService
+
+                svc = SlotValidationService()
+                paragraph_slots = [
+                    {
+                        "paragraph_id": p.get("id", ""),
+                        "slots": (p.get("template") or {}).get("slots", []),
+                    }
+                    for p in task_detail.get("source_paragraphs", [])
+                    if p.get("type") == "parameter" and isinstance(p.get("template"), dict)
+                ]
+                if paragraph_slots:
+                    val_report = await svc.validate_slots(paragraph_slots, {})
+                    if val_report.get("conflicts"):
+                        logger.warning(f"slot 校验发现 {len(val_report['conflicts'])} 个冲突: {val_report['conflicts']}")
+                    if val_report.get("warnings"):
+                        logger.warning(f"slot 校验 {val_report['warnings']} 个警告")
+            except Exception as e:
+                logger.warning(f"slot 校验失败(不阻断入库): {e}")
+
             # ========== 阶段2.5: 构建知识图谱 ==========
             await context.set_progress(80.0, "正在构建知识图谱...")
             await context.set_message("正在构建知识图谱...")
