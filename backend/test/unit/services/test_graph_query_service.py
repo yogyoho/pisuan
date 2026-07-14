@@ -178,3 +178,27 @@ async def test_get_chapter_outline_handles_duplicate_chapters():
         assert len(multi_warnings) == 0, "不应报 multiple records warning"
     finally:
         service.close()
+
+
+@pytest.mark.asyncio
+async def test_get_templates_recurses_to_children():
+    """顶级章节无模板时,递归查子章节模板"""
+    service = GraphQueryService()
+    try:
+        templates = await service.get_templates("coal", "eia_report", "区域自然和社会经济概况")
+        assert isinstance(templates, list)
+        assert len(templates) > 0, "应通过递归子章节返回模板"
+    finally:
+        service.close()
+
+
+@pytest.mark.asyncio
+async def test_get_templates_subchapter_direct():
+    """子章节直接查模板(不递归)"""
+    service = GraphQueryService()
+    try:
+        templates = await service.get_templates("coal", "eia_report", "自然环境概况")
+        assert isinstance(templates, list)
+        assert len(templates) > 0
+    finally:
+        service.close()
