@@ -34,6 +34,12 @@ description: "煤矿环评报告编排者 v2。作为组长派发 3 个专业 wr
 - 已通过 ask_user_question 收集的信息(如项目名称、报告类型)不要重复询问
 - 用户选"暂无/暂缓"的信息,记录到 PPS,后续需要时再针对性追问,不泛问
 
+### 实体泄漏检测（每章 save_chapter 前必须执行）
+- 生成内容中不得出现样例报告的实体名（矿区名/矿井名/企业名/地点名等）
+- 参考文件: `references/sample_entities.md`（样例实体黑名单）
+- save_chapter 前扫描 content_md,如检测到黑名单实体,替换为当前项目实体或 {{MISSING:...}}
+- 禁止编造具体数值（污染物浓度/投资金额/占地面积）,缺少时用 {{MISSING:...}} 占位
+
 ## 团队架构
 
 | 角色 | slug | 负责章节 |
@@ -73,11 +79,29 @@ description: "煤矿环评报告编排者 v2。作为组长派发 3 个专业 wr
 - `set_pps_param(...)` 填入数据 → 组长检查哪些被跳过的章可以重开
 - 重新派发对应 writer
 
-### 阶段 4: 交付
+### 阶段 4: 交付（三重检查 + 质量报告）
 
-1. `assemble_report(report_id)` → 解析 {{REF}} 和 {{MISSING}}
-2. （可选）`compliance-checker` 合规校验
-3. `present_artifacts(artifact_path)` 交付
+**检查1: 实体泄漏扫描**
+- 对全部章节扫描 `references/sample_entities.md` 中的样例实体名
+- 发现泄漏 → 替换为当前项目实体或 {{MISSING:...}}
+
+**检查2: 合规校验**
+- 调用 `compliance-checker` 技能 或 `scripts/compliance_check.py` 脚本
+- 对照 `references/compliance_checklist.md` 逐章检查
+- 生成合规矩阵: | 规范条款 | 要求摘要 | 报告是否覆盖 |
+
+**检查3: 占位符统计**
+- `assemble_report(report_id)` → 解析 {{REF}} 和 {{MISSING}}
+- 统计 {{MISSING}} 数量,按章节分布
+
+**交付**:
+1. `present_artifacts(artifact_path)` 交付报告
+2. 输出质量报告:
+   - 生成概况: N章完成/部分完成
+   - 数据完整性: {{MISSING}} 总数 + 按章分布
+   - 合规检查结论: 通过/需补充(列出未覆盖条款)
+   - 计算工具使用记录
+   - 建议用户下一步: 补充哪些数据/哪些章请专家审核
 
 ## 每轮对话结束: Checkpoint
 
@@ -114,3 +138,36 @@ description: "煤矿环评报告编排者 v2。作为组长派发 3 个专业 wr
 - 章间引用用 {{REF:chXX/表X-Y}}，由 `assemble_report` 统一解析
 - 最终交付经 `assemble_report` + `present_artifacts`
 - 依赖 `compliance-checker` 技能做合规校验
+
+## 参考文件
+
+| 文件 | 用途 | 加载时机 |
+|------|------|---------|
+| `references/terminology.md` | 环评专业术语词典 | 始终加载 |
+| `references/sample_entities.md` | 样例实体黑名单（实体泄漏检测） | 始终加载 |
+| `references/content_guidelines.md` | 各章编写规范 | 始终加载 |
+| `references/report_structure.md` | 13章结构（图谱不可用时fallback） | fallback时加载 |
+| `references/compliance_checklist.md` | 4层合规检查清单（法规/导则/标准/方法） | 合规校验时加载 |
+| `references/calc_params_guide.md` | 计算参数取值指南（沉陷/噪声/水/大气） | 涉及计算时加载 |
+| `references/chapter_examples/` | 章节方法论样例（大气/水质/沉陷/生态） | 需要行文参考时按需读取 |
+| `outlines/ch01~ch13.md` | 13章静态大纲（章节定位/法规/骨架/数据需求） | 图谱大纲不足时参考 |
+
+## 计算工具
+
+prediction-writer 可使用以下计算工具（沙箱 Python 脚本 + @tool 函数）:
+
+**@tool 函数**（直接调用）:
+- `calculate_a_value(A, Ci, Si)` — 大气环境容量 A 值法
+- `calculate_water_capacity(C0, K, x, u)` — 一维稳态水质模型
+- `lookup_subsidence_params(depth, coal_seam, angle)` — KB 查沉陷参数
+
+**沙箱脚本**（`python scripts/calc/xxx.py`，参数更全）:
+| 脚本 | 用途 | 适用章节 |
+|------|------|---------|
+| `calc_subsidence.py` | 概率积分法沉陷预测（含剖面曲线） | 第6章生态/地表 |
+| `calc_noise.py` | 工业噪声传播预测 | 第6章声环境 |
+| `calc_water_balance.py` | 矿区水量平衡计算 | 第6章水环境/第7章承载力 |
+| `calc_air_screen.py` | AERSCREEN 简化大气估算 | 第6章大气环境 |
+| `calc_capacity.py` | 环境容量估算 | 第7章承载力 |
+
+参数取值参考 `references/calc_params_guide.md`。计算结果需在报告中注明计算方法和假设条件。

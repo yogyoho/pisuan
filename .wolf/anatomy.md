@@ -1,22 +1,19 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-13T05:19:39.507Z
-> Files: 66 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-14T04:11:50.553Z
+> Files: 38 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
 
 ## ../../Users/Lenovo/.docker/
 
-- `daemon.json` (~52 tok)
 
 ## ../../tmp/
 
 
 ## ./
 
-- `_extract_eia_structure.py` — p (~1919 tok)
-- `_extract_eia_structure2.py` — p (~1091 tok)
 
 ## .claude/
 
@@ -39,24 +36,15 @@
 ## .github/workflows/
 
 
+## .gstack/qa-reports/
+
+- `qa-report-localhost-2026-07-14.md` — QA Report: 环评写作助手 — 第5章编写测试 (~716 tok)
+
 ## .ruff_cache/
 
 
 ## .superpowers/sdd/
 
-- `followups-report.md` — 写作侧确定性骨架 — 4 个 Review Follow-up Fixes (~302 tok)
-- `original-upload-report.md` — Original File Upload to MinIO — Report (~369 tok)
-- `p0-task1-report.md` — P0 Task 1: ExcludedToolsMiddleware (~680 tok)
-- `p0-task2-3-report.md` — P0 Task 2 + Task 3 Report (~599 tok)
-- `task-1-report.md` — Task 1 Report: 存储——3 张表 + repository (~701 tok)
-- `task-2-report.md` — Task 2 Report: create_report / get_report / set_pps_param 工具 (~387 tok)
-- `task-3-report.md` — Task 3 Report: save_chapter 工具(懒建 + status) (~554 tok)
-- `task-4-report.md` — Task 4 Report: `{{REF}}` resolver (纯代码) (~609 tok)
-- `task-5-report.md` — Task 5 Report: assemble_report 工具(合并 + 解析 + 写沙箱) (~649 tok)
-- `task-6-report.md` — Task 6 Report: chapter-writer 子 agent 注册 (~423 tok)
-- `task-7-fix-report.md` — Task 7 Fix: canonical_chapter_key Backfill Mismatch (~561 tok)
-- `task-7-report.md` — Task 7 Report: coal-eia-writer SKILL 改为编排者 (~388 tok)
-- `task-8-report.md` — Task 8 Report: 端到端验证 + changelog + OpenWolf 收尾 (~614 tok)
 
 ## backend/
 
@@ -78,79 +66,96 @@
 
 ## backend/package/yuxi/agents/
 
-- `base.py` — BaseAgent: module_name, id, get_info, get_config + 2 more (~5465 tok)
-- `context.py` — Define the configurable parameters for the agent. (~5467 tok)
 
 ## backend/package/yuxi/agents/backends/
 
-- `composite.py` — from: glob, aglob, wrap_tool_call, awrap_tool_call + 6 more (~2338 tok)
 
 ## backend/package/yuxi/agents/backends/sandbox/
 
-- `backend.py` — ProvisionerSandboxBackend: id, read (~7669 tok)
 
 ## backend/package/yuxi/agents/buildin/
 
 
 ## backend/package/yuxi/agents/buildin/chatbot/
 
-- `graph.py` — ChatbotAgent: get_graph, main (~1261 tok)
 
 ## backend/package/yuxi/agents/buildin/deep_agent/
 
 
 ## backend/package/yuxi/agents/buildin/subagent/
 
-- `graph.py` — _SubAgentToolFilterMiddleware: wrap_model_call, awrap_model_call, get_info, get_graph (~1538 tok)
 
 ## backend/package/yuxi/agents/middlewares/
 
-- `excluded_tools.py` — ExcludedToolsMiddleware — 从模型可见工具列表中移除 agent 配置的 excluded_tools。 (~348 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/
 
-- `__init__.py` — Declares from (~1063 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/
 
-- `SKILL.md` — 煤矿环评报告编写 v2 (~567 tok)
+- `references/chapter_examples/sample_coal_eia.md` — 横城矿区环评报告3章节选 行文风格参考 (~1500 tok)
+- `references/content_guidelines.md` — 13章编写规范 每章含编写要点+格式示例 (~2000 tok)
+- `references/report_structure.md` — 13章标准结构表 图谱不可用时fallback (~800 tok)
+- `references/terminology.md` — 煤矿环评核心术语词典 6类约40条 (~1200 tok)
+- `SKILL.md` — 煤矿环评报告编写 v2 (~1205 tok)
+
+## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/outlines/
+
+- `ch01-总论.md` — 第1章 总论 (~156 tok)
+- `ch02-规划概况.md` — 第2章 规划概况 (~139 tok)
+- `ch03-环境现状.md` — 第3章 环境现状调查与评价 (~221 tok)
+- `ch04-回顾评价.md` — 第4章 回顾性评价 (~131 tok)
+- `ch05-影响识别.md` — 第5章 环境影响识别与评价因子筛选 (~118 tok)
+- `ch06-影响预测.md` — 第6章 环境影响预测与评价 (~256 tok)
+- `ch07-承载力.md` — 第7章 环境承载力分析 (~138 tok)
+- `ch08-综合论证.md` — 第8章 规划方案综合论证 (~148 tok)
+- `ch09-减缓措施.md` — 第9章 环境保护措施及其可行性论证 (~176 tok)
+- `ch10-环境管理.md` — 第10章 环境管理与监测计划 (~149 tok)
+- `ch11-清洁生产.md` — 第11章 清洁生产与循环经济 (~154 tok)
+- `ch12-公众参与.md` — 第12章 公众参与 (~135 tok)
+- `ch13-结论.md` — 第13章 环境影响评价结论 (~141 tok)
+- `README.md` — 13章大纲索引+静态vs动态边界+加载顺序 (~600 tok)
+- `README.md` — Project documentation (~295 tok)
+
+## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/
+
+- `content_guidelines.md` — 煤矿环评报告各章节编写指南 (~969 tok)
+- `terminology.md` — 煤矿环评专业术语词典 (~529 tok)
+
+## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/chapter_examples/
+
+- `sample_coal_eia.md` — 横城矿区环评报告样例片段 (~499 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/compliance-checker/
 
-- `SKILL.md` — 合规性校验 (~460 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/data-survey-writer/
 
-- `SKILL.md` — 数据与现状 Writer (~316 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/deep-reporter/
 
 
 ## backend/package/yuxi/agents/skills/buildin/prediction-writer/
 
-- `SKILL.md` — 预测与论证 Writer (~330 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/regulation-writer/
 
-- `SKILL.md` — 法规标准 Writer (~335 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/reporter/
 
 
 ## backend/package/yuxi/agents/skills/buildin/slot-filler/
 
-- `SKILL.md` — 智能填槽 (~632 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/template-recommender/
 
-- `SKILL.md` — 段落模板智能推荐 (~533 tok)
 
 ## backend/package/yuxi/agents/toolkits/
 
 
 ## backend/package/yuxi/agents/toolkits/buildin/
 
-- `tools.py` — Pydantic: PresentArtifactsInput (~7684 tok)
+- `tools.py` — Pydantic: PresentArtifactsInput (~8251 tok)
 
 ## backend/package/yuxi/agents/toolkits/debug/
 
@@ -169,7 +174,6 @@
 
 ## backend/package/yuxi/knowledge/
 
-- `base.py` — FileStatus: load_metadata, get_create_params_config, validate_additional_params, normalize_additiona (~18255 tok)
 
 ## backend/package/yuxi/knowledge/chunking/
 
@@ -197,7 +201,6 @@
 
 ## backend/package/yuxi/knowledge/parser/
 
-- `unified.py` — Unified parser module for markdown conversion. (~4858 tok)
 
 ## backend/package/yuxi/knowledge/utils/
 
@@ -213,30 +216,31 @@
 
 ## backend/package/yuxi/repositories/
 
-- `agent_repository.py` — AgentRepository: is_builtin_agent, resolve_agent_is_subagent, normalize_agent_share_config, user_can (~7166 tok)
-- `domain_factory_repository.py` — Domain Factory 数据访问层 - Repository (~9382 tok)
 
 ## backend/package/yuxi/services/
 
-- `chat_service.py` — Agent runtime streaming service. (~15101 tok)
-- `domain_factory_service.py` — Domain Factory Service - 领域知识工厂服务层 (~62945 tok)
-- `file_preview.py` — OfficePreviewConversionError: is_office_pdf_preview_file, is_ascii_text_file, is_binary_preview_type (~2725 tok)
-- `ref_resolver.py` — {{REF:chXX/表X-Y}} 位置编号解析器。assemble 时扫各章 content_md 现算。 (~626 tok)
-- `run_worker.py` — ARQ worker for agent runs. (~6522 tok)
+- `graph_builder.py` — 知识图谱构建服务：将领域工厂结构化数据写入 Neo4j 图谱 (~18596 tok)
+- `graph_query_service.py` — 图谱查询服务:封装 Cypher,供工具直查 Neo4j 图谱。 (~2056 tok)
 
 ## backend/package/yuxi/storage/minio/
 
 
 ## backend/package/yuxi/storage/postgres/
 
-- `manager.py` — PostgreSQL 数据库管理器 - 支持知识库和业务数据 (~15286 tok)
-- `models_domain_factory.py` — Domain Factory 模块的 PostgreSQL 数据模型 - 领域知识工厂 ETL 相关表 (~3859 tok)
 
 ## backend/package/yuxi/utils/
 
 
 ## backend/scripts/
 
+- `compliance_check.py` — 脚本化合规检查:对环评章节 markdown 执行 8 项 PASS/WARN/FAIL 检查。 (~2690 tok)
+- `e2e_test.py` — 端到端验证: 建报告→查大纲→写3章→装配。验证环评写作全链路。 (~757 tok)
+- `seed_outline_content.py` — 把 outlines/ MD 静态大纲内容写入图谱标准章节节点（幂等）。 (~1056 tok)
+- `seed_standard_chapters.py` — 补充13章标准结构 ChapterTemplate 到图谱（幂等）。 (~902 tok)
+
+## backend/scripts/governance/
+
+- `fix_existing_graph.py` — 存量图谱数据治理脚本(幂等)。 (~2512 tok)
 
 ## backend/server/
 
@@ -246,7 +250,6 @@
 
 ## backend/server/utils/
 
-- `lifespan.py` — lifespan (~1381 tok)
 
 ## backend/templates/coal_mining/
 
@@ -275,20 +278,23 @@
 ## backend/test/integration/services/
 
 
+## backend/test/scripts/
+
+- `test_compliance_check.py` — compliance_check.py 单元测试:8 项合规检查 + 整体 check。 (~2421 tok)
+- `test_fix_existing_graph.py` — test_dry_run_does_not_modify_graph, test_report_initialization, test_clean_title_dual_numbering, tes (~1776 tok)
+
 ## backend/test/unit/
 
 
 ## backend/test/unit/agents/
 
-- `test_auto_artifacts.py` — Test _auto_present_artifacts: scan outputs dir and register .md files as artifacts. (~739 tok)
 
 ## backend/test/unit/agents/middlewares/
 
-- `test_excluded_tools.py` — _Request: override, test_sync_filters_excluded_tools, handler, test_async_filters_excluded_tools + 1 (~994 tok)
 
 ## backend/test/unit/agents/toolkits/buildin/
 
-- `test_tools.py` — TDD tests for v2 calculation tools and save_chapter state extension. (~1406 tok)
+- `test_tools.py` — TDD tests for v2 calculation tools and save_chapter state extension. (~1848 tok)
 
 ## backend/test/unit/backends/
 
@@ -307,7 +313,6 @@
 
 ## backend/test/unit/repositories/
 
-- `test_chapter_writer_subagent.py` — test_ensure_chapter_writer_subagent_idempotent (~184 tok)
 
 ## backend/test/unit/routers/
 
@@ -317,30 +322,22 @@
 
 ## backend/test/unit/services/
 
-- `test_outline_producer.py` — test_group_assets_by_chapter_buckets_by_chapter, test_assemble_deterministic_outline_fields, test_ll (~1466 tok)
-- `test_ref_resolver.py` — test_resolve_table_ref_and_flag_unresolved, test_chapters_merged_in_order, test_resolve_section_ref, (~721 tok)
+- `test_graph_query_service.py` — test_list_chapter_keys_returns_distinct_keys, test_list_chapter_keys_unknown_domain_returns_empty, t (~1720 tok)
 
 ## backend/test/unit/storage/
 
-- `test_domain_factory_outline_repo.py` — test_upsert_and_get_outline, test_list_chapter_keys_and_backfill (~530 tok)
-- `test_report_repo.py` — test_create_report_and_chapter_and_pps (~384 tok)
 
 ## backend/test/unit/toolkits/
 
-- `test_domain_factory_tools.py` — test_get_chapter_outline_tool_returns_dict, test_get_templates_tool_returns_list (~330 tok)
-- `test_report_tools.py` — test_create_report_tool, test_get_report_and_set_pps_tools, test_save_chapter_tool, test_save_chapte (~1302 tok)
 
 ## docker/
 
-- `api.Dockerfile` — 使用轻量级Python基础镜像 (~532 tok)
-- `web.Dockerfile` (~257 tok)
 
 ## docker/nginx/
 
 
 ## docker/sandbox_provisioner/
 
-- `Dockerfile` — Docker container definition (~97 tok)
 
 ## docker/volumes/milvus/etcd/member/snap/
 
@@ -363,25 +360,22 @@
 ## docker/volumes/milvus/minio/.minio.sys/buckets/.usage-cache.bin/
 
 
+## docker/volumes/yuxi/threads/shared/admin/workspace/agents/
+
+- `AGENTS.md` (~0 tok)
+
 ## docs/design/
 
 
 ## docs/develop-guides/
 
-- `changelog.md` — 版本变更记录 (~10896 tok)
+- `changelog.md` — 版本变更记录 (~11233 tok)
 
 ## docs/superpowers/plans/
 
-- `2026-07-11-writing-backbone.md` — 写作侧确定性骨架 Implementation Plan (子项目 2) (~9895 tok)
-- `2026-07-12-agent-compliance.md` — Agent 合规性强制 Implementation Plan (P0) (~603 tok)
-- `2026-07-13-coal-eia-writer-v2-plan.md` — 环评写作助手 v2 实施计划 (~7360 tok)
 
 ## docs/superpowers/specs/
 
-- `2026-07-11-writing-backbone-design.md` — 写作侧确定性骨架（Sub-project 2）— design (~1627 tok)
-- `2026-07-12-agent-compliance-design.md` — Agent 合规性强制(P0)— design (~471 tok)
-- `2026-07-12-writer-agent-compliance-design.md` — 写作侧 Agent 合规性（P0）— design (~1315 tok)
-- `2026-07-13-coal-eia-writer-v2-design.md` — 环评写作助手 v2 设计文档 (~2627 tok)
 
 ## docs/vibe/
 
@@ -403,7 +397,6 @@
 
 ## web/src/components/domain-factory/
 
-- `EtlWorkbench.vue` — Vue: setup (~21525 tok)
 
 ## web/src/components/modals/
 
