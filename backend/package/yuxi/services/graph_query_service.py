@@ -2,10 +2,24 @@
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Any
 
 from neo4j import GraphDatabase
+
+
+def _parse_json_field(value: Any) -> list[str] | None:
+    """Neo4j 存的 JSON 字符串解析为 list, None/空返回 None。"""
+    if not value:
+        return None
+    if isinstance(value, list):
+        return value
+    try:
+        parsed = json.loads(value)
+        return parsed if isinstance(parsed, list) else None
+    except (json.JSONDecodeError, TypeError):
+        return None
 
 
 class GraphQueryService:
@@ -56,6 +70,10 @@ class GraphQueryService:
                        ch.level AS level, ch.`order` AS `order`,
                        ch.rigidity AS rigidity, ch.frequency AS frequency,
                        ch.content_contract AS content_contract,
+                       ch.purpose AS purpose,
+                       ch.key_points AS key_points,
+                       ch.regulations AS regulations,
+                       ch.writing_hints AS writing_hints,
                        collect(DISTINCT {title: sub.title, key: sub.canonical_chapter_key}) AS children,
                        collect(DISTINCT pr.name) AS roles
                 """,
@@ -74,6 +92,10 @@ class GraphQueryService:
                 "rigidity": rec["rigidity"],
                 "frequency": rec["frequency"],
                 "content_contract": rec["content_contract"],
+                "purpose": rec["purpose"],
+                "key_points": _parse_json_field(rec["key_points"]),
+                "regulations": _parse_json_field(rec["regulations"]),
+                "writing_hints": rec["writing_hints"],
                 "child_chapters": [c for c in rec["children"] if c and c.get("title")],
                 "paragraph_roles": [r for r in (rec["roles"] or []) if r],
             }
