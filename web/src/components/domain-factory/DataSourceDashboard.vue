@@ -1060,7 +1060,7 @@ defineExpose({ refresh })
   }
 
   &.no-checkbox {
-    grid-template-columns: minmax(150px, 1fr) 88px 100px 100px 130px 88px 100px;
+    grid-template-columns: minmax(150px, 1fr) 120px 140px 130px 150px 88px 140px;
   }
 }
 
