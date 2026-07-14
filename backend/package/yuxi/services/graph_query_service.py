@@ -119,10 +119,24 @@ class GraphQueryService:
     async def get_templates(self, domain: str, report_type: str, canonical_key: str) -> list[dict[str, Any]]:
         """查询某章节下的段落模板,含 Slot 和 LegalReference。
 
-        通过先 MATCH ChapterTemplate(domain+report_type+key) 确认该 key 属于
-        指定 domain/report_type,再 MATCH ParagraphTemplate —— 避免多 domain
-        入库后返回其他 domain 的同名章节模板。
+        顶级章节无模板时递归查子章节(HAS_CHILD*1..3),去重返回。
         """
+        templates = self._query_templates(domain, report_type, canonical_key)
+        if templates:
+            return templates
+        child_keys = self._query_child_canonical_keys(domain, report_type, canonical_key)
+        all_templates = []
+        seen_patterns: set[str] = set()
+        for child_key in child_keys:
+            for t in self._query_templates(domain, report_type, child_key):
+                pattern = t.get("text_pattern", "")
+                if pattern and pattern not in seen_patterns:
+                    seen_patterns.add(pattern)
+                    all_templates.append(t)
+        return all_templates
+
+    def _query_templates(self, domain: str, report_type: str, canonical_key: str) -> list[dict[str, Any]]:
+        """查询单个 canonical_chapter_key 的段落模板(不递归)。"""
         with self._driver.session() as session:
             result = session.run(
                 """
@@ -158,6 +172,20 @@ class GraphQueryService:
                     }
                 )
             return templates
+
+    def _query_child_canonical_keys(self, domain: str, report_type: str, canonical_key: str) -> list[str]:
+        """查询某章节的所有子章节 canonical_chapter_key(去重, HAS_CHILD*1..3)。"""
+        with self._driver.session() as session:
+            result = session.run(
+                """
+                MATCH (ch:ChapterTemplate {domain: $domain, report_type: $rt, canonical_chapter_key: $key})
+                OPTIONAL MATCH (ch)-[:HAS_CHILD*1..3]->(sub:ChapterTemplate)
+                WHERE sub.canonical_chapter_key IS NOT NULL AND sub.canonical_chapter_key <> ''
+                RETURN DISTINCT sub.canonical_chapter_key AS key
+                """,
+                domain=domain, rt=report_type, key=canonical_key,
+            )
+            return [r["key"] for r in result if r["key"]]
 
     async def lookup_chapter_order(self, domain: str, report_type: str, canonical_key: str) -> int | None:
         """查询章节顺序号。"""
