@@ -113,35 +113,112 @@ AI 编写第5章时:
    - 取所有报告中最长的 sample_original
 ```
 
-## 4. P0: 标准↔ETL 关联 + get_templates 递归
+## 4. P0: 标准↔ETL 关联 + 子章节归一化 + get_templates 递归
 
-### 4.1 HAS_CHILD 关联脚本
+### 4.0 子章节归一化（跨报告章节标题统一）
+
+**问题**: 不同报告的同一子章节标题不同但语义等价:
+```
+报告A: 5.1 环境影响识别
+报告B: 5.1 矿区环境影响因子识别
+报告C: 5.1 污染类影响因子识别
+```
+不归一化则每个报告的"5.1"是独立节点，模板无法跨报告聚合。
+
+**方案**: 从 outlines/ MD 的"写作骨架"解析标准子章节结构，seed 到图谱作为 level=2 锚点，ETL 子章节按编号映射。
+
+**标准子章节来源**: outlines/ MD 已定义每章的标准子节结构:
+```markdown
+## 写作骨架
+5.1 环境影响识别
+  5.1.1 识别方法（矩阵法/清单法）
+5.2 评价因子筛选
+5.3 重点评价要素确定
+```
+
+**归一化流程**:
+```
+ETL 子章节 "5.1 矿区环境影响因子识别"
+  ↓ 按编号 "5.1" 匹配标准子章节
+  → canonical_chapter_key = "环境影响识别"（标准名）
+  → original_title = "矿区环境影响因子识别"（保留原始名）
+  ↓
+不同报告的 "5.1 xxx" 共享同一 canonical_chapter_key → 模板自然聚合
+```
+
+**三级映射策略**:
+| 级别 | 匹配方式 | 场景 | 可靠性 |
+|------|---------|------|--------|
+| 1. 编号匹配（默认） | "5.1" → 标准5.1 | 报告遵循导则编号 | 高 |
+| 2. 标题相似度（fallback） | 编辑距离/LLM匹配标准子章节名 | 编号不同但内容相同 | 中 |
+| 3. 父章节兜底 | 无法匹配 → 挂标准第5章（不设子章节key） | 结构完全不同 | 低 |
+
+**图谱结构（三级锚点）**:
+```
+标准第5章 "环境影响识别与评价指标体系" (level=1, std_5)
+  ├─HAS_CHILD→ 标准子节 "环境影响识别" (level=2, std_5_1)
+  │    ├─HAS_CHILD→ ETL子节 "5.1 矿区环境影响因子识别" (报告B)
+  │    ├─HAS_CHILD→ ETL子节 "5.1 污染类影响因子识别" (报告C)
+  │    └─HAS_CHILD→ ETL子节 "5.1 环境影响识别" (报告A)
+  ├─HAS_CHILD→ 标准子节 "评价因子筛选" (level=2, std_5_2)
+  │    └─HAS_CHILD→ ETL子节 "5.2 评价因子筛选" (报告A/B/C)
+  └─HAS_CHILD→ 标准子节 "重点评价要素确定" (level=2, std_5_3)
+```
+
+### 4.1 标准子章节 seed 脚本
+
+**文件**: `scripts/seed_standard_subchapters.py`
+
+从 outlines/ MD 的"写作骨架"段解析标准子章节，seed 到图谱:
+
+```python
+# 解析 outlines/ch05-影响识别.md "写作骨架" 段:
+#   5.1 环境影响识别 → {parent_order:5, sub_order:1, key:"环境影响识别", level:2}
+#   5.2 评价因子筛选 → {parent_order:5, sub_order:2, key:"评价因子筛选", level:2}
+#   5.3 重点评价要素确定 → {parent_order:5, sub_order:3, key:"重点评价要素确定", level:2}
+
+# Cypher:
+# MERGE (sub:ChapterTemplate {id: "CH_coal_eia_report_std_5_1"})
+# SET sub.canonical_chapter_key = "环境影响识别",
+#     sub.level = 2, sub.`order` = 1, sub.title = "5.1 环境影响识别"
+# MERGE (std)-[:HAS_CHILD]->(sub)  -- 标准第5章 → 标准子节
+```
+
+### 4.2 ETL 子章节映射到标准子章节
+
+ETL 创建 ChapterTemplate 时，按编号匹配标准子章节:
+
+```python
+# ETL 子章节 title = "5.1 矿区环境影响因子识别"
+# 1. 提取编号前缀: "5.1" → parent=5, sub=1
+# 2. 查标准子章节: std_5_1 (canonical_chapter_key="环境影响识别")
+# 3. 设置 ETL 节点:
+#    - canonical_chapter_key = "环境影响识别"（标准名，非原始标题）
+#    - original_title = "矿区环境影响因子识别"（保留原始名）
+#    - HAS_CHILD → 标准子节 std_5_1（而非直接挂标准第5章）
+```
+
+### 4.3 HAS_CHILD 关联脚本（存量数据）
 
 **文件**: `scripts/governance/link_standard_chapters.py`
 
-按章节编号前缀匹配 ETL 子章节到标准章节:
+对存量 ETL 子章节，按编号前缀建 HAS_CHILD 到标准子章节:
 
-```python
-# ETL 子章节 "5.1 环境影响因子识别" → 标准第5章
-# 匹配规则: 章节编号首数字 = 标准章节 order
-```
-
-**Cypher**:
 ```cypher
-// 对每个 ETL 子章节(level > 1), 按编号首数字找到标准章节, 建 HAS_CHILD
-MATCH (sub:ChapterTemplate)
-WHERE sub.level > 1 AND sub.canonical_chapter_key IS NOT NULL
-  AND sub.title =~ '^[0-9]+\\.'
-WITH sub, split(sub.title, '.')[0] AS chapter_num
-MATCH (std:ChapterTemplate)
-WHERE std.level = 1 AND std.`order` = toInteger(chapter_num)
-  AND std.id STARTS WITH 'CH_coal_eia_report_std_'
-MERGE (std)-[:HAS_CHILD]->(sub)
+// ETL 子章节 "5.1 矿区环境影响因子识别" → 标准子节 std_5_1
+MATCH (etl:ChapterTemplate)
+WHERE etl.level > 1 AND etl.title =~ '^[0-9]+\\.'
+WITH etl, split(replace(etl.title, ' ', '.'), '.') AS parts
+  // 提取前两级编号: "5.1.xxx" → parent=5, sub=1
+WITH etl, parts[0] AS parent_num, parts[1] AS sub_num
+MATCH (std_sub:ChapterTemplate)
+WHERE std_sub.id = 'CH_coal_eia_report_std_' + parent_num + '_' + sub_num
+MERGE (std_sub)-[:HAS_CHILD]->(etl)
+// 同时归一化 canonical_chapter_key
+SET etl.canonical_chapter_key = std_sub.canonical_chapter_key
 ```
 
-注意: 需处理 ETL title 含双编号的情况（"1.1.1 3.1.1 地形地貌"），用清洗后的编号匹配。
-
-### 4.2 get_templates 递归查询
+### 4.4 get_templates 递归查询
 
 **文件**: `backend/package/yuxi/services/graph_query_service.py`
 
@@ -161,17 +238,17 @@ async def get_templates(self, domain, report_type, canonical_key):
     return all_templates
 ```
 
-**Cypher（递归）**:
+**Cypher（递归查子章节模板）**:
 ```cypher
 MATCH (ch:ChapterTemplate {canonical_chapter_key: $key})
 OPTIONAL MATCH (ch)-[:HAS_CHILD*1..3]->(sub:ChapterTemplate)
-OPTIONAL MATCH (sub)-[:HAS_SLOT]->(s:Slot)
 OPTIONAL MATCH (pt:ParagraphTemplate {canonical_chapter_key: sub.canonical_chapter_key})
+OPTIONAL MATCH (pt)-[:HAS_SLOT]->(s:Slot)
 OPTIONAL MATCH (pt)-[:CITES]->(lr:LegalReference)
 RETURN pt, collect(DISTINCT s), collect(DISTINCT lr)
 ```
 
-### 4.3 get_chapter_outline child_chapters 增强
+### 4.5 get_chapter_outline child_chapters 增强
 
 HAS_CHILD 关系建好后，`get_chapter_outline` 的 `child_chapters` 自然有值。无需改代码，只需确保 Cypher 的 OPTIONAL MATCH HAS_CHILD 生效（已有）。
 
@@ -266,17 +343,20 @@ if report["conflicts"]:
 
 | Phase | 内容 | 优先级 | 依赖 |
 |-------|------|--------|------|
-| Phase 1 | HAS_CHILD 关联脚本 + get_templates 递归 | P0 | 无 |
-| Phase 2 | 分章节上传（source_report_id + chapter_label） | P0 | Phase 1 |
-| Phase 3 | 多报告去重合并（Stage 2.10） | P1 | Phase 1 |
-| Phase 4 | slot_validation 接入 ETL | P1 | 无 |
-| Phase 5 | ETL 源头映射标准结构 | P2 | Phase 1-3 |
+| Phase 1 | 标准子章节 seed（从 outlines/ 解析 level=2 锚点） + 存量 ETL 子章节 HAS_CHILD 关联 + canonical_chapter_key 归一化 | P0 | 无 |
+| Phase 2 | get_templates 递归查询（顶级查不到时查子章节） | P0 | Phase 1 |
+| Phase 3 | 分章节上传（source_report_id + chapter_label） | P0 | Phase 1 |
+| Phase 4 | 多报告去重合并（Stage 2.10 + hash 去重 + 大纲并集） | P1 | Phase 1 |
+| Phase 5 | slot_validation 接入 ETL commit pipeline | P1 | 无 |
+| Phase 6 | ETL 源头映射标准子章节结构（新数据入库即归一化） | P2 | Phase 1-4 |
 
 ## 9. 不变量
 
-1. 标准13章是唯一的合并锚点（level=1, id 含 std_ 前缀）
-2. 所有 ETL 子章节必须挂到对应标准章节（HAS_CHILD）
-3. get_templates 顶级章节查不到时递归查子章节
-4. ParagraphTemplate 按 text_pattern hash 全局去重
-5. 多报告合并不删除数据，只去重和聚合
-6. source_count 准确反映贡献的报告数
+1. 标准13章是唯一的顶级合并锚点（level=1, id 含 std_ 前缀）
+2. 标准子章节是子级合并锚点（level=2, id 含 std_N_M 前缀）
+3. ETL 子章节按编号映射到标准子章节，canonical_chapter_key 用标准名（非原始标题）
+4. 不同报告的同编号子章节共享同一 canonical_chapter_key → 模板自然聚合
+5. get_templates 顶级章节查不到时递归查子章节
+6. ParagraphTemplate 按 text_pattern hash 全局去重
+7. 多报告合并不删除数据，只去重和聚合
+8. source_count 准确反映贡献的报告数
