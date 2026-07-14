@@ -49,7 +49,7 @@ def _derive_canonical_key(title: str) -> str:
     if re.fullmatch(r"\d+(?:\.\d+)*", text):
         return ""
     while True:
-        m = re.match(r"^(\d+(?:\.\d+)*)\s+(.+)$", text)
+        m = re.match(r"^(\d+(?:\.\d+)*)\s*(\S.*)$", text)
         if not m:
             break
         text = m.group(2).strip()
