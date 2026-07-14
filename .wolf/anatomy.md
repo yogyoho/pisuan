@@ -1,10 +1,11 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-14T04:11:50.553Z
-> Files: 38 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-14T14:22:36.955Z
+> Files: 54 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
+- `tender-sleeping-scone.md` — 大纲模板页面设计与实现 (~1410 tok)
 
 ## ../../Users/Lenovo/.docker/
 
@@ -219,14 +220,17 @@
 
 ## backend/package/yuxi/services/
 
-- `graph_builder.py` — 知识图谱构建服务：将领域工厂结构化数据写入 Neo4j 图谱 (~18596 tok)
-- `graph_query_service.py` — 图谱查询服务:封装 Cypher,供工具直查 Neo4j 图谱。 (~2056 tok)
+- `domain_factory_service.py` — Domain Factory Service - 领域知识工厂服务层 (~66506 tok)
+- `graph_builder.py` — 知识图谱构建服务：将领域工厂结构化数据写入 Neo4j 图谱 (~19323 tok)
+- `graph_query_service.py` — 图谱查询服务:封装 Cypher,供工具直查 Neo4j 图谱。 (~3404 tok)
 
 ## backend/package/yuxi/storage/minio/
 
 
 ## backend/package/yuxi/storage/postgres/
 
+- `manager.py` — PostgreSQL 数据库管理器 - 支持知识库和业务数据 (~15393 tok)
+- `models_domain_factory.py` — Domain Factory 模块的 PostgreSQL 数据模型 - 领域知识工厂 ETL 相关表 (~3904 tok)
 
 ## backend/package/yuxi/utils/
 
@@ -237,16 +241,19 @@
 - `e2e_test.py` — 端到端验证: 建报告→查大纲→写3章→装配。验证环评写作全链路。 (~757 tok)
 - `seed_outline_content.py` — 把 outlines/ MD 静态大纲内容写入图谱标准章节节点（幂等）。 (~1056 tok)
 - `seed_standard_chapters.py` — 补充13章标准结构 ChapterTemplate 到图谱（幂等）。 (~902 tok)
+- `seed_standard_subchapters.py` — 从 outlines/ MD 的写作骨架段解析标准子章节, seed 到图谱作为 level=2 合并锚点。 (~1327 tok)
 
 ## backend/scripts/governance/
 
 - `fix_existing_graph.py` — 存量图谱数据治理脚本(幂等)。 (~2512 tok)
+- `link_subchapters.py` — 存量 ETL 子章节归一化: 按标题匹配标准子章节, 建 HAS_CHILD, 归一化 canonical_chapter_key。 (~986 tok)
 
 ## backend/server/
 
 
 ## backend/server/routers/
 
+- `domain_factory_router.py` — Domain Factory API Router - 领域知识工厂路由 (~7718 tok)
 
 ## backend/server/utils/
 
@@ -282,6 +289,8 @@
 
 - `test_compliance_check.py` — compliance_check.py 单元测试:8 项合规检查 + 整体 check。 (~2421 tok)
 - `test_fix_existing_graph.py` — test_dry_run_does_not_modify_graph, test_report_initialization, test_clean_title_dual_numbering, tes (~1776 tok)
+- `test_link_subchapters.py` — link_subchapters.py 单元测试: 存量 ETL 子章节归一化匹配逻辑。 (~605 tok)
+- `test_seed_standard_subchapters.py` — seed_standard_subchapters.py 单元测试: 解析 outlines/ MD 写作骨架 + 标准子章节生成。 (~632 tok)
 
 ## backend/test/unit/
 
@@ -322,7 +331,7 @@
 
 ## backend/test/unit/services/
 
-- `test_graph_query_service.py` — test_list_chapter_keys_returns_distinct_keys, test_list_chapter_keys_unknown_domain_returns_empty, t (~1720 tok)
+- `test_graph_query_service.py` — test_list_chapter_keys_returns_distinct_keys, test_list_chapter_keys_unknown_domain_returns_empty, t (~1919 tok)
 
 ## backend/test/unit/storage/
 
@@ -373,9 +382,11 @@
 
 ## docs/superpowers/plans/
 
+- `2026-07-14-knowledge-factory-merge-plan.md` — 知识工厂数据加工完善与升级 Implementation Plan (~6587 tok)
 
 ## docs/superpowers/specs/
 
+- `2026-07-14-knowledge-factory-merge-design.md` — 知识工厂数据加工完善与升级设计文档 (~2582 tok)
 
 ## docs/vibe/
 
@@ -385,6 +396,7 @@
 
 ## web/src/apis/
 
+- `domain_factory_api.js` — Domain Knowledge Factory API (~2776 tok)
 
 ## web/src/assets/css/
 
@@ -397,6 +409,9 @@
 
 ## web/src/components/domain-factory/
 
+- `DataSourceDashboard.vue` — Vue: setup (~9810 tok)
+- `EtlWorkbench.vue` — Vue: setup (~22711 tok)
+- `OutlineTemplate.vue` — Vue: setup (~2753 tok)
 
 ## web/src/components/modals/
 
@@ -412,3 +427,4 @@
 
 ## web/src/views/
 
+- `DomainFactoryView.vue` — Vue: setup (~4247 tok)
