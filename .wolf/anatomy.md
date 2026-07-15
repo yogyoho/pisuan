@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-14T15:28:16.803Z
-> Files: 56 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-15T00:19:02.029Z
+> Files: 57 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -15,6 +15,7 @@
 
 ## ./
 
+- `docker-compose.yml` — Docker Compose services (~4001 tok)
 
 ## .claude/
 
