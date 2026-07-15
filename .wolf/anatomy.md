@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-15T00:37:23.856Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-15T00:48:03.848Z
 > Files: 58 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
@@ -218,7 +218,7 @@
 
 ## backend/package/yuxi/repositories/
 
-- `agent_repository.py` — AgentRepository: is_builtin_agent, resolve_agent_is_subagent, normalize_agent_share_config, user_can (~7181 tok)
+- `agent_repository.py` — AgentRepository: is_builtin_agent, resolve_agent_is_subagent, normalize_agent_share_config, user_can (~7229 tok)
 
 ## backend/package/yuxi/services/
 
