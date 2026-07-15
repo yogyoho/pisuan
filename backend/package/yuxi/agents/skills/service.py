@@ -1285,6 +1285,12 @@ async def init_builtin_skills(db: AsyncSession, *, created_by: str = "system") -
     repo = SkillRepository(db)
     synced_items: list[Skill] = []
 
+    # 清理上次 _replace_skill_target 中断遗留的 .tmp-* / .bak-* 目录
+    skills_root = get_skills_root_dir()
+    for entry in skills_root.iterdir():
+        if entry.is_dir() and (entry.name.startswith(".") and ("-tmp-" in entry.name or "-bak-" in entry.name)):
+            shutil.rmtree(entry, ignore_errors=True)
+
     for spec in list_builtin_skill_specs():
         slug = spec["slug"]
         existing = await repo.get_by_slug(slug)

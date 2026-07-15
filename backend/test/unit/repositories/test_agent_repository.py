@@ -143,6 +143,62 @@ async def test_create_agent_for_normal_user_forces_private_share(monkeypatch):
     assert db.added is agent
 
 
+@pytest.mark.asyncio
+async def test_ensure_regulation_writer_subagent_creates_with_config(monkeypatch):
+    db = FakeDb()
+    repo = AgentRepository(db)
+
+    async def get_by_slug(_slug):
+        return None
+
+    monkeypatch.setattr(repo, "get_by_slug", get_by_slug)
+
+    agent = await repo.ensure_regulation_writer_subagent(created_by="system")
+    ctx = agent.config_json.get("context", {})
+    assert agent.slug == "regulation-writer"
+    assert agent.is_subagent is True
+    assert "get_chapter_outline" in ctx.get("tools", [])
+    assert "save_chapter" in ctx.get("tools", [])
+    assert "query_kb" in ctx.get("tools", [])
+
+
+@pytest.mark.asyncio
+async def test_ensure_data_survey_writer_subagent_creates_with_config(monkeypatch):
+    db = FakeDb()
+    repo = AgentRepository(db)
+
+    async def get_by_slug(_slug):
+        return None
+
+    monkeypatch.setattr(repo, "get_by_slug", get_by_slug)
+
+    agent = await repo.ensure_data_survey_writer_subagent(created_by="system")
+    ctx = agent.config_json.get("context", {})
+    assert agent.slug == "data-survey-writer"
+    assert agent.is_subagent is True
+    assert "set_pps_param" in ctx.get("tools", [])
+    assert "query_kb" in ctx.get("tools", [])
+
+
+@pytest.mark.asyncio
+async def test_ensure_prediction_writer_subagent_creates_with_config(monkeypatch):
+    db = FakeDb()
+    repo = AgentRepository(db)
+
+    async def get_by_slug(_slug):
+        return None
+
+    monkeypatch.setattr(repo, "get_by_slug", get_by_slug)
+
+    agent = await repo.ensure_prediction_writer_subagent(created_by="system")
+    ctx = agent.config_json.get("context", {})
+    assert agent.slug == "prediction-writer"
+    assert agent.is_subagent is True
+    assert "calculate_a_value" in ctx.get("tools", [])
+    assert "calculate_water_capacity" in ctx.get("tools", [])
+    assert "lookup_subsidence_params" in ctx.get("tools", [])
+
+
 def test_shared_agent_is_accessible_but_not_manageable_for_normal_user():
     user = User(username="user", uid="user", password_hash="x", role="user", department_id=1)
     agent = Agent(
