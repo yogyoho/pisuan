@@ -123,7 +123,6 @@ async def _startup(app: FastAPI) -> None:
             await repository.ensure_general_purpose_subagent()
             await repository.ensure_web_search_subagent()
             await repository.ensure_deep_research_agents()
-            await repository.ensure_chapter_writer_subagent()
             await repository.ensure_regulation_writer_subagent()
             await repository.ensure_data_survey_writer_subagent()
             await repository.ensure_prediction_writer_subagent()
