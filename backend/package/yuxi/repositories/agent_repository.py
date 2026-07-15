@@ -330,6 +330,7 @@ class AgentRepository:
             config_context={
                 "tools": list(REGULATION_WRITER_AGENT_TOOLS),
                 "excluded_tools": list(REGULATION_WRITER_EXCLUDED_TOOLS),
+                "model": "deepseek:deepseek-v4-flash",
             },
             is_subagent=True,
             created_by=created_by,
@@ -345,6 +346,7 @@ class AgentRepository:
             config_context={
                 "tools": list(DATA_SURVEY_WRITER_AGENT_TOOLS),
                 "excluded_tools": list(DATA_SURVEY_WRITER_EXCLUDED_TOOLS),
+                "model": "deepseek:deepseek-v4-flash",
             },
             is_subagent=True,
             created_by=created_by,
@@ -360,6 +362,7 @@ class AgentRepository:
             config_context={
                 "tools": list(PREDICTION_WRITER_AGENT_TOOLS),
                 "excluded_tools": list(PREDICTION_WRITER_EXCLUDED_TOOLS),
+                "model": "deepseek:deepseek-v4-flash",
             },
             is_subagent=True,
             created_by=created_by,
