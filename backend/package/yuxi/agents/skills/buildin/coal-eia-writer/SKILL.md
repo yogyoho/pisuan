@@ -17,6 +17,13 @@ description: "煤矿环评报告编排者 v2。作为组长派发 3 个专业 wr
 - save_chapter 单章一次写入,禁止反复 append 修补
 - 章节正文有误 → 内存整体重生成 → 一次 save_chapter 覆盖
 - 连续失败 2 次必须停止并告诉用户
+- **save_chapter 的 status 一律用 `done`**：章节正文写完即标 `done`，不要用 `review`/`writing`——`assemble_report` 只装配 `done` 章节，写成 review/writing 会被排除、永远进不了成稿
+
+### 装配交付铁律（不可跳过）
+- 子 writer 写完一章 → 该章在 DB 里必须是 `status=done`；若某章仍是 review/writing，视为未完成，重派或继续推进
+- 所有目标章节 done 后，**必须**调 `assemble_report(report_id)` 装配成稿 → 再 `present_artifacts(artifact_path)` 交付
+- 禁止不装配就结束对话。成稿文件由 assemble_report 写入 `/app/saves/outputs/report_{report_id}.md`
+- 即使存在 {{MISSING}} 占位符也照常装配交付，占位符在成稿中可见
 
 ### 工具白名单（各 writer 严格限定）
 - regulation-writer: get_chapter_outline/get_report/get_templates/save_chapter
@@ -47,6 +54,24 @@ description: "煤矿环评报告编排者 v2。作为组长派发 3 个专业 wr
 | 法规标准 writer | `regulation-writer` | 1总则、10环境管理、11清洁生产、12公众参与 |
 | 数据与现状 writer | `data-survey-writer` | 2规划概况、3环境现状、4回顾评价 |
 | 预测与论证 writer | `prediction-writer` | 5影响识别、6影响预测、7承载力、8综合论证、9减缓措施、13结论 |
+
+### 各 writer 写作规范
+
+**regulation-writer（法规标准）**：
+- 模板替代率：ch1 总则 90%、ch10 环境管理 85%、ch11 清洁生产 70%、ch12 公众参与 90%
+- 法规引用格式：`"GB 3095-2012《环境空气质量标准》二级标准"`，编号+全称+版本，不得省略
+- 对 `get_chapter_outline` 返回的 `regulations` 中每个标准逐条 `query_kb` 获取条款全文
+- 章节末尾列出本章引用的全部标准清单
+
+**data-survey-writer（数据与现状）**：
+- 写前先扫描数据需求，按树形列出每项数据，标注来源：已有(PPS) / KB可查 / {{MISSING:...}}
+- 数据源优先级：PPS → `query_kb` 监测库 → 用户附件 → `ask_user_question` 追问
+- 现状评价方法：单因子指数法、超标率统计，监测数据写入结构化表格
+
+**prediction-writer（预测与论证）**：
+- 计算按复杂度分层：简单计算 → 沙箱 Python；固定公式 → @tool 函数；专业软件 → KB 查表
+- 公式用 LaTeX 格式，标注每个参数的来源；计算结果分情景讨论
+- 论证按"因为A…所以B…建议C"链条推进，每章末尾写小结，ch13 汇总全局结论
 
 ## 四阶段流程
 
@@ -90,18 +115,21 @@ description: "煤矿环评报告编排者 v2。作为组长派发 3 个专业 wr
 - 对照 `references/compliance_checklist.md` 逐章检查
 - 生成合规矩阵: | 规范条款 | 要求摘要 | 报告是否覆盖 |
 
-**检查3: 占位符统计**
-- `assemble_report(report_id)` → 解析 {{REF}} 和 {{MISSING}}
-- 统计 {{MISSING}} 数量,按章节分布
+**检查3: 章节就绪确认**
+- `get_report(report_id)` 查各章 status，确认目标章节均为 `done`；仍有 review/writing 的章先重派写完
+- {{MISSING}} 占位符统计在下方交付步骤的 `assemble_report` 返回中获取
 
-**交付**:
-1. `present_artifacts(artifact_path)` 交付报告
-2. 输出质量报告:
+**交付（必须执行，不可跳过）**:
+1. `assemble_report(report_id)` → 装配所有 `done` 章节成稿，返回 `artifact_path`（落点 `/app/saves/outputs/report_{report_id}.md`）+ {{MISSING}} 统计
+2. `present_artifacts(artifact_path)` 把成稿交付给用户
+3. 输出质量报告:
    - 生成概况: N章完成/部分完成
-   - 数据完整性: {{MISSING}} 总数 + 按章分布
+   - 数据完整性: {{MISSING}} 总数 + 按章分布（来自步骤1）
    - 合规检查结论: 通过/需补充(列出未覆盖条款)
    - 计算工具使用记录
    - 建议用户下一步: 补充哪些数据/哪些章请专家审核
+
+> ⛔ 没调 `assemble_report` + `present_artifacts` 就不算交付完成。有 {{MISSING}} 占位符也照常装配。
 
 ## 每轮对话结束: Checkpoint
 
