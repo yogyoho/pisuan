@@ -59,6 +59,7 @@ REGULATION_WRITER_AGENT_TOOLS = [
     "get_report",
     "get_templates",
     "save_chapter",
+    "query_kb",
 ]
 REGULATION_WRITER_EXCLUDED_TOOLS = []
 
@@ -74,6 +75,7 @@ DATA_SURVEY_WRITER_AGENT_TOOLS = [
     "get_templates",
     "set_pps_param",
     "save_chapter",
+    "query_kb",
 ]
 DATA_SURVEY_WRITER_EXCLUDED_TOOLS = []
 
@@ -89,6 +91,7 @@ PREDICTION_WRITER_AGENT_TOOLS = [
     "get_templates",
     "set_pps_param",
     "save_chapter",
+    "query_kb",
     "calculate_a_value",
     "calculate_water_capacity",
     "lookup_subsidence_params",
