@@ -6,6 +6,7 @@ import { DownOutlined, UpOutlined, ExperimentOutlined, ThunderboltOutlined, Clou
 import { Database, Layers, Zap } from 'lucide-vue-next'
 import DataSourceDashboard from '@/components/domain-factory/DataSourceDashboard.vue'
 import EtlWorkbench from '@/components/domain-factory/EtlWorkbench.vue'
+import RegulationEnrichPanel from '@/extensions/regulation-library/RegulationEnrichPanel.vue'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { useTaskerStore } from '@/stores/tasker'
 
@@ -14,6 +15,7 @@ const router = useRouter()
 const taskerStore = useTaskerStore()
 
 const activeTab = ref('data')
+const regulationPanelOpen = ref(false)
 const domains = ref([])
 const selectedDomain = ref('')
 const loadingDomains = ref(false)
@@ -204,6 +206,9 @@ watch(() => route.query.tab, (tab) => {
             <a-button size="small" class="hero-nav-btn" @click="router.push('/domain-factory/entity-builder')">
               实体构建器
             </a-button>
+            <a-button size="small" class="hero-nav-btn" @click="regulationPanelOpen = true">
+              规范库加工
+            </a-button>
           </div>
         </div>
       </div>
@@ -249,12 +254,13 @@ watch(() => route.query.tab, (tab) => {
         </a-tabs>
       </div>
     </div>
+    <RegulationEnrichPanel v-model:open="regulationPanelOpen" />
   </div>
 </template>
 
 <style lang="less" scoped>
 .domain-factory-view {
-  padding: 24px 28px 80px;
+  padding: 24px 28px 32px;
   min-height: 100%;
   background: var(--gray-50, #f5f7fb);
 
