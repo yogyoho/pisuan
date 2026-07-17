@@ -6,8 +6,7 @@ from yuxi.extensions.regulation_library.unit_parser import parse_chunk_unit
 def test_standard_clause():
     """标准条款: 4.2 / 4.2.1"""
     r = parse_chunk_unit("4.2 环境空气功能区分类\n环境空气功能区分为二类...", "technical_standard")
-    assert r == {"unit_no": "4.2", "unit_type": "clause", "parent_unit": "4",
-                 "title": "环境空气功能区分类"}
+    assert r == {"unit_no": "4.2", "unit_type": "clause", "parent_unit": "4", "title": "环境空气功能区分类"}
 
 
 def test_law_article():
