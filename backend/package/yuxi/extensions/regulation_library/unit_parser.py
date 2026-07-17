@@ -30,35 +30,35 @@ def parse_chunk_unit(content: str, doc_type: str) -> dict | None:
     # 表格优先（所有 doc_type 通用）
     m = _TABLE_RE.search(text[:200])
     if m and ("<table" in text or "|" in text):
-        return {"unit_no": f"表{m.group(1)}", "unit_type": "table",
-                "parent_unit": None, "title": m.group(2).strip()}
+        return {"unit_no": f"表{m.group(1)}", "unit_type": "table", "parent_unit": None, "title": m.group(2).strip()}
 
     if doc_type == "law" or doc_type.endswith("regulation") or doc_type.endswith("rule"):
         m = _ARTICLE_RE.search(text[:100])
         if m:
-            return {"unit_no": m.group(1), "unit_type": "article",
-                    "parent_unit": None, "title": m.group(2).strip()[:100]}
+            return {
+                "unit_no": m.group(1),
+                "unit_type": "article",
+                "parent_unit": None,
+                "title": m.group(2).strip()[:100],
+            }
 
     if doc_type in ("technical_standard",):
         m = _CLAUSE_RE.search(text[:100])
         if m:
             num = m.group(1)
             parent = ".".join(num.split(".")[:-1]) or None
-            return {"unit_no": num, "unit_type": "clause",
-                    "parent_unit": parent, "title": m.group(2).strip()[:100]}
+            return {"unit_no": num, "unit_type": "clause", "parent_unit": parent, "title": m.group(2).strip()[:100]}
 
     # 规划/政策/项目资料: 中文编号章节
     m = _CN_SECTION_RE.search(text[:100])
     if m:
-        return {"unit_no": m.group(1), "unit_type": "section",
-                "parent_unit": None, "title": m.group(2).strip()[:100]}
+        return {"unit_no": m.group(1), "unit_type": "section", "parent_unit": None, "title": m.group(2).strip()[:100]}
 
     # fallback: 数字编号
     m = _CLAUSE_RE.search(text[:100])
     if m:
         num = m.group(1)
         parent = ".".join(num.split(".")[:-1]) or None
-        return {"unit_no": num, "unit_type": "clause",
-                "parent_unit": parent, "title": m.group(2).strip()[:100]}
+        return {"unit_no": num, "unit_type": "clause", "parent_unit": parent, "title": m.group(2).strip()[:100]}
 
     return None
