@@ -65,3 +65,7 @@ if _KNOWLEDGE_ENABLED:
     router.include_router(workspace_knowledge)  # /api/workspace/knowledge/* 工作区知识文件只读视图
     router.include_router(domain_factory)  # /api/domain-factory/* 领域知识工厂
     router.include_router(domain_entity_builder)  # /api/domain-entity-builder/* 领域实体构建器
+
+    # pisuan 扩展区（extensions/ 目录，零侵入上游模块）
+    from yuxi.extensions.regulation_library.router import regulation_library
+    router.include_router(regulation_library)  # /api/regulation-library/* 标准规范库(pisuan扩展)
