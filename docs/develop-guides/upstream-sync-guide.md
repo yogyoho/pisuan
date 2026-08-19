@@ -21,6 +21,33 @@ pisuan-custom ───→ 领域知识库工厂 + 本地化定制，基于最�
 
 ## 二、同步步骤
 
+### ⚠️ 上游历史重写的恢复流程（2026-08-20 实战记录）
+
+上游 force-push 重写过 main 历史（旧 merge commit 被拍平，SHA 全变但内容大部分 patch 等价）。症状与处理：
+
+```bash
+# 症状：git fetch upstream 显示 (forced update)；main 与 upstream/main 显示
+# behind 2501 / ahead 2269，共同祖先停在 2024-07-14。
+# 真实差异用 --cherry-pick 过滤 SHA 噪声：
+git rev-list --left-right --cherry-pick --count upstream/main...main
+
+# 1. main 硬重置（纯镜像不能 --ff-only）：
+git checkout main && git reset --hard upstream/main
+
+# 2. rebase 定制分支（先开 rerere，.wolf 元数据冲突一律 checkout --ours）：
+git config rerere.enabled true
+git checkout pisuan-custom && git rebase main
+```
+
+已知坑（详见 .wolf/buglog.json）：
+
+1. **上游 CLAUDE.md 是符号链接**（指向 AGENTS.md）：与 pisuan 普通文件构成 merge-ort 类型冲突，自动改名文件含提交主题冒号，Windows 非法路径导致 pick 直接失败。需先把 HEAD 的 CLAUDE.md 恢复为普通文件（`git update-index --cacheinfo 100644,<blob>,CLAUDE.md`，Windows 下 `git add` 不改 mode），再 continue。
+2. **v0.7.2 新增 .env 必填密钥**：`JWT_SECRET_KEY` / `API_KEY_DERIVATION_SECRET` / `SANDBOX_PROVISIONER_TOKEN` / `YUXI_INSTANCE_ID`（跑 `bash scripts/init.sh` 生成），缺失时启动组件硬失败。改 .env 后必须 `docker compose up -d --force-recreate`（restart 不重读 env）。
+3. **合并 pyproject 后必须 `cd backend && uv lock`**：否则 Docker 构建 `uv sync --frozen` 因 manifest 哈希不匹配失败。
+4. **镜像 tag 漂移**：新版 compose 默认 `YUXI_VERSION=0.7.2.dev0`，本地已有镜像是旧 tag；开发环境可在 .env 钉 `YUXI_VERSION=<已有tag>` + `--no-build` 重建容器，镜像重建等镜像源可用后再做（lock 的 wheel URL 若指向失效镜像源需换源重生）。
+5. **DB 遗留 lightrag 空库会硬失败**：上游把"使用中但不受支持的 KB 类型"从跳过改为启动失败，需备份后清理（`knowledge_bases_backup_lightrag_20260820`）。
+
+
 ### 自动化（推荐）
 
 ```bash
