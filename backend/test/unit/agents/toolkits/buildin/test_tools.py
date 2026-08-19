@@ -103,6 +103,7 @@ async def test_save_chapter_rejects_invalid_status():
         "content_md": "正文",
         "summary": "摘要",
         "status": "invalid_status",
+        "runtime": None,  # C3: 拒绝路径不触达 runtime
     })
     assert "error" in result
     assert "无效 status" in result["error"]
@@ -121,6 +122,7 @@ async def test_save_chapter_rejects_empty_content_on_done_and_review():
             "content_md": "",
             "summary": "",
             "status": status,
+            "runtime": None,  # C3: 拒绝路径不触达 runtime
         })
         assert "error" in result, f"status={status} should reject empty content"
         assert status in result["error"]
@@ -140,6 +142,7 @@ async def test_save_chapter_accepts_all_valid_statuses():
             "content_md": "正文内容",
             "summary": "摘要",
             "status": status,
+            "runtime": None,  # C3: report 不存在即返回，不触达 runtime
         })
         if "error" in result:
             assert "无效 status" not in result["error"], (

@@ -37,13 +37,15 @@
         <div class="hero-content">
           <div class="hero-badge">
             <Sparkles :size="16" />
-            <span>Harness驱动的智能写作平台</span>
+            <span>Harness-Powered AI Writing Platform</span>
           </div>
           <h1 class="title">
             <span class="title-line">{{ infoStore.branding.title }}</span>
             <span class="title-gradient-underline"></span>
           </h1>
-          <p class="subtitle">{{ infoStore.branding.subtitle }}</p>
+          <Transition name="subtitle-switch" mode="out-in">
+            <p class="subtitle" :key="currentSubtitle">{{ currentSubtitle }}</p>
+          </Transition>
           <div class="hero-actions">
             <button class="button-base primary" @click="goToAgent">
               <Rocket :size="20" />
@@ -114,7 +116,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useInfoStore } from '@/stores/info'
@@ -139,6 +141,34 @@ const router = useRouter()
 const userStore = useUserStore()
 const infoStore = useInfoStore()
 const agentStore = useAgentStore()
+
+// Hero 副标题轮播（参考上游 Yuxi HomeView 实现）
+const SUBTITLE_OPTIONS = [
+  '企业智能体平台套件，融合 RAG 与知识图谱',
+  '统一编排 Agent、知识库、图谱与工具链',
+  '让智能体可构建，让知识可连接，让决策可验证',
+  '让智能体可落地，让流程可编排，让协作可扩展',
+  '让数据可沉淀，让能力可复用，让系统可进化'
+]
+const subtitleIndex = ref(0)
+const currentSubtitle = computed(() => SUBTITLE_OPTIONS[subtitleIndex.value] || '')
+let subtitleTimer = null
+
+const stopSubtitleCarousel = () => {
+  if (subtitleTimer) {
+    clearInterval(subtitleTimer)
+    subtitleTimer = null
+  }
+}
+
+const startSubtitleCarousel = () => {
+  stopSubtitleCarousel()
+  subtitleIndex.value = 0
+  if (SUBTITLE_OPTIONS.length <= 1) return
+  subtitleTimer = setInterval(() => {
+    subtitleIndex.value = (subtitleIndex.value + 1) % SUBTITLE_OPTIONS.length
+  }, 4000)
+}
 
 const goToAgent = async () => {
   if (!userStore.isLoggedIn) {
@@ -184,6 +214,11 @@ const handleInternalLink = (event, url) => {
 
 onMounted(async () => {
   await infoStore.loadInfoConfig()
+  startSubtitleCarousel()
+})
+
+onUnmounted(() => {
+  stopSubtitleCarousel()
 })
 
 const iconKey = (value) => (typeof value === 'string' ? value.toLowerCase() : '')
@@ -482,6 +517,18 @@ const actionLinks = computed(() => {
     color: var(--gray-600);
     margin-bottom: 2.5rem;
     line-height: 1.8;
+    min-height: calc(1.25rem * 1.8 * 2);
+  }
+
+  .subtitle-switch-enter-active,
+  .subtitle-switch-leave-active {
+    transition: opacity 0.32s ease, transform 0.32s ease;
+  }
+
+  .subtitle-switch-enter-from,
+  .subtitle-switch-leave-to {
+    opacity: 0;
+    transform: translateY(7px);
   }
 
   .hero-actions {

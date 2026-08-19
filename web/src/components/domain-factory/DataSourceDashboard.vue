@@ -871,7 +871,7 @@ defineExpose({ refresh })
   align-items: center;
   justify-content: space-between;
   padding: 16px 24px;
-  background: #fff;
+  background: var(--gray-0);
   border-radius: 0;
   border-bottom: 1px solid var(--gray-150);
 
@@ -895,7 +895,7 @@ defineExpose({ refresh })
     .refresh-btn {
       border-radius: 999px;
       border: 1px solid var(--gray-300);
-      background: #ffffff;
+      background: var(--gray-0);
       color: var(--gray-700);
       box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
 
@@ -909,7 +909,7 @@ defineExpose({ refresh })
 }
 
 .domain-card {
-  background: #fff;
+  background: var(--gray-0);
   border-radius: 0;
   border-left: none;
   border-right: none;
@@ -1159,8 +1159,8 @@ defineExpose({ refresh })
 
   .custom-upload-dragger {
     :deep(.ant-upload-drag) {
-      background: #fafafa;
-      border: 2px dashed #d9d9d9;
+      background: var(--gray-25);
+      border: 2px dashed var(--gray-300);
       border-radius: 8px;
       padding: 40px 20px;
       transition: all 0.3s ease;
@@ -1214,7 +1214,7 @@ defineExpose({ refresh })
       align-items: center;
       gap: 12px;
       padding: 8px 12px;
-      background: #fff;
+      background: var(--gray-0);
       border-radius: 6px;
       border: 1px solid var(--gray-100);
 

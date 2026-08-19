@@ -3,6 +3,7 @@
 from typing import Any
 
 from sqlalchemy import JSON, Column, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from yuxi.storage.postgres.models_business import Base
@@ -66,6 +67,7 @@ class DomainFactoryTask(Base):
     knowledge_base_id = Column(String(128), nullable=True)  # 目标知识库ID
     source_report_id = Column(String(64), nullable=True, index=True)  # 所属源报告(分章上传合并)
     chapter_label = Column(String(64), nullable=True)  # 章节标签(如"3"/"5")
+    validation_report = Column(JSONB, nullable=True)  # 最新校验报告
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
     committed_at = Column(DateTime, nullable=True)

@@ -73,12 +73,23 @@ description: "煤矿环评报告编排者 v2。作为组长派发 3 个专业 wr
 
 ### 阶段 2+3: 并行期（数据收集 + 编写同时进行）
 
+**⛔ 派发铁律（每次 task/subagent_start 描述里必须写明）**:
+> 你负责的章节写完后，**必须**调 `save_chapter(report_id, canonical_chapter_key, title, content_md, summary, status="done")`。status 只能用 `"done"`（不能用 writing/review/skipped，除非数据缺失用 pending_data）。save_chapter 会返回 preview_path——这是你产出文件的唯一途径，不要用 write_file。本指令必须在每次派发的 task 描述原文中包含，不要省略。
+
 **第一波（可并行）**:
 - 派 `regulation-writer` 写独立章: 第1、10、11、12章
-- 派 `data-survey-writer` 扫描数据需求 → 列出 {{MISSING:...}} 清单
+- 派 `data-survey-writer` 扫描数据需求（按下方"缺失数据中继协议"返回 `## MISSING_DATA` 清单，不写章节正文）
 - 派 `prediction-writer` 写第五5章（大纲充足，可先行）
 
-**同步**: 将 `data-survey-writer` 发现的缺失数据清单呈现给用户，请用户补充。同时独立章继续写。
+**⛔ 缺失数据中继协议（data-survey-writer 不能直接问用户，必须经你中继）**:
+> 子 writer 无 `ask_user_question` 权限。data-survey-writer 扫描数据需求后，在其最终回复末尾必须输出结构化清单：
+> ```
+> ## MISSING_DATA
+> - 参数名: <entity_key或参数中文名> | 用途: <哪个章节哪项计算/评价需要> | 优先级: <高/中/低>
+> ```
+> 你（组长）收到回复后，解析 `## MISSING_DATA` 块，**立即调 `ask_user_question`** 把这些参数一次性问用户（每项一个问题，附用途说明）。用户回答后用 `set_pps_param` 落库，再重派写章节的 writer。无缺失数据时 data-survey-writer 输出空 `## MISSING_DATA` 块，你跳过询问直接进第二波。
+
+**同步**: 将 `data-survey-writer` 发现的缺失数据清单经 `ask_user_question` 呈现给用户补充（见上方协议）。同时独立章继续写。
 
 **第二波（有依赖）**:
 - 第3、4章数据到位 → 派 `data-survey-writer` 写

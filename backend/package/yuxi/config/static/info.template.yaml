@@ -10,7 +10,7 @@ organization:
 
 # 项目信息
 branding:
-  name: "HY-Agent"
+  name: "HyIntelliAgent"
   title: "华宇工程：工程报告智能写作应用平台"     # 系统标题
   subtitle: "企业智能体平台套件，融合 RAG 与知识图谱"          # 副标题（subtitles 为空时使用）
   subtitles:

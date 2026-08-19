@@ -193,6 +193,47 @@ async def save_task_step(
         raise HTTPException(status_code=500, detail=f"保存任务失败: {str(e)}")
 
 
+@domain_factory.post("/tasks/{task_id}/validate")
+async def validate_task(
+    task_id: str,
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """对任务执行校验（PreCommitValidator + SlotValidationService），返回结构化报告。
+
+    纯只读操作，不修改任务状态。用户可在提交前反复调用以检查和修正问题。
+    """
+    try:
+        service = get_domain_factory_service()
+        report = await service.validate_task(task_id)
+        if "error" in report:
+            raise HTTPException(status_code=404, detail=report["error"])
+        return {"success": True, "report": report}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to validate task {task_id}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"校验失败: {str(e)}")
+
+
+@domain_factory.post("/tasks/{task_id}/discover-entities")
+async def discover_entities(
+    task_id: str,
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """异步触发实体发现：LLM 分析未绑定 slot，建议新实体/属性"""
+    try:
+        service = get_domain_factory_service()
+        result = await service.discover_entities_task(task_id)
+        if "error" in result:
+            raise HTTPException(status_code=404, detail=result["error"])
+        return {"success": True, "result": result}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to discover entities for {task_id}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"实体发现失败: {str(e)}")
+
+
 @domain_factory.post("/tasks/{task_id}/commit")
 async def commit_task(
     task_id: str,
@@ -541,6 +582,8 @@ DOMAIN_FACTORY_STATUS_MAP = {
     "GENERALIZING": {"status": "running", "progress": 80, "message": "正在生成槽位模板..."},
     "WAITING_REVIEW": {"status": "running", "progress": 95, "message": "信息提取完成，等待人工审核..."},
     "COMMITTED": {"status": "success", "progress": 100, "message": "报告已入库完成"},
+    "COMMIT_PARTIAL": {"status": "success", "progress": 100, "message": "报告已入库（部分阶段有警告，请查看 partial_errors）"},
+    "COMMIT_FAILED": {"status": "failed", "progress": 100, "message": "入库失败"},
     "FAILED": {"status": "failed", "progress": 100, "message": "执行失败"},
 }
 
@@ -719,3 +762,117 @@ async def update_outline_template(
     except Exception as e:
         logger.error(f"Failed to update outline template: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"大纲模板更新失败: {str(e)}")
+
+
+@domain_factory.post("/outline-templates/seed")
+async def seed_outline_templates(
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """初始化/重建标准 13 章大纲结构（幂等）。
+
+    复用 scripts/ 下三个 seed 脚本的 seed() 函数，按依赖顺序写入 Neo4j：
+    标准章节 → 标准子章节 → 大纲内容。图谱为空或需重置标准结构时调用。
+    """
+    import os
+
+    from neo4j import GraphDatabase
+
+    from scripts.seed_outline_content import seed as seed_content
+    from scripts.seed_standard_chapters import seed as seed_chapters
+    from scripts.seed_standard_subchapters import seed as seed_subchapters
+
+    uri = os.environ.get("NEO4J_URI", "bolt://graph:7687")
+    user = os.environ.get("NEO4J_USERNAME", "neo4j")
+    password = os.environ.get("NEO4J_PASSWORD", "0123456789")
+
+    driver = GraphDatabase.driver(uri, auth=(user, password))
+    try:
+        chapters = seed_chapters(driver)
+        subchapters = seed_subchapters(driver)
+        content_chapters = seed_content(driver)
+        logger.info(
+            f"标准大纲结构初始化完成: chapters={chapters}, "
+            f"subchapters={subchapters}, content={content_chapters}"
+        )
+        return {
+            "success": True,
+            "chapters": chapters,
+            "subchapters": subchapters,
+            "content_chapters": content_chapters,
+        }
+    except Exception as e:
+        logger.error(f"Failed to seed outline templates: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"标准结构初始化失败: {str(e)}")
+    finally:
+        driver.close()
+
+
+@domain_factory.post("/outline-templates/extract")
+async def extract_outline_preview(
+    file: UploadFile = File(...),
+    domain: str = Form("coal"),
+    report_type: str = Form("eia_report"),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """从上传的报告轻量提取大纲（只解析+章节归一化，跳过泛化），返回预览供确认。
+
+    相比完整 ETL 提速 10-50 倍。预览结果经人工确认后调 /confirm 入库。
+    """
+    try:
+        file_bytes = await file.read()
+        if not file_bytes:
+            raise HTTPException(status_code=400, detail="上传文件为空")
+        service = get_domain_factory_service()
+        preview = await service.extract_outline_preview(
+            file_bytes, file.filename or "upload.docx", domain, report_type
+        )
+        return preview
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to extract outline: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"大纲提取失败: {str(e)}")
+
+
+@domain_factory.post("/outline-templates/confirm")
+async def confirm_outline_extract(
+    body: dict = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """将人工确认的大纲章节入库（PG outline upsert + 图谱标准章节同步）。"""
+    try:
+        domain = body.get("domain", "coal")
+        report_type = body.get("report_type", "eia_report")
+        chapters = body.get("chapters") or []
+        file_name = body.get("file_name") or ""
+        if not chapters:
+            raise HTTPException(status_code=400, detail="chapters 不能为空")
+        service = get_domain_factory_service()
+        result = await service.confirm_outline_extract(domain, report_type, chapters, file_name)
+        return {"success": True, **result}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to confirm outline: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"大纲入库失败: {str(e)}")
+
+
+@domain_factory.post("/outline-templates/generate-regex")
+async def generate_extraction_regex(
+    body: dict = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """为指定领域/报告类型的图谱标准章节(std_ level=1)批量生成 extraction_regex。
+
+    seed 的标准章节不走 LLM，没有 extraction_regex。此端点走主进程(driver 正常)，
+    对每个 std_ 章节调 _llm_chapter_meta 生成正则并写回图谱。
+    """
+    try:
+        domain = body.get("domain", "coal")
+        report_type = body.get("report_type", "eia_report")
+        service = get_domain_factory_service()
+        result = await service.generate_standard_extraction_regex(domain, report_type)
+        return {"success": True, **result}
+    except Exception as e:
+        logger.error(f"Failed to generate extraction_regex: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"提取规则生成失败: {str(e)}")

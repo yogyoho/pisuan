@@ -793,7 +793,7 @@ const handleCreateEntity = (domainId = null) => {
     const domain = taxonomy.value.domains.find(d => d.domain_id === domainId)
     if (domain?.categories?.length) defaultCategory = domain.categories[0].category_name
   }
-  if (!defaultCategory) defaultCategory = '基础工程实体'
+  if (!defaultCategory) defaultCategory = 'project_basic'
 
   editingEntity.value = {
     entity_id: null, entity_key: '', name_cn: '',
@@ -1248,9 +1248,9 @@ const domainLabel = (code) => {
       .diff-row {
         display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 3px 0;
         .diff-field { font-weight: 600; color: var(--gray-800); min-width: 120px; }
-        .diff-old { color: var(--danger-color, #ff4d4f); text-decoration: line-through; background: #fff2f0; padding: 1px 6px; border-radius: 3px; }
+        .diff-old { color: var(--color-error-500); text-decoration: line-through; background: var(--color-error-50); padding: 1px 6px; border-radius: 3px; }
         .diff-arrow { color: var(--gray-400); }
-        .diff-new { color: var(--success-color, #52c41a); background: #f6ffed; padding: 1px 6px; border-radius: 3px; }
+        .diff-new { color: var(--color-success-500); background: var(--color-success-50); padding: 1px 6px; border-radius: 3px; }
       }
     }
 

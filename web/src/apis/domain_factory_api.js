@@ -159,6 +159,21 @@ export const domainFactoryApi = {
       demo: true
     }),
 
+  validateTask: (taskId) =>
+    withDemoFallback(
+      () => apiAdminPost(`/api/domain-factory/tasks/${taskId}/validate`, {}),
+      () => ({
+        success: true,
+        report: { passed: true, summary: { total_errors: 0, total_warnings: 0, total_paragraphs: 0, parameter_paragraphs: 0, checked_at: '' }, errors: [], warnings: [] }
+      })
+    ),
+
+  discoverEntities: (taskId) =>
+    withDemoFallback(
+      () => apiAdminPost(`/api/domain-factory/tasks/${taskId}/discover-entities`, {}),
+      () => ({ success: true, result: { proposals: [], total: 0 } })
+    ),
+
   commitTask: (taskId, payload) =>
     withDemoFallback(() => apiAdminPost(`/api/domain-factory/tasks/${taskId}/commit`, payload), {
       success: true,
@@ -281,6 +296,35 @@ export const domainFactoryApi = {
     withDemoFallback(
       () => apiAdminPut(`/api/domain-factory/outline-templates/${encodeURIComponent(chapterKey)}`, data),
       { success: true, demo: true }
+    ),
+
+  seedOutlineTemplates: () =>
+    withDemoFallback(
+      () => apiAdminPost('/api/domain-factory/outline-templates/seed', {}),
+      { success: true, demo: true }
+    ),
+
+  extractOutlinePreview: (file, { domain = 'coal', report_type = 'eia_report' } = {}) => {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('domain', domain)
+    form.append('report_type', report_type)
+    return withDemoFallback(
+      () => apiAdminPost('/api/domain-factory/outline-templates/extract', form),
+      { chapters: [], total: 0, demo: true }
+    )
+  },
+
+  confirmOutlineExtract: (payload) =>
+    withDemoFallback(
+      () => apiAdminPost('/api/domain-factory/outline-templates/confirm', payload),
+      { success: true, demo: true }
+    ),
+
+  generateExtractionRegex: (domain, report_type) =>
+    withDemoFallback(
+      () => apiAdminPost('/api/domain-factory/outline-templates/generate-regex', { domain, report_type }),
+      { success: true, generated: 0, total: 0, demo: true }
     ),
 
   // ========== Contexts ==========

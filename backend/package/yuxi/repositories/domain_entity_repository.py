@@ -190,29 +190,41 @@ class DomainEntityRepository:
         categories = await self.list_distinct_categories(domain_code)
 
         domain_mappings = {
-            "基础工程实体": {
-                "domain_id": "engineering",
+            "project_basic": {
+                "domain_id": "project_basic",
                 "domain_name": "基础工程实体",
-                "domain_key": "Engineering",
+                "domain_key": "ProjectBasic",
                 "description": "定义'谁在建'、'建什么'、'怎么建'",
             },
-            "敏感目标与空间实体": {
-                "domain_id": "spatial_sensitive",
+            "natural_env": {
+                "domain_id": "natural_env",
+                "domain_name": "自然环境实体",
+                "domain_key": "NaturalEnv",
+                "description": "定义自然环境要素",
+            },
+            "env_quality": {
+                "domain_id": "env_quality",
+                "domain_name": "环境质量与污染源实体",
+                "domain_key": "EnvQuality",
+                "description": "定义环境质量与污染源",
+            },
+            "sensitive_target": {
+                "domain_id": "sensitive_target",
                 "domain_name": "敏感目标与空间实体",
-                "domain_key": "SpatialSensitive",
+                "domain_key": "SensitiveTarget",
                 "description": "定义'在哪建'、'周围有什么'",
             },
-            "环境要素与影响实体": {
+            "measures_regulation": {
+                "domain_id": "measures_regulation",
+                "domain_name": "措施与法规实体",
+                "domain_key": "MeasuresRegulation",
+                "description": "定义'怎么办'、'依据什么'",
+            },
+            "impact_assessment": {
                 "domain_id": "impact_assessment",
-                "domain_name": "环境要素与影响实体",
+                "domain_name": "环境影响评价实体",
                 "domain_key": "ImpactAssessment",
                 "description": "定义'产生什么问题'、'后果如何'",
-            },
-            "措施与法规实体": {
-                "domain_id": "mitigation_compliance",
-                "domain_name": "措施与法规实体",
-                "domain_key": "MitigationCompliance",
-                "description": "定义'怎么办'、'依据什么'",
             },
         }
 
