@@ -564,9 +564,9 @@ async def _worker_shutdown(ctx):
 
 class WorkerSettings:
     functions = [process_agent_run]
-    max_jobs = 1  # 单任务串行：agent run 内存占用大(~400MB+),并行会触发 OOM
+    max_jobs = 2  # 主agent+子agent并行: max_jobs=1会导致子agent派发死锁
     max_tries = 2
-    retry_jobs = 30  # 二次确认:retry 前等30秒,给OOM进程释放内存
+    retry_jobs = 30
     job_timeout = 3600
     keep_result = 60
     keep_result_forever = False  # 不持久保留结果，避免内存堆积

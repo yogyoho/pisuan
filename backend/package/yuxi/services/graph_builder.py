@@ -760,7 +760,7 @@ class GraphBuilder:
                 dol.last_updated = datetime(),
                 dol.kb_id = $kb_id
             ON MATCH SET
-                dol.source_count = dol.source_count + 1,
+                dol.source_count = coalesce(dol.source_count, 0) + 1,
                 dol.last_updated = datetime()
             RETURN dol.source_count AS sc
             """,

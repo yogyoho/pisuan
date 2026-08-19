@@ -22,6 +22,14 @@ from yuxi_cli.commands import (
     whoami as whoami_command,
 )
 from yuxi_cli.config import ConfigError, ConfigStore
+from yuxi_cli.domain_factory import (
+    DomainFactoryError,
+    commit_task,
+    list_tasks,
+    retry_task,
+    show_task_status,
+    upload_files,
+)
 from yuxi_cli.kb_upload import DEFAULT_CONCURRENCY, MAX_CONCURRENCY, KbUploadError, KbUploadOptions, run_kb_upload
 
 console = Console()
@@ -29,9 +37,11 @@ app = typer.Typer(help="Yuxi command line client.", invoke_without_command=True)
 remote_app = typer.Typer(help="Manage Yuxi remotes.")
 agent_app = typer.Typer(help="Run and manage Yuxi agents.")
 kb_app = typer.Typer(help="Upload and manage knowledge base files.")
+df_app = typer.Typer(help="Domain factory ETL pipeline commands.")
 app.add_typer(remote_app, name="remote")
 app.add_typer(agent_app, name="agent")
 app.add_typer(kb_app, name="kb")
+app.add_typer(df_app, name="domain-factory")
 
 
 def _store() -> ConfigStore:
@@ -214,3 +224,104 @@ def eval_agent(
         run_langfuse_agent_experiment(store, remote, options, console)
     except (ConfigError, ClientError, AgentEvalError) as exc:
         _handle_error(exc)
+
+
+# ==========================================================================
+# Domain Factory commands
+# ==========================================================================
+
+
+@df_app.command("upload")
+def df_upload(
+    paths: list[Path] = typer.Argument(..., help="Files or directories to upload."),
+    domain: str | None = typer.Option(None, "--domain", "-d", help="Domain code (e.g. coal_mining)."),
+    document_type: str = typer.Option("通用", "--doc-type", help="Document type label."),
+    report_type_code: str = typer.Option("通用", "--report-type", "-r", help="Report type code."),
+    remote: str | None = typer.Option(None, "--remote", help="Remote name."),
+    wait: bool = typer.Option(False, "--wait", "-w", help="Wait for pipeline to finish."),
+    poll_seconds: float = typer.Option(3.0, "--poll", help="Poll interval in seconds when --wait."),
+):
+    """Upload files to domain factory and trigger the ETL pipeline."""
+    expanded = _expand_paths(paths)
+    if not expanded:
+        console.print("[yellow]没有找到可上传的文件[/yellow]")
+        raise typer.Exit(0)
+
+    store = _store()
+    try:
+        _print_remote_context(store, remote)
+        upload_files(store, remote, expanded, domain, document_type, report_type_code, wait, poll_seconds, console)
+    except (ConfigError, ClientError, DomainFactoryError) as exc:
+        _handle_error(exc)
+
+
+@df_app.command("tasks")
+def df_tasks(
+    domain: str | None = typer.Option(None, "--domain", "-d", help="Filter by domain."),
+    status: str | None = typer.Option(None, "--status", "-s", help="Filter by status."),
+    remote: str | None = typer.Option(None, "--remote", help="Remote name."),
+):
+    """List domain factory tasks."""
+    store = _store()
+    try:
+        _print_remote_context(store, remote)
+        list_tasks(store, remote, domain, status, console)
+    except (ConfigError, ClientError) as exc:
+        _handle_error(exc)
+
+
+@df_app.command("status")
+def df_status(
+    task_id: str = typer.Argument(..., help="Task ID."),
+    remote: str | None = typer.Option(None, "--remote", help="Remote name."),
+):
+    """Show task detail and current pipeline stage."""
+    store = _store()
+    try:
+        _print_remote_context(store, remote)
+        show_task_status(store, remote, task_id, console)
+    except (ConfigError, ClientError) as exc:
+        _handle_error(exc)
+
+
+@df_app.command("retry")
+def df_retry(
+    task_id: str = typer.Argument(..., help="Task ID."),
+    remote: str | None = typer.Option(None, "--remote", help="Remote name."),
+):
+    """Retry a failed domain factory task."""
+    store = _store()
+    try:
+        _print_remote_context(store, remote)
+        retry_task(store, remote, task_id, console)
+    except (ConfigError, ClientError) as exc:
+        _handle_error(exc)
+
+
+@df_app.command("commit")
+def df_commit(
+    task_id: str = typer.Argument(..., help="Task ID."),
+    kb_id: str | None = typer.Option(None, "--kb-id", help="Knowledge base ID for ingestion."),
+    remote: str | None = typer.Option(None, "--remote", help="Remote name."),
+):
+    """Commit a reviewed task to the knowledge base."""
+    store = _store()
+    try:
+        _print_remote_context(store, remote)
+        commit_task(store, remote, task_id, kb_id, console)
+    except (ConfigError, ClientError) as exc:
+        _handle_error(exc)
+
+
+def _expand_paths(paths: list[Path]) -> list[Path]:
+    result: list[Path] = []
+    for p in paths:
+        if p.is_file():
+            result.append(p)
+        elif p.is_dir():
+            for child in sorted(p.rglob("*")):
+                if child.is_file():
+                    result.append(child)
+        else:
+            console.print(f"[yellow]跳过不存在的路径: {p}[/yellow]")
+    return result

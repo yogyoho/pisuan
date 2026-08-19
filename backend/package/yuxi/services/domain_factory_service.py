@@ -254,7 +254,7 @@ class DomainFactoryService:
             "8. 地理描述、环境特征等较长描述文字，如不适合拆为 slot，用 [叙述标记: 描述内容] 标记\n\n"
             "需要：\n"
             "1. 给出泛化后的文本（保持原文逻辑结构不变）；\n"
-            "2. 列出每个插槽的含义及推荐数据来源；\n"
+            "2. 列出每个插槽的含义及推荐数据来源，并附带被替换前的原文文字（value 字段，用于审核时恢复原文）；\n"
             '3. 如果段落包含判断逻辑（如"因此"、"所以"、"如果...则"、"当...时"等），提取触发该模板的前提条件；\n'
             "4. 严格只输出 JSON，不要输出任何自然语言解释或前后缀文本；\n"
             "5. 严格禁止输出代码块标记（例如 ```json 或 ```）；\n"
@@ -268,6 +268,7 @@ class DomainFactoryService:
             "     {{\n"
             '       "name": "插槽中文名称",\n'
             '       "type": "类型",\n'
+            '       "value": "被替换前的原文文字（必填，如 \\"7.9℃\\"）",\n'
             '       "description": "插槽含义描述",\n'
             '       "suggested_source": "推荐数据来源"\n'
             "     }}\n"
@@ -791,9 +792,12 @@ class DomainFactoryService:
                 skipped_count = len(paragraphs) - len(parameter_paragraphs)
                 logger.info(f"泛化过滤: {len(parameter_paragraphs)} 个参数型段落待泛化, {skipped_count} 个段落跳过")
 
+                # Phase 4：注入领域实体属性作为 Schema 变量提示，引导泛化优先匹配已有属性
+                schema_vars = await self._load_entity_schema_variables(domain_code)
+
                 paragraph_results = await self.generalize_paragraphs(
                     paragraphs=parameter_paragraphs,
-                    schema_variables=[],
+                    schema_variables=schema_vars,
                     domain_label=domain_label,
                     max_concurrency=10,
                 )
@@ -905,6 +909,19 @@ class DomainFactoryService:
                 },
             )
 
+            # 自动映射 slot → entity.property
+            try:
+                mapped_count = await service._auto_map_slots_to_entity_properties(
+                    paragraphs, domain_code=domain_code
+                )
+                if mapped_count > 0:
+                    logger.info(f"slot→entity.property 自动映射完成: {mapped_count} 个")
+                    await service.repo.update_task(
+                        task_id, {"source_paragraphs": paragraphs}
+                    )
+            except Exception as e:
+                logger.warning(f"slot→entity.property 自动映射失败: {e}")
+
             # 收集未识别插槽（泛化结果中没有 entity_ref 的插槽）
             unrecognized_slots = self._collect_unrecognized_slots(paragraphs)
             if unrecognized_slots:
@@ -984,6 +1001,142 @@ class DomainFactoryService:
 
         return text
 
+    @staticmethod
+    def _post_process_paragraphs(paragraphs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """后处理：合并表格上下文 + 子点标题 + 公式块到所属段落。
+
+        三阶段：
+        1. 表格合并 — 独立粗体行（表格标题/编号）合并到后续表格段落
+        2. 子点合并 — 子点标记行合并到后续内容段落
+        3. 公式合并 — 公式表达式 + 变量定义合并为公式块
+        """
+        import re
+
+        # 独立粗体行模式：整行仅含 **xxx**
+        _bold_only = re.compile(r"^\*\*[^*]+\*\*$")
+        # 表格编号模式：表N.M 或 表N.M-X（可带粗体、续表等后缀）
+        _table_label = re.compile(r"^\**表\s*\d[\d.\-]*(?:[（(][^)）]*[)）])?\**$")
+        # 是否为表格上下文行（粗体标题 或 表格编号）
+        def _is_table_context(text: str) -> bool:
+            return bool(_bold_only.match(text) or _table_label.match(text))
+        # 子点标记模式：1）/（1）/① / a）等
+        _subpoint = re.compile(
+            r"^[（(]?\d+[）)]\s*\S"  # 1）xxx / （1）xxx / (1) xxx
+            r"|^[①②③④⑤⑥⑦⑧⑨⑩]\s*\S"  # ① xxx
+            r"|^[（(]?[a-z][）)]\s*\S"  # a）xxx
+        )
+        # 公式表达式模式：含 = 且有数学运算符的短行
+        _formula_expr = re.compile(r"=")
+        _formula_ops = re.compile(r"[/×÷^*]")
+
+        def _is_formula_line(text: str) -> bool:
+            """单行公式表达式，如 P=Ci/Co、v=q/A"""
+            t = text.strip()
+            if len(t) > 80:
+                return False
+            if not _formula_expr.search(t):
+                return False
+            if not _formula_ops.search(t):
+                return False
+            # 不以句号结尾的短表达式
+            return not t.endswith(("。", "，", "；"))
+
+        # 变量定义行模式："式中：X－..." 或 "X―..." 或 "X——..."
+        _var_def = re.compile(
+            r"^式中[：:]"  # 式中：xxx
+            r"|^[A-Za-z][A-Za-z\d]*\s*[－―——]"  # P－xxx / Ci―xxx
+        )
+
+        def _is_var_def(text: str) -> bool:
+            """变量定义行，如 '式中：P－单因子污染指数' 或 'Ci―浓度值'"""
+            t = text.strip()
+            if not t:
+                return False
+            return bool(_var_def.match(t))
+
+        if not paragraphs:
+            return paragraphs
+
+        merged = []
+        i = 0
+        while i < len(paragraphs):
+            para = paragraphs[i]
+            content = (para.get("content") or "").strip()
+            is_title_para = para.get("is_title", False)
+
+            # ---- 阶段 1：表格上下文合并 ----
+            if para.get("is_table"):
+                ctx_parts = []
+                j = len(merged) - 1
+                while j >= 0 and len(ctx_parts) < 3:
+                    prev = merged[j]
+                    prev_content = (prev.get("content") or "").strip()
+                    if prev.get("is_title"):
+                        break
+                    if _is_table_context(prev_content):
+                        ctx_parts.insert(0, prev_content)
+                        j -= 1
+                    else:
+                        break
+                if ctx_parts:
+                    del merged[j + 1 :]
+                    para = dict(para)
+                    para["table_context"] = [c.strip("*") for c in ctx_parts]
+
+            # ---- 阶段 2：子点标记合并 ----
+            elif not is_title_para and _subpoint.match(content) and i + 1 < len(paragraphs):
+                next_para = paragraphs[i + 1]
+                if not next_para.get("is_title") and not next_para.get("is_table"):
+                    next_content = (next_para.get("content") or "").strip()
+                    # 不合并另一个子点标记
+                    if not _subpoint.match(next_content):
+                        para = dict(para)
+                        para["content"] = content + "\n" + next_content
+                        para["word_count"] = len(para["content"])
+                        para["char_count"] = len(para["content"])
+                        para["subpoint_merged"] = True
+                        i += 1  # 跳过被合并的下一段
+
+            # ---- 阶段 3：公式块合并 ----
+            # 公式引导句（以"为："或"如下："结尾），后续为公式表达式+变量定义
+            if not is_title_para and not para.get("is_table") and not para.get("subpoint_merged"):
+                _formula_lead = re.search(
+                    r"(?:计算|估算|预测|评价).*?(?:公式|模式|方法|如下).*?[：:]\s*$", content
+                )
+                if _formula_lead and i + 1 < len(paragraphs):
+                    next_para = paragraphs[i + 1]
+                    next_content = (next_para.get("content") or "").strip()
+                    if not next_para.get("is_title") and not next_para.get("is_table"):
+                        # 检查下一段是否为公式表达式
+                        if _is_formula_line(next_content):
+                            # 收集：引导句 + 公式表达式 + 变量定义行
+                            formula_parts = [content, next_content]
+                            i += 1  # 跳过公式表达式
+                            # 继续收集后续的变量定义行
+                            while i + 1 < len(paragraphs):
+                                look = paragraphs[i + 1]
+                                look_content = (look.get("content") or "").strip()
+                                if look.get("is_title") or look.get("is_table"):
+                                    break
+                                # 变量定义行："式中：..." 或 "X－..." 或 "X―..."
+                                if _is_var_def(look_content):
+                                    formula_parts.append(look_content)
+                                    i += 1
+                                else:
+                                    break
+                            if len(formula_parts) >= 2:
+                                para = dict(para)
+                                para["content"] = "\n".join(formula_parts)
+                                para["word_count"] = len(para["content"])
+                                para["char_count"] = len(para["content"])
+                                para["classify_type"] = "formula"
+                                para["formula_merged"] = True
+
+            merged.append(para)
+            i += 1
+
+        return merged
+
     def _parse_markdown_to_paragraphs(self, markdown: str, html_content: str | None = None) -> list[dict[str, Any]]:
         """将 Markdown 文本解析为段落列表，按章节组织
 
@@ -1003,7 +1156,7 @@ class DomainFactoryService:
                 "content": "",              # 段落内容（标题时为空）
                 "is_title": true,           # 是否为标题
                 "level": 1,                # 标题层级
-                "section_path": ["1"],      # 章节路径，如 ["1", "1.1", "1.1.1"]
+                "section_path": ["1"],      # 章节路径，如 ["1", "1.1", "1.1.1", "1.1.1.1"]
                 "section_code": "SEC_1",    # 章节代码
                 "word_count": 120,          # 字数
                 "char_count": 200,          # 字符数
@@ -1022,8 +1175,10 @@ class DomainFactoryService:
         md_table_count = 0  # Markdown 中遇到的表格数量
 
         # 章节路径栈 - 维护当前章节层级路径
-        section_path_stack: list[str] = []  # ["1", "1.1", "1.1.1"]
+        section_path_stack: list[str] = []  # ["1", "1.1", "1.1.1", "1.1.1.1"]
         paragraph_counter = 0
+        # 当前章节完整标题（编号+名称），正文段落继承它作为 title
+        current_section_title = ""
 
         # 标题层级模式
         heading_patterns = [
@@ -1100,6 +1255,9 @@ class DomainFactoryService:
                     num_match = numbered_pattern.match(title_text)
                     if num_match:
                         num_part = num_match.group(1)
+                        # 清洗 title_text 去掉编号前缀，避免 current_section_title 拼接时编号重复
+                        # 例如 "3.1.1 地形地貌" → "地形地貌"
+                        title_text = num_match.group(2).strip()
                     break
 
             # 如果不是 Markdown 标题，尝试数字标题格式 (1. xxx 或 1.1 xxx)
@@ -1144,8 +1302,10 @@ class DomainFactoryService:
                         level = 1
                     elif num_level == 2:
                         level = 2
-                    elif num_level >= 3:
+                    elif num_level == 3:
                         level = 3
+                    elif num_level >= 4:
+                        level = 4
 
                     if level == 1:
                         section_path_stack = [num_part]
@@ -1159,11 +1319,18 @@ class DomainFactoryService:
                         else:
                             section_path_stack.append(num_part)
                         section_path_stack = section_path_stack[:2]
-                    elif level >= 3:
+                    elif level == 3:
                         while len(section_path_stack) < 2:
                             section_path_stack.append("1")
                         section_path_stack = section_path_stack[:2] + [num_part]
                         section_path_stack = section_path_stack[:3]
+                    elif level >= 4:
+                        while len(section_path_stack) < 3:
+                            section_path_stack.append("1")
+                        # 父级路径 = num_part 去掉末段编号
+                        parent_num = ".".join(path_parts[:-1])
+                        section_path_stack = section_path_stack[:2] + [parent_num, num_part]
+                        section_path_stack = section_path_stack[:4]
                 else:
                     if level == 1:
                         section_path_stack = [str(len([p for p in paragraphs if p.get("level", 0) == 1]) + 1)]
@@ -1182,6 +1349,11 @@ class DomainFactoryService:
 
                 section_code = f"SEC_{'_'.join(section_path_stack)}"
 
+                # 记录当前 heading 的完整标题（编号+名称），供后续正文段落继承。
+                # 正文段落 title 原为空，导致模板回流 chapter 标识退化为 section_path 乱码拼接、
+                # 大纲分组 fallback 到"未分类"、LLM 章节归一化退化到"总则"。
+                current_section_title = f"{num_part} {title_text}".strip() if num_part else title_text
+
                 paragraphs.append(
                     {
                         "id": para_id,
@@ -1199,14 +1371,22 @@ class DomainFactoryService:
                 )
                 i += 1
             elif is_table_line(stripped):
-                # 表格行：收集连续的 Markdown 表格行，然后用 HTML 表格替代
+                # 表格行：收集连续的 Markdown 表格行，跳过分隔符行（|---|...|），然后用 HTML 表格替代
                 table_lines = []
-                while i < len(lines) and is_table_line(lines[i].strip()):
-                    table_lines.append(lines[i].strip())
-                    i += 1
+                while i < len(lines):
+                    line_text = lines[i].strip()
+                    if is_table_line(line_text):
+                        table_lines.append(line_text)
+                        i += 1
+                    elif line_text.startswith("|") and line_text.endswith("|"):
+                        # 表格分隔符行（如 |---|:---|），属于表格但不收集内容
+                        i += 1
+                    else:
+                        break
 
-                if len(table_lines) >= 2 and html_table_index < len(html_tables):
-                    # 使用对应的 HTML 表格
+                has_html = html_table_index < len(html_tables)
+                if has_html and len(table_lines) >= 1:
+                    # 使用对应的 HTML 表格（单行或多行，只要有 HTML 就信任匹配）
                     html_table = html_tables[html_table_index]
                     html_table_index += 1
                     md_table_count += 1
@@ -1214,7 +1394,7 @@ class DomainFactoryService:
                     paragraphs.append(
                         {
                             "id": para_id,
-                            "title": "",
+                            "title": current_section_title,
                             "content": html_table,  # 存储完整 HTML 表格
                             "is_title": False,
                             "level": 0,
@@ -1233,7 +1413,7 @@ class DomainFactoryService:
                     paragraphs.append(
                         {
                             "id": para_id,
-                            "title": "",
+                            "title": current_section_title,
                             "content": table_lines[0],
                             "is_title": False,
                             "level": 0,
@@ -1253,7 +1433,7 @@ class DomainFactoryService:
                     paragraphs.append(
                         {
                             "id": para_id,
-                            "title": "",
+                            "title": current_section_title,
                             "content": content,
                             "is_title": False,
                             "level": 0,
@@ -1272,7 +1452,7 @@ class DomainFactoryService:
                 paragraphs.append(
                     {
                         "id": para_id,
-                        "title": "",
+                        "title": current_section_title,
                         "content": stripped,
                         "is_title": False,
                         "level": 0,
@@ -1286,6 +1466,9 @@ class DomainFactoryService:
                     }
                 )
                 i += 1
+
+        # 后处理：合并表格上下文 + 子点标题
+        paragraphs = self._post_process_paragraphs(paragraphs)
 
         title_count = sum(1 for p in paragraphs if p.get("is_title"))
         table_count = sum(1 for p in paragraphs if p.get("is_table"))
@@ -1395,6 +1578,11 @@ class DomainFactoryService:
             content = para.get("content", "").strip()
             title = para.get("title", "")
             tags = []
+
+            # 后处理已标记类型（公式合并等），跳过重新分类
+            if para.get("classify_type"):
+                para["classify_tags"] = tags
+                continue
 
             # 1. 标题型
             if para.get("is_title"):
@@ -1508,6 +1696,10 @@ class DomainFactoryService:
             return True
         if '=' in content and _re.search(r'[×÷·∑∫√π]', content):
             return True
+        # 简单公式表达式: "P=Ci/Co", "v=q/A", "Q=C×V"
+        if '=' in content and _re.search(r'[/×÷^*]', content):
+            if len(content) < 80 and not content.rstrip().endswith(('。', '，', '；')):
+                return True
         formula_title_keywords = ["计算公式", "预测模式", "计算方法", "数学模型"]
         if any(kw in title for kw in formula_title_keywords):
             return True
@@ -3701,6 +3893,48 @@ class DomainFactoryService:
             lines.append(f"- {key} ({dtype}): {label}；提取提示：{prompt}")
         return "\n".join(lines) if lines else "无特定 Schema 变量，请根据文本内容自动识别"
 
+    async def _load_entity_schema_variables(self, domain_code: str | None, max_items: int = 60) -> list[dict[str, Any]]:
+        """Phase 4：加载领域实体属性作为泛化 Schema 变量提示。
+
+        让泛化 LLM 优先按已有实体属性名提取 slot（自上而下收敛），而非完全自由提取。
+        只取该领域实体的属性（非全量），cap max_items 控制 token 成本。
+        返回 _format_schema_variables 所需的 {key, data_type, label, prompt} 格式。
+        """
+        if not domain_code:
+            return []
+        from yuxi.repositories.domain_entity_repository import DomainEntityRepository
+
+        try:
+            repo = DomainEntityRepository()
+            entities = await repo.list_all(domain_code=domain_code)
+        except Exception as e:
+            logger.warning(f"[phase4] 加载实体属性失败 {domain_code}: {e}")
+            return []
+        variables: list[dict[str, Any]] = []
+        for e in entities:
+            ek = e.get("entity_key", "")
+            ent_name = e.get("name_cn", "") or ek
+            props = e.get("properties", []) or []
+            items = props.items() if isinstance(props, dict) else enumerate(props)
+            for pk, pv in items:
+                if not isinstance(pv, dict):
+                    continue
+                prop_key = pk if isinstance(props, dict) else (pv.get("key") or "")
+                name_cn = (pv.get("name_cn") or prop_key or "").strip()
+                if not name_cn:
+                    continue
+                unit = pv.get("unit")
+                variables.append({
+                    "key": f"{ek}.{prop_key}" if ek and prop_key else (prop_key or name_cn),
+                    "data_type": pv.get("value_type", ""),
+                    "label": f"{ent_name}.{name_cn}",
+                    "prompt": pv.get("extraction_hint") or (f"单位 {unit}" if unit else ""),
+                })
+                if len(variables) >= max_items:
+                    return variables
+        return variables
+
+
     def _generalize_fallback(self, text: str, domain_label: str = "") -> dict[str, Any]:
         """泛化失败时的回退方法"""
         return {
@@ -3747,6 +3981,81 @@ class DomainFactoryService:
             "ingest_task_id": task.ingest_task_id,
             "knowledge_base_id": task.knowledge_base_id,
         }
+
+    async def validate_task(self, task_id: str) -> dict[str, Any]:
+        """对任务执行 PreCommitValidator + SlotValidationService 校验，返回结构化报告并写入 DB。
+
+        纯只读操作，不修改任务状态，用户可在提交前反复调用。
+        """
+        from yuxi.services.pre_commit_validator import PreCommitValidator
+        from yuxi.services.slot_validation_service import SlotValidationService
+
+        task_detail = await self.get_task_detail(task_id)
+        if not task_detail:
+            return {"error": "任务不存在", "task_id": task_id}
+
+        paragraphs = task_detail.get("source_paragraphs", [])
+
+        # ---- L1: PreCommitValidator ----
+        validator = PreCommitValidator()
+        pre_result = await validator.validate(task_detail)
+        errors = [
+            {"type": "pre_commit", "message": msg}
+            for msg in pre_result.errors
+        ]
+        warnings = [
+            {"type": "pre_commit", "message": msg}
+            for msg in pre_result.warnings
+        ]
+
+        # ---- L2: SlotValidationService ----
+        try:
+            svc = SlotValidationService()
+            paragraph_slots = [
+                {
+                    "paragraph_id": p.get("id", ""),
+                    "slots": (p.get("template") or {}).get("slots", []),
+                }
+                for p in paragraphs
+                if p.get("type") == "parameter" and isinstance(p.get("template"), dict)
+            ]
+            if paragraph_slots:
+                val_report = await svc.validate_slots(paragraph_slots, {})
+                for c in val_report.get("conflicts", []):
+                    warnings.append({
+                        "type": "slot_entity_conflict",
+                        "slot_name": c.get("slot_name", ""),
+                        "message": c.get("message", ""),
+                        "paragraph_ids": c.get("paragraph_ids", []),
+                    })
+                if val_report.get("warnings", 0) > 0:
+                    warnings.append({
+                        "type": "slot_type_warning",
+                        "message": f"{val_report['warnings']} 个 slot-entity 类型不一致",
+                    })
+        except Exception as e:
+            warnings.append({"type": "slot_validation_error", "message": f"slot 校验异常: {e}"})
+
+        # 组装报告
+        report = {
+            "passed": len(errors) == 0,
+            "summary": {
+                "total_errors": len(errors),
+                "total_warnings": len(warnings),
+                "total_paragraphs": len(paragraphs),
+                "parameter_paragraphs": sum(1 for p in paragraphs if p.get("type") == "parameter"),
+                "checked_at": None,  # 前端填充
+            },
+            "errors": errors,
+            "warnings": warnings,
+        }
+
+        # 写入 DB
+        from datetime import datetime, timezone
+        report["summary"]["checked_at"] = datetime.now(timezone.utc).isoformat()
+        await self.repo.update_task(task_id, {"validation_report": report})
+
+        return report
 
     async def list_pending_tasks(self, domain_code: str | None = None) -> list[dict[str, Any]]:
         domain_id = None
@@ -4491,9 +4800,11 @@ class DomainFactoryService:
                 )
                 chunk_idx += 1
 
-        # 构建段落 chunks
+        # 构建段落 chunks（公式段落跳过，由下方的公式 chunk 专门处理）
         paragraphs = task_detail.get("source_paragraphs", [])
         for para in paragraphs:
+            if para.get("classify_type") == "formula":
+                continue
             title = para.get("title", "")
             content = para.get("content", "")
             section_path = para.get("section_path", [])
@@ -4540,6 +4851,51 @@ class DomainFactoryService:
                     }
                 )
                 chunk_idx += 1
+
+        # 构建公式 chunks — 公式段落单独建 chunk，包含变量映射 + 图谱 FormulaTemplate 引用
+        for para in paragraphs:
+            if para.get("classify_type") != "formula":
+                continue
+            tmpl = para.get("template") or {}
+            formula_data = tmpl.get("formula")
+            if not isinstance(formula_data, dict):
+                continue
+
+            original = formula_data.get("original", "")
+            purpose = formula_data.get("purpose", "")
+            variables = formula_data.get("variables", [])
+            formula_id = f"FORMULA_{hashstr(original[:200], 12)}"
+
+            # 构建可检索文本：公式表达式 + 变量映射 + 用途
+            lines = [original]
+            if purpose:
+                lines.append(f"用途: {purpose}")
+            if variables:
+                var_descs = []
+                for v in variables:
+                    sym = v.get("symbol", "")
+                    name = v.get("name", sym)
+                    unit = v.get("unit", "")
+                    unit_str = f"({unit})" if unit else ""
+                    entity = v.get("entity_ref", "")
+                    entity_str = f" [{entity}]" if entity else ""
+                    var_descs.append(f"{sym} = {name}{unit_str}{entity_str}")
+                lines.append("变量: " + "; ".join(var_descs))
+
+            chunks.append(
+                {
+                    "id": f"{file_id}_formula_{chunk_idx}",
+                    "content": "\n".join(lines),
+                    "chunk_order_index": chunk_idx,
+                    "section_id": f"formula_{para.get('id', chunk_idx)}",
+                    "section_title": para.get("title", "公式"),
+                    "parent_section_title": "",
+                    "template": tmpl,
+                    "slots": tmpl.get("slots"),
+                    "formula_template_id": formula_id,
+                }
+            )
+            chunk_idx += 1
 
         # 构建表格 chunks
         structured_blocks = task_detail.get("structured_blocks", [])
@@ -4644,11 +5000,9 @@ class DomainFactoryService:
             if tmpl.get("generalized") or tmpl.get("slots"):
                 g["templates"].append(tmpl)
             # 收集与 _save_learned_templates_from_task 相同的 chapter 标识，供回填精确匹配
-            pk = (para.get("title") or "").strip() or (
-                ".".join(str(s) for s in para.get("section_path", []))
-                if para.get("section_path")
-                else ""
-            )
+            # 兜底取 section_path 最后一级，与 _save_learned_templates_from_task 保持一致
+            _sp = para.get("section_path") or []
+            pk = (para.get("title") or "").strip() or (_sp[-1] if _sp else "")
             if pk:
                 g["template_chapter_keys"].add(pk)
         # 结构化资产按章回填（ETL 抽取产物里若带 chapter/title 则归入对应组）
@@ -4774,7 +5128,8 @@ class DomainFactoryService:
   "purpose": "1-2 句：本章在环评中的作用与编写目的",
   "overview": "2-3 句：本章概述",
   "key_points": ["要点1", "要点2", "要点3-5个"],
-  "writing_hints": "本章专属写作提示（如：先列现状值再列标准值；用表格呈现监测点位）"
+  "writing_hints": "本章专属写作提示（如：先列现状值再列标准值；用表格呈现监测点位）",
+  "extraction_regex": "用于从报告 markdown 中定位本章标题行的正则字符串。需兼容编号变体(如 5.2.3 / 5.2.3. )并覆盖标题核心词。例：章节'地下水环境影响预测' → ^\\\\d+(\\\\.\\\\d+)*\\\\s*地下水.*影响预测。只输出正则本体(JSON字符串,反斜杠需转义),不要分隔符或解释"
 }}
 """
 
@@ -4798,7 +5153,7 @@ class DomainFactoryService:
             data = m.group(0)
             parsed = _json.loads(data)
             parsed.setdefault("canonical_chapter_key", fallback_key)
-            for k in ("purpose", "overview", "key_points", "writing_hints"):
+            for k in ("purpose", "overview", "key_points", "writing_hints", "extraction_regex"):
                 parsed.setdefault(k, [] if k == "key_points" else None)
             return parsed
         except Exception as e:
@@ -4809,6 +5164,7 @@ class DomainFactoryService:
                 "overview": None,
                 "key_points": [],
                 "writing_hints": None,
+                "extraction_regex": None,
             }
 
     async def _produce_outlines_async(self, task_id: str, domain_code: str, report_type_code: str) -> int:
@@ -4848,6 +5204,365 @@ class DomainFactoryService:
         logger.info(f"章节大纲产出: {count} 章, domain={domain_code}, report_type={report_type_code}")
         return count
 
+    async def extract_outline_preview(
+        self, file_bytes: bytes, filename: str, domain_code: str, report_type_code: str
+    ) -> dict[str, Any]:
+        """专用大纲提取：python-docx 读 heading 结构 + 每章 LLM 归一化。
+
+        不走 docling 完整解析（含图片加载+VLM描述，对图片密集报告需 10+ 分钟），
+        而是用 python-docx 直接读 Word 原生 heading 样式——秒级完成且层级准确。
+        每个 heading 并发调一次 _llm_chapter_meta 归一化 canonical/purpose，
+        返回层级章节树预览供人工确认后再入库。
+        """
+        import asyncio
+        import os
+
+        suffix = (os.path.splitext(filename)[1] or "").lower()
+        if suffix != ".docx":
+            raise ValueError(f"大纲提取暂仅支持 .docx，收到 {suffix or '未知'}")
+
+        headings = self._extract_headings_from_docx(file_bytes)
+        if not headings:
+            logger.warning(f"未提取到 heading: file={filename}")
+            return {
+                "domain": domain_code,
+                "report_type": report_type_code,
+                "file_name": filename,
+                "total": 0,
+                "chapters": [],
+            }
+
+        seed_keys = await self.repo.list_chapter_keys(domain_code, report_type_code)
+
+        async def _normalize_heading(h: dict) -> dict[str, Any]:
+            reqs = [c for c in h.get("content", [])[:8] if c]
+            meta = await self._llm_chapter_meta(h["text"], {"content_requirements": reqs}, seed_keys)
+            canonical = meta.get("canonical_chapter_key") or h["text"]
+            if canonical not in seed_keys:
+                seed_keys.append(canonical)
+            return {
+                "level": h["level"],
+                "chapter_title": h["text"],
+                "canonical_chapter_key": canonical,
+                "purpose": meta.get("purpose"),
+                "overview": meta.get("overview"),
+                "key_points": meta.get("key_points") or [],
+                "writing_hints": meta.get("writing_hints"),
+                "extraction_regex": meta.get("extraction_regex"),
+                "paragraph_count": len(h.get("content", [])),
+            }
+
+        chapters = list(await asyncio.gather(*[_normalize_heading(h) for h in headings]))
+        logger.info(f"大纲提取(python-docx): {len(chapters)} 章, file={filename}")
+        return {
+            "domain": domain_code,
+            "report_type": report_type_code,
+            "file_name": filename,
+            "total": len(chapters),
+            "chapters": chapters,
+        }
+
+    def _extract_headings_from_docx(self, file_bytes: bytes) -> list[dict[str, Any]]:
+        """用 python-docx 提取 docx 的 heading 结构（不走 docling 图片VLM）。
+
+        直接读 Word 原生 Heading 样式，秒级完成、层级准确。每个 heading 收集其下
+        正文段落摘要，供 _llm_chapter_meta 作为归一化上下文。返回 [{level, text, content}]。
+        """
+        import io
+
+        from docx import Document
+
+        doc = Document(io.BytesIO(file_bytes))
+        headings: list[dict[str, Any]] = []
+        current: dict[str, Any] | None = None
+        for para in doc.paragraphs:
+            text = (para.text or "").strip()
+            if not text:
+                continue
+            level = self._docx_heading_level(para.style.name or "")
+            if level:
+                current = {"level": level, "text": text, "content": []}
+                headings.append(current)
+            elif current is not None:
+                current["content"].append(text[:80])
+        return headings
+
+    @staticmethod
+    def _docx_heading_level(style_name: str) -> int | None:
+        """从 Word 样式名解析 heading 层级：'Heading 2'/'标题 3' → 2/3。"""
+        s = (style_name or "").strip()
+        if s.startswith("Heading "):
+            tail = s[len("Heading "):].strip()
+            if tail.isdigit() and 1 <= int(tail) <= 6:
+                return int(tail)
+        if s.startswith("标题"):
+            tail = s[len("标题"):].strip()
+            if tail.isdigit() and 1 <= int(tail) <= 6:
+                return int(tail)
+        return None
+
+
+    async def confirm_outline_extract(
+        self,
+        domain_code: str,
+        report_type_code: str,
+        chapters: list[dict[str, Any]],
+        file_name: str = "",
+    ) -> dict[str, Any]:
+        """将确认的大纲入库：PG upsert + 图谱归纳（样例/模板分离）。
+
+        复用 GraphBuilder._build_skeleton_aggregation 建 ChapterTemplate 模板节点 +
+        计算 frequency/rigidity（多份样例归纳通用性）；Document 作样例标识（供 doc_count）；
+        _merge_cross_report_knowledge 算 content_contract。不再直接 MERGE 样例目录。
+        """
+        import json as _json
+
+        from yuxi.services.graph_builder import GraphBuilder
+        from yuxi.utils import hashstr
+
+        # 1. PG outline upsert（保留，供前端检索/编辑）
+        saved = 0
+        for ch in chapters:
+            canonical = (ch.get("canonical_chapter_key") or "").strip()
+            if not canonical:
+                continue
+            await self.repo.upsert_outline(
+                domain_code=domain_code,
+                report_type_code=report_type_code,
+                canonical_chapter_key=canonical,
+                chapter_title=ch.get("chapter_title"),
+                purpose=ch.get("purpose"),
+                overview=ch.get("overview"),
+                key_points=ch.get("key_points") or [],
+                writing_hints=ch.get("writing_hints"),
+                source_task_ids=["outline_extract"],
+                source_count=1,
+            )
+            saved += 1
+
+        # 2. 图谱归纳（样例 → Document；模板 → ChapterTemplate with frequency/rigidity）
+        builder = GraphBuilder()
+        graph_synced = 0
+        doc_id = ""
+        try:
+            driver = builder._get_driver()
+            if driver is None:
+                logger.warning("图谱未连接，跳过归纳（仅 PG 入库）")
+                return {"saved": saved, "graph_synced": 0}
+
+            with driver.session() as session:
+                std_keys = [
+                    r["key"]
+                    for r in session.run(
+                        "MATCH (c:ChapterTemplate {domain: $d, report_type: $rt}) "
+                        "WHERE c.id STARTS WITH 'CH_' + $d + '_' + $rt + '_std_' "
+                        "RETURN c.canonical_chapter_key AS key",
+                        d=domain_code,
+                        rt=report_type_code,
+                    )
+                    if r["key"]
+                ]
+
+            source_paragraphs = self._chapters_to_source_paragraphs(chapters, std_keys)
+            doc_id = f"DOC_EXT_{domain_code}_{report_type_code}_{hashstr(file_name or 'extract', 12)}"
+            kb_id = f"KB_EXT_{domain_code}_{report_type_code}"
+            doc_title = file_name or "outline_extract"
+
+            with driver.session() as session:
+                # 建 Document（样例标识，供 doc_count 统计）
+                session.execute_write(
+                    GraphBuilder._create_document_node,
+                    kb_id,
+                    doc_id,
+                    doc_title,
+                    domain_code,
+                    domain_code,
+                    report_type_code,
+                )
+                # 骨架归纳：DomainOutline source_count 递增 + ChapterTemplate frequency/rigidity + HAS_CHILD
+                session.execute_write(
+                    GraphBuilder._build_skeleton_aggregation,
+                    kb_id,
+                    domain_code,
+                    report_type_code,
+                    doc_id,
+                    doc_title,
+                    source_paragraphs,
+                )
+                # 回填 LLM 元数据（purpose/key_points/extraction_regex）到归纳出的 ChapterTemplate
+                for p in source_paragraphs:
+                    purpose = p.get("_purpose")
+                    kp = p.get("_key_points") or []
+                    regex = p.get("_regex")
+                    if not (purpose or kp or regex):
+                        continue
+                    session.run(
+                        """
+                        MATCH (ch:ChapterTemplate {domain: $d, report_type: $rt, canonical_chapter_key: $key, level: $level})
+                        SET ch.purpose = coalesce($purpose, ch.purpose),
+                            ch.key_points = coalesce($kp, ch.key_points),
+                            ch.extraction_regex = coalesce($regex, ch.extraction_regex)
+                        """,
+                        d=domain_code,
+                        rt=report_type_code,
+                        key=p["title"],
+                        level=p["level"],
+                        purpose=purpose,
+                        kp=_json.dumps(kp, ensure_ascii=False) if kp else None,
+                        regex=regex,
+                    )
+                    graph_synced += 1
+
+            # content_contract 重算（required=所有样例有 / optional=部分）
+            try:
+                await self._merge_cross_report_knowledge(
+                    {"domain": domain_code, "report_type_code": report_type_code}
+                )
+            except Exception as e:
+                logger.warning(f"content_contract 重算失败（不阻断）: {e}")
+        finally:
+            builder.close()
+
+        logger.info(f"大纲确认入库(归纳): saved={saved}, graph_synced={graph_synced}, doc={doc_id}")
+        return {"saved": saved, "graph_synced": graph_synced}
+
+    @staticmethod
+    def _chapters_to_source_paragraphs(
+        chapters: list[dict[str, Any]], std_keys: list[str]
+    ) -> list[dict[str, Any]]:
+        """extract chapters → ETL source_paragraphs 适配（喂给 _build_skeleton_aggregation）。
+
+        - section_path 用 level 栈+计数器重建，保证同结构样例路径一致（[1,1,2] 等）；
+        - canonical 归一到 std_ 规范名（level 1 挂 std_ 根；跨样例合并）；
+        - title 用归一后的 canonical，保证 _derive_canonical_key 结果一致 → frequency 能正确统计。
+        """
+        std_set = set(std_keys)
+
+        def _norm(s: str) -> str:
+            return (s or "").replace("、", "").replace(" ", "").replace("及", "与")
+
+        std_norm = {_norm(k): k for k in std_keys}
+
+        def _resolve(c: str) -> str:
+            if not c or c in std_set:
+                return c
+            cn = _norm(c)
+            if cn in std_norm:
+                return std_norm[cn]
+            for k in std_keys:
+                kn = _norm(k)
+                if len(kn) >= 4 and (kn in cn or cn in kn):
+                    return k
+            # 字符重合匹配：处理"评价"vs"预测与评价"等措辞变体（包含匹配漏掉的）
+            best_k, best_ratio = None, 0.0
+            for k in std_keys:
+                kn_chars = set(_norm(k))
+                if not kn_chars:
+                    continue
+                common = sum(1 for ch in cn if ch in kn_chars)
+                denom = max(len(cn), len(_norm(k)))
+                ratio = common / denom if denom else 0.0
+                if ratio > best_ratio:
+                    best_ratio, best_k = ratio, k
+            if best_ratio >= 0.6:
+                return best_k
+            return c
+
+        result: list[dict[str, Any]] = []
+        path_counter: dict[int, int] = {}
+        stack: list[int] = []
+        for idx, ch in enumerate(chapters):
+            level = int(ch.get("level") or 1)
+            stack = stack[: level - 1]
+            path_counter[level] = path_counter.get(level, 0) + 1
+            for deeper in [k for k in path_counter if k > level]:
+                del path_counter[deeper]
+            stack.append(path_counter[level])
+
+            canonical = _resolve((ch.get("canonical_chapter_key") or "").strip())
+            # level 1 必须归一到 std_ 13 章根；真非导则章(前言/附录等)跳过，不建独立 level 1
+            if level == 1 and canonical not in std_set:
+                continue
+            title = canonical or (ch.get("chapter_title") or "").strip()
+            result.append(
+                {
+                    "is_title": True,
+                    "section_path": stack[:],
+                    "title": title,
+                    "id": f"p{idx}",
+                    "level": level,
+                    "_purpose": ch.get("purpose"),
+                    "_key_points": ch.get("key_points") or [],
+                    "_regex": ch.get("extraction_regex"),
+                }
+            )
+        return result
+
+    async def generate_standard_extraction_regex(
+        self, domain_code: str, report_type_code: str
+    ) -> dict[str, Any]:
+        """为图谱标准章节(std_ level=1)批量生成 extraction_regex。
+
+        seed 的标准章节不走 LLM，没有 extraction_regex。此方法遍历 std_ 节点，
+        对每个调 _llm_chapter_meta 生成正则，update_chapter_template 写回图谱。
+        用于补全标准结构的提取规则。
+        """
+        import asyncio
+        import json
+
+        from yuxi.services.graph_query_service import GraphQueryService
+
+        graph_svc = GraphQueryService()
+        try:
+            with graph_svc._driver.session() as session:
+                result = session.run(
+                    """
+                    MATCH (ch:ChapterTemplate)
+                    WHERE ch.domain = $domain AND ch.report_type = $rt
+                      AND ch.level = 1
+                      AND ch.id STARTS WITH 'CH_' + $domain + '_' + $rt + '_std_'
+                    RETURN ch.canonical_chapter_key AS canonical, ch.key_points AS key_points
+                    """,
+                    domain=domain_code,
+                    rt=report_type_code,
+                )
+                std_chapters: list[dict[str, Any]] = []
+                for r in result:
+                    kp = r["key_points"]
+                    if isinstance(kp, str):
+                        try:
+                            kp = json.loads(kp)
+                        except (json.JSONDecodeError, TypeError):
+                            kp = []
+                    canonical = r["canonical"]
+                    if canonical:
+                        std_chapters.append({"canonical": canonical, "key_points": kp or []})
+
+            if not std_chapters:
+                return {"generated": 0, "total": 0, "reason": "未找到标准章节"}
+
+            seed_keys = [c["canonical"] for c in std_chapters]
+
+            async def _gen(ch: dict[str, Any]) -> str | None:
+                meta = await self._llm_chapter_meta(
+                    ch["canonical"],
+                    {"content_requirements": ch.get("key_points", [])},
+                    seed_keys,
+                )
+                regex = meta.get("extraction_regex")
+                if regex:
+                    await graph_svc.update_chapter_template(
+                        domain_code, report_type_code, ch["canonical"], {"extraction_regex": regex}
+                    )
+                return regex
+
+            results = await asyncio.gather(*[_gen(c) for c in std_chapters])
+            generated = sum(1 for r in results if r)
+            logger.info(f"标准章节 extraction_regex 生成: {generated}/{len(std_chapters)}")
+            return {"generated": generated, "total": len(std_chapters)}
+        finally:
+            graph_svc.close()
+
     async def _save_learned_templates_from_task(self, task_detail: dict[str, Any]) -> int:
         """从已提交任务中提取高质量模板，回流到学习模板库"""
         domain_code = task_detail.get("domain", "coal")
@@ -4867,7 +5582,12 @@ class DomainFactoryService:
             slot_names = sorted(s.get("name", "") for s in slots if isinstance(s, dict))
             slot_signature = "|".join(slot_names)
             section_path = para.get("section_path", [])
-            chapter = para.get("title", "") or (".".join(str(p) for p in section_path) if section_path else "")
+            # chapter 标识优先用 title（修复后正文段落已继承所属章节标题）；
+            # title 缺失时取 section_path 最后一级（如 ["1","1.2","1.2.2"] → "1.2.2"），
+            # 不要全层 join（会得到 "1.1.2.1.2.2" 乱码）。
+            chapter = (para.get("title", "") or "").strip() or (
+                section_path[-1] if section_path else ""
+            )
             sample_original = para.get("original", para.get("content", ""))
             metadata = template.get("metadata", {})
 
@@ -5384,6 +6104,265 @@ class DomainFactoryService:
     # ========== Standard Code Mapping ==========
 
     # ========== Entity Evolution（实体进化回路） ==========
+
+    async def _auto_map_slots_to_entity_properties(
+        self, paragraphs: list[dict], domain_code: str | None = None
+    ) -> int:
+        """自动映射 slot name 到 entity.property，填充 entity_ref。
+
+        从 DB 读取所有实体及其 properties 列表，对每个 slot 做三级匹配：
+        1. slot.name 等于 property.name_cn
+        2. slot.name 包含 property.name_cn 或反向
+        3. slot.name 的任意字符在 property.name_cn 中出现
+
+        匹配成功 → slot.entity_ref = "entity_key.property_name"
+        """
+        from yuxi.repositories.domain_entity_repository import DomainEntityRepository
+
+        repo = DomainEntityRepository()
+        entities = await repo.list_all(domain_code=domain_code)
+
+        if not entities:
+            return 0
+
+        # 构建 property 索引: {prop_name: (entity_key, prop)}
+        prop_index: dict[str, list[tuple[str, dict]]] = {}
+        for e in entities:
+            ek = e.get("entity_key", "")
+            if not ek:
+                continue
+            props = e.get("properties", []) or []
+            if isinstance(props, dict):
+                # dict 格式: {prop_key: {name_cn, ...}}
+                for pk, pv in props.items():
+                    name = (pv.get("name_cn") or pk).strip()
+                    if name:
+                        prop_index.setdefault(name, []).append((ek, pk, pv))
+            else:
+                # list 格式: [{name_cn, value_type, unit, ...}]
+                for p in props:
+                    if not isinstance(p, dict):
+                        continue
+                    name = (p.get("name_cn") or "").strip()
+                    if name:
+                        prop_index.setdefault(name, []).append((ek, name, p))
+
+        if not prop_index:
+            return 0
+
+        mapped = 0
+        for para in paragraphs:
+            tmpl = para.get("template")
+            if not isinstance(tmpl, dict):
+                continue
+            slots = tmpl.get("slots", [])
+            for slot in slots:
+                if slot.get("entity_ref"):
+                    continue  # 已映射
+                slot_name = (slot.get("name") or "").strip()
+                if not slot_name:
+                    continue
+
+                match = self._match_slot_to_property(slot_name, prop_index)
+                if match:
+                    slot["entity_ref"] = f"{match[0]}.{match[1]}"
+                    mapped += 1
+
+        return mapped
+
+    @staticmethod
+    def _match_slot_to_property(
+        slot_name: str, prop_index: dict[str, list[tuple[str, str, dict]]]
+    ) -> tuple[str, str] | None:
+        """三级匹配：精确 → 包含 → 模糊"""
+        # 1. 精确匹配
+        if slot_name in prop_index:
+            ek, pk, _ = prop_index[slot_name][0]
+            return (ek, pk)
+
+        # 2. 包含匹配
+        for prop_name, matches in prop_index.items():
+            if prop_name in slot_name or slot_name in prop_name:
+                ek, pk, _ = matches[0]
+                return (ek, pk)
+
+        # 3. 关键词交集匹配（至少 2 个汉字重叠）
+        slot_chars = set(slot_name)
+        for prop_name, matches in prop_index.items():
+            common = slot_chars & set(prop_name)
+            if len(common) >= 2:
+                ek, pk, _ = matches[0]
+                return (ek, pk)
+
+        return None
+
+    async def discover_entities_task(self, task_id: str) -> dict[str, Any]:
+        """异步后台任务：识别新实体/属性 + 对当前 slot 执行实体属性绑定。
+
+        三步：
+        1. 规则匹配：_auto_map_slots_to_entity_properties 直接绑定能命中的 slot
+        2. LLM 分析剩余未绑定 slot：建议新实体/属性 + 语义绑定建议
+        3. LLM 的 bind_slot 建议直接应用绑定；new_entity/add_property 存 metadata 待人工确认
+        """
+        detail = await self.get_task_detail(task_id)
+        if not detail:
+            return {"error": "任务不存在"}
+
+        paragraphs = detail.get("source_paragraphs", [])
+        domain_code = detail.get("domain") or "coal"
+
+        # ---- 步骤 1: 规则匹配自动绑定 ----
+        rule_bound = await self._auto_map_slots_to_entity_properties(paragraphs, domain_code=domain_code)
+
+        # ---- 步骤 2: 收集仍未绑定的 slot（按名称去重，统计出现频次）----
+        slot_freq: dict[str, dict] = {}
+        for para in paragraphs:
+            tmpl = para.get("template")
+            if not isinstance(tmpl, dict):
+                continue
+            for slot in tmpl.get("slots", []):
+                if slot.get("entity_ref"):
+                    continue
+                name = slot.get("name", "").strip()
+                if not name:
+                    continue
+                if name not in slot_freq:
+                    slot_freq[name] = {"name": name, "type": slot.get("type", ""),
+                                       "description": slot.get("description", ""),
+                                       "count": 0, "paragraphs": []}
+                slot_freq[name]["count"] += 1
+                slot_freq[name]["paragraphs"].append(para.get("title", "")[:60])
+
+        # 置信度过滤：>=3 段落出现
+        candidates = [s for s in slot_freq.values() if s["count"] >= 3]
+
+        if not candidates:
+            if rule_bound > 0:
+                await self.repo.update_task(task_id, {"source_paragraphs": paragraphs})
+            return {"message": "所有 slot 已绑定或无满足置信度阈值的候选",
+                    "proposals": [], "total": 0, "bound": rule_bound}
+
+        # ---- 步骤 3: 加载已有实体（含属性）供 LLM 参考 ----
+        from yuxi.repositories.domain_entity_repository import DomainEntityRepository
+        repo = DomainEntityRepository()
+        entities = await repo.list_all(domain_code=domain_code)
+
+        # ---- 步骤 4: LLM 分析 ----
+        prompt = self._build_discovery_prompt(candidates, entities, domain_code)
+        from yuxi.models.chat import select_model
+        model = select_model()
+        response = await model.call(prompt)
+        text = response.content if hasattr(response, "content") else str(response)
+        proposals = self._parse_discovery_response(text)
+
+        # ---- 步骤 5: bind_slot 建议直接应用绑定，其余存 metadata 待确认 ----
+        bind_suggestions = [p for p in proposals if p.get("suggestion_type") == "bind_slot"]
+        pending_proposals = [p for p in proposals if p.get("suggestion_type") != "bind_slot"]
+
+        llm_bound = 0
+        if bind_suggestions:
+            bind_map = {b.get("slot_name", ""): b.get("entity_ref", "")
+                        for b in bind_suggestions
+                        if b.get("slot_name") and b.get("entity_ref")}
+            for para in paragraphs:
+                tmpl = para.get("template")
+                if not isinstance(tmpl, dict):
+                    continue
+                for slot in tmpl.get("slots", []):
+                    if slot.get("entity_ref"):
+                        continue
+                    ref = bind_map.get(slot.get("name", "").strip())
+                    if ref:
+                        slot["entity_ref"] = ref
+                        llm_bound += 1
+
+        # 保存绑定结果
+        if rule_bound > 0 or llm_bound > 0:
+            await self.repo.update_task(task_id, {"source_paragraphs": paragraphs})
+
+        # 写入 metadata（仅待确认的建议）
+        existing_meta = (detail.get("template_metadata") or {}) if isinstance(detail.get("template_metadata"), dict) else {}
+        await self.repo.update_task(task_id, {
+            "template_metadata": {
+                **existing_meta,
+                "entity_proposals": pending_proposals,
+                "discovery_status": "completed",
+            }
+        })
+
+        return {"proposals": pending_proposals, "total": len(pending_proposals),
+                "bound": rule_bound + llm_bound}
+
+    def _build_discovery_prompt(self, candidates: list[dict],
+                                 entities: list[dict], domain_code: str) -> str:
+        """构建 LLM prompt：将候选 slot 匹配到实体/属性"""
+        candidate_text = "\n".join(
+            f"- {c['name']} (类型={c['type']}, 出现{c['count']}次, "
+            f"描述={c.get('description','')})"
+            for c in candidates[:50]
+        )
+
+        # 实体列表带属性（供 bind_slot 建议使用）
+        entity_lines = []
+        for e in entities[:40]:
+            props = e.get("properties", []) or []
+            prop_names = []
+            if isinstance(props, list):
+                prop_names = [f"{p.get('key','')}({p.get('name_cn','')})" for p in props[:10] if isinstance(p, dict)]
+            prop_desc = f" 属性: {', '.join(prop_names)}" if prop_names else ""
+            entity_lines.append(
+                f"- {e.get('name_cn','')} ({e.get('entity_key','')}) [{e.get('category','')}]{prop_desc}"
+            )
+        entity_text = "\n".join(entity_lines)
+
+        CATEGORIES = """entity categories (6):
+- project_basic: 基础工程实体 (项目、产能、开采技术、建设性质)
+- natural_env: 自然环境实体 (地形、气候、水文、地质、生态、土壤)
+- env_quality: 环境质量与污染源实体 (空气、水、噪声、固废、排放)
+- sensitive_target: 敏感目标与空间实体 (居民点、红线、文物、保护区)
+- measures_regulation: 措施与法规实体 (治理措施、监测计划、法规标准)
+- impact_assessment: 环境影响评价实体 (预测模型、评价结论)"""
+
+        return f"""你是煤矿环评领域专家。以下是文档中提取的未绑定 slot 变量，需要将其归类到实体体系。
+
+{CATEGORIES}
+
+已有实体（含属性）:
+{entity_text}
+
+候选 slot:
+{candidate_text}
+
+请输出 JSON 数组，每个元素可以是以下三种之一：
+1. bind_slot: slot 语义上匹配到某个已有实体的已有属性（优先选择此项）
+{{"suggestion_type":"bind_slot","slot_name":"候选slot的名称","entity_ref":"entity_key.prop_key","confidence":0.9}}
+
+2. add_property: slot 属于已有实体但需要新增属性
+{{"suggestion_type":"add_property","target_entity_key":"已有实体的key","slot_name":"候选slot的名称","proposed_property":{{"key":"prop_key","name_cn":"属性名","value_type":"number|string","unit":"单位"}},"confidence":0.8}}
+
+3. new_entity: 无可归属实体，创建全新实体
+{{"suggestion_type":"new_entity","entity_key":"snake_key","name_cn":"中文名","category":"6分类之一","properties":[{{"key":"prop_key","name_cn":"属性中文","value_type":"number|string|boolean","unit":"单位"}}],"confidence":0.8}}
+
+要求：
+- 优先 bind_slot（已有属性能语义匹配就绑定），其次 add_property，最后 new_entity
+- 每个 slot 必须出现在一条建议中
+- 可合并的连续值（如最高值+最低值+单位）合并为一个属性的子字段
+- 属性 key 用英文 snake_case
+- 严格 JSON 数组格式输出，不要包含注释
+"""
+
+    @staticmethod
+    def _parse_discovery_response(text: str) -> list[dict]:
+        """解析 LLM 返回的 JSON 数组"""
+        import json
+        import re
+        m = re.search(r'\[[\s\S]*\]', text)
+        if not m:
+            return []
+        try:
+            return json.loads(m.group())
+        except (json.JSONDecodeError, ValueError):
+            return []
 
     def _collect_unrecognized_slots(self, paragraphs: list[dict]) -> list[dict[str, Any]]:
         """从泛化结果中收集未匹配到实体的插槽"""
