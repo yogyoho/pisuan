@@ -56,14 +56,39 @@ class GraphQueryService:
     async def get_chapter_outline(self, domain: str, report_type: str, canonical_key: str) -> dict[str, Any] | None:
         """查询单个章节大纲,含子章节和段落角色预览。
 
-        content_contract 字段从图谱节点属性读取(治理回填后存在);
-        节点暂无此属性时返回 None,留好字段位置供后续填充。
+        canonical_key 支持 "canonical||level" 复合格式(list_outline_templates 返回)，
+        按 (canonical, level) 精确匹配；纯 canonical 时按 canonical LIMIT 1(向后兼容)。
         """
+        parts = (canonical_key or "").split("||")
+        canonical = parts[0]
+        level = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else None
         with self._driver.session() as session:
-            result = session.run(
-                """
-                MATCH (ch:ChapterTemplate {domain: $domain, report_type: $rt, canonical_chapter_key: $key})
-                WITH ch LIMIT 1
+            if level is not None:
+                result = session.run(
+                    """
+                    MATCH (ch:ChapterTemplate {domain: $domain, report_type: $rt, canonical_chapter_key: $key, level: $lvl})
+                    WITH ch LIMIT 1
+                    OPTIONAL MATCH (ch)-[:HAS_CHILD]->(sub:ChapterTemplate)
+                    OPTIONAL MATCH (ch)-[:REQUIRES_PARAGRAPH_ROLE]->(pr:ParagraphRole)
+                    RETURN ch.canonical_chapter_key AS key, ch.title AS title,
+                           ch.level AS level, ch.`order` AS `order`,
+                           ch.rigidity AS rigidity, ch.frequency AS frequency,
+                           ch.content_contract AS content_contract,
+                           ch.purpose AS purpose,
+                           ch.key_points AS key_points,
+                           ch.regulations AS regulations,
+                           ch.writing_hints AS writing_hints,
+                           ch.extraction_regex AS extraction_regex,
+                           collect(DISTINCT {title: sub.title, key: sub.canonical_chapter_key}) AS children,
+                           collect(DISTINCT pr.name) AS roles
+                    """,
+                    domain=domain, rt=report_type, key=canonical, lvl=level,
+                )
+            else:
+                result = session.run(
+                    """
+                    MATCH (ch:ChapterTemplate {domain: $domain, report_type: $rt, canonical_chapter_key: $key})
+                    WITH ch LIMIT 1
                 OPTIONAL MATCH (ch)-[:HAS_CHILD]->(sub:ChapterTemplate)
                 OPTIONAL MATCH (ch)-[:REQUIRES_PARAGRAPH_ROLE]->(pr:ParagraphRole)
                 RETURN ch.canonical_chapter_key AS key, ch.title AS title,
@@ -74,12 +99,13 @@ class GraphQueryService:
                        ch.key_points AS key_points,
                        ch.regulations AS regulations,
                        ch.writing_hints AS writing_hints,
+                       ch.extraction_regex AS extraction_regex,
                        collect(DISTINCT {title: sub.title, key: sub.canonical_chapter_key}) AS children,
                        collect(DISTINCT pr.name) AS roles
                 """,
                 domain=domain,
                 rt=report_type,
-                key=canonical_key,
+                key=canonical,
             )
             rec = result.single()
             if rec is None or rec["key"] is None:
@@ -96,6 +122,7 @@ class GraphQueryService:
                 "key_points": _parse_json_field(rec["key_points"]),
                 "regulations": _parse_json_field(rec["regulations"]),
                 "writing_hints": rec["writing_hints"],
+                "extraction_regex": rec["extraction_regex"],
                 "child_chapters": [c for c in rec["children"] if c and c.get("title")],
                 "paragraph_roles": [r for r in (rec["roles"] or []) if r],
             }
@@ -188,39 +215,68 @@ class GraphQueryService:
             return [r["key"] for r in result if r["key"]]
 
     async def list_outline_templates(self, domain: str, report_type: str) -> list[dict[str, Any]]:
-        """列出13章大纲模板概要(用于页面左侧列表)。"""
+        """列出大纲模板完整目录树(含子章节),供页面左侧树形展示。
+
+        查所有 std_ 节点(不限 level) + HAS_CHILD 父子关系,按 level/order 构建树。
+        返回根节点列表,每个节点含 {key, title, order, level, children, ...}。
+        """
         with self._driver.session() as session:
             result = session.run(
                 """
-                MATCH (ch:ChapterTemplate {domain: $domain, report_type: $rt, level: 1})
-                WHERE ch.id STARTS WITH 'CH_' + $domain + '_' + $rt + '_std_'
+                MATCH (ch:ChapterTemplate {domain: $domain, report_type: $rt})
+                OPTIONAL MATCH (parent)-[:HAS_CHILD]->(ch)
+                WITH ch, parent
+                ORDER BY ch.level, ch.`order`
                 RETURN ch.canonical_chapter_key AS key, ch.title AS title,
-                       ch.`order` AS `order`, ch.purpose AS purpose,
-                       ch.content_contract AS content_contract
-                ORDER BY ch.`order`
+                       ch.`order` AS `order`, ch.level AS level,
+                       ch.frequency AS frequency, ch.rigidity AS rigidity,
+                       ch.purpose AS purpose, ch.content_contract AS content_contract,
+                       parent.canonical_chapter_key AS parent_key, parent.level AS parent_level
                 """,
                 domain=domain, rt=report_type,
             )
-            items = []
+            # 用 (canonical, level) 作内部 key，避免同 canonical 跨 level 合并错乱；
+            # 返回的 node.key 编码为 "canonical||level" 保证前端唯一 + 可回查。
+            nodes: dict[tuple[str, int], dict[str, Any]] = {}
+            roots: list[dict[str, Any]] = []
             for r in result:
+                canonical = r["key"]
+                level = r["level"]
+                if not canonical:
+                    continue
+                nkey = (canonical, level)
+                if nkey in nodes:
+                    continue
                 cc = r["content_contract"]
                 if isinstance(cc, str):
                     try:
                         cc = json.loads(cc)
                     except (json.JSONDecodeError, TypeError):
                         cc = None
-                items.append({
-                    "key": r["key"],
-                    "title": r["title"],
+                node = {
+                    "key": f"{canonical}||{level}",
+                    "title": r["title"] or canonical,
                     "order": r["order"],
+                    "level": level,
+                    "frequency": r["frequency"],
+                    "rigidity": r["rigidity"],
+                    "is_universal": r["rigidity"] == "rigid",
                     "purpose_preview": (r["purpose"] or "")[:80],
                     "content_contract_summary": {
                         "required_count": len((cc or {}).get("required_elements", [])),
                         "optional_count": len((cc or {}).get("optional_elements", [])),
                         "total_reports": (cc or {}).get("total_reports", 0),
                     } if cc else None,
-                })
-            return items
+                    "children": [],
+                }
+                nodes[nkey] = node
+                pk = r["parent_key"]
+                pl = r["parent_level"]
+                if pk is not None and pl is not None and (pk, pl) in nodes:
+                    nodes[(pk, pl)]["children"].append(node)
+                else:
+                    roots.append(node)
+            return roots
 
     async def update_chapter_template(self, domain: str, report_type: str, canonical_key: str, updates: dict[str, Any]) -> bool:
         """更新标准章节节点的模板字段。"""

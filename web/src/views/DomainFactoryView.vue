@@ -271,11 +271,11 @@ watch(() => route.query.tab, (tab) => {
 
   .hero {
     border-radius: 16px;
-    background: #fff;
-    border: 1px solid var(--gray-150, #e8ecf1);
+    background: var(--gray-0);
+    border: 1px solid var(--gray-150);
     margin-bottom: 20px;
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 
     &.collapsed {
       border-radius: 12px;
@@ -293,7 +293,7 @@ watch(() => route.query.tab, (tab) => {
       gap: 40px;
       background:
         radial-gradient(ellipse at top right, rgba(22, 119, 255, 0.06), transparent 50%),
-        linear-gradient(135deg, #fafcff 0%, #fff 100%);
+        linear-gradient(135deg, var(--main-10) 0%, var(--gray-0) 100%);
     }
 
     .hero-text {
@@ -339,7 +339,7 @@ watch(() => route.query.tab, (tab) => {
         padding: 16px 24px;
         background: linear-gradient(135deg, rgba(22, 119, 255, 0.03), rgba(82, 196, 26, 0.03));
         border-radius: 14px;
-        border: 1px solid var(--gray-100, #f1f5f9);
+        border: 1px solid var(--gray-100);
       }
 
       .pipeline-node {
@@ -348,8 +348,8 @@ watch(() => route.query.tab, (tab) => {
         gap: 10px;
         padding: 10px 14px;
         border-radius: 10px;
-        background: #fff;
-        border: 1px solid var(--gray-100, #f1f5f9);
+        background: var(--gray-0);
+        border: 1px solid var(--gray-100);
         transition: all 0.2s;
         min-width: 100px;
 
@@ -504,7 +504,7 @@ watch(() => route.query.tab, (tab) => {
   }
 
   .factory-tabs-wrapper {
-    background: #fff;
+    background: var(--gray-0);
     border-radius: 0;
     border: none;
     box-shadow: none;
@@ -515,10 +515,10 @@ watch(() => route.query.tab, (tab) => {
     :deep(.ant-tabs-nav) {
       margin: 0;
       padding: 0 8px;
-      background: #fff;
+      background: var(--gray-0);
 
       &::before {
-        border-bottom: 1px solid var(--gray-100, #f1f5f9);
+        border-bottom: 1px solid var(--gray-100);
       }
     }
 
