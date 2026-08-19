@@ -6,7 +6,10 @@ from sqlalchemy import JSON, Column, DateTime, ForeignKey, Index, Integer, Strin
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
-from yuxi.storage.postgres.models_business import Base
+from sqlalchemy.orm import declarative_base
+
+# 领域模型使用独立 Base，避免污染业务模型的元数据（业务测试用 SQLite 建表时会因 JSONB 失败）
+Base = declarative_base()
 from yuxi.utils.datetime_utils import format_utc_datetime, utc_now_naive
 
 

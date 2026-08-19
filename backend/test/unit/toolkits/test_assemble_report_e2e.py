@@ -30,7 +30,7 @@ def _fake_runtime() -> ToolRuntime:
 @pytest.mark.asyncio
 async def test_assemble_includes_done_and_review_excludes_writing(monkeypatch, tmp_path):
     """A) assemble_report 合并 done + review，排除 writing。"""
-    monkeypatch.setattr("yuxi.config.save_dir", str(tmp_path))
+    monkeypatch.setenv("SAVE_DIR", str(tmp_path))
     chapters = [
         {"chapter_order": 1, "canonical_chapter_key": "ch1", "title": "总则", "status": "done", "content_md": "# 总则\n内容1"},
         {"chapter_order": 2, "canonical_chapter_key": "ch2", "title": "现状", "status": "review", "content_md": "# 现状\n内容2"},
@@ -107,7 +107,7 @@ async def test_save_chapter_done_returns_preview_writing_does_not(monkeypatch):
 @pytest.mark.asyncio
 async def test_save_then_assemble_full_chain(monkeypatch, tmp_path):
     """C) save_chapter × N → assemble_report → 成稿含全部 done 章节。"""
-    monkeypatch.setattr("yuxi.config.save_dir", str(tmp_path))
+    monkeypatch.setenv("SAVE_DIR", str(tmp_path))
 
     # 用内存 dict 模拟 DB 章节表
     store: dict[str, dict] = {}
