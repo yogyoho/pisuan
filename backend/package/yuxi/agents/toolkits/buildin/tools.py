@@ -898,8 +898,8 @@ async def assemble_report(report_id: str) -> dict:
 
     # 写入共享 outputs 目录
     from pathlib import Path
-    from yuxi import config
-    out_dir = Path(config.save_dir) / "outputs"
+    from yuxi.config import get_save_dir
+    out_dir = get_save_dir() / "outputs"
     out_dir.mkdir(parents=True, exist_ok=True)
     artifact_path = out_dir / f"report_{report_id}.md"
     artifact_path.write_text(markdown, encoding="utf-8")

@@ -1,7 +1,6 @@
 from langchain_core.messages import convert_to_messages
 
 from yuxi.agents.models import load_chat_model
-from yuxi.config import config
 from yuxi.models.providers.cache import model_cache
 from yuxi.utils import logger
 

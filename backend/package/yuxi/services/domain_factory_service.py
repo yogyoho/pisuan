@@ -64,7 +64,7 @@ class StructuredDocument:
 
 import aiofiles
 
-from yuxi.config import config
+from yuxi.config import get_save_dir
 from yuxi.models.chat import select_model
 from yuxi.repositories.domain_factory_repository import DomainFactoryRepository
 from yuxi.services.entity_meta_service import EntityMetaAdapter, EntityMetaMatcher, SlotEntityMapper
@@ -172,7 +172,7 @@ class DomainFactoryService:
 
     def __init__(self):
         self.repo = DomainFactoryRepository()
-        self._storage_dir = Path(config.save_dir) / "domain_factory"
+        self._storage_dir = get_save_dir() / "domain_factory"
         self._storage_dir.mkdir(parents=True, exist_ok=True)
         self._entity_adapter = EntityMetaAdapter()
         self._entity_matcher = EntityMetaMatcher()
