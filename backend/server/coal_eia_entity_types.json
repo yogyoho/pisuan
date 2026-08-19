@@ -2,7 +2,7 @@
   "project_main": {
     "id": "project_main",
     "name": "项目主体",
-    "category": "基础工程实体",
+    "category": "project_basic",
     "description": "矿井名称、井田名称、选煤厂、工业场地等",
     "examples": [
       "矿井名称",
@@ -21,7 +21,7 @@
   "construction_nature": {
     "id": "construction_nature",
     "name": "建设性质",
-    "category": "基础工程实体",
+    "category": "project_basic",
     "description": "新建、改扩建、技术改造、资源整合、规划修编",
     "examples": [
       "新建",
@@ -42,7 +42,7 @@
   "lifecycle": {
     "id": "lifecycle",
     "name": "生命周期",
-    "category": "基础工程实体",
+    "category": "project_basic",
     "description": "规划期、建设期（施工期）、运营期、服务期满（闭坑期）",
     "examples": [
       "规划期",
@@ -65,7 +65,7 @@
   "mining_technology": {
     "id": "mining_technology",
     "name": "开采技术",
-    "category": "基础工程实体",
+    "category": "project_basic",
     "description": "井工开采、露天开采、充填开采、综采放顶煤",
     "examples": [
       "井工开采",
@@ -84,7 +84,7 @@
   "engineering_params": {
     "id": "engineering_params",
     "name": "工程参数",
-    "category": "基础工程实体",
+    "category": "project_basic",
     "description": "生产能力（万吨/年）、设计服务年限、井田面积、开采深度、煤层厚度",
     "examples": [
       "生产能力",
@@ -105,7 +105,7 @@
   "spatial_boundary": {
     "id": "spatial_boundary",
     "name": "空间边界",
-    "category": "敏感目标与空间实体",
+    "category": "sensitive_target",
     "description": "矿区范围、井田边界、错动线、首采区、辅助生产区、行政边界、城镇开发边界",
     "examples": [
       "矿区范围",
@@ -130,7 +130,7 @@
   "ecological_redline": {
     "id": "ecological_redline",
     "name": "生态红线类保护目标",
-    "category": "敏感目标与空间实体",
+    "category": "sensitive_target",
     "description": "自然保护区（核心/缓冲/实验区）、风景名胜区、森林公园、地质公园",
     "examples": [
       "自然保护区",
@@ -155,7 +155,7 @@
   "water_resource": {
     "id": "water_resource",
     "name": "水资源类保护目标",
-    "category": "敏感目标与空间实体",
+    "category": "sensitive_target",
     "description": "饮用水源保护区（一级/二级）、地下水补给径流区、泉域保护区",
     "examples": [
       "饮用水源保护区",
@@ -176,7 +176,7 @@
   "residential": {
     "id": "residential",
     "name": "人居类保护目标",
-    "category": "敏感目标与空间实体",
+    "category": "sensitive_target",
     "description": "居民点（搬迁村庄/留守村庄）、学校、医院",
     "examples": [
       "居民点",
@@ -196,7 +196,7 @@
   "cultural_relic": {
     "id": "cultural_relic",
     "name": "文物类保护目标",
-    "category": "敏感目标与空间实体",
+    "category": "sensitive_target",
     "description": "省级/国家级文物保护单位、古长城遗址、古墓群",
     "examples": [
       "文物保护单位",
@@ -215,7 +215,7 @@
   "linear_engineering": {
     "id": "linear_engineering",
     "name": "线性工程",
-    "category": "敏感目标与空间实体",
+    "category": "sensitive_target",
     "description": "铁路、高速公路、输油气管道、高压走廊",
     "examples": [
       "铁路",
@@ -235,7 +235,7 @@
   "environmental_element": {
     "id": "environmental_element",
     "name": "环境要素",
-    "category": "环境要素与影响实体",
+    "category": "natural_env",
     "description": "地表水、地下水（潜水/承压水）、声环境、环境空气、土壤环境、生态系统（植被/生物多样性）",
     "examples": [
       "地表水",
@@ -264,7 +264,7 @@
   "impact_behavior": {
     "id": "impact_behavior",
     "name": "影响行为",
-    "category": "环境要素与影响实体",
+    "category": "impact_assessment",
     "description": "地表沉陷、裂缝发育、地下水位下降、疏干排水、矸石堆放、粉尘排放、噪声震动",
     "examples": [
       "地表沉陷",
@@ -291,7 +291,7 @@
   "pollutant": {
     "id": "pollutant",
     "name": "污染物",
-    "category": "环境要素与影响实体",
+    "category": "env_quality",
     "description": "COD、氨氮、矿井水、生活污水、PM10、TSP、SO2、NOx",
     "examples": [
       "COD",
@@ -318,7 +318,7 @@
   "judgment": {
     "id": "judgment",
     "name": "判定结论",
-    "category": "环境要素与影响实体",
+    "category": "impact_assessment",
     "description": "达标、超标、可接受、不可接受、相容、冲突",
     "examples": [
       "达标",
@@ -342,7 +342,7 @@
   "prevention_measure": {
     "id": "prevention_measure",
     "name": "防治措施",
-    "category": "措施与法规实体",
+    "category": "measures_regulation",
     "description": "导水裂隙带治理、帷幕注浆、甚至搬迁、留设煤柱、生态复垦（复垦率）、洒水抑尘、消声降噪、污水处理站（一级/二级处理）",
     "examples": [
       "导水裂隙带治理",
@@ -372,7 +372,7 @@
   "regulation": {
     "id": "regulation",
     "name": "法规标准",
-    "category": "措施与法规实体",
+    "category": "measures_regulation",
     "description": "《环境影响评价法》、《煤炭工业矿井设计规范》、《地下水质量标准》(GB/T 14848)、《地表水环境质量标准》",
     "examples": [
       "环境影响评价法",

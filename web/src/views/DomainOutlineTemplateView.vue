@@ -13,30 +13,59 @@
           管理报告章节大纲模板，定义各章节的编写目的、内容契约和子章节结构
         </p>
       </div>
+      <div class="header-actions">
+        <a-upload
+          :show-upload-list="false"
+          :before-upload="onExtractFile"
+          accept=".docx,.pdf"
+        >
+          <a-button type="primary" :loading="extracting">
+            <template #icon><FileSearchOutlined /></template>
+            从报告提取大纲
+          </a-button>
+        </a-upload>
+      </div>
     </div>
-    <OutlineTemplate />
+    <OutlineTemplate ref="outlineRef" />
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeftOutlined } from '@ant-design/icons-vue'
+import { ArrowLeftOutlined, FileSearchOutlined } from '@ant-design/icons-vue'
 import OutlineTemplate from '@/components/domain-factory/OutlineTemplate.vue'
 
 const router = useRouter()
+const outlineRef = ref(null)
+const extracting = ref(false)
 
 const handleBack = () => {
   router.push('/domain-factory')
+}
+
+const onExtractFile = async (file) => {
+  extracting.value = true
+  try {
+    await outlineRef.value?.handleExtract(file)
+  } finally {
+    extracting.value = false
+  }
+  return false
 }
 </script>
 
 <style lang="less" scoped>
 .domain-outline-template-view {
   padding: 24px;
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
   background: var(--gray-50);
+  overflow: hidden;
 
   .page-header {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;

@@ -627,7 +627,10 @@ class DomainFactoryRepository:
                 .order_by(DomainFactoryReportChapter.chapter_order)
             )
             if status_only:
-                stmt = stmt.where(DomainFactoryReportChapter.status == status_only)
+                if isinstance(status_only, (list, tuple, set)):
+                    stmt = stmt.where(DomainFactoryReportChapter.status.in_(status_only))
+                else:
+                    stmt = stmt.where(DomainFactoryReportChapter.status == status_only)
             rows = (await session.execute(stmt)).scalars().all()
             return [
                 {
