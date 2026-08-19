@@ -95,6 +95,8 @@
 
 ### 开发记录
 
+- 完成上游 v0.7.2 历史重写后的全量差分同步：main 硬重置至上游新历史（9e2679b9），pisuan-custom 164 个定制提交 rebase 重放，全部定制红线（Landing/登录页/蓝色主题/领域工厂导航与页面/华宇页脚）与同步前零差异。适配上游破坏性变更：全局 `config` 对象移除（`config.save_dir` → `get_save_dir()`）、`parse_source_to_markdown` 以兼容包装桥接上游新 `parse_resolved_document` 架构、skills 注册迁移至 `BUILTIN_SKILLS.extend` 结构、DB 迁移列表追加合并上游 agent_run 新表。领域模型（domain_factory/domain_entity）拆分独立 declarative Base，不再污染业务 Base 元数据。`uv.lock` 按 deepagents `<0.6.8` 钉版重新生成。
+
 - 修复 Milvus 知识图谱子图查询忽略 `max_depth` 的问题：查询会按请求深度展开路径，并完整返回路径中的中间节点与关系；排除 Chunk 时同时限制整条路径，避免通过 Chunk 间接扩展。路径结果继续遵循现有节点和边数量上限。
 
 - 修复线程文件接口的同步文件 I/O 阻塞：交付物预览仅异步读取媒体类型识别所需的 512 字节文件头，不再同步加载完整文件；线程文件全文读取和目录扫描下沉到工作线程，避免大文件或大目录并发访问时阻塞 API 事件循环。
