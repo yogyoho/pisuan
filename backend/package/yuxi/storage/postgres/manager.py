@@ -609,6 +609,7 @@ class PostgresManager(metaclass=SingletonMeta):
             # Domain Factory: 分章节上传支持
             "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS source_report_id VARCHAR(64)",
             "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS chapter_label VARCHAR(64)",
+            "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS validation_report JSONB",
             "CREATE INDEX IF NOT EXISTS idx_df_tasks_source_report ON domain_factory_tasks(source_report_id)",
             # Domain Factory: 清理废弃列和表
             "ALTER TABLE IF EXISTS domain_factory_tasks DROP COLUMN IF EXISTS structured_data",

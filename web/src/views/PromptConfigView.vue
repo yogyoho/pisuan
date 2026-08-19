@@ -352,7 +352,7 @@ onMounted(() => {
 <style lang="less" scoped>
 .prompt-config-view {
   padding: 24px;
-  background: #fff;
+  background: var(--gray-0);
   min-height: 100vh;
 
   .page-header {
@@ -394,7 +394,7 @@ onMounted(() => {
   }
 
   .content-area {
-    background: #fff;
+    background: var(--gray-0);
 
     .prompt-editor {
       padding: 16px;

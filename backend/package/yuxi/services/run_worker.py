@@ -1218,9 +1218,9 @@ async def _worker_shutdown(ctx):
 
 class WorkerSettings:
     functions = [process_agent_run]
-    max_jobs = 1  # 单任务串行：agent run 内存占用大(~400MB+),并行会触发 OOM
+    max_jobs = 2  # 主agent+子agent并行: max_jobs=1会导致子agent派发死锁
     max_tries = 2
-    retry_jobs = True
+    retry_jobs = 30  # retry 前等 30 秒，给 OOM 进程释放内存的时间
     # 单任务最长执行时间（秒），可配置：超长图谱构建/深度检索场景需调大，
     # 避免长任务被 arq 取消并误标为 cancelled。
     job_timeout = int(os.getenv("YUXI_JOB_TIMEOUT_SECONDS", "3600"))

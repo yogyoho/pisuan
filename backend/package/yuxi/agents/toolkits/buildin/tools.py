@@ -548,24 +548,34 @@ domain/report_type 必须使用数据字典中的 code（用 list_report_types �
     description=GET_CHAPTER_OUTLINE_DESCRIPTION,
 )
 async def get_chapter_outline(domain: str, report_type: str, canonical_chapter_key: str) -> dict:
-    """获取指定章节的结构化大纲。优先查图谱,回退 DB。"""
+    """获取指定章节的结构化大纲。优先查图谱,回退 DB。
+
+    回退时在返回里标注 _source=db_fallback + _degraded_note，让调用方（agent）感知
+    并可转告用户"当前图谱不可用，使用数据库回退数据"，避免静默降级。
+    """
     from yuxi.services.graph_query_service import GraphQueryService
 
     domain = _normalize_domain(domain)
     report_type = _normalize_report_type(report_type)
+    graph_errored = False
     try:
         graph_svc = GraphQueryService()
         try:
             outline = await graph_svc.get_chapter_outline(domain, report_type, canonical_chapter_key)
             if outline:
+                outline.setdefault("_source", "graph")
                 return outline
         finally:
             graph_svc.close()
     except Exception as e:
-        logger.warning(f"图谱查询 get_chapter_outline 失败,回退 DB: {e}")
+        logger.warning(f"[graph-degraded] get_chapter_outline 图谱查询失败,回退 DB: {domain}/{report_type}/{canonical_chapter_key} - {e}")
+        graph_errored = True
     repo = DomainFactoryRepository()
     out = await repo.get_outline(domain, report_type, canonical_chapter_key)
     if out:
+        out["_source"] = "db_fallback" if graph_errored else "db"
+        if graph_errored:
+            out["_degraded_note"] = "图谱查询失败，此为数据库回退数据（可能与图谱不完全一致），请在回复中告知用户当前图谱不可用"
         return out
     types = await repo.list_report_types()
     valid_codes = [t["code"] for t in types]
@@ -622,7 +632,7 @@ async def list_chapter_keys(domain: str, report_type: str) -> list[str]:
         finally:
             graph_svc.close()
     except Exception as e:
-        logger.warning(f"图谱查询 list_chapter_keys 失败,回退 DB: {e}")
+        logger.warning(f"[graph-degraded] list_chapter_keys 图谱查询失败,回退 DB: {domain}/{report_type} - {e}")
     repo = DomainFactoryRepository()
     return await repo.list_chapter_keys(domain, report_type)
 
@@ -657,7 +667,7 @@ async def get_templates(domain: str, report_type: str, canonical_chapter_key: st
             finally:
                 graph_svc.close()
         except Exception as e:
-            logger.warning(f"图谱查询 get_templates 失败,回退 DB: {e}")
+            logger.warning(f"[graph-degraded] get_templates 图谱查询失败,回退 DB: {domain}/{report_type}/{canonical_chapter_key} - {e}")
     repo = DomainFactoryRepository()
     return await repo.list_learned_templates_by_key(domain, report_type, canonical_chapter_key)
 
@@ -747,13 +757,25 @@ SAVE_CHAPTER_DESCRIPTION = """
 懒建/更新一章。canonical_chapter_key 用 get_chapter_outline 的大纲章节名。
 content_md 为本章 markdown 正文(含 {{REF:chXX/表X-Y}} 交叉引用占位符、{{MISSING:参数}} 数据占位符)。
 status 取:
-  - writing: 起草中(默认)
-  - done: 终稿锁定
+  - done: 章节正文写完(推荐默认值)——会顺带写 preview 文件并返回 preview_path
+  - review: 写完等人审阅——同样写 preview，也会被 assemble_report 装配
+  - writing: 起草中(进行中，不会被装配)
   - skipped: 用户明确跳过
   - pending_data: 等待用户补充数据后再继续
-  - review: 提交审批(等待组长/用户确认)
-done 时 content_md 不能为空。
+done/review 时 content_md 不能为空。
+重要:save_chapter 是你持久化章节的唯一途径。全部章节 done 后由编排者调 assemble_report 合并为成稿文件。
 """
+
+
+class SaveChapterInput(BaseModel):
+    """save_chapter 的 LLM 入参（runtime 由框架注入，不入 schema）。"""
+
+    report_id: str = Field(description="报告 ID，由 create_report 返回")
+    canonical_chapter_key: str = Field(description="大纲章节名，取自 get_chapter_outline")
+    title: str = Field(description="章节标题")
+    content_md: str = Field(description="本章 markdown 正文")
+    summary: str = Field(description="本章一句话摘要")
+    status: str = Field(description="writing|done|skipped|pending_data|review，写完用 done")
 
 
 @tool(
@@ -761,6 +783,7 @@ done 时 content_md 不能为空。
     tags=["报告", "章节"],
     display_name="保存章节",
     description=SAVE_CHAPTER_DESCRIPTION,
+    args_schema=SaveChapterInput,
 )
 async def save_chapter(
     report_id: str,
@@ -769,8 +792,13 @@ async def save_chapter(
     content_md: str,
     summary: str,
     status: str,
+    runtime: ToolRuntime,
 ) -> dict:
-    """懒建或更新一章，自动从大纲推导 chapter_order，并校验。status: writing|done|skipped|pending_data|review"""
+    """懒建或更新一章，自动从大纲推导 chapter_order，并校验。status: writing|done|skipped|pending_data|review
+
+    C3：done/review 章节顺带写 preview 文件并返回 preview_path，把模型"产出文件"先验
+    对齐到本工具（而非诱使它去找 write_file）。编排者最终用 assemble_report 合并成稿。
+    """
     valid_statuses = {"writing", "done", "skipped", "pending_data", "review"}
     if status not in valid_statuses:
         return {"error": f"无效 status: {status}，合法值: {', '.join(sorted(valid_statuses))}"}
@@ -782,7 +810,7 @@ async def save_chapter(
     if not await repo.report_exists(report_id):
         return {"error": f"报告 {report_id} 不存在。请先调 create_report 创建报告后再 save_chapter。"}
     order = await repo.lookup_chapter_order(report_id, canonical_chapter_key)
-    return await repo.upsert_chapter(
+    result = await repo.upsert_chapter(
         report_id=report_id,
         canonical_chapter_key=canonical_chapter_key,
         chapter_order=order,
@@ -791,6 +819,31 @@ async def save_chapter(
         summary=summary,
         status=status,
     )
+    # C3: done/review 章节写 preview 文件，给模型"已产出文件"的反馈（非阻断）
+    preview_path = _write_chapter_preview(runtime, report_id, canonical_chapter_key, content_md, status)
+    if preview_path:
+        result["preview_path"] = preview_path
+        result["提示"] = "本章节已存入数据库并生成 preview 文件；全部章节完成后，编排者调 assemble_report 合并成 /app/saves/outputs/report_{id}.md".replace("{id}", report_id)
+    return result
+
+
+def _write_chapter_preview(runtime: ToolRuntime, report_id: str, chapter_key: str, content_md: str, status: str) -> str | None:
+    """done/review 章节写 preview 文件到沙箱 outputs，返回路径；writing/skipped/pending_data 不写。"""
+    if status not in ("done", "review") or not (content_md or "").strip():
+        return None
+    try:
+        from yuxi.agents.backends.sandbox.paths import sandbox_outputs_dir
+
+        thread_id, _uid = _resolve_runtime_file_scope(runtime)
+        safe_key = re.sub(r"[^A-Za-z0-9_-]", "_", chapter_key)[:48] or "chapter"
+        out_dir = sandbox_outputs_dir(thread_id).resolve()
+        out_dir.mkdir(parents=True, exist_ok=True)
+        preview = out_dir / f"chapter_preview_{report_id}_{safe_key}.md"
+        preview.write_text(content_md, encoding="utf-8")
+        return str(preview)
+    except Exception as e:
+        logger.warning(f"save_chapter preview 写入失败 {report_id}/{chapter_key}: {e}")
+        return None
 
 
 def check_content_contract(content_md: str, content_contract: dict | None) -> list[str]:
@@ -812,22 +865,10 @@ def check_content_contract(content_md: str, content_contract: dict | None) -> li
 
 
 ASSEMBLE_REPORT_DESCRIPTION = """
-按 outline 序合并所有 done 章节 + 解析 {{REF}} → 成稿 markdown,写入沙箱 outputs。
-未解析的 {{REF}} 保留为可见占位符并列出。返回 {markdown, artifact_path, unresolved_refs}。
-随后可用 present_artifacts 展示给用户。
+按 outline 序合并所有 done/review 章节 + 解析 {{REF}} → 成稿 markdown,写入 outputs。
+review(写完待审)章节也会进成稿;writing(进行中)章节被排除。未解析的 {{REF}} 保留为可见占位符并列出。
+返回 {markdown, artifact_path, unresolved_refs, missing_params}。随后用 present_artifacts 展示给用户。
 """
-
-
-async def _write_assembled_to_sandbox(runtime_context, report_id: str, markdown: str) -> str:
-    """将成稿 markdown 写入沙箱 outputs 目录,返回虚拟路径。"""
-    from yuxi.agents.backends.sandbox.paths import sandbox_outputs_dir
-
-    thread_id = getattr(runtime_context, "thread_id", None) or "shared"
-    out_dir = sandbox_outputs_dir(thread_id).resolve()
-    out_dir.mkdir(parents=True, exist_ok=True)
-    path = out_dir / f"report_{report_id}.md"
-    await asyncio.to_thread(path.write_text, markdown, "utf-8")
-    return f"/home/gem/user-data/outputs/report_{report_id}.md"
 
 
 @tool(
@@ -837,11 +878,14 @@ async def _write_assembled_to_sandbox(runtime_context, report_id: str, markdown:
     description=ASSEMBLE_REPORT_DESCRIPTION,
 )
 async def assemble_report(report_id: str) -> dict:
-    """合并 done 章节 + 解析 {{REF}} + 检测 {{MISSING}} + 写出 artifact,返回成稿信息。"""
+    """合并 done/review 章节 + 解析 {{REF}} + 检测 {{MISSING}} + 写出 artifact,返回成稿信息。
+
+    含 review 是语义校正：review=写完等人审阅的完稿，本就该进成稿草稿；writing=进行中才排除。
+    """
     from yuxi.services.ref_resolver import _MISSING_RE, resolve_refs
 
     repo = DomainFactoryRepository()
-    chapters = await repo.list_chapters(report_id, status_only="done")
+    chapters = await repo.list_chapters(report_id, status_only=["done", "review"])
     markdown, unresolved = resolve_refs(chapters)
 
     # 检测 {{MISSING:...}} 占位符并分组
@@ -1001,3 +1045,41 @@ async def lookup_subsidence_params(depth: str, coal_seam: str, angle: str) -> di
         return {"matched": None, "hint": "KB 沉陷参数库尚未就绪（Phase 5 数据基础设施建设中）"}
     except Exception as e:
         return {"matched": None, "error": f"KB 查询失败: {e}"}
+
+
+LOOKUP_STANDARD_INDICATOR_DESCRIPTION = """
+查标准规范库的限值指标（standard_indicators，由"标准规范库加工"富化产出）。
+给定污染物名（如 SO2/NO2/TSP/颗粒物）+ 可选文档编号（如 GB 3095-2012），返回匹配的限值行：
+[{doc_code, unit_no, pollutant, metric, limit_value, unit, condition}]。
+写污染物浓度/排放标准相关章节时用此工具拿权威限值，不要凭记忆编造。
+"""
+
+
+@tool(
+    category="buildin",
+    tags=["知识工厂", "标准规范"],
+    display_name="查标准限值",
+    description=LOOKUP_STANDARD_INDICATOR_DESCRIPTION,
+)
+async def lookup_standard_indicator(pollutant: str, doc_code: str | None = None) -> dict:
+    """§8：从标准规范库查污染物的限值指标（regulation_library 扩展）。"""
+    pollutant = (pollutant or "").strip()
+    if not pollutant:
+        return {"error": "pollutant 必填（如 SO2/NO2/TSP）"}
+    try:
+        from yuxi.extensions.regulation_library.enrichment_service import query_indicators
+    except ImportError:
+        return {"matched": [], "hint": "标准规范库扩展未安装（regulation_library），限值数据不可用"}
+    try:
+        rows = await query_indicators(doc_code=doc_code or None, pollutant=pollutant)
+    except Exception as e:
+        logger.warning(f"[regulation] lookup_standard_indicator 查询失败 {pollutant}/{doc_code}: {e}")
+        return {"matched": [], "error": f"查询失败: {e}"}
+    if not rows:
+        return {"matched": [], "hint": f"未找到 {pollutant} 的限值记录（doc_code={doc_code or '全部'}），可能该规范未加工入库；可用 query_kb 检索原文"}
+    return {
+        "matched": rows[:20],
+        "count": len(rows),
+        "note": "限值来自标准规范库富化结果，引用时标注 doc_code + unit_no",
+    }
+

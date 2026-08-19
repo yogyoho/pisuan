@@ -66,6 +66,8 @@ async def test_save_chapter_tool(monkeypatch):
             upsert_chapter=AsyncMock(return_value={"canonical_chapter_key": "k", "status": "done"}),
         ),
     )
+    # C3: 跳过真实 preview 文件写入（单元测试不依赖沙箱）
+    monkeypatch.setattr(tools_mod, "_write_chapter_preview", lambda *a, **k: "/fake/preview.md")
     out = await tools_mod.save_chapter.ainvoke(
         {
             "report_id": "rpt_1",
@@ -74,9 +76,11 @@ async def test_save_chapter_tool(monkeypatch):
             "content_md": "正文",
             "summary": "摘",
             "status": "done",
+            "runtime": _fake_runtime(),
         }
     )
     assert out["status"] == "done"
+    assert out["preview_path"] == "/fake/preview.md"  # C3 返回 preview 路径
 
 
 @pytest.mark.asyncio
@@ -92,6 +96,7 @@ async def test_save_chapter_rejects_done_with_empty_content(monkeypatch):
             "content_md": "",
             "summary": "摘",
             "status": "done",
+            "runtime": _fake_runtime(),
         }
     )
     assert "error" in out
@@ -114,6 +119,7 @@ async def test_save_chapter_rejects_invalid_report_id(monkeypatch):
             "content_md": "正文",
             "summary": "摘",
             "status": "writing",
+            "runtime": _fake_runtime(),
         }
     )
     assert "error" in out

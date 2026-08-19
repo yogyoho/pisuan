@@ -267,6 +267,58 @@ class YuxiClient:
     def authorize_url(self, session: CLIAuthSession) -> str:
         return build_url(self.remote.url, session.authorize_path)
 
+    # ==========================================================================
+    # Domain Factory
+    # ==========================================================================
+
+    def list_domains(self) -> dict:
+        return self._request("GET", "/domain-factory/domains")
+
+    def upload_domain_file(
+        self,
+        path: Path,
+        *,
+        domain: str,
+        document_type: str = "通用",
+        report_type_code: str = "通用",
+        source_report_id: str | None = None,
+        chapter_label: str | None = None,
+        timeout_seconds: float = 300,
+    ) -> dict:
+        data: dict[str, str] = {"domain": domain, "document_type": document_type, "report_type_code": report_type_code}
+        if source_report_id:
+            data["source_report_id"] = source_report_id
+        if chapter_label:
+            data["chapter_label"] = chapter_label
+        with path.open("rb") as fp:
+            return self._request(
+                "POST",
+                "/domain-factory/upload",
+                data=data,
+                files={"file": (path.name, fp, "application/octet-stream")},
+                timeout=timeout_seconds,
+            )
+
+    def get_domain_task(self, task_id: str) -> dict:
+        return self._request("GET", f"/domain-factory/tasks/{task_id}")
+
+    def list_domain_tasks(
+        self,
+        *,
+        domain: str | None = None,
+        status: str | None = None,
+    ) -> dict:
+        return self._request("GET", "/domain-factory/tasks-center", params=_strip_none({"domain": domain, "status": status}))
+
+    def retry_domain_task(self, task_id: str) -> dict:
+        return self._request("POST", f"/domain-factory/tasks/{task_id}/retry")
+
+    def commit_domain_task(self, task_id: str, *, kb_id: str | None = None) -> dict:
+        payload: dict[str, Any] = {}
+        if kb_id:
+            payload["knowledge_base_id"] = kb_id
+        return self._request("POST", f"/domain-factory/tasks/{task_id}/commit", json=payload)
+
     def _request(
         self,
         method: str,
@@ -315,6 +367,10 @@ class YuxiClient:
         if not isinstance(data, dict):
             raise ClientError("远程响应格式无效")
         return data
+
+
+def _strip_none(d: dict) -> dict:
+    return {k: v for k, v in d.items() if v is not None}
 
 
 def _parse_http_error(response: httpx.Response) -> tuple[str | None, str]:

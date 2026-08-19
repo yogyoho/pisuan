@@ -192,7 +192,24 @@ async def test_create_agent_allows_same_explicit_share_scope_for_normal_user(mon
 
 
 def test_user_shared_agent_is_manageable_for_normal_user():
+    user = User(username="user", uid="user", password_hash="x", role="user", department_id=1)
+    agent = Agent(
+        slug="shared-bot",
+        name="Shared Bot",
+        backend_id="ChatbotAgent",
+        created_by="other",
+        share_config={
+            "version": 2,
+            "read_scope": {"access_level": "user", "department_ids": [], "user_uids": ["user"]},
+            "manage_scope": {"access_level": "user", "department_ids": [], "user_uids": ["user"]},
+        },
+    )
 
+    assert user_can_access_agent(user, agent) is True
+    assert user_can_manage_agent(user, agent) is True
+
+
+@pytest.mark.asyncio
 async def test_ensure_regulation_writer_subagent_creates_with_config(monkeypatch):
     db = FakeDb()
     repo = AgentRepository(db)

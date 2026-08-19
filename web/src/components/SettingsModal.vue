@@ -186,6 +186,7 @@
 import { computed, ref, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
 import {
+  CircleUser,
   Key as KeyIcon,
   Settings,
   Key,
@@ -194,7 +195,8 @@ import {
   SquareTerminal,
   SquareCode,
   User,
-  Users
+  Users,
+  X
 } from 'lucide-vue-next'
 import AccountSettingsComponent from '@/components/AccountSettingsComponent.vue'
 import AgentEnvSettingsCard from '@/components/AgentEnvSettingsCard.vue'

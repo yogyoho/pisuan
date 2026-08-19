@@ -15,19 +15,26 @@ entity_types = APIRouter(prefix="/entity-types", tags=["Entity Types"])
 
 # 内存中的实体类型存储（生产环境应使用数据库）
 _entity_types_store = {
-    "基础工程实体": [
+    "project_basic": [
         {"id": "e1", "name": "煤矿", "description": "煤矿开采相关设施", "keywords": ["矿井", "采煤"]},
         {"id": "e2", "name": "道路", "description": "交通道路设施", "keywords": ["公路", "铁路"]},
     ],
-    "敏感目标与空间实体": [
+    "sensitive_target": [
         {"id": "s1", "name": "学校", "description": "教育设施", "keywords": ["小学", "中学"]},
         {"id": "s2", "name": "医院", "description": "医疗机构", "keywords": ["医院", "诊所"]},
     ],
-    "环境要素与影响实体": [
+    "natural_env": [
         {"id": "env1", "name": "地表水", "description": "地表水体", "keywords": ["河流", "湖泊"]},
         {"id": "env2", "name": "空气", "description": "大气环境", "keywords": ["PM2.5", "空气质量"]},
     ],
-    "措施与法规实体": [
+    "env_quality": [
+        {"id": "eq1", "name": "PM10", "description": "可吸入颗粒物", "keywords": ["颗粒物"]},
+        {"id": "eq2", "name": "COD", "description": "化学需氧量", "keywords": ["化学需氧量"]},
+    ],
+    "impact_assessment": [
+        {"id": "ia1", "name": "环境影响评价", "description": "环境影响评价相关法规", "keywords": ["环评"]},
+    ],
+    "measures_regulation": [
         {"id": "m1", "name": "环评法", "description": "环境影响评价相关法规", "keywords": ["环境保护法"]},
     ],
     "其他": []
