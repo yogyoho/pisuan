@@ -205,6 +205,7 @@ def test_convert_with_docling_reinserts_image_links_in_document_order(
             SimpleNamespace(image=SimpleNamespace(uri=f"data:image/png;base64,{second_image}")),
         ],
         export_to_markdown=lambda: "before\n<!-- image -->\nremote\n<!-- image -->\nbetween\n<!-- image -->\nafter",
+        export_to_html=lambda: "<html></html>",
     )
     fake_result = SimpleNamespace(status=SimpleNamespace(name="SUCCESS"), document=fake_doc)
     uploaded_images: list[bytes] = []
@@ -223,7 +224,7 @@ def test_convert_with_docling_reinserts_image_links_in_document_order(
     image_timestamps = iter([1.0, 2.0])
     monkeypatch.setattr(parser_unified.time, "time", lambda: next(image_timestamps))
 
-    markdown = parser_unified._convert_with_docling(file_path)
+    markdown, _html = parser_unified._convert_with_docling(file_path)
 
     assert uploaded_images == [b"first image", b"second image"]
     assert markdown == (
@@ -247,6 +248,7 @@ def test_convert_with_docling_keeps_image_placeholder_when_upload_fails(
     fake_doc = SimpleNamespace(
         pictures=[SimpleNamespace(image=SimpleNamespace(uri=f"data:image/png;base64,{image}"))],
         export_to_markdown=lambda: "before\n<!-- image -->\nafter",
+        export_to_html=lambda: "<html></html>",
     )
     fake_result = SimpleNamespace(status=SimpleNamespace(name="SUCCESS"), document=fake_doc)
 
@@ -262,7 +264,7 @@ def test_convert_with_docling_keeps_image_placeholder_when_upload_fails(
     monkeypatch.setattr(parser_unified, "_upload_image_to_minio", _raise_upload_error)
     monkeypatch.setattr(parser_unified.time, "time", lambda: 1.0)
 
-    markdown = parser_unified._convert_with_docling(file_path)
+    markdown, _html = parser_unified._convert_with_docling(file_path)
 
     assert markdown == "before\n[图片: image_1000000.png]\nafter"
 
@@ -344,9 +346,9 @@ async def test_parse_document_docx_does_not_block_event_loop(
     file_path.write_bytes(b"fake docx")
     completion_order: list[str] = []
 
-    def _slow_docling_conversion(*args, **kwargs) -> str:
+    def _slow_docling_conversion(*args, **kwargs) -> tuple[str, str | None]:
         time.sleep(0.1)
-        return "Async DOCX content"
+        return "Async DOCX content", None
 
     async def _parse_document() -> None:
         await parse_document(str(file_path))
