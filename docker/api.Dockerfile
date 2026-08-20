@@ -51,7 +51,9 @@ COPY backend/uv.lock /app/uv.lock
 # 先复制 package 目录，因为 pyproject.toml 中 yuxi = { path = "package", editable = true }
 COPY backend/package /app/package
 
-# 如果网络还是不好，可以在后面添加 --index-url https://pypi.tuna.tsinghua.edu.cn/simple
+# 大包(pytorch 等)下载慢，放宽 uv HTTP 超时
+ENV UV_HTTP_TIMEOUT=600
+
 RUN uv sync --no-cache --group test --no-dev --frozen
 
 # 复制 server 代码
