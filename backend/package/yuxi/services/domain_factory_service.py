@@ -66,6 +66,7 @@ import aiofiles
 
 from yuxi.config import get_save_dir
 from yuxi.models.chat import select_model
+from yuxi.config.options import system_options
 from yuxi.repositories.domain_factory_repository import DomainFactoryRepository
 from yuxi.services.entity_meta_service import EntityMetaAdapter, EntityMetaMatcher, SlotEntityMapper
 from yuxi.services.task_service import tasker
@@ -1870,7 +1871,7 @@ class DomainFactoryService:
 
         try:
             from yuxi.models.chat import select_model
-            model = select_model()
+            model = select_model(model_spec=(await system_options.get())["default_model"])
 
             # 尝试多模态调用（需要支持 vision 的模型）
             if hasattr(model, "call_vision") or hasattr(model, "analyze_image"):
@@ -2107,7 +2108,7 @@ class DomainFactoryService:
         try:
             from yuxi.models.chat import select_model
 
-            model = select_model()
+            model = select_model(model_spec=(await system_options.get())["default_model"])
             # 限制：最多处理 5 个段落，避免过多 LLM 调用
             for para in target_paragraphs[:5]:
                 content = para.get("content", "")[:500]
@@ -2327,7 +2328,7 @@ class DomainFactoryService:
 
             try:
                 from yuxi.models.chat import select_model
-                model = select_model()
+                model = select_model(model_spec=(await system_options.get())["default_model"])
                 response = await model.call(prompt)
                 text = response.content if hasattr(response, "content") else str(response)
 
@@ -2387,7 +2388,7 @@ class DomainFactoryService:
 
             try:
                 from yuxi.models.chat import select_model
-                model = select_model()
+                model = select_model(model_spec=(await system_options.get())["default_model"])
                 response = await model.call(prompt)
                 text = response.content if hasattr(response, "content") else str(response)
                 parsed = self._parse_logic_response(text, chapter_path)
@@ -3188,7 +3189,7 @@ class DomainFactoryService:
 """
 
         try:
-            model = select_model()
+            model = select_model(model_spec=(await system_options.get())["default_model"])
             response = await model.call(prompt)
 
             response_text = response.content if hasattr(response, "content") else str(response)
@@ -3585,7 +3586,7 @@ class DomainFactoryService:
 
         model = None
         try:
-            model = select_model()
+            model = select_model(model_spec=(await system_options.get())["default_model"])
             logger.debug(f"泛化调用模型={model.model_name}, prompt长度={len(prompt)}字符")
             response = await model.call(prompt)
             response_text = response.content if hasattr(response, "content") else str(response)
@@ -4412,13 +4413,13 @@ class DomainFactoryService:
             kb_ingested = False
             if knowledge_base_id:
                 try:
-                    from yuxi.knowledge import knowledge_base as kb_manager
+                    from yuxi.knowledge.runtime import knowledge_base as kb_manager
                     from yuxi.knowledge.base import FileStatus
 
                     await context.set_progress(40.0, "正在组装入库内容...")
                     await context.set_message("正在组装入库内容...")
 
-                    kb_instance = await kb_manager.aget_kb(knowledge_base_id)
+                    kb_instance = await kb_manager.get_kb_executor(knowledge_base_id)
                     if not kb_instance:
                         raise ValueError(f"知识库 {knowledge_base_id} 不存在")
 
@@ -5144,7 +5145,7 @@ class DomainFactoryService:
         )
         fallback_key = chapter_title
         try:
-            model = select_model()
+            model = select_model(model_spec=(await system_options.get())["default_model"])
             response = await model.call(prompt)
             text = response.content if hasattr(response, "content") else str(response)
             m = _re.search(r"\{[\s\S]*\}", text)
@@ -5691,7 +5692,7 @@ class DomainFactoryService:
                 await context.set_progress(30.0, "正在组装入库内容...")
                 await context.set_message("正在组装入库内容...")
 
-                from yuxi.knowledge import knowledge_base as kb_manager
+                from yuxi.knowledge.runtime import knowledge_base as kb_manager
                 from yuxi.knowledge.base import FileStatus
 
                 ingest_markdown = self._build_ingest_markdown(task_detail)
@@ -5699,7 +5700,7 @@ class DomainFactoryService:
                 await context.set_progress(40.0, "正在写入知识库...")
                 await context.set_message("正在写入知识库...")
 
-                kb_instance = await kb_manager.aget_kb(knowledge_base_id)
+                kb_instance = await kb_manager.get_kb_executor(knowledge_base_id)
                 if not kb_instance:
                     raise ValueError(f"知识库 {knowledge_base_id} 不存在")
 
@@ -6250,7 +6251,7 @@ class DomainFactoryService:
         # ---- 步骤 4: LLM 分析 ----
         prompt = self._build_discovery_prompt(candidates, entities, domain_code)
         from yuxi.models.chat import select_model
-        model = select_model()
+        model = select_model(model_spec=(await system_options.get())["default_model"])
         response = await model.call(prompt)
         text = response.content if hasattr(response, "content") else str(response)
         proposals = self._parse_discovery_response(text)
@@ -6426,7 +6427,7 @@ class DomainFactoryService:
             try:
                 from yuxi.models.chat import select_model
 
-                model = select_model()
+                model = select_model(model_spec=(await system_options.get())["default_model"])
                 response = await model.call(prompt)
                 text = response.content if hasattr(response, "content") else str(response)
                 entity_proposals = self._parse_entity_proposal_response(text)
