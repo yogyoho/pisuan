@@ -1,10 +1,11 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T16:39:30.535Z
-> Files: 1 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-20T02:08:38.678Z
+> Files: 3 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
+- `tranquil-drifting-rossum.md` — 追赶上游 2 个新提交（9e2679b9 → 777875ff）+ 推送落地 (~337 tok)
 
 ## ../../tmp/
 
@@ -167,7 +168,6 @@
 
 ## backend/package/yuxi/storage/postgres/
 
-- `manager.py` — PostgreSQL 数据库管理器 - 支持知识库和业务数据 (~19387 tok)
 
 ## backend/package/yuxi/utils/
 
@@ -279,6 +279,8 @@
 
 ## docs/develop-guides/
 
+- `changelog.md` — 版本变更记录 (~15766 tok)
+- `upstream-sync-guide.md` — 上游代码同步与本地化扩展实施方案 (~1560 tok)
 
 ## docs/intro/
 
