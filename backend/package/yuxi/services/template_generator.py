@@ -155,8 +155,8 @@ class TemplateGenerator:
         """调用 LLM 生成模板"""
         try:
             from yuxi.models.chat import select_model
-
-            model = select_model()
+            from yuxi.config.options import system_options
+            model = select_model(model_spec=(await system_options.get())["default_model"])
             response = await asyncio.to_thread(model.call, prompt)
             return response.content if hasattr(response, "content") else str(response)
         except Exception as e:

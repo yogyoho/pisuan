@@ -44,10 +44,10 @@ def parse_indicator_response(text: str) -> list[dict[str, Any]]:
 async def extract_indicators(doc_code: str, unit_no: str, table_content: str) -> list[dict[str, Any]]:
     """对单张限值表调用 LLM 提取指标"""
     from yuxi.models.chat import select_model
-
+    from yuxi.config.options import system_options
     prompt = _PROMPT.format(doc_code=doc_code, unit_no=unit_no or "未编号表", table_content=table_content[:6000])
     try:
-        model = select_model()
+        model = select_model(model_spec=(await system_options.get())["default_model"])
         response = await model.call(prompt)
         text = response.content if hasattr(response, "content") else str(response)
         return parse_indicator_response(text)
