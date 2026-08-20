@@ -315,7 +315,8 @@ class DomainEntityService:
 
         try:
             from yuxi.models.chat import select_model
-            model = select_model()
+            from yuxi.config.options import system_options
+            model = select_model(model_spec=(await system_options.get())["default_model"])
             response = await model.call(prompt)
             response_text = response.content if hasattr(response, "content") else str(response)
         except Exception as e:
