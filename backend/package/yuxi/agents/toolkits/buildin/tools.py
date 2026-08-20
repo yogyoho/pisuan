@@ -1016,7 +1016,7 @@ LOOKUP_SUBSIDENCE_DESCRIPTION = """
 async def lookup_subsidence_params(depth: str, coal_seam: str, angle: str) -> dict:
     """从 KB 查预计算的沉陷参数（Phase 5 数据到位后启用 KB 查询）。"""
     try:
-        from yuxi.knowledge import knowledge_base as kb_manager
+        from yuxi.knowledge.runtime import knowledge_base as kb_manager
 
         databases = await kb_manager.get_databases_by_type("milvus")
         if not databases:

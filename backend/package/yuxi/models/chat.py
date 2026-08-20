@@ -52,9 +52,7 @@ def _langchain_kwargs(provider_type: str, kwargs: dict) -> dict:
 
 def select_model(model_spec: str | None = None, **kwargs) -> LangChainChatAdapter:
     if not model_spec:
-        model_spec = getattr(config, "default_model", None)
-    if not model_spec:
-        raise ValueError("model_spec 不能为空且未配置默认模型")
+        raise ValueError("model_spec 不能为空：同步调用方需显式传入 (await system_options.get())['default_model']")
 
     info = model_cache.get_model_info(model_spec)
     if not info:
