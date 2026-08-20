@@ -44,7 +44,8 @@ git checkout pisuan-custom && git rebase main
 1. **上游 CLAUDE.md 是符号链接**（指向 AGENTS.md）：与 pisuan 普通文件构成 merge-ort 类型冲突，自动改名文件含提交主题冒号，Windows 非法路径导致 pick 直接失败。需先把 HEAD 的 CLAUDE.md 恢复为普通文件（`git update-index --cacheinfo 100644,<blob>,CLAUDE.md`，Windows 下 `git add` 不改 mode），再 continue。
 2. **v0.7.2 新增 .env 必填密钥**：`JWT_SECRET_KEY` / `API_KEY_DERIVATION_SECRET` / `SANDBOX_PROVISIONER_TOKEN` / `YUXI_INSTANCE_ID`（跑 `bash scripts/init.sh` 生成），缺失时启动组件硬失败。改 .env 后必须 `docker compose up -d --force-recreate`（restart 不重读 env）。
 3. **合并 pyproject 后必须 `cd backend && uv lock`**：否则 Docker 构建 `uv sync --frozen` 因 manifest 哈希不匹配失败。
-4. **镜像 tag 漂移**：新版 compose 默认 `YUXI_VERSION=0.7.2.dev0`，本地已有镜像是旧 tag；开发环境可在 .env 钉 `YUXI_VERSION=<已有tag>` + `--no-build` 重建容器，镜像重建等镜像源可用后再做（lock 的 wheel URL 若指向失效镜像源需换源重生）。
+4. **pytorch 等大包构建超时**：默认 `UV_HTTP_TIMEOUT=30s` 扛不住 torch（200MB+），docker/api.Dockerfile 已放宽至 600s；uv 的 `--no-cache` 使失败的 RUN 层整体重下，一次构建约 40 分钟，失败重试成本高。
+5. **镜像 tag 漂移**：新版 compose 默认 `YUXI_VERSION=0.7.2.dev0`，本地已有镜像是旧 tag；开发环境可在 .env 钉 `YUXI_VERSION=<已有tag>` + `--no-build` 重建容器，镜像重建等镜像源可用后再做（lock 的 wheel URL 若指向失效镜像源需换源重生）。
 5. **DB 遗留 lightrag 空库会硬失败**：上游把"使用中但不受支持的 KB 类型"从跳过改为启动失败，需备份后清理（`knowledge_bases_backup_lightrag_20260820`）。
 
 
