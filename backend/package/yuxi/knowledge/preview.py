@@ -47,6 +47,20 @@ async def read_knowledge_file_preview(kb_id: str, file_id: str) -> dict:
     if file_size is not None and int(file_size) > MAX_BINARY_PREVIEW_SIZE_BYTES:
         return {**response, **preview_too_large().payload()}
 
+    # pisuan 定制: 领域工厂提交文件 file_type=md 但文件名可能是 .docx，
+    # file_type 明确为文本时优先走 markdown 预览，避免误入 office→PDF 转换读到旧 docx。
+    if (getattr(file_record, "file_type", "") or "").lower() in {"md", "txt", "markdown", "mdx"}:
+        raw_content = await _read_minio_bytes(original_path)
+        return {
+            **response,
+            "content": raw_content,
+            "media_type": "text/markdown",
+            "preview_type": "markdown",
+            "supported": True,
+            "message": None,
+            "binary": False,
+        }
+
     if is_office_pdf_preview_file(filename):
         pdf_content = await _read_office_pdf_preview(kb_id, file_id, filename, original_path)
         return {

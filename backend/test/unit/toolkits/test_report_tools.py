@@ -4,11 +4,26 @@ from langgraph.prebuilt.tool_node import ToolRuntime
 import yuxi.agents.toolkits.buildin.tools as tools_mod
 
 
+@pytest.fixture(autouse=True)
+def user_data_root(tmp_path, monkeypatch):
+    """把用户数据根指到 tmp：Workdir outputs 读写都落在临时目录。"""
+    root = tmp_path / "user-data"
+    (root / "shared" / "u1" / "workspace" / "projects" / "w1").mkdir(parents=True)
+    monkeypatch.setattr("yuxi.workspace.paths.get_user_data_dir", lambda: root)
+    return root
+
+
 def _fake_runtime(context=None):
-    """构造测试用 ToolRuntime(最小必填字段)。"""
+    """构造测试用 ToolRuntime(带 Workdir scope，供文件写入类工具解析)。"""
     return ToolRuntime(
         state={},
-        context=context or {},
+        context={
+            "uid": "u1",
+            "thread_id": "t1",
+            "runtime_scope_id": "t1",
+            "workdir_relative_path": "projects/w1",
+            **(context or {}),
+        },
         config={},
         stream_writer=lambda *a, **k: None,
         tool_call_id="tc_test",
@@ -140,6 +155,6 @@ async def test_assemble_report_tool(monkeypatch, tmp_path):
     )
 
     out = await tools_mod.assemble_report.ainvoke({"report_id": "rpt_1", "runtime": _fake_runtime()})
-    # assemble_report 写 config.save_dir/outputs/report_{report_id}.md
-    assert out["artifact_path"].endswith("report_rpt_1.md")
+    # assemble_report 写当前 Workdir outputs，artifact_path 为 runtime 虚拟路径
+    assert out["artifact_path"].endswith("projects/w1/outputs/report_rpt_1.md")
     assert out["unresolved_refs"] == []

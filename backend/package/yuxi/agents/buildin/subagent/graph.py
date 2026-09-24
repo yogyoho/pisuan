@@ -17,6 +17,7 @@ from yuxi.agents.buildin.subagent.context import SubAgentContext
 from yuxi.agents.context import (
     DEFAULT_TOOL_RESULT_EVICTION_K_TOKENS,
 )
+from yuxi.agents.middlewares.excluded_tools import ExcludedToolsMiddleware
 from yuxi.agents.middlewares import (
     ImageInputCompatibilityMiddleware,
     NetworkRetryMiddleware,
@@ -102,6 +103,7 @@ async def _build_middlewares(context, backend, tool_approval_mode: str):
         create_summary_middleware_from_context(context, backend=backend),
         TodoListMiddleware(system_prompt=TODO_MID_PROMPT),
         PatchToolCallsMiddleware(),
+        ExcludedToolsMiddleware(getattr(context, "excluded_tools", None)),
         _SubAgentToolFilterMiddleware(tool_approval_mode),
         NetworkRetryMiddleware(),
         ImageInputCompatibilityMiddleware(),

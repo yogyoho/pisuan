@@ -16,10 +16,24 @@ from langgraph.prebuilt.tool_node import ToolRuntime
 import yuxi.agents.toolkits.buildin.tools as tools_mod
 
 
+@pytest.fixture(autouse=True)
+def user_data_root(tmp_path, monkeypatch):
+    """把用户数据根指到 tmp：Workdir outputs 读写都落在临时目录。"""
+    root = tmp_path / "user-data"
+    (root / "shared" / "u1" / "workspace" / "projects" / "w1").mkdir(parents=True)
+    monkeypatch.setattr("yuxi.workspace.paths.get_user_data_dir", lambda: root)
+    return root
+
+
+def _host_artifact(root, report_id: str):
+    """report_{id}.md 在宿主侧的真实落盘路径。"""
+    return root / "shared" / "u1" / "workspace" / "projects" / "w1" / "outputs" / f"report_{report_id}.md"
+
+
 def _fake_runtime() -> ToolRuntime:
     return ToolRuntime(
         state={},
-        context={},
+        context={"uid": "u1", "thread_id": "t1", "runtime_scope_id": "t1", "workdir_relative_path": "projects/w1"},
         config={},
         stream_writer=lambda *a, **k: None,
         tool_call_id="tc_golden",
@@ -28,9 +42,8 @@ def _fake_runtime() -> ToolRuntime:
 
 
 @pytest.mark.asyncio
-async def test_assemble_includes_done_and_review_excludes_writing(monkeypatch, tmp_path):
+async def test_assemble_includes_done_and_review_excludes_writing(monkeypatch, user_data_root):
     """A) assemble_report 合并 done + review，排除 writing。"""
-    monkeypatch.setenv("SAVE_DIR", str(tmp_path))
     chapters = [
         {"chapter_order": 1, "canonical_chapter_key": "ch1", "title": "总则", "status": "done", "content_md": "# 总则\n内容1"},
         {"chapter_order": 2, "canonical_chapter_key": "ch2", "title": "现状", "status": "review", "content_md": "# 现状\n内容2"},
@@ -55,9 +68,9 @@ async def test_assemble_includes_done_and_review_excludes_writing(monkeypatch, t
     # 断言 assemble_report 向 list_chapters 传了 done+review 过滤
     repo.list_chapters.assert_awaited_with("rpt_golden", status_only=["done", "review"])
 
-    # 成稿文件真实写出
-    assert out["artifact_path"].endswith("report_rpt_golden.md")
-    content = open(out["artifact_path"], encoding="utf-8").read()
+    # 成稿文件真实写出（宿主路径落盘，artifact_path 为 runtime 虚拟路径）
+    assert out["artifact_path"].endswith("projects/w1/outputs/report_rpt_golden.md")
+    content = _host_artifact(user_data_root, "rpt_golden").read_text(encoding="utf-8")
     # done + review 章节进入成稿
     assert "内容1" in content
     assert "内容2" in content
@@ -105,9 +118,8 @@ async def test_save_chapter_done_returns_preview_writing_does_not(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_save_then_assemble_full_chain(monkeypatch, tmp_path):
+async def test_save_then_assemble_full_chain(monkeypatch, user_data_root):
     """C) save_chapter × N → assemble_report → 成稿含全部 done 章节。"""
-    monkeypatch.setenv("SAVE_DIR", str(tmp_path))
 
     # 用内存 dict 模拟 DB 章节表
     store: dict[str, dict] = {}
@@ -142,6 +154,7 @@ async def test_save_then_assemble_full_chain(monkeypatch, tmp_path):
 
     out = await tools_mod.assemble_report.ainvoke({"report_id": "rpt_chain", "runtime": rt})
 
-    content = open(out["artifact_path"], encoding="utf-8").read()
+    assert out["artifact_path"].endswith("projects/w1/outputs/report_rpt_chain.md")
+    content = _host_artifact(user_data_root, "rpt_chain").read_text(encoding="utf-8")
     for body in ["总则正文", "现状正文", "预测正文"]:
         assert body in content

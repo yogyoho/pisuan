@@ -31,6 +31,11 @@ def test_preset_discovery_includes_shipping_roles():
         "deep-research",
         "research-explorer",
         "fact-verifier",
+        # pisuan 环评写作链路写手
+        "chapter-writer",
+        "regulation-writer",
+        "data-survey-writer",
+        "prediction-writer",
     }
     assert found["deep-research"].context["subagents"] == ["research-explorer", "fact-verifier"]
     assert found["general-purpose"].context == {}
@@ -177,7 +182,18 @@ async def test_each_graph_uses_its_own_run_context(monkeypatch, backend_id):
 def test_shipping_skills_keep_required_dependencies():
     """默认知识能力及研究依赖不能因发现重组缺失。"""
     found = {spec["slug"]: spec for spec in skill_service.list_builtin_skill_specs()}
-    assert set(found) == {"image-gen", "html-preview", "deep-research", "knowledge-base", "mysql-reporter"}
+    assert set(found) == {
+        "image-gen",
+        "html-preview",
+        "deep-research",
+        "knowledge-base",
+        "mysql-reporter",
+        # pisuan 环评写作链路技能
+        "coal-eia-writer",
+        "template-recommender",
+        "slot-filler",
+        "compliance-checker",
+    }
     assert found["knowledge-base"]["tool_dependencies"] == [
         "list_kbs",
         "query_kb",

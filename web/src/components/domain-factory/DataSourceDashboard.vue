@@ -14,7 +14,7 @@ import {
   EyeOutlined,
   RedoOutlined
 } from '@ant-design/icons-vue'
-import { Search } from 'lucide-vue-next'
+import { Search } from '@lucide/vue'
 import dayjs from 'dayjs'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { useTaskerStore } from '@/stores/tasker'
