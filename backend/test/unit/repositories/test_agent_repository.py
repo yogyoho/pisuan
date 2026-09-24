@@ -309,59 +309,32 @@ def test_user_shared_agent_is_manageable_for_normal_user():
 
 
 @pytest.mark.asyncio
-async def test_ensure_regulation_writer_subagent_creates_with_config(monkeypatch):
-    db = FakeDb()
-    repo = AgentRepository(db)
+async def test_ensure_writer_presets_create_with_config(monkeypatch):
+    """pisuan 定制 writer preset 幂等注册并携带工具配置（v0.7.3 preset 自动发现机制）。"""
+    from yuxi.agents.presets.subagents.data_survey_writer import PRESET as DATA_PRESET
+    from yuxi.agents.presets.subagents.prediction_writer import PRESET as PREDICTION_PRESET
+    from yuxi.agents.presets.subagents.regulation_writer import PRESET as REGULATION_PRESET
 
-    async def get_by_slug(_slug):
-        return None
+    cases = [
+        (REGULATION_PRESET, ["get_chapter_outline", "save_chapter", "query_kb"]),
+        (DATA_PRESET, ["set_pps_param", "query_kb"]),
+        (PREDICTION_PRESET, ["calculate_a_value", "calculate_water_capacity", "lookup_subsidence_params"]),
+    ]
+    for preset, expected_tools in cases:
+        db = FakeDb()
+        repo = AgentRepository(db)
 
-    monkeypatch.setattr(repo, "get_by_slug", get_by_slug)
+        async def get_by_slug(_slug):
+            return None
 
-    agent = await repo.ensure_regulation_writer_subagent(created_by="system")
-    ctx = agent.config_json.get("context", {})
-    assert agent.slug == "regulation-writer"
-    assert agent.is_subagent is True
-    assert "get_chapter_outline" in ctx.get("tools", [])
-    assert "save_chapter" in ctx.get("tools", [])
-    assert "query_kb" in ctx.get("tools", [])
+        monkeypatch.setattr(repo, "get_by_slug", get_by_slug)
 
-
-@pytest.mark.asyncio
-async def test_ensure_data_survey_writer_subagent_creates_with_config(monkeypatch):
-    db = FakeDb()
-    repo = AgentRepository(db)
-
-    async def get_by_slug(_slug):
-        return None
-
-    monkeypatch.setattr(repo, "get_by_slug", get_by_slug)
-
-    agent = await repo.ensure_data_survey_writer_subagent(created_by="system")
-    ctx = agent.config_json.get("context", {})
-    assert agent.slug == "data-survey-writer"
-    assert agent.is_subagent is True
-    assert "set_pps_param" in ctx.get("tools", [])
-    assert "query_kb" in ctx.get("tools", [])
-
-
-@pytest.mark.asyncio
-async def test_ensure_prediction_writer_subagent_creates_with_config(monkeypatch):
-    db = FakeDb()
-    repo = AgentRepository(db)
-
-    async def get_by_slug(_slug):
-        return None
-
-    monkeypatch.setattr(repo, "get_by_slug", get_by_slug)
-
-    agent = await repo.ensure_prediction_writer_subagent(created_by="system")
-    ctx = agent.config_json.get("context", {})
-    assert agent.slug == "prediction-writer"
-    assert agent.is_subagent is True
-    assert "calculate_a_value" in ctx.get("tools", [])
-    assert "calculate_water_capacity" in ctx.get("tools", [])
-    assert "lookup_subsidence_params" in ctx.get("tools", [])
+        agent = await repo.ensure_preset(preset, created_by="system")
+        ctx = agent.config_json.get("context", {})
+        assert agent.slug == preset.slug
+        assert agent.is_subagent is True
+        for tool in expected_tools:
+            assert tool in ctx.get("tools", [])
 
 
 def test_shared_agent_is_accessible_but_not_manageable_for_normal_user():

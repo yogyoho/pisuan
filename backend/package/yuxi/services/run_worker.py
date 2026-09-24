@@ -1619,11 +1619,12 @@ class WorkerSettings:
         process_agent_run,
         func(process_task, timeout=TASKER_DEFAULT_TIMEOUT_SECONDS + 30),
     ]
-    max_jobs = worker_max_jobs()
+    # pisuan 定制：主agent+子agent并行, max_jobs=1会导致子agent派发死锁
+    max_jobs = max(worker_max_jobs(), 2)
     # 交互请求避免继承 ARQ 默认的 500ms 空闲轮询等待。
     poll_delay = 0.05
     max_tries = 2
-    retry_jobs = True
+    retry_jobs = 30  # pisuan 定制: retry 前等 30 秒，给 OOM 进程释放内存的时间
     # 单任务最长执行时间（秒），可配置：超长图谱构建/深度检索场景需调大，
     # 避免长任务被 arq 取消并误标为 cancelled。
     job_timeout = int(os.getenv("YUXI_JOB_TIMEOUT_SECONDS", "3600"))

@@ -42,6 +42,16 @@
 - 精简测试中的重复准备、低信息量断言和无引用夹具，保留不同观察边界的 unit、真实 provider 探针与 E2E；测试运行器使用 readiness gate。并发评测统一为 `python -m backend.test.performance`，既有实测与环境限制见[并发优化决策](./decisions/implemented/2026-09-07-agent-concurrency-optimization.md)。
 - 更新文档首页、导航和并发配置说明，补齐迁移基线、模型配置与运行机制文档。
 
+### pisuan 定制同步（2026-09-24）
+
+- 完成上游 v0.7.3 全量差分同步：main 快进至 `dee83624`（201 个上游提交），pisuan-custom 179 个定制提交 rebase 重放，六项定制红线（Landing/登录页/蓝色主题/领域工厂导航与页面/华宇页脚）零丢失。本次适配要点：上游前端图标库迁移 `lucide-vue-next` → `@lucide/vue`（定制文件批量替换 import）；skills 内置注册改为目录自动发现 + SKILL.md frontmatter 元数据（4 个定制 skill 补齐 `version`/`tool_dependencies`/`skill_dependencies`）；内置子 agent 注册改为 `presets/` 目录 `PRESET` 自动发现（chapter-writer 与 3 个 v2 writer 迁移为 preset 文件）；知识库预览决策迁移至 `knowledge/preview.py`（file_type 优先的 markdown 预览分支随之迁移，领域工厂提交的 md 内容不再误入 office→PDF 转换）；上游 #1001 原生 excluded_tools 机制补全 AgentContext 字段定义与 subagent graph 装配。`domain_factory` DDL 合并进上游拆分后的迁移语句体系（`DomainFactoryBase`/`DomainEntityBase` 挂载 create_all/drop_all）。上游移除 torch 依赖后镜像构建不再需要 pytorch 镜像源。`uv.lock` 按阿里云索引重新生成（214 包）。
+
+同步收尾修复（全量回归暴露）：
+
+- 上游 v0.7.3 废除 per-thread 目录、改为 UserWorkspace/Workdir 作用域后，定制的 sandbox outputs 兼容层随之迁移：删除 rebase 中丢失的 `sandbox/paths.py` 依赖，`_auto_present_artifacts` 改为扫描 `user_workdir_host_dir(uid, workdir)/outputs` 并返回 runtime 虚拟路径（`/home/gem/user-data/<workdir>/outputs/...`，与上游 `present_artifacts` 同一命名空间）；`_write_chapter_preview` 与 `assemble_report` 同步改为写入当前 Workdir outputs（新增 `_workdir_outputs_paths` 解析），不再写全局目录导致交付物不可展示。
+- `PostgresManager` 增加事件循环绑定守卫 `_ensure_loop_fresh`：异步连接池绑定创建时的循环无法迁移，检测到已绑定的旧循环与当前循环不一致（每用例独立循环的 pytest 全量回归）时丢弃旧池并按当前循环重建，从未绑定过（含测试手工构造实例）则只采纳当前循环；生产单循环运行零影响。此前全量跑 `test_chapter_writer_subagent` 会因复用已关闭循环上的池而失败，并在 teardown 连锁拖垮后续用例。 共享的异步 Redis 客户端单例（`get_async_redis_client`）存在同类跨循环复用问题（偶发永久挂起），同样以循环绑定守卫修复。 此外 `initialize()` 在测试循环内构造的 psycopg 连接池会在 pytest-asyncio 拆卸时因后台建连任务与 `_cancel_all_tasks` 互等而永久挂起（最小复现：建池+查询+cancel-all tasks），新增 `backend/test/unit/conftest.py` autouse 夹具在循环销毁前于所属循环内显式关闭池，生产代码不动。
+- 上游 `test_builtin_discovery` 的发布内容集合断言补入 4 个定制写手 preset 与 4 个定制 skill。
+
 ## v0.7.2 (2026-08-26)
 
 ::: warning Beta 升级说明

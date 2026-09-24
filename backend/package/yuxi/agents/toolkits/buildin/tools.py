@@ -427,6 +427,15 @@ def _runtime_scope_value(runtime: ToolRuntime, key: str) -> str | None:
             return value.strip()
     return None
 
+def _workdir_outputs_paths(runtime: ToolRuntime) -> tuple[Path, str]:
+    """解析当前 Workdir 的宿主 outputs 目录与对应的 runtime 虚拟路径前缀。"""
+    from yuxi.workspace.paths import user_workdir_host_dir
+
+    _scope_id, uid, workdir_relative = _resolve_runtime_sandbox_scope(runtime)
+    out_dir = user_workdir_host_dir(uid, workdir_relative) / "outputs"
+    virtual_base = f"{VIRTUAL_PATH_PREFIX.rstrip('/')}/{workdir_relative.strip('/')}/outputs"
+    return out_dir, virtual_base
+
 
 def _next_ocr_output_path(backend, workdir_path: str, source_path: PurePosixPath) -> str:
     """在当前 Project outputs 中选择不冲突的 Markdown 路径。"""
@@ -816,24 +825,26 @@ async def save_chapter(
     preview_path = _write_chapter_preview(runtime, report_id, canonical_chapter_key, content_md, status)
     if preview_path:
         result["preview_path"] = preview_path
-        result["提示"] = "本章节已存入数据库并生成 preview 文件；全部章节完成后，编排者调 assemble_report 合并成 /app/saves/outputs/report_{id}.md".replace("{id}", report_id)
+        result["提示"] = (
+            "本章节已存入数据库并生成 preview 文件；全部章节完成后，"
+            "编排者调 assemble_report 合并成当前 Project Workdir outputs 下的 report_{id}.md"
+        ).replace("{id}", report_id)
     return result
 
 
-def _write_chapter_preview(runtime: ToolRuntime, report_id: str, chapter_key: str, content_md: str, status: str) -> str | None:
+def _write_chapter_preview(
+    runtime: ToolRuntime, report_id: str, chapter_key: str, content_md: str, status: str
+) -> str | None:
     """done/review 章节写 preview 文件到沙箱 outputs，返回路径；writing/skipped/pending_data 不写。"""
     if status not in ("done", "review") or not (content_md or "").strip():
         return None
     try:
-        from yuxi.agents.backends.sandbox.paths import sandbox_outputs_dir
-
-        thread_id, _uid = _resolve_runtime_file_scope(runtime)
-        safe_key = re.sub(r"[^A-Za-z0-9_-]", "_", chapter_key)[:48] or "chapter"
-        out_dir = sandbox_outputs_dir(thread_id).resolve()
+        out_dir, virtual_base = _workdir_outputs_paths(runtime)
         out_dir.mkdir(parents=True, exist_ok=True)
+        safe_key = re.sub(r"[^A-Za-z0-9_-]", "_", chapter_key)[:48] or "chapter"
         preview = out_dir / f"chapter_preview_{report_id}_{safe_key}.md"
         preview.write_text(content_md, encoding="utf-8")
-        return str(preview)
+        return f"{virtual_base}/{preview.name}"
     except Exception as e:
         logger.warning(f"save_chapter preview 写入失败 {report_id}/{chapter_key}: {e}")
         return None
@@ -870,7 +881,7 @@ review(写完待审)章节也会进成稿;writing(进行中)章节被排除。�
     display_name="装配报告",
     description=ASSEMBLE_REPORT_DESCRIPTION,
 )
-async def assemble_report(report_id: str) -> dict:
+async def assemble_report(report_id: str, runtime: ToolRuntime) -> dict:
     """合并 done/review 章节 + 解析 {{REF}} + 检测 {{MISSING}} + 写出 artifact,返回成稿信息。
 
     含 review 是语义校正：review=写完等人审阅的完稿，本就该进成稿草稿；writing=进行中才排除。
@@ -889,17 +900,15 @@ async def assemble_report(report_id: str) -> dict:
         if ch_missing:
             missing_by_chapter[ch.get("canonical_chapter_key", "")] = ch_missing
 
-    # 写入共享 outputs 目录
-    from pathlib import Path
-    from yuxi.config import get_save_dir
-    out_dir = get_save_dir() / "outputs"
+    # 写入当前 Workdir 的 outputs 目录，返回 runtime 虚拟路径供 present_artifacts 使用
+    out_dir, virtual_base = _workdir_outputs_paths(runtime)
     out_dir.mkdir(parents=True, exist_ok=True)
     artifact_path = out_dir / f"report_{report_id}.md"
     artifact_path.write_text(markdown, encoding="utf-8")
     await repo.mark_assembled(report_id)
     return {
         "markdown": markdown[:500] + ("..." if len(markdown) > 500 else ""),
-        "artifact_path": str(artifact_path),
+        "artifact_path": f"{virtual_base}/{artifact_path.name}",
         "unresolved_refs": unresolved,
         "missing_params": {
             "total": len(missing_params),

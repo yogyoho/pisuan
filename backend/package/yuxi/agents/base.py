@@ -98,32 +98,43 @@ def _recursion_limit_from_context(context: BaseContext, default: int) -> int:
     return int(value) if isinstance(value, int) and value > 0 else default
 
 
-def _auto_present_artifacts(thread_id: str, uid: str, existing: list[str] | None = None) -> list[str]:
-    """Scan the thread's sandbox outputs dir for .md files and return their virtual paths.
+def _auto_present_artifacts(context: BaseContext, existing: list[str] | None = None) -> list[str]:
+    """扫描当前 Workdir outputs 下的 .md 文件并合并进交付物列表。
 
-    Acts as a fallback so that agent-generated Markdown files in outputs are
-    visible to the user even when the agent doesn't explicitly call
-    present_artifacts.  Internal sub-directories (conversation_history,
-    large_tool_history, …) are excluded.
+    pisuan 定制回退：写作链路的成稿/预览即使 agent 漏调 present_artifacts 也能在前端可见。
+    内部子目录（conversation_history、large_tool_results）排除；
+    无 Workdir 的会话（普通聊天、单测）没有 outputs 概念，原样返回 existing。
     """
-    from yuxi.agents.backends.sandbox.paths import sandbox_outputs_dir
-    from yuxi.agents.toolkits.buildin.tools import _PRESENT_ARTIFACTS_INTERNAL_DIR_NAMES
-    from yuxi.utils.paths import OUTPUTS_DIR_NAME, VIRTUAL_PATH_PREFIX
+    from yuxi.agents.backends.paths import (
+        CONVERSATION_HISTORY_DIR_NAME,
+        LARGE_TOOL_RESULTS_DIR_NAME,
+        VIRTUAL_PATH_PREFIX,
+    )
+    from yuxi.workspace.paths import user_workdir_host_dir
 
-    outputs_dir = sandbox_outputs_dir(thread_id)
-    if not outputs_dir.exists():
-        return list(existing or [])
-
-    already_present = set(existing or [])
-    virtual_base = f"/{VIRTUAL_PATH_PREFIX.strip('/')}/{OUTPUTS_DIR_NAME}"
-    for md_file in sorted(outputs_dir.rglob("*.md")):
-        relative = md_file.relative_to(outputs_dir)
-        if relative.parts and relative.parts[0] in _PRESENT_ARTIFACTS_INTERNAL_DIR_NAMES:
-            continue
-        virtual_path = f"{virtual_base}/{relative.as_posix()}"
-        if virtual_path not in already_present:
-            already_present.add(virtual_path)
-    return sorted(already_present)
+    artifacts = list(existing or [])
+    workdir_relative = str(getattr(context, "workdir_relative_path", "") or "").strip()
+    if not workdir_relative:
+        return artifacts
+    try:
+        outputs_dir = user_workdir_host_dir(str(context.uid), workdir_relative) / "outputs"
+        if not outputs_dir.is_dir():
+            return artifacts
+        internal_dirs = {CONVERSATION_HISTORY_DIR_NAME, LARGE_TOOL_RESULTS_DIR_NAME}
+        virtual_base = f"{VIRTUAL_PATH_PREFIX.rstrip('/')}/{workdir_relative.strip('/')}/outputs"
+        seen = set(artifacts)
+        for md_file in sorted(outputs_dir.rglob("*.md")):
+            relative = md_file.relative_to(outputs_dir)
+            if relative.parts and relative.parts[0] in internal_dirs:
+                continue
+            virtual_path = f"{virtual_base}/{relative.as_posix()}"
+            if virtual_path not in seen:
+                seen.add(virtual_path)
+                artifacts.append(virtual_path)
+        return sorted(seen)
+    except Exception as exc:
+        logger.warning(f"自动登记 Workdir outputs 交付物失败: {exc}")
+        return artifacts
 
 
 class BaseAgent:
@@ -339,7 +350,7 @@ class BaseAgent:
         # Fallback: auto-register .md outputs as artifacts so the frontend
         # sees them even if the agent didn't explicitly call present_artifacts.
         if isinstance(msg, dict):
-            msg["artifacts"] = _auto_present_artifacts(context.thread_id, context.uid, msg.get("artifacts"))
+            msg["artifacts"] = _auto_present_artifacts(context, msg.get("artifacts"))
         return msg
 
     @abstractmethod

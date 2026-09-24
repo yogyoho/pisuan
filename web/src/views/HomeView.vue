@@ -135,7 +135,7 @@ import {
   Database,
   Bot,
   Settings
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 
 const router = useRouter()
 const userStore = useUserStore()

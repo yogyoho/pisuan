@@ -1,6 +1,9 @@
 ---
 name: coal-eia-writer
 description: "煤矿环评报告编排者 v2。作为组长派发 3 个专业 writer（法规/数据/预测），支持跨会话长项目、{{MISSING}}占位符并行、计算工具调用和审批流。"
+version: "2026.05.11"
+tool_dependencies: ["get_chapter_outline", "get_templates", "create_report", "get_report", "set_pps_param", "save_chapter", "assemble_report", "subagent_start", "subagent_await", "present_artifacts", "ask_user_question", "list_kbs", "query_kb", "list_report_types", "list_chapter_keys"]
+skill_dependencies: ["template-recommender", "slot-filler", "compliance-checker"]
 ---
 
 # 煤矿环评报告编写 v2

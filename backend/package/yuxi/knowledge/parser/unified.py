@@ -9,6 +9,7 @@ import re
 import tempfile
 import threading
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -399,3 +400,34 @@ def _convert_xls_to_markdown(file_path: Path) -> str:
             blocks.append(f"## {sheet_name}")
         blocks.append(dataframe.to_markdown(index=False, headers=[""] * len(dataframe.columns), disable_numparse=True))
     return "\n\n".join(blocks)
+
+# ========== pisuan ETL 兼容层 ==========
+# 上游 v0.7.3 将解析入口收敛为 parse_resolved_document（纯 Markdown 返回）。
+# 领域工厂 ETL 依赖 MarkdownParseResult(markdown, html) 结构：表格以完整 HTML
+# 存储（见 domain_factory_service._parse_markdown_to_paragraphs），故保留此入口。
+
+
+@dataclass
+class MarkdownParseResult:
+    """pisuan ETL 解析结果：markdown 必备，html 按需生成（表格以 HTML 保留）。"""
+
+    markdown: str
+    html: str | None = None
+
+
+def _markdown_to_html(markdown: str) -> str:
+    """将 Markdown 全文转换为 HTML（启用表格扩展，供 ETL 表格提取）。"""
+    from markdown_it import MarkdownIt
+
+    return MarkdownIt("commonmark", {"typographer": True}).enable("table").render(markdown)
+
+
+async def parse_source_to_markdown(source: str, params: dict | None = None) -> MarkdownParseResult:
+    """pisuan ETL 兼容入口：解析为 Markdown 并生成对应 HTML。"""
+    markdown = await parse_resolved_document(source, params)
+    try:
+        html = _markdown_to_html(markdown)
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Markdown 转 HTML 失败，ETL 将回退 Markdown 表格: {e}")
+        html = None
+    return MarkdownParseResult(markdown=markdown, html=html)

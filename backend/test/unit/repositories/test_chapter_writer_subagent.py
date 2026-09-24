@@ -1,5 +1,6 @@
 import pytest
 
+from yuxi.agents.presets.subagents.chapter_writer import PRESET as CHAPTER_WRITER_PRESET
 from yuxi.repositories.agent_repository import AgentRepository
 from yuxi.storage.postgres.manager import pg_manager
 
@@ -15,7 +16,7 @@ async def _dispose():
 async def test_ensure_chapter_writer_subagent_idempotent():
     async with pg_manager.get_async_session_context() as session:
         repo = AgentRepository(session)
-        a1 = await repo.ensure_chapter_writer_subagent()
-        a2 = await repo.ensure_chapter_writer_subagent()
+        a1 = await repo.ensure_preset(CHAPTER_WRITER_PRESET)
+        a2 = await repo.ensure_preset(CHAPTER_WRITER_PRESET)
         assert a1.slug == "chapter-writer"
         assert a1.id == a2.id  # 幂等

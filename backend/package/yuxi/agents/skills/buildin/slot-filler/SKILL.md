@@ -1,6 +1,9 @@
 ---
 name: slot-filler
 description: "根据上下文和用户提供的附件，智能填充段落模板中的插槽。在模板推荐完成后自动触发，为每个插槽填入数据并给出置信度，绝不编造数据，无法填充的插槽会提示用户补充。依赖 template-recommender 技能。"
+version: "2026.04.29"
+tool_dependencies: ["query_kb", "ask_user_question", "get_templates", "list_report_types"]
+skill_dependencies: ["template-recommender"]
 ---
 
 # 智能填槽

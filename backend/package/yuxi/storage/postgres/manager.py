@@ -1,5 +1,6 @@
 """PostgreSQL 数据库管理器 - 支持知识库和业务数据"""
 
+import asyncio
 import json
 import os
 from contextlib import asynccontextmanager
@@ -19,6 +20,12 @@ from yuxi.storage.postgres.models_business import (
 )
 from yuxi.storage.postgres.models_business import Base as BusinessBase
 from yuxi.storage.postgres.models_knowledge import Base as KnowledgeBase
+from yuxi.storage.postgres.models_domain_factory import (
+    Base as DomainFactoryBase,
+)
+from yuxi.storage.postgres.models_domain_entity import (
+    Base as DomainEntityBase,
+)
 from yuxi.utils import logger
 from yuxi.utils.singleton import SingletonMeta
 
@@ -339,6 +346,29 @@ class PostgresManager(metaclass=SingletonMeta):
         self.langgraph_checkpointer = None
         self._langgraph_checkpointer_setup = False
         self._initialized = False
+        self._bound_loop: asyncio.AbstractEventLoop | None = None
+
+    async def _ensure_loop_fresh(self):
+        """异步连接池绑定创建时的事件循环，无法跨循环迁移。
+
+        单进程单循环的生产运行不受影响；在每用例独立事件循环的测试等场景，
+        检测到循环变化时丢弃旧池引用并按当前循环重建（旧循环已关闭，池无需也不能 await 关闭）。
+        """
+        loop = asyncio.get_running_loop()
+        # bound_loop 为 None 表示从未在异步上下文绑定过（含测试以 object.__new__
+        # 手工构造、属性缺失的实例）：此时只采纳当前循环，不做丢弃重建
+        bound = getattr(self, "_bound_loop", None)
+        if self._initialized and bound is not None and bound is not loop:
+            logger.warning("PostgreSQL 连接池绑定的事件循环已变化，丢弃旧池并重建")
+            self.async_engine = None
+            self.AsyncSession = None
+            self.langgraph_pool = None
+            self.langgraph_checkpointer = None
+            self._langgraph_checkpointer_setup = False
+            self._initialized = False
+        if not self._initialized:
+            self.initialize()
+        self._bound_loop = loop
 
     def initialize(self):
         """初始化数据库连接"""
@@ -410,6 +440,7 @@ class PostgresManager(metaclass=SingletonMeta):
 
     async def setup_langgraph_checkpointer(self) -> AsyncPostgresSaver:
         """跨进程串行创建 checkpoint 表，迁移实例不参与运行时构图。"""
+        await self._ensure_loop_fresh()
         if self.langgraph_checkpointer is None:
             self.langgraph_checkpointer = self.get_langgraph_checkpointer()
         checkpointer = self.langgraph_checkpointer
@@ -525,7 +556,9 @@ class PostgresManager(metaclass=SingletonMeta):
         self._check_initialized()
         async with self.async_engine.begin() as conn:
             await conn.run_sync(BusinessBase.metadata.create_all)
-        logger.info("PostgreSQL business tables created/checked")
+            await conn.run_sync(DomainFactoryBase.metadata.create_all)
+            await conn.run_sync(DomainEntityBase.metadata.create_all)
+        logger.info("PostgreSQL business + domain_factory tables created/checked")
 
     async def upgrade_knowledge_schema_v1_to_v2(self) -> None:
         """为知识文件处理中间态增加 Durable Task attempt owner。"""
@@ -540,6 +573,8 @@ class PostgresManager(metaclass=SingletonMeta):
         async with self.async_engine.begin() as conn:
             await conn.run_sync(BusinessBase.metadata.drop_all)
             await conn.run_sync(KnowledgeBase.metadata.drop_all)
+            await conn.run_sync(DomainFactoryBase.metadata.drop_all)
+            await conn.run_sync(DomainEntityBase.metadata.drop_all)
         logger.info("PostgreSQL tables dropped")
 
     async def ensure_knowledge_schema(self):
@@ -949,6 +984,23 @@ class PostgresManager(metaclass=SingletonMeta):
             "ALTER TABLE IF EXISTS messages ADD COLUMN IF NOT EXISTS delivery_status VARCHAR(32) NOT NULL DEFAULT 'complete'",
             "CREATE INDEX IF NOT EXISTS ix_messages_run_id ON messages(run_id)",
             "CREATE INDEX IF NOT EXISTS ix_messages_request_id ON messages(request_id)",
+            # messages: 上游新增 run_id / request_id / delivery_status，旧库 create_all 不会补列
+            "ALTER TABLE IF EXISTS messages ADD COLUMN IF NOT EXISTS run_id VARCHAR(64)",
+            "ALTER TABLE IF EXISTS messages ADD COLUMN IF NOT EXISTS request_id VARCHAR(64)",
+            "ALTER TABLE IF EXISTS messages ADD COLUMN IF NOT EXISTS delivery_status VARCHAR(32) NOT NULL DEFAULT 'complete'",
+            "CREATE INDEX IF NOT EXISTS ix_messages_run_id ON messages(run_id)",
+            "CREATE INDEX IF NOT EXISTS ix_messages_request_id ON messages(request_id)",
+            "ALTER TABLE IF EXISTS mcp_servers ADD COLUMN IF NOT EXISTS env JSONB",
+            # Domain Factory: 添加 HTML 格式的文档内容列
+            "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS raw_html TEXT",
+            # Domain Factory: 分章节上传支持
+            "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS source_report_id VARCHAR(64)",
+            "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS chapter_label VARCHAR(64)",
+            "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS validation_report JSONB",
+            "CREATE INDEX IF NOT EXISTS idx_df_tasks_source_report ON domain_factory_tasks(source_report_id)",
+            # Domain Factory: 清理废弃列和表
+            "ALTER TABLE IF EXISTS domain_factory_tasks DROP COLUMN IF EXISTS structured_data",
+            "DROP TABLE IF EXISTS domain_factory_saved_sections",
             "ALTER TABLE IF EXISTS mcp_servers ADD COLUMN IF NOT EXISTS env JSONB",
             *AGENT_RUN_CURSOR_SCHEMA_STATEMENTS,
             """
@@ -1430,6 +1482,186 @@ class PostgresManager(metaclass=SingletonMeta):
             ON agent_run_requests(uid, agent_slug, conversation_thread_id, status, created_at, id)
             """,
             "CREATE INDEX IF NOT EXISTS ix_agent_run_requests_dispatched_run_id ON agent_run_requests(dispatched_run_id)",  # noqa: E501
+                        # Domain Factory tables
+            "CREATE TABLE IF NOT EXISTS domain_factory_domains ("
+            "    id SERIAL PRIMARY KEY,"
+            "    code VARCHAR(64) UNIQUE NOT NULL,"
+            "    name VARCHAR(128) NOT NULL,"
+            "    description TEXT,"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+            ")",
+            "CREATE TABLE IF NOT EXISTS domain_factory_tasks ("
+            "    id VARCHAR(64) PRIMARY KEY,"
+            "    domain_id INTEGER REFERENCES domain_factory_domains(id),"
+            "    file_name VARCHAR(255) NOT NULL,"
+            "    storage_path VARCHAR(1024) NOT NULL,"
+            "    status VARCHAR(32) NOT NULL DEFAULT 'UPLOADED',"
+            "    document_type VARCHAR(64) DEFAULT '通用',"
+            "    ai_confidence INTEGER,"
+            "    uploaded_by VARCHAR(64),"
+            "    reviewer VARCHAR(64),"
+            "    error_message TEXT,"
+            "    base_info JSONB,"
+            "    template_payload JSONB,"
+            "    form_schema_snapshot JSONB,"
+            "    source_paragraphs JSONB,"
+            "    raw_markdown TEXT,"
+            "    template_metadata JSONB,"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    committed_at TIMESTAMP"
+            ")",
+            "CREATE INDEX IF NOT EXISTS idx_df_tasks_domain ON domain_factory_tasks(domain_id)",
+            "CREATE INDEX IF NOT EXISTS idx_df_tasks_status ON domain_factory_tasks(status)",
+            "CREATE TABLE IF NOT EXISTS domain_factory_learned_templates ("
+            "    id SERIAL PRIMARY KEY,"
+            "    domain_code VARCHAR(64) NOT NULL,"
+            "    chapter VARCHAR(255) NOT NULL DEFAULT '',"
+            "    generalized TEXT NOT NULL,"
+            "    slots JSONB NOT NULL DEFAULT '[]',"
+            "    slot_signature TEXT NOT NULL DEFAULT '',"
+            "    source_count INTEGER NOT NULL DEFAULT 1,"
+            "    match_count INTEGER NOT NULL DEFAULT 0,"
+            "    sample_original TEXT,"
+            "    extra_meta JSONB DEFAULT '{}',"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    UNIQUE(domain_code, chapter, slot_signature)"
+            ")",
+            "CREATE INDEX IF NOT EXISTS idx_dflt_domain ON domain_factory_learned_templates(domain_code)",
+            "ALTER TABLE IF EXISTS domain_factory_learned_templates ADD COLUMN IF NOT EXISTS match_count INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE IF EXISTS domain_factory_learned_templates ALTER COLUMN slot_signature TYPE TEXT",
+            "ALTER TABLE IF EXISTS domain_factory_learned_templates ADD COLUMN IF NOT EXISTS canonical_chapter_key TEXT",
+            "CREATE TABLE IF NOT EXISTS domain_factory_outlines ("
+            "    id SERIAL PRIMARY KEY,"
+            "    domain_code VARCHAR(64) NOT NULL,"
+            "    report_type_code VARCHAR(64) NOT NULL DEFAULT '通用',"
+            "    canonical_chapter_key TEXT NOT NULL,"
+            "    chapter_id VARCHAR(128),"
+            "    chapter_title TEXT,"
+            "    purpose TEXT,"
+            "    overview TEXT,"
+            "    key_points JSONB DEFAULT '[]',"
+            "    content_requirements JSONB DEFAULT '[]',"
+            "    regulations JSONB DEFAULT '[]',"
+            "    entity_bindings JSONB DEFAULT '[]',"
+            "    writing_example TEXT,"
+            "    writing_hints TEXT,"
+            "    expected_tables JSONB DEFAULT '[]',"
+            "    expected_charts JSONB DEFAULT '[]',"
+            "    expected_formulas JSONB DEFAULT '[]',"
+            "    expected_figures JSONB DEFAULT '[]',"
+            "    content_contract JSONB DEFAULT '[]',"
+            "    dependencies JSONB DEFAULT '[]',"
+            "    source_task_ids JSONB DEFAULT '[]',"
+            "    source_count INTEGER NOT NULL DEFAULT 1,"
+            "    prose_based_on_source_count INTEGER,"
+            "    rigidity VARCHAR(16),"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    UNIQUE(domain_code, report_type_code, canonical_chapter_key)"
+            ")",
+            "CREATE INDEX IF NOT EXISTS idx_dfo_domain_rt ON domain_factory_outlines(domain_code, report_type_code)",
+            # Writing-backbone: report / chapter / pps
+            "CREATE TABLE IF NOT EXISTS domain_factory_reports ("
+            "    id VARCHAR(64) PRIMARY KEY,"
+            "    title TEXT NOT NULL,"
+            "    domain_code VARCHAR(64) NOT NULL,"
+            "    report_type_code VARCHAR(64) NOT NULL DEFAULT '通用',"
+            "    kb_id VARCHAR(128),"
+            "    thread_id VARCHAR(64),"
+            "    status VARCHAR(32) NOT NULL DEFAULT 'draft',"
+            "    created_by VARCHAR(64),"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+            ")",
+            "CREATE TABLE IF NOT EXISTS domain_factory_reports_chapters ("
+            "    id SERIAL PRIMARY KEY,"
+            "    report_id VARCHAR(64) NOT NULL,"
+            "    canonical_chapter_key TEXT NOT NULL,"
+            "    chapter_order INTEGER,"
+            "    title TEXT,"
+            "    status VARCHAR(32) NOT NULL DEFAULT 'pending',"
+            "    content_md TEXT,"
+            "    summary TEXT,"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    UNIQUE(report_id, canonical_chapter_key)"
+            ")",
+            "CREATE INDEX IF NOT EXISTS idx_dfrch_report ON domain_factory_reports_chapters(report_id)",
+            "CREATE TABLE IF NOT EXISTS domain_factory_reports_pps ("
+            "    id SERIAL PRIMARY KEY,"
+            "    report_id VARCHAR(64) NOT NULL,"
+            "    entity_key TEXT NOT NULL,"
+            "    name TEXT,"
+            "    value TEXT,"
+            "    value_type VARCHAR(32),"
+            "    unit VARCHAR(64),"
+            "    source TEXT,"
+            "    confidence VARCHAR(32),"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    UNIQUE(report_id, entity_key)"
+            ")",
+            "CREATE INDEX IF NOT EXISTS idx_dfrpps_report ON domain_factory_reports_pps(report_id)",
+            "CREATE TABLE IF NOT EXISTS domain_factory_prompt_configs ("
+            "    id SERIAL PRIMARY KEY,"
+            "    domain_code VARCHAR(64),"
+            "    prompt_type VARCHAR(32) NOT NULL,"
+            "    template TEXT,"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    UNIQUE(domain_code, prompt_type)"
+            ")",
+            # Seed default domains if not exist
+            "INSERT INTO domain_factory_domains (code, name, description) VALUES "
+            "('coal', '煤炭采掘', '煤矿/露天矿环评项目') ON CONFLICT (code) DO NOTHING",
+            "INSERT INTO domain_factory_domains (code, name, description) VALUES "
+            "('chem', '石油化工', '化工/精细化工环评项目') ON CONFLICT (code) DO NOTHING",
+            "INSERT INTO domain_factory_domains (code, name, description) VALUES "
+            "('transport', '交通运输', '交通工程与物流园项目') ON CONFLICT (code) DO NOTHING",
+            # Domain Entity Builder: entity schema table + migration for existing installs
+            "CREATE TABLE IF NOT EXISTS domain_entity_schemas ("
+            "    entity_id VARCHAR(64) PRIMARY KEY,"
+            "    entity_key VARCHAR(255) UNIQUE NOT NULL,"
+            "    name_cn VARCHAR(255) NOT NULL,"
+            "    category VARCHAR(128) NOT NULL,"
+            "    domain_code VARCHAR(64) NOT NULL DEFAULT 'coal',"
+            "    value_type VARCHAR(32) NOT NULL DEFAULT 'String',"
+            "    unit VARCHAR(64),"
+            "    is_list_type BOOLEAN DEFAULT FALSE,"
+            "    description TEXT DEFAULT '',"
+            "    synonyms JSONB NOT NULL DEFAULT '[]',"
+            "    properties JSONB NOT NULL DEFAULT '[]',"
+            "    relation_rules JSONB NOT NULL DEFAULT '[]',"
+            "    extra_meta JSONB DEFAULT '{}',"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+            ")",
+            "ALTER TABLE IF EXISTS domain_entity_schemas ADD COLUMN IF NOT EXISTS domain_code VARCHAR(64) NOT NULL DEFAULT 'coal'",
+            "ALTER TABLE IF EXISTS domain_entity_schemas DROP COLUMN IF EXISTS report_types",
+            "CREATE INDEX IF NOT EXISTS idx_des_entity_key ON domain_entity_schemas(entity_key)",
+            "CREATE INDEX IF NOT EXISTS idx_des_category ON domain_entity_schemas(category)",
+            "CREATE INDEX IF NOT EXISTS idx_des_domain_code ON domain_entity_schemas(domain_code)",
+            # Report Types 字典表
+            "CREATE TABLE IF NOT EXISTS report_types ("
+            "    code VARCHAR(64) PRIMARY KEY,"
+            "    name VARCHAR(128) NOT NULL,"
+            "    domain_code VARCHAR(64) NOT NULL,"
+            "    description TEXT,"
+            "    icon VARCHAR(128),"
+            "    is_active BOOLEAN DEFAULT TRUE,"
+            "    sort_order INTEGER DEFAULT 0,"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+            ")",
+            "INSERT INTO report_types (code, name, domain_code, sort_order) VALUES "
+            "('通用', '通用（全部报告类型）', 'coal', 0) ON CONFLICT (code, domain_code) DO NOTHING",
+            "INSERT INTO report_types (code, name, domain_code, sort_order) VALUES "
+            "('feasibility_report', '可行性研究报告', 'coal', 1) ON CONFLICT (code, domain_code) DO NOTHING",
+            "INSERT INTO report_types (code, name, domain_code, sort_order) VALUES "
+            "('eia_report', '环境影响评价报告', 'coal', 2) ON CONFLICT (code, domain_code) DO NOTHING",
             *TASK_DURABLE_SCHEMA_STATEMENTS,
         ]
         async with self.async_engine.begin() as conn:
@@ -1499,7 +1731,7 @@ class PostgresManager(metaclass=SingletonMeta):
     @asynccontextmanager
     async def get_async_session_context(self):
         """获取异步数据库会话的上下文管理器"""
-        self.initialize()  # 确保已初始化
+        await self._ensure_loop_fresh()
         session = self.AsyncSession()
         try:
             yield session
@@ -1525,6 +1757,7 @@ class PostgresManager(metaclass=SingletonMeta):
         self.langgraph_checkpointer = None
         self._langgraph_checkpointer_setup = False
         self._initialized = False
+        self._bound_loop = None
 
     async def async_check_first_run(self):
         """检查是否首次运行（异步版本）- 检查用户表是否有数据"""

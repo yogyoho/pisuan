@@ -44,6 +44,11 @@ async def test_discovered_presets_creates_orchestrator_and_subagents(monkeypatch
         "deep-research",
         "research-explorer",
         "fact-verifier",
+        # pisuan 环评写作链路 writer 预置
+        "chapter-writer",
+        "regulation-writer",
+        "data-survey-writer",
+        "prediction-writer",
     }
 
     explorer = created["research-explorer"]
