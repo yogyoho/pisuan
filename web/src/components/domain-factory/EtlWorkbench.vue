@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref, watch, h } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { LeftOutlined, RightOutlined, UpOutlined, DownOutlined } from '@ant-design/icons-vue'
-import { FileText, Inbox, Plus, X } from 'lucide-vue-next'
+import { FileText, Inbox, Plus, X } from '@lucide/vue'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { domainEntityBuilderApi } from '@/apis/domain_entity_builder_api'
 import { databaseApi } from '@/apis/knowledge_api'

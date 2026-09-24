@@ -47,6 +47,10 @@ git checkout pisuan-custom && git rebase main
 4. **pytorch 等大包构建超时**：默认 `UV_HTTP_TIMEOUT=30s` 扛不住 torch（200MB+），docker/api.Dockerfile 已放宽至 600s；uv 的 `--no-cache` 使失败的 RUN 层整体重下，一次构建约 40 分钟，失败重试成本高。
 5. **镜像 tag 漂移**：新版 compose 默认 `YUXI_VERSION=0.7.2.dev0`，本地已有镜像是旧 tag；开发环境可在 .env 钉 `YUXI_VERSION=<已有tag>` + `--no-build` 重建容器，镜像重建等镜像源可用后再做（lock 的 wheel URL 若指向失效镜像源需换源重生）。
 5. **DB 遗留 lightrag 空库会硬失败**：上游把"使用中但不受支持的 KB 类型"从跳过改为启动失败，需备份后清理（`knowledge_bases_backup_lightrag_20260820`）。
+6. **上游可能彻底移除依赖**（v0.7.3 移除 torch、前端移除 lucide-vue-next/sigma/highlight.js）：定制侧对应配置随之失效是正常现象，不要"恢复"；上游新增替代机制（如 @lucide/vue、SKILL.md frontmatter 元数据、presets/ 目录自动发现）时，定制内容必须迁移到新机制而不是固守旧注册点。
+7. **rebase 冲突取 `--ours` 前先分清语义**：rebase 中 ours=上游新代码、theirs=定制提交。上游删掉的旧注册结构（如 BUILTIN_SKILLS 列表）取 ours 没问题，但定制**追加内容**（DDL、路由注册、依赖元数据）会随之丢失——rebase 结束后必须按清单校验定制最终态（grep domain_factory DDL、路由注册、writer preset、skill frontmatter），缺的从旧链 `git show <旧链>:<file>` 提取合入。
+8. **幽灵引用**：手工合并路由/导出注册时，以旧链**最终态**（`git show 227c8c1d:...`）为准，不要照搬中间定制提交的旧内容（如已废弃的 section_routing，会被 domain_entity_builder 取代），否则引入 ImportError。
+
 
 
 ### 自动化（推荐）

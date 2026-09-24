@@ -62,9 +62,11 @@ router.include_router(workspace_knowledge)  # /api/workspace/knowledge/* 工作�
 
 # pisuan 领域工厂定制路由
 from server.routers.domain_factory_router import domain_factory
-from server.routers.section_routing_router import section_routing
+from server.routers.domain_entity_builder_router import domain_entity_builder
 from server.routers.entity_type_router import entity_types
+from yuxi.extensions.regulation_library.router import regulation_library
 
 router.include_router(domain_factory)  # /api/domain-factory/* 领域知识工厂
-router.include_router(section_routing)  # /api/section-routing/* 章节路由配置
+router.include_router(domain_entity_builder)  # /api/domain-entity-builder/* 领域实体构建器
 router.include_router(entity_types)  # /api/entity-types/* 实体类型管理
+router.include_router(regulation_library)  # /api/regulation-library/* 标准规范库(pisuan扩展)

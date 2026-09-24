@@ -1,6 +1,8 @@
 ---
 name: compliance-checker
 description: "对工程类报告（环评、可研等）进行政策法规合规性校验。从知识库大纲中提取章节关联的法规标准，逐章比对报告内容与法规要求，输出合规性校验报告。"
+version: "2026.05.11"
+tool_dependencies: ["list_kbs", "query_kb", "read_file", "get_chapter_outline", "list_report_types", "list_chapter_keys"]
 ---
 
 # 合规性校验

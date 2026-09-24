@@ -12,7 +12,8 @@ import {
   PanelLeft,
   PanelLeftOpen,
   MessageCirclePlus,
-  Search
+  Search,
+  Layers
 } from '@lucide/vue'
 
 import { useConfigStore } from '@/stores/config'
@@ -200,6 +201,17 @@ const mainList = computed(() => {
       path: '/dashboard',
       icon: BarChart3,
       activeIcon: BarChart3
+    })
+  }
+
+  // pisuan 定制：领域知识工厂入口（Lite 模式下隐藏）
+  if (!isLiteMode) {
+    items.push({
+      name: '知识工厂',
+      path: '/domain-factory',
+      activePaths: ['/domain-factory'],
+      icon: Layers,
+      activeIcon: Layers
     })
   }
 

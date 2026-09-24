@@ -1,11 +1,10 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-20T02:08:38.678Z
-> Files: 3 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-30T01:14:06.891Z
+> Files: 2 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
-- `tranquil-drifting-rossum.md` — 追赶上游 2 个新提交（9e2679b9 → 777875ff）+ 推送落地 (~337 tok)
 
 ## ../../tmp/
 
@@ -57,6 +56,7 @@
 
 ## backend/package/yuxi/agents/
 
+- `context.py` — Define the configurable parameters for the agent. (~5754 tok)
 
 ## backend/package/yuxi/agents/backends/
 
@@ -279,8 +279,7 @@
 
 ## docs/develop-guides/
 
-- `changelog.md` — 版本变更记录 (~15766 tok)
-- `upstream-sync-guide.md` — 上游代码同步与本地化扩展实施方案 (~1560 tok)
+- `changelog.md` — 版本变更记录 (~18127 tok)
 
 ## docs/intro/
 

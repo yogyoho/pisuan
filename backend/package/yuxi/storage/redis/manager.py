@@ -152,6 +152,7 @@ async def create_async_redis_client(config: RedisConfig | None = None, *, ping: 
 
 _async_redis_client: Any | None = None
 _async_redis_lock: asyncio.Lock | None = None
+_async_redis_loop: asyncio.AbstractEventLoop | None = None
 
 
 def _get_async_redis_lock() -> asyncio.Lock:
@@ -162,24 +163,34 @@ def _get_async_redis_lock() -> asyncio.Lock:
 
 
 async def get_async_redis_client(config: RedisConfig | None = None) -> Any:
-    """获取共享异步 Redis 客户端。"""
-    global _async_redis_client
+    """获取共享异步 Redis 客户端。
+
+    异步连接绑定创建时的事件循环，旧循环关闭后跨循环复用会永久挂起；
+    检测到循环变化时丢弃旧客户端，按当前循环重建。
+    """
+    global _async_redis_client, _async_redis_lock, _async_redis_loop
+    loop = asyncio.get_running_loop()
+    if _async_redis_client is not None and _async_redis_loop is not loop:
+        _async_redis_client = None
+        _async_redis_lock = None
     if _async_redis_client is not None:
         return _async_redis_client
 
     async with _get_async_redis_lock():
         if _async_redis_client is None:
             _async_redis_client = await create_async_redis_client(config)
+        _async_redis_loop = asyncio.get_running_loop()
         return _async_redis_client
 
 
 async def close_async_redis_client() -> None:
     """关闭共享异步 Redis 客户端。"""
-    global _async_redis_client
+    global _async_redis_client, _async_redis_loop
     if _async_redis_client is None:
         return
     await _close_async_client(_async_redis_client)
     _async_redis_client = None
+    _async_redis_loop = None
 
 
 def get_arq_redis_settings(config: RedisConfig | None = None) -> Any:

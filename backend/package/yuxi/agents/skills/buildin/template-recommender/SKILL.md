@@ -1,6 +1,8 @@
 ---
 name: template-recommender
 description: "从领域知识库中智能搜索并推荐报告章节和段落模板。当用户需要编写工程类报告（如环评报告、可行性研究等）、查找报告章节结构、搜索段落模板时使用此技能。支持按章节标题递归搜索子章节并合并输出模板与原文引用。"
+version: "2026.04.29"
+tool_dependencies: ["list_kbs", "get_mindmap", "query_kb", "get_templates", "list_report_types", "list_chapter_keys"]
 ---
 
 # 段落模板智能推荐
