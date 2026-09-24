@@ -2044,15 +2044,15 @@
     "error_message": "Missing await",
     "file": "backend/package/yuxi/services/domain_factory_service.py",
     "root_cause": "Async call without await — returned Promise instead of value",
-    "fix": "Added await to async call",
+    "fix": "新增 _ensure_loop_fresh 守卫（get_async_session_context / setup_langgraph_checkpointer 入口）：bound_loop 已绑定且异于当前循环时丢弃旧池并按当前循环重建；bound_loop 缺失（object.__new__ 手工构造的测试实例）只采纳当前循环不丢弃；生产单循环零影响",
     "tags": [
       "auto-detected",
       "async-fix",
       "py"
     ],
     "related_bugs": [],
-    "occurrences": 1,
-    "last_seen": "2026-07-16T02:31:54.518Z"
+    "occurrences": 5,
+    "last_seen": "2026-09-25"
   },
   {
     "id": "bug-127",
@@ -4261,6 +4261,44 @@
     ],
     "related_bugs": [],
     "occurrences": 1,
+    "last_seen": "2026-08-20"
+  },
+  {
+    "id": "bug-264",
+    "timestamp": "2026-08-20",
+    "error_message": "PowerShell 运行 claude 报 'claude.exe 不是此操作系统平台的有效应用程序'",
+    "file": "npm全局目录 @anthropic-ai/claude-code/bin/claude.exe",
+    "root_cause": "自动更新到 2.1.237 时平台包 @anthropic-ai/claude-code-win32-x64（optionalDependency）下载失败，npm 对 optional 依赖静默跳过，install.cjs 留下 500 字节 echo 错误桩充当 claude.exe；重装也因 registry 元数据/缓存不一致报 notarget",
+    "fix": "npm install -g @anthropic-ai/claude-code-win32-x64@<主包版本> --prefer-online 補装平台包，再 cd 到 claude-code 目录跑 node install.cjs 把真二进制(330MB MZ)拷贝覆盖占位符",
+    "tags": [
+      "claude-code",
+      "npm",
+      "optional-dependencies",
+      "windows",
+      "自更新损坏"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-08-20"
+  },
+  {
+    "id": "bug-265",
+    "timestamp": "2026-08-20",
+    "error_message": "ETL commit 管道连环失败: cannot import knowledge_base / no attribute aget_kb / name 'config' is not defined / Database 3 not found",
+    "file": "backend/package/yuxi/services/domain_factory_service.py 等",
+    "root_cause": "上游 v0.7.2 运行时 API 漂移在单测 mock 层不可见，只有真实 ETL 提交才暴露：①knowledge_base 单例移至 yuxi.knowledge.runtime ②aget_kb 更名 get_kb_executor ③全局 config 移除后 getattr(config,'default_model')（无点号！grep 'config.' 查不到）④KB 标识是 kb_id 字符串(kb_xxx)不是表 serial id",
+    "fix": "runtime 导入×3 + get_kb_executor×2 + 13 处 bare select_model() 改显式传 (await system_options.get())['default_model']（对齐上游 mindmap_utils 模式）+ commit 用 kb_cgsguljhor。教训：**清点 API 引用不能只 grep 'name.'，要含 getattr(name,/name[ 等无点号形态；find -rn 别用 head 截断**",
+    "tags": [
+      "upstream-sync",
+      "api-drift",
+      "etl",
+      "select_model",
+      "kb_id"
+    ],
+    "related_bugs": [
+      "bug-131"
+    ],
+    "occurrences": 5,
     "last_seen": "2026-08-20"
   }
 ]

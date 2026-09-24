@@ -51,6 +51,14 @@
 - **规范库 §7 已被 compliance-checker skill 覆盖（2026-07-20）：** "条款引用匹配"功能目标（取章节 regulations.standard_code → query_kb 法规原文 → 逐章比对标准引用正确性 → 4 态矩阵）已由 `compliance-checker` skill 完整实现（KB 层），RegDocument 图谱层是内部结构。§8（写手查限值）缺，已补 buildin 工具 `lookup_standard_indicator` 调 `regulation_library.query_indicators`。模式：extension 的 query 函数暴露为 buildin 工具时，函数内 import + ImportError 兜底 + 无匹配 hint 引导 query_kb。
 - **ask_user_question 子 agent 全局禁用（subagent/graph.py:26 `_SUBAGENT_DISABLED_TOOLS`）→ 中继协议是正解（2026-07-20）：** data-survey-writer 要问缺数据但不能直接调 ask_user_question。修在 coal-eia-writer SKILL.md（在 BUILTIN_SKILLS，改完重启 worker + 新对话生效）：写手输出 `## MISSING_DATA` 结构化块 → 编排者解析后代调 ask_user_question。无独立 writer SKILL.md（目录都不存在），writer 行为由 DB system_prompt + 编排者 task 描述决定。
 
+
+### 2026-09-24/25 v0.7.3 同步收尾
+
+- **pg_manager 跨事件循环**：psycopg AsyncConnectionPool / SQLAlchemy async engine 绑定创建时的 asyncio loop，无法迁移。pytest 每用例独立循环，全量跑任何"上个用例初始化、下个用例直接用"的组合都会 'Event loop is closed'。已在 `PostgresManager._ensure_loop_fresh` 统一守卫（get_async_session_context / setup_langgraph_checkpointer 入口），测试不要再复制 `_dispose` 里 `pg_manager.close(); _initialized=False` 的手工重置。
+- **v0.7.3 文件布局**：per-thread 目录已废除。宿主侧 = `get_user_data_dir()/shared/<uid>/workspace/<workdir>`（runtime 虚拟路径 `/home/gem/user-data/<workdir>`）；outputs 在 `<workdir>/outputs`。写"可展示的交付物"必须写进 Workdir outputs 并用 runtime 虚拟路径（`_workdir_outputs_paths` in tools.py 是标准入口）；写 `get_user_data_dir()/outputs` 这类全局目录前端无法展示。
+- **上游测试的集合断言**（test_builtin_discovery 等）枚举了"全部内置 preset/skill"，新增定制条目时必须同步把 slug 加进期望集合，否则全量回归必挂。
+- **docker exec 管道死锁**：`docker exec ... sh -c "pytest ... | tail"` 长跑会因 Windows 侧管道背压假死（进程活着但无输出）。长测试用容器内 nohup 落盘（`nohup ... > /tmp/pt.log 2>&1 &`）+ 轮询读文件。
+
 ## Do-Not-Repeat
 
 <!-- Mistakes made and corrected. Each entry prevents the same mistake recurring. -->
@@ -66,6 +74,9 @@
 - [2026-07-10] 合并中途 `uv.lock` 里残留冲突标记会让 worker/api 启动崩在 `Failed to parse uv.lock`（TOML 解析）。合并产生锁文件冲突时，先 `git checkout --theirs` 清标记再 `uv lock` 重生成，别让容器带着冲突标记重启。
 - [2026-07-10] 领域工厂 commit/reingest 曾按 LightRAG 接口写文件记录（`kb_instance.files_meta[...]` + `_persist_file` + `database_id` 命名），LightRAG v0.7.0 移除后在 Milvus 上崩 `'MilvusKB' object has no attribute 'files_meta'`，任务转 FAILED 且 KB 无内容。改动领域工厂入库时一律用基类 `_persist_file_meta(file_id, {..., "kb_id": ...})` + `kb_manager.index_file`。相关：`slot_signature` 曾是 `VARCHAR(255)`，参数密集段落签名超限被截断、模板回流被 try/except 静默吞掉 → 已改 `TEXT`。
 
+
+- (2026-09-25) 不要为"全量测试通过"依赖跨用例的隐式状态链：pg/redis 异步单例跨事件循环复用必然出问题（确定性失败或偶发挂起）。修复模式已定型：模块级异步单例一律记录绑定循环，入口处检测循环变化即丢弃重建；psycopg 池必须在所属循环销毁前 close（unit conftest autouse 夹具统一处理，勿在单测里手工复制 close+_initialized=False）。
+- (2026-09-25) docker exec 长跑命令勿用 `| tail` 管道（Windows 侧背压假死）；用容器内 nohup 落盘 + 轮询读文件。挂起诊断三板斧：faulthandler.dump_traceback_later(30, file=..., exit=True) 转储线程栈 → 最小化复现脚本 → 对比改动前后时序。
 ## Decision Log
 
 <!-- Significant technical decisions with rationale. Why X was chosen over Y. -->

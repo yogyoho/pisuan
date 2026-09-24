@@ -323,3 +323,9 @@
 
 ## web/src/views/
 
+## backend/package/yuxi/agents/presets/subagents/
+
+- `chapter_writer.py` — 章节写手 AgentPreset（slug=chapter-writer，coal-eia 工具集，持久化铁律系统提示） (~350 tok)
+- `regulation_writer.py` — 法规标准写手 AgentPreset（模板型章节+KB 法规检索） (~300 tok)
+- `data_survey_writer.py` — 数据调查写手 AgentPreset（v2 写手） (~300 tok)
+- `prediction_writer.py` — 预测写手 AgentPreset（v2 写手） (~300 tok)

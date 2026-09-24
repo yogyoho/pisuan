@@ -2582,3 +2582,44 @@
 | 10:13 | Session end: 33 writes across 16 files (.gitignore, __init__.py, info.template.yaml, config.mts, manager.py) | 18 reads | ~22957 tok |
 | 10:14 | Session end: 33 writes across 16 files (.gitignore, __init__.py, info.template.yaml, config.mts, manager.py) | 18 reads | ~22957 tok |
 | 10:16 | Session end: 33 writes across 16 files (.gitignore, __init__.py, info.template.yaml, config.mts, manager.py) | 18 reads | ~22957 tok |
+| 10:21 | 追赶上游2新提交(777875ff)完成:rerere零冲突+红线零差异+9/9测试过 | git | done | 12k |
+| 10:21 | Session end: 33 writes across 16 files (.gitignore, __init__.py, info.template.yaml, config.mts, manager.py) | 18 reads | ~22957 tok |
+| 10:22 | Session end: 33 writes across 16 files (.gitignore, __init__.py, info.template.yaml, config.mts, manager.py) | 18 reads | ~22957 tok |
+| 10:31 | Session end: 33 writes across 16 files (.gitignore, __init__.py, info.template.yaml, config.mts, manager.py) | 18 reads | ~22957 tok |
+
+## Session: 2026-08-20 10:39
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:04 | 图谱回灌闭环:伊宁报告COMMITTED+124模板节点+2测试转绿 | domain_factory | done | 25k |
+| 16:44 | 全部容器切0.7.2.dev0正式镜像+终验全绿(华宇页脚/首页200/37测试) | docker | done | 15k |
+| 16:46 | 会话收官:上游差分+镜像0.7.2.dev0+图谱回灌全部闭环,227c8c1d已推送 | 全仓 | done | - |
+
+## Session: 2026-09-24 19:27
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-24 19:29
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-24 19:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-24 23:35
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:30 | buglog 记录 v0.7.3 同步 6 条踩坑（MSYS 路径/孤儿数据/schema 漂移/get_save_dir/网络分裂/ETL 兼容层） | .wolf/buglog.json | OK | ~4k |
+| 23:45 | 全量回归暴露 11F+2E：定位为 v0.7.3 废除 per-thread 目录后定制 sandbox outputs 兼容层失效（sandbox/paths.py 在 rebase 中丢失，_auto_present_artifacts/_write_chapter_preview/assemble_report 引用已删模块） | base.py, tools.py | 根因定位 | ~15k |
+| 23:58 | 交付物链路迁移 Workdir 模型：_auto_present_artifacts 扫 user_workdir_host_dir/outputs 返回 runtime 虚拟路径；工具侧新增 _workdir_outputs_paths；3 个测试文件适配 + builtin_discovery 集合断言补定制条目 | base.py, tools.py, test_* | 子集全绿 | ~20k |
+| 00:20 | pg_manager 增加事件循环绑定守卫 _ensure_loop_fresh，根治全量跑 chapter_writer 跨循环复用连接池失败及 teardown 连锁 | storage/postgres/manager.py | 语法 OK | ~8k |
+| 00:40 | changelog/cerebrum 记录同步收尾修复；等待全量回归结果 | docs, .wolf | OK | ~5k |
+| 01:20 | 定位 outline_producer 偶发挂起：get_async_redis_client 模块级单例跨循环复用死循环连接（pg 同病由守卫改时序显形），redis manager 加循环绑定守卫 | storage/redis/manager.py | 单文件 4/4 稳定过 | ~12k |
+| 02:00 | 定位 run_worker 挂起真因：psycopg 池后台建连任务与 pytest-asyncio _cancel_all_tasks 互等死锁（最小复现确认），unit conftest 加 autouse 夹具在循环销毁前关池 | backend/test/unit/conftest.py | run_worker 52/52 过 | ~15k |
+| 02:40 | 发现两轮全量 pytest 并发运行且共用日志文件——此前 outline/run_worker 部分"挂起"观察被资源竞争污染；真实证据为最小复现（psycopg 池 cancel-all 死锁）。清理后以唯一日志重跑 | 无代码改动 | 待干净结果 | ~2k |
+| 03:00 | 全量跑暴露 _bound_loop 属性缺失误触发 DROP 路径（object.__new__ 测试实例被打成真池打真库）；守卫语义修正：未绑定过只采纳不丢弃 | storage/postgres/manager.py | storage 68/68、关键文件 57/57 过 | ~8k |
