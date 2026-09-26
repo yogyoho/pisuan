@@ -3,14 +3,14 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from yuxi.agents.mcp.service import ensure_builtin_mcp_servers_in_db
-from yuxi.models.providers.service import ensure_builtin_model_providers_in_db
-from yuxi.services.run_queue_service import close_queue_clients, get_redis_client
-from yuxi.storage.postgres.manager import pg_manager
-from yuxi.utils import logger
-from yuxi.agents.backends.sandbox import init_sandbox_provider, shutdown_sandbox_provider
-from yuxi import get_version
-from yuxi.utils.auth_utils import AuthUtils
+from pisuan.agents.mcp.service import ensure_builtin_mcp_servers_in_db
+from pisuan.models.providers.service import ensure_builtin_model_providers_in_db
+from pisuan.services.run_queue_service import close_queue_clients, get_redis_client
+from pisuan.storage.postgres.manager import pg_manager
+from pisuan.utils import logger
+from pisuan.agents.backends.sandbox import init_sandbox_provider, shutdown_sandbox_provider
+from pisuan import get_version
+from pisuan.utils.auth_utils import AuthUtils
 
 
 class RequiredStartupComponentError(RuntimeError):
@@ -66,7 +66,7 @@ async def _startup(app: FastAPI) -> None:
     pg_manager.initialize()
     await pg_manager.require_current_schema()
 
-    from yuxi.config.options import (
+    from pisuan.config.options import (
         ensure_options_in_db,
         invalidate_option_cache,
         system_options,
@@ -87,7 +87,7 @@ async def _startup(app: FastAPI) -> None:
     async def initialize_builtin_skills() -> None:
         """在独立事务中安装内置 Skills。"""
 
-        from yuxi.agents.skills.service import init_builtin_skills
+        from pisuan.agents.skills.service import init_builtin_skills
 
         async with pg_manager.get_async_session_context() as session:
             await init_builtin_skills(session)
@@ -102,7 +102,7 @@ async def _startup(app: FastAPI) -> None:
     async def initialize_default_agents() -> None:
         """确保平台至少具有可用的默认 Agent 定义。"""
 
-        from yuxi.services.agent_config_service import initialize_agent_presets
+        from pisuan.services.agent_config_service import initialize_agent_presets
 
         async with pg_manager.get_async_session_context() as session:
             await initialize_agent_presets(session)
@@ -132,8 +132,8 @@ async def _startup(app: FastAPI) -> None:
     async def initialize_model_cache() -> None:
         """用 PostgreSQL 当前供应商事实重建进程内模型缓存。"""
 
-        from yuxi.models.providers.cache import model_cache
-        from yuxi.models.providers.service import get_all_model_providers
+        from pisuan.models.providers.cache import model_cache
+        from pisuan.models.providers.service import get_all_model_providers
 
         async with pg_manager.get_async_session_context() as session:
             providers = await get_all_model_providers(session)
@@ -147,7 +147,7 @@ async def _startup(app: FastAPI) -> None:
     )
 
     # 初始化知识库管理器
-    from yuxi.knowledge.runtime import knowledge_base
+    from pisuan.knowledge.runtime import knowledge_base
 
     await _initialize_startup_component(
         app,
@@ -182,7 +182,7 @@ async def _startup(app: FastAPI) -> None:
     ░██      ░█████░██ ░██    ░██ ░██  v{get_version()}
 
     """)
-    logger.info("Yuxi backend startup complete")
+    logger.info("Pisuan backend startup complete")
 
 
 async def _shutdown_component(name: str, operation: Callable[[], object]) -> None:
@@ -199,7 +199,7 @@ async def _shutdown_component(name: str, operation: Callable[[], object]) -> Non
 def _close_neo4j_connection() -> object:
     """关闭共享图数据库连接。"""
 
-    from yuxi.storage.neo4j import close_shared_neo4j_connection
+    from pisuan.storage.neo4j import close_shared_neo4j_connection
 
     return close_shared_neo4j_connection()
 

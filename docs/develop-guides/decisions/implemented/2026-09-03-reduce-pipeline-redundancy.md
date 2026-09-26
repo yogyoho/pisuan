@@ -2,16 +2,16 @@
 
 状态：implemented
 类型：simplification
-Owner：backend/package/yuxi/knowledge/parser/capabilities.py
+Owner：backend/package/pisuan/knowledge/parser/capabilities.py
 
 相关事实由下列源码 Owner 分别持有：
 
-- 解析格式与 provider 能力：`backend/package/yuxi/knowledge/parser/capabilities.py`
-- Conversation/Project/Workdir 授权映射：`backend/package/yuxi/services/workdir_service.py`
-- Redis Run 事件行协议：`backend/package/yuxi/services/run_queue_service.py`
+- 解析格式与 provider 能力：`backend/package/pisuan/knowledge/parser/capabilities.py`
+- Conversation/Project/Workdir 授权映射：`backend/package/pisuan/services/workdir_service.py`
+- Redis Run 事件行协议：`backend/package/pisuan/services/run_queue_service.py`
 - 前端 Run 事件投影与终态收敛：`web/src/composables/useAgentRunStream.js`
 - 当前 Thread 与 Project 列表：`web/src/stores/chatThreads.js`、`web/src/stores/projects.js`
-- AgentRun 持久字段与业务 Schema 迁移：`backend/package/yuxi/storage/postgres/models_business.py`、`backend/package/yuxi/storage/postgres/manager.py`
+- AgentRun 持久字段与业务 Schema 迁移：`backend/package/pisuan/storage/postgres/models_business.py`、`backend/package/pisuan/storage/postgres/manager.py`
 
 ## 问题
 
@@ -46,7 +46,7 @@ Owner：backend/package/yuxi/knowledge/parser/capabilities.py
 - `docker compose exec api python -m pytest test/integration/api/test_agent_run_events_router.py test/integration/api/test_agent_request_queue_router.py`：Passed，12 passed。
 - `docker compose exec api python -m pytest test/e2e/test_attachment_and_agent_state.py::test_attachment_confirm_is_reflected_in_thread_metadata`：Passed。
 - `uv run --group test pytest test/unit/services/test_agent_request_queue_service.py test/unit/services/test_run_submission_service.py`：Passed，54 passed。
-- `rg -n "yuxi\\.knowledge\\.parser\\.registry|PROCESSOR_TYPES|get_parser_metadata" backend scripts`：Passed，无残余引用。
+- `rg -n "pisuan\\.knowledge\\.parser\\.registry|PROCESSOR_TYPES|get_parser_metadata" backend scripts`：Passed，无残余引用。
 - parser、OCR、配置相关文件的 Ruff lint 与 format check：Passed。
 - `pnpm test:unit`：Passed，196 passed。
 - `pnpm lint:check`、`pnpm build`：Passed；build 仅保留既有大 chunk 警告。

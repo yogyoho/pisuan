@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：bug-fix
-Owner：backend/package/yuxi/agents/buildin/subagent/graph.py
+Owner：backend/package/pisuan/agents/buildin/subagent/graph.py
 
 ## 问题
 

@@ -6,11 +6,11 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from yuxi.agents.skills import service as skill_service
-from yuxi.agents.toolkits.buildin import install_skill as exported_install_skill
+from pisuan.agents.skills import service as skill_service
+from pisuan.agents.toolkits.buildin import install_skill as exported_install_skill
 
-install_skill_module = importlib.import_module("yuxi.agents.toolkits.buildin.install_skill")
-sandbox_backend_module = importlib.import_module("yuxi.agents.backends.sandbox")
+install_skill_module = importlib.import_module("pisuan.agents.toolkits.buildin.install_skill")
+sandbox_backend_module = importlib.import_module("pisuan.agents.backends.sandbox")
 
 
 class _AsyncSessionContext:
@@ -200,10 +200,10 @@ async def test_enable_skills_updates_explicit_agent_selection(monkeypatch, confi
             return agent_arg
 
     monkeypatch.setattr(
-        "yuxi.repositories.conversation_repository.ConversationRepository",
+        "pisuan.repositories.conversation_repository.ConversationRepository",
         FakeConversationRepository,
     )
-    monkeypatch.setattr("yuxi.repositories.agent_repository.AgentRepository", FakeAgentRepository)
+    monkeypatch.setattr("pisuan.repositories.agent_repository.AgentRepository", FakeAgentRepository)
 
     result = await skill_service.enable_personal_skills_for_agent_config(
         SimpleNamespace(),
@@ -247,10 +247,10 @@ async def test_enable_skills_skips_update_for_all_mode_or_unchanged_selection(mo
             raise AssertionError("无需更新 Agent 配置")
 
     monkeypatch.setattr(
-        "yuxi.repositories.conversation_repository.ConversationRepository",
+        "pisuan.repositories.conversation_repository.ConversationRepository",
         FakeConversationRepository,
     )
-    monkeypatch.setattr("yuxi.repositories.agent_repository.AgentRepository", FakeAgentRepository)
+    monkeypatch.setattr("pisuan.repositories.agent_repository.AgentRepository", FakeAgentRepository)
 
     assert await skill_service.enable_personal_skills_for_agent_config(
         SimpleNamespace(),
@@ -291,10 +291,10 @@ async def test_enable_skills_does_not_update_unowned_agent(monkeypatch, runtime_
             calls["update"] = True
 
     monkeypatch.setattr(
-        "yuxi.repositories.conversation_repository.ConversationRepository",
+        "pisuan.repositories.conversation_repository.ConversationRepository",
         FakeConversationRepository,
     )
-    monkeypatch.setattr("yuxi.repositories.agent_repository.AgentRepository", FakeAgentRepository)
+    monkeypatch.setattr("pisuan.repositories.agent_repository.AgentRepository", FakeAgentRepository)
 
     result = await skill_service.enable_personal_skills_for_agent_config(
         SimpleNamespace(),

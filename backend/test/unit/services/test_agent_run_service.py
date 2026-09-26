@@ -6,8 +6,8 @@ from types import SimpleNamespace
 
 import pytest
 
-import yuxi.services.agent_run_service as agent_run_service
-from yuxi.services.input_message_service import (
+import pisuan.services.agent_run_service as agent_run_service
+from pisuan.services.input_message_service import (
     build_chat_input_message_from_openai_content,
     restore_chat_input_message,
 )
@@ -774,7 +774,7 @@ async def test_stream_agent_run_events_compacts_verbose_false(monkeypatch: pytes
                     "thread_id": "thread-1",
                     "event": "custom",
                     "payload": {
-                        "name": "yuxi.init",
+                        "name": "pisuan.init",
                         "chunk": {
                             "request_id": "req-1",
                             "response": None,
@@ -807,7 +807,7 @@ async def test_stream_agent_run_events_compacts_verbose_false(monkeypatch: pytes
                     "thread_id": "thread-1",
                     "event": "custom",
                     "payload": {
-                        "name": "yuxi.agent_state",
+                        "name": "pisuan.agent_state",
                         "chunk": {
                             "request_id": "req-1",
                             "response": None,
@@ -906,7 +906,7 @@ async def test_stream_agent_run_events_compacts_verbose_false(monkeypatch: pytes
     init_data = _sse_data(chunks[1])
     init_chunk = init_data["payload"]["chunk"]
     assert init_data["request_id"] == "req-1"
-    assert init_data["payload"]["name"] == "yuxi.init"
+    assert init_data["payload"]["name"] == "pisuan.init"
     assert "meta" not in init_chunk
     assert "request_id" not in init_chunk
     assert "response" not in init_chunk
@@ -2125,7 +2125,7 @@ def test_validate_resume_input_accepts_only_approve_and_reject_decisions():
                 "response": None,
                 "thread_id": "thread-1",
                 "status": "context_compression",
-                "compression": {"type": "yuxi.context_compression", "status": "started"},
+                "compression": {"type": "pisuan.context_compression", "status": "started"},
                 "meta": {"uid": "user-1"},
             },
         ),

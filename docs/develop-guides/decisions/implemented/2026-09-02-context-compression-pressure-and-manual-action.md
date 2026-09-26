@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：simplification
-Owner：backend/package/yuxi/agents/middlewares/summary.py
+Owner：backend/package/pisuan/agents/middlewares/summary.py
 
 ## 问题
 

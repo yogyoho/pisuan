@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from yuxi.agents.skills.repository import SkillRepository
+from pisuan.agents.skills.repository import SkillRepository
 
 
 @pytest.mark.asyncio

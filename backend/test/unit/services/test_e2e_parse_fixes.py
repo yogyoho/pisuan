@@ -4,7 +4,7 @@
 3. Sub-point merging
 """
 
-from yuxi.services.domain_factory_service import DomainFactoryService
+from pisuan.services.domain_factory_service import DomainFactoryService
 
 
 def _service() -> DomainFactoryService:

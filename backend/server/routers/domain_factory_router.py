@@ -8,9 +8,9 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile
 
 from server.utils.auth_middleware import get_admin_user
-from yuxi.services.domain_factory_service import get_domain_factory_service
-from yuxi.storage.postgres.models_business import User
-from yuxi.utils import logger
+from pisuan.services.domain_factory_service import get_domain_factory_service
+from pisuan.storage.postgres.models_business import User
+from pisuan.utils import logger
 
 domain_factory = APIRouter(prefix="/domain-factory", tags=["Domain Factory"])
 
@@ -538,7 +538,7 @@ async def get_tasks_for_task_center(
     直接从任务中心获取 domain_factory 类型任务，并关联知识工厂的详细状态
     """
     try:
-        from yuxi.services.task_service import tasker as global_tasker
+        from pisuan.services.task_service import tasker as global_tasker
 
         # 从任务中心获取所有任务
         all_tasks = await global_tasker.list_tasks(limit=limit)
@@ -600,7 +600,7 @@ async def sync_task_to_task_center(
         if not detail:
             raise HTTPException(status_code=404, detail="任务不存在")
 
-        from yuxi.services.task_service import tasker as global_tasker
+        from pisuan.services.task_service import tasker as global_tasker
 
         tasks_data = await global_tasker.list_tasks(limit=200)
 
@@ -698,7 +698,7 @@ async def list_outline_templates(
 ) -> dict[str, Any]:
     """列出13章大纲模板概要"""
     try:
-        from yuxi.services.graph_query_service import GraphQueryService
+        from pisuan.services.graph_query_service import GraphQueryService
 
         svc = GraphQueryService()
         try:
@@ -720,7 +720,7 @@ async def get_outline_template(
 ) -> dict[str, Any]:
     """获取单章大纲模板详情"""
     try:
-        from yuxi.services.graph_query_service import GraphQueryService
+        from pisuan.services.graph_query_service import GraphQueryService
 
         svc = GraphQueryService()
         try:
@@ -747,7 +747,7 @@ async def update_outline_template(
 ) -> dict[str, Any]:
     """更新单章大纲模板"""
     try:
-        from yuxi.services.graph_query_service import GraphQueryService
+        from pisuan.services.graph_query_service import GraphQueryService
 
         svc = GraphQueryService()
         try:

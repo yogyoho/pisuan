@@ -5,9 +5,9 @@ import pytest
 from fastapi import HTTPException, UploadFile
 
 from server.routers import knowledge_router
-from yuxi.knowledge.read_models import KnowledgeBaseDetail
-from yuxi.services import knowledge_task_service
-from yuxi.services.task_registry import get_task_definition
+from pisuan.knowledge.read_models import KnowledgeBaseDetail
+from pisuan.services import knowledge_task_service
+from pisuan.services.task_registry import get_task_definition
 
 pytestmark = pytest.mark.asyncio
 

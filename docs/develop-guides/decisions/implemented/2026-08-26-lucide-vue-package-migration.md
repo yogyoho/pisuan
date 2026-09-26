@@ -34,6 +34,6 @@ Owner：web/package.json
 - 命名导出 oracle：167 个实际导入全部存在于新版 6101 个 ESM exports。
 - `cd web && pnpm run lint:check && pnpm run test:unit && pnpm run build`：通过，136 tests passed。
 - `pnpm --dir web audit --prod --audit-level=moderate`：无已知漏洞；`pnpm outdated` 为空。
-- `docker build -f docker/web.Dockerfile --target build-stage -t yuxi-web:lucide-vue-test .`：frozen install 和生产 build 通过。
+- `docker build -f docker/web.Dockerfile --target build-stage -t pisuan-web:lucide-vue-test .`：frozen install 和生产 build 通过。
 - 工程契约、相关策略测试、docs build 与 `git diff --check`：通过。
 - 独立 Reviewer：No blocking findings；指出活动开发文档仍引用旧包，已同步修复。

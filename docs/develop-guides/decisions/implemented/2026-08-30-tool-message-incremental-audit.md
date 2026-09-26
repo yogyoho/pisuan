@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：feature
-Owner：backend/package/yuxi/repositories/tool_message_audit_repository.py
+Owner：backend/package/pisuan/repositories/tool_message_audit_repository.py
 
 ## 问题
 

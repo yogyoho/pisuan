@@ -4,10 +4,10 @@ import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from yuxi.config.options import ensure_options_in_db, update_option_value
-from yuxi.knowledge.parser.capabilities import PARSER_CAPABILITIES
-from yuxi.services import ocr_service
-from yuxi.storage.postgres.models_business import Base, ModelProvider
+from pisuan.config.options import ensure_options_in_db, update_option_value
+from pisuan.knowledge.parser.capabilities import PARSER_CAPABILITIES
+from pisuan.services import ocr_service
+from pisuan.storage.postgres.models_business import Base, ModelProvider
 
 
 @pytest_asyncio.fixture

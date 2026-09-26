@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from yuxi.services import agent_config_service
+from pisuan.services import agent_config_service
 
 pytestmark = pytest.mark.unit
 

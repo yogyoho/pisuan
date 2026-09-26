@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from yuxi.agents.context import BaseContext
+from pisuan.agents.context import BaseContext
 
 from contextlib import aclosing
 from types import SimpleNamespace
 
 import pytest
 
-from yuxi.agents.base import BaseAgent
+from pisuan.agents.base import BaseAgent
 
 
 class _FakeGraph:
@@ -69,7 +69,7 @@ class _TestAgent(BaseAgent):
         return self._graph
 
 
-_TestAgent.__module__ = "yuxi.agents.tests.fake"
+_TestAgent.__module__ = "pisuan.agents.tests.fake"
 
 
 @pytest.mark.asyncio
@@ -84,7 +84,7 @@ async def test_base_agent_passes_callbacks_metadata_and_tags(mode):
             context=BaseContext(**{"uid": "user-1", "thread_id": "thread-1"}),
             callbacks=["handler-1"],
             metadata={"langfuse_user_id": "user-1"},
-            tags=["yuxi"],
+            tags=["pisuan"],
         ):
             items.append(item)
         assert len(items) == 1
@@ -95,7 +95,7 @@ async def test_base_agent_passes_callbacks_metadata_and_tags(mode):
             context=BaseContext(**{"uid": "user-1", "thread_id": "thread-1"}),
             callbacks=["handler-1"],
             metadata={"langfuse_user_id": "user-1"},
-            tags=["yuxi"],
+            tags=["pisuan"],
         )
         config_attr = "last_invoke_config"
 
@@ -105,7 +105,7 @@ async def test_base_agent_passes_callbacks_metadata_and_tags(mode):
         "recursion_limit": 300,
         "callbacks": ["handler-1"],
         "metadata": {"langfuse_user_id": "user-1"},
-        "tags": ["yuxi"],
+        "tags": ["pisuan"],
     }
 
 

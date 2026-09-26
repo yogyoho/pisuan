@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：simplification
-Owner：backend/package/yuxi/services/chat_service.py
+Owner：backend/package/pisuan/services/chat_service.py
 
 ## 问题
 
@@ -25,7 +25,7 @@ Agent 聊天服务不再执行输入、流式输出或完整输出内容审查�
 
 ## 后果
 
-Yuxi 不再在自身聊天链路拦截关键词或调用独立 LLM 判断内容。需要内容安全策略的部署方必须在模型供应商、网关或其他明确边界承担该策略。
+Pisuan 不再在自身聊天链路拦截关键词或调用独立 LLM 判断内容。需要内容安全策略的部署方必须在模型供应商、网关或其他明确边界承担该策略。
 
 已持久化的旧配置键可以留在 JSON 中，但不可见、不可更新且没有 consumer；未来若重新使用同名字段，必须显式处理这些历史值，不能让旧值静默恢复能力。历史消息若带有旧错误类型，会通过通用错误回退展示；本变更不重写历史消息。
 

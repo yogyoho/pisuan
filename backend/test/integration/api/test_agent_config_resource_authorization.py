@@ -10,9 +10,9 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from yuxi.agents.buildin.chatbot.context import ChatBotContext
-from yuxi.agents.context import normalize_agent_context_config
-from yuxi.storage.postgres.models_business import User
+from pisuan.agents.buildin.chatbot.context import ChatBotContext
+from pisuan.agents.context import normalize_agent_context_config
+from pisuan.storage.postgres.models_business import User
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 

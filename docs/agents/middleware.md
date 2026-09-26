@@ -24,9 +24,9 @@
 | 1 | `SteerMiddleware` | 在安全边界发现待接替请求 |
 | 2 | `create_agent_filesystem_middleware` | 提供 Workdir、User Data、Skills 文件后端，并卸载过大的工具结果 |
 | 3 | `SkillsMiddleware` | 注入 Skill 说明，按激活状态开放依赖 |
-| 4 | `YuxiMemoryMiddleware` | Memory 开关开启且 `MEMORY.md` 有内容时，注入用户记忆并提供受限工具 |
-| 5 | `YuxiSubAgentMiddleware` | 主智能体有可见子智能体时提供子智能体生命周期工具 |
-| 6 | `YuxiSummarizationMiddleware` | 先确定性压缩工具结果，仍达到同一阈值时生成摘要 |
+| 4 | `PisuanMemoryMiddleware` | Memory 开关开启且 `MEMORY.md` 有内容时，注入用户记忆并提供受限工具 |
+| 5 | `PisuanSubAgentMiddleware` | 主智能体有可见子智能体时提供子智能体生命周期工具 |
+| 6 | `PisuanSummarizationMiddleware` | 先确定性压缩工具结果，仍达到同一阈值时生成摘要 |
 | 7 | `TodoListMiddleware` | 保存待办，供状态面板展示 |
 | 8 | `PatchToolCallsMiddleware` | 修正部分工具调用消息形态 |
 | 9 | `NetworkRetryMiddleware` | 网络错误按预算、其他可重试模型错误按次数重试，耗尽后抛出异常 |
@@ -75,4 +75,4 @@ Summary 在文件和 Skills 等中间件之后运行。请求达到唯一压力�
 
 先说明它要改变哪一条边界：Prompt、模型调用、工具调用、文件访问、state 或观测。资源筛选和权限收敛放在 Graph 创建前；文件读写和工具结果卸载优先复用现有 filesystem middleware；新增模型可见输入或副作用时补充对应测试和失败案例。
 
-实现入口：[ChatbotAgent graph](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/agents/buildin/chatbot/graph.py)、[中间件目录](https://github.com/xerrors/Yuxi/tree/main/backend/package/yuxi/agents/middlewares)。
+实现入口：[ChatbotAgent graph](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/agents/buildin/chatbot/graph.py)、[中间件目录](https://github.com/xerrors/Yuxi/tree/main/backend/package/pisuan/agents/middlewares)。

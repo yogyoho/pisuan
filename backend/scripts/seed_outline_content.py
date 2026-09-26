@@ -16,7 +16,7 @@ from pathlib import Path
 
 from neo4j import GraphDatabase
 
-OUTLINES_DIR = Path(__file__).resolve().parent.parent / "package" / "yuxi" / "agents" / "skills" / "buildin" / "coal-eia-writer" / "outlines"
+OUTLINES_DIR = Path(__file__).resolve().parent.parent / "package" / "pisuan" / "agents" / "skills" / "buildin" / "coal-eia-writer" / "outlines"
 
 
 def parse_md(md_path: Path) -> dict:

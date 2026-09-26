@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - '.env.template'
-      - 'backend/package/yuxi/**'
+      - 'backend/package/pisuan/**'
       - 'backend/pyproject.toml'
       - 'backend/uv.lock'
       - 'backend/server/**'
@@ -23,7 +23,7 @@ on:
     branches: [main]
     paths:
       - '.env.template'
-      - 'backend/package/yuxi/**'
+      - 'backend/package/pisuan/**'
       - 'backend/pyproject.toml'
       - 'backend/uv.lock'
       - 'backend/server/**'
@@ -70,19 +70,19 @@ jobs:
       - name: Restore api image layer cache
         uses: actions/cache@v4
         with:
-          path: /tmp/yuxi-buildkit-cache/api
+          path: /tmp/pisuan-buildkit-cache/api
           key: buildkit-api-${{ runner.os }}-${{ hashFiles('backend/uv.lock', 'backend/pyproject.toml', 'docker/api.Dockerfile') }}
           restore-keys: |
             buildkit-api-${{ runner.os }}-
       - name: Restore sandbox-provisioner image layer cache
         uses: actions/cache@v4
         with:
-          path: /tmp/yuxi-buildkit-cache/sandbox-provisioner
+          path: /tmp/pisuan-buildkit-cache/sandbox-provisioner
           key: buildkit-sandbox-provisioner-${{ runner.os }}-${{ hashFiles('docker/sandbox_provisioner/requirements.txt', 'docker/sandbox_provisioner/Dockerfile') }}
           restore-keys: |
             buildkit-sandbox-provisioner-${{ runner.os }}-
       - name: Build topology images with cached layers
-        run: bash scripts/ci_build_topology_images.sh /tmp/yuxi-buildkit-cache/api /tmp/yuxi-buildkit-cache/sandbox-provisioner
+        run: bash scripts/ci_build_topology_images.sh /tmp/pisuan-buildkit-cache/api /tmp/pisuan-buildkit-cache/sandbox-provisioner
       - name: Start durable-task runtime topology
         run: docker compose up -d postgres redis minio etcd milvus sandbox-provisioner api worker
       - name: Wait for durable-task topology readiness
@@ -173,19 +173,19 @@ jobs:
       - name: Restore api image layer cache
         uses: actions/cache@v4
         with:
-          path: /tmp/yuxi-buildkit-cache/api
+          path: /tmp/pisuan-buildkit-cache/api
           key: buildkit-api-${{ runner.os }}-${{ hashFiles('backend/uv.lock', 'backend/pyproject.toml', 'docker/api.Dockerfile') }}
           restore-keys: |
             buildkit-api-${{ runner.os }}-
       - name: Restore sandbox-provisioner image layer cache
         uses: actions/cache@v4
         with:
-          path: /tmp/yuxi-buildkit-cache/sandbox-provisioner
+          path: /tmp/pisuan-buildkit-cache/sandbox-provisioner
           key: buildkit-sandbox-provisioner-${{ runner.os }}-${{ hashFiles('docker/sandbox_provisioner/requirements.txt', 'docker/sandbox_provisioner/Dockerfile') }}
           restore-keys: |
             buildkit-sandbox-provisioner-${{ runner.os }}-
       - name: Build topology images with cached layers
-        run: bash scripts/ci_build_topology_images.sh /tmp/yuxi-buildkit-cache/api /tmp/yuxi-buildkit-cache/sandbox-provisioner
+        run: bash scripts/ci_build_topology_images.sh /tmp/pisuan-buildkit-cache/api /tmp/pisuan-buildkit-cache/sandbox-provisioner
       - name: Start focused runtime topology
         run: docker compose up -d postgres redis minio sandbox-provisioner api worker
       - name: Wait for truthful readiness
@@ -235,8 +235,8 @@ jobs:
           PY
       - name: Verify worker health leases are expiring runtime facts
         run: |
-          worker_ttl=$(docker compose exec -T redis redis-cli PTTL yuxi:worker:health:agent-run-v1)
-          reconciliation_ttl=$(docker compose exec -T redis redis-cli PTTL yuxi:worker:health:agent-run-v1:lease-reconciliation)
+          worker_ttl=$(docker compose exec -T redis redis-cli PTTL pisuan:worker:health:agent-run-v1)
+          reconciliation_ttl=$(docker compose exec -T redis redis-cli PTTL pisuan:worker:health:agent-run-v1:lease-reconciliation)
           test "$worker_ttl" -gt 0 && test "$worker_ttl" -le 6000
           test "$reconciliation_ttl" -gt 0 && test "$reconciliation_ttl" -le 65000
       - name: Verify dead worker removes API readiness

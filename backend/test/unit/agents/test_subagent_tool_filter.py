@@ -4,8 +4,8 @@ from types import SimpleNamespace
 
 import pytest
 from deepagents.backends import StateBackend
-from yuxi.agents.backends import create_agent_filesystem_middleware
-from yuxi.agents.buildin.subagent import graph as subagent_graph
+from pisuan.agents.backends import create_agent_filesystem_middleware
+from pisuan.agents.buildin.subagent import graph as subagent_graph
 
 
 class _Request:

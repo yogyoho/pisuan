@@ -8,13 +8,13 @@ import os
 import pytest
 from sqlalchemy import delete
 
-from yuxi.knowledge.eval.service import EvaluationService
-from yuxi.repositories.evaluation_repository import EvaluationRepository
-from yuxi.repositories.task_repository import TaskRepository
-from yuxi.services import task_service
-from yuxi.storage.postgres.manager import pg_manager
-from yuxi.storage.postgres.models_business import TaskRecord
-from yuxi.storage.postgres.models_knowledge import KnowledgeBase
+from pisuan.knowledge.eval.service import EvaluationService
+from pisuan.repositories.evaluation_repository import EvaluationRepository
+from pisuan.repositories.task_repository import TaskRepository
+from pisuan.services import task_service
+from pisuan.storage.postgres.manager import pg_manager
+from pisuan.storage.postgres.models_business import TaskRecord
+from pisuan.storage.postgres.models_knowledge import KnowledgeBase
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 

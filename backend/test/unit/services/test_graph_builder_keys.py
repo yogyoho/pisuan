@@ -5,7 +5,7 @@ from neo4j import GraphDatabase
 @pytest.mark.asyncio
 async def test_build_knowledge_graph_writes_chapter_canonical_key():
     """build_knowledge_graph 后 ChapterTemplate 应有 canonical_chapter_key"""
-    from yuxi.services.graph_builder import GraphBuilder
+    from pisuan.services.graph_builder import GraphBuilder
 
     builder = GraphBuilder()
     source_paragraphs = [
@@ -50,7 +50,7 @@ async def test_build_knowledge_graph_writes_chapter_canonical_key():
 @pytest.mark.asyncio
 async def test_build_knowledge_graph_writes_para_canonical_key():
     """build_knowledge_graph 后 ParagraphTemplate 应有 canonical_chapter_key(继承所属章节)"""
-    from yuxi.services.graph_builder import GraphBuilder
+    from pisuan.services.graph_builder import GraphBuilder
 
     builder = GraphBuilder()
     source_paragraphs = [
@@ -112,7 +112,7 @@ async def test_build_knowledge_graph_writes_para_canonical_key():
 @pytest.mark.asyncio
 async def test_backfill_canonical_keys_updates_chapter():
     """GraphBuilder.backfill_canonical_keys 用 outline_map 更新 ChapterTemplate key"""
-    from yuxi.services.graph_builder import GraphBuilder
+    from pisuan.services.graph_builder import GraphBuilder
 
     driver = GraphDatabase.driver("bolt://graph:7687", auth=("neo4j", "0123456789"))
     try:

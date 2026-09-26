@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：bug-fix
-Owner：backend/package/yuxi/repositories/dashboard_repository.py
+Owner：backend/package/pisuan/repositories/dashboard_repository.py
 
 ## 问题
 

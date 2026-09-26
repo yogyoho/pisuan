@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：feature
-Owner：backend/package/yuxi/storage/postgres/models_business.py
+Owner：backend/package/pisuan/storage/postgres/models_business.py
 
 ## 问题
 

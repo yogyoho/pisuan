@@ -85,7 +85,7 @@
 
 父 state 的 `subagent_runs` 保存子任务身份，页面加载时通过数据库父子关系补齐尚未进入 checkpoint 的记录。状态面板独立订阅各子 Run 的事件流，并从 Run 接口读取当前状态；父 graph 在 `subagent_await` 中等待时，先完成的子任务立即更新。切换会话会关闭订阅，重新打开时回读状态；完成后从持久化消息读取最终结果。Redis 原始事件只供运行基础设施和前端订阅，不作为主智能体的工具结果。
 
-实现入口见 [子智能体 middleware](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/agents/middlewares/subagent_task.py)、[SubAgentBackend](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/agents/buildin/subagent/graph.py) 和 [AgentRun 服务](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/services/agent_run_service.py)。
+实现入口见 [子智能体 middleware](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/agents/middlewares/subagent_task.py)、[SubAgentBackend](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/agents/buildin/subagent/graph.py) 和 [AgentRun 服务](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/services/agent_run_service.py)。
 
 页面最多同时订阅三个子 Run，其余活跃子 Run 每两秒查询状态，避免 HTTP/1.1 的同源连接被长连接占满。连接无事件时每十五秒核对持久状态；断线或查询失败显示重连提示。
 

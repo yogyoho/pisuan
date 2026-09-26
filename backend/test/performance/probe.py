@@ -111,11 +111,11 @@ def wrap(owner, name):
 
 def run():
     """使用实际 ARQ worker，仅在进程入口安装诊断包装。"""
-    from yuxi.services.arq_worker import run_worker
-    from yuxi.agents import BaseAgent
-    from yuxi.agents.buildin.chatbot import graph
-    from yuxi.agents.skills import service
-    from yuxi.services import agent_run_manifest_service, chat_service, run_worker as worker
+    from pisuan.services.arq_worker import run_worker
+    from pisuan.agents import BaseAgent
+    from pisuan.agents.buildin.chatbot import graph
+    from pisuan.agents.skills import service
+    from pisuan.services import agent_run_manifest_service, chat_service, run_worker as worker
     from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
     if FINE:

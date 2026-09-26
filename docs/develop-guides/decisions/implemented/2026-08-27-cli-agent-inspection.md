@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：feature
-Owner：packages/yuxi-cli/src/yuxi_cli/agent.py
+Owner：packages/pisuan-cli/src/pisuan_cli/agent.py
 
 ## 问题
 
@@ -10,7 +10,7 @@ CLI 登录用户可以按已知 slug 调用 Agent，却无法先发现当前账�
 
 ## 决策
 
-新增 `yuxi agent list` 与 `yuxi agent show <slug>`。CLI 通过现有认证 API 读取当前用户可见的主 Agent：列表展示默认标识、名称、slug 和描述；详情展示基础信息，以及 `config_json.context` 中的模型、Skills、系统提示词、工具和其余配置。两个命令支持与知识库查询命令一致的 `--remote` 和无 ANSI 原始 `--json` 输出，并通过 discovery 中的专用能力声明拒绝不支持该契约的旧服务端。
+新增 `pisuan agent list` 与 `pisuan agent show <slug>`。CLI 通过现有认证 API 读取当前用户可见的主 Agent：列表展示默认标识、名称、slug 和描述；详情展示基础信息，以及 `config_json.context` 中的模型、Skills、系统提示词、工具和其余配置。两个命令支持与知识库查询命令一致的 `--remote` 和无 ANSI 原始 `--json` 输出，并通过 discovery 中的专用能力声明拒绝不支持该契约的旧服务端。
 
 CLI 不推测运行时资源解析结果。`tools`、`knowledges`、`mcps` 和 `skills` 未配置时展示为使用全部可用资源，显式空列表展示为不启用；`subagents` 未配置或为空列表时均展示为使用全部可见子 Agent。详情接口仍允许按既有授权读取可见子 Agent，列表保持服务端现有的主 Agent 范围。
 
@@ -28,7 +28,7 @@ Agent 可见性、详情过滤和不存在或无权访问时的 404 继续由现
 
 ## 验证
 
-- `cd packages/yuxi-cli && UV_PYTHON=3.13 uv run --group test pytest -q`：111 passed。
+- `cd packages/pisuan-cli && UV_PYTHON=3.13 uv run --group test pytest -q`：111 passed。
 - `uvx ruff format/check`（Agent 新实现与测试）：通过。
 - `cd backend && UV_PYTHON=3.13 uv run --group test pytest test/unit -m "not slow"`：1590 passed。
 - API 容器 unit fallback `uv run --no-sync --group test pytest test/unit -m "not slow" -q`：1569 passed，40 skipped；常规同步命令因容器内 editable 文件权限失败。

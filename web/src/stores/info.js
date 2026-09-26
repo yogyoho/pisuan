@@ -4,7 +4,7 @@ import { brandApi } from '@/apis/system_api'
 
 function readDebugMode() {
   try {
-    return localStorage.getItem('yuxi_debug_mode') === 'true'
+    return localStorage.getItem('pisuan_debug_mode') === 'true'
   } catch {
     return false
   }
@@ -110,9 +110,9 @@ export const useInfoStore = defineStore('info', () => {
     debugMode.value = Boolean(enabled)
     try {
       if (debugMode.value) {
-        localStorage.setItem('yuxi_debug_mode', 'true')
+        localStorage.setItem('pisuan_debug_mode', 'true')
       } else {
-        localStorage.removeItem('yuxi_debug_mode')
+        localStorage.removeItem('pisuan_debug_mode')
       }
     } catch {
       // localStorage 不可用时仍保留当前页面内的响应式状态。

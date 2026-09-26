@@ -1,4 +1,4 @@
-"""Yuxi Schema 版本事实在真实 PostgreSQL 上的集成测试。"""
+"""Pisuan Schema 版本事实在真实 PostgreSQL 上的集成测试。"""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from yuxi.storage.postgres.manager import BUSINESS_SCHEMA_VERSION, KNOWLEDGE_SCHEMA_VERSION, PostgresManager
-from yuxi.storage.postgres.models_knowledge import KnowledgeBase
+from pisuan.storage.postgres.manager import BUSINESS_SCHEMA_VERSION, KNOWLEDGE_SCHEMA_VERSION, PostgresManager
+from pisuan.storage.postgres.models_knowledge import KnowledgeBase
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 

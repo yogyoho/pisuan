@@ -7,15 +7,15 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from yuxi.agents.buildin import AgentBackendNotFoundError, get_agent_backend, list_agent_backend_info
-from yuxi.agents.context import filter_declared_config
-from yuxi.repositories.agent_repository import (
+from pisuan.agents.buildin import AgentBackendNotFoundError, get_agent_backend, list_agent_backend_info
+from pisuan.agents.context import filter_declared_config
+from pisuan.repositories.agent_repository import (
     AgentRepository,
     is_builtin_agent,
     user_can_access_agent,
     user_can_manage_agent,
 )
-from yuxi.services.agent_request_queue_service import (
+from pisuan.services.agent_request_queue_service import (
     cancel_queued_request as cancel_queued_request_svc,
     continue_thread_queue,
     finalize_dispatch,
@@ -24,8 +24,8 @@ from yuxi.services.agent_request_queue_service import (
     steer_queued_request,
     stream_request_events,
 )
-from yuxi.services.agent_config_service import prepare_agent_config_write
-from yuxi.services.agent_run_service import (
+from pisuan.services.agent_config_service import prepare_agent_config_write
+from pisuan.services.agent_run_service import (
     cancel_agent_run_view,
     create_resume_run_view,
     get_active_run_by_thread,
@@ -34,10 +34,10 @@ from yuxi.services.agent_run_service import (
     get_agent_run_view,
     stream_agent_run_events,
 )
-from yuxi.services.input_message_service import build_chat_input_message
-from yuxi.services.agent_request_service import RunOrigin, AgentRequestInput, submit_agent_request
-from yuxi.storage.postgres.manager import pg_manager
-from yuxi.storage.postgres.models_business import User
+from pisuan.services.input_message_service import build_chat_input_message
+from pisuan.services.agent_request_service import RunOrigin, AgentRequestInput, submit_agent_request
+from pisuan.storage.postgres.manager import pg_manager
+from pisuan.storage.postgres.models_business import User
 
 from server.utils.auth_middleware import get_admin_user, get_db, get_required_user, get_superadmin_user
 

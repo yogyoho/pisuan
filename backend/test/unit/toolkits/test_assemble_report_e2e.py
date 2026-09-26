@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock
 import pytest
 from langgraph.prebuilt.tool_node import ToolRuntime
 
-import yuxi.agents.toolkits.buildin.tools as tools_mod
+import pisuan.agents.toolkits.buildin.tools as tools_mod
 
 
 @pytest.fixture(autouse=True)
@@ -21,7 +21,7 @@ def user_data_root(tmp_path, monkeypatch):
     """把用户数据根指到 tmp：Workdir outputs 读写都落在临时目录。"""
     root = tmp_path / "user-data"
     (root / "shared" / "u1" / "workspace" / "projects" / "w1").mkdir(parents=True)
-    monkeypatch.setattr("yuxi.workspace.paths.get_user_data_dir", lambda: root)
+    monkeypatch.setattr("pisuan.workspace.paths.get_user_data_dir", lambda: root)
     return root
 
 

@@ -8,10 +8,10 @@ from langchain_core.messages import SystemMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.types import Command
 
-import yuxi.agents.middlewares.skills as skills_middleware
-from yuxi.agents.middlewares.skills import SkillsMiddleware
-from yuxi.agents.skills.runtime import resolve_skill_gated_tools
-from yuxi.agents.toolkits.service import resolve_configured_runtime_tools
+import pisuan.agents.middlewares.skills as skills_middleware
+from pisuan.agents.middlewares.skills import SkillsMiddleware
+from pisuan.agents.skills.runtime import resolve_skill_gated_tools
+from pisuan.agents.toolkits.service import resolve_configured_runtime_tools
 
 _KB_TOOL_NAMES = {
     "list_kbs",
@@ -393,7 +393,7 @@ async def test_explicit_mcp_rejects_skill_local_tool_name_collision(monkeypatch)
         assert server_name == "configured"
         return [conflicting_list_kbs]
 
-    monkeypatch.setattr("yuxi.agents.mcp.service.get_enabled_mcp_tools", fake_get_enabled_mcp_tools)
+    monkeypatch.setattr("pisuan.agents.mcp.service.get_enabled_mcp_tools", fake_get_enabled_mcp_tools)
     context = SimpleNamespace(
         tools=[],
         mcps=["configured"],

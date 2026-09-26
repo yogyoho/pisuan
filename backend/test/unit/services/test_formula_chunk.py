@@ -1,7 +1,7 @@
 """Test that formula paragraphs get separate chunks with formula_template_id reference."""
 
-from yuxi.services.domain_factory_service import DomainFactoryService
-from yuxi.utils import hashstr
+from pisuan.services.domain_factory_service import DomainFactoryService
+from pisuan.utils import hashstr
 
 
 def _service():

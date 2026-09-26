@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：feature
-Owner：backend/package/yuxi/storage/postgres/models_business.py
+Owner：backend/package/pisuan/storage/postgres/models_business.py
 
 ## 问题
 
@@ -12,9 +12,9 @@ Langfuse trace ID 只随最终 assistant Message 保存时，没有最终输出�
 
 AgentRun 直接保存可空 `langfuse_trace_id`。Langfuse 启用时，当前 lease owner 在模型执行前用独立短事务幂等固化 request 对应的预创建 trace ID；相同 ID 可重放，不同 ID 不可覆盖。Run 结果和调试跳转优先读取 AgentRun，历史 Run 继续兼容最终输出 Message metadata。
 
-预创建 trace ID 是 Yuxi 的唯一关联来源。Langfuse callback 只有在上下文没有预创建 ID 时才提供 fallback，不能用不同的 `last_trace_id` 改写 Run 或 Message 关联。Langfuse 禁用时字段保持为空，不访问 repository，也不阻断 Run。
+预创建 trace ID 是 Pisuan 的唯一关联来源。Langfuse callback 只有在上下文没有预创建 ID 时才提供 fallback，不能用不同的 `last_trace_id` 改写 Run 或 Message 关联。Langfuse 禁用时字段保持为空，不访问 repository，也不阻断 Run。
 
-`BaseAgent._stream_input_with_state()` 在 message metadata 和 Model/Tool 生命周期 stream payload 中保留 ProtocolEvent 的 `seq` 与 `params.timestamp`。这两个字段仍只属于运行流：`seq` 是根 StreamMux 顺序，`timestamp` 是 Yuxi 进程观察时间；本决定不把它们持久化为 Message，也不宣称 timestamp 是 Provider 服务端时间。
+`BaseAgent._stream_input_with_state()` 在 message metadata 和 Model/Tool 生命周期 stream payload 中保留 ProtocolEvent 的 `seq` 与 `params.timestamp`。这两个字段仍只属于运行流：`seq` 是根 StreamMux 顺序，`timestamp` 是 Pisuan 进程观察时间；本决定不把它们持久化为 Message，也不宣称 timestamp 是 Provider 服务端时间。
 
 唯一 storage migrator 从 0.7.2 发布版一次幂等补齐 AgentRun trace 与 Message 审计字段，完成后才记录当前版本；API 与 worker 继续只读校验精确版本。
 

@@ -145,7 +145,7 @@ WORKFLOW_CONTRACTS = (
             "docker compose exec -T api uv run --no-sync --no-dev pytest test/integration/services/test_project_workdir_provisioner.py -q",
         ),
         required_paths=(
-            "backend/package/yuxi/**",
+            "backend/package/pisuan/**",
             "backend/server/**",
             "backend/test/integration/**",
             "backend/test/e2e/**",
@@ -941,8 +941,8 @@ def _validate_workspace_host_path_boundary(root: Path, errors: list[str]) -> int
 
     checked = 0
     for source_root in (
-        root / "backend/package/yuxi/services",
-        root / "backend/package/yuxi/repositories",
+        root / "backend/package/pisuan/services",
+        root / "backend/package/pisuan/repositories",
     ):
         for path in sorted(source_root.rglob("*.py")):
             checked += 1
@@ -956,33 +956,33 @@ def _validate_workspace_host_path_boundary(root: Path, errors: list[str]) -> int
                 forbidden: set[str] = set()
                 if (
                     isinstance(node, ast.ImportFrom)
-                    and node.module == "yuxi.workspace.paths"
+                    and node.module == "pisuan.workspace.paths"
                 ):
                     forbidden.update(
                         WORKSPACE_HOST_PATH_EXPORTS.intersection(
                             alias.name for alias in node.names
                         )
                     )
-                elif isinstance(node, ast.ImportFrom) and node.module == "yuxi.config":
+                elif isinstance(node, ast.ImportFrom) and node.module == "pisuan.config":
                     if any(alias.name == "get_user_data_dir" for alias in node.names):
                         forbidden.add("get_user_data_dir")
                 elif (
-                    isinstance(node, ast.ImportFrom) and node.module == "yuxi.workspace"
+                    isinstance(node, ast.ImportFrom) and node.module == "pisuan.workspace"
                 ):
                     if any(alias.name == "paths" for alias in node.names):
                         forbidden.add("paths module")
                 elif isinstance(node, ast.Import):
                     imported = {alias.name for alias in node.names}
-                    if "yuxi.workspace.paths" in imported:
+                    if "pisuan.workspace.paths" in imported:
                         forbidden.add("paths module")
-                    if "yuxi.config" in imported:
+                    if "pisuan.config" in imported:
                         forbidden.add("config module")
                 if forbidden:
                     errors.append(
                         "普通 Service/Repository 不得取得 UserWorkspace 宿主 Path："
                         f"{relative}:{node.lineno} -> {', '.join(sorted(forbidden))}"
                     )
-            if "YUXI_USER_DATA_DIR" in source:
+            if "PISUAN_USER_DATA_DIR" in source:
                 errors.append(
                     "普通 Service/Repository 不得读取 UserWorkspace 宿主根环境变量："
                     f"{relative}"

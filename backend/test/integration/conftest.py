@@ -45,7 +45,7 @@ def ensure_live_api_schema():
         return
 
     async def verify_schema_version() -> None:
-        from yuxi.storage.postgres.manager import pg_manager
+        from pisuan.storage.postgres.manager import pg_manager
 
         pg_manager.initialize()
         try:

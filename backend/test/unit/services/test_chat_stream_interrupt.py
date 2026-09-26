@@ -5,15 +5,15 @@ from types import SimpleNamespace
 
 import pytest
 
-from yuxi.services.chat_service import (
+from pisuan.services.chat_service import (
     _build_ask_user_question_payload,
     _build_tool_approval_payload,
     _normalize_interrupt_questions,
     stream_agent_resume,
 )
 from test.unit.agent_context_fixtures import prepared_execution
-from yuxi.services import chat_service as svc
-from yuxi.utils.question_utils import normalize_options
+from pisuan.services import chat_service as svc
+from pisuan.utils.question_utils import normalize_options
 
 
 class _FakeSession:

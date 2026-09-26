@@ -49,7 +49,7 @@ COPY backend/pyproject.toml /app/pyproject.toml
 COPY backend/.python-version /app/.python-version
 COPY backend/uv.lock /app/uv.lock
 
-# 先复制 package 目录，因为 pyproject.toml 中 yuxi = { path = "package", editable = true }
+# 先复制 package 目录，因为 pyproject.toml 中 pisuan = { path = "package", editable = true }
 COPY backend/package /app/package
 
 # 大包(pytorch 等)下载慢，放宽 uv HTTP 超时
@@ -59,17 +59,17 @@ RUN uv sync --no-cache --group test --no-dev --frozen
 
 # 复制 server 代码
 COPY backend/server /app/server
-COPY docker/api-entrypoint.sh /usr/local/bin/yuxi-entrypoint
+COPY docker/api-entrypoint.sh /usr/local/bin/pisuan-entrypoint
 
-RUN groupadd --gid 1000 yuxi \
-    && useradd --uid 1000 --gid 1000 --create-home yuxi \
-    && mkdir -p /app/runtime /home/yuxi/.cache/rapidocr/models \
-    && chown -R 1000:1000 /app/runtime /home/yuxi \
-    && chmod 0755 /usr/local/bin/yuxi-entrypoint
+RUN groupadd --gid 1000 pisuan \
+    && useradd --uid 1000 --gid 1000 --create-home pisuan \
+    && mkdir -p /app/runtime /home/pisuan/.cache/rapidocr/models \
+    && chown -R 1000:1000 /app/runtime /home/pisuan \
+    && chmod 0755 /usr/local/bin/pisuan-entrypoint
 
-ENV HOME=/home/yuxi \
-    RAPIDOCR_MODEL_DIR=/home/yuxi/.cache/rapidocr/models
+ENV HOME=/home/pisuan \
+    RAPIDOCR_MODEL_DIR=/home/pisuan/.cache/rapidocr/models
 
 USER 1000:1000
 
-ENTRYPOINT ["/usr/local/bin/yuxi-entrypoint"]
+ENTRYPOINT ["/usr/local/bin/pisuan-entrypoint"]

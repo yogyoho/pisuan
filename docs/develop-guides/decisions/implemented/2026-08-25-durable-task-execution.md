@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：architecture
-Owner：backend/package/yuxi/services/task_service.py
+Owner：backend/package/pisuan/services/task_service.py
 
 ## 问题
 

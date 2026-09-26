@@ -6,7 +6,7 @@
 
 ## 一、系统概述
 
-领域知识工厂（Domain Knowledge Factory）是 Yuxi 平台的核心模块，负责将行业报告文档（PDF/Word/Markdown）自动解析为**五层可复用知识资产**：文档骨架、句式模板、标准条款、表格结构、逻辑关系。
+领域知识工厂（Domain Knowledge Factory）是 Pisuan 平台的核心模块，负责将行业报告文档（PDF/Word/Markdown）自动解析为**五层可复用知识资产**：文档骨架、句式模板、标准条款、表格结构、逻辑关系。
 
 核心设计思想是**"先分类再入库"的二维模板空间**：
 
@@ -33,10 +33,10 @@ domain × report_type = 独立隔离的模板空间
 
 | 文件 | 职责 |
 |------|------|
-| `backend/package/yuxi/services/domain_factory_service.py` | ETL 流水线、段落分类、泛化、法律引用、公式/图片/表格提取、逻辑关系提取 |
-| `backend/package/yuxi/services/graph_builder.py` | Neo4j 知识图谱构建、骨架聚合、节点/关系写入 |
-| `backend/package/yuxi/repositories/domain_factory_repository.py` | PostgreSQL 数据访问层（任务、模板、领域、报告类型） |
-| `backend/package/yuxi/storage/postgres/models_domain_factory.py` | SQLAlchemy 数据模型定义 |
+| `backend/package/pisuan/services/domain_factory_service.py` | ETL 流水线、段落分类、泛化、法律引用、公式/图片/表格提取、逻辑关系提取 |
+| `backend/package/pisuan/services/graph_builder.py` | Neo4j 知识图谱构建、骨架聚合、节点/关系写入 |
+| `backend/package/pisuan/repositories/domain_factory_repository.py` | PostgreSQL 数据访问层（任务、模板、领域、报告类型） |
+| `backend/package/pisuan/storage/postgres/models_domain_factory.py` | SQLAlchemy 数据模型定义 |
 | `backend/server/routers/__init__.py` | HTTP 路由注册 |
 | `web/src/components/domain-factory/EtlWorkbench.vue` | 前端 ETL 审核工作台 |
 | `web/src/components/domain-factory/DataSourceDashboard.vue` | 前端数据源管理（上传+领域选择） |

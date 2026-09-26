@@ -25,7 +25,7 @@ def _fake_context(task_payload):
 @pytest.mark.asyncio
 async def test_commit_pipeline_rejects_invalid_task():
     """提交前校验失败(无段落) → pipeline 返回 COMMIT_FAILED,不进入阶段1"""
-    from yuxi.services.domain_factory_service import DomainFactoryService
+    from pisuan.services.domain_factory_service import DomainFactoryService
 
     payload = {"task_id": "t1", "reviewer": "admin", "knowledge_base_id": "kb1", "ingest_task_id": "ing1"}
     ctx = _fake_context(payload)
@@ -40,7 +40,7 @@ async def test_commit_pipeline_rejects_invalid_task():
 
     fake_service.repo.update_task = fake_update
 
-    with patch("yuxi.services.domain_factory_service.get_domain_factory_service", return_value=fake_service):
+    with patch("pisuan.services.domain_factory_service.get_domain_factory_service", return_value=fake_service):
         result = await DomainFactoryService()._commit_pipeline_async(ctx)
 
     assert result.get("status") == "COMMIT_FAILED"
@@ -50,7 +50,7 @@ async def test_commit_pipeline_rejects_invalid_task():
 @pytest.mark.asyncio
 async def test_graph_build_failure_marks_commit_failed():
     """图谱构建失败 → COMMIT_FAILED(不再吞异常)"""
-    from yuxi.services.domain_factory_service import DomainFactoryService
+    from pisuan.services.domain_factory_service import DomainFactoryService
 
     payload = {"task_id": "t1", "reviewer": "admin", "knowledge_base_id": None, "ingest_task_id": "ing1"}
     ctx = _fake_context(payload)
@@ -71,8 +71,8 @@ async def test_graph_build_failure_marks_commit_failed():
 
     fake_service.repo.update_task = fake_update
 
-    with patch("yuxi.services.domain_factory_service.get_domain_factory_service", return_value=fake_service), \
-         patch("yuxi.services.graph_builder.GraphBuilder.build_knowledge_graph", side_effect=RuntimeError("neo4j refused")):
+    with patch("pisuan.services.domain_factory_service.get_domain_factory_service", return_value=fake_service), \
+         patch("pisuan.services.graph_builder.GraphBuilder.build_knowledge_graph", side_effect=RuntimeError("neo4j refused")):
         await DomainFactoryService()._commit_pipeline_async(ctx)
 
     assert any(c.get("status") == "COMMIT_FAILED" for c in update_calls), \
@@ -82,7 +82,7 @@ async def test_graph_build_failure_marks_commit_failed():
 @pytest.mark.asyncio
 async def test_outline_failure_marks_commit_partial():
     """outline 生成失败(图谱OK) → COMMIT_PARTIAL"""
-    from yuxi.services.domain_factory_service import DomainFactoryService
+    from pisuan.services.domain_factory_service import DomainFactoryService
 
     payload = {"task_id": "t1", "reviewer": "admin", "knowledge_base_id": None, "ingest_task_id": "ing1"}
     ctx = _fake_context(payload)
@@ -105,8 +105,8 @@ async def test_outline_failure_marks_commit_partial():
 
     fake_service.repo.update_task = fake_update
 
-    with patch("yuxi.services.domain_factory_service.get_domain_factory_service", return_value=fake_service), \
-         patch("yuxi.services.graph_builder.GraphBuilder.build_knowledge_graph", return_value={"nodes_created": 0, "relationships_created": 0}):
+    with patch("pisuan.services.domain_factory_service.get_domain_factory_service", return_value=fake_service), \
+         patch("pisuan.services.graph_builder.GraphBuilder.build_knowledge_graph", return_value={"nodes_created": 0, "relationships_created": 0}):
         await DomainFactoryService()._commit_pipeline_async(ctx)
 
     final = [c for c in update_calls if c.get("status")]

@@ -8,10 +8,10 @@ import pytest
 from fastapi import HTTPException
 from starlette.datastructures import UploadFile
 
-import yuxi.services.viewer_filesystem_service as svc
-from yuxi.workspace.errors import FileTransferLimitError
-from yuxi.workspace.workdir import Workdir
-from yuxi.services.workdir_service import AuthorizedWorkdir
+import pisuan.services.viewer_filesystem_service as svc
+from pisuan.workspace.errors import FileTransferLimitError
+from pisuan.workspace.workdir import Workdir
+from pisuan.services.workdir_service import AuthorizedWorkdir
 
 
 class _Backend:

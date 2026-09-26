@@ -2,11 +2,11 @@
 
 状态：implemented
 类型：simplification
-Owner：backend/package/yuxi/knowledge/parser/unified.py
+Owner：backend/package/pisuan/knowledge/parser/unified.py
 
 ## 问题
 
-Yuxi 只使用 Docling 将 DOCX、PPTX、XLSX 和 XLS 转为 Markdown，但完整 `docling` 的 standard 依赖同时安装模型、PDF 管线、Torch、TorchVision 和 IBM Models。后端镜像因此携带当前解析路径不会使用的重运行时。
+Pisuan 只使用 Docling 将 DOCX、PPTX、XLSX 和 XLS 转为 Markdown，但完整 `docling` 的 standard 依赖同时安装模型、PDF 管线、Torch、TorchVision 和 IBM Models。后端镜像因此携带当前解析路径不会使用的重运行时。
 
 ## 决策
 

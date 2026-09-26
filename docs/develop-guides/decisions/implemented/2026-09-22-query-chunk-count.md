@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：feature
-Owner：backend/package/yuxi/repositories/knowledge_file_repository.py
+Owner：backend/package/pisuan/repositories/knowledge_file_repository.py
 
 ## 问题
 

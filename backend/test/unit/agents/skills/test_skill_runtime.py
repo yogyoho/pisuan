@@ -2,8 +2,8 @@ from types import SimpleNamespace
 
 import pytest
 
-import yuxi.agents.skills.runtime as skill_runtime
-from yuxi.agents.skills.runtime import build_dependency_bundle, expand_skill_closure, resolve_runtime_skills_for_context
+import pisuan.agents.skills.runtime as skill_runtime
+from pisuan.agents.skills.runtime import build_dependency_bundle, expand_skill_closure, resolve_runtime_skills_for_context
 
 
 def _skill(tmp_path, slug: str, *, dependencies: list[str] | None = None, content: str | None = None):
@@ -147,7 +147,7 @@ async def test_preload_rejects_symlinked_source_ancestor(tmp_path, monkeypatch):
 @pytest.mark.asyncio
 async def test_manifest_retains_metadata_from_authorized_resolution(tmp_path, monkeypatch):
     """源记录更新后，manifest 仍使用首次解析的版本与内容摘要。"""
-    from yuxi.services.agent_run_manifest_service import build_skill_manifest_entries
+    from pisuan.services.agent_run_manifest_service import build_skill_manifest_entries
 
     item = _skill(tmp_path, "alpha", content="original body")
 

@@ -1,6 +1,6 @@
 """结构单元解析测试：4 类文档格式的 unit_no 识别"""
 
-from yuxi.extensions.regulation_library.unit_parser import parse_chunk_unit
+from pisuan.extensions.regulation_library.unit_parser import parse_chunk_unit
 
 
 def test_standard_clause():

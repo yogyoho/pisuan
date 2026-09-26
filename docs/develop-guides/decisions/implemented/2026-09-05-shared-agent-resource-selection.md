@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：bug-fix
-Owner：backend/package/yuxi/repositories/agent_repository.py
+Owner：backend/package/pisuan/repositories/agent_repository.py
 
 ## 问题
 
@@ -10,7 +10,7 @@ Owner：backend/package/yuxi/repositories/agent_repository.py
 
 ## 决策
 
-保存接口将 `config_json.context` 作为字段补丁处理，省略字段保留原值。`agent_config_service` 按 Context Schema 和用户角色过滤可写字段，并复用运行时资源选项解析访问范围；运行时资源字段集合由 `yuxi.agents.context` 导出，保存边界额外处理预加载 Skill。创建和更新均经过资源校验，个人 Skill 自动启用入口只提交对应字段补丁。
+保存接口将 `config_json.context` 作为字段补丁处理，省略字段保留原值。`agent_config_service` 按 Context Schema 和用户角色过滤可写字段，并复用运行时资源选项解析访问范围；运行时资源字段集合由 `pisuan.agents.context` 导出，保存边界额外处理预加载 Skill。创建和更新均经过资源校验，个人 Skill 自动启用入口只提交对应字段补丁。
 
 `AgentRepository` 在 PostgreSQL 行锁内读取最新配置并合并。非空列表允许增删可见项，保留旧的不可见引用，拒绝新增无权访问的引用。仍保留的旧引用维持原相对顺序，新选择按请求顺序追加，避免改变 Skill 和预加载说明的加载顺序。
 

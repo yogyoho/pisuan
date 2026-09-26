@@ -5,15 +5,15 @@ from contextlib import asynccontextmanager
 from types import SimpleNamespace
 
 import pytest
-import yuxi.agents.middlewares.subagent_task as subagent_task_middleware
-import yuxi.services.agent_run_service as agent_run_service
-import yuxi.services.subagent_run_service as subagent_run_service
+import pisuan.agents.middlewares.subagent_task as subagent_task_middleware
+import pisuan.services.agent_run_service as agent_run_service
+import pisuan.services.subagent_run_service as subagent_run_service
 from langgraph.prebuilt.tool_node import ToolRuntime
 from langgraph.types import Command
-from yuxi.agents.middlewares.subagent_task import YuxiSubAgentMiddleware
-from yuxi.repositories.agent_repository import SUB_AGENT_BACKEND_ID
-from yuxi.services.input_message_service import AgentRunInputMessage
-from yuxi.utils.hash_utils import subagent_child_thread_id
+from pisuan.agents.middlewares.subagent_task import PisuanSubAgentMiddleware
+from pisuan.repositories.agent_repository import SUB_AGENT_BACKEND_ID
+from pisuan.services.input_message_service import AgentRunInputMessage
+from pisuan.utils.hash_utils import subagent_child_thread_id
 
 
 def make_child_thread_id(parent_thread_id: str, agent_slug: str, tool_call_id: str) -> str:
@@ -49,7 +49,7 @@ def _patch_subagent_run_service(monkeypatch, service_class) -> None:
     )
 
 
-def _async_tool_middleware(*, model: str | None = None) -> YuxiSubAgentMiddleware:
+def _async_tool_middleware(*, model: str | None = None) -> PisuanSubAgentMiddleware:
     parent_context = SimpleNamespace(
         thread_id="parent-thread",
         runtime_scope_id="parent-thread",
@@ -59,7 +59,7 @@ def _async_tool_middleware(*, model: str | None = None) -> YuxiSubAgentMiddlewar
     )
     if model:
         parent_context.model = model
-    return YuxiSubAgentMiddleware(
+    return PisuanSubAgentMiddleware(
         parent_context=parent_context,
         subagents=[
             SimpleNamespace(
@@ -209,7 +209,7 @@ async def test_create_task_middleware_loads_all_visible_subagents_when_empty(mon
         SimpleNamespace(thread_id="parent-thread", uid="user-1", subagents=[]),
     )
 
-    assert isinstance(middleware, YuxiSubAgentMiddleware)
+    assert isinstance(middleware, PisuanSubAgentMiddleware)
     assert {tool.name for tool in middleware.tools} == {
         "subagent_start",
         "subagent_status",
@@ -220,7 +220,7 @@ async def test_create_task_middleware_loads_all_visible_subagents_when_empty(mon
 
 @pytest.mark.asyncio
 async def test_subagent_start_rejects_unconfigured_subagent() -> None:
-    middleware = YuxiSubAgentMiddleware(
+    middleware = PisuanSubAgentMiddleware(
         parent_context=SimpleNamespace(thread_id="parent-thread", uid="user-1", model=""),
         subagents=[
             SimpleNamespace(
@@ -253,7 +253,7 @@ async def test_subagent_start_invokes_subagent_with_child_scope(monkeypatch) -> 
     captured = {}
     _patch_start(monkeypatch, captured, thread_id="child-thread")
 
-    middleware = YuxiSubAgentMiddleware(
+    middleware = PisuanSubAgentMiddleware(
         parent_context=SimpleNamespace(
             thread_id="child-runtime-thread",
             runtime_scope_id="parent-thread",
@@ -297,7 +297,7 @@ async def test_subagent_start_leaves_model_resolution_to_service(monkeypatch) ->
     captured = {}
     _patch_start(monkeypatch, captured)
 
-    middleware = YuxiSubAgentMiddleware(
+    middleware = PisuanSubAgentMiddleware(
         parent_context=SimpleNamespace(
             thread_id="parent-thread",
             runtime_scope_id="parent-thread",
@@ -331,7 +331,7 @@ async def test_subagent_start_continues_existing_subagent_thread(monkeypatch) ->
     captured = {}
     _patch_start(monkeypatch, captured, thread_id="child-thread")
 
-    middleware = YuxiSubAgentMiddleware(
+    middleware = PisuanSubAgentMiddleware(
         parent_context=SimpleNamespace(
             thread_id="parent-thread",
             runtime_scope_id="parent-thread",
@@ -376,7 +376,7 @@ async def test_subagent_start_rejects_invalid_continuation_thread(monkeypatch) -
     _patch_session(monkeypatch)
 
     _patch_subagent_run_service(monkeypatch, _SubagentRunService)
-    middleware = YuxiSubAgentMiddleware(
+    middleware = PisuanSubAgentMiddleware(
         parent_context=SimpleNamespace(
             thread_id="parent-thread",
             runtime_scope_id="parent-thread",
@@ -615,7 +615,7 @@ async def test_subagent_cancel_and_await_use_parent_run_scope(monkeypatch) -> No
         return {"status": "completed", "output": "awaited result"}
 
     _patch_session(monkeypatch)
-    monkeypatch.setattr(YuxiSubAgentMiddleware, "_get_verified_subagent_run", fake_get_verified_subagent_run)
+    monkeypatch.setattr(PisuanSubAgentMiddleware, "_get_verified_subagent_run", fake_get_verified_subagent_run)
     monkeypatch.setattr(agent_run_service, "request_cancel_agent_run", fake_request_cancel_agent_run)
     monkeypatch.setattr(agent_run_service, "await_agent_run_result", fake_await_agent_run_result)
 
@@ -665,7 +665,7 @@ async def test_subagent_await_reports_timeout_when_run_is_still_active(monkeypat
         )
 
     _patch_session(monkeypatch)
-    monkeypatch.setattr(YuxiSubAgentMiddleware, "_get_verified_subagent_run", fake_get_verified_subagent_run)
+    monkeypatch.setattr(PisuanSubAgentMiddleware, "_get_verified_subagent_run", fake_get_verified_subagent_run)
     monkeypatch.setattr(agent_run_service, "await_agent_run_result", fake_await_agent_run_result)
 
     result = await {item.name: item for item in _async_tool_middleware().tools}["subagent_await"].coroutine(

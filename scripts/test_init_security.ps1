@@ -8,7 +8,7 @@ $PowerShellPath = (Get-Process -Id $PID).Path
 $InitScript = (Resolve-Path (Join-Path $PSScriptRoot "init.ps1")).Path
 
 function Invoke-SecurityValidation([string]$EnvContent) {
-    $caseDirectory = Join-Path ([IO.Path]::GetTempPath()) ("yuxi-init-security-" + [guid]::NewGuid().ToString("N"))
+    $caseDirectory = Join-Path ([IO.Path]::GetTempPath()) ("pisuan-init-security-" + [guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Path $caseDirectory | Out-Null
     try {
         Set-Content -Path (Join-Path $caseDirectory ".env") -Value $EnvContent -Encoding utf8NoBOM

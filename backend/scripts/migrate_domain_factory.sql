@@ -4,7 +4,7 @@
 -- ============================================================================
 -- 使用方式：
 --   方式1: 在 PostgreSQL 客户端中直接执行
---   方式2: docker exec -i postgres psql -U postgres -d yuxi_know -f migrate_domain_factory.sql
+--   方式2: docker exec -i postgres psql -U postgres -d pisuan_know -f migrate_domain_factory.sql
 --   方式3: 通过 API 的 ensure_business_schema() 自动执行（重启 api-dev 容器即可）
 -- ============================================================================
 

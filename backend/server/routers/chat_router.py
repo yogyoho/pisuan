@@ -6,20 +6,20 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, UploadFile, 
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from yuxi.storage.postgres.models_business import User
+from pisuan.storage.postgres.models_business import User
 from server.utils.auth_middleware import get_db, get_required_user, get_superadmin_user
-from yuxi.config.options import system_options
-from yuxi.agents.tool_approval import ToolApprovalMode
-from yuxi.models import select_model
-from yuxi.services.attachment_service import (
+from pisuan.config.options import system_options
+from pisuan.agents.tool_approval import ToolApprovalMode
+from pisuan.models import select_model
+from pisuan.services.attachment_service import (
     confirm_tmp_thread_attachments_view,
     delete_thread_attachment_view,
     list_thread_attachments_view,
     parse_tmp_attachment_view,
     upload_tmp_attachment_view,
 )
-from yuxi.services.chat_service import get_agent_state_view
-from yuxi.services.conversation_service import (
+from pisuan.services.chat_service import get_agent_state_view
+from pisuan.services.conversation_service import (
     create_thread_view,
     delete_thread_view,
     get_thread_history_view,
@@ -29,14 +29,14 @@ from yuxi.services.conversation_service import (
     search_threads_view,
     update_thread_view,
 )
-from yuxi.services.artifact_service import (
+from pisuan.services.artifact_service import (
     resolve_thread_artifact_view,
     save_thread_artifact_to_workspace_view,
 )
-from yuxi.services.feedback_service import get_message_feedback_view, submit_message_feedback_view
-from yuxi.services.context_compression_service import compress_thread_context as compress_context
-from yuxi.utils.logging_config import logger
-from yuxi.utils.image_processor import process_uploaded_image
+from pisuan.services.feedback_service import get_message_feedback_view, submit_message_feedback_view
+from pisuan.services.context_compression_service import compress_thread_context as compress_context
+from pisuan.utils.logging_config import logger
+from pisuan.utils.image_processor import process_uploaded_image
 
 
 # TODO：当前文件的功能过于庞杂，路由标签混乱

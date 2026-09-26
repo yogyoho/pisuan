@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：feature
-Owner：backend/package/yuxi/agents/middlewares/memory.py
+Owner：backend/package/pisuan/agents/middlewares/memory.py
 
 ## 问题
 
@@ -19,7 +19,7 @@ Owner：backend/package/yuxi/agents/middlewares/memory.py
 
 `enable_memory` 是主 Agent Memory 能力的唯一开关。通用 `build_agent_input_context()` 只装配
 `AGENTS.md` 与 `USER.md`，继续供 chat、resume、agent state 和 SubAgent 使用。只有 Chatbot graph
-构造 `YuxiMemoryMiddleware`：它在每个新 Run 装配时重新查询 `UserConfig`；开关开启才读取最多 24 KiB
+构造 `PisuanMemoryMiddleware`：它在每个新 Run 装配时重新查询 `UserConfig`；开关开启才读取最多 24 KiB
 的 `/agents/MEMORY.md`、注入低信任数据提示并注册三个工具，关闭时既不读取文件也不注册工具。SubAgent
 graph 不构造该 middleware，因此没有用户级 Memory prompt 或工具。
 
@@ -49,7 +49,7 @@ error allowlist，最多 10 条、单条 4 KiB、合计 16 KiB。所有截断遵
 image、附件、feedback、system/tool 内容和工具类型 Message 不进入响应。middleware 明确把 Memory 与历史
 标为低信任数据，历史指令不能覆盖当前系统约束，也不能触发长期记忆写入。
 
-UTF-8 字节预算截断由 `yuxi.utils.string_utils.truncate_utf8()` 提供；Conversation repository 继续拥有历史
+UTF-8 字节预算截断由 `pisuan.utils.string_utils.truncate_utf8()` 提供；Conversation repository 继续拥有历史
 响应的字段选择、各级预算和截断标记策略，通用工具不接管协议结构或 JSON 响应裁剪。
 
 语义 Owner 分工如下：Memory middleware 拥有主 Agent prompt 和工具装配；Chat service、AgentRun

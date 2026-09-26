@@ -62,10 +62,10 @@ git checkout pisuan-custom && git rebase main
 已知坑（详见 .wolf/buglog.json）：
 
 1. **上游 CLAUDE.md 是符号链接**（指向 AGENTS.md）：与 pisuan 普通文件构成 merge-ort 类型冲突，自动改名文件含提交主题冒号，Windows 非法路径导致 pick 直接失败。需先把 HEAD 的 CLAUDE.md 恢复为普通文件（`git update-index --cacheinfo 100644,<blob>,CLAUDE.md`，Windows 下 `git add` 不改 mode），再 continue。
-2. **v0.7.2 新增 .env 必填密钥**：`JWT_SECRET_KEY` / `API_KEY_DERIVATION_SECRET` / `SANDBOX_PROVISIONER_TOKEN` / `YUXI_INSTANCE_ID`（跑 `bash scripts/init.sh` 生成），缺失时启动组件硬失败。改 .env 后必须 `docker compose up -d --force-recreate`（restart 不重读 env）。
+2. **v0.7.2 新增 .env 必填密钥**：`JWT_SECRET_KEY` / `API_KEY_DERIVATION_SECRET` / `SANDBOX_PROVISIONER_TOKEN` / `PISUAN_INSTANCE_ID`（跑 `bash scripts/init.sh` 生成），缺失时启动组件硬失败。改 .env 后必须 `docker compose up -d --force-recreate`（restart 不重读 env）。
 3. **合并 pyproject 后必须 `cd backend && uv lock`**：否则 Docker 构建 `uv sync --frozen` 因 manifest 哈希不匹配失败。
 4. **pytorch 等大包构建超时**：默认 `UV_HTTP_TIMEOUT=30s` 扛不住 torch（200MB+），docker/api.Dockerfile 已放宽至 600s；uv 的 `--no-cache` 使失败的 RUN 层整体重下，一次构建约 40 分钟，失败重试成本高。
-5. **镜像 tag 漂移**：新版 compose 默认 `YUXI_VERSION=0.7.2.dev0`，本地已有镜像是旧 tag；开发环境可在 .env 钉 `YUXI_VERSION=<已有tag>` + `--no-build` 重建容器，镜像重建等镜像源可用后再做（lock 的 wheel URL 若指向失效镜像源需换源重生）。
+5. **镜像 tag 漂移**：新版 compose 默认 `PISUAN_VERSION=0.7.2.dev0`，本地已有镜像是旧 tag；开发环境可在 .env 钉 `PISUAN_VERSION=<已有tag>` + `--no-build` 重建容器，镜像重建等镜像源可用后再做（lock 的 wheel URL 若指向失效镜像源需换源重生）。
 6. **DB 遗留 lightrag 空库会硬失败**：上游把"使用中但不受支持的 KB 类型"从跳过改为启动失败，需备份后清理（`knowledge_bases_backup_lightrag_20260820`）。
 7. **上游可能彻底移除依赖**（v0.7.3 移除 torch、前端移除 lucide-vue-next/sigma/highlight.js）：定制侧对应配置随之失效是正常现象，不要"恢复"；上游新增替代机制（如 @lucide/vue、SKILL.md frontmatter 元数据、presets/ 目录自动发现）时，定制内容必须迁移到新机制而不是固守旧注册点。
 8. **rebase 冲突取 `--ours` 前先分清语义**：rebase 中 ours=上游新代码、theirs=定制提交。上游删掉的旧注册结构（如 BUILTIN_SKILLS 列表）取 ours 没问题，但定制**追加内容**（DDL、路由注册、依赖元数据）会随之丢失——rebase 结束后必须按清单校验定制最终态（grep domain_factory DDL、路由注册、writer preset、skill frontmatter），缺的从旧链 `git show <旧链>:<file>` 提取合入。
@@ -208,13 +208,13 @@ e2e 已知限制：确定性回放路径依赖模型端点从容器内可达；�
 | `web/src/assets/css/base.css` | 蓝色主题色变量 (`--ant-primary-color: #1890ff` 等) | 保留上游新增变量 + 保留我们的主题色 |
 | `web/src/assets/css/base.dark.css` | 暗色模式主题色 | 同 base.css |
 | `web/src/layouts/AppLayout.vue` | ① 领域工厂导航项 (`Layers` 图标) ② 任务中心独立位置 ③ UserInfoComponent 简化用法 ④ GitHub 已移除 | 保留我们的导航结构和组件用法，上游新增的 ConversationNavSection 等特性可以合并 |
-| `backend/package/yuxi/config/static/info.template.yaml` | 页脚版权: `"© 北京华宇工程有限公司 2026 v1.6.0"` | 始终使用我们的版本 |
+| `backend/package/pisuan/config/static/info.template.yaml` | 页脚版权: `"© 北京华宇工程有限公司 2026 v1.6.0"` | 始终使用我们的版本 |
 
 ### 7.3 追加合并类（双方保留）
 
 | 文件 | 定制内容 | 合并策略 |
 |------|----------|----------|
-| `backend/package/yuxi/storage/postgres/manager.py` | domain_factory 系列 DDL（建表/索引/种子数据） | 保留上游新增的 DDL + 保留我们的 domain_factory DDL |
+| `backend/package/pisuan/storage/postgres/manager.py` | domain_factory 系列 DDL（建表/索引/种子数据） | 保留上游新增的 DDL + 保留我们的 domain_factory DDL |
 | `backend/server/routers/__init__.py` | domain_factory / entity_type / section_routing 路由注册 | 保留上游新增路由 + 保留我们的路由注册 |
 | `docs/develop-guides/roadmap.md` | 领域知识工厂相关条目 | 保留上游更新 + 末尾追加我们的条目 |
 
@@ -232,17 +232,17 @@ e2e 已知限制：确定性回放路径依赖模型端点从容器内可达；�
 
 **后端新增：**
 ```
-backend/package/yuxi/repositories/domain_factory_repository.py
-backend/package/yuxi/services/domain_factory_service.py
-backend/package/yuxi/services/entity_meta_service.py
-backend/package/yuxi/services/graph_builder.py
-backend/package/yuxi/services/template_generator.py
-backend/package/yuxi/services/template_library.py
-backend/package/yuxi/services/template_matcher.py
-backend/package/yuxi/storage/postgres/models_domain_factory.py
-backend/package/yuxi/config/static/prompt_templates.yaml
-backend/package/yuxi/agents/skills/buildin/slot-filler/
-backend/package/yuxi/agents/skills/buildin/template-recommender/
+backend/package/pisuan/repositories/domain_factory_repository.py
+backend/package/pisuan/services/domain_factory_service.py
+backend/package/pisuan/services/entity_meta_service.py
+backend/package/pisuan/services/graph_builder.py
+backend/package/pisuan/services/template_generator.py
+backend/package/pisuan/services/template_library.py
+backend/package/pisuan/services/template_matcher.py
+backend/package/pisuan/storage/postgres/models_domain_factory.py
+backend/package/pisuan/config/static/prompt_templates.yaml
+backend/package/pisuan/agents/skills/buildin/slot-filler/
+backend/package/pisuan/agents/skills/buildin/template-recommender/
 backend/server/routers/domain_factory_router.py
 backend/server/routers/entity_type_router.py
 backend/server/routers/section_routing_router.py

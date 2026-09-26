@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：bug-fix
-Owner：backend/package/yuxi/agents/backends/sandbox/backend.py
+Owner：backend/package/pisuan/agents/backends/sandbox/backend.py
 
 ## 问题
 
@@ -12,14 +12,14 @@ DeepAgents 0.7 的异步 `read_file` 调用 `BackendProtocol.aread()`。`Provisi
 
 `ProvisionerSandboxBackend.aread()` 使用 `agent-sandbox` 的原生异步文件 API，并与同步 `read()` 共享路径分类、类型错误、内容规范化和 `ReadResult` 分页组装规则。
 
-文本通过 `AsyncSandbox.file.read_file()` 按行读取。图片通过 `AsyncSandbox.file.download_file()` 流式读取原始字节，在 Yuxi 内执行 `MAX_BINARY_BYTES` 限制和 base64 编码；PDF、Office、音频、视频及未知二进制保持同步读取的拒绝语义。授权和参数检查先于任何远端 client 构造。
+文本通过 `AsyncSandbox.file.read_file()` 按行读取。图片通过 `AsyncSandbox.file.download_file()` 流式读取原始字节，在 Pisuan 内执行 `MAX_BINARY_BYTES` 限制和 base64 编码；PDF、Office、音频、视频及未知二进制保持同步读取的拒绝语义。授权和参数检查先于任何远端 client 构造。
 
 每次需要访问 sandbox 的异步读取都创建一个 owning `httpx.AsyncClient`，通过 `async with` 关闭，并将其显式传入 `AsyncSandbox`。同步 provisioner 连接发现通过 `asyncio.to_thread()` 执行；当前不缓存没有进程级关闭 Owner 的异步 client。
 
 ## 替代方案
 
 - `asyncio.to_thread(self.read, ...)`：能恢复结果正确性，但取消不能中止底层同步 HTTP，并会继续占用线程池，未采用。
-- 保留 DeepAgents 默认 shell 读取：依赖纯 stdout JSON、输出上限和 shell 传输，无法闭合 Yuxi 授权与文件类型契约，未采用。
+- 保留 DeepAgents 默认 shell 读取：依赖纯 stdout JSON、输出上限和 shell 传输，无法闭合 Pisuan 授权与文件类型契约，未采用。
 - 立即增加进程级共享 `AsyncClient`：需要新增 API/worker 生命周期和关闭接线，超出本次缺陷修复范围，未采用。
 
 ## 后果

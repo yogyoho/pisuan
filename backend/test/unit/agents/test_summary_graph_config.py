@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from yuxi.agents.buildin.chatbot import graph as chatbot_graph
-from yuxi.agents.buildin.subagent import graph as subagent_graph
-from yuxi.agents.middlewares import summary as summary_module
+from pisuan.agents.buildin.chatbot import graph as chatbot_graph
+from pisuan.agents.buildin.subagent import graph as subagent_graph
+from pisuan.agents.middlewares import summary as summary_module
 
 
 def _context(summary_threshold: int = 123) -> SimpleNamespace:

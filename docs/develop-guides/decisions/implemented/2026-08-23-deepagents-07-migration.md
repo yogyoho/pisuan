@@ -2,14 +2,14 @@
 
 状态：implemented
 类型：architecture
-Owner：backend/package/yuxi/agents/backends/composite.py
+Owner：backend/package/pisuan/agents/backends/composite.py
 
 ## 问题
 
-Yuxi 此前锁定 `deepagents==0.6.7` 与旧版 LangChain 底座（langchain 1.3.10、langchain-core 1.4.8）。升级到 DeepAgents 0.7 存在以下硬性断点：
+Pisuan 此前锁定 `deepagents==0.6.7` 与旧版 LangChain 底座（langchain 1.3.10、langchain-core 1.4.8）。升级到 DeepAgents 0.7 存在以下硬性断点：
 
 1. **Backend factory 移除**：`FilesystemMiddleware` 与 `SummarizationMiddleware` 不再接受返回 backend 的 callable，必须传已初始化的 `BackendProtocol` 实例。
-2. **`CompositeBackend` 路由补丁**：0.6 时 Yuxi 维护 `CustomCompositeBackend` 修复 route-aware glob 逻辑；0.7 官方已修复此问题并支持 `GlobResult.truncated`。
+2. **`CompositeBackend` 路由补丁**：0.6 时 Pisuan 维护 `CustomCompositeBackend` 修复 route-aware glob 逻辑；0.7 官方已修复此问题并支持 `GlobResult.truncated`。
 3. **协议扩展**：0.7 新增 `grep(max_count=...)`、`ReadResult` 结构化分页字段与可选 `delete`。
 4. **全仓依赖滞后**：多项直接与间接依赖落后，需要安全批量升级并逐项验证。
 
@@ -17,7 +17,7 @@ Yuxi 此前锁定 `deepagents==0.6.7` 与旧版 LangChain 底座（langchain 1.3
 
 1. **依赖升级**：
    - backend：`deepagents>=0.7.7,<0.8`、`langchain>=1.3.15`、`langchain-core>=1.6.0`、`langchain-anthropic>=1.6.0`，并执行 `uv lock --upgrade` 升级 26+ 直接依赖。
-   - packages/yuxi-cli：升级 lock 至最新。
+   - packages/pisuan-cli：升级 lock 至最新。
    - web：升级 pinia (4.0.3)、js-yaml (5.3.0, 适配命名导入)、markdown-it (15.0.0)、katex (0.18.4)、@opencode-ai/models (0.0.51) 等。
 2. **Backend 实例装配**：
    - 在每次 `get_graph()` 时基于已准备好的 `context` 调用 `create_agent_composite_backend()` 构造本 Run 独享的 `CompositeBackend` 实例（`artifacts_root` 设为 `{workdir}/outputs`）。
@@ -40,7 +40,7 @@ Yuxi 此前锁定 `deepagents==0.6.7` 与旧版 LangChain 底座（langchain 1.3
 
 ## 后果
 
-- 删除了 Yuxi 自行维护的 `CustomCompositeBackend`。
+- 删除了 Pisuan 自行维护的 `CustomCompositeBackend`。
 - 文件搜索与大文件读取获得 0.7 结构化续读提示。
 - 依赖漏洞审计 `uv audit --locked` 0 漏洞。
 - 1475 项 unit 测试全部通过。
@@ -54,4 +54,4 @@ Yuxi 此前锁定 `deepagents==0.6.7` 与旧版 LangChain 底座（langchain 1.3
 | 全仓 unit 门禁全绿 | `docker compose exec api uv run --no-sync --group test pytest test/unit -m "not slow" -q` | Passed (1475 passed) |
 | 工程契约与依赖安全审计通过 | `python3 scripts/verify_engineering_contracts.py` + `uv audit --locked` | Passed；0 漏洞 |
 | 前端构建与测试通过 | `pnpm run build && pnpm run test:unit && pnpm run lint` | Passed；82 unit passed |
-| yuxi-cli 构建与测试通过 | `uv run --isolated --no-dev --with pytest pytest tests -q` | Passed；90 unit passed |
+| pisuan-cli 构建与测试通过 | `uv run --isolated --no-dev --with pytest pytest tests -q` | Passed；90 unit passed |

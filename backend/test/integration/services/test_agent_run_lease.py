@@ -19,20 +19,20 @@ from sqlalchemy import delete, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from yuxi.agents.context import BaseContext
-from yuxi.repositories.agent_run_repository import AgentRunRepository
-from yuxi.repositories.conversation_repository import ConversationRepository
-from yuxi.repositories.model_message_audit_repository import ModelMessageAuditRepository
-from yuxi.repositories.tool_message_audit_repository import ToolMessageAuditRepository
-from yuxi.services import chat_service, run_worker
-from yuxi.services.agent_run_manifest_service import PreparedRunExecution
-from yuxi.storage.postgres.manager import (
+from pisuan.agents.context import BaseContext
+from pisuan.repositories.agent_run_repository import AgentRunRepository
+from pisuan.repositories.conversation_repository import ConversationRepository
+from pisuan.repositories.model_message_audit_repository import ModelMessageAuditRepository
+from pisuan.repositories.tool_message_audit_repository import ToolMessageAuditRepository
+from pisuan.services import chat_service, run_worker
+from pisuan.services.agent_run_manifest_service import PreparedRunExecution
+from pisuan.storage.postgres.manager import (
     AGENT_RUN_LANGFUSE_SCHEMA_STATEMENTS,
     AGENT_RUN_LEASE_SCHEMA_STATEMENTS,
     MESSAGE_AUDIT_SCHEMA_STATEMENTS,
     RUNTIME_SCOPE_SCHEMA_STATEMENTS,
 )
-from yuxi.storage.postgres.models_business import (
+from pisuan.storage.postgres.models_business import (
     AgentRun,
     Conversation,
     Message,
@@ -41,7 +41,7 @@ from yuxi.storage.postgres.models_business import (
     ToolCall,
     User,
 )
-from yuxi.utils.datetime_utils import utc_now_naive
+from pisuan.utils.datetime_utils import utc_now_naive
 
 from agent_run_test_helpers import create_agent_run
 
@@ -354,7 +354,7 @@ async def test_approval_flush_overlap_preserves_terminal_publication(lease_datab
 
 async def test_first_model_request_timing_survives_owner_cancellation(lease_database, monkeypatch):
     """取消前已发生的模型调用仍归属原 Run，过期与其他 owner 不得补写。"""
-    from yuxi.agents.callbacks.model_request_timing import FirstModelRequestRecorder
+    from pisuan.agents.callbacks.model_request_timing import FirstModelRequestRecorder
 
     _, session_factory = lease_database
     owner = "timing-owner"
@@ -636,7 +636,7 @@ async def test_tool_audit_lifecycle_owns_compatibility_projection_and_is_lease_f
                 operation_id="call-tool-1",
                 sequence=3,
                 started_at=now,
-                metadata={"tool_calls": [{"id": "call-tool-1", "name": "search", "args": {"q": "Yuxi"}}]},
+                metadata={"tool_calls": [{"id": "call-tool-1", "name": "search", "args": {"q": "Pisuan"}}]},
             )
             await model_repo.finish(
                 run_id=run_id,
@@ -658,7 +658,7 @@ async def test_tool_audit_lifecycle_owns_compatibility_projection_and_is_lease_f
                 worker_id=owner,
                 tool_call_id="call-tool-1",
                 tool_name="search",
-                tool_input={"q": "effective Yuxi"},
+                tool_input={"q": "effective Pisuan"},
                 sequence=5,
                 started_at=now + timedelta(milliseconds=60),
             )
@@ -669,7 +669,7 @@ async def test_tool_audit_lifecycle_owns_compatibility_projection_and_is_lease_f
                 worker_id=owner,
                 tool_call_id="call-tool-1",
                 tool_name="search",
-                tool_input={"q": "effective Yuxi"},
+                tool_input={"q": "effective Pisuan"},
                 sequence=5,
                 started_at=now + timedelta(milliseconds=70),
             )
@@ -722,12 +722,12 @@ async def test_tool_audit_lifecycle_owns_compatibility_projection_and_is_lease_f
             assert completed.execution_status == "completed"
             assert completed.content == "result"
             assert completed.duration_ms == 100
-            assert completed.extra_metadata["input"] == {"q": "effective Yuxi"}
+            assert completed.extra_metadata["input"] == {"q": "effective Pisuan"}
             assert completed.extra_metadata["source_model_operation_id"] == "call-tool-1"
             persisted_model = await model_repo.get(run_id=run_id, operation_id="call-tool-1")
             assert persisted_model.id == model_message.id
             assert tool_call.message_id == model_message.id
-            assert tool_call.tool_input == {"q": "effective Yuxi"}
+            assert tool_call.tool_input == {"q": "effective Pisuan"}
             assert tool_call.tool_output == "result"
             assert tool_call.status == "success"
 
@@ -1741,7 +1741,7 @@ async def test_cancel_execution_tree_locks_root_before_descendants(lease_databas
     """取消执行树等待 root 时不能提前持有 child 行锁。"""
     _, session_factory = lease_database
     suffix = uuid.uuid4().hex
-    application_name = f"yuxi-lock-order-{suffix}"
+    application_name = f"pisuan-lock-order-{suffix}"
     now = utc_now_naive()
     root_id, root_thread, _ = await _create_run(session_factory)
     async with session_factory() as db:

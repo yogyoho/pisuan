@@ -6,8 +6,8 @@ import json
 
 import pytest
 
-from yuxi.services.template_library import TemplateLibrary
-from yuxi.services.template_matcher import TemplateMatcher
+from pisuan.services.template_library import TemplateLibrary
+from pisuan.services.template_matcher import TemplateMatcher
 
 
 # ------------------------------------------------------------------

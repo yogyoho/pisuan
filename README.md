@@ -1,6 +1,6 @@
 ![Yuxi：可私有部署的多租户知识智能体平台](https://xerrors.oss-cn-shanghai.aliyuncs.com/posts/2026/08/20260818-151118-mac-1787037059154-8c08f48c.png)
 
-**Yuxi = Cloud Agents + Knowledge RAG**，Yuxi 是一个可私有部署的多租户知识智能体平台。自定义智能体，权限可控，沉淀企业轨迹。它把知识库检索、知识图谱、LangGraph 多智能体编排、MCP/Skills、沙盒工具和权限管理放进同一个工作区。让每个用户都拥有一个云端 Codex。
+**Pisuan = Cloud Agents + Knowledge RAG**，Pisuan 是一个可私有部署的多租户知识智能体平台。自定义智能体，权限可控，沉淀企业轨迹。它把知识库检索、知识图谱、LangGraph 多智能体编排、MCP/Skills、沙盒工具和权限管理放进同一个工作区。让每个用户都拥有一个云端 Codex。
 
 [项目主页](https://xerrors.github.io/Yuxi/) · [快速开始](https://xerrors.github.io/Yuxi/intro/quick-start) · [演示视频](https://www.bilibili.com/video/BV1erE26iEgv/) · [版本记录](https://github.com/xerrors/Yuxi/releases) · [English](README.en.md)
 
@@ -11,11 +11,11 @@
 [![DeepWiki](https://img.shields.io/badge/DeepWiki-blue.svg)](https://deepwiki.com/xerrors/Yuxi)
 [![Bilibili](https://img.shields.io/badge/知识库演示-00A1D6?logo=bilibili&logoColor=fff)](https://www.bilibili.com/video/BV1erE26iEgv/)
 
-<a href="https://trendshift.io/repositories/24335" target="_blank"><img src="https://trendshift.io/api/badge/repositories/24335" alt="xerrors%2FYuxi | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+<a href="https://trendshift.io/repositories/24335" target="_blank"><img src="https://trendshift.io/api/badge/repositories/24335" alt="xerrors%2FPisuan | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
-## Yuxi 能做什么
+## Pisuan 能做什么
 
-Yuxi 是面向需要企业自部署的多用户 Agent 产品，且需要自己掌握数据、模型和权限的团队：
+Pisuan 是面向需要企业自部署的多用户 Agent 产品，且需要自己掌握数据、模型和权限的团队：
 
 - **Harness**：功能完善的云端多用户 Harness，自定义智能体，沉淀企业轨迹。
 - **Knowledge**： 高效、精准的 Agentic RAG 套件，上传文档，解析、分块和向量索引。
@@ -33,7 +33,7 @@ Yuxi 是面向需要企业自部署的多用户 Agent 产品，且需要自己�
 
 ## 快速启动
 
-语析（Yuxi）完全基于 Docker 启动，服务和中间件主要包括：LangGraph、Vue、FastAPI、Milvus、Neo4j、PostgreSQL、MinerU、PaddleOCR。
+语析（Pisuan）完全基于 Docker 启动，服务和中间件主要包括：LangGraph、Vue、FastAPI、Milvus、Neo4j、PostgreSQL、MinerU、PaddleOCR。
 
 ### 前置条件
 
@@ -43,7 +43,7 @@ Yuxi 是面向需要企业自部署的多用户 Agent 产品，且需要自己�
 
 ```bash
 git clone --branch v0.7.3 --depth 1 https://github.com/xerrors/Yuxi.git
-cd Yuxi
+cd Pisuan
 
 # Linux/macOS
 ./scripts/init.sh
@@ -83,7 +83,7 @@ curl --fail http://localhost:5050/api/system/ready
 
 ## 能力展示
 
-Yuxi 把知识进入系统、Agent 执行任务和团队治理放在一条完整链路中。以下按六个核心模块介绍系统能力：
+Pisuan 把知识进入系统、Agent 执行任务和团队治理放在一条完整链路中。以下按六个核心模块介绍系统能力：
 
 
 | 模块               | 解决的问题                           | 代表能力                                             |
@@ -329,7 +329,7 @@ Yuxi 把知识进入系统、Agent 执行任务和团队治理放在一条完整
 
 Yuxi 本体采用 MIT License，详见 [LICENSE](LICENSE)。Docker Compose 引入的第三方组件遵循各自的许可证；再分发和商业部署前，请按实际镜像版本核对上游许可和源码义务，相关边界见[生产部署指南](docs/advanced/deployment.md)。
 
-Yuxi 的实现和文档参考了以下优秀的开源项目：
+Pisuan 的实现和文档参考了以下优秀的开源项目：
 
 - [LightRAG](https://github.com/HKUDS/LightRAG)：早期图谱构建和检索思路；
 - [DeepAgents](https://github.com/langchain-ai/deepagents)：深度智能体框架；
@@ -340,7 +340,7 @@ Yuxi 的实现和文档参考了以下优秀的开源项目：
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=xerrors%2Fyuxi&type=date&legend=bottom-right">
+<a href="https://www.star-history.com/?repos=xerrors%2Fpisuan&type=date&legend=bottom-right">
  <picture>
    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=xerrors/yuxi&type=date&theme=dark&legend=top-left" />
    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=xerrors/yuxi&type=date&legend=top-left" />

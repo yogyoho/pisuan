@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from yuxi.services import conversation_service
+from pisuan.services import conversation_service
 
 
 @pytest.mark.asyncio
@@ -52,7 +52,7 @@ async def test_get_thread_message_audits_view_serializes_model_and_tool_facts(mo
             "namespace": [],
             "tool_call_id": "call-1",
             "tool_name": "search",
-            "input": {"q": "Yuxi"},
+            "input": {"q": "Pisuan"},
             "output": {"type": "tool", "content": "查询结果", "status": "success"},
             "error_message": None,
             "source_model_operation_id": "model-1",
@@ -153,7 +153,7 @@ async def test_get_thread_message_audits_view_serializes_model_and_tool_facts(mo
         "operation_id": "call-1",
         "tool_call_id": "call-1",
         "tool_name": "search",
-        "tool_input": {"q": "Yuxi"},
+        "tool_input": {"q": "Pisuan"},
         "tool_output": {"type": "tool", "content": "查询结果", "status": "success"},
         "error_message": None,
         "source_model_operation_id": "model-1",

@@ -11,10 +11,10 @@ import pytest
 from test.live_api_cleanup import make_test_conversation_metadata, make_test_conversation_title, make_test_resource_id
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from yuxi.repositories.agent_run_repository import AgentRunRepository
-from yuxi.workspace.paths import user_workdir_host_dir
-from yuxi.storage.postgres.models_business import AgentRun, AgentRunRequest, Conversation, Message, Project
-from yuxi.utils.datetime_utils import utc_now_naive
+from pisuan.repositories.agent_run_repository import AgentRunRepository
+from pisuan.workspace.paths import user_workdir_host_dir
+from pisuan.storage.postgres.models_business import AgentRun, AgentRunRequest, Conversation, Message, Project
+from pisuan.utils.datetime_utils import utc_now_naive
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 

@@ -307,7 +307,7 @@ const loadProviders = async () => {
 
 function getUserUidHeaderDisplay(provider) {
   if (!provider.include_user_uid) return '关闭'
-  return 'x-yuxi-uid（签名）'
+  return 'x-pisuan-uid（签名）'
 }
 
 function getProviderInfo(provider) {
@@ -924,7 +924,7 @@ defineExpose({
               API Key
               <a
                 v-if="providerForm.provider_id === 'fluxionai'"
-                href="https://fluxionai.space/register?source=github&campaign=yuxi&promo=YUXI"
+                href="https://fluxionai.space/register?source=github&campaign=pisuan&promo=YUXI"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -1006,7 +1006,7 @@ defineExpose({
 
         <div class="form-switch">
           <a-tooltip
-            :title="providerForm.provider_type === 'gemini' ? 'Gemini 供应商暂不支持请求携带用户 ID。' : '开启后，智能体对话产生的聊天模型请求会携带带 HMAC 签名的 x-yuxi-uid 请求头（值为当前用户 UID），外部网关验签后即可按用户统计用量并防止伪造。需要先在 API/worker 环境变量配置 YUXI_UID_SIGNATURE_SECRET，保存时会校验；仅影响该供应商且仅在开启时生效。'"
+            :title="providerForm.provider_type === 'gemini' ? 'Gemini 供应商暂不支持请求携带用户 ID。' : '开启后，智能体对话产生的聊天模型请求会携带带 HMAC 签名的 x-pisuan-uid 请求头（值为当前用户 UID），外部网关验签后即可按用户统计用量并防止伪造。需要先在 API/worker 环境变量配置 PISUAN_UID_SIGNATURE_SECRET，保存时会校验；仅影响该供应商且仅在开启时生效。'"
           >
             <span>请求携带用户 ID</span>
           </a-tooltip>

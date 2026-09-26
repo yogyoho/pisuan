@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：bug-fix
-Owner：backend/package/yuxi/repositories/user_repository.py
+Owner：backend/package/pisuan/repositories/user_repository.py
 
 ## 问题
 

@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from yuxi.services.agent_request_service import AgentRequestInput, RunOrigin
-from yuxi.services import agent_request_service
+from pisuan.services.agent_request_service import AgentRequestInput, RunOrigin
+from pisuan.services import agent_request_service
 from types import SimpleNamespace
 
 import asyncio
 import os
 import uuid
-from yuxi.agents.context import BaseContext
+from pisuan.agents.context import BaseContext
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock
@@ -19,13 +19,13 @@ from fastapi import HTTPException
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from yuxi.repositories.agent_run_request_repository import AgentRunRequestRepository
-from yuxi.repositories.agent_run_repository import AgentRunRepository
-from yuxi.services import agent_request_queue_service
-from yuxi.services import context_compression_service
-from yuxi.services import run_worker
-from yuxi.services.input_message_service import build_chat_input_message
-from yuxi.storage.postgres.models_business import (
+from pisuan.repositories.agent_run_request_repository import AgentRunRequestRepository
+from pisuan.repositories.agent_run_repository import AgentRunRepository
+from pisuan.services import agent_request_queue_service
+from pisuan.services import context_compression_service
+from pisuan.services import run_worker
+from pisuan.services.input_message_service import build_chat_input_message
+from pisuan.storage.postgres.models_business import (
     AgentRun,
     AgentRunRequest,
     Conversation,
@@ -34,7 +34,7 @@ from yuxi.storage.postgres.models_business import (
     SubagentThread,
     User,
 )
-from yuxi.utils.datetime_utils import utc_now_naive
+from pisuan.utils.datetime_utils import utc_now_naive
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 

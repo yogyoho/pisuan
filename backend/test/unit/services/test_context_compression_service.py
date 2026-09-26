@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from yuxi.agents.context import BaseContext
+from pisuan.agents.context import BaseContext
 
 import asyncio
 from types import SimpleNamespace
@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 
-from yuxi.services import context_compression_service as service
+from pisuan.services import context_compression_service as service
 
 
 _Context = BaseContext

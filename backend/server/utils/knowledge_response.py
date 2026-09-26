@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from yuxi.knowledge.read_models import KnowledgeBaseDetail, KnowledgeBaseSummary
-from yuxi.knowledge.utils.security import redact_sensitive_params
-from yuxi.permissions import ResourcePermission
-from yuxi.utils.datetime_utils import utc_isoformat
+from pisuan.knowledge.read_models import KnowledgeBaseDetail, KnowledgeBaseSummary
+from pisuan.knowledge.utils.security import redact_sensitive_params
+from pisuan.permissions import ResourcePermission
+from pisuan.utils.datetime_utils import utc_isoformat
 
 
 def _knowledge_base_stats(database: KnowledgeBaseSummary) -> dict[str, int]:

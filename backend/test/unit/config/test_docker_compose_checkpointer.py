@@ -9,7 +9,7 @@ import yaml
 
 def _project_root() -> Path:
     """定位包含 Compose 文件的仓库根目录。"""
-    configured = os.environ.get("YUXI_PROJECT_ROOT")
+    configured = os.environ.get("PISUAN_PROJECT_ROOT")
     if configured:
         return Path(configured)
 
@@ -25,7 +25,7 @@ def test_compose_does_not_expose_checkpoint_backend_or_local_storage():
     for filename in ("docker-compose.yml", "docker-compose.prod.yml"):
         compose = yaml.safe_load((project_root / filename).read_text())
         assert "LANGGRAPH_CHECKPOINTER_BACKEND" not in compose["x-api-worker-env"]
-        assert "YUXI_CHECKPOINT_DIR" not in compose["x-api-worker-env"]
+        assert "PISUAN_CHECKPOINT_DIR" not in compose["x-api-worker-env"]
 
 
 def test_api_key_derivation_secret_is_required_for_api_and_worker():

@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from yuxi.agents.presets.subagents.general_purpose import PRESET as GENERAL_PURPOSE
-from yuxi.repositories.agent_repository import (
+from pisuan.agents.presets.subagents.general_purpose import PRESET as GENERAL_PURPOSE
+from pisuan.repositories.agent_repository import (
     AgentRepository,
     DEFAULT_AGENT_DESCRIPTION,
     DEFAULT_SHARE_CONFIG,
@@ -15,7 +15,7 @@ from yuxi.repositories.agent_repository import (
     user_can_access_agent,
     user_can_manage_agent,
 )
-from yuxi.storage.postgres.models_business import Agent, User
+from pisuan.storage.postgres.models_business import Agent, User
 
 
 class FakeDb:
@@ -311,9 +311,9 @@ def test_user_shared_agent_is_manageable_for_normal_user():
 @pytest.mark.asyncio
 async def test_ensure_writer_presets_create_with_config(monkeypatch):
     """pisuan 定制 writer preset 幂等注册并携带工具配置（v0.7.3 preset 自动发现机制）。"""
-    from yuxi.agents.presets.subagents.data_survey_writer import PRESET as DATA_PRESET
-    from yuxi.agents.presets.subagents.prediction_writer import PRESET as PREDICTION_PRESET
-    from yuxi.agents.presets.subagents.regulation_writer import PRESET as REGULATION_PRESET
+    from pisuan.agents.presets.subagents.data_survey_writer import PRESET as DATA_PRESET
+    from pisuan.agents.presets.subagents.prediction_writer import PRESET as PREDICTION_PRESET
+    from pisuan.agents.presets.subagents.regulation_writer import PRESET as REGULATION_PRESET
 
     cases = [
         (REGULATION_PRESET, ["get_chapter_outline", "save_chapter", "query_kb"]),

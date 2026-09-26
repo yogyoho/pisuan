@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：feature
-Owner：backend/package/yuxi/agents/skills/runtime.py
+Owner：backend/package/pisuan/agents/skills/runtime.py
 
 ## 问题
 

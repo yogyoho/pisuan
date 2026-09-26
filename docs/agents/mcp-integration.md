@@ -9,7 +9,7 @@ MCP（Model Context Protocol）让智能体调用外部服务提供的工具。�
 | `streamable_http` | 新的远程 MCP 服务 |
 | `sse` | 仍提供 SSE 接口的远程服务 |
 
-管理接口只接受 `streamable_http` 和 `sse`。Yuxi 不支持 `stdio`，包括内置 MCP 和直接传入的运行时配置；历史 `stdio` 配置会被禁用，应迁移为远程服务。
+管理接口只接受 `streamable_http` 和 `sse`。Pisuan 不支持 `stdio`，包括内置 MCP 和直接传入的运行时配置；历史 `stdio` 配置会被禁用，应迁移为远程服务。
 
 ## 添加远程 MCP
 
@@ -59,7 +59,7 @@ MCP 配置从 PostgreSQL 读取，工具对象按配置哈希缓存。修改连�
 
 内置 DeepWiki 使用 `deepwiki-official` 标识，通过 `https://mcp.deepwiki.com/mcp` 提供 Streamable HTTP 服务，无需认证即可查询公开 GitHub 仓库。详见 [DeepWiki 官方文档](https://docs.devin.ai/work-with-devin/deepwiki-mcp)。
 
-开发者在 [`builtin.py`](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/agents/mcp/builtin.py) 的 `BUILTIN_MCP_SERVERS` 中添加固定远程定义：
+开发者在 [`builtin.py`](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/agents/mcp/builtin.py) 的 `BUILTIN_MCP_SERVERS` 中添加固定远程定义：
 
 ```python
 BUILTIN_MCP_SERVERS = {

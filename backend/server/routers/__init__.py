@@ -64,7 +64,7 @@ router.include_router(workspace_knowledge)  # /api/workspace/knowledge/* 工作�
 from server.routers.domain_factory_router import domain_factory
 from server.routers.domain_entity_builder_router import domain_entity_builder
 from server.routers.entity_type_router import entity_types
-from yuxi.extensions.regulation_library.router import regulation_library
+from pisuan.extensions.regulation_library.router import regulation_library
 
 router.include_router(domain_factory)  # /api/domain-factory/* 领域知识工厂
 router.include_router(domain_entity_builder)  # /api/domain-entity-builder/* 领域实体构建器

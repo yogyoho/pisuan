@@ -1,11 +1,11 @@
 x-api-worker-env: &api-worker-env
   HOST_IP: ${HOST_IP:-}
   RUNNING_IN_DOCKER: "true"
-  YUXI_ENV: development
+  PISUAN_ENV: development
   API_KEY_DERIVATION_SECRET: ${API_KEY_DERIVATION_SECRET:?Set API_KEY_DERIVATION_SECRET in .env [v0.7.2+], or rerun `bash scripts/init.sh`.}
-  RAPIDOCR_MODEL_DIR: /home/yuxi/.cache/rapidocr/models
+  RAPIDOCR_MODEL_DIR: /home/pisuan/.cache/rapidocr/models
   # DBs and other services
-  POSTGRES_URL: ${POSTGRES_URL:-postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-yuxi}}
+  POSTGRES_URL: ${POSTGRES_URL:-postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pisuan}}
   REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
   NEO4J_URI: ${NEO4J_URI:-bolt://graph:7687}
   NEO4J_USERNAME: ${NEO4J_USERNAME:-neo4j}
@@ -30,10 +30,10 @@ x-api-worker-env: &api-worker-env
   RUN_EVENTS_STREAM_TTL_SECONDS: ${RUN_EVENTS_STREAM_TTL_SECONDS:-7200}
   READINESS_PROBE_TIMEOUT_SECONDS: ${READINESS_PROBE_TIMEOUT_SECONDS:-2}
   READINESS_CACHE_TTL_SECONDS: ${READINESS_CACHE_TTL_SECONDS:-1}
-  YUXI_CORS_ORIGINS: ${YUXI_CORS_ORIGINS:-}
-  YUXI_DATASET_PERSIST_BATCH_SIZE: ${YUXI_DATASET_PERSIST_BATCH_SIZE:-1}
-  YUXI_SKILL_DATA_DIR: /app/skill-sources
-  YUXI_SKILL_PROJECTION_DIR: /app/skill-projections
+  PISUAN_CORS_ORIGINS: ${PISUAN_CORS_ORIGINS:-}
+  PISUAN_DATASET_PERSIST_BATCH_SIZE: ${PISUAN_DATASET_PERSIST_BATCH_SIZE:-1}
+  PISUAN_SKILL_DATA_DIR: /app/skill-sources
+  PISUAN_SKILL_PROJECTION_DIR: /app/skill-projections
   # 其他环境变量
   NO_PROXY: localhost,127.0.0.1,milvus,graph,minio,etcd,mineru,paddlex,sandbox-provisioner,api.siliconflow.cn
   no_proxy: localhost,127.0.0.1,milvus,graph,minio,etcd,mineru,paddlex,sandbox-provisioner,api.siliconflow.cn
@@ -50,37 +50,37 @@ services:
     build:
       context: .
       dockerfile: docker/api.Dockerfile
-    image: ${COMPOSE_PROJECT_NAME:-yuxi}-api:${YUXI_VERSION:-0.7.3}
+    image: ${COMPOSE_PROJECT_NAME:-pisuan}-api:${PISUAN_VERSION:-0.7.3}
     working_dir: /app
     user: "1000:1000"
     volumes:
       - ./backend/server:/app/server
       - ./backend/package:/app/package
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/threads
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/pisuan/threads
         target: /app/user-data
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/skill-sources
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/pisuan/skill-sources
         target: /app/skill-sources
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/skill-projections
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/pisuan/skill-projections
         target: /app/skill-projections
       - ./backend/test:/app/test
       - ./backend/scripts:/app/scripts
       - ./docker/sandbox_provisioner:/app/docker/sandbox_provisioner:ro
     ports:
-      - "${YUXI_API_PORT:-5050}:5050"
+      - "${PISUAN_API_PORT:-5050}:5050"
     networks:
       - app-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
     env_file:
-      - ${YUXI_ENV_FILE:-.env}
+      - ${PISUAN_ENV_FILE:-.env}
     # region api_envs
     environment:
       <<: *api-worker-env
-      YUXI_RUNTIME_DIR: /app/runtime/api
-      YUXI_USER_DATA_DIR: /app/user-data
+      PISUAN_RUNTIME_DIR: /app/runtime/api
+      PISUAN_USER_DATA_DIR: /app/user-data
       POSTGRES_POOL_SIZE: ${API_POSTGRES_POOL_SIZE:-120}
       POSTGRES_MAX_OVERFLOW: ${API_POSTGRES_MAX_OVERFLOW:-40}
       POSTGRES_POOL_TIMEOUT_SECONDS: ${API_POSTGRES_POOL_TIMEOUT_SECONDS:-30}
@@ -112,20 +112,20 @@ services:
     build:
       context: .
       dockerfile: docker/api.Dockerfile
-    image: ${COMPOSE_PROJECT_NAME:-yuxi}-api:${YUXI_VERSION:-0.7.3}
+    image: ${COMPOSE_PROJECT_NAME:-pisuan}-api:${PISUAN_VERSION:-0.7.3}
     working_dir: /app
     user: "1000:1000"
     volumes:
       - ./backend/server:/app/server
       - ./backend/package:/app/package
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/threads
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/pisuan/threads
         target: /app/user-data
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/skill-sources
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/pisuan/skill-sources
         target: /app/skill-sources
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/skill-projections
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/pisuan/skill-projections
         target: /app/skill-projections
       - ./backend/test:/app/test
       - ./backend/scripts:/app/scripts
@@ -137,11 +137,11 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     env_file:
-      - ${YUXI_ENV_FILE:-.env}
+      - ${PISUAN_ENV_FILE:-.env}
     environment:
       <<: *api-worker-env
-      YUXI_RUNTIME_DIR: /app/runtime/worker
-      YUXI_USER_DATA_DIR: /app/user-data
+      PISUAN_RUNTIME_DIR: /app/runtime/worker
+      PISUAN_USER_DATA_DIR: /app/user-data
       ARQ_MAX_JOBS: ${ARQ_MAX_JOBS:-140}
       REDIS_MAX_CONNECTIONS: ${WORKER_REDIS_MAX_CONNECTIONS:-256}
       POSTGRES_POOL_SIZE: ${WORKER_POSTGRES_POOL_SIZE:-120}
@@ -173,33 +173,33 @@ services:
     build:
       context: .
       dockerfile: docker/api.Dockerfile
-    image: ${COMPOSE_PROJECT_NAME:-yuxi}-api:${YUXI_VERSION:-0.7.3}
+    image: ${COMPOSE_PROJECT_NAME:-pisuan}-api:${PISUAN_VERSION:-0.7.3}
     working_dir: /app
     user: "0:0"
     volumes:
       - ./backend/package:/app/package:ro
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/yuxi
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/pisuan
         target: /app/legacy-saves
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/threads
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/pisuan/threads
         target: /app/user-data
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/skill-sources
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/pisuan/skill-sources
         target: /app/skill-sources
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/skill-projections
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/pisuan/skill-projections
         target: /app/skill-projections
     networks:
       - app-network
     env_file:
-      - ${YUXI_ENV_FILE:-.env}
+      - ${PISUAN_ENV_FILE:-.env}
     environment:
       <<: *api-worker-env
-      YUXI_RUNTIME_DIR: /app/runtime/storage-migrator
-      YUXI_LEGACY_STORAGE_DIR: /app/legacy-saves
-      YUXI_USER_DATA_DIR: /app/user-data
-    command: uv run --no-sync --no-dev python -m yuxi.storage_migration
+      PISUAN_RUNTIME_DIR: /app/runtime/storage-migrator
+      PISUAN_LEGACY_STORAGE_DIR: /app/legacy-saves
+      PISUAN_USER_DATA_DIR: /app/user-data
+    command: uv run --no-sync --no-dev python -m pisuan.storage_migration
     restart: "no"
     depends_on:
       postgres:
@@ -209,19 +209,19 @@ services:
     build:
       context: ./docker/sandbox_provisioner
       dockerfile: Dockerfile
-    image: ${COMPOSE_PROJECT_NAME:-yuxi}-sandbox-provisioner:${YUXI_VERSION:-0.7.3}
+    image: ${COMPOSE_PROJECT_NAME:-pisuan}-sandbox-provisioner:${PISUAN_VERSION:-0.7.3}
     volumes:
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/threads
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/pisuan/threads
         target: /app/user-data
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/skill-projections
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/pisuan/skill-projections
         target: /app/skill-projections
       - ./docker/sandbox_provisioner/app.py:/app/app.py:ro
       - ${SANDBOX_ENV_FILE:-./docker/sandbox_provisioner/sandbox.env}:/app/sandbox.env:ro
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
-      - "127.0.0.1:${YUXI_SANDBOX_PORT:-8002}:8002"
+      - "127.0.0.1:${PISUAN_SANDBOX_PORT:-8002}:8002"
     networks:
       app-network:
         # 动态接入沙盒网络时保留管理端口的默认路由。
@@ -252,18 +252,18 @@ services:
       - HTTPS_PROXY=${SANDBOX_HTTPS_PROXY:-}
       - NO_PROXY=localhost,127.0.0.1,host.docker.internal
       # Docker backend only
-      - DOCKER_NETWORK_PREFIX=${SANDBOX_DOCKER_NETWORK_PREFIX:-${COMPOSE_PROJECT_NAME:-yuxi}-sandbox}
+      - DOCKER_NETWORK_PREFIX=${SANDBOX_DOCKER_NETWORK_PREFIX:-${COMPOSE_PROJECT_NAME:-pisuan}-sandbox}
       - DOCKER_ADDRESS_POOL=${SANDBOX_DOCKER_ADDRESS_POOL:-10.253.240.0/20}
       - DOCKER_SUBNET_PREFIX=${SANDBOX_DOCKER_SUBNET_PREFIX:-28}
       - DOCKER_USER_DATA_HOST_PATH=${SANDBOX_DOCKER_USER_DATA_HOST_PATH:-}
       - DOCKER_SKILL_PROJECTIONS_HOST_PATH=${SANDBOX_DOCKER_SKILL_PROJECTIONS_HOST_PATH:-}
-      - DOCKER_SANDBOX_PREFIX=${SANDBOX_DOCKER_SANDBOX_PREFIX:-${COMPOSE_PROJECT_NAME:-yuxi}-sandbox}
+      - DOCKER_SANDBOX_PREFIX=${SANDBOX_DOCKER_SANDBOX_PREFIX:-${COMPOSE_PROJECT_NAME:-pisuan}-sandbox}
       # Kubernetes backend only
-      - K8S_NAMESPACE=${SANDBOX_K8S_NAMESPACE:-yuxi-know}
+      - K8S_NAMESPACE=${SANDBOX_K8S_NAMESPACE:-pisuan-know}
       - NODE_HOST=${SANDBOX_NODE_HOST:-host.docker.internal}
       - KUBECONFIG_PATH=${KUBECONFIG_PATH:-}
-      - USER_DATA_PVC=${USER_DATA_PVC:-yuxi-user-data}
-      - SKILLS_PVC=${SKILLS_PVC:-yuxi-skills}
+      - USER_DATA_PVC=${USER_DATA_PVC:-pisuan-user-data}
+      - SKILLS_PVC=${SKILLS_PVC:-pisuan-skills}
     command: >
       sh -lc "python -c 'import docker' >/dev/null 2>&1 || pip install --no-cache-dir 'docker>=7.1.0';
       uvicorn app:app --host 0.0.0.0 --port 8002"
@@ -283,7 +283,7 @@ services:
       context: .
       dockerfile: docker/web.Dockerfile
       target: development
-    image: ${COMPOSE_PROJECT_NAME:-yuxi}-web:${YUXI_VERSION:-0.7.3}
+    image: ${COMPOSE_PROJECT_NAME:-pisuan}-web:${PISUAN_VERSION:-0.7.3}
     volumes:
       - ./web/src:/app/src
       - ./web/test:/app/test
@@ -291,7 +291,7 @@ services:
       - ./web/index.html:/app/index.html
       - ./web/vite.config.js:/app/vite.config.js
     ports:
-      - "${YUXI_WEB_PORT:-5173}:5173"
+      - "${PISUAN_WEB_PORT:-5173}:5173"
     depends_on:
       - api
     networks:
@@ -306,14 +306,14 @@ services:
   graph:
     image: neo4j:5.26.29
     ports:
-      - "127.0.0.1:${YUXI_NEO4J_HTTP_PORT:-7474}:7474"
-      - "127.0.0.1:${YUXI_NEO4J_BOLT_PORT:-7687}:7687"
+      - "127.0.0.1:${PISUAN_NEO4J_HTTP_PORT:-7474}:7474"
+      - "127.0.0.1:${PISUAN_NEO4J_BOLT_PORT:-7687}:7687"
     volumes:
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/neo4j/data
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/neo4j/data
         target: /data
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/neo4j/logs
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/neo4j/logs
         target: /logs
     healthcheck:
       test: ["CMD-SHELL", "cypher-shell -a bolt://localhost:7687 -u ${NEO4J_USERNAME:-neo4j} -p ${NEO4J_PASSWORD:-0123456789} 'RETURN 1;' >/dev/null || exit 1"]
@@ -341,7 +341,7 @@ services:
       - ETCD_SNAPSHOT_COUNT=50000
     volumes:
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/milvus/etcd
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/milvus/etcd
         target: /etcd
     command: etcd -advertise-client-urls=http://etcd:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
     healthcheck:
@@ -361,10 +361,10 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
     volumes:
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/milvus/minio
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/milvus/minio
         target: /data
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/milvus/minio_config
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/milvus/minio_config
         target: /root/.minio
     command: minio server /data --address 0.0.0.0:9000 --console-address 0.0.0.0:9001
     healthcheck:
@@ -374,8 +374,8 @@ services:
       retries: 5
       start_period: 30s
     ports:
-      - "127.0.0.1:${YUXI_MINIO_API_PORT:-9000}:9000"
-      - "127.0.0.1:${YUXI_MINIO_CONSOLE_PORT:-9001}:9001"
+      - "127.0.0.1:${PISUAN_MINIO_API_PORT:-9000}:9000"
+      - "127.0.0.1:${PISUAN_MINIO_CONSOLE_PORT:-9001}:9001"
     networks:
       - app-network
     restart: unless-stopped
@@ -388,7 +388,7 @@ services:
     # 硬上界终会被合法增长击穿，击穿模式是 OOM→重启→重加载→再 OOM 的循环。
     # cpus 上限同时让内置 maxprocs 按 cgroup quota 收敛 GOMAXPROCS。
     logging: *default-logging
-    cpus: ${YUXI_MILVUS_CPUS:-2}
+    cpus: ${PISUAN_MILVUS_CPUS:-2}
     security_opt:
       - seccomp:unconfined
     environment:
@@ -398,10 +398,10 @@ services:
       MINIO_SECRET_ACCESS_KEY: ${MINIO_SECRET_KEY:-minioadmin}
     volumes:
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/milvus/milvus
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/milvus/milvus
         target: /var/lib/milvus
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/milvus/logs
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/milvus/logs
         target: /var/lib/milvus/logs
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
@@ -410,8 +410,8 @@ services:
       timeout: 30s
       retries: 5
     ports:
-      - "127.0.0.1:${YUXI_MILVUS_PORT:-19530}:19530"
-      - "127.0.0.1:${YUXI_MILVUS_HEALTH_PORT:-9091}:9091"
+      - "127.0.0.1:${PISUAN_MILVUS_PORT:-19530}:19530"
+      - "127.0.0.1:${PISUAN_MILVUS_HEALTH_PORT:-9091}:9091"
     depends_on:
       - "etcd"
       - "minio"
@@ -423,18 +423,18 @@ services:
     image: postgres:16
     command: ["postgres", "-c", "max_connections=${POSTGRES_MAX_CONNECTIONS:-600}"]
     ports:
-      - "127.0.0.1:${YUXI_POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${PISUAN_POSTGRES_PORT:-5432}:5432"
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - POSTGRES_DB=${POSTGRES_DB:-yuxi}
+      - POSTGRES_DB=${POSTGRES_DB:-pisuan}
       - TZ=${TZ:-Asia/Shanghai}
     volumes:
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/postgresql
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/postgresql
         target: /var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-yuxi} || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-pisuan} || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 30
@@ -445,7 +445,7 @@ services:
   redis:
     image: redis:7.4.10-alpine
     ports:
-      - "127.0.0.1:${YUXI_REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:${PISUAN_REDIS_PORT:-6379}:6379"
     command: redis-server --appendonly yes
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -454,7 +454,7 @@ services:
       retries: 10
     volumes:
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/redis
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/redis
         target: /data
     networks:
       - app-network
@@ -465,13 +465,13 @@ services:
     build:
       context: .
       dockerfile: docker/mineru.Dockerfile
-    image: ${COMPOSE_PROJECT_NAME:-yuxi}-mineru:latest
+    image: ${COMPOSE_PROJECT_NAME:-pisuan}-mineru:latest
     profiles:
       - all
     env_file:
-      - ${YUXI_ENV_FILE:-.env}
+      - ${PISUAN_ENV_FILE:-.env}
     ports:
-      - "127.0.0.1:${YUXI_MINERU_PORT:-30001}:30001"
+      - "127.0.0.1:${PISUAN_MINERU_PORT:-30001}:30001"
     environment:
       MINERU_MODEL_SOURCE: local
       VLLM_USE_V1: "1"
@@ -503,15 +503,15 @@ services:
     build:
       context: .
       dockerfile: docker/paddlex.Dockerfile
-    image: ${COMPOSE_PROJECT_NAME:-yuxi}-paddlex:latest
+    image: ${COMPOSE_PROJECT_NAME:-pisuan}-paddlex:latest
     profiles:
       - all
     volumes:
       - type: bind
-        source: ${YUXI_STATE_DIR:-./docker/volumes}/paddlex
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/paddlex
         target: /paddlex
     ports:
-      - "127.0.0.1:${YUXI_PADDLEX_PORT:-8080}:8080"
+      - "127.0.0.1:${PISUAN_PADDLEX_PORT:-8080}:8080"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
       interval: 20s

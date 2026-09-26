@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：bug-fix
-Owner：backend/package/yuxi/storage/postgres/models_knowledge.py
+Owner：backend/package/pisuan/storage/postgres/models_knowledge.py
 
 ## 问题
 
@@ -28,4 +28,4 @@ Knowledge 与 Evaluation 模型的 `DateTime(timezone=True)` 字段曾由 naive 
 
 - `docker compose exec api uv run --group test pytest test/integration/services/test_schema_migration_version.py -q`：7 passed；真实 PostgreSQL 临时 Schema 覆盖非 UTC 写入，并从独立 UTC session 回读持久化时间。
 - `docker compose exec api uv run --group test pytest test/unit -m "not slow" -q`：1652 passed，44 skipped。
-- `docker compose exec -e RUFF_CACHE_DIR=/tmp/yuxi-ruff-cache api uv run ruff check package/yuxi/knowledge/eval/service.py package/yuxi/repositories/knowledge_file_repository.py package/yuxi/storage/postgres/models_knowledge.py`：通过。
+- `docker compose exec -e RUFF_CACHE_DIR=/tmp/pisuan-ruff-cache api uv run ruff check package/pisuan/knowledge/eval/service.py package/pisuan/repositories/knowledge_file_repository.py package/pisuan/storage/postgres/models_knowledge.py`：通过。

@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：simplification
-Owner：backend/package/yuxi/services/chat_service.py
+Owner：backend/package/pisuan/services/chat_service.py
 
 ## 问题
 
@@ -22,7 +22,7 @@ Owner：backend/package/yuxi/services/chat_service.py
 
 正式实验的主指标为 ASGI 接到 POST、鉴权与正文解析之前，到 Worker 首次进入 HTTPX.send 的耗时。测试探针只在实验 Compose 入口装配；终点早于实际 socket 写出，不代表供应商已经收到。它与 shipping 的持久化指标分开解释。
 
-[首次模型请求记录器](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/agents/callbacks/model_request_timing.py)在 LangChain `on_chat_model_start` 捕获 Run 的首次时间。自定义 Agent callback 统一归属 `agents/callbacks`，不独立建 service 或保留转发模块；聊天与 Worker 直接装配回调，持久化约束仍由 repository 拥有。有效 lease owner 在终态前 write-once 保存 `first_model_request_at`；已发起调用的 `cancel_requested` Run 也可由当前 owner 补写。写入失败保持 best-effort，不改变业务结果；崩溃导致缺失时明确计数。结果 API 的 `first_model_request_latency_ms` 从 Run 创建计起，与主表的 API 接入→HTTP 发送口径不同，回调也不等于 HTTP 发送入口。
+[首次模型请求记录器](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/agents/callbacks/model_request_timing.py)在 LangChain `on_chat_model_start` 捕获 Run 的首次时间。自定义 Agent callback 统一归属 `agents/callbacks`，不独立建 service 或保留转发模块；聊天与 Worker 直接装配回调，持久化约束仍由 repository 拥有。有效 lease owner 在终态前 write-once 保存 `first_model_request_at`；已发起调用的 `cancel_requested` Run 也可由当前 owner 补写。写入失败保持 best-effort，不改变业务结果；崩溃导致缺失时明确计数。结果 API 的 `first_model_request_latency_ms` 从 Run 创建计起，与主表的 API 接入→HTTP 发送口径不同，回调也不等于 HTTP 发送入口。
 
 Callback 归位不改变实现、触发点或持久化规则，对应单测位于 `backend/test/unit/agents/callbacks/`。Alpha `uv run --no-sync --group test pytest test/unit -m 'not slow' -q --disable-warnings` 为 1862 passed、52 skipped；真实 PG 用例 `test/integration/services/test_agent_run_lease.py::test_first_model_request_timing_survives_owner_cancellation` 在 `--confcutdir=test/integration/services` 下通过，保留用例自身数据库准备、owner 反例、最终回读与清理。完整 integration 初始化在通用 `ensure_live_api_schema` 的事件循环关闭阶段等待，未算通过；聚焦执行仅排除与该 PG 用例无关的上级自动 fixture。旧 callback service 路径无残留，Ruff、文档构建及独立 Review 通过；不重新执行付费模型评测。
 
@@ -30,12 +30,12 @@ Callback 归位不改变实现、触发点或持久化规则，对应单测位�
 
 | 执行边界与 Owner | 保留的最小优化 | 不变的约束 |
 | --- | --- | --- |
-| [Skill 投影](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/agents/skills/service.py) | 锁内比较路径、类型、执行位与内容，未变则跳过 staging 复制及删除 | fd-relative、no-follow、跨进程锁及锁内授权重读不变；非法来源清理旧投影并失败，非法目标重建 |
-| [SubAgent 工具](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/agents/middlewares/subagent_task.py) | 进程内只复用四个不可变输入 Schema | 工具实例、动态描述、闭包与父 Run 上下文逐次创建 |
-| [聊天服务](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/services/chat_service.py) | 复用同 Run manifest 的规范化配置，直接调用拥有查询的 repository | 线程归属、Agent 可见性和 executor 权限不缓存、不跳过 |
-| [短期事件发布](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/services/run_queue_service.py) | XADD 与 EXPIRE 使用一次非事务 pipeline | 发布顺序、事件 ID 与 TTL 保留；PostgreSQL 终态不依赖 Redis 成功 |
-| [PostgreSQL checkpoint factory](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/storage/postgres/manager.py) | 每次构图创建独立 saver，连接池继续按进程共享 | 单图内 saver 锁、SQL、持久化频率及迁移 advisory lock 不变 |
-| [Worker](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/services/run_worker.py) 与 [ARQ 适配](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/services/arq_worker.py) | 50 ms 轮询；仅过滤本进程尚未完成的 Task | 其余候选保持原序；Redis 队列、竞争、容量预留、重试、清理和 PG lease 继续由原 Owner 执行 |
+| [Skill 投影](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/agents/skills/service.py) | 锁内比较路径、类型、执行位与内容，未变则跳过 staging 复制及删除 | fd-relative、no-follow、跨进程锁及锁内授权重读不变；非法来源清理旧投影并失败，非法目标重建 |
+| [SubAgent 工具](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/agents/middlewares/subagent_task.py) | 进程内只复用四个不可变输入 Schema | 工具实例、动态描述、闭包与父 Run 上下文逐次创建 |
+| [聊天服务](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/services/chat_service.py) | 复用同 Run manifest 的规范化配置，直接调用拥有查询的 repository | 线程归属、Agent 可见性和 executor 权限不缓存、不跳过 |
+| [短期事件发布](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/services/run_queue_service.py) | XADD 与 EXPIRE 使用一次非事务 pipeline | 发布顺序、事件 ID 与 TTL 保留；PostgreSQL 终态不依赖 Redis 成功 |
+| [PostgreSQL checkpoint factory](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/storage/postgres/manager.py) | 每次构图创建独立 saver，连接池继续按进程共享 | 单图内 saver 锁、SQL、持久化频率及迁移 advisory lock 不变 |
+| [Worker](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/services/run_worker.py) 与 [ARQ 适配](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/services/arq_worker.py) | 50 ms 轮询；仅过滤本进程尚未完成的 Task | 其余候选保持原序；Redis 队列、竞争、容量预留、重试、清理和 PG lease 继续由原 Owner 执行 |
 
 开发、生产和诊断入口复用同一 Worker 工厂，健康检查仍读取 WorkerSettings。ARQ 升级须运行真实 Redis 回归，依赖声明和锁文件变更已纳入 system-tests 触发路径。优化不将 Redis 提升为业务终态 Owner，也不改变 PostgreSQL 提交后才能投递的顺序。
 

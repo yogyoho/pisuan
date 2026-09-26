@@ -1,6 +1,6 @@
 import pytest
-from yuxi.storage.postgres.manager import pg_manager
-from yuxi.repositories.domain_factory_repository import DomainFactoryRepository
+from pisuan.storage.postgres.manager import pg_manager
+from pisuan.repositories.domain_factory_repository import DomainFactoryRepository
 
 
 @pytest.fixture(autouse=True)

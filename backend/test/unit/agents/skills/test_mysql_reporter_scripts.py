@@ -11,8 +11,8 @@ from types import ModuleType
 
 import pytest
 
-from yuxi.agents.skills.buildin import BUILTIN_SKILLS_DIR
-from yuxi.agents.skills.service import copy_skill_tree_no_symlinks
+from pisuan.agents.skills.buildin import BUILTIN_SKILLS_DIR
+from pisuan.agents.skills.service import copy_skill_tree_no_symlinks
 
 
 def _mysql_reporter_dir() -> Path:

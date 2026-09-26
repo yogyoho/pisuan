@@ -141,17 +141,17 @@ def install(probe, app=None):
         return
     _installed = True
     modules = (
-        "yuxi.services.agent_request_service",
-        "yuxi.services.agent_request_queue_service",
-        "yuxi.services.agent_run_manifest_service",
-        "yuxi.services.workdir_service",
-        "yuxi.services.memory_service",
-        "yuxi.services.run_queue_service",
-        "yuxi.agents.context",
-        "yuxi.agents.skills.runtime",
-        "yuxi.agents.skills.service",
-        "yuxi.agents.backends.composite",
-        "yuxi.agents.buildin.chatbot.graph",
+        "pisuan.services.agent_request_service",
+        "pisuan.services.agent_request_queue_service",
+        "pisuan.services.agent_run_manifest_service",
+        "pisuan.services.workdir_service",
+        "pisuan.services.memory_service",
+        "pisuan.services.run_queue_service",
+        "pisuan.agents.context",
+        "pisuan.agents.skills.runtime",
+        "pisuan.agents.skills.service",
+        "pisuan.agents.backends.composite",
+        "pisuan.agents.buildin.chatbot.graph",
         "server.utils.auth_middleware",
     )
     for name in modules:
@@ -159,7 +159,7 @@ def install(probe, app=None):
 
     replacements = {}
     for module_name, module in list(sys.modules.items()):
-        if module is None or not (module_name in modules or module_name.startswith("yuxi.repositories.")):
+        if module is None or not (module_name in modules or module_name.startswith("pisuan.repositories.")):
             continue
         for value in vars(module).copy().values():
             if inspect.isfunction(value) and value.__module__ == module_name:
@@ -171,7 +171,7 @@ def install(probe, app=None):
                         setattr(value, method_name, measured(method, probe.trace))
     # 同一函数可能以 from import 绑定到多个 consumer，均替换以覆盖实际装配路径。
     for module_name, module in list(sys.modules.items()):
-        if module is not None and module_name.startswith(("yuxi.", "server.")):
+        if module is not None and module_name.startswith(("pisuan.", "server.")):
             for name, value in vars(module).copy().items():
                 if inspect.isfunction(value) and value in replacements:
                     setattr(module, name, replacements[value])

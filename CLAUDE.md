@@ -9,7 +9,7 @@ This project uses OpenWolf for context management. Read and follow .wolf/OPENWOL
 
 # 项目目录结构 (Project Overview)
 
-Yuxi 是一个基于大模型的智能知识库与知识图谱智能体开发平台，融合了 RAG 技术与知识图谱技术，基于 LangGraph v1 + Vue.js + FastAPI + LightRAG 架构构建。项目完全通过 Docker Compose 进行管理，支持热重载开发。
+Pisuan 是一个基于大模型的智能知识库与知识图谱智能体开发平台，融合了 RAG 技术与知识图谱技术，基于 LangGraph v1 + Vue.js + FastAPI + LightRAG 架构构建。项目完全通过 Docker Compose 进行管理，支持热重载开发。
 
 架构代码地图见 [ARCHITECTURE.md](ARCHITECTURE.md)。修改不熟悉的模块前，先阅读其中的后端、前端、运行链路和架构不变量说明，再用符号搜索定位具体实现；该文档只维护相对稳定的系统边界，不替代细节文档或源码注释。
 
@@ -36,7 +36,7 @@ bash scripts/sync-upstream.sh  # Linux/macOS
 - `web/src/views/HomeView.vue` — pisuan 定制 Landing 首页
 - `web/src/views/LoginView.vue` — pisuan 定制登录页
 - `web/src/assets/css/base.css` / `base.dark.css` — 蓝色主题色
-- `backend/package/yuxi/config/static/info.template.yaml` — 华宇页脚
+- `backend/package/pisuan/config/static/info.template.yaml` — 华宇页脚
 
 ## Commands
 
@@ -69,15 +69,15 @@ python -c "import ast; ast.parse(open('path/to/file.py', encoding='utf-8').read(
 
 ## Architecture
 
-后端分两个顶层边界：`backend/server`（HTTP 适配层）和 `backend/package/yuxi`（可复用业务包）。新增业务逻辑优先放 `yuxi` 包中，路由层只做请求解析、认证和响应装配。
+后端分两个顶层边界：`backend/server`（HTTP 适配层）和 `backend/package/pisuan`（可复用业务包）。新增业务逻辑优先放 `pisuan` 包中，路由层只做请求解析、认证和响应装配。
 
 关键分层：
 - `server/routers` → HTTP 路由（薄层，按领域拆分，集中注册于 `__init__.py`）
-- `yuxi/services` → 用例层（串联 repositories、agents、knowledge）
-- `yuxi/repositories` → 数据库访问边界（SQLAlchemy，路由不应绕过 repository）
-- `yuxi/knowledge` → 知识库领域（`KnowledgeBaseManager` 分发到 LightRAG/Milvus/Dify 实现）
-- `yuxi/agents` → LangGraph 智能体体系（`BaseAgent` 基类 + `middlewares` 组合能力）
-- `yuxi/storage/postgres` → 数据模型与连接池
+- `pisuan/services` → 用例层（串联 repositories、agents、knowledge）
+- `pisuan/repositories` → 数据库访问边界（SQLAlchemy，路由不应绕过 repository）
+- `pisuan/knowledge` → 知识库领域（`KnowledgeBaseManager` 分发到 LightRAG/Milvus/Dify 实现）
+- `pisuan/agents` → LangGraph 智能体体系（`BaseAgent` 基类 + `middlewares` 组合能力）
+- `pisuan/storage/postgres` → 数据模型与连接池
 
 前端 `web/src` 结构：
 - `apis` → 唯一后端接口封装位置（组件不直接拼接 URL）

@@ -1,6 +1,6 @@
 # 上下文压缩机制
 
-长对话和大段工具结果会占用模型上下文。Yuxi 使用一个压力阈值控制自动压缩：请求达到阈值后先确定性压缩大工具结果，重新计量后仍达到同一阈值才调用摘要模型。配置入口见[智能体配置](../agents/agents-config.md)，中间件顺序见[中间件](../agents/middleware.md)。
+长对话和大段工具结果会占用模型上下文。Pisuan 使用一个压力阈值控制自动压缩：请求达到阈值后先确定性压缩大工具结果，重新计量后仍达到同一阈值才调用摘要模型。配置入口见[智能体配置](../agents/agents-config.md)，中间件顺序见[中间件](../agents/middleware.md)。
 
 ## 先记住三件事
 
@@ -24,7 +24,7 @@ flowchart TD
     State --> ModelSummary["system + tools + 摘要 + 最近原文 → 主模型"]
 ```
 
-入口阈值没有达到时，Yuxi 直接调用主模型。请求达到阈值后，确定性压缩先执行；压缩后的请求低于同一阈值时不调用摘要模型。主模型返回 `ContextOverflowError` 时，系统把它视为强制摘要信号。
+入口阈值没有达到时，Pisuan 直接调用主模型。请求达到阈值后，确定性压缩先执行；压缩后的请求低于同一阈值时不调用摘要模型。主模型返回 `ContextOverflowError` 时，系统把它视为强制摘要信号。
 
 ## 确定性工具结果压缩
 
@@ -101,12 +101,12 @@ Summary 触发使用近似 token 统计；主模型返回的 `usage_metadata` �
 
 ## 源码定位与验证
 
-- [Summary middleware](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/agents/middlewares/summary.py)
-- [主动压缩 service](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/services/context_compression_service.py)
-- [Agent state repository](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/repositories/agent_state_repository.py)
-- [Agent 配置](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/agents/context.py)
-- [Chatbot graph](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/agents/buildin/chatbot/graph.py)
-- [Token usage](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/agents/middlewares/token_usage.py)
+- [Summary middleware](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/agents/middlewares/summary.py)
+- [主动压缩 service](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/services/context_compression_service.py)
+- [Agent state repository](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/repositories/agent_state_repository.py)
+- [Agent 配置](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/agents/context.py)
+- [Chatbot graph](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/agents/buildin/chatbot/graph.py)
+- [Token usage](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/agents/middlewares/token_usage.py)
 - [Summary unit tests](https://github.com/xerrors/Yuxi/tree/main/backend/test/unit/middlewares)
 - [主动压缩 service tests](https://github.com/xerrors/Yuxi/blob/main/backend/test/unit/services/test_context_compression_service.py)
 - [真实模型 integration test](https://github.com/xerrors/Yuxi/blob/main/backend/test/integration/services/test_summary_middleware_real_model.py)

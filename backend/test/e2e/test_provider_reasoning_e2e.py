@@ -15,9 +15,9 @@ pytestmark = [pytest.mark.asyncio, pytest.mark.e2e, pytest.mark.slow]
 
 async def test_reasoning_stream_matches_persisted_history(e2e_client, e2e_headers, e2e_agent_context):
     """无工具的单次编码问答完成后，SSE 原文必须等于同一 Run 的持久化推理。"""
-    spec = os.getenv("YUXI_REASONING_E2E_MODEL")
+    spec = os.getenv("PISUAN_REASONING_E2E_MODEL")
     if not spec:
-        pytest.skip("显式配置 YUXI_REASONING_E2E_MODEL 后才调用真实模型")
+        pytest.skip("显式配置 PISUAN_REASONING_E2E_MODEL 后才调用真实模型")
     client, headers = e2e_client, e2e_headers
     slug = f"e2e-async-agent-reasoning-{uuid4().hex[:8]}"
     response = await client.post(
