@@ -279,5 +279,55 @@ class DirtyDstTest(unittest.TestCase):
         )
 
 
+class ResidueAllowlistTest(unittest.TestCase):
+    """12 项保留清单机检（2026-09-26 审计口径，详见 upstream-sync-guide 残余报告一节）。
+
+    这些行在机械改名后的 localized 树中作为残余 yuxi 存活：无保护词且任何规则
+    不命中。防两向漂移——规则误伤存活 token（行为断言）、清单与真实树脱节（存在断言）。
+    """
+
+    # (相对路径, 文件内存活 token, 改名后整行——rewrite_text 必须原样放行)
+    ALLOWLIST = [
+        ("backend/scripts/seed_initial_users.py", "yuxi123456",
+         'DEFAULT_USER_PASSWORD = "yuxi123456"'),
+        ("backend/scripts/seed_initial_users.py", "默认密码：yuxi123456",
+         'print("部门管理员和普通用户默认密码：yuxi123456")'),
+        ("backend/test/integration/services/test_live_api_cleanup_run_rows.py", "YUXI-TEST-ordinary",
+         'request_ids = [f"PISUAN_TEST_valid_{uuid.uuid4()}", f"YUXI-TEST-ordinary-{uuid.uuid4()}"]'),
+        ("docs/.vitepress/config.mts", "base: '/Yuxi/'",
+         "base: '/Yuxi/',"),
+        ("docs/.vitepress/config.mts", "href: '/Yuxi/favicon.svg'",
+         "['link', { rel: 'icon', href: '/Yuxi/favicon.svg' }],"),
+        ("docs/.vitepress/config.mts", "href: '/Yuxi/favicon.ico'",
+         "['link', { rel: 'alternate icon', href: '/Yuxi/favicon.ico' }],"),
+        ("docs/develop-guides/contributing.md", "Yuxi.git",
+         "git clone https://github.com/<your-username>/Yuxi.git"),
+        ("docs/develop-guides/parallel-worktree-environments.md", "Yuxi-prod",
+         "| `Yuxi-prod` | 独立生产环境，不参与开发 | 生产专用目录 |"),
+        ("docs/develop-guides/parallel-worktree-environments.md", "Yuxi-feature-a",
+         "cd ../Yuxi-feature-a"),
+        ("docs/develop-guides/parallel-worktree-environments.md", "cp ../Yuxi/.env",
+         "cp ../Yuxi/.env .env"),
+        ("docs/develop-guides/parallel-worktree-environments.md", "Yuxi-prod` 的 `.env",
+         "不要复制 `Yuxi-prod` 的 `.env`。"),
+        ("web/src/components/model-management/ModelProviderManagePanel.vue", "promo=YUXI",
+         'href="https://fluxionai.space/register?source=github&campaign=pisuan&promo=YUXI"'),
+    ]
+
+    def test_allowlist_entries_exist_in_tree(self):
+        """清单与真实树不脱节：每条目的文件与存活 token 仍在源语义树中。"""
+        for i, (rel, token, _) in enumerate(self.ALLOWLIST):
+            with self.subTest(entry=f"{i}: {rel}::{token}"):
+                text = (REPO_ROOT / rel).read_text(encoding="utf-8")
+                self.assertIn(token, text)
+
+    def test_allowlist_lines_rewrite_invariant(self):
+        """规则不误伤：任何规则演化都不得改写保留行（否则 localized 残余口径漂移）。"""
+        for i, (rel, token, line) in enumerate(self.ALLOWLIST):
+            with self.subTest(entry=f"{i}: {rel}::{token}"):
+                new, _ = rewrite_text(line)
+                self.assertEqual(new, line)
+
+
 if __name__ == "__main__":
     unittest.main()
