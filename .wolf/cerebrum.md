@@ -58,6 +58,7 @@
 - **v0.7.3 文件布局**：per-thread 目录已废除。宿主侧 = `get_user_data_dir()/shared/<uid>/workspace/<workdir>`（runtime 虚拟路径 `/home/gem/user-data/<workdir>`）；outputs 在 `<workdir>/outputs`。写"可展示的交付物"必须写进 Workdir outputs 并用 runtime 虚拟路径（`_workdir_outputs_paths` in tools.py 是标准入口）；写 `get_user_data_dir()/outputs` 这类全局目录前端无法展示。
 - **上游测试的集合断言**（test_builtin_discovery 等）枚举了"全部内置 preset/skill"，新增定制条目时必须同步把 slug 加进期望集合，否则全量回归必挂。
 - **docker exec 管道死锁**：`docker exec ... sh -c "pytest ... | tail"` 长跑会因 Windows 侧管道背压假死（进程活着但无输出）。长测试用容器内 nohup 落盘（`nohup ... > /tmp/pt.log 2>&1 &`）+ 轮询读文件。
+- **storage-migrator 一次性容器语义**：storage-migrator 是 init 容器（api/worker `depends_on: service_completed_successfully`），迁移完成后 Exited(0) 属正常状态，`docker compose ps` 显示 Exited 不是故障。`docker logs` 跨重启保留全部历史 traceback——判断它是否故障必须看 `docker inspect` 的 ExitCode/FinishedAt，别被日志尾部的旧报错骗。quiesce proof 文件（`docker/volumes/yuxi/.storage-migration-quiesced`）由迁移脚本用后清理；`main()` 先探测旧布局残留（requires_quiescence）才校验 proof，已迁移状态下无 proof 也幂等跳过。
 
 ## Do-Not-Repeat
 

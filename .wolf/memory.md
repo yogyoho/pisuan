@@ -2623,3 +2623,10 @@
 | 02:00 | 定位 run_worker 挂起真因：psycopg 池后台建连任务与 pytest-asyncio _cancel_all_tasks 互等死锁（最小复现确认），unit conftest 加 autouse 夹具在循环销毁前关池 | backend/test/unit/conftest.py | run_worker 52/52 过 | ~15k |
 | 02:40 | 发现两轮全量 pytest 并发运行且共用日志文件——此前 outline/run_worker 部分"挂起"观察被资源竞争污染；真实证据为最小复现（psycopg 池 cancel-all 死锁）。清理后以唯一日志重跑 | 无代码改动 | 待干净结果 | ~2k |
 | 03:00 | 全量跑暴露 _bound_loop 属性缺失误触发 DROP 路径（object.__new__ 测试实例被打成真池打真库）；守卫语义修正：未绑定过只采纳不丢弃 | storage/postgres/manager.py | storage 68/68、关键文件 57/57 过 | ~8k |
+| 03:40 | 推送落地：pisuan-custom force-with-lease 至 d1dcddb8（GitHub 瞬时断连后重试成功），main 快进 777875ff→dee83624；v0.7.3 同步全流程闭环 | git | origin 双分支同步完成 | ~1k |
+
+## Session: 2026-09-24 07:51
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:50 | 排查 storage-migrator 启动失败：确认为旧 traceback 残留+一次性容器 Exited(0) 属预期，最新运行 ExitCode=0，版本表 business=7/knowledge=2，全栈健康 | .wolf/buglog.json | 已记录 bug-129 | ~3k |

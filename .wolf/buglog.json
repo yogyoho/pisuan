@@ -4300,5 +4300,25 @@
     ],
     "occurrences": 5,
     "last_seen": "2026-08-20"
+  },
+  {
+    "id": "bug-129",
+    "timestamp": "2026-09-25T07:50:00+08:00",
+    "error_message": "pisuan-storage-migrator-1启动失败，错误日志：RuntimeError: 检测到旧文件数据；请先运行 scripts/migrate-storage.sh 停止旧运行环境",
+    "file": "backend/package/yuxi/storage_migration.py",
+    "root_cause": "非当前故障：docker logs 中的 RuntimeError 是 09-24 12:32 UTC（proof 文件尚不存在时）旧运行的残留日志；storage-migrator 是一次性 init 容器（api/worker depends_on service_completed_successfully），正常完成后 Exited(0) 属预期。迁移会话已消费 proof 文件，最新运行 requires_quiescence=False 且版本表已在目标（business=7/knowledge=2），6 秒退出 ExitCode=0",
+    "fix": "无需修复。诊断结论：docker logs 会跨重启保留历史 traceback，判断一次性容器是否故障必须看 docker inspect 的 ExitCode/FinishedAt 而非日志尾部",
+    "tags": [
+      "storage-migrator",
+      "one-shot-container",
+      "stale-log",
+      "docker-compose",
+      "v0.7.3"
+    ],
+    "related_bugs": [
+      "bug-121"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-09-25T07:50:00+08:00"
   }
 ]
