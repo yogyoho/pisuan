@@ -13,6 +13,15 @@
 
 $ErrorActionPreference = "Stop"
 
+# 前置守卫: 只允许在 pisuan-custom 分支运行——rebase 与双推均以它为对象,
+# 在别的分支运行会得到误导性报错甚至更新错分支
+$currentBranch = git branch --show-current
+if (-not $currentBranch) { $currentBranch = "detached HEAD" }
+if ($currentBranch -ne "pisuan-custom") {
+    Write-Host "⚠️  请切换到 pisuan-custom 分支后再运行 (当前分支: $currentBranch)。" -ForegroundColor Yellow
+    exit 1
+}
+
 Write-Host "==> [1/5] 拉取上游最新代码..." -ForegroundColor Cyan
 git fetch upstream
 if ($LASTEXITCODE -ne 0) { Write-Host "⚠️  拉取上游失败, 请检查网络。" -ForegroundColor Yellow; exit 1 }
