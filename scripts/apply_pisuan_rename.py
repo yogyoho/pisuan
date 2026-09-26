@@ -122,18 +122,23 @@ def rewrite_text(text: str) -> tuple[str, int]:
     return "".join(lines), count
 
 
-def residue_report(root: Path, files: list[Path]) -> list[str]:
-    """改名后仍含 yuxi 字样的位置（应全部落在保留清单内）。"""
+def residue_report(root: Path, files: list[Path]) -> tuple[list[str], int]:
+    """改名后仍含 yuxi 字样的位置（应全部落在保留清单内）, 连同非 UTF-8 跳过文件数。
+
+    与 main 的改写循环枚举同一份 files, 跳过集合恒等, 计数以此为单一来源。
+    """
     hits = []
+    skipped = 0
     for p in files:
         try:
             text = p.read_bytes().decode("utf-8")
         except UnicodeDecodeError:
+            skipped += 1
             continue  # 二进制文件
         for lineno, line in enumerate(text.splitlines(), 1):
             if "yuxi" in line.lower():
                 hits.append(f"{p.relative_to(root)}:{lineno}: {line.strip()[:120]}")
-    return hits
+    return hits, skipped
 
 
 def main() -> int:
@@ -142,9 +147,20 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="生成 yuxi→pisuan 机械改名层")
     ap.add_argument("--apply", action="store_true", help="实际执行（缺省 dry-run）")
     ap.add_argument("--root", default=None, help="仓库根（缺省取本脚本上上级目录）")
+    ap.add_argument("--allow-dirty", action="store_true", help="跳过脏工作树守卫")
     args = ap.parse_args()
 
     root = Path(args.root).resolve() if args.root else Path(__file__).resolve().parent.parent
+    if args.apply and not args.allow_dirty:
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no"],
+            cwd=root, capture_output=True, text=True, encoding="utf-8",
+        ).stdout.strip()
+        if dirty:
+            print("工作树有未提交改动, 拒绝 --apply（确认无误可用 --allow-dirty 跳过）:", file=sys.stderr)
+            for line in dirty.splitlines()[:20]:
+                print(f"  {line}", file=sys.stderr)
+            return 1
     moves = plan_dir_moves(tracked_files(root), root)
     applied = apply_dir_moves(root, moves) if args.apply else []
 
@@ -170,8 +186,12 @@ def main() -> int:
     for old, new in applied:
         print(f"  {old} -> {new}")
     print(f"内容改写文件: {changed}")
-    residues = residue_report(root, files)
-    print(f"残余 yuxi 位置: {len(residues)}")
+    residues, skipped = residue_report(root, files)
+    if args.apply:
+        print(f"残余 yuxi 位置: {len(residues)}")
+    else:
+        print(f"当前含 yuxi 位置: {len(residues)}（dry-run 未改写, 含将被改写的行）")
+    print(f"跳过非 UTF-8 文件: {skipped}")
     for h in residues:
         print(f"  {h}")
     return 0

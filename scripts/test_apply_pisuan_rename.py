@@ -73,14 +73,18 @@ class EndToEndTest(unittest.TestCase):
         (root / "packages/yuxi-cli").mkdir(parents=True)
         (root / "docs/superpowers/specs").mkdir(parents=True)
         (root / "backend/package/yuxi/core.py").write_text(
-            "from yuxi.storage import db\n# 上游 Yuxi 项目\n", encoding="utf-8"
+            "from yuxi.storage import db\n# 上游 Yuxi 项目\n", encoding="utf-8", newline=""
         )
-        (root / "packages/yuxi-cli/main.py").write_text("YUXI_API_PORT = 1\n", encoding="utf-8")
+        (root / "packages/yuxi-cli/main.py").write_text(
+            "YUXI_API_PORT = 1\n", encoding="utf-8", newline=""
+        )
         (root / "docs/guide.md").write_text(
-            "fork 自 xerrors/Yuxi\n见 backend/package/yuxi/README\n", encoding="utf-8"
+            "fork 自 xerrors/Yuxi\n见 backend/package/yuxi/README\n", encoding="utf-8", newline=""
         )
-        (root / "docs/superpowers/specs/design.md").write_text("yuxi 保持原貌\n", encoding="utf-8")
-        (root / "backend/uv.lock").write_text('name = "yuxi"\n', encoding="utf-8")
+        (root / "docs/superpowers/specs/design.md").write_text(
+            "yuxi 保持原貌\n", encoding="utf-8", newline=""
+        )
+        (root / "backend/uv.lock").write_text('name = "yuxi"\n', encoding="utf-8", newline="")
         (root / "scripts").mkdir()
         for name in ("apply_pisuan_rename.py", "test_apply_pisuan_rename.py"):
             shutil.copy2(REPO_ROOT / "scripts" / name, root / "scripts" / name)
@@ -106,6 +110,17 @@ class EndToEndTest(unittest.TestCase):
         return r.stdout
 
     def test_apply_renames_and_idempotent(self):
+        # dry-run: 零改动
+        dry = self._run()
+        self.assertIn("目录 mv 实际执行: 0", dry)
+        self.assertIn("当前含 yuxi 位置", dry)
+        self.assertIn("跳过非 UTF-8 文件: 0", dry)
+        for rel, expected in (
+            ("backend/package/yuxi/core.py", "from yuxi.storage import db\n# 上游 Yuxi 项目\n"),
+            ("backend/uv.lock", 'name = "yuxi"\n'),
+            ("docs/guide.md", "fork 自 xerrors/Yuxi\n见 backend/package/yuxi/README\n"),
+        ):
+            self.assertEqual((self.root / rel).read_bytes(), expected.encode("utf-8"))
         out = self._run("--apply")
         self.assertIn("backend/package/yuxi -> backend/package/pisuan", out)
         self.assertIn("packages/yuxi-cli -> packages/pisuan-cli", out)
@@ -121,8 +136,8 @@ class EndToEndTest(unittest.TestCase):
             "yuxi 保持原貌",
             (self.root / "docs/superpowers/specs/design.md").read_text(encoding="utf-8"),
         )
-        # 幂等: 复跑无任何新变化
-        out2 = self._run("--apply")
+        # 幂等: 复跑无任何新变化（首次 apply 后工作树必然是脏的, 需显式放行）
+        out2 = self._run("--apply", "--allow-dirty")
         self.assertIn("目录 mv 实际执行: 0", out2)
         self.assertIn("内容改写文件: 0", out2)
 
@@ -134,6 +149,28 @@ class EndToEndTest(unittest.TestCase):
                 (self.root / "scripts" / name).read_bytes(),
                 (REPO_ROOT / "scripts" / name).read_bytes(),
             )
+
+    def test_dirty_worktree_guard(self):
+        """--apply 遇未提交改动拒绝执行; --allow-dirty 显式放行。"""
+        core = self.root / "backend/package/yuxi/core.py"
+        core.write_text("from yuxi.storage import db\n# 上游 Yuxi 项目\ndirty = True\n", encoding="utf-8")
+        r = subprocess.run(
+            [sys.executable, str(SCRIPT), "--root", str(self.root), "--apply"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        )
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("拒绝", r.stderr)
+        self.assertTrue((self.root / "backend/package/yuxi").exists())
+        self.assertEqual(
+            core.read_text(encoding="utf-8"),
+            "from yuxi.storage import db\n# 上游 Yuxi 项目\ndirty = True\n",
+        )
+        out = self._run("--apply", "--allow-dirty")
+        self.assertIn("backend/package/yuxi -> backend/package/pisuan", out)
+        self.assertTrue((self.root / "backend/package/pisuan/core.py").exists())
 
 
 if __name__ == "__main__":
