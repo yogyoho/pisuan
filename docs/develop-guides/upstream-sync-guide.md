@@ -11,17 +11,17 @@ main ────────────→ 纯净镜像 upstream/main，禁止
     │
     │ git rebase --autostash main
     ▼
-pisuan-custom ───→ 领域知识库工厂 + 本地化定制（yuxi 命名空间），语义改动的唯一入口
+pisuan-custom ───→ 领域知识库工厂 + 本地化定制（yuxi 命名空间），语义改动的唯一入口 <!-- rename-keep -->
     │
     │ scripts/apply_pisuan_rename.py --apply（同步脚本第 5 步自动执行）
     ▼
-pisuan-localized ─→ pisuan-custom 顶端 + 1 个脚本生成的机械改名提交（yuxi→pisuan）
+pisuan-localized ─→ pisuan-custom 顶端 + 1 个脚本生成的机械改名提交（yuxi→pisuan） <!-- rename-keep -->
 ```
 
 | 分支 | 用途 | 规则 |
 |------|------|------|
 | `main` | 上游代码镜像 | **禁止直接提交**，仅由同步脚本经 `git fetch upstream main:main` 快进更新 |
-| `pisuan-custom` | 语义定制分支 | 所有定制代码在此分支（yuxi 命名空间），由脚本 rebase 到 main |
+| `pisuan-custom` | 语义定制分支 | 所有定制代码在此分支（yuxi 命名空间），由脚本 rebase 到 main | <!-- rename-keep -->
 | `pisuan-localized` | 机械改名层 | = pisuan-custom 顶端 + 脚本生成提交；**可丢弃可重建**；推送到 github `yogyoho/pisuan` |
 
 **双目录**：
@@ -40,8 +40,6 @@ pisuan-localized ─→ pisuan-custom 顶端 + 1 个脚本生成的机械改名�
 - **必须从 `pisuan-custom` 分支运行**（两脚本均有前置守卫，其他分支/detached HEAD 明确拒绝并显示当前分支）；
 - **容忍 `.wolf` 等跟踪文件的常态未提交改动**：main 更新用 `git fetch upstream main:main`（强制 ff、fail-closed、不触碰工作树），rebase 用 `--autostash`（脏改动自动收放）——无需手工 stash；
 - 上游无新提交时全链路为幂等 no-op（main 不动、rebase up-to-date、推送 Everything up-to-date、localized 重建提交跳过或仅差量）。
-
-### ⚠️ 上游历史重写的恢复流程（2026-08-20 实战记录）
 
 ### ⚠️ 上游历史重写的恢复流程（2026-08-20 实战记录）
 
@@ -68,10 +66,10 @@ git checkout pisuan-custom && git rebase main
 3. **合并 pyproject 后必须 `cd backend && uv lock`**：否则 Docker 构建 `uv sync --frozen` 因 manifest 哈希不匹配失败。
 4. **pytorch 等大包构建超时**：默认 `UV_HTTP_TIMEOUT=30s` 扛不住 torch（200MB+），docker/api.Dockerfile 已放宽至 600s；uv 的 `--no-cache` 使失败的 RUN 层整体重下，一次构建约 40 分钟，失败重试成本高。
 5. **镜像 tag 漂移**：新版 compose 默认 `YUXI_VERSION=0.7.2.dev0`，本地已有镜像是旧 tag；开发环境可在 .env 钉 `YUXI_VERSION=<已有tag>` + `--no-build` 重建容器，镜像重建等镜像源可用后再做（lock 的 wheel URL 若指向失效镜像源需换源重生）。
-5. **DB 遗留 lightrag 空库会硬失败**：上游把"使用中但不受支持的 KB 类型"从跳过改为启动失败，需备份后清理（`knowledge_bases_backup_lightrag_20260820`）。
-6. **上游可能彻底移除依赖**（v0.7.3 移除 torch、前端移除 lucide-vue-next/sigma/highlight.js）：定制侧对应配置随之失效是正常现象，不要"恢复"；上游新增替代机制（如 @lucide/vue、SKILL.md frontmatter 元数据、presets/ 目录自动发现）时，定制内容必须迁移到新机制而不是固守旧注册点。
-7. **rebase 冲突取 `--ours` 前先分清语义**：rebase 中 ours=上游新代码、theirs=定制提交。上游删掉的旧注册结构（如 BUILTIN_SKILLS 列表）取 ours 没问题，但定制**追加内容**（DDL、路由注册、依赖元数据）会随之丢失——rebase 结束后必须按清单校验定制最终态（grep domain_factory DDL、路由注册、writer preset、skill frontmatter），缺的从旧链 `git show <旧链>:<file>` 提取合入。
-8. **幽灵引用**：手工合并路由/导出注册时，以旧链**最终态**（`git show 227c8c1d:...`）为准，不要照搬中间定制提交的旧内容（如已废弃的 section_routing，会被 domain_entity_builder 取代），否则引入 ImportError。
+6. **DB 遗留 lightrag 空库会硬失败**：上游把"使用中但不受支持的 KB 类型"从跳过改为启动失败，需备份后清理（`knowledge_bases_backup_lightrag_20260820`）。
+7. **上游可能彻底移除依赖**（v0.7.3 移除 torch、前端移除 lucide-vue-next/sigma/highlight.js）：定制侧对应配置随之失效是正常现象，不要"恢复"；上游新增替代机制（如 @lucide/vue、SKILL.md frontmatter 元数据、presets/ 目录自动发现）时，定制内容必须迁移到新机制而不是固守旧注册点。
+8. **rebase 冲突取 `--ours` 前先分清语义**：rebase 中 ours=上游新代码、theirs=定制提交。上游删掉的旧注册结构（如 BUILTIN_SKILLS 列表）取 ours 没问题，但定制**追加内容**（DDL、路由注册、依赖元数据）会随之丢失——rebase 结束后必须按清单校验定制最终态（grep domain_factory DDL、路由注册、writer preset、skill frontmatter），缺的从旧链 `git show <旧链>:<file>` 提取合入。
+9. **幽灵引用**：手工合并路由/导出注册时，以旧链**最终态**（`git show 227c8c1d:...`）为准，不要照搬中间定制提交的旧内容（如已废弃的 section_routing，会被 domain_entity_builder 取代），否则引入 ImportError。
 
 
 
@@ -130,34 +128,36 @@ fetch origin → switch pisuan-localized → reset --hard origin/pisuan-custom
 
 ### 残余报告口径（2026-09-26 实测）
 
-改名后残余 yuxi 位置 **211 = 199 受保护行 + 12 项 allowlist**：
+改名后残余 yuxi 位置 **227 = 199 保护词行 + 16 文档自描述行 + 12 项 allowlist**： <!-- rename-keep -->
 
-- **199 受保护行**：含 `xerrors` / `上游` / `upstream` 关键词，属"对上游项目的指称"，裸词规则刻意不动（结构化标识符仍会改写）；
-- **12 项 allowlist**：无保护词且任何规则均不命中的存活 token，共 6 类：
+- **199 保护词行**：含 `xerrors` / `上游` / `upstream` 关键词，属"对上游项目的指称"，裸词规则刻意不动（结构化标识符仍会改写）；
+- **16 文档自描述行**：本指南 / CLAUDE.md / changelog 中以旧名为内容自描述改名的行（切换日指令、架构与口径自述），行内嵌 `<!-- rename-keep -->` 哨兵，整行逐字存活——行级保护，同文件真实路径照常改写；
+- **12 项 allowlist**：无保护词且任何规则均不命中的存活 token；与文档自描述行合计共 7 类：
 
 | 类别 | 处数 | 位置 | 保留原因 |
 |------|------|------|----------|
+| 文档自描述行哨兵 | 16 | 本指南 / `CLAUDE.md` / `changelog.md` | 行内嵌 `<!-- rename-keep -->` 整行逐字存活（改名指令/口径自述）；行级保护，不伤同文件真实路径 |
 | 种子账号默认口令字面量 | 2 | `backend/scripts/seed_initial_users.py` | 口令字符串值，改名即无法登录（仅限开发环境，见 六） |
-| 测试夹具请求 ID | 1 | `backend/test/integration/services/test_live_api_cleanup_run_rows.py` | `YUXI-TEST-*` 历史数据对账取值 |
-| 文档站部署 base 路径 | 3 | `docs/.vitepress/config.mts` | `/Yuxi/` 为 GitHub Pages 部署路径，改动即断链 |
+| 测试夹具请求 ID | 1 | `backend/test/integration/services/test_live_api_cleanup_run_rows.py` | `YUXI-TEST-*` 历史数据对账取值 | <!-- rename-keep -->
+| 文档站部署 base 路径 | 3 | `docs/.vitepress/config.mts` | `/Yuxi/` 为 GitHub Pages 部署路径，改动即断链 | <!-- rename-keep -->
 | 上游克隆指引 | 1 | `docs/develop-guides/contributing.md` | 指引用户克隆上游仓库 |
 | 平行 worktree 环境命名 | 4 | `docs/develop-guides/parallel-worktree-environments.md` | 既有环境目录名，非本仓标识符 |
-| 运营渠道参数 | 1 | `web/src/components/model-management/ModelProviderManagePanel.vue` | `promo=YUXI` 为渠道方定义的取值 |
+| 运营渠道参数 | 1 | `web/src/components/model-management/ModelProviderManagePanel.vue` | `promo=YUXI` 为渠道方定义的取值 | <!-- rename-keep -->
 
-**核对方法论**：任何新增残余行（不在上表且非受保护行）= 改名脚本漏改，处理纪律是修脚本规则 → 重新生成本地化层，**禁止在 pisuan-localized 手工修补**。allowlist 自身由 `scripts/test_apply_pisuan_rename.py` 的 `ResidueAllowlistTest` 机检（防规则误伤与清单脱节两向漂移）。
+**核对方法论**：新增受保护行（保护词行或哨兵行随文档演进增长）= 预期；未知 / allowlist 外新增残余 = 改名脚本漏改，处理纪律是修脚本规则 → 重新生成本地化层，**禁止在 pisuan-localized 手工修补**。allowlist 与哨兵行均由 `scripts/test_apply_pisuan_rename.py` 机检（`ResidueAllowlistTest` / `ProtectedDocLinesTest`，防规则误伤与清单脱节双向漂移）。
 
 ### 已知保留：数据库库名
 
-`POSTGRES_DB=yuxi_know` 不属 `YUXI_*` 变量交换范围（库名不是前缀命名空间），本次改造未含库名迁移，记为**已知保留**。如需彻底更名须 `ALTER DATABASE` + 停机窗口，属可选独立决策。
+`POSTGRES_DB=yuxi_know` 不属 `YUXI_*` 变量交换范围（库名不是前缀命名空间），本次改造未含库名迁移，记为**已知保留**。如需彻底更名须 `ALTER DATABASE` + 停机窗口，属可选独立决策。 <!-- rename-keep -->
 
 ## 四、切换日操作手册（一次性，时机另行拍板）
 
 1. 停旧栈（`C:\workspace\pisuan` 下 `docker compose down`）
 2. 备份：数据目录整体 copy + pg dump
 3. 迁移：
-   - `docker/volumes/yuxi` → `docker/volumes/pisuan`
-   - psql：`ALTER TABLE yuxi_schema_migrations RENAME TO pisuan_schema_migrations;`
-   - `.env` 全部 `YUXI_*` → `PISUAN_*`
+   - `docker/volumes/yuxi` → `docker/volumes/pisuan` <!-- rename-keep -->
+   - psql：`ALTER TABLE yuxi_schema_migrations RENAME TO pisuan_schema_migrations;` <!-- rename-keep -->
+   - `.env` 全部 `YUXI_*` → `PISUAN_*` <!-- rename-keep -->
 4. 在 `C:\workspace\pisuan-localized` 下 `docker compose up -d`（migrator 以改名后的表名读取 version 记录，迁移后即到位）
 5. 验证：三段测试 + 探针（见 五、六）
 6. **回滚路径**：compose down → 恢复备份目录与表名 → 旧目录原样拉起
@@ -165,7 +165,7 @@ fetch origin → switch pisuan-localized → reset --hard origin/pisuan-custom
 **实测缺口（T4 启动演练坐实，切换日必须补齐）：**
 
 - **Neo4j 章节模板种子迁移**：启动链只覆盖 Postgres，不播 Neo4j——不迁移则图谱章节模板功能为空，unit 4 个种子依赖用例必失败。切换日需从旧栈 Neo4j 导出章节模板种子导入新栈。
-- **库名保留**：`POSTGRES_DB=yuxi_know` 不随 `.env` 置换自动更名（见 三）。
+- **库名保留**：`POSTGRES_DB=yuxi_know` 不随 `.env` 置换自动更名（见 三）。 <!-- rename-keep -->
 - **探针口径**：`/health` 端点不存在（bug-273），以 `import pisuan` 路径检查 + `GET /api/system/ready` 全量 JSON + web 首页 200 为准。
 - **栈运行期间热写 pyc**：改名树运行时容器向 `backend/package/pisuan/**/__pycache__/` 热写 ignored 字节码，会物理占据重建目标路径（bug-272）。栈 down 后可选 scoped 清理：`git -C C:/workspace/pisuan-localized clean -fdX backend/package/pisuan`——**只许此等路径级清理，严禁 repo 级 `git clean -fdX`**（会抹掉 `.env` 与 bind-mount 部署数据）。改名脚本自身已内置"占据即 scoped 清理"逻辑，此步仅为运行时整洁。
 
@@ -183,8 +183,8 @@ e2e 已知限制：确定性回放路径依赖模型端点从容器内可达；�
 
 ## 六、品牌归属与账号安全
 
-- **campaign 归属（Minor-A）**：注册渠道链接 `fluxionai.space/...?campaign=pisuan` 的 `campaign=pisuan` 为 pisuan 侧投放归属参数；`promo=YUXI` 为渠道方定义的取值（在 12 项 allowlist 内，勿改）。统计口径按 `campaign=pisuan` 归属。
-- **种子账号口令（Minor-B）**：`seed_initial_users.py` 的 `DEFAULT_USER_PASSWORD = "yuxi123456"` 仅供开发环境种子；任何对外环境必须轮换。该字面量在改名 allowlist 内——若轮换口令须同步更新 `scripts/test_apply_pisuan_rename.py` 的 `ResidueAllowlistTest` fixtures。
+- **campaign 归属（Minor-A）**：注册渠道链接 `fluxionai.space/...?campaign=pisuan` 的 `campaign=pisuan` 为 pisuan 侧投放归属参数；`promo=YUXI` 为渠道方定义的取值（在 12 项 allowlist 内，勿改）。统计口径按 `campaign=pisuan` 归属。 <!-- rename-keep -->
+- **种子账号口令（Minor-B）**：`seed_initial_users.py` 的 `DEFAULT_USER_PASSWORD = "yuxi123456"` 仅供开发环境种子；任何对外环境必须轮换。该字面量在改名 allowlist 内——若轮换口令须同步更新 `scripts/test_apply_pisuan_rename.py` 的 `ResidueAllowlistTest` fixtures。 <!-- rename-keep -->
 
 ## 七、不可覆盖的本地定制清单
 
