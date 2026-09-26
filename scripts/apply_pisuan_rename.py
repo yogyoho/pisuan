@@ -8,6 +8,7 @@
 - 幂等: 重复执行不再产生变化
 - 显式模式表: 结构化标识符替换 + 带行保护的裸词替换, 不做盲目全局 sed
 - 只触碰 git 跟踪文件; 运行时数据/未跟踪文件归切换日手册处理
+  （唯一例外: ignored 残留物理占据改名目标时 scoped 清除, 见 clear_occupied_dst）
 
 用法:
   python scripts/apply_pisuan_rename.py           # dry-run: 只打印计划与残余报告
@@ -98,11 +99,39 @@ def shallowest_dir_moves(files: list[Path], root: Path) -> list[tuple[Path, Path
     return sorted(planned.items())
 
 
+def clear_occupied_dst(root: Path, dst_rel: str) -> None:
+    """dst 占据三分支裁决 (bug-272): dst.exists() 只查文件系统, 部署运行残留的
+    ignored 文件(pycache/egg-info) 物理占据目标路径时会被误判"已改名"而静默跳过,
+    产出半改树。
+
+    1. dst 被 tracked 内容占据 → 正常流程不可能到达, 状态异常, raise
+    2. dst 全为 ignored/untracked 残留 → scoped `git clean -fdX -- <dst>` 后放行;
+       仍被非 ignored 未跟踪文件占据 → raise 给出可行动路径
+    3. dst 不存在 → 直接放行 git mv
+    """
+    dst = root / dst_rel
+    if not dst.exists():
+        return
+    tracked = git(root, "ls-files", "--", dst_rel).strip()
+    if tracked:
+        raise RuntimeError(
+            f"目标路径被 git 跟踪内容占据, 正常流程不可能到达, 状态异常: {dst_rel}\n"
+            + "\n".join(f"  {line}" for line in tracked.splitlines()[:20])
+        )
+    git(root, "clean", "-fdX", "--", dst_rel)
+    if not dst.exists():
+        return
+    leftovers = sorted(p.relative_to(root).as_posix() for p in dst.rglob("*") if p.is_file())
+    raise RuntimeError(
+        f"目标路径被未跟踪文件占据, scoped clean 后仍存在, 请手动处理以下路径后重跑: {dst_rel}\n"
+        + "\n".join(f"  {p}" for p in (leftovers or [dst_rel])[:20])
+    )
+
+
 def apply_dir_moves(root: Path, moves: list[tuple[Path, Path]]) -> list[tuple[str, str]]:
     done = []
     for src, dst in moves:
-        if dst.exists():
-            continue  # 幂等: 已改名
+        clear_occupied_dst(root, dst.relative_to(root).as_posix())
         git(root, "mv", "--", str(src.relative_to(root)), str(dst.relative_to(root)))
         done.append((src.relative_to(root).as_posix(), dst.relative_to(root).as_posix()))
     return done
@@ -176,20 +205,9 @@ def plan_file_renames(rel_parts: list[tuple[str, ...]]) -> list[tuple[str, str]]
 def apply_file_renames(root: Path, plan: list[tuple[str, str]]) -> list[tuple[str, str]]:
     done = []
     for src, dst in plan:
-        if (root / dst).exists():
-            continue  # 幂等: 已改名
+        clear_occupied_dst(root, dst)  # 同 bug-272 规则: 文件基名改名路径审计同步修复
         git(root, "mv", "--", src, dst)
         done.append((src, dst))
-    return done
-
-
-def apply_dir_moves(root: Path, moves: list[tuple[Path, Path]]) -> list[tuple[str, str]]:
-    done = []
-    for src, dst in moves:
-        if dst.exists():
-            continue  # 幂等: 已改名
-        git(root, "mv", "--", str(src.relative_to(root)), str(dst.relative_to(root)))
-        done.append((src.relative_to(root).as_posix(), dst.relative_to(root).as_posix()))
     return done
 
 
