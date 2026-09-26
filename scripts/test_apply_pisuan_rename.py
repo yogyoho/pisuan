@@ -85,6 +85,13 @@ class EndToEndTest(unittest.TestCase):
             "yuxi 保持原貌\n", encoding="utf-8", newline=""
         )
         (root / "backend/uv.lock").write_text('name = "yuxi"\n', encoding="utf-8", newline="")
+        (root / "packages/yuxi-cli/src/yuxi_cli").mkdir(parents=True)
+        (root / "packages/yuxi-cli/src/yuxi_cli/main.py").write_text(
+            "from yuxi_cli.util import x\n", encoding="utf-8", newline=""
+        )
+        (root / "docs/public").mkdir(parents=True)
+        (root / "docs/public/yuxi-icon.svg").write_text("<svg/>\n", encoding="utf-8", newline="")
+        (root / "docs/yuxi-lockup-on-light.svg").write_text("<svg/>\n", encoding="utf-8", newline="")
         (root / "scripts").mkdir()
         for name in ("apply_pisuan_rename.py", "test_apply_pisuan_rename.py"):
             shutil.copy2(REPO_ROOT / "scripts" / name, root / "scripts" / name)
@@ -115,6 +122,10 @@ class EndToEndTest(unittest.TestCase):
         self.assertIn("目录 mv 实际执行: 0", dry)
         self.assertIn("当前含 yuxi 位置", dry)
         self.assertIn("跳过非 UTF-8 文件: 0", dry)
+        # dry-run 须展示嵌套闭包的完整计划与文件改名计划
+        self.assertIn("packages/yuxi-cli/src/yuxi_cli -> packages/pisuan-cli/src/pisuan_cli", dry)
+        self.assertIn("文件改名计划: 2", dry)
+        self.assertIn("文件改名实际执行: 0", dry)
         for rel, expected in (
             ("backend/package/yuxi/core.py", "from yuxi.storage import db\n# 上游 Yuxi 项目\n"),
             ("backend/uv.lock", 'name = "yuxi"\n'),
@@ -136,9 +147,19 @@ class EndToEndTest(unittest.TestCase):
             "yuxi 保持原貌",
             (self.root / "docs/superpowers/specs/design.md").read_text(encoding="utf-8"),
         )
+        # 嵌套目录两级都改名 + 文件基名改名
+        self.assertIn("packages/yuxi-cli/src/yuxi_cli -> packages/pisuan-cli/src/pisuan_cli", out)
+        self.assertIn("docs/public/yuxi-icon.svg -> docs/public/pisuan-icon.svg", out)
+        self.assertIn("docs/yuxi-lockup-on-light.svg -> docs/pisuan-lockup-on-light.svg", out)
+        self.assertEqual(
+            (self.root / "packages/pisuan-cli/src/pisuan_cli/main.py").read_text(encoding="utf-8"),
+            "from pisuan_cli.util import x\n",
+        )
+        self.assertTrue((self.root / "docs/public/pisuan-icon.svg").exists())
         # 幂等: 复跑无任何新变化（首次 apply 后工作树必然是脏的, 需显式放行）
         out2 = self._run("--apply", "--allow-dirty")
         self.assertIn("目录 mv 实际执行: 0", out2)
+        self.assertIn("文件改名实际执行: 0", out2)
         self.assertIn("内容改写文件: 0", out2)
 
     def test_tool_files_excluded_from_rewrite(self):
