@@ -93,7 +93,7 @@ def shallowest_dir_moves(files: list[Path], root: Path) -> list[tuple[Path, Path
         for i, part in enumerate(rel.parts[:-1]):
             if is_rename_dir(part):
                 src = root / Path(*rel.parts[: i + 1])
-                planned.setdefault(src, src.parent / part.replace("yuxi", "pisuan", 1))
+                planned.setdefault(src, src.parent / rewrite_text(part)[0])
                 break
     return sorted(planned.items())
 
@@ -141,7 +141,7 @@ def plan_dir_closure(rel_parts: list[tuple[str, ...]]) -> list[tuple[str, str]]:
         for parts in virt:
             for i in range(len(parts) - 1):
                 if is_rename_dir(parts[i]):
-                    hits.setdefault(tuple(parts[: i + 1]), parts[i].replace("yuxi", "pisuan", 1))
+                    hits.setdefault(tuple(parts[: i + 1]), rewrite_text(parts[i])[0])
                     break
         if not hits:
             return plan
