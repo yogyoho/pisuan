@@ -58,7 +58,7 @@
 
 ### pisuan 本地化改名与同步基建（2026-09-26）
 
-- 新增机械改名层 `pisuan-localized` 分支（= pisuan-custom 顶端 + 脚本生成的 yuxi→pisuan 改名提交，可随时重建）与配套改名脚本 `scripts/apply_pisuan_rename.py`（结构化标识符规则 + 保护行裸词规则 + 目录/文件 mv 嵌套闭包，确定性幂等，unittest 覆盖含 12 项保留清单机检）。同步脚本升级三分支流程：`git fetch upstream main:main` 强制 ff 更新 main（不触碰工作树）、`rebase --autostash` 容忍 `.wolf` 常态脏树、非 pisuan-custom 分支前置守卫明确拒绝、第 5 步自动重建 localized（重跑改名脚本 + backend 与 pisuan-cli 双 `uv lock` + force-with-lease 推送，失败降级不阻断主流程）。已通过真实同步演练：全链路 exit 0 零手工干预，改名层对相同语义输入字节级再生。改名脚本健壮性：dst 幂等判定升级 git 层——ignored 运行时残留（pycache 等）物理占据改名目标路径时自动 scoped 清理而非静默跳过，tracked 占据与不可清理占据显式报错（bug-272）；`git mv` 对 Windows 瞬时句柄锁退避重试。详见 [upstream-sync-guide](./upstream-sync-guide.md)（重写：三分支架构、残余报告口径 211=199+12、切换日操作手册含 Neo4j 种子迁移等四个实测缺口、测试基线口径）。
+- 新增机械改名层 `pisuan-localized` 分支（= pisuan-custom 顶端 + 脚本生成的 yuxi→pisuan 改名提交，可随时重建）与配套改名脚本 `scripts/apply_pisuan_rename.py`（结构化标识符规则 + 保护行裸词规则 + 目录/文件 mv 嵌套闭包，确定性幂等，unittest 覆盖含 12 项保留清单机检）。同步脚本升级三分支流程：`git fetch upstream main:main` 强制 ff 更新 main（不触碰工作树）、`rebase --autostash` 容忍 `.wolf` 常态脏树、非 pisuan-custom 分支前置守卫明确拒绝、第 5 步自动重建 localized（重跑改名脚本 + backend 与 pisuan-cli 双 `uv lock` + force-with-lease 推送，失败降级不阻断主流程）。已通过真实同步演练：全链路 exit 0 零手工干预，改名层对相同语义输入字节级再生。改名脚本健壮性：dst 幂等判定升级 git 层——ignored 运行时残留（pycache 等）物理占据改名目标路径时自动 scoped 清理而非静默跳过，tracked 占据与不可清理占据显式报错（bug-272）；`git mv` 对 Windows 瞬时句柄锁退避重试。详见 [upstream-sync-guide](./upstream-sync-guide.md)（重写：三分支架构、残余报告口径 227=199+16+12、切换日操作手册含 Neo4j 种子迁移等四个实测缺口、测试基线口径）改名脚本新增 `<!-- rename-keep -->` 文档自描述行哨兵：以旧名为内容自描述改名的文档行（切换日指令、口径自述）整行逐字存活，行级保护不伤同文件真实路径，实跑验证 16 行哨兵行逐字落地。 <!-- rename-keep -->
 
 ## v0.7.2 (2026-08-26)
 
