@@ -52,10 +52,14 @@ BARE_RULES = [
 ]
 PROTECTED_LINE = ("xerrors", "上游", "upstream")
 
-# 目录改名: 基名恰为 yuxi 或以 yuxi- 开头的跟踪目录
-# （已知命中: backend/package/yuxi、packages/yuxi-cli）
+# 目录改名: 基名恰为 yuxi 或以 yuxi- / yuxi_ 开头的跟踪目录, 嵌套闭包迭代至无命中
+# （已知命中: backend/package/yuxi、packages/yuxi-cli、packages/yuxi-cli/src/yuxi_cli）
 DIR_EXACT = "yuxi"
-DIR_PREFIX = "yuxi-"
+DIR_PREFIXES = ("yuxi-", "yuxi_")
+
+
+def is_rename_dir(name: str) -> bool:
+    return name == DIR_EXACT or name.startswith(DIR_PREFIXES)
 
 
 def git(root: Path, *args: str) -> str:
@@ -81,17 +85,102 @@ def tracked_files(root: Path) -> list[Path]:
     return paths
 
 
-def plan_dir_moves(files: list[Path], root: Path) -> list[tuple[Path, Path]]:
-    """收集需要改名的目录（每个文件命中最顶层组件即止）。"""
+def shallowest_dir_moves(files: list[Path], root: Path) -> list[tuple[Path, Path]]:
+    """收集当前各跟踪路径的最浅命中目录（每文件首个命中组件即止, 去重）。"""
     planned: dict[Path, Path] = {}
     for p in files:
         rel = p.relative_to(root)
         for i, part in enumerate(rel.parts[:-1]):
-            if part == DIR_EXACT or part.startswith(DIR_PREFIX):
+            if is_rename_dir(part):
                 src = root / Path(*rel.parts[: i + 1])
                 planned.setdefault(src, src.parent / part.replace("yuxi", "pisuan", 1))
                 break
     return sorted(planned.items())
+
+
+def apply_dir_moves(root: Path, moves: list[tuple[Path, Path]]) -> list[tuple[str, str]]:
+    done = []
+    for src, dst in moves:
+        if dst.exists():
+            continue  # 幂等: 已改名
+        git(root, "mv", "--", str(src.relative_to(root)), str(dst.relative_to(root)))
+        done.append((src.relative_to(root).as_posix(), dst.relative_to(root).as_posix()))
+    return done
+
+
+def apply_dir_closure(root: Path) -> list[tuple[str, str]]:
+    """真实执行嵌套闭包: 每轮重新枚举 ls-files 取最浅命中执行 git mv, 直至无命中。"""
+    done: list[tuple[str, str]] = []
+    while True:
+        executed = apply_dir_moves(root, shallowest_dir_moves(tracked_files(root), root))
+        if not executed:
+            return done
+        done.extend(executed)
+
+
+def original_parts(src: tuple[str, ...], plan: list[tuple[str, str]]) -> tuple[str, ...]:
+    """把当前虚拟坐标的目录沿已规划条目逆向映射回原始坐标。"""
+    parts = list(src)
+    for orig, final in reversed(plan):
+        final_parts = final.split("/")
+        if parts[: len(final_parts)] == final_parts:
+            parts = orig.split("/") + parts[len(final_parts):]
+    return tuple(parts)
+
+
+def plan_dir_closure(rel_parts: list[tuple[str, ...]]) -> list[tuple[str, str]]:
+    """dry-run 用的虚拟闭包规划, 条目为 (原始路径, 最终路径), 顺序即真实执行顺序。
+
+    每轮对各虚拟路径取最浅命中目录做前缀替换直至无命中; 深层目录在外层
+    改名后才会暴露, 故需迭代而非单轮 break。
+    """
+    virt = [list(parts) for parts in rel_parts]
+    plan: list[tuple[str, str]] = []
+    while True:
+        hits: dict[tuple[str, ...], str] = {}
+        for parts in virt:
+            for i in range(len(parts) - 1):
+                if is_rename_dir(parts[i]):
+                    hits.setdefault(tuple(parts[: i + 1]), parts[i].replace("yuxi", "pisuan", 1))
+                    break
+        if not hits:
+            return plan
+        for src in sorted(hits, key=len):
+            dst = src[:-1] + (hits[src],)
+            plan.append(("/".join(original_parts(src, plan)), "/".join(dst)))
+            for parts in virt:
+                if tuple(parts[: len(src)]) == src:
+                    parts[:] = list(dst) + parts[len(src):]
+
+
+def virtual_final_parts(rel_parts: tuple[str, ...], dir_plan: list[tuple[str, str]]) -> tuple[str, ...]:
+    """把原始路径按目录闭包计划映射为最终虚拟路径（深前缀优先应用）。"""
+    parts = list(rel_parts)
+    for src, dst in reversed(dir_plan):
+        src_parts = src.split("/")
+        if parts[: len(src_parts)] == src_parts:
+            parts = dst.split("/") + parts[len(src_parts):]
+    return tuple(parts)
+
+
+def plan_file_renames(rel_parts: list[tuple[str, ...]]) -> list[tuple[str, str]]:
+    """跟踪文件基名按同一套替换规则改名（路径单行, 无保护行场景）。"""
+    plan = []
+    for parts in rel_parts:
+        new_name, _ = rewrite_text(parts[-1])
+        if new_name != parts[-1]:
+            plan.append(("/".join(parts), "/".join(parts[:-1] + (new_name,))))
+    return sorted(plan)
+
+
+def apply_file_renames(root: Path, plan: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    done = []
+    for src, dst in plan:
+        if (root / dst).exists():
+            continue  # 幂等: 已改名
+        git(root, "mv", "--", src, dst)
+        done.append((src, dst))
+    return done
 
 
 def apply_dir_moves(root: Path, moves: list[tuple[Path, Path]]) -> list[tuple[str, str]]:
@@ -161,10 +250,22 @@ def main() -> int:
             for line in dirty.splitlines()[:20]:
                 print(f"  {line}", file=sys.stderr)
             return 1
-    moves = plan_dir_moves(tracked_files(root), root)
-    applied = apply_dir_moves(root, moves) if args.apply else []
+    files = tracked_files(root)
+    dir_plan = plan_dir_closure([p.relative_to(root).parts for p in files])
+    dir_done: list[tuple[str, str]] = []
+    file_plan: list[tuple[str, str]] = []
+    file_done: list[tuple[str, str]] = []
+    if args.apply:
+        dir_done = apply_dir_closure(root)
+        files = tracked_files(root)  # 目录改名后重新枚举
+        file_plan = plan_file_renames([p.relative_to(root).parts for p in files])
+        file_done = apply_file_renames(root, file_plan)
+        files = tracked_files(root)  # 文件改名后重新枚举
+    else:
+        file_plan = plan_file_renames(
+            [virtual_final_parts(p.relative_to(root).parts, dir_plan) for p in files]
+        )
 
-    files = tracked_files(root)  # 目录改名后重新枚举
     changed = 0
     for p in files:
         try:
@@ -179,12 +280,18 @@ def main() -> int:
 
     mode = "APPLY" if args.apply else "DRY-RUN"
     print(f"== pisuan 改名 [{mode}] ==")
-    print(f"目录 mv 计划: {len(moves)}")
-    for src, dst in moves:
-        print(f"  {src.relative_to(root).as_posix()} -> {dst.relative_to(root).as_posix()}")
-    print(f"目录 mv 实际执行: {len(applied)}")
-    for old, new in applied:
-        print(f"  {old} -> {new}")
+    print(f"目录 mv 计划: {len(dir_plan)}")
+    for src, dst in dir_plan:
+        print(f"  {src} -> {dst}")
+    print(f"目录 mv 实际执行: {len(dir_done)}")
+    for src, dst in dir_done:
+        print(f"  {src} -> {dst}")
+    print(f"文件改名计划: {len(file_plan)}")
+    for src, dst in file_plan:
+        print(f"  {src} -> {dst}")
+    print(f"文件改名实际执行: {len(file_done)}")
+    for src, dst in file_done:
+        print(f"  {src} -> {dst}")
     print(f"内容改写文件: {changed}")
     residues, skipped = residue_report(root, files)
     if args.apply:
