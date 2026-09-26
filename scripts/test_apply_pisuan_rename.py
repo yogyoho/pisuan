@@ -199,5 +199,71 @@ class EndToEndTest(unittest.TestCase):
         self.assertTrue((self.root / "backend/package/pisuan/core.py").exists())
 
 
+class DirtyDstTest(unittest.TestCase):
+    """bug-272: dst 被 ignored 残留占据时不得静默跳过 mv。
+
+    三分支裁决: tracked 占据 → raise; 全 ignored/untracked → scoped
+    `git clean -fdX` 后 mv; 仍被非 ignored 未跟踪文件占据 → raise 带可行动路径。
+    """
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        root = Path(self._tmp.name)
+        self.root = root
+        (root / "backend/package/yuxi").mkdir(parents=True)
+        (root / "backend/package/yuxi/core.py").write_text(
+            "from yuxi.storage import db\n", encoding="utf-8", newline=""
+        )
+        (root / ".gitignore").write_text("__pycache__/\n*.pyc\n", encoding="utf-8", newline="")
+        for args in (
+            ["init", "-q"],
+            ["add", "-A"],
+            ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init"],
+        ):
+            subprocess.run(["git", *args], cwd=root, check=True, capture_output=True)
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def _run(self, *extra: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [sys.executable, str(SCRIPT), "--root", str(self.root), *extra],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        )
+
+    def test_apply_clears_ignored_dst_occupation(self):
+        """dst 只有 ignored 残留(pycache) → scoped clean 后完成完整 mv。"""
+        pycache = self.root / "backend/package/pisuan/__pycache__"
+        pycache.mkdir(parents=True)
+        (pycache / "core.cpython-313.pyc").write_bytes(b"\x00junk")
+        r = self._run("--apply")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("backend/package/yuxi -> backend/package/pisuan", r.stdout)
+        self.assertFalse((self.root / "backend/package/yuxi").exists())
+        self.assertFalse(pycache.exists())  # ignored 占据被清除, 不混入改名结果
+        self.assertEqual(
+            (self.root / "backend/package/pisuan/core.py").read_text(encoding="utf-8"),
+            "from pisuan.storage import db\n",
+        )
+
+    def test_apply_raises_on_untracked_dst_occupation(self):
+        """dst 有非 ignored 未跟踪文件占据 → raise 且 exit≠0, 不做半改。"""
+        occupy = self.root / "backend/package/pisuan/manual.txt"
+        occupy.parent.mkdir(parents=True)
+        occupy.write_text("hands off\n", encoding="utf-8", newline="")
+        r = self._run("--apply")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("backend/package/pisuan", r.stderr)
+        self.assertIn("manual.txt", r.stderr)  # 可行动信息: 指出占据文件
+        self.assertTrue((self.root / "backend/package/yuxi").exists())  # 未做 mv
+        self.assertEqual(
+            (self.root / "backend/package/yuxi/core.py").read_text(encoding="utf-8"),
+            "from yuxi.storage import db\n",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
