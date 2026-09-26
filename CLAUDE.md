@@ -20,7 +20,7 @@ Yuxi 是一个基于大模型的智能知识库与知识图谱智能体开发平
 
 - **`main`** → 纯净跟踪 `upstream/main`，禁止直接提交定制代码
 - **`pisuan-custom`** → 所有本地定制（领域工厂 + 品牌 + 主题），定期 rebase 到 main
-- **`pisuan-localized`** → pisuan-custom 顶端 + 脚本生成的机械改名层（yuxi→pisuan），可随时重建，推送到 github yogyoho/pisuan；**禁止直接语义改动**，一切语义改动进 pisuan-custom
+- **`pisuan-localized`** → pisuan-custom 顶端 + 脚本生成的机械改名层（yuxi→pisuan），可随时重建，推送到 github yogyoho/pisuan；**禁止直接语义改动**，一切语义改动进 pisuan-custom <!-- rename-keep -->
 
 工作目录：`C:\workspace\pisuan`（日常工程）/ `C:\workspace\pisuan-localized`（改名衍生物，勿直接开发）。
 

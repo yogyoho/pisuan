@@ -12,7 +12,7 @@ import threading
 import unittest
 from pathlib import Path
 
-from scripts.apply_pisuan_rename import rewrite_text
+from scripts.apply_pisuan_rename import DOC_KEEP_MARKER, rewrite_text
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / "scripts" / "apply_pisuan_rename.py"
@@ -331,3 +331,30 @@ class ResidueAllowlistTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ProtectedDocLinesTest(unittest.TestCase):
+    """文档自描述行哨兵机检：行内嵌 <!-- rename-keep --> 的行必须被 rewrite_text 原样放行。
+
+    这些行以旧名为内容自描述改名（切换日指令、架构与口径自述），被机械规则改写
+    即自相矛盾。防两向漂移——哨兵行遭改写（行为断言）、哨兵被成片拆除（数量下限）。
+    """
+
+    DOC_FILES = (
+        "docs/develop-guides/upstream-sync-guide.md",
+        "CLAUDE.md",
+        "docs/develop-guides/changelog.md",
+    )
+
+    def test_marked_doc_lines_rewrite_invariant(self):
+        checked = 0
+        for rel in self.DOC_FILES:
+            text = (REPO_ROOT / rel).read_text(encoding="utf-8")
+            for line in text.splitlines(keepends=True):
+                if DOC_KEEP_MARKER not in line:
+                    continue
+                with self.subTest(file=rel, line=line.strip()[:60]):
+                    new, _ = rewrite_text(line)
+                    self.assertEqual(new, line)
+                checked += 1
+        self.assertGreaterEqual(checked, 16)
