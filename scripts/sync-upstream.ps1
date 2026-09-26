@@ -102,4 +102,4 @@ Write-Host "  pisuan-custom:    $(git rev-parse --short pisuan-custom)"
 Write-Host "  pisuan-localized: $(git -C $localizedDir rev-parse --short HEAD)"
 Write-Host "============================================" -ForegroundColor Green
 Write-Host "提醒：pisuan-localized 禁止手工语义改动（红线纪律）。"
-Write-Host "同步后验证清单见 docs/develop-guides/upstream-sync-guide.md 第五节。"
+Write-Host "同步后验证清单见 docs/develop-guides/upstream-sync-guide.md 同步后验证一节。"

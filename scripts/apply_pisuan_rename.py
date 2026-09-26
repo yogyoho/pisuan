@@ -53,6 +53,10 @@ BARE_RULES = [
     (r"(?<![\w._\-])Yuxi(?![\w./_\-])", "Pisuan"),
 ]
 PROTECTED_LINE = ("xerrors", "上游", "upstream")
+# 文档自描述行哨兵: 指南/CLAUDE.md/changelog 中以旧名为内容自描述改名的行
+# （切换日指令、残余口径、架构描述），行内嵌此标记即整行逐字存活（全部规则跳过）。
+# 行级保护: 同文件其他行照常改写, 真实树路径（如 backend/package/yuxi）不受影响。
+DOC_KEEP_MARKER = "<!-- rename-keep -->"
 
 # 目录改名: 基名恰为 yuxi 或以 yuxi- / yuxi_ 开头的跟踪目录, 嵌套闭包迭代至无命中
 # （已知命中: backend/package/yuxi、packages/yuxi-cli、packages/yuxi-cli/src/yuxi_cli）
@@ -234,19 +238,22 @@ def apply_file_renames(root: Path, plan: list[tuple[str, str]]) -> list[tuple[st
 def rewrite_text(text: str) -> tuple[str, int]:
     """应用全部替换规则, 返回 (新文本, 替换次数)。字节级保真（不动行尾）。"""
     count = 0
-    for pattern, repl in STRUCTURAL_RULES:
-        text, n = re.subn(pattern, repl, text)
-        count += n
-    lines = []
+    out = []
     for line in text.splitlines(keepends=True):
+        if DOC_KEEP_MARKER in line:
+            out.append(line)  # 文档自描述行: 整行逐字存活
+            continue
+        for pattern, repl in STRUCTURAL_RULES:
+            line, n = re.subn(pattern, repl, line)
+            count += n
         if any(k in line for k in PROTECTED_LINE):
-            lines.append(line)
+            out.append(line)
             continue
         for pattern, repl in BARE_RULES:
             line, n = re.subn(pattern, repl, line)
             count += n
-        lines.append(line)
-    return "".join(lines), count
+        out.append(line)
+    return "".join(out), count
 
 
 def residue_report(root: Path, files: list[Path]) -> tuple[list[str], int]:
