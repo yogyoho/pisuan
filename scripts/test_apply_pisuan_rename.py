@@ -1,0 +1,118 @@
+"""scripts/apply_pisuan_rename.py 的单元测试。
+
+运行（仓库根执行）: python -m unittest scripts.test_apply_pisuan_rename -v
+"""
+
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+from scripts.apply_pisuan_rename import rewrite_text
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SCRIPT = REPO_ROOT / "scripts" / "apply_pisuan_rename.py"
+
+
+class RewriteTextTest(unittest.TestCase):
+    """纯函数测试: 替换规则本体。"""
+
+    def test_structural_renames(self):
+        text, n = rewrite_text("from yuxi.storage import db\nimport yuxi.models\nYUXI_API_PORT = 1\n")
+        self.assertEqual(
+            text, "from pisuan.storage import db\nimport pisuan.models\nPISUAN_API_PORT = 1\n"
+        )
+        self.assertEqual(n, 3)
+
+    def test_bare_and_brand(self):
+        text, _ = rewrite_text('X = "yuxi"\n# Yuxi 是一个知识库平台\n')
+        self.assertEqual(text, 'X = "pisuan"\n# Pisuan 是一个知识库平台\n')
+
+    def test_url_and_data_path(self):
+        text, _ = rewrite_text("const u = new URL(url, 'http://yuxi.local')\nv: ./docker/volumes/yuxi\n")
+        self.assertEqual(
+            text, "const u = new URL(url, 'http://pisuan.local')\nv: ./docker/volumes/pisuan\n"
+        )
+
+    def test_protected_line(self):
+        """含上游指称的行: 裸词不动，结构化标识符照改。"""
+        text, _ = rewrite_text(
+            "fork 自 xerrors/Yuxi，同步上游 Yuxi 项目\n路径: backend/package/yuxi/config\n"
+        )
+        self.assertEqual(
+            text, "fork 自 xerrors/Yuxi，同步上游 Yuxi 项目\n路径: backend/package/pisuan/config\n"
+        )
+
+    def test_idempotent(self):
+        once, _ = rewrite_text("from yuxi.a import b  # yuxi\nsee http://yuxi.local/api\n")
+        twice, n = rewrite_text(once)
+        self.assertEqual(once, twice)
+        self.assertEqual(n, 0)
+
+
+class EndToEndTest(unittest.TestCase):
+    """临时 git 仓库端到端: 目录 mv + 内容重写 + 幂等。"""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        root = Path(self._tmp.name)
+        self.root = root
+        (root / "backend/package/yuxi").mkdir(parents=True)
+        (root / "packages/yuxi-cli").mkdir(parents=True)
+        (root / "docs/superpowers/specs").mkdir(parents=True)
+        (root / "backend/package/yuxi/core.py").write_text(
+            "from yuxi.storage import db\n# 上游 Yuxi 项目\n", encoding="utf-8"
+        )
+        (root / "packages/yuxi-cli/main.py").write_text("YUXI_API_PORT = 1\n", encoding="utf-8")
+        (root / "docs/guide.md").write_text(
+            "fork 自 xerrors/Yuxi\n见 backend/package/yuxi/README\n", encoding="utf-8"
+        )
+        (root / "docs/superpowers/specs/design.md").write_text("yuxi 保持原貌\n", encoding="utf-8")
+        (root / "backend/uv.lock").write_text('name = "yuxi"\n', encoding="utf-8")
+        for args in (
+            ["init", "-q"],
+            ["add", "-A"],
+            ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init"],
+        ):
+            subprocess.run(["git", *args], cwd=root, check=True, capture_output=True)
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def _run(self, *extra: str) -> str:
+        r = subprocess.run(
+            [sys.executable, str(SCRIPT), "--root", str(self.root), *extra],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"},  # Windows 管道默认 locale 编码, 强制子进程 UTF-8
+            check=True,
+        )
+        return r.stdout
+
+    def test_apply_renames_and_idempotent(self):
+        out = self._run("--apply")
+        self.assertIn("backend/package/yuxi -> backend/package/pisuan", out)
+        self.assertIn("packages/yuxi-cli -> packages/pisuan-cli", out)
+        self.assertEqual(
+            (self.root / "backend/package/pisuan/core.py").read_text(encoding="utf-8"),
+            "from pisuan.storage import db\n# 上游 Yuxi 项目\n",
+        )
+        self.assertEqual(
+            (self.root / "backend/uv.lock").read_text(encoding="utf-8"),
+            'name = "yuxi"\n',  # uv.lock 由 uv lock 重新生成, 脚本跳过
+        )
+        self.assertIn(
+            "yuxi 保持原貌",
+            (self.root / "docs/superpowers/specs/design.md").read_text(encoding="utf-8"),
+        )
+        # 幂等: 复跑无任何新变化
+        out2 = self._run("--apply")
+        self.assertIn("目录 mv 实际执行: 0", out2)
+        self.assertIn("内容改写文件: 0", out2)
+
+
+if __name__ == "__main__":
+    unittest.main()
