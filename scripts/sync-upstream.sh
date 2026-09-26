@@ -13,6 +13,7 @@
 # 冲突处理：
 #   脚本会自动 rebase，冲突时需要手动解决后执行:
 #     git add -A && git rebase --continue
+# 注意: 修改本脚本时须同步维持 scripts/sync-upstream.ps1 语义对齐
 # ============================================================
 
 set -euo pipefail
@@ -69,13 +70,12 @@ rebuild_localized() {
   else
     git -C "$LOCALIZED_DIR" commit -m "chore: 机械改名层 yuxi→pisuan（脚本重新生成）" || return 1
     git -C "$LOCALIZED_DIR" push github pisuan-localized --force-with-lease || return 1
+    echo "   ✅ pisuan-localized 已重建并推送"
   fi
   return 0
 }
 
-if rebuild_localized; then
-  echo "   ✅ pisuan-localized 已重建并推送"
-else
+if ! rebuild_localized; then
   echo "⚠️  localized 重建失败, pisuan-custom 已同步完成, 可稍后手动重建。"
 fi
 
