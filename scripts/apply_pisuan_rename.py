@@ -137,6 +137,8 @@ def residue_report(root: Path, files: list[Path]) -> list[str]:
 
 
 def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description="生成 yuxi→pisuan 机械改名层")
     ap.add_argument("--apply", action="store_true", help="实际执行（缺省 dry-run）")
     ap.add_argument("--root", default=None, help="仓库根（缺省取本脚本上上级目录）")
