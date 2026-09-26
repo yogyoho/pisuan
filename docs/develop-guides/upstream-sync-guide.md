@@ -306,5 +306,5 @@ docs/vibe/*.md       → 纯我们的文档，无冲突
 - [ ] 侧边栏有"领域工厂"导航入口
 - [ ] 页脚显示"北京华宇工程有限公司"
 - [ ] 领域工厂各页面正常加载
-- [ ] localized 重建成功（或明确降级原因）：三 tip 汇总行齐全，残余口径 211 = 199 + 12 无漂移
+- [ ] localized 重建成功（或明确降级原因）：三 tip 汇总行齐全，残余口径 227 = 199 保护词行 + 16 文档自描述行 + 12 项 allowlist，无漂移
 - [ ] `git ls-remote` 前后对比：pisuan-custom 与 pisuan-localized 新 tip 已上 GitHub

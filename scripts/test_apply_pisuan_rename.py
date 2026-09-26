@@ -12,6 +12,9 @@ import threading
 import unittest
 from pathlib import Path
 
+# 直跑本文件（python scripts/test_...py）时 sys.path[0] 是 scripts/，补仓库根使 scripts 包可导入
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from scripts.apply_pisuan_rename import DOC_KEEP_MARKER, rewrite_text
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -329,10 +332,6 @@ class ResidueAllowlistTest(unittest.TestCase):
                 self.assertEqual(new, line)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class ProtectedDocLinesTest(unittest.TestCase):
     """文档自描述行哨兵机检：行内嵌 <!-- rename-keep --> 的行必须被 rewrite_text 原样放行。
 
@@ -358,3 +357,7 @@ class ProtectedDocLinesTest(unittest.TestCase):
                     self.assertEqual(new, line)
                 checked += 1
         self.assertGreaterEqual(checked, 16)
+
+
+if __name__ == "__main__":
+    unittest.main()
