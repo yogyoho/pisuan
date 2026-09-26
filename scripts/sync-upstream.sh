@@ -18,6 +18,15 @@
 
 set -euo pipefail
 
+# 前置守卫: 只允许在 pisuan-custom 分支运行——rebase 与双推均以它为对象,
+# 在别的分支运行会得到误导性报错甚至更新错分支
+CURRENT_BRANCH=$(git branch --show-current) || { echo "⚠️  获取当前分支失败。"; exit 1; }
+if [ -z "$CURRENT_BRANCH" ]; then CURRENT_BRANCH="detached HEAD"; fi
+if [ "$CURRENT_BRANCH" != "pisuan-custom" ]; then
+  echo "⚠️  请切换到 pisuan-custom 分支后再运行 (当前分支: $CURRENT_BRANCH)。"
+  exit 1
+fi
+
 echo "==> [1/5] 拉取上游最新代码..."
 git fetch upstream || { echo "⚠️  拉取上游失败, 请检查网络。"; exit 1; }
 
