@@ -25,7 +25,9 @@ from pathlib import Path
 # 目录整体跳过（按路径组件名匹配）: .wolf 是会话元数据; docs/superpowers 是设计/计划
 # 文档本身, 其中对 yuxi 的引用是对改名对象的描述而非待改标识符
 SKIP_DIRS = {".git", ".wolf", "node_modules", "superpowers", ".venv"}
-SKIP_FILES = {"uv.lock"}  # 由 uv lock 重新生成, 不做文本替换
+# 文件整体跳过: uv.lock 由 uv lock 重新生成; 改名工具与其测试是对改名对象的描述
+# （含规则字面量/断言夹具）, 参与改写会自毁规则表与断言, 与 docs/superpowers 同理豁免
+SKIP_FILES = {"uv.lock", "apply_pisuan_rename.py", "test_apply_pisuan_rename.py"}
 SKIP_SUFFIXES = (".egg-info",)  # 路径组件以此结尾即跳过（构建产物）
 
 # 结构化替换: 带分隔符上下文的标识符（路径/导入/环境变量）, 任何行都改。
