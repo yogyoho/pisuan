@@ -29,10 +29,16 @@ SKIP_FILES = {"uv.lock"}  # 由 uv lock 重新生成, 不做文本替换
 SKIP_SUFFIXES = (".egg-info",)  # 路径组件以此结尾即跳过（构建产物）
 
 # 结构化替换: 带分隔符上下文的标识符（路径/导入/环境变量）, 任何行都改。
-# 否则代码跑不起来, 不受"上游指称"行保护约束
+# 否则代码跑不起来, 不受"上游指称"行保护约束。
+# 后三条覆盖嵌入形态: 类名(YuxiWorker)/HTTP 头(x-yuxi-uid)/临时路径(.yuxi/)/
+# 下划线嵌入(_message_chunk_yuxi_events); xerrors/Yuxi 的 Yuxi 前面是 "/",
+# 不在 lookbehind [\w.\-] 内, 上游指称依然安全
 STRUCTURAL_RULES = [
     (r"YUXI_(?=[A-Z0-9_])", "PISUAN_"),  # 环境变量名 YUXI_API_PORT 等
     (r"(?<![\w.\-])yuxi(?=[./_\-])", "pisuan"),  # yuxi. yuxi/ yuxi_ yuxi-
+    (r"Yuxi(?=[A-Z0-9])", "Pisuan"),  # 嵌入大写: YuxiWorker → PisuanWorker
+    (r"(?<=[\w.\-])yuxi", "pisuan"),  # 标识符嵌入: _yuxi_ .yuxi/ x-yuxi-uid
+    (r"(?<=[\w.\-])Yuxi", "Pisuan"),  # 嵌入大写: X-Yuxi-Preview → X-Pisuan-Preview
 ]
 
 # 裸词替换: 独立出现的 yuxi / Yuxi（导入尾词、引号内、品牌文案、路径末段）。
