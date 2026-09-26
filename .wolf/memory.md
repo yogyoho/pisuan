@@ -2656,3 +2656,4 @@
 | 11:56 | Edited backend/package/yuxi/storage/postgres/manager.py | 6→7 lines | ~99 |
 | 12:00 | 修复 ensure_business_schema 全新库三连雷（report_types 种子/索引顺序/DDL 缺列），迁移测试 9 passed；pt11 全量复跑中 | manager.py | 已修复 | ~12k |
 | 11:58 | Session end: 8 writes across 3 files (conftest.py, test_outline_producer.py, manager.py) | 4 reads | ~1158 tok |
+| 12:04 | Session end: 8 writes across 3 files (conftest.py, test_outline_producer.py, manager.py) | 5 reads | ~1158 tok |
