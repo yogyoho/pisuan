@@ -2630,3 +2630,29 @@
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 07:50 | 排查 storage-migrator 启动失败：确认为旧 traceback 残留+一次性容器 Exited(0) 属预期，最新运行 ExitCode=0，版本表 business=7/knowledge=2，全栈健康 | .wolf/buglog.json | 已记录 bug-129 | ~3k |
+| 10:00 | 上游增量同步 4 提交 rebase 零冲突；踩 schema 守卫死锁与 pytest 整树收集两坑，已记录 bug-130/131；三段测试重跑中 | backend/test, docker-compose.yml | 进行中 | ~15k |
+
+## Session: 2026-09-26 10:07
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-26 10:07
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:39 | Edited backend/test/unit/conftest.py | 7→9 lines | ~85 |
+| 10:43 | Edited backend/test/conftest.py | modified _dispose_pg_pools() | ~239 |
+| 10:35 | integration 段拆卸挂死=bug-128 同类未覆盖；夹具上移根 conftest 删 unit 版；pt9 三段重跑中 | backend/test/conftest.py | 进行中 | ~8k |
+| 10:45 | Session end: 2 writes across 1 files (conftest.py) | 2 reads | ~324 tok |
+| 11:11 | Session end: 2 writes across 1 files (conftest.py) | 2 reads | ~324 tok |
+| 11:34 | Edited backend/test/unit/services/test_outline_producer.py | expanded (+7 lines) | ~135 |
+| 11:45 | 挂死真因=测试未 mock system_options.get 致嵌套循环建真实池（bug-134）；已修，单文件 4 passed | test_outline_producer.py | 已修复 | ~6k |
+| 11:36 | Session end: 3 writes across 2 files (conftest.py, test_outline_producer.py) | 3 reads | ~459 tok |
+| 11:49 | Edited backend/package/yuxi/storage/postgres/manager.py | expanded (+6 lines) | ~248 |
+| 11:52 | Edited backend/package/yuxi/storage/postgres/manager.py | 5→6 lines | ~140 |
+| 11:53 | Edited backend/package/yuxi/storage/postgres/manager.py | 2→3 lines | ~86 |
+| 11:56 | Edited backend/package/yuxi/storage/postgres/manager.py | 6→10 lines | ~126 |
+| 11:56 | Edited backend/package/yuxi/storage/postgres/manager.py | 6→7 lines | ~99 |
+| 12:00 | 修复 ensure_business_schema 全新库三连雷（report_types 种子/索引顺序/DDL 缺列），迁移测试 9 passed；pt11 全量复跑中 | manager.py | 已修复 | ~12k |
+| 11:58 | Session end: 8 writes across 3 files (conftest.py, test_outline_producer.py, manager.py) | 4 reads | ~1158 tok |

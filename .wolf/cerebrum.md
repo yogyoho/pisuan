@@ -52,6 +52,14 @@
 - **ask_user_question 子 agent 全局禁用（subagent/graph.py:26 `_SUBAGENT_DISABLED_TOOLS`）→ 中继协议是正解（2026-07-20）：** data-survey-writer 要问缺数据但不能直接调 ask_user_question。修在 coal-eia-writer SKILL.md（在 BUILTIN_SKILLS，改完重启 worker + 新对话生效）：写手输出 `## MISSING_DATA` 结构化块 → 编排者解析后代调 ask_user_question。无独立 writer SKILL.md（目录都不存在），writer 行为由 DB system_prompt + 编排者 task 描述决定。
 
 
+### 2026-09-26 上游增量同步（dee83624→2def1d3a）
+
+- **同步后必做两步序**：上游若动 `BUSINESS_SCHEMA_VERSION`，api/worker 的 lifespan 守卫 `require_current_schema` 会在热重载时拒绝旧 schema 启动且不自愈（DB 修复不触发热重载）。顺序：`docker compose run --rm storage-migrator` → `docker restart pisuan-api-1 pisuan-worker-1`。只跑 migrator 不重启 = 容器停留在死态。
+- **pytest 禁止整树收集**：`pytest /app/test` 会因 unit/ 与 integration/ 下 3 对同名模块（test_builtin_discovery/test_mcp_router/test_memory_service）报 import file mismatch。必须按上游 run_tests.sh 分 scope：unit `-m "not slow"` / integration / e2e deterministic 各跑一次。
+- **load_chat_model 新签名**：v0.7.3 之后上游加了 keyword-only `uid: str | None = None`（供应商按用户用量统计），存量调用兼容；定制代码目前无直接调用点，但新增定制 agent 需要按用户计费统计时注意传 uid。
+- **ensure_business_schema 巨型语句列表的三条纪律**：向 `PostgresManager.ensure_business_schema` 的平铺 stmts 列表加语句时：(1) CREATE INDEX 必须排在其 CREATE TABLE 之后（列表是顺序执行，全新库上表未建先建索引直接炸）；(2) 建表 DDL 必须含全量列——ALTER ADD COLUMN 只为存量库补列，不能作为新库列的唯一来源；(3) 种子 INSERT 用 `INSERT...SELECT...WHERE NOT EXISTS` 而非 ON CONFLICT（同一张表在历史安装与新建库上的约束形态可能不同，ON CONFLICT 目标约束不一定存在）。
+- **同步测试里的嵌套 asyncio.run 是 flaky 地雷**：同步单测用 `asyncio.run()` 包异步代码时，任何未 mock 的 DB 路径（如 `system_options.get()`）都会把真实 psycopg 池拖进嵌套循环；`asyncio.run` 退出时 `_cancel_all_tasks` 与池 worker 取消重试竞态，表现为三态随机——挂死/teardown error/侥幸通过。判别靠 faulthandler（`kill -ABRT <pid>` 栈里出现 `_cancel_all_tasks`）；修复是把 DB 依赖 mock 在测试内（参照 test_context_auth 的 FakeSystemOptions 模式）。挂死诊断三板斧：`ps` 看 CPU 是否停滞 → 日志 mtime 是否冻结 → ABRT 取栈。
+
 ### 2026-09-24/25 v0.7.3 同步收尾
 
 - **pg_manager 跨事件循环**：psycopg AsyncConnectionPool / SQLAlchemy async engine 绑定创建时的 asyncio loop，无法迁移。pytest 每用例独立循环，全量跑任何"上个用例初始化、下个用例直接用"的组合都会 'Event loop is closed'。已在 `PostgresManager._ensure_loop_fresh` 统一守卫（get_async_session_context / setup_langgraph_checkpointer 入口），测试不要再复制 `_dispose` 里 `pg_manager.close(); _initialized=False` 的手工重置。

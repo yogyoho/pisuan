@@ -12,7 +12,7 @@
 
 - MCP 仅支持远程 SSE / Streamable HTTP，移除内置 `mcp-server-chart`，所有历史 stdio 配置停用；新增远程 DeepWiki，默认待管理员启用。MySQL 报表技能改用 Markdown 表格。自定义角色或 Skill 对旧图表 MCP 的引用需调整，详见 [MCP 集成](../agents/mcp-integration.md)。
 
-- 数据库一次迁移 business 2 → 7、knowledge 1 → 2，无需经过未发布的中间版本。先停机并成套备份，再运行迁移器，最后协调重启 API 与 worker；旧知识文件的无 owner 处理中间态会标记失败，需要显式重试。操作见[生产部署与升级](../advanced/deployment.md)。
+- 数据库一次迁移 business 2 → 8、knowledge 1 → 2，无需经过未发布的中间版本。先停机并成套备份，再运行迁移器，最后协调重启 API 与 worker；旧知识文件的无 owner 处理中间态会标记失败，需要显式重试。操作见[生产部署与升级](../advanced/deployment.md)。
 - 移除 LITE 模式，部署统一包含知识库、图谱和评估能力；原 LITE 实例须补齐完整拓扑资源。
 - Sandbox 默认使用 `core` 规格；网页自动化部署须配置 `SANDBOX_RUNTIME_PROFILE=browser`，需要 Jupyter、code-server 等完整服务时使用 `full`。配置方式见[升级指南](../advanced/deployment.md)。
 - 移除内置内容安全检查能力及其配置入口；需要内容审核的部署须自行接入相应策略。
@@ -21,6 +21,10 @@
 
 ### 功能与修复
 
+- 修复 Sandbox 内 grep 文件搜索在结果含 NUL 字符时传输截断的问题，搜索改走原生文件通道并合并结果。
+- 模型供应商支持按用户身份签名统计用量（`include_user_uid`），开启后可在供应商侧区分各用户的调用统计；数据库随之升级到 business schema 8，由迁移器自动补列。
+- 收敛 Agent E2E 测试范围与超时预算，明确单元/集成/E2E 分段执行约定（见 `backend/test/run_tests.sh`）。
+- 修复领域工厂 Schema 在全新数据库上的初始化阻断：`report_types` 种子语句不再依赖特定 ON CONFLICT 约束（历史安装与新建表的约束形态不同），`domain_factory_tasks` 的索引创建移到建表之后并补齐 DDL 缺失列（`raw_html`/`source_report_id`/`chapter_label`/`validation_report`），`domain_factory_learned_templates` 建表补齐 `canonical_chapter_key`。存量部署不受影响，新装环境此前会启动失败。
 - 深度研究 Skill 不再依赖 `html-preview`，默认在当前 Workdir 的 `outputs/` 目录生成独立、响应式的 HTML 阅读文档并作为交付物展示；宽屏可使用侧栏目录，窄屏隐藏或折叠侧栏，并可按内容需要使用外部图片等公开资源。来源在 HTML 中以普通链接呈现；用户明确指定其他格式时仍以用户要求为准。
 - 新增用户定时智能体任务（Beta），支持 cron、时区、独立 Project 和立即运行；重叠执行跳过，错过的触发合并处理。边界见[定时任务决策](./decisions/implemented/2026-08-26-user-agent-scheduled-tasks.md)。
 - 支持空闲线程主动压缩上下文；达到预算 85% 时提示操作。自动压缩统一使用一个阈值，大工具结果保留完整文件及模型可读摘要，检索预览保留来源信息。

@@ -1,11 +1,10 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-20T02:08:38.678Z
-> Files: 3 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-26T03:56:05.107Z
+> Files: 2 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
-- `tranquil-drifting-rossum.md` — 追赶上游 2 个新提交（9e2679b9 → 777875ff）+ 推送落地 (~337 tok)
 
 ## ../../tmp/
 
@@ -74,6 +73,9 @@
 
 
 ## backend/package/yuxi/agents/middlewares/
+
+
+## backend/package/yuxi/agents/presets/subagents/
 
 
 ## backend/package/yuxi/agents/skills/buildin/
@@ -168,6 +170,7 @@
 
 ## backend/package/yuxi/storage/postgres/
 
+- `manager.py` — PostgreSQL 数据库管理器 - 支持知识库和业务数据 (~27119 tok)
 
 ## backend/package/yuxi/utils/
 
@@ -237,6 +240,7 @@
 
 ## backend/test/unit/services/
 
+- `test_outline_producer.py` — test_group_assets_by_chapter_buckets_by_chapter, test_assemble_deterministic_outline_fields, test_ll (~1561 tok)
 
 ## backend/test/unit/storage/
 
@@ -279,8 +283,6 @@
 
 ## docs/develop-guides/
 
-- `changelog.md` — 版本变更记录 (~15766 tok)
-- `upstream-sync-guide.md` — 上游代码同步与本地化扩展实施方案 (~1560 tok)
 
 ## docs/intro/
 
@@ -323,9 +325,3 @@
 
 ## web/src/views/
 
-## backend/package/yuxi/agents/presets/subagents/
-
-- `chapter_writer.py` — 章节写手 AgentPreset（slug=chapter-writer，coal-eia 工具集，持久化铁律系统提示） (~350 tok)
-- `regulation_writer.py` — 法规标准写手 AgentPreset（模板型章节+KB 法规检索） (~300 tok)
-- `data_survey_writer.py` — 数据调查写手 AgentPreset（v2 写手） (~300 tok)
-- `prediction_writer.py` — 预测写手 AgentPreset（v2 写手） (~300 tok)

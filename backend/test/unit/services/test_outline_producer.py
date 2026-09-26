@@ -82,6 +82,13 @@ def test_llm_chapter_meta_parses_json_and_reuses_seed_key():
 
         with patch.object(
             mod, "select_model", return_value=type("M", (), {"call": AsyncMock(return_value=fake_resp)})()
+        ), patch.object(
+            # system_options.get 走真实 DB 会把 psycopg 池拖进嵌套 asyncio.run 的
+            # 事件循环，循环销毁时与池 worker 取消竞态（bug-132/133 同源），
+            # 纯解析测试必须隔离掉这条隐式 DB 依赖
+            mod,
+            "system_options",
+            type("O", (), {"get": AsyncMock(return_value={"default_model": "test:model"})}),
         ):
             out = asyncio.run(
                 svc._llm_chapter_meta(

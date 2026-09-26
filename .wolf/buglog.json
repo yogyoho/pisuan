@@ -4320,5 +4320,151 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-09-25T07:50:00+08:00"
+  },
+  {
+    "id": "bug-130",
+    "timestamp": "2026-09-26T10:00:00+08:00",
+    "error_message": "RuntimeError: Database schema migration is incomplete or incompatible: business=7 (required 8)；容器 unhealthy，宿主 curl 5050 返回 000",
+    "file": "backend/package/yuxi/storage/postgres/manager.py",
+    "root_cause": "上游 4 新提交把 BUSINESS_SCHEMA_VERSION 7→8；rebase 落盘触发 uvicorn 热重载，新代码 lifespan 的 require_current_schema 守卫拒绝 business=7 启动（正确行为）。而 migrator 升级 DB 不会触发热重载，uvicorn 停在死态不自愈",
+    "fix": "同步后按序：先 docker compose run --rm storage-migrator 升 schema，再 docker restart pisuan-api-1 pisuan-worker-1；顺序反了就是本次现象",
+    "tags": [
+      "upstream-sync",
+      "schema-version",
+      "hot-reload",
+      "uvicorn",
+      "require_current_schema"
+    ],
+    "related_bugs": [
+      "bug-129"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-09-26T10:00:00+08:00"
+  },
+  {
+    "id": "bug-131",
+    "timestamp": "2026-09-26T10:00:00+08:00",
+    "error_message": "pytest: Interrupted: 3 errors during collection — import file mismatch: imported module test_builtin_discovery has __file__ /app/test/integration/services/... which is not the same as test file /app/test/unit/agents/...",
+    "file": "backend/test/run_tests.sh",
+    "root_cause": "test/unit 与 test/integration 下存在 3 对同名测试模块（test_builtin_discovery/test_mcp_router/test_memory_service），整树一次 pytest 收集时 basename 冲突。上游 run_tests.sh 从不整树跑（unit/integration/e2e 三段分开），单文件或单 scope 跑不触发",
+    "fix": "遵守上游约定分 scope：pytest test/unit -m \"not slow\"；pytest test/integration；pytest test/e2e/test_deterministic_agent_path_e2e.py -m e2e。不要 pytest /app/test 一把梭",
+    "tags": [
+      "pytest",
+      "collection-error",
+      "basename-collision",
+      "test-scope",
+      "upstream-convention"
+    ],
+    "related_bugs": [],
+    "occurrences": 2,
+    "last_seen": "2026-09-26T10:00:00+08:00"
+  },
+  {
+    "id": "bug-132",
+    "timestamp": "2026-09-26T10:20:00+08:00",
+    "error_message": "pytest unit 段 1 error（2530 passed 无 failed）：ERROR at teardown of test_llm_chapter_meta_parses_json_and_reuses_seed_key — conftest.py:21 await pool.close(timeout=2) 内 psycopg worker q.get() CancelledError 泄漏",
+    "file": "backend/test/unit/conftest.py",
+    "root_cause": "bug-128 修复夹具 _dispose_pg_pools 的 pool.close(timeout=2) 在建连竞态下偶发 CancelledError；py3.8+ CancelledError 继承 BaseException，except Exception: pass 抓不住，导致 best-effort 清理反而报 teardown error",
+    "fix": "夹具改 except BaseException 并注明契约（循环随后销毁，清理失败不得影响测试结果）",
+    "tags": [
+      "pytest",
+      "teardown",
+      "CancelledError",
+      "psycopg-pool",
+      "conftest",
+      "asyncio"
+    ],
+    "related_bugs": [
+      "bug-128"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-09-26T10:20:00+08:00"
+  },
+  {
+    "id": "bug-133",
+    "timestamp": "2026-09-26T10:35:00+08:00",
+    "error_message": "integration 段 pytest 挂死 25 分钟（test_dataset_generation_resume_router 拆卸阶段）；faulthandler 栈：pytest_asyncio _scoped_runner.close → _cancel_all_tasks → run_forever/select",
+    "file": "backend/test/conftest.py",
+    "root_cause": "bug-128 的修复夹具 _dispose_pg_pools 只放在 test/unit/conftest.py，integration 段没有覆盖；集成测试同样创建 psycopg 池，拆卸时 _cancel_all_tasks 对重试建连的池 worker 取消无效导致永久挂起。与 bug-128 同类、不同 scope",
+    "fix": "夹具上移到根 backend/test/conftest.py（autouse，unit/integration/e2e 三段全覆盖），删除 test/unit/conftest.py；夹具同时按 bug-132 加固 except BaseException",
+    "tags": [
+      "pytest",
+      "hang",
+      "psycopg-pool",
+      "integration",
+      "conftest",
+      "pytest-asyncio"
+    ],
+    "related_bugs": [
+      "bug-128",
+      "bug-132"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-09-26T10:35:00+08:00"
+  },
+  {
+    "id": "bug-134",
+    "timestamp": "2026-09-26T11:45:00+08:00",
+    "error_message": "unit 段 pytest 挂死 45 分钟于 test_outline_producer；faulthandler 栈：test_outline_producer.py:86 asyncio.run → runners._cancel_all_tasks → run_forever/select",
+    "file": "backend/test/unit/services/test_outline_producer.py",
+    "root_cause": "test_llm_chapter_meta_parses_json_and_reuses_seed_key 只 mock 了 select_model/select_model_lazy，未 mock system_options.get——其真实实现走 DB → pg_manager 在嵌套 asyncio.run 的事件循环里创建真实 psycopg 池；asyncio.run 退出时 _cancel_all_tasks 与池 worker 取消重试竞态，为 flaky（昨日赢=通过、pt8 报 teardown CancelledError、pt9 挂死），与 bug-128/132/133 同源",
+    "fix": "测试补 patch system_options.get 返回 {\"default_model\": \"test:model\"}，纯解析测试彻底无 DB 依赖",
+    "tags": [
+      "pytest",
+      "hang",
+      "asyncio.run",
+      "system_options",
+      "psycopg-pool",
+      "flaky",
+      "nested-loop"
+    ],
+    "related_bugs": [
+      "bug-128",
+      "bug-132",
+      "bug-133"
+    ],
+    "occurrences": 2,
+    "last_seen": "2026-09-26T11:45:00+08:00"
+  },
+  {
+    "id": "bug-135",
+    "timestamp": "2026-09-26T12:00:00+08:00",
+    "error_message": "integration: asyncpg InvalidColumnReferenceError: there is no unique or exclusion constraint matching the ON CONFLICT specification（report_types 种子语句）",
+    "file": "backend/package/yuxi/storage/postgres/manager.py",
+    "root_cause": "report_types 种子 ON CONFLICT (code, domain_code) 依赖唯一约束，但当前 DDL 是 PK(code)（无该复合约束）；线上老表是 PK(id)+UNIQUE(code, domain_code) 旧形态所以侥幸能跑。全新部署首次 ensure_business_schema 必炸——潜伏的全新安装阻断 bug",
+    "fix": "种子改 INSERT...SELECT...WHERE NOT EXISTS (code=...) 写法，不依赖任何 ON CONFLICT 目标，新旧表形态下都幂等",
+    "tags": [
+      "schema",
+      "domain-factory",
+      "fresh-install",
+      "ON CONFLICT",
+      "idempotent",
+      "seed"
+    ],
+    "related_bugs": [
+      "bug-136"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-09-26T12:00:00+08:00"
+  },
+  {
+    "id": "bug-136",
+    "timestamp": "2026-09-26T12:00:00+08:00",
+    "error_message": "integration: UndefinedTableError relation domain_factory_tasks does not exist → 修复后又 UndefinedColumnError column source_report_id does not exist（均为 ensure_business_schema 内 CREATE INDEX idx_df_tasks_source_report 语句）",
+    "file": "backend/package/yuxi/storage/postgres/manager.py",
+    "root_cause": "两层缺陷叠加：(1) CREATE INDEX 排在 CREATE TABLE domain_factory_tasks 之前的列表位置，全新库表未建先建索引；(2) 建表 DDL 缺 raw_html/source_report_id/chapter_label/validation_report 四列（只靠 ALTER ADD COLUMN 对存量库演进），索引引用缺列。线上老库两样都侥幸成立",
+    "fix": "索引语句移到建表语句之后与 idx_df_tasks_domain/status 相邻；CREATE TABLE 补齐 4 列；learned_templates DDL 同步补 canonical_chapter_key",
+    "tags": [
+      "schema",
+      "domain-factory",
+      "statement-order",
+      "fresh-install",
+      "DDL-drift"
+    ],
+    "related_bugs": [
+      "bug-135"
+    ],
+    "occurrences": 2,
+    "last_seen": "2026-09-26T12:00:00+08:00"
   }
 ]

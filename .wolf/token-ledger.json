@@ -2,12 +2,12 @@
   "version": 1,
   "created_at": "2026-05-12T06:40:36.630Z",
   "lifetime": {
-    "total_tokens_estimated": 73902499,
-    "total_reads": 20341,
-    "total_writes": 29344,
-    "total_sessions": 78,
+    "total_tokens_estimated": 73904764,
+    "total_reads": 20355,
+    "total_writes": 29359,
+    "total_sessions": 80,
     "anatomy_hits": 7336,
-    "anatomy_misses": 12600,
+    "anatomy_misses": 12614,
     "repeated_reads_blocked": 32634,
     "estimated_savings_vs_bare_cli": 715446892
   },
@@ -280650,6 +280650,249 @@
         "reads_count": 3,
         "writes_count": 0,
         "repeated_reads_blocked": 2,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-09-24-0751",
+      "started": "2026-09-24T23:51:07.596Z",
+      "ended": "2026-09-26T01:59:43.861Z",
+      "reads": [
+        {
+          "file": "C:/Users/Lenovo/AppData/Local/Temp/claude/C--workspace-pisuan/29b93312-9079-4fc7-b65b-4c46b04a95ba/tasks/b1rrfw7z2.output",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/Users/Lenovo/AppData/Local/Temp/claude/C--workspace-pisuan/29b93312-9079-4fc7-b65b-4c46b04a95ba/tasks/bxwjd5g5v.output",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/Users/Lenovo/AppData/Local/Temp/claude/C--workspace-pisuan/29b93312-9079-4fc7-b65b-4c46b04a95ba/tasks/b2kmrznge.output",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 0,
+        "reads_count": 3,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-09-26-1007",
+      "started": "2026-09-26T02:07:34.623Z",
+      "ended": "2026-09-26T02:45:39.117Z",
+      "reads": [
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/conftest.py",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/conftest.py",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/conftest.py",
+          "tokens_estimated": 85,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/conftest.py",
+          "tokens_estimated": 239,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 324,
+        "reads_count": 2,
+        "writes_count": 2,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-09-26-1007",
+      "started": "2026-09-26T02:07:34.623Z",
+      "ended": "2026-09-26T03:11:25.797Z",
+      "reads": [
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/conftest.py",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/conftest.py",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/conftest.py",
+          "tokens_estimated": 85,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/conftest.py",
+          "tokens_estimated": 239,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 324,
+        "reads_count": 2,
+        "writes_count": 2,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-09-26-1007",
+      "started": "2026-09-26T02:07:34.623Z",
+      "ended": "2026-09-26T03:36:56.570Z",
+      "reads": [
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/conftest.py",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/conftest.py",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/Users/Lenovo/AppData/Local/Temp/claude/C--workspace-pisuan/82b122f3-1cae-42c1-8888-915b2d757b5b/tasks/b2iom3bm3.output",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/conftest.py",
+          "tokens_estimated": 85,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/conftest.py",
+          "tokens_estimated": 239,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_outline_producer.py",
+          "tokens_estimated": 135,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 459,
+        "reads_count": 3,
+        "writes_count": 3,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-09-26-1007",
+      "started": "2026-09-26T02:07:34.623Z",
+      "ended": "2026-09-26T03:58:12.650Z",
+      "reads": [
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/conftest.py",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/conftest.py",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/Users/Lenovo/AppData/Local/Temp/claude/C--workspace-pisuan/82b122f3-1cae-42c1-8888-915b2d757b5b/tasks/b2iom3bm3.output",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/Users/Lenovo/AppData/Local/Temp/claude/C--workspace-pisuan/82b122f3-1cae-42c1-8888-915b2d757b5b/tasks/bcxqopcjl.output",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/conftest.py",
+          "tokens_estimated": 85,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/conftest.py",
+          "tokens_estimated": 239,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_outline_producer.py",
+          "tokens_estimated": 135,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/storage/postgres/manager.py",
+          "tokens_estimated": 248,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/storage/postgres/manager.py",
+          "tokens_estimated": 140,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/storage/postgres/manager.py",
+          "tokens_estimated": 86,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/storage/postgres/manager.py",
+          "tokens_estimated": 126,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/storage/postgres/manager.py",
+          "tokens_estimated": 99,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 1158,
+        "reads_count": 4,
+        "writes_count": 8,
+        "repeated_reads_blocked": 0,
         "anatomy_lookups": 0
       }
     }

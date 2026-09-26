@@ -994,10 +994,11 @@ class PostgresManager(metaclass=SingletonMeta):
             # Domain Factory: 添加 HTML 格式的文档内容列
             "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS raw_html TEXT",
             # Domain Factory: 分章节上传支持
+            # （source_report_id 的索引在 domain_factory_tasks 建表语句之后统一创建，
+            #   避免全新库上"表未建先建索引"的 UndefinedTableError）
             "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS source_report_id VARCHAR(64)",
             "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS chapter_label VARCHAR(64)",
             "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS validation_report JSONB",
-            "CREATE INDEX IF NOT EXISTS idx_df_tasks_source_report ON domain_factory_tasks(source_report_id)",
             # Domain Factory: 清理废弃列和表
             "ALTER TABLE IF EXISTS domain_factory_tasks DROP COLUMN IF EXISTS structured_data",
             "DROP TABLE IF EXISTS domain_factory_saved_sections",
@@ -1508,12 +1509,17 @@ class PostgresManager(metaclass=SingletonMeta):
             "    source_paragraphs JSONB,"
             "    raw_markdown TEXT,"
             "    template_metadata JSONB,"
+            "    raw_html TEXT,"
+            "    source_report_id VARCHAR(64),"
+            "    chapter_label VARCHAR(64),"
+            "    validation_report JSONB,"
             "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
             "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
             "    committed_at TIMESTAMP"
             ")",
             "CREATE INDEX IF NOT EXISTS idx_df_tasks_domain ON domain_factory_tasks(domain_id)",
             "CREATE INDEX IF NOT EXISTS idx_df_tasks_status ON domain_factory_tasks(status)",
+            "CREATE INDEX IF NOT EXISTS idx_df_tasks_source_report ON domain_factory_tasks(source_report_id)",
             "CREATE TABLE IF NOT EXISTS domain_factory_learned_templates ("
             "    id SERIAL PRIMARY KEY,"
             "    domain_code VARCHAR(64) NOT NULL,"
@@ -1525,6 +1531,7 @@ class PostgresManager(metaclass=SingletonMeta):
             "    match_count INTEGER NOT NULL DEFAULT 0,"
             "    sample_original TEXT,"
             "    extra_meta JSONB DEFAULT '{}',"
+            "    canonical_chapter_key TEXT,"
             "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
             "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
             "    UNIQUE(domain_code, chapter, slot_signature)"
@@ -1656,12 +1663,18 @@ class PostgresManager(metaclass=SingletonMeta):
             "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
             "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
             ")",
-            "INSERT INTO report_types (code, name, domain_code, sort_order) VALUES "
-            "('通用', '通用（全部报告类型）', 'coal', 0) ON CONFLICT (code, domain_code) DO NOTHING",
-            "INSERT INTO report_types (code, name, domain_code, sort_order) VALUES "
-            "('feasibility_report', '可行性研究报告', 'coal', 1) ON CONFLICT (code, domain_code) DO NOTHING",
-            "INSERT INTO report_types (code, name, domain_code, sort_order) VALUES "
-            "('eia_report', '环境影响评价报告', 'coal', 2) ON CONFLICT (code, domain_code) DO NOTHING",
+            # Report Types 种子：历史安装中该表存在 PK(id)+UNIQUE(code, domain_code)
+            # 旧形态，而新建 DDL 是 PK(code)。NOT EXISTS 写法不依赖 ON CONFLICT
+            # 目标约束，在新旧两种形态下都幂等（ensure 在 schema 迁移锁内单飞执行）
+            "INSERT INTO report_types (code, name, domain_code, sort_order) "
+            "SELECT '通用', '通用（全部报告类型）', 'coal', 0 "
+            "WHERE NOT EXISTS (SELECT 1 FROM report_types WHERE code = '通用')",
+            "INSERT INTO report_types (code, name, domain_code, sort_order) "
+            "SELECT 'feasibility_report', '可行性研究报告', 'coal', 1 "
+            "WHERE NOT EXISTS (SELECT 1 FROM report_types WHERE code = 'feasibility_report')",
+            "INSERT INTO report_types (code, name, domain_code, sort_order) "
+            "SELECT 'eia_report', '环境影响评价报告', 'coal', 2 "
+            "WHERE NOT EXISTS (SELECT 1 FROM report_types WHERE code = 'eia_report')",
             *TASK_DURABLE_SCHEMA_STATEMENTS,
         ]
         async with self.async_engine.begin() as conn:
