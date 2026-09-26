@@ -21,6 +21,7 @@ import argparse
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 # 目录整体跳过（按路径组件名匹配）: .wolf 是会话元数据; docs/superpowers 是设计/计划
@@ -67,6 +68,25 @@ def git(root: Path, *args: str) -> str:
     return subprocess.run(
         ["git", *args], cwd=root, capture_output=True, text=True, encoding="utf-8", check=True
     ).stdout
+
+
+def git_mv(root: Path, src: str, dst: str) -> None:
+    """git mv 带有界重试: Windows Defender/索引器对刚被删除的目录树会瞬时持有
+    句柄, 紧接的目录 rename 报 Permission denied (间歇性, 见 bug-272 重演)。
+    仅对 Permission denied 退避重试, 其余错误立即抛出。"""
+    last_err: subprocess.CalledProcessError | None = None
+    for delay in (0, 1, 2, 4):
+        if delay:
+            time.sleep(delay)
+        try:
+            git(root, "mv", "--", src, dst)
+            return
+        except subprocess.CalledProcessError as e:
+            if e.stderr and "Permission denied" in e.stderr:
+                last_err = e
+                continue
+            raise
+    raise last_err
 
 
 def tracked_files(root: Path) -> list[Path]:
@@ -132,7 +152,7 @@ def apply_dir_moves(root: Path, moves: list[tuple[Path, Path]]) -> list[tuple[st
     done = []
     for src, dst in moves:
         clear_occupied_dst(root, dst.relative_to(root).as_posix())
-        git(root, "mv", "--", str(src.relative_to(root)), str(dst.relative_to(root)))
+        git_mv(root, str(src.relative_to(root)), str(dst.relative_to(root)))
         done.append((src.relative_to(root).as_posix(), dst.relative_to(root).as_posix()))
     return done
 
@@ -206,7 +226,7 @@ def apply_file_renames(root: Path, plan: list[tuple[str, str]]) -> list[tuple[st
     done = []
     for src, dst in plan:
         clear_occupied_dst(root, dst)  # 同 bug-272 规则: 文件基名改名路径审计同步修复
-        git(root, "mv", "--", src, dst)
+        git_mv(root, src, dst)
         done.append((src, dst))
     return done
 

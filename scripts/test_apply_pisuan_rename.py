@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
@@ -262,6 +263,19 @@ class DirtyDstTest(unittest.TestCase):
         self.assertEqual(
             (self.root / "backend/package/yuxi/core.py").read_text(encoding="utf-8"),
             "from yuxi.storage import db\n",
+        )
+
+    @unittest.skipIf(os.name != "nt", "Windows 目录句柄阻止 rename 的语义")
+    def test_apply_retries_mv_on_transient_lock(self):
+        """git mv 遇 Windows 瞬时锁(Permission denied) → 有界重试后成功 (bug-272 重演实测)。"""
+        lock = open(self.root / "backend/package/yuxi/core.py", "rb")  # 句柄阻止父目录 rename
+        threading.Timer(0.5, lock.close).start()  # 0.5s 后释放, 落在重试窗口内
+        r = self._run("--apply")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("backend/package/yuxi -> backend/package/pisuan", r.stdout)
+        self.assertEqual(
+            (self.root / "backend/package/pisuan/core.py").read_text(encoding="utf-8"),
+            "from pisuan.storage import db\n",
         )
 
 
