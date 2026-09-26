@@ -4,6 +4,7 @@
 """
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -80,6 +81,9 @@ class EndToEndTest(unittest.TestCase):
         )
         (root / "docs/superpowers/specs/design.md").write_text("yuxi 保持原貌\n", encoding="utf-8")
         (root / "backend/uv.lock").write_text('name = "yuxi"\n', encoding="utf-8")
+        (root / "scripts").mkdir()
+        for name in ("apply_pisuan_rename.py", "test_apply_pisuan_rename.py"):
+            shutil.copy2(REPO_ROOT / "scripts" / name, root / "scripts" / name)
         for args in (
             ["init", "-q"],
             ["add", "-A"],
@@ -121,6 +125,15 @@ class EndToEndTest(unittest.TestCase):
         out2 = self._run("--apply")
         self.assertIn("目录 mv 实际执行: 0", out2)
         self.assertIn("内容改写文件: 0", out2)
+
+    def test_tool_files_excluded_from_rewrite(self):
+        """改名工具与其测试被复制进仓库后, --apply 不得改写它们（否则自毁规则/断言）。"""
+        self._run("--apply")
+        for name in ("apply_pisuan_rename.py", "test_apply_pisuan_rename.py"):
+            self.assertEqual(
+                (self.root / "scripts" / name).read_bytes(),
+                (REPO_ROOT / "scripts" / name).read_bytes(),
+            )
 
 
 if __name__ == "__main__":
