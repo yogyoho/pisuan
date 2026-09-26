@@ -8,6 +8,7 @@
 #
 # 执行：.\scripts\sync-upstream.ps1
 # 冲突时手动解决后执行：git add -A; git rebase --continue
+# 注意: 修改本脚本时须同步维持 scripts/sync-upstream.sh 语义对齐
 # ============================================================
 
 $ErrorActionPreference = "Stop"
@@ -20,7 +21,8 @@ Write-Host ""
 Write-Host "==> [2/5] 更新本地 main 到 upstream/main..." -ForegroundColor Cyan
 $currentBranch = git branch --show-current
 git checkout main
-git merge upstream/main --ff-only 2>$null
+# 不重定向 stderr: PS 5.1 下 2>$null + EAP=Stop 会抛 RemoteException 绕过 $LASTEXITCODE 判定 (bug-271)
+git merge upstream/main --ff-only
 if ($LASTEXITCODE -ne 0) {
     Write-Host "⚠️  main 无法快进合并，可能有本地提交。请手动处理。" -ForegroundColor Yellow
     git checkout $currentBranch
@@ -55,7 +57,6 @@ Write-Host "   ✅ 推送完成" -ForegroundColor Green
 Write-Host ""
 Write-Host "==> [5/5] 重建 pisuan-localized（机械改名层重新生成）..." -ForegroundColor Cyan
 $localizedDir = "$(Split-Path $PSScriptRoot -Parent)-localized"
-$ok = $false
 try {
     git -C $localizedDir fetch origin
     if ($LASTEXITCODE -ne 0) { throw "git fetch origin 失败" }
@@ -78,13 +79,12 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "git commit 失败" }
         git -C $localizedDir push github pisuan-localized --force-with-lease
         if ($LASTEXITCODE -ne 0) { throw "git push github 失败" }
+        Write-Host "   ✅ pisuan-localized 已重建并推送" -ForegroundColor Green
     }
-    $ok = $true
 } catch {
     Write-Host "⚠️  localized 重建失败: $_" -ForegroundColor Yellow
     Write-Host "    pisuan-custom 已同步完成, localized 可稍后手动重建。"
 }
-if ($ok) { Write-Host "   ✅ pisuan-localized 已重建并推送" -ForegroundColor Green }
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Green
