@@ -23,19 +23,19 @@ git fetch upstream || { echo "⚠️  拉取上游失败, 请检查网络。"; e
 
 echo ""
 echo "==> [2/5] 更新本地 main 到 upstream/main..."
-CURRENT_BRANCH=$(git branch --show-current)
-git checkout main
-git merge upstream/main --ff-only 2>/dev/null || {
-  echo "⚠️  main 无法快进合并，可能有本地提交。请手动处理。"
-  git checkout "$CURRENT_BRANCH"
+# fetch 强制 ff 更新本地 main ref: 非 ff 自动拒绝(fail-closed), 全程不触碰工作树——
+# 兼容 .wolf 等跟踪文件的常态未提交改动(checkout 往返会被脏树拒绝)
+git fetch upstream main:main || {
+  echo "⚠️  main 无法快进到 upstream/main，请手动处理。"
   exit 1
 }
-echo "   main 已更新到 $(git rev-parse --short HEAD)"
+echo "   main 已更新到 $(git rev-parse --short main)"
 
 echo ""
 echo "==> [3/5] 将 pisuan-custom rebase 到最新 main..."
 git checkout pisuan-custom
-if git rebase main; then
+# --autostash: 临时收起 .wolf 等未提交改动, rebase 后自动恢复, 冲突语义不变
+if git rebase --autostash main; then
   echo "   ✅ rebase 成功，无冲突"
 else
   echo ""

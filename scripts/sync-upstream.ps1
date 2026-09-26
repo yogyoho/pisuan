@@ -19,21 +19,20 @@ if ($LASTEXITCODE -ne 0) { Write-Host "⚠️  拉取上游失败, 请检查网�
 
 Write-Host ""
 Write-Host "==> [2/5] 更新本地 main 到 upstream/main..." -ForegroundColor Cyan
-$currentBranch = git branch --show-current
-git checkout main
-# 不重定向 stderr: PS 5.1 下 2>$null + EAP=Stop 会抛 RemoteException 绕过 $LASTEXITCODE 判定 (bug-271)
-git merge upstream/main --ff-only
+# fetch 强制 ff 更新本地 main ref: 非 ff 自动拒绝(fail-closed), 全程不触碰工作树——
+# 兼容 .wolf 等跟踪文件的常态未提交改动(checkout 往返会被脏树拒绝)
+git fetch upstream main:main
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "⚠️  main 无法快进合并，可能有本地提交。请手动处理。" -ForegroundColor Yellow
-    git checkout $currentBranch
+    Write-Host "⚠️  main 无法快进到 upstream/main，请手动处理。" -ForegroundColor Yellow
     exit 1
 }
-Write-Host "   main 已更新到 $(git rev-parse --short HEAD)"
+Write-Host "   main 已更新到 $(git rev-parse --short main)"
 
 Write-Host ""
 Write-Host "==> [3/5] 将 pisuan-custom rebase 到最新 main..." -ForegroundColor Cyan
 git checkout pisuan-custom
-git rebase main
+# --autostash: 临时收起 .wolf 等未提交改动, rebase 后自动恢复, 冲突语义不变
+git rebase --autostash main
 if ($LASTEXITCODE -eq 0) {
     Write-Host "   ✅ rebase 成功，无冲突" -ForegroundColor Green
 } else {
