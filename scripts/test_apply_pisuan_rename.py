@@ -45,6 +45,15 @@ class RewriteTextTest(unittest.TestCase):
             text, "fork 自 xerrors/Yuxi，同步上游 Yuxi 项目\n路径: backend/package/pisuan/config\n"
         )
 
+    def test_embedded_identifiers(self):
+        text, _ = rewrite_text(
+            "class YuxiWorker: ...\nx-yuxi-uid\n.yuxi/tmp\n_message_chunk_yuxi_events\n"
+        )
+        self.assertEqual(
+            text,
+            "class PisuanWorker: ...\nx-pisuan-uid\n.pisuan/tmp\n_message_chunk_pisuan_events\n",
+        )
+
     def test_idempotent(self):
         once, _ = rewrite_text("from yuxi.a import b  # yuxi\nsee http://yuxi.local/api\n")
         twice, n = rewrite_text(once)
