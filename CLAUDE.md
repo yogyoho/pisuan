@@ -14,12 +14,15 @@ Yuxi 是一个基于大模型的智能知识库与知识图谱智能体开发平
 架构代码地图见 [ARCHITECTURE.md](ARCHITECTURE.md)。修改不熟悉的模块前，先阅读其中的后端、前端、运行链路和架构不变量说明，再用符号搜索定位具体实现；该文档只维护相对稳定的系统边界，不替代细节文档或源码注释。
 
 ## 开发准则
-## 上游代码同步（双分支策略）
+## 上游代码同步（三分支策略）
 
 本项目 fork 自 [xerrors/Yuxi](https://github.com/xerrors/Yuxi)，在此基础上进行领域知识库工厂扩展。
 
 - **`main`** → 纯净跟踪 `upstream/main`，禁止直接提交定制代码
 - **`pisuan-custom`** → 所有本地定制（领域工厂 + 品牌 + 主题），定期 rebase 到 main
+- **`pisuan-localized`** → pisuan-custom 顶端 + 脚本生成的机械改名层（yuxi→pisuan），可随时重建，推送到 github yogyoho/pisuan；**禁止直接语义改动**，一切语义改动进 pisuan-custom
+
+工作目录：`C:\workspace\pisuan`（日常工程）/ `C:\workspace\pisuan-localized`（改名衍生物，勿直接开发）。
 
 ```bash
 # 上游发新版后执行同步

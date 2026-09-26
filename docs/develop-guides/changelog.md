@@ -56,6 +56,10 @@
 - `PostgresManager` 增加事件循环绑定守卫 `_ensure_loop_fresh`：异步连接池绑定创建时的循环无法迁移，检测到已绑定的旧循环与当前循环不一致（每用例独立循环的 pytest 全量回归）时丢弃旧池并按当前循环重建，从未绑定过（含测试手工构造实例）则只采纳当前循环；生产单循环运行零影响。此前全量跑 `test_chapter_writer_subagent` 会因复用已关闭循环上的池而失败，并在 teardown 连锁拖垮后续用例。 共享的异步 Redis 客户端单例（`get_async_redis_client`）存在同类跨循环复用问题（偶发永久挂起），同样以循环绑定守卫修复。 此外 `initialize()` 在测试循环内构造的 psycopg 连接池会在 pytest-asyncio 拆卸时因后台建连任务与 `_cancel_all_tasks` 互等而永久挂起（最小复现：建池+查询+cancel-all tasks），新增 `backend/test/unit/conftest.py` autouse 夹具在循环销毁前于所属循环内显式关闭池，生产代码不动。
 - 上游 `test_builtin_discovery` 的发布内容集合断言补入 4 个定制写手 preset 与 4 个定制 skill。
 
+### pisuan 本地化改名与同步基建（2026-09-26）
+
+- 新增机械改名层 `pisuan-localized` 分支（= pisuan-custom 顶端 + 脚本生成的 yuxi→pisuan 改名提交，可随时重建）与配套改名脚本 `scripts/apply_pisuan_rename.py`（结构化标识符规则 + 保护行裸词规则 + 目录/文件 mv 嵌套闭包，确定性幂等，unittest 覆盖含 12 项保留清单机检）。同步脚本升级三分支流程：`git fetch upstream main:main` 强制 ff 更新 main（不触碰工作树）、`rebase --autostash` 容忍 `.wolf` 常态脏树、非 pisuan-custom 分支前置守卫明确拒绝、第 5 步自动重建 localized（重跑改名脚本 + backend 与 pisuan-cli 双 `uv lock` + force-with-lease 推送，失败降级不阻断主流程）。已通过真实同步演练：全链路 exit 0 零手工干预，改名层对相同语义输入字节级再生。改名脚本健壮性：dst 幂等判定升级 git 层——ignored 运行时残留（pycache 等）物理占据改名目标路径时自动 scoped 清理而非静默跳过，tracked 占据与不可清理占据显式报错（bug-272）；`git mv` 对 Windows 瞬时句柄锁退避重试。详见 [upstream-sync-guide](./upstream-sync-guide.md)（重写：三分支架构、残余报告口径 211=199+12、切换日操作手册含 Neo4j 种子迁移等四个实测缺口、测试基线口径）。
+
 ## v0.7.2 (2026-08-26)
 
 ::: warning Beta 升级说明
