@@ -194,12 +194,6 @@ const router = createRouter({
           name: 'DomainEntityBuilder',
           component: () => import('../views/DomainEntityBuilderView.vue'),
           meta: { keepAlive: false, requiresAuth: true, requiresAdmin: true }
-        },
-        {
-          path: 'outline-template',
-          name: 'DomainOutlineTemplate',
-          component: () => import('../views/DomainOutlineTemplateView.vue'),
-          meta: { keepAlive: false, requiresAuth: true, requiresAdmin: true }
         }
       ]
     },
