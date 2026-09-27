@@ -36,7 +36,13 @@
               <Sparkles :size="14" />
               <span>AI 驱动 · 工程报告智能写作平台</span>
             </span>
-            <h1 class="lp-hero-title">{{ infoStore.branding.title }}</h1>
+            <h1 class="lp-hero-title">
+              <template v-if="titleLines.length > 1">
+                <span class="lp-title-line">{{ titleLines[0] }}</span>
+                <span class="lp-title-line">{{ titleLines[1] }}</span>
+              </template>
+              <template v-else>{{ infoStore.branding.title }}</template>
+            </h1>
             <p class="lp-hero-sub">
               以领域知识库与知识图谱为底座，覆盖资料加工、大纲生成、分章写作到装配交付的报告写作全流程。每一章有据可依，每一稿皆可溯源。
             </p>
@@ -234,7 +240,7 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useInfoStore } from '@/stores/info'
@@ -265,6 +271,15 @@ const router = useRouter()
 const userStore = useUserStore()
 const infoStore = useInfoStore()
 const agentStore = useAgentStore()
+
+// Break the hero title at the phrase boundary (never mid-word); fall back to the raw title
+const titleLines = computed(() => {
+  const title = infoStore.branding.title || ''
+  const at = title.indexOf('工程报告')
+  if (at < 0) return [title]
+  const cut = at + '工程报告'.length
+  return [title.slice(0, cut), title.slice(cut)]
+})
 
 // Auth-aware entry: mirrors HomeView goToAgent behavior
 const goWrite = async () => {
@@ -638,6 +653,10 @@ onUnmounted(() => {
   letter-spacing: 0.5px;
   text-wrap: balance;
   color: var(--gray-1000);
+}
+
+.lp-title-line {
+  display: block;
 }
 
 .lp-hero-sub {
