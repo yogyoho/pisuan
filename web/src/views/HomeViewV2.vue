@@ -361,25 +361,25 @@ const features = [
 
 const steps = [
   {
-    num: '01',
+    num: '1',
     icon: Upload,
     title: '上传领域资料',
     desc: '项目资料与历史报告批量上传，自动完成解析与分类。'
   },
   {
-    num: '02',
+    num: '2',
     icon: Database,
     title: '知识加工入库',
     desc: '泛化提取工程实体与模板结构，人工复核后入库沉淀。'
   },
   {
-    num: '03',
+    num: '3',
     icon: FileText,
     title: '智能分章写作',
     desc: '生成项目大纲后按章派发写手，结合知识库逐章成文。'
   },
   {
-    num: '04',
+    num: '4',
     icon: PackageCheck,
     title: '装配成稿交付',
     desc: '合并全部完稿章节，输出完整报告文档，支持溯源审阅。'
