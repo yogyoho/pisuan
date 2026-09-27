@@ -1145,8 +1145,8 @@ onUnmounted(() => {
   border-radius: 16px;
   text-align: center;
   color: var(--gray-0);
-  background: linear-gradient(135deg, var(--main-900) 0%, var(--main-700) 100%);
-  box-shadow: 0 24px 60px rgba(0, 82, 179, 0.35);
+  background: linear-gradient(135deg, var(--main-800) 0%, var(--main-600) 100%);
+  box-shadow: 0 24px 60px rgba(9, 109, 217, 0.35);
 
   h2 {
     margin: 0 0 12px;
