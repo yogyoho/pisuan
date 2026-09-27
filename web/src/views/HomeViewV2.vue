@@ -554,12 +554,16 @@ onUnmounted(() => {
 }
 
 .lp-btn-primary {
-  background: var(--main-700);
+  background: var(--main-600);
   color: var(--gray-0);
 
   &:hover {
-    background: var(--main-800);
+    background: var(--main-500);
     box-shadow: 0 6px 16px var(--shadow-3);
+  }
+
+  &:active {
+    background: var(--main-700);
   }
 }
 
