@@ -17,8 +17,8 @@ const router = createRouter({
         {
           path: '',
           name: 'Home',
-          component: () => import('../views/HomeView.vue'),
-          meta: { keepAlive: true, requiresAuth: false }
+          component: () => import('../views/HomeViewV2.vue'),
+          meta: { keepAlive: false, requiresAuth: false }
         },
         {
           path: 'landing-v2',
