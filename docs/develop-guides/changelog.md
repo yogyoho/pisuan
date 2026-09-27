@@ -24,6 +24,7 @@
 
 - 修复官方 MinIO 镜像下架导致的部署与 CI 中断：MinIO 在 Docker Hub 与 quay.io 上的镜像已不再公开分发，`dl.min.io` 返回 410。两份 Compose 改为按 `docker/minio/Dockerfile` 构建该镜像，构建时从官方 GitHub Release 下载固定版本的二进制并校验 sha256，运行与下架前完全相同的 MinIO 二进制；数据卷、凭据、端口与 `command` 不变，离线导出的脚本会先构建再打包。
 - 新增工程报告写作平台新版落地页 `/landing-v2`（`HomeViewV2.vue`）：面向工程报告智能写作场景，含核心能力、工作流程与应用场景展示；旧版首页 `/` 保持不变，两条路由并存便于对比验收。
+- 新增工程报告写作平台新版落地页（`HomeViewV2.vue`）：面向工程报告智能写作场景，含核心能力、工作流程与应用场景展示；`/` 默认首页已切换为新版（`keepAlive` 关闭以匹配其滚动监听生命周期），旧版 `HomeView.vue` 不再挂路由，`/landing-v2` 预览路由暂时保留便于回看。视觉上按钮、CTA 色带与系统主题蓝 `#1890ff` 对齐，hero 标题按短语边界受控断行，四步流程为数字+图标组合徽标。
 - 修复 Sandbox 内 grep 文件搜索在结果含 NUL 字符时传输截断的问题，搜索改走原生文件通道并合并结果。
 - 模型供应商支持按用户身份签名统计用量（`include_user_uid`），开启后可在供应商侧区分各用户的调用统计；数据库随之升级到 business schema 8，由迁移器自动补列。
 - 收敛 Agent E2E 测试范围与超时预算，明确单元/集成/E2E 分段执行约定（见 `backend/test/run_tests.sh`）。
