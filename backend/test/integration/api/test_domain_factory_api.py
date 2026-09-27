@@ -51,9 +51,28 @@ async def test_pipeline_and_prompt_config_get(test_client, admin_headers):
         assert res.status_code == 200, f"{path}: {res.text}"
 
 
-async def test_non_admin_forbidden(test_client, standard_user):
-    """非 admin 访问 domain-factory 应被拒（401/403）。"""
-    res = await test_client.get("/api/domain-factory/domains", headers=standard_user["headers"])
+async def test_standard_user_workflow_access(test_client, standard_user):
+    """普通用户可访问工作流只读端点（2026-09-27 权限放开）。"""
+    for path in ("/api/domain-factory/domains", "/api/domain-factory/contexts"):
+        res = await test_client.get(path, headers=standard_user["headers"])
+        assert res.status_code == 200, f"{path}: {res.text}"
+
+
+async def test_standard_user_config_forbidden(test_client, standard_user):
+    """普通用户访问配置类端点仍应被拒（401/403）。"""
+    res = await test_client.post(
+        "/api/domain-factory/domains", json={"name": "x", "code": "x"}, headers=standard_user["headers"]
+    )
+    assert res.status_code in (401, 403), f"expected auth denial, got {res.status_code}"
+    res = await test_client.put(
+        "/api/domain-factory/prompt-config", json={}, headers=standard_user["headers"]
+    )
+    assert res.status_code in (401, 403), f"expected auth denial, got {res.status_code}"
+
+
+async def test_unauthenticated_denied(test_client):
+    """未认证访问 domain-factory 应被拒（401）。"""
+    res = await test_client.get("/api/domain-factory/domains")
     assert res.status_code in (401, 403), f"expected auth denial, got {res.status_code}"
 
 

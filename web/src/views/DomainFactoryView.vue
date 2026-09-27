@@ -2,17 +2,29 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { DownOutlined, UpOutlined, ExperimentOutlined, ThunderboltOutlined, CloudUploadOutlined, RobotOutlined, AuditOutlined, DatabaseOutlined, RightOutlined } from '@ant-design/icons-vue'
+import {
+  DownOutlined,
+  UpOutlined,
+  ExperimentOutlined,
+  ThunderboltOutlined,
+  CloudUploadOutlined,
+  RobotOutlined,
+  AuditOutlined,
+  DatabaseOutlined,
+  RightOutlined
+} from '@ant-design/icons-vue'
 import { Database, Layers, Zap } from '@lucide/vue'
 import DataSourceDashboard from '@/components/domain-factory/DataSourceDashboard.vue'
 import EtlWorkbench from '@/components/domain-factory/EtlWorkbench.vue'
 import RegulationEnrichPanel from '@/extensions/regulation-library/RegulationEnrichPanel.vue'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { useTaskerStore } from '@/stores/tasker'
+import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
 const router = useRouter()
 const taskerStore = useTaskerStore()
+const userStore = useUserStore()
 
 const activeTab = ref('data')
 const regulationPanelOpen = ref(false)
@@ -73,8 +85,8 @@ const handleTaskCompleted = () => {
 
 const handleTaskUpdated = () => {
   refreshDashboard()
-  if (currentTask.value?.id) {
-    domainFactoryApi.syncTaskToTaskCenter(currentTask.value.id).catch(err => {
+  if (userStore.isAdmin && currentTask.value?.id) {
+    domainFactoryApi.syncTaskToTaskCenter(currentTask.value.id).catch((err) => {
       console.error('同步任务中心失败:', err)
     })
   }
@@ -96,7 +108,7 @@ const fetchStats = async () => {
   try {
     const res = await domainFactoryApi.getContexts()
     if (res?.stats) globalStats.value = res.stats
-  } catch (e) {
+  } catch {
     // 静默失败，不影响主页面
   }
 }
@@ -106,12 +118,15 @@ onMounted(() => {
   fetchStats()
 })
 
-watch(() => route.query.tab, (tab) => {
-  if (tab && ['data', 'workbench'].includes(tab)) {
-    activeTab.value = tab
-    router.replace({ query: { ...route.query, tab: undefined } })
+watch(
+  () => route.query.tab,
+  (tab) => {
+    if (tab && ['data', 'workbench'].includes(tab)) {
+      activeTab.value = tab
+      router.replace({ query: { ...route.query, tab: undefined } })
+    }
   }
-})
+)
 </script>
 
 <template>
@@ -123,7 +138,7 @@ watch(() => route.query.tab, (tab) => {
           <div v-if="!heroCollapsed" class="hero-content">
             <div class="hero-text">
               <div class="badge">
-                <ExperimentOutlined style="margin-right: 4px;" />Domain Knowledge Factory
+                <ExperimentOutlined style="margin-right: 4px" />Domain Knowledge Factory
               </div>
               <h1>人机协同的领域知识工厂</h1>
               <p class="desc">
@@ -197,13 +212,28 @@ watch(() => route.query.tab, (tab) => {
             {{ heroCollapsed ? '展开简介' : '收起' }}
           </span>
           <div class="hero-actions">
-            <a-button size="small" class="hero-nav-btn" @click="router.push('/domain-factory/prompt-config')">
+            <a-button
+              v-if="userStore.isAdmin"
+              size="small"
+              class="hero-nav-btn"
+              @click="router.push('/domain-factory/prompt-config')"
+            >
               <ThunderboltOutlined /> Prompt 管理
             </a-button>
-            <a-button size="small" class="hero-nav-btn" @click="router.push('/domain-factory/outline-template')">
+            <a-button
+              v-if="userStore.isAdmin"
+              size="small"
+              class="hero-nav-btn"
+              @click="router.push('/domain-factory/outline-template')"
+            >
               大纲模板
             </a-button>
-            <a-button size="small" class="hero-nav-btn" @click="router.push('/domain-factory/entity-builder')">
+            <a-button
+              v-if="userStore.isAdmin"
+              size="small"
+              class="hero-nav-btn"
+              @click="router.push('/domain-factory/entity-builder')"
+            >
               实体构建器
             </a-button>
             <a-button size="small" class="hero-nav-btn" @click="regulationPanelOpen = true">
@@ -481,7 +511,9 @@ watch(() => route.query.tab, (tab) => {
         user-select: none;
         transition: color 0.2s;
 
-        &:hover { color: var(--main-color, #1677ff); }
+        &:hover {
+          color: var(--main-color, #1677ff);
+        }
       }
 
       .hero-actions {
@@ -537,8 +569,12 @@ watch(() => route.query.tab, (tab) => {
         height: 7px;
         border-radius: 50%;
 
-        &.data { background: #1677ff; }
-        &.workbench { background: #722ed1; }
+        &.data {
+          background: #1677ff;
+        }
+        &.workbench {
+          background: #722ed1;
+        }
       }
 
       .tab-hint {

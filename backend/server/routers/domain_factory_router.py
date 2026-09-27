@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile
 
-from server.utils.auth_middleware import get_admin_user
+from server.utils.auth_middleware import get_admin_user, get_required_user
 from yuxi.services.domain_factory_service import get_domain_factory_service
 from yuxi.storage.postgres.models_business import User
 from yuxi.utils import logger
@@ -22,7 +22,7 @@ domain_factory = APIRouter(prefix="/domain-factory", tags=["Domain Factory"])
 
 @domain_factory.get("/domains")
 async def get_domains(
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """获取所有领域列表"""
     try:
@@ -104,7 +104,7 @@ async def delete_domain(
 async def fetch_data_sources(
     domain: str | None = Query(None),
     status: str | None = Query(None),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """获取待处理数据源列表"""
     try:
@@ -120,7 +120,7 @@ async def fetch_data_sources(
 async def fetch_history(
     domain: str | None = Query(None),
     limit: int = Query(50),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """获取已提交历史列表"""
     try:
@@ -135,7 +135,7 @@ async def fetch_history(
 @domain_factory.get("/tasks/{task_id}")
 async def get_task_detail(
     task_id: str,
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """获取任务详情"""
     try:
@@ -154,7 +154,7 @@ async def get_task_detail(
 @domain_factory.get("/tasks/{task_id}/markdown")
 async def get_task_markdown(
     task_id: str,
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """获取任务的 Markdown 内容（原始文档解析结果）"""
     try:
@@ -177,7 +177,7 @@ async def get_task_markdown(
 async def save_task_step(
     task_id: str,
     payload: dict[str, Any] = Body(...),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """保存任务步骤数据"""
     try:
@@ -196,7 +196,7 @@ async def save_task_step(
 @domain_factory.post("/tasks/{task_id}/validate")
 async def validate_task(
     task_id: str,
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """对任务执行校验（PreCommitValidator + SlotValidationService），返回结构化报告。
 
@@ -218,7 +218,7 @@ async def validate_task(
 @domain_factory.post("/tasks/{task_id}/discover-entities")
 async def discover_entities(
     task_id: str,
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """异步触发实体发现：LLM 分析未绑定 slot，建议新实体/属性"""
     try:
@@ -238,7 +238,7 @@ async def discover_entities(
 async def commit_task(
     task_id: str,
     payload: dict[str, Any] = Body({}),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """提交任务（人工审核后确认入库）"""
     try:
@@ -277,7 +277,7 @@ async def commit_task(
 async def reingest_task(
     task_id: str,
     payload: dict[str, Any] = Body({}),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """再入库：重新处理并入库已提交的任务"""
     try:
@@ -299,7 +299,7 @@ async def reingest_task(
 @domain_factory.delete("/tasks/{task_id}")
 async def delete_task(
     task_id: str,
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """删除任务"""
     try:
@@ -318,7 +318,7 @@ async def delete_task(
 @domain_factory.post("/tasks/{task_id}/retry")
 async def retry_task(
     task_id: str,
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """重试失败任务"""
     try:
@@ -337,7 +337,7 @@ async def retry_task(
 @domain_factory.get("/tasks/{task_id}/proposed-entities")
 async def get_proposed_entities(
     task_id: str,
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """获取 LLM 整理后的实体建议（从泛化阶段未识别插槽生成）"""
     try:
@@ -353,7 +353,7 @@ async def get_proposed_entities(
 async def confirm_entities(
     task_id: str,
     payload: dict[str, Any] = Body(...),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """确认并保存建议的实体到实体库"""
     try:
@@ -383,7 +383,7 @@ async def upload_file(
     report_type_code: str = Form("通用"),
     source_report_id: str | None = Form(None),
     chapter_label: str | None = Form(None),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """上传文档文件。支持分章节上传: source_report_id 关联同一报告, chapter_label 标记章节。"""
     try:
@@ -434,7 +434,7 @@ async def upload_file(
 
 @domain_factory.get("/pipeline-config")
 async def get_pipeline_config(
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """获取处理流程配置"""
     try:
@@ -510,7 +510,7 @@ async def update_prompt_config(
 
 @domain_factory.get("/contexts")
 async def get_contexts(
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """获取所有行业领域与报告类型"""
     try:
@@ -659,7 +659,7 @@ async def query_graph_templates(
     domain_code: str = Query("", description="领域编码"),
     report_type_code: str = Query("", description="报告类型编码"),
     limit: int = Query(50, description="返回数量限制"),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """按 (domain, report_type) 查询图谱中的模板和骨架数据"""
     try:
@@ -676,7 +676,7 @@ async def query_graph_legal_references(
     domain_code: str = Query("", description="领域编码"),
     scope: str = Query("", description="适用范围过滤 (national/regional/project)"),
     limit: int = Query(100, description="返回数量限制"),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """查询图谱中的法律引用，支持按 scope 过滤"""
     try:
@@ -694,7 +694,7 @@ async def query_graph_legal_references(
 async def list_outline_templates(
     domain: str = Query("coal"),
     report_type: str = Query("eia_report"),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """列出13章大纲模板概要"""
     try:
@@ -716,7 +716,7 @@ async def get_outline_template(
     chapter_key: str,
     domain: str = Query("coal"),
     report_type: str = Query("eia_report"),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """获取单章大纲模板详情"""
     try:
@@ -812,7 +812,7 @@ async def extract_outline_preview(
     file: UploadFile = File(...),
     domain: str = Form("coal"),
     report_type: str = Form("eia_report"),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """从上传的报告轻量提取大纲（只解析+章节归一化，跳过泛化），返回预览供确认。
 
@@ -837,7 +837,7 @@ async def extract_outline_preview(
 @domain_factory.post("/outline-templates/confirm")
 async def confirm_outline_extract(
     body: dict = Body(...),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """将人工确认的大纲章节入库（PG outline upsert + 图谱标准章节同步）。"""
     try:

@@ -175,7 +175,7 @@ const router = createRouter({
           path: '',
           name: 'DomainFactoryMain',
           component: () => import('../views/DomainFactoryView.vue'),
-          meta: { keepAlive: false, requiresAuth: true, requiresAdmin: true }
+          meta: { keepAlive: false, requiresAuth: true }
         },
         {
           path: 'prompt-config',

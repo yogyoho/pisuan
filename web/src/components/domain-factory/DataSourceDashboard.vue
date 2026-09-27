@@ -1,16 +1,14 @@
 <script setup>
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
-import { message, Modal, Upload, Select, Form } from 'ant-design-vue'
+import { message, Modal, Upload } from 'ant-design-vue'
 import {
   InboxOutlined,
   FileTextOutlined,
   DeleteOutlined,
   FilePdfOutlined,
   FileWordOutlined,
-  MoreOutlined,
   ReloadOutlined,
   PlusOutlined,
-  AuditOutlined,
   EyeOutlined,
   RedoOutlined
 } from '@ant-design/icons-vue'
@@ -18,6 +16,7 @@ import { Search } from '@lucide/vue'
 import dayjs from 'dayjs'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { useTaskerStore } from '@/stores/tasker'
+import { useUserStore } from '@/stores/user'
 
 const props = defineProps({
   domains: { type: Array, default: () => [] },
@@ -28,6 +27,7 @@ const props = defineProps({
 const emit = defineEmits(['update:domain', 'task-open', 'domains-refreshed'])
 
 const taskerStore = useTaskerStore()
+const userStore = useUserStore()
 
 // 状态
 const taskList = ref([])
@@ -41,7 +41,6 @@ const uploadFileList = ref([])
 const uploading = ref(false)
 const selectedReportType = ref('')
 const reportTypeOptions = ref([])
-const activeTab = ref('pending')
 
 // 批量操作
 const selectedRowKeys = ref([])
@@ -51,7 +50,7 @@ const batchOperating = ref(false)
 let refreshTimer = null
 
 const hasActiveTasks = computed(() =>
-  taskList.value.some(t =>
+  taskList.value.some((t) =>
     ['UPLOADED', 'PARSING', 'EXTRACTING', 'GENERALIZING'].includes(t.status)
   )
 )
@@ -107,11 +106,14 @@ const pendingCount = computed(() => taskList.value.length)
 // 领域选择
 const localDomain = ref('__all__')
 
-watch(() => props.selectedDomain, (val) => {
-  if (val && val !== localDomain.value) {
-    localDomain.value = val
+watch(
+  () => props.selectedDomain,
+  (val) => {
+    if (val && val !== localDomain.value) {
+      localDomain.value = val
+    }
   }
-})
+)
 
 watch(localDomain, (val) => {
   fetchTasks(val)
@@ -125,16 +127,10 @@ const handleDomainChange = (eventOrValue) => {
   emit('update:domain', value)
 }
 
-const getDomainLabel = (value) => {
-  if (!Array.isArray(props.domains)) return value
-  const found = props.domains.find(d => (d.code || d.id || d.name) === value)
-  return found?.name || value
-}
-
 const domainOptions = computed(() => {
   if (!Array.isArray(props.domains)) return []
   const allOption = { label: '全部', value: '__all__' }
-  const domainList = props.domains.map(d => ({
+  const domainList = props.domains.map((d) => ({
     label: d.name,
     value: d.code || d.id || d.name
   }))
@@ -146,25 +142,27 @@ const filteredTasks = computed(() => taskList.value)
 const filteredHistory = computed(() => {
   if (!searchKeyword.value) return historyList.value
   const kw = searchKeyword.value.toLowerCase()
-  return historyList.value.filter(t =>
-    t.file_name?.toLowerCase().includes(kw)
-  )
+  return historyList.value.filter((t) => t.file_name?.toLowerCase().includes(kw))
 })
 
-const pendingAllSelected = computed(() =>
-  filteredTasks.value.length > 0 && filteredTasks.value.every(t => selectedRowKeys.value.includes(t.id))
+const pendingAllSelected = computed(
+  () =>
+    filteredTasks.value.length > 0 &&
+    filteredTasks.value.every((t) => selectedRowKeys.value.includes(t.id))
 )
-const pendingPartiallySelected = computed(() =>
-  !pendingAllSelected.value && filteredTasks.value.some(t => selectedRowKeys.value.includes(t.id))
+const pendingPartiallySelected = computed(
+  () =>
+    !pendingAllSelected.value &&
+    filteredTasks.value.some((t) => selectedRowKeys.value.includes(t.id))
 )
 const handlePendingSelectAll = (e) => {
-  selectedRowKeys.value = e.target.checked ? filteredTasks.value.map(t => t.id) : []
+  selectedRowKeys.value = e.target.checked ? filteredTasks.value.map((t) => t.id) : []
 }
 const togglePendingSelect = (id, checked) => {
   if (checked) {
     if (!selectedRowKeys.value.includes(id)) selectedRowKeys.value = [...selectedRowKeys.value, id]
   } else {
-    selectedRowKeys.value = selectedRowKeys.value.filter(k => k !== id)
+    selectedRowKeys.value = selectedRowKeys.value.filter((k) => k !== id)
   }
 }
 
@@ -225,14 +223,17 @@ const handleBatchDelete = async () => {
       try {
         await domainFactoryApi.deleteDataSource(id)
         ok++
-      } catch (e) { /* skip */ }
+      } catch {
+        /* skip */
+      }
     }
     message.success(`已删除 ${ok} 个任务`)
     selectedRowKeys.value = []
     refresh()
     emit('domains-refreshed')
-  } catch (e) { /* cancelled */ }
-  finally {
+  } catch {
+    /* cancelled */
+  } finally {
     batchOperating.value = false
   }
 }
@@ -253,7 +254,7 @@ const handleDeleteTask = async (task) => {
     message.success('删除成功')
     refresh()
     emit('domains-refreshed')
-  } catch (e) {
+  } catch {
     message.error('删除失败')
   }
 }
@@ -264,7 +265,7 @@ const handleRetryTask = async (task) => {
     await domainFactoryApi.retryTask(task.id || task.task_id)
     message.success('已重新提交')
     refresh()
-  } catch (e) {
+  } catch {
     message.error('重试失败')
   }
 }
@@ -330,7 +331,7 @@ const handleCreateDomain = async () => {
 const uploadDomain = ref('')
 const uploadDomainOptions = computed(() => {
   if (!Array.isArray(props.domains)) return []
-  return props.domains.map(d => ({
+  return props.domains.map((d) => ({
     label: d.name,
     value: d.code || d.id || d.name
   }))
@@ -339,7 +340,8 @@ const uploadDomainOptions = computed(() => {
 const openUploadModal = async () => {
   uploadFiles.value = []
   uploadFileList.value = []
-  uploadDomain.value = props.selectedDomain || (props.domains?.[0]?.code || props.domains?.[0]?.id || '')
+  uploadDomain.value =
+    props.selectedDomain || props.domains?.[0]?.code || props.domains?.[0]?.id || ''
   selectedReportType.value = ''
   await loadReportTypes()
   uploadModalVisible.value = true
@@ -351,7 +353,7 @@ const loadReportTypes = async () => {
     const domain = uploadDomain.value || props.selectedDomain || props.domains?.[0]?.code || ''
     const typesByDomain = res?.report_types || {}
     const types = typesByDomain[domain] || []
-    reportTypeOptions.value = types.map(t => ({ label: t.name, value: t.code }))
+    reportTypeOptions.value = types.map((t) => ({ label: t.name, value: t.code }))
   } catch {
     reportTypeOptions.value = []
   }
@@ -364,7 +366,8 @@ const handleUploadDomainChange = async () => {
 
 const beforeUpload = (file) => {
   // 文件类型验证
-  const isValidType = file.type === 'application/pdf' ||
+  const isValidType =
+    file.type === 'application/pdf' ||
     file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
     file.type === 'application/msword' ||
     file.name.endsWith('.pdf') ||
@@ -384,7 +387,7 @@ const beforeUpload = (file) => {
   }
 
   // 检查是否已存在
-  const exists = uploadFiles.value.find(f => f.name === file.name && f.size === file.size)
+  const exists = uploadFiles.value.find((f) => f.name === file.name && f.size === file.size)
   if (exists) {
     message.warning(`文件 "${file.name}" 已存在`)
     return Upload.LIST_IGNORE
@@ -395,11 +398,13 @@ const beforeUpload = (file) => {
 }
 
 const handleFileRemove = (file) => {
-  const index = uploadFiles.value.findIndex(f => f.name === file.name && f.size === file.size)
+  const index = uploadFiles.value.findIndex((f) => f.name === file.name && f.size === file.size)
   if (index > -1) {
     uploadFiles.value.splice(index, 1)
   }
-  const listIndex = uploadFileList.value.findIndex(f => f.name === file.name && f.size === file.size)
+  const listIndex = uploadFileList.value.findIndex(
+    (f) => f.name === file.name && f.size === file.size
+  )
   if (listIndex > -1) {
     uploadFileList.value.splice(listIndex, 1)
   }
@@ -435,7 +440,7 @@ const handleUpload = async () => {
       const formData = new FormData()
       formData.append('file', file.originFileObj || file)
       formData.append('domain', uploadDomain.value)
-      const rtOption = reportTypeOptions.value.find(o => o.value === selectedReportType.value)
+      const rtOption = reportTypeOptions.value.find((o) => o.value === selectedReportType.value)
       formData.append('document_type', rtOption?.label || selectedReportType.value)
       formData.append('report_type_code', selectedReportType.value)
       const result = await domainFactoryApi.uploadSources(formData)
@@ -479,14 +484,6 @@ const formatTime = (isoString) => {
   }
 }
 
-// 置信度颜色
-const getConfidenceColor = (val) => {
-  if (val === null || val === undefined) return 'var(--gray-400)'
-  if (val >= 80) return '#52c41a'
-  if (val >= 60) return '#faad14'
-  return '#ff4d4f'
-}
-
 onMounted(() => {
   refresh()
 })
@@ -510,9 +507,7 @@ defineExpose({ refresh })
         <a-button class="refresh-btn" @click="refresh" :loading="taskLoading || historyLoading">
           <ReloadOutlined /> 刷新
         </a-button>
-        <a-button type="primary" @click="openUploadModal">
-          <PlusOutlined /> 上传新报告
-        </a-button>
+        <a-button type="primary" @click="openUploadModal"> <PlusOutlined /> 上传新报告 </a-button>
       </div>
     </div>
 
@@ -521,11 +516,7 @@ defineExpose({ refresh })
       <div class="domain-toolbar">
         <div class="label">领域筛选</div>
         <div class="domains">
-          <a-radio-group
-            :value="localDomain"
-            button-style="solid"
-            @change="handleDomainChange"
-          >
+          <a-radio-group :value="localDomain" button-style="solid" @change="handleDomainChange">
             <a-radio-button
               v-for="domain in domainOptions"
               :key="domain.value"
@@ -534,7 +525,12 @@ defineExpose({ refresh })
               {{ domain.label }}
             </a-radio-button>
           </a-radio-group>
-          <a-button type="link" size="small" @click="showCreateDomainModal">
+          <a-button
+            v-if="userStore.isAdmin"
+            type="link"
+            size="small"
+            @click="showCreateDomainModal"
+          >
             <PlusOutlined /> 新建领域
           </a-button>
         </div>
@@ -589,12 +585,13 @@ defineExpose({ refresh })
           <span class="col-action">操作</span>
         </div>
         <a-spin v-if="taskLoading" class="list-state" tip="加载中..." />
-        <a-empty v-else-if="!filteredTasks.length" description="暂无待处理任务" class="list-empty" />
+        <a-empty
+          v-else-if="!filteredTasks.length"
+          description="暂无待处理任务"
+          class="list-empty"
+        />
         <template v-for="record in filteredTasks" :key="record.id">
-          <div
-            class="file-row"
-            @click="selectedRowKeys = [record.id]"
-          >
+          <div class="file-row" @click="selectedRowKeys = [record.id]">
             <span class="checkbox-cell" @click.stop>
               <a-checkbox
                 :checked="selectedRowKeys.includes(record.id)"
@@ -602,15 +599,20 @@ defineExpose({ refresh })
               />
             </span>
             <span class="name-cell" :title="record.file_name">
-              <FileTextOutlined style="color: var(--main-500); font-size: 16px; flex-shrink: 0;" />
+              <FileTextOutlined style="color: var(--main-500); font-size: 16px; flex-shrink: 0" />
               <span class="entry-name">{{ record.file_name }}</span>
             </span>
             <span class="col-center">{{ record.domain_label }}</span>
-            <span>{{ record.document_type || record.report_type_name || record.report_type_code || '-' }}</span>
+            <span>{{
+              record.document_type || record.report_type_name || record.report_type_code || '-'
+            }}</span>
             <span class="col-center col-time">{{ formatTime(record.uploaded_at) }}</span>
             <span class="col-center">
               <span class="status-dot">
-                <span class="dot" :style="{ backgroundColor: statusMap[record.status]?.color || '#999' }"></span>
+                <span
+                  class="dot"
+                  :style="{ backgroundColor: statusMap[record.status]?.color || '#999' }"
+                ></span>
                 {{ statusMap[record.status]?.text || record.status }}
               </span>
             </span>
@@ -631,7 +633,12 @@ defineExpose({ refresh })
                   </a-button>
                 </a-tooltip>
                 <a-tooltip title="查看原文">
-                  <a-button size="small" type="text" class="btn-view" @click="handleViewMarkdown(record)">
+                  <a-button
+                    size="small"
+                    type="text"
+                    class="btn-view"
+                    @click="handleViewMarkdown(record)"
+                  >
                     <EyeOutlined />
                   </a-button>
                 </a-tooltip>
@@ -640,15 +647,17 @@ defineExpose({ refresh })
                     <RedoOutlined />
                   </a-button>
                 </a-tooltip>
-                <a-tooltip v-else-if="record.status === 'COMMIT_FAILED' || record.status === 'COMMIT_PARTIAL'" title="重新入库">
+                <a-tooltip
+                  v-else-if="
+                    record.status === 'COMMIT_FAILED' || record.status === 'COMMIT_PARTIAL'
+                  "
+                  title="重新入库"
+                >
                   <a-button size="small" type="text" @click="handleReingestTask(record)">
                     <RedoOutlined />
                   </a-button>
                 </a-tooltip>
-                <a-popconfirm
-                  title="确定删除此任务吗？"
-                  @confirm="handleDeleteTask(record)"
-                >
+                <a-popconfirm title="确定删除此任务吗？" @confirm="handleDeleteTask(record)">
                   <a-tooltip title="删除">
                     <a-button size="small" danger type="text" class="btn-delete">
                       <DeleteOutlined />
@@ -692,11 +701,15 @@ defineExpose({ refresh })
           <span class="col-action">操作</span>
         </div>
         <a-spin v-if="historyLoading" class="list-state" tip="加载中..." />
-        <a-empty v-else-if="!filteredHistory.length" description="暂无历史数据" class="list-empty" />
+        <a-empty
+          v-else-if="!filteredHistory.length"
+          description="暂无历史数据"
+          class="list-empty"
+        />
         <template v-for="record in filteredHistory" :key="record.id">
           <div class="file-row no-checkbox" @click="handleViewMarkdown(record)">
             <span class="name-cell" :title="record.file_name">
-              <FileTextOutlined style="color: var(--main-500); font-size: 16px; flex-shrink: 0;" />
+              <FileTextOutlined style="color: var(--main-500); font-size: 16px; flex-shrink: 0" />
               <span class="entry-name">{{ record.file_name }}</span>
             </span>
             <span class="col-center">{{ record.domain_label }}</span>
@@ -710,14 +723,16 @@ defineExpose({ refresh })
             <span class="col-action" @click.stop>
               <div class="action-btns">
                 <a-tooltip title="查看原文">
-                  <a-button size="small" type="text" class="btn-view" @click="handleViewMarkdown(record)">
+                  <a-button
+                    size="small"
+                    type="text"
+                    class="btn-view"
+                    @click="handleViewMarkdown(record)"
+                  >
                     <EyeOutlined />
                   </a-button>
                 </a-tooltip>
-                <a-popconfirm
-                  title="确定删除此记录吗？"
-                  @confirm="handleDeleteTask(record)"
-                >
+                <a-popconfirm title="确定删除此记录吗？" @confirm="handleDeleteTask(record)">
                   <a-tooltip title="删除">
                     <a-button size="small" danger type="text" class="btn-delete">
                       <DeleteOutlined />
@@ -791,8 +806,14 @@ defineExpose({ refresh })
             >
               <div class="file-status-dot"></div>
               <div class="file-icon-wrapper">
-                <FilePdfOutlined v-if="getFileIcon(file.name) === 'pdf'" class="file-icon pdf-icon" />
-                <FileWordOutlined v-else-if="getFileIcon(file.name) === 'doc'" class="file-icon doc-icon" />
+                <FilePdfOutlined
+                  v-if="getFileIcon(file.name) === 'pdf'"
+                  class="file-icon pdf-icon"
+                />
+                <FileWordOutlined
+                  v-else-if="getFileIcon(file.name) === 'doc'"
+                  class="file-icon doc-icon"
+                />
                 <FileTextOutlined v-else class="file-icon file-icon-default" />
               </div>
               <div class="file-name" :title="file.name">{{ file.name }}</div>
@@ -1137,7 +1158,7 @@ defineExpose({ refresh })
 
 .list-empty {
   margin-top: 48px;
-  font-size: 13px; 
+  font-size: 13px;
   color: var(--gray-600);
 }
 
@@ -1230,9 +1251,15 @@ defineExpose({ refresh })
         .file-icon {
           font-size: 20px;
 
-          &.pdf-icon { color: #dc2626; }
-          &.doc-icon { color: #2563eb; }
-          &.file-icon-default { color: var(--gray-500); }
+          &.pdf-icon {
+            color: #dc2626;
+          }
+          &.doc-icon {
+            color: #2563eb;
+          }
+          &.file-icon-default {
+            color: var(--gray-500);
+          }
         }
       }
 
@@ -1254,7 +1281,9 @@ defineExpose({ refresh })
 
       .file-remove-btn {
         opacity: 0.6;
-        &:hover { opacity: 1; }
+        &:hover {
+          opacity: 1;
+        }
       }
     }
 
@@ -1364,7 +1393,12 @@ defineExpose({ refresh })
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
 }
 </style>
