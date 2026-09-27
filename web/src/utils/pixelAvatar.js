@@ -1,6 +1,6 @@
 const DICEBEAR_GLYPHS_AVATAR_BASE_URL = 'https://api.dicebear.com/10.x/glyphs/svg'
-// 智能体统一头像：几何构成套图（shapes），蓝青主调与科技蓝主题同色系
-const DICEBEAR_AGENT_AVATAR_BASE_URL = 'https://api.dicebear.com/10.x/shapes/svg'
+// 智能体统一头像：thumbs 扁平图形套图（用户选定）
+const DICEBEAR_AGENT_AVATAR_BASE_URL = 'https://api.dicebear.com/10.x/thumbs/svg'
 
 export const AVATAR_BACKGROUND_TOKENS = [
   { background: 'linear-gradient(135deg, var(--main-600), var(--color-info-500))', color: '#fff' },
