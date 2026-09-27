@@ -45,6 +45,10 @@ bash scripts/sync-upstream.sh  # Linux/macOS
 make up                    # 全量启动
 make up-lite               # 轻量启动（跳过知识库/图谱/评估等重依赖服务）
 
+# 开发期快速同步：pisuan 工作树改动（含未提交）→ 运行栈热重载（详见 upstream-sync-guide.md）
+.\scripts\sync-dev.ps1             # 同步到运行栈
+.\scripts\sync-dev.ps1 -Revert     # 还原运行栈目录；跑 sync-upstream 官方链前建议先执行
+
 # 查看日志
 docker logs api-dev --tail 100
 docker logs worker-dev --tail 100

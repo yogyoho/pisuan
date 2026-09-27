@@ -25,6 +25,7 @@
 - 修复官方 MinIO 镜像下架导致的部署与 CI 中断：MinIO 在 Docker Hub 与 quay.io 上的镜像已不再公开分发，`dl.min.io` 返回 410。两份 Compose 改为按 `docker/minio/Dockerfile` 构建该镜像，构建时从官方 GitHub Release 下载固定版本的二进制并校验 sha256，运行与下架前完全相同的 MinIO 二进制；数据卷、凭据、端口与 `command` 不变，离线导出的脚本会先构建再打包。
 - 新增工程报告写作平台新版落地页 `/landing-v2`（`HomeViewV2.vue`）：面向工程报告智能写作场景，含核心能力、工作流程与应用场景展示；旧版首页 `/` 保持不变，两条路由并存便于对比验收。
 - 新增工程报告写作平台新版落地页（`HomeViewV2.vue`）：面向工程报告智能写作场景，含核心能力、工作流程与应用场景展示；`/` 默认首页已切换为新版（`keepAlive` 关闭以匹配其滚动监听生命周期），旧版 `HomeView.vue` 不再挂路由，`/landing-v2` 预览路由暂时保留便于回看。视觉上按钮、CTA 色带与系统主题蓝 `#1890ff` 对齐，hero 标题按短语边界受控断行，四步流程为数字+图标组合徽标。
+- 新增开发期快速同步脚本 `scripts/sync-dev.ps1`：日常在 pisuan 目录改动代码后，一键把工作树内容（含未提交改动）按容器挂载清单落到 pisuan-localized 运行栈并再生机械改名层，web/api 热重载即生效，免去「提交 → push → fetch/reset → 改名」全链路；`-Revert` 开关一键还原（跑官方镜像链前建议先执行）。同步以 detached HEAD 挂基线，`pisuan-localized` 分支引用不受影响；机制与边界（uv.lock 不搬运、删除类改动走官方链等）见[上游同步指南](./upstream-sync-guide.md)「开发期快速同步」小节。
 - UI 主题统一切换为「科技蓝」配色：中性色以 shadcn zinc 为基准（暗色模式页面底 `#0a0a0a`、浮面 `#171717`、次级面 `#262626`），主色由 AntD 拂晓蓝 `#1890ff` 更换为 Tailwind blue（浅色 `#2563eb` / 暗色 `#3b82f6`），辅助色由暖金色更换为科技青（Tailwind cyan），图表色板同步为蓝锚点科技配色，语义色（success/error/warning）保持不变。实现上仅替换 `base.css` / `base.dark.css` 的 token 值与 `stores/theme.js` 的 AntD 主色接线，全部 CSS 变量名保持不变，业务组件零改动；暗色模式下文本选中与滚动条 hover 使用主蓝点睛。
 - 智能体默认头像统一更换为 thumbs 扁平图形套图（DiceBear thumbs）：智能体管理页卡片、对话页切换器、编辑弹窗预览与子智能体标识共用新增的 `generateAgentAvatar` 图源，与用户头像（glyphs 符号）形成区分；用户头像等其他图标不受影响。
 - 建立上游同步的 `[pisuan-custom]` 行内定制标记约定：本次 UI 个性化定制（科技蓝换肤、全局字体、智能体头像）的全部改动点已在源码行内嵌标记，`git grep -n '\[pisuan-custom\]'` 可列出全部定制点，约定与合并策略已写入[上游同步指南](./upstream-sync-guide.md)第七节。
