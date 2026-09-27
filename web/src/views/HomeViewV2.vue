@@ -169,7 +169,12 @@
               :key="s.title"
               :style="{ '--stagger': i }"
             >
-              <span class="lp-step-num">{{ s.num }}</span>
+              <div class="lp-step-head">
+                <span class="lp-step-icon">
+                  <component :is="s.icon" :size="20" />
+                </span>
+                <span class="lp-step-num">{{ s.num }}</span>
+              </div>
               <h3>{{ s.title }}</h3>
               <p>{{ s.desc }}</p>
             </li>
@@ -259,6 +264,9 @@ import {
   Upload,
   Layers,
   FileCheck,
+  Database,
+  FileText,
+  PackageCheck,
   ClipboardCheck,
   FileSearch,
   Tags,
@@ -352,10 +360,30 @@ const features = [
 ]
 
 const steps = [
-  { num: '01', title: '上传领域资料', desc: '项目资料与历史报告批量上传，自动完成解析与分类。' },
-  { num: '02', title: '知识加工入库', desc: '泛化提取工程实体与模板结构，人工复核后入库沉淀。' },
-  { num: '03', title: '智能分章写作', desc: '生成项目大纲后按章派发写手，结合知识库逐章成文。' },
-  { num: '04', title: '装配成稿交付', desc: '合并全部完稿章节，输出完整报告文档，支持溯源审阅。' }
+  {
+    num: '01',
+    icon: Upload,
+    title: '上传领域资料',
+    desc: '项目资料与历史报告批量上传，自动完成解析与分类。'
+  },
+  {
+    num: '02',
+    icon: Database,
+    title: '知识加工入库',
+    desc: '泛化提取工程实体与模板结构，人工复核后入库沉淀。'
+  },
+  {
+    num: '03',
+    icon: FileText,
+    title: '智能分章写作',
+    desc: '生成项目大纲后按章派发写手，结合知识库逐章成文。'
+  },
+  {
+    num: '04',
+    icon: PackageCheck,
+    title: '装配成稿交付',
+    desc: '合并全部完稿章节，输出完整报告文档，支持溯源审阅。'
+  }
 ]
 
 const scenarios = [
@@ -1055,16 +1083,37 @@ onUnmounted(() => {
   }
 }
 
-.lp-step-num {
+.lp-step-head {
+  position: relative;
+  width: 44px;
+}
+
+.lp-step-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 10px;
-  background: var(--main-700);
+  background: var(--main-50);
+  color: var(--main-600);
+}
+
+.lp-step-num {
+  position: absolute;
+  top: -8px;
+  right: -12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 2px solid var(--gray-0);
+  background: var(--main-600);
   color: var(--gray-0);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
