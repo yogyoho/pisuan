@@ -6,12 +6,12 @@ export const useThemeStore = defineStore('theme', () => {
   // 从 localStorage 读取保存的主题，默认为浅色
   const isDark = ref(localStorage.getItem('theme') === 'dark')
 
-  // 公共主题配置 - Ant Design 拂晓蓝主题
+  // 公共主题配置 - 科技蓝主题 (Tailwind blue-600)
   const commonTheme = {
     token: {
       fontFamily:
         '"PingFang SC", "PingFang HK", "Helvetica Neue", Helvetica, "Microsoft Yahei", "微软雅黑", Arial, sans-serif',
-      colorPrimary: '#1890ff',
+      colorPrimary: '#2563eb',
       colorLink: 'var(--main-color)',
       colorLinkHover: 'var(--main-600)',
       colorLinkActive: 'var(--main-800)',
@@ -25,9 +25,13 @@ export const useThemeStore = defineStore('theme', () => {
     ...commonTheme
   }
 
-  // 深色主题配置
+  // 深色主题配置（shadcn zinc 暗色基准，主色提亮为 blue-500）
   const darkTheme = {
     ...commonTheme,
+    token: {
+      ...commonTheme.token,
+      colorPrimary: '#3b82f6'
+    },
     algorithm: theme.darkAlgorithm
   }
 

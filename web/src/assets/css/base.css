@@ -1,68 +1,68 @@
 /* color palette from <https://github.com/vuejs/theme> */
-/* https://material-foundation.github.io/material-theme-builder/ */
+/* 中性色基准：shadcn (zinc)；主色基准：Tailwind blue-600 科技蓝 */
 :root {
-  /* 主色调 - Ant Design 拂晓蓝 (从 know 项目导入) */
-  --main-1000: #002766;
-  --main-900: #003a8c;
-  --main-800: #0050b3;
-  --main-700: #096dd9;
-  --main-600: #1890ff;
-  --main-500: #40a9ff;
-  --main-400: #69c0ff;
-  --main-300: #91d5ff;
-  --main-200: #bae7ff;
-  --main-100: #e6f7ff;
-  --main-50: #f0f9ff;
-  --main-40: #f5faff;
-  --main-30: #f8fcff;
-  --main-20: #fafcff;
-  --main-10: #fcfdff;
-  --main-5: #fefeff;
-  --main-1: #fefeff;
+  /* 主色调 - 科技蓝 (Tailwind blue 刻度，基准 --main-600 #2563eb) */
+  --main-1000: #172554;
+  --main-900: #1e3a8a;
+  --main-800: #1e40af;
+  --main-700: #1d4ed8;
+  --main-600: #2563eb;
+  --main-500: #3b82f6;
+  --main-400: #60a5fa;
+  --main-300: #93c5fd;
+  --main-200: #bfdbfe;
+  --main-100: #dbeafe;
+  --main-50: #eff6ff;
+  --main-40: #f4f8fe;
+  --main-30: #f8fbfe;
+  --main-20: #fbfdfe;
+  --main-10: #fcfeff;
+  --main-5: #feffff;
+  --main-1: #feffff;
   --main-0: #ffffff;
 
   /* 品牌色变量 */
-  --main-color: #1890ff;
-  --main-bright: #40a9ff;
+  --main-color: #2563eb;
+  --main-bright: #3b82f6;
 
-  /* 辅助色：暖金色系，基准 --second-500 #c9983c，刻度与 --main-* 对齐 */
-  --second-1000: #2e2108;
-  --second-900: #4a350d;
-  --second-800: #6b4d14;
-  --second-700: #8a641d;
-  --second-600: #a97e2b;
-  --second-500: #c9983c;
-  --second-400: #d4ac5f;
-  --second-300: #dfc183;
-  --second-200: #ead5a8;
-  --second-100: #f4e8cc;
-  --second-50: #faf3e2;
-  --second-40: #f6efe0;
-  --second-30: #fbf8f0;
-  --second-20: #faf7ee;
-  --second-10: #fcfbf6;
-  --second-5: #fefdfa;
-  --second-1: #fefefe;
+  /* 辅助色：科技青色系，基准 --second-500 #06b6d4，刻度与 --main-* 对齐 */
+  --second-1000: #083344;
+  --second-900: #164e63;
+  --second-800: #155e75;
+  --second-700: #0e7490;
+  --second-600: #0891b2;
+  --second-500: #06b6d4;
+  --second-400: #22d3ee;
+  --second-300: #67e8f9;
+  --second-200: #a5f3fc;
+  --second-100: #cffafe;
+  --second-50: #ecfeff;
+  --second-40: #f2fcfd;
+  --second-30: #f8fdfe;
+  --second-20: #fbfefe;
+  --second-10: #fdfeff;
+  --second-5: #feffff;
+  --second-1: #feffff;
   --second-0: #ffffff;
 
   --second-color: var(--second-600);
 
   --gray-10000: #000000; /* 保持纯黑 */
-  --gray-2000: #0c0d0d; /* 更精致的暗灰，用于极深背景 */
-  --gray-1000: #151616; /* 深灰黑，适用于主文本 */
-  --gray-900: #1e1f1f;
-  --gray-800: #323333; /* 标准深灰，适合背景 */
-  --gray-700: #4c4d4d;
-  --gray-600: #697070; /* 调和中灰，适合次要文本 */
-  --gray-500: #979999; /* 更柔和的中灰色 */
-  --gray-400: #bdbfbf;
-  --gray-300: #d7d9d9; /* 修正了原300/200重复 */
-  --gray-200: #e4e6e6; /* 稍微加深一点，便于分层 */
-  --gray-150: #eef0f0;
-  --gray-100: #eff2f2;
-  --gray-50: #f5f7f7;
-  --gray-25: #f8fafa;
-  --gray-10: #fbfcfc;
+  --gray-2000: #09090b; /* zinc-950，极深背景/主文本 */
+  --gray-1000: #18181b; /* zinc-900，深灰黑，主文本 */
+  --gray-900: #27272a; /* zinc-800 */
+  --gray-800: #3f3f46; /* zinc-700，适合背景 */
+  --gray-700: #52525b; /* zinc-600 */
+  --gray-600: #71717a; /* zinc-500，次要文本 */
+  --gray-500: #a1a1aa; /* zinc-400，占位/弱文本 */
+  --gray-400: #c4c4cb;
+  --gray-300: #d4d4d8; /* zinc-300 */
+  --gray-200: #e4e4e7; /* zinc-200，边框 */
+  --gray-150: #ececee;
+  --gray-100: #f4f4f5; /* zinc-100 */
+  --gray-50: #fafafa; /* zinc-50 */
+  --gray-25: #fbfbfc;
+  --gray-10: #fdfdfd;
   --gray-0: #ffffff;
 
   /* Standard Color System - 标准5档色阶系统 */
@@ -100,12 +100,12 @@
   --color-warning-700: #d48806; /* 警告色-深 */
   --color-warning-900: #ad6800; /* 警告色-最深 */
 
-  --color-info-10: #f5fbff; /* 信息色-极浅 */
-  --color-info-50: #e6f7ff; /* 信息色-最浅 */
-  --color-info-100: #bae7ff; /* 信息色-浅 */
-  --color-info-500: #1890ff; /* 信息色-标准 */
-  --color-info-700: #096dd9; /* 信息色-深 */
-  --color-info-900: #0050b3; /* 信息色-最深 */
+  --color-info-10: #f7faff; /* 信息色-极浅 */
+  --color-info-50: #eff6ff; /* 信息色-最浅 */
+  --color-info-100: #dbeafe; /* 信息色-浅 */
+  --color-info-500: #3b82f6; /* 信息色-标准 */
+  --color-info-700: #2563eb; /* 信息色-深 */
+  --color-info-900: #1e3a8a; /* 信息色-最深 */
 
   --color-accent-10: #f5fffe; /* 强调色-极浅 */
   --color-accent-50: #e6fffb; /* 强调色-最浅 */
@@ -114,17 +114,17 @@
   --color-accent-700: #08979c; /* 强调色-深 */
   --color-accent-900: #006d75; /* 强调色-最深 */
 
-  /* Chart Palette - 图表调色板 (从 know 项目导入) */
+  /* Chart Palette - 图表调色板 (科技蓝锚点 + 青/紫/靛辅助) */
   --chart-palette-1: var(--main-500);
-  --chart-palette-2: #11cbe3;
-  --chart-palette-3: #00b8a9;
-  --chart-palette-4: #f2c94c;
-  --chart-palette-5: #eb5757;
-  --chart-palette-6: #2f80ed;
-  --chart-palette-7: #9b51e0;
-  --chart-palette-8: #56ccf2;
-  --chart-palette-9: #6fcf97;
-  --chart-palette-10: #333333;
+  --chart-palette-2: #06b6d4;
+  --chart-palette-3: #8b5cf6;
+  --chart-palette-4: #f59e0b;
+  --chart-palette-5: #ef4444;
+  --chart-palette-6: #6366f1;
+  --chart-palette-7: #ec4899;
+  --chart-palette-8: #14b8a6;
+  --chart-palette-9: #22c55e;
+  --chart-palette-10: #52525b;
 
   --bg-sider: var(--main-5);
 
@@ -177,7 +177,13 @@
   --color-trans-dark: var(--dark-85);
 
   /* Ant Design 主色变量 */
-  --ant-primary-color: #1890ff;
+  --ant-primary-color: #2563eb;
+}
+
+/* 文本选中美化（科技蓝点睛） */
+::selection {
+  background: var(--main-100);
+  color: var(--main-1000);
 }
 
 :root {
@@ -203,7 +209,7 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--gray-100);
+  background: var(--gray-300);
 }
 
 /* Firefox 滚动条样式 */
