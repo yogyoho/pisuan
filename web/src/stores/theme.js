@@ -10,7 +10,7 @@ export const useThemeStore = defineStore('theme', () => {
   const commonTheme = {
     token: {
       fontFamily:
-        '"PingFang SC", "PingFang HK", "Helvetica Neue", Helvetica, "Microsoft Yahei", "微软雅黑", Arial, sans-serif',
+        '"Inter Variable", "Inter", "PingFang SC", "Noto Sans SC", "Microsoft Yahei", "微软雅黑", Arial, sans-serif',
       colorPrimary: '#2563eb',
       colorLink: 'var(--main-color)',
       colorLinkHover: 'var(--main-600)',
