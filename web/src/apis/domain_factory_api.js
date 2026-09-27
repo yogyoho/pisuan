@@ -3,12 +3,23 @@
  * 领域知识工厂相关接口
  */
 
-import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete, apiRequest } from './base'
+import {
+  apiAdminGet,
+  apiAdminPost,
+  apiAdminPut,
+  apiAdminDelete,
+  apiGet,
+  apiPost,
+  apiPut,
+  apiDelete,
+  apiRequest
+} from './base'
 
 const runtimeEnv = typeof import.meta !== 'undefined' ? import.meta.env : {}
-const isDev = !!runtimeEnv?.DEV
 const buildUrl = (base, params = {}) => {
-  const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')).toString()
+  const qs = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')
+  ).toString()
   return qs ? `${base}?${qs}` : base
 }
 
@@ -72,15 +83,19 @@ const demoTaskDetail = () => ({
   template: {
     original: '示例原文内容。',
     generalized: '示例泛化内容 {{Slot_A}}。',
-    slots: [
-      { name: 'Slot_A', source: '自动提取', status: 'auto' }
-    ],
+    slots: [{ name: 'Slot_A', source: '自动提取', status: 'auto' }],
     metadata: { chapter: '1. 总论', tags: [] }
   },
   metadata_options: { chapters: ['1. 总论'], tags: [] },
   source_paragraphs: [
-    { id: 'p1', title: '1.1 项目概况', content: '示例项目概况内容。', is_title: true, section_path: ['1', '1.1'] }
-  ],
+    {
+      id: 'p1',
+      title: '1.1 项目概况',
+      content: '示例项目概况内容。',
+      is_title: true,
+      section_path: ['1', '1.1']
+    }
+  ]
 })
 
 const withDemoFallback = async (requestFn, fallbackFn) => {
@@ -101,7 +116,7 @@ export const domainFactoryApi = {
 
   getDomains: () =>
     withDemoFallback(
-      () => apiAdminGet('/api/domain-factory/domains'),
+      () => apiGet('/api/domain-factory/domains'),
       () => ({ items: [] })
     ),
 
@@ -128,101 +143,113 @@ export const domainFactoryApi = {
   fetchDataSources: (params = {}) => {
     const url = buildUrl('/api/domain-factory/data-sources', params)
     return withDemoFallback(
-      () => apiAdminGet(url).then(res => res),
+      () => apiGet(url).then((res) => res),
       () => ({ pending: buildDemoTasks(params?.domain || 'coal') })
     )
   },
 
   fetchHistory: (params = {}) =>
     withDemoFallback(
-      () => apiAdminGet(buildUrl('/api/domain-factory/history', params)),
+      () => apiGet(buildUrl('/api/domain-factory/history', params)),
       () => ({ items: buildDemoHistory(params?.domain || 'coal') })
     ),
 
   getTaskDetail: (taskId) =>
     withDemoFallback(
-      () => apiAdminGet(`/api/domain-factory/tasks/${taskId}`),
+      () => apiGet(`/api/domain-factory/tasks/${taskId}`),
       () => demoTaskDetail()
     ),
 
   getTaskMarkdown: (taskId) =>
     withDemoFallback(
-      () => apiAdminGet(`/api/domain-factory/tasks/${taskId}/markdown`),
+      () => apiGet(`/api/domain-factory/tasks/${taskId}/markdown`),
       () => ({
-        markdown: '# 示例 Markdown 内容\n\n这是一份环保报告的解析结果。\n\n## 1. 项目概况\n\n项目名称：新阳煤矿\n设计产能：5.0 Mt/a\n\n## 2. 环境现状\n\n项目所在区域环境空气质量良好。'
+        markdown:
+          '# 示例 Markdown 内容\n\n这是一份环保报告的解析结果。\n\n## 1. 项目概况\n\n项目名称：新阳煤矿\n设计产能：5.0 Mt/a\n\n## 2. 环境现状\n\n项目所在区域环境空气质量良好。'
       })
     ),
 
   saveTaskStep: (taskId, payload) =>
-    withDemoFallback(() => apiAdminPut(`/api/domain-factory/tasks/${taskId}`, payload), {
+    withDemoFallback(() => apiPut(`/api/domain-factory/tasks/${taskId}`, payload), {
       success: true,
       demo: true
     }),
 
   validateTask: (taskId) =>
     withDemoFallback(
-      () => apiAdminPost(`/api/domain-factory/tasks/${taskId}/validate`, {}),
+      () => apiPost(`/api/domain-factory/tasks/${taskId}/validate`, {}),
       () => ({
         success: true,
-        report: { passed: true, summary: { total_errors: 0, total_warnings: 0, total_paragraphs: 0, parameter_paragraphs: 0, checked_at: '' }, errors: [], warnings: [] }
+        report: {
+          passed: true,
+          summary: {
+            total_errors: 0,
+            total_warnings: 0,
+            total_paragraphs: 0,
+            parameter_paragraphs: 0,
+            checked_at: ''
+          },
+          errors: [],
+          warnings: []
+        }
       })
     ),
 
   discoverEntities: (taskId) =>
     withDemoFallback(
-      () => apiAdminPost(`/api/domain-factory/tasks/${taskId}/discover-entities`, {}),
+      () => apiPost(`/api/domain-factory/tasks/${taskId}/discover-entities`, {}),
       () => ({ success: true, result: { proposals: [], total: 0 } })
     ),
 
   commitTask: (taskId, payload) =>
-    withDemoFallback(() => apiAdminPost(`/api/domain-factory/tasks/${taskId}/commit`, payload), {
+    withDemoFallback(() => apiPost(`/api/domain-factory/tasks/${taskId}/commit`, payload), {
       success: true,
       demo: true
     }),
 
   // 再入库
   reingestTask: (taskId, payload) =>
-    withDemoFallback(() => apiAdminPost(`/api/domain-factory/tasks/${taskId}/reingest`, payload), {
+    withDemoFallback(() => apiPost(`/api/domain-factory/tasks/${taskId}/reingest`, payload), {
       success: true,
       demo: true,
       task: { ingest_task_id: `demo_reingest_${taskId}_${Date.now()}` }
     }),
 
   // 重新提取未识别实体
-  refreshUnrecognizedEntities: (taskId, maxEntities = 20) =>
+  refreshUnrecognizedEntities: (taskId) =>
     withDemoFallback(
-      () => apiAdminGet(`/api/domain-factory/tasks/${taskId}/proposed-entities`),
+      () => apiGet(`/api/domain-factory/tasks/${taskId}/proposed-entities`),
       () => ({ entities: [], raw_slots: [] })
     ),
 
   retryTask: (taskId) =>
-    withDemoFallback(() => apiAdminPost(`/api/domain-factory/tasks/${taskId}/retry`), {
+    withDemoFallback(() => apiPost(`/api/domain-factory/tasks/${taskId}/retry`), {
       success: true,
       demo: true
     }),
 
   deleteDataSource: (taskId) =>
-    withDemoFallback(
-      () => apiAdminDelete(`/api/domain-factory/tasks/${taskId}`),
-      { success: true, demo: true }
-    ),
-
-  retryDataSource: (taskId) =>
-    withDemoFallback(() => apiAdminPost(`/api/domain-factory/tasks/${taskId}/retry`), {
+    withDemoFallback(() => apiDelete(`/api/domain-factory/tasks/${taskId}`), {
       success: true,
       demo: true
     }),
 
-  getUnrecognizedEntities: (taskId, maxEntities = 20) =>
+  retryDataSource: (taskId) =>
+    withDemoFallback(() => apiPost(`/api/domain-factory/tasks/${taskId}/retry`), {
+      success: true,
+      demo: true
+    }),
+
+  getUnrecognizedEntities: (taskId) =>
     withDemoFallback(
-      () => apiAdminGet(`/api/domain-factory/tasks/${taskId}/proposed-entities`),
+      () => apiGet(`/api/domain-factory/tasks/${taskId}/proposed-entities`),
       () => ({ entities: [], raw_slots: [] })
     ),
 
   // 确认并保存建议的实体到实体库
   confirmProposedEntities: (taskId, entities) =>
     withDemoFallback(
-      () => apiAdminPost(`/api/domain-factory/tasks/${taskId}/confirm-entities`, { entities }),
+      () => apiPost(`/api/domain-factory/tasks/${taskId}/confirm-entities`, { entities }),
       () => ({ success: true, saved: 0, skipped: 0 })
     ),
 
@@ -246,7 +273,7 @@ export const domainFactoryApi = {
 
   getPipelineConfig: () =>
     withDemoFallback(
-      () => apiAdminGet('/api/domain-factory/pipeline-config'),
+      () => apiGet('/api/domain-factory/pipeline-config'),
       () => ({
         pipeline_id: 'default',
         entry_point: 'upload',
@@ -284,25 +311,38 @@ export const domainFactoryApi = {
 
   getOutlineTemplates: (params = {}) => {
     const url = buildUrl('/api/domain-factory/outline-templates', params)
-    return withDemoFallback(() => apiAdminGet(url), () => ({ items: [], total: 0 }))
+    return withDemoFallback(
+      () => apiGet(url),
+      () => ({ items: [], total: 0 })
+    )
   },
 
   getOutlineTemplate: (chapterKey, params = {}) => {
-    const url = buildUrl(`/api/domain-factory/outline-templates/${encodeURIComponent(chapterKey)}`, params)
-    return withDemoFallback(() => apiAdminGet(url), () => ({}))
+    const url = buildUrl(
+      `/api/domain-factory/outline-templates/${encodeURIComponent(chapterKey)}`,
+      params
+    )
+    return withDemoFallback(
+      () => apiGet(url),
+      () => ({})
+    )
   },
 
   updateOutlineTemplate: (chapterKey, data) =>
     withDemoFallback(
-      () => apiAdminPut(`/api/domain-factory/outline-templates/${encodeURIComponent(chapterKey)}`, data),
+      () =>
+        apiAdminPut(
+          `/api/domain-factory/outline-templates/${encodeURIComponent(chapterKey)}`,
+          data
+        ),
       { success: true, demo: true }
     ),
 
   seedOutlineTemplates: () =>
-    withDemoFallback(
-      () => apiAdminPost('/api/domain-factory/outline-templates/seed', {}),
-      { success: true, demo: true }
-    ),
+    withDemoFallback(() => apiAdminPost('/api/domain-factory/outline-templates/seed', {}), {
+      success: true,
+      demo: true
+    }),
 
   extractOutlinePreview: (file, { domain = 'coal', report_type = 'eia_report' } = {}) => {
     const form = new FormData()
@@ -316,14 +356,18 @@ export const domainFactoryApi = {
   },
 
   confirmOutlineExtract: (payload) =>
-    withDemoFallback(
-      () => apiAdminPost('/api/domain-factory/outline-templates/confirm', payload),
-      { success: true, demo: true }
-    ),
+    withDemoFallback(() => apiAdminPost('/api/domain-factory/outline-templates/confirm', payload), {
+      success: true,
+      demo: true
+    }),
 
   generateExtractionRegex: (domain, report_type) =>
     withDemoFallback(
-      () => apiAdminPost('/api/domain-factory/outline-templates/generate-regex', { domain, report_type }),
+      () =>
+        apiAdminPost('/api/domain-factory/outline-templates/generate-regex', {
+          domain,
+          report_type
+        }),
       { success: true, generated: 0, total: 0, demo: true }
     ),
 
@@ -331,7 +375,7 @@ export const domainFactoryApi = {
 
   getContexts: () =>
     withDemoFallback(
-      () => apiAdminGet('/api/domain-factory/contexts'),
+      () => apiGet('/api/domain-factory/contexts'),
       () => ({ domains: [], report_types: {} })
     ),
 
@@ -374,4 +418,3 @@ export const domainFactoryApi = {
       })
     )
 }
-
