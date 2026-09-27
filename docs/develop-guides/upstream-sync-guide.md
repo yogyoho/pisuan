@@ -94,16 +94,20 @@ bash scripts/sync-upstream.sh
 .\scripts\sync-dev.ps1 -Revert    # 还原 localized 到镜像 tip（跑官方链前建议先执行）
 ```
 
-机制：localized 以 **detached HEAD** 挂到 origin/pisuan-custom（yuxi 命名基线），覆盖拷贝后整树
-再生改名层；`pisuan-localized` 分支引用全程不被触碰。
+机制：只把 HEAD 指针 detach 到 origin/pisuan-custom（`git update-ref --no-deref`，**工作树不动**），
+拷贝 walker 对每个文件做「路径翻译（yuxi 目录名 → pisuan）+ 内容变换（官方改名规则）+ 差异比较」，
+仅当变换结果与目标不同才落盘——收敛轮零 mtime 事件，vite 不重启；随后仓库级 `git add -A` 使索引
+镜像工作树，rename 以幂等方式兜底（对已是 pisuan 形态的内容零替换不落盘）。`pisuan-localized`
+分支引用全程不被触碰。
 
 边界（务必知悉）：
 
 1. 只同步容器挂载路径（backend server/package/test/scripts、docker/sandbox_provisioner、web src/test/public + index.html/vite.config.js/pyproject.toml）；docs 等非挂载路径仍走官方链
 2. 不搬运 `backend/uv.lock`（锁文件必须 `uv lock` 机生）；依赖变更后跑官方链重生成，否则镜像重建失败（热重载不受影响）
-3. 「删除 tracked 文件」不被同步（detach 基线会还原它）——删除类改动走官方链
+3. 「删除文件」不被同步（本地化树会保留旧文件；索引中的对应条目由 `git add -A` 自动清退）——删除类改动走官方链
 4. 不做任何提交/推送；GitHub 发布仍由官方镜像链负责
 5. dev 同步后 localized 处于 detached + 脏树态，跑官方链 `sync-upstream.ps1` 前先 `-Revert`，否则其第 5 步 `git switch` 可能因脏树失败（仅降级警告）
+6. 病理状态（如手工 checkout/混用旧流程导致索引与工作树命名脱钩、双目录并存）用 `-Revert` 一步还原到镜像 tip 即可自愈
 
 ### 定时自动同步（Windows 任务计划）
 

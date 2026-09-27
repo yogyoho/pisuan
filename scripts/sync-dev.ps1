@@ -8,14 +8,16 @@
 #   .\scripts\sync-dev.ps1            # 同步（含未提交改动）到运行栈，热重载即时生效
 #   .\scripts\sync-dev.ps1 -Revert    # 还原 localized 到镜像 tip（跑官方链 sync-upstream 前建议先执行）
 #
-# 机制：localized 以 detached HEAD 挂到 origin/pisuan-custom（yuxi 命名基线，改名脚本的合法
-# 输入形态），覆盖拷贝工作树改动后整树再生改名层。pisuan-localized 分支引用全程不被触碰。
+# 机制：只把 HEAD 指针 detach 到 origin/pisuan-custom（update-ref，工作树不动），覆盖拷贝
+# 工作树改动后再生改名层。rename 规则幂等，对上轮已改名的树零替换不落盘——收敛轮零写入。
+# pisuan-localized 分支引用全程不被触碰。
 #
 # 边界（务必知悉）：
 #   1. 只同步容器挂载的代码路径；docs/packages 等非挂载路径不随 dev 同步更新；
 #   2. 不搬运 backend/uv.lock（锁文件必须由 uv lock 机生，手搬即损坏）；依赖变更后需跑
 #      官方链 scripts/sync-upstream.ps1 重生成锁文件，否则镜像重建会失败（热重载不受影响）；
-#   3. 「删除文件」不被同步（detach 基线会还原已删文件）——删除类改动请跑官方链；
+#   3. 「删除文件」不被同步（本地化树会保留旧文件；索引中的对应条目由 git add -A 自动清退）
+#      ——删除类改动请跑官方链；
 #   4. 不做任何 git 提交/推送；推送上 GitHub 由官方镜像链负责；
 #   5. dev 同步后 localized 处于 detached + 工作树差异状态，跑官方链前先 -Revert 还原，
 #      否则官方链第 5 步的 git switch 可能因脏树失败（仅降级警告，不阻断主流程）。
@@ -63,44 +65,79 @@ if ($Revert) {
   exit 0
 }
 
-# ---- 主流程：detach 到 yuxi 命名基线 → 覆盖拷贝 → 整树改名再生 ----
+# ---- 主流程：HEAD 指针 detach 到基线（工作树不动）→ 覆盖拷贝 → 幂等改名再生 ----
 
 # 1. 更新基线引用（离线时基线稍旧不影响挂载路径内容——它们来自 pisuan 工作树拷贝）
 git -C $loc fetch --quiet origin
 if ($LASTEXITCODE -ne 0) { Write-Warning "git fetch 失败（离线？），继续用本地 origin/pisuan-custom 旧基线" }
 
-# 2. detached 挂到基线（-f 丢弃上一次 dev 同步的 tracked 差异；分支引用不动）
-git -C $loc checkout --quiet --detach --force origin/pisuan-custom
-if ($LASTEXITCODE -ne 0) { throw "detach 到 origin/pisuan-custom 失败" }
+# 2. 只挪 HEAD 指针到基线（--no-deref 脱离分支且不触碰 index/工作树）。
+#    千万不要用 checkout/reset 重置工作树：基线是 yuxi 命名，重置会把上轮改名层整树
+#    打回 yuxi 形态再靠 rename 改回来，每轮全树两次写入（vite 全量重启/容器抖动）。
+#    rename 规则幂等（对已是 pisuan 形态的内容零替换不落盘），无需先回到基线内容。
+git -C $loc update-ref --no-deref HEAD (git -C $loc rev-parse origin/pisuan-custom)
+if ($LASTEXITCODE -ne 0) { throw "HEAD 指到 origin/pisuan-custom 失败" }
 foreach ($p in $syncPaths) {
   git -C $loc clean --quiet -fd -- $p
   if ($LASTEXITCODE -ne 0) { throw "git clean 失败: $p" }
 }
 
-# 3. 按挂载清单拷贝工作树内容（排除缓存与虚拟环境目录）
-$excludeDirs = @('__pycache__', '.pytest_cache', '.venv', 'node_modules', '.vite')
-foreach ($p in $syncPaths) {
-  $src = Join-Path $root $p
-  $dst = Join-Path $loc $p
-  if (-not (Test-Path $src)) { Write-Warning "源不存在，跳过: $p"; continue }
-  $absExclude = $excludeDirs | ForEach-Object { Join-Path $src $_ }
-  robocopy $src $dst /E /XD $absExclude /R:2 /W:2 /NFL /NDL /NJH /NP | Out-Null
-  if ($LASTEXITCODE -ge 8) { throw "robocopy 失败（exit $LASTEXITCODE）: $p" }
-}
-# 单文件用 robocopy 文件模式（内容未变则跳过，避免 mtime 变动触发 vite 无谓重启）
+# 3. 拷贝工作树内容（python walker 单进程：路径翻译 + 内容变换 + 差异比较后才落盘）
+#    源树（pisuan 仓库）是 yuxi 命名，本地化树是 pisuan 命名——直接整目录拷贝会与改名层
+#    撞名（backend/package/yuxi vs pisuan）。walker 对每个文件：路径组件按 is_rename_dir
+#    翻译、文件名与内容按 rewrite_text 变换，变换后与目标一致则不写（收敛轮零 mtime 事件，
+#    vite 不重启）。注意：python 代码必须经临时 .py 文件调用——PS 5.1 向原生命令传含双引号
+#    的 -c 代码会坏参
 $copyFiles = @('web/index.html', 'web/vite.config.js', 'backend/pyproject.toml')
-foreach ($p in $copyFiles) {
-  $srcDir = Join-Path $root (Split-Path $p)
-  $dstDir = Join-Path $loc (Split-Path $p)
-  $name = Split-Path -Leaf $p
-  if (-not (Test-Path (Join-Path $root $p))) { Write-Warning "源不存在，跳过: $p"; continue }
-  robocopy $srcDir $dstDir $name /R:2 /W:2 /NFL /NDL /NJH /NP | Out-Null
-  if ($LASTEXITCODE -ge 8) { throw "robocopy 失败（exit $LASTEXITCODE）: $p" }
-}
+$pyFile = Join-Path $env:TEMP 'syncdev_copy.py'
+@'
+import sys, hashlib
+from pathlib import Path
+import importlib.util
+spec = importlib.util.spec_from_file_location("apr", sys.argv[1])
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+src_root, dst_root = Path(sys.argv[2]), Path(sys.argv[3])
+EXCLUDE = {"__pycache__", ".pytest_cache", ".venv", "node_modules", ".vite"}
+written = 0
+for rel in sys.argv[4:]:
+    base = src_root / rel
+    if not base.exists():
+        continue
+    files = base.rglob("*") if base.is_dir() else [base]
+    for f in files:
+        if not f.is_file():
+            continue
+        rp = f.relative_to(src_root)
+        if any(part in EXCLUDE for part in rp.parts):
+            continue
+        parts = list(rp.parts[:-1])
+        for i, comp in enumerate(parts):
+            if m.is_rename_dir(comp):
+                parts[i] = m.rewrite_text(comp)[0]
+        name = m.rewrite_text(rp.parts[-1])[0]
+        dst = dst_root.joinpath(*parts, name)
+        raw = f.read_bytes()
+        try:
+            data = m.rewrite_text(raw.decode("utf-8"))[0].encode("utf-8")
+        except UnicodeDecodeError:
+            data = raw  # 二进制：仅路径翻译
+        if dst.exists() and dst.read_bytes() == data:
+            continue
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_bytes(data)
+        written += 1
+print(f"walker: {written} files written")
+'@ | Set-Content -Path $pyFile -Encoding UTF8
+python $pyFile (Join-Path $root 'scripts/apply_pisuan_rename.py') $root $loc (@($syncPaths) + $copyFiles)
+$walkerExit = $LASTEXITCODE
+Remove-Item $pyFile -Force
+if ($walkerExit -ne 0) { throw "拷贝 walker 失败" }
 
-# 3.5 新拷贝的文件入索引（不提交）：改名脚本按 git ls-files（tracked）圈定处理范围，
-# untracked 新文件会被漏改（yuxi 引用在运行栈成坏引用）；入索引后 -Revert 仍可整树还原
-git -C $loc add -A -- (@($syncPaths) + $copyFiles)
+# 3.5 仓库级 add（不提交）：让索引镜像工作树的 pisuan 形态。改名脚本按 git ls-files
+# （索引）圈定范围——新拷贝文件不入索引会被漏改；索引若残留 yuxi 命名旧路径，rename
+# 会规划目录搬迁并撞上工作树已改名目标而崩溃，仓库级 add 使两者永远一致
+git -C $loc add -A
 if ($LASTEXITCODE -ne 0) { throw "git add 失败" }
 
 # 4. 再生机械改名层（确定性变换；--allow-dirty 放行脚本自身制造的拷贝差异与行尾噪声）
