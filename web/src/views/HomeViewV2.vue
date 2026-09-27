@@ -461,6 +461,9 @@ onUnmounted(() => {
   font-size: 17px;
   font-weight: 700;
   letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lp-nav {
@@ -502,6 +505,7 @@ onUnmounted(() => {
   font-family: inherit;
   cursor: pointer;
   text-decoration: none;
+  white-space: nowrap;
   transition:
     background 0.2s ease,
     color 0.2s ease,
@@ -619,6 +623,7 @@ onUnmounted(() => {
   line-height: 1.22;
   font-weight: 700;
   letter-spacing: 0.5px;
+  text-wrap: balance;
   color: var(--gray-1000);
 }
 
@@ -1162,6 +1167,14 @@ onUnmounted(() => {
 @media (max-width: 767px) {
   .lp-nav {
     display: none;
+  }
+
+  .lp-header .lp-btn-ghost {
+    display: none;
+  }
+
+  .lp-brand-name {
+    font-size: 15px;
   }
 
   .lp-hero {
