@@ -17,7 +17,7 @@
         </nav>
         <div class="lp-header-actions">
           <button v-if="!userStore.isLoggedIn" class="lp-btn lp-btn-ghost" @click="goLogin">
-            登录系统
+            登录
           </button>
           <button v-else class="lp-btn lp-btn-primary lp-btn-sm" @click="goFactory">
             <span>进入工作台</span>
