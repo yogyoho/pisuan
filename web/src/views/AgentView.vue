@@ -127,7 +127,7 @@ import AgentChatComponent from '@/components/AgentChatComponent.vue'
 import AgentEditModal from '@/components/model-management/AgentEditModal.vue'
 import { isBuiltinAgent, useAgentStore } from '@/stores/agent'
 import { handleChatError } from '@/utils/errorHandler'
-import { generatePixelAvatar } from '@/utils/pixelAvatar'
+import { generateAgentAvatar } from '@/utils/pixelAvatar'
 import { normalizeAgentBackendOption } from '@/utils/agentConfigUtils'
 import FallbackAvatar from '@/components/common/FallbackAvatar.vue'
 
@@ -249,7 +249,7 @@ const agentQuickSwitchOptions = computed(() =>
       label: agent.name || agent.id,
       value: agent.id,
       icon: agent.icon || '',
-      defaultIcon: agent.id ? generatePixelAvatar(agent.id) : '',
+      defaultIcon: agent.id ? generateAgentAvatar(agent.id) : '',
       isBuiltin: isBuiltinAgent(agent)
     }))
 )
