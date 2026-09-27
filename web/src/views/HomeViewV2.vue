@@ -103,9 +103,18 @@
       <!-- Metrics -->
       <section class="lp-metrics">
         <div class="lp-container lp-metrics-grid">
-          <div class="lp-metric reveal" v-for="m in metrics" :key="m.label">
+          <div
+            class="lp-metric reveal"
+            v-for="(m, i) in metrics"
+            :key="m.value"
+            :style="{ '--stagger': i }"
+          >
+            <span class="lp-metric-ticks" aria-hidden="true"></span>
+            <span class="lp-metric-icon">
+              <component :is="m.icon" :size="19" />
+            </span>
             <p class="lp-metric-value">{{ m.value }}</p>
-            <p class="lp-metric-label">{{ m.label }}</p>
+            <p class="lp-metric-desc">{{ m.desc }}</p>
           </div>
         </div>
       </section>
@@ -244,6 +253,10 @@ import {
   Upload,
   Layers,
   FileCheck,
+  ClipboardCheck,
+  FileSearch,
+  Tags,
+  Milestone,
   Rocket,
   Check
 } from '@lucide/vue'
@@ -284,10 +297,10 @@ const demoLines = [92, 100, 78, 96, 64, 88, 42]
 
 // Metrics reflect real platform mechanics (not fabricated ops data)
 const metrics = [
-  { value: '5 环节', label: '知识加工流水线 · 解析到入库' },
-  { value: '6 类', label: '领域工程实体体系' },
-  { value: '3 步', label: '报告流转 · 草稿到装配' },
-  { value: '章节级', label: '内容溯源与规范引用' }
+  { icon: ClipboardCheck, value: '5 步加工', desc: '资料到知识，全程可复核' },
+  { icon: Tags, value: '6 大分类', desc: '工程知识结构化入图' },
+  { icon: Milestone, value: '3 步流转', desc: '草稿、写作、装配，状态全程可视' },
+  { icon: FileSearch, value: '章节级溯源', desc: '引用与依据，逐章可查' }
 ]
 
 const features = [
@@ -827,22 +840,62 @@ onUnmounted(() => {
 .lp-metrics-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-  padding-top: 28px;
-  padding-bottom: 28px;
+  padding-top: 36px;
+  padding-bottom: 36px;
+}
+
+.lp-metric {
+  position: relative;
+  padding: 2px 28px;
+
+  &:first-child {
+    padding-left: 0;
+  }
+
+  &:last-child {
+    padding-right: 0;
+  }
+
+  & + & {
+    border-left: 1px solid var(--gray-200);
+  }
+}
+
+/* Blueprint ruler ticks: small engineering accent */
+.lp-metric-ticks {
+  display: block;
+  width: 46px;
+  height: 6px;
+  margin-bottom: 16px;
+  background: repeating-linear-gradient(90deg, var(--main-200) 0 2px, transparent 2px 8px);
+}
+
+.lp-metric-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 14px;
+  border-radius: 9px;
+  background: var(--gray-0);
+  border: 1px solid var(--gray-150);
+  color: var(--main-600);
 }
 
 .lp-metric-value {
-  margin: 0 0 4px;
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--main-700);
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: var(--gray-1000);
   font-variant-numeric: tabular-nums;
 }
 
-.lp-metric-label {
+.lp-metric-desc {
   margin: 0;
-  font-size: 13px;
+  font-size: 13.5px;
+  line-height: 1.65;
   color: var(--gray-600);
 }
 
@@ -1160,7 +1213,15 @@ onUnmounted(() => {
 
   .lp-metrics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 24px 16px;
+    gap: 28px 24px;
+  }
+
+  .lp-metric {
+    padding: 0;
+  }
+
+  .lp-metric + .lp-metric {
+    border-left: none;
   }
 }
 
@@ -1190,6 +1251,11 @@ onUnmounted(() => {
   .lp-scenarios-grid,
   .lp-metrics-grid {
     grid-template-columns: 1fr;
+  }
+
+  .lp-metric + .lp-metric {
+    border-top: 1px solid var(--gray-200);
+    padding-top: 22px;
   }
 
   .lp-section {
