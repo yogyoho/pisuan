@@ -17,7 +17,7 @@ import ShareConfigForm from '@/components/ShareConfigForm.vue'
 import FallbackAvatar from '@/components/common/FallbackAvatar.vue'
 import { isBuiltinAgent, useAgentStore } from '@/stores/agent'
 import { useUserStore } from '@/stores/user'
-import { generateAgentAvatar } from '@/utils/pixelAvatar'
+import { generateAgentAvatar } from '@/utils/pixelAvatar' // [pisuan-custom]
 import { MAX_IMAGE_UPLOAD_SIZE_BYTES, MAX_IMAGE_UPLOAD_SIZE_MB } from '@/utils/upload_limits'
 import { normalizeAgent } from '@/utils/agentConfigUtils'
 
@@ -189,6 +189,7 @@ const getAgentShareAllowedLevels = () => {
 }
 
 const agentModalTitle = computed(() => (editingAgentId.value ? '编辑智能体' : '新增智能体'))
+// [pisuan-custom] 编辑弹窗预览头像用 thumbs 套图（上游为 generatePixelAvatar glyphs 符号）
 const agentPreviewDefaultIcon = computed(() =>
   editingAgentId.value ? generateAgentAvatar(editingAgentId.value) : ''
 )

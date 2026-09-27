@@ -1,5 +1,5 @@
 const DICEBEAR_GLYPHS_AVATAR_BASE_URL = 'https://api.dicebear.com/10.x/glyphs/svg'
-// 智能体统一头像：thumbs 扁平图形套图（用户选定）
+// [pisuan-custom] 智能体统一头像：thumbs 扁平图形套图（用户选定；上游仅 glyphs 一套），同步时保留
 const DICEBEAR_AGENT_AVATAR_BASE_URL = 'https://api.dicebear.com/10.x/thumbs/svg'
 
 export const AVATAR_BACKGROUND_TOKENS = [
@@ -34,7 +34,7 @@ export const generatePixelAvatar = (id) => {
   return `${DICEBEAR_GLYPHS_AVATAR_BASE_URL}?seed=${encodeURIComponent(seed)}`
 }
 
-/** 智能体统一使用机器人套图，与用户头像（glyphs 符号）区分。 */
+/** [pisuan-custom] 智能体统一使用 thumbs 套图，与用户头像（glyphs 符号）区分；上游无此函数。 */
 export const generateAgentAvatar = (id) => {
   const seed = normalizeSeed(id)
   return `${DICEBEAR_AGENT_AVATAR_BASE_URL}?seed=${encodeURIComponent(seed)}`

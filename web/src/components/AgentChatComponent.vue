@@ -861,7 +861,7 @@ import {
   Trash2
 } from '@lucide/vue'
 import FileTypeIcon from '@/components/common/FileTypeIcon.vue'
-import { generateAgentAvatar } from '@/utils/pixelAvatar'
+import { generateAgentAvatar } from '@/utils/pixelAvatar' // [pisuan-custom]
 import { CheckCircleOutlined, CloseCircleOutlined, SyncOutlined } from '@ant-design/icons-vue'
 import AgentInputArea from '@/components/AgentInputArea.vue'
 import ContextUsageRing from '@/components/ContextUsageRing.vue'
@@ -1199,6 +1199,7 @@ const getSubagentIconSrc = (run) => {
   return agent?.icon || ''
 }
 
+// [pisuan-custom] 子智能体默认头像用 thumbs 套图（上游为 generatePixelAvatar glyphs 符号）
 const getSubagentDefaultIconSrc = (run) =>
   run?.subagent_slug ? generateAgentAvatar(run.subagent_slug) : ''
 
