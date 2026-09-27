@@ -19,7 +19,7 @@
           <button v-if="!userStore.isLoggedIn" class="lp-btn lp-btn-ghost" @click="goLogin">
             登录系统
           </button>
-          <button class="lp-btn lp-btn-primary lp-btn-sm" @click="goWrite">
+          <button v-else class="lp-btn lp-btn-primary lp-btn-sm" @click="goFactory">
             <span>进入工作台</span>
             <ArrowRight :size="16" />
           </button>
@@ -306,6 +306,10 @@ const goWrite = async () => {
 
 const goLogin = () => {
   router.push('/login')
+}
+
+const goFactory = () => {
+  router.push('/domain-factory')
 }
 
 // Report workbench mock data
