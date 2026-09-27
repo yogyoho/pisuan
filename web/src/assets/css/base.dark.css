@@ -1,3 +1,5 @@
+/* [pisuan-custom] 暗色科技蓝主题定制：token 值整体重写（zinc 暗色三层面 + Tailwind blue 提亮），
+   变量名与上游一致、刻度反转映射。上游同步冲突时保留本文件版本。 */
 /* 深色模式 - shadcn zinc 暗色基准 + 科技蓝 (Tailwind blue) */
 :root.dark {
   --main-1000: #eff6ff;

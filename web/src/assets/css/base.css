@@ -1,4 +1,7 @@
 /* color palette from <https://github.com/vuejs/theme> */
+/* [pisuan-custom] 科技蓝主题定制：本文件全部 token 值已按 pisuan 规范整体重写
+   （中性色 shadcn zinc、主色 Tailwind blue-600 #2563eb、辅助色 cyan），变量名结构与上游一致。
+   上游同步冲突时保留本文件版本，上游新增变量名可手工并入。 */
 /* 中性色基准：shadcn (zinc)；主色基准：Tailwind blue-600 科技蓝 */
 :root {
   /* 主色调 - 科技蓝 (Tailwind blue 刻度，基准 --main-600 #2563eb) */

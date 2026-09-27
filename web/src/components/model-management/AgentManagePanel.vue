@@ -12,7 +12,7 @@ import InfoCard from '@/components/shared/InfoCard.vue'
 import FallbackAvatar from '@/components/common/FallbackAvatar.vue'
 import ExtensionCardGrid from '@/components/extensions/ExtensionCardGrid.vue'
 import { normalizeAgent, normalizeAgentBackendOption } from '@/utils/agentConfigUtils'
-import { generateAgentAvatar } from '@/utils/pixelAvatar'
+import { generateAgentAvatar } from '@/utils/pixelAvatar' // [pisuan-custom]
 import { getShareConfigLabel } from '@/utils/shareConfig'
 
 const agentStore = useAgentStore()
@@ -65,6 +65,7 @@ const agentStats = computed(() => ({
   ).length
 }))
 const canManageAgent = (agent) => !!agent?.can_manage
+// [pisuan-custom] 智能体默认头像用 thumbs 套图（上游为 generatePixelAvatar glyphs 符号）
 const getAgentDefaultIconSrc = (agent) => (agent.id ? generateAgentAvatar(agent.id) : '')
 
 /** 返回智能体共享范围的简短展示文案。 */

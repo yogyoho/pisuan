@@ -198,6 +198,9 @@ e2e 已知限制：确定性回放路径依赖模型端点从容器内可达；�
 
 以下文件和内容在同步冲突时必须优先保留，**禁止使用 upstream 版本直接覆盖**。
 
+> **行内标记约定（2026-09-27 起）**：pisuan 定制改动在源码行内嵌 `[pisuan-custom]` 标记注释——CSS 用 `/* [pisuan-custom] … */`、JS/Vue script 用 `// [pisuan-custom] …`、Vue template 用 `<!-- [pisuan-custom] … -->`、package.json 用 `"//"` 键承载。
+> `git grep -n '\[pisuan-custom\]'` 列出全部定制点；rebase 冲突解决后必须核对带标记行的定制语义全部存活（标记行被上游改动吞掉时，从旧链 `git show <旧链>:<file>` 提取恢复）。
+
 ### 7.1 整体替换类（禁止覆盖）
 
 这些文件是 pisuan 完全重写的，冲突时直接使用 `pisuan-custom` 版本：
@@ -213,8 +216,16 @@ e2e 已知限制：确定性回放路径依赖模型端点从容器内可达；�
 
 | 文件 | 定制内容 | 合并策略 |
 |------|----------|----------|
-| `web/src/assets/css/base.css` | 蓝色主题色变量 (`--ant-primary-color: #1890ff` 等) | 保留上游新增变量 + 保留我们的主题色 |
-| `web/src/assets/css/base.dark.css` | 暗色模式主题色 | 同 base.css |
+| `web/src/assets/css/base.css` | 科技蓝 token 全量定制（主色 #2563eb / zinc 中性 / cyan 辅助，变量名与上游一致） | 保留上游新增变量 + 保留我们的定制值 |
+| `web/src/assets/css/base.dark.css` | 暗色科技蓝 token 全量定制（刻度反转映射） | 同 base.css |
+| `web/src/stores/theme.js` | AntD 主色接线（浅 #2563eb / 暗 #3b82f6）+ 全局字体栈 | 保留定制值，上游 token 结构变化时手工并入 |
+| `web/src/main.js` | 4 个 @fontsource 字体 import | 整块保留（依赖见 package.json） |
+| `web/package.json` | @fontsource-variable/inter、@fontsource/noto-sans-sc 字体依赖 | 保留定制依赖行 |
+| `web/src/utils/pixelAvatar.js` | `generateAgentAvatar` 智能体 thumbs 套图函数 | 保留新函数与 URL 常量，勿动用户共用的 `generatePixelAvatar` |
+| `web/src/components/model-management/AgentManagePanel.vue` | 智能体卡片头像图源（thumbs） | 单点替换，保留带标记行 |
+| `web/src/views/AgentView.vue` | 对话页智能体切换器头像图源（thumbs） | 同上 |
+| `web/src/components/AgentChatComponent.vue` | 子智能体头像图源（thumbs） | 同上 |
+| `web/src/components/model-management/AgentEditModal.vue` | 编辑弹窗预览头像图源（thumbs） | 同上 |
 | `web/src/layouts/AppLayout.vue` | ① 领域工厂导航项 (`Layers` 图标) ② 任务中心独立位置 ③ UserInfoComponent 简化用法 ④ GitHub 已移除 | 保留我们的导航结构和组件用法，上游新增的 ConversationNavSection 等特性可以合并 |
 | `backend/package/yuxi/config/static/info.template.yaml` | 页脚版权: `"© 北京华宇工程有限公司 2026 v1.6.0"` | 始终使用我们的版本 |
 
