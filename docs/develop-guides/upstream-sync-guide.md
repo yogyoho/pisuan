@@ -81,6 +81,29 @@ git checkout pisuan-custom && git rebase main
 
 # Linux/macOS
 bash scripts/sync-upstream.sh
+```
+
+### 开发期快速同步（日常调试，不推送）
+
+官方镜像链面向「发布」：提交 → 推 GitHub → 重建改名层。日常在 `C:\workspace\pisuan` 改代码调试时，
+走全链路太重。`sync-dev.ps1` 把 pisuan 工作树改动（**含未提交内容**）按容器挂载清单直接落到
+`C:\workspace\pisuan-localized` 并再生改名层，秒级生效：
+
+```powershell
+.\scripts\sync-dev.ps1            # 同步到运行栈，web/api 热重载即生效
+.\scripts\sync-dev.ps1 -Revert    # 还原 localized 到镜像 tip（跑官方链前建议先执行）
+```
+
+机制：localized 以 **detached HEAD** 挂到 origin/pisuan-custom（yuxi 命名基线），覆盖拷贝后整树
+再生改名层；`pisuan-localized` 分支引用全程不被触碰。
+
+边界（务必知悉）：
+
+1. 只同步容器挂载路径（backend server/package/test/scripts、docker/sandbox_provisioner、web src/test/public + index.html/vite.config.js/pyproject.toml）；docs 等非挂载路径仍走官方链
+2. 不搬运 `backend/uv.lock`（锁文件必须 `uv lock` 机生）；依赖变更后跑官方链重生成，否则镜像重建失败（热重载不受影响）
+3. 「删除 tracked 文件」不被同步（detach 基线会还原它）——删除类改动走官方链
+4. 不做任何提交/推送；GitHub 发布仍由官方镜像链负责
+5. dev 同步后 localized 处于 detached + 脏树态，跑官方链 `sync-upstream.ps1` 前先 `-Revert`，否则其第 5 步 `git switch` 可能因脏树失败（仅降级警告）
 
 ### 定时自动同步（Windows 任务计划）
 
