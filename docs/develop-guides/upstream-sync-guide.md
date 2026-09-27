@@ -150,7 +150,9 @@ fetch origin → switch pisuan-localized → reset --hard origin/pisuan-custom
 
 `POSTGRES_DB=yuxi_know` 不属 `YUXI_*` 变量交换范围（库名不是前缀命名空间），本次改造未含库名迁移，记为**已知保留**。如需彻底更名须 `ALTER DATABASE` + 停机窗口，属可选独立决策。 <!-- rename-keep -->
 
-## 四、切换日操作手册（一次性，时机另行拍板）
+## 四、切换日操作手册（一次性——已于 2026-09-26/27 实施完成）
+
+> **状态**：切换已完成并验收。以下手册原文保留，切换日实测补全以「实测补记」标注，供回滚与未来重部署参考。
 
 1. 停旧栈（`C:\workspace\pisuan` 下 `docker compose down`）
 2. 备份：数据目录整体 copy + pg dump
@@ -162,9 +164,12 @@ fetch origin → switch pisuan-localized → reset --hard origin/pisuan-custom
 5. 验证：三段测试 + 探针（见 五、六）
 6. **回滚路径**：compose down → 恢复备份目录与表名 → 旧目录原样拉起
 
-**实测缺口（T4 启动演练坐实，切换日必须补齐）：**
+**实测缺口与补全（T4 启动演练坐实；2026-09-27 切换日已全部处置）：**
 
-- **Neo4j 章节模板种子迁移**：启动链只覆盖 Postgres，不播 Neo4j——不迁移则图谱章节模板功能为空，unit 4 个种子依赖用例必失败。切换日需从旧栈 Neo4j 导出章节模板种子导入新栈。
+- **Neo4j 章节模板种子迁移**：启动链只覆盖 Postgres，不播 Neo4j——不迁移则图谱章节模板功能为空。**实测补记：数据卷整树迁移已把章节模板随卷带到新栈（unit 2530P+0F 双重验证），无需独立种子导出/导入步骤；若未来改用非整树迁移方式，此缺口仍在，需从旧栈 Neo4j 导出章节模板种子导入新栈。**
+- **Milvus 就绪竞态（bug-280，实测补记）**：全栈 up 时 Milvus 需恢复 4.1G 数据卷，API 就绪早于 Milvus 可服务 → knowledge_base 组件首连被拒、API 首启失败一次。处置：**先等 milvus healthy 再起 api，或 api 起后 `docker compose restart api` 一次**即恢复。
+- **存量库凭据纪律（实测补记）**：迁移后的存量库**严禁**运行 `seed_initial_users.py`（会向生产数据插入默认账号）；e2e 凭据版仅适用全新栈，存量库一律按无凭据 12 skipped 口径如实记录，登录账号以库内实有为准。
+- **pkey 索引名残留（可选清理）**：表 RENAME 后 PK 索引名仍随旧表名（`*_pkey`），纯内部标识无功能影响，可按需 `ALTER INDEX ... RENAME` 清理。
 - **库名保留**：`POSTGRES_DB=yuxi_know` 不随 `.env` 置换自动更名（见 三）。 <!-- rename-keep -->
 - **探针口径**：`/health` 端点不存在（bug-273），以 `import pisuan` 路径检查 + `GET /api/system/ready` 全量 JSON + web 首页 200 为准。
 - **栈运行期间热写 pyc**：改名树运行时容器向 `backend/package/pisuan/**/__pycache__/` 热写 ignored 字节码，会物理占据重建目标路径（bug-272）。栈 down 后可选 scoped 清理：`git -C C:/workspace/pisuan-localized clean -fdX backend/package/pisuan`——**只许此等路径级清理，严禁 repo 级 `git clean -fdX`**（会抹掉 `.env` 与 bind-mount 部署数据）。改名脚本自身已内置"占据即 scoped 清理"逻辑，此步仅为运行时整洁。
@@ -179,12 +184,15 @@ fetch origin → switch pisuan-localized → reset --hard origin/pisuan-custom
 | integration | 141 passed / 205 skipped / 3 errors | — | 3 errors 为上游存量 FK 问题（`test_project_api.py`），非本次改动引入 |
 | e2e | 12 skipped（无凭据） | — | **skipped ≠ 通过**；凭据版前置 `E2E_USERNAME`/`E2E_PASSWORD` + 种子账号 |
 
+**2026-09-27 切换日实测（迁移栈，数据卷迁移后）**：unit 2530 passed + 0 failed（两次独立运行数字一致，Neo4j 章节模板随卷到位）；integration 140 passed + 1 failed（时序 flake，单文件复跑 3 passed 自愈）+ 205 skipped + 3 errors（上游遗留 FK，同基线）；e2e 12 skipped（无凭据口径）。凭据版实测证实种子默认账号在存量库不存在——凭据版只适用全新栈。
+
 e2e 已知限制：确定性回放路径依赖模型端点从容器内可达；当前 `OPENAI_API_BASE` 为宿主机 LAN 地址，容器内不可达，凭据版 12 failed 属环境限制。回放服务器位于 `backend/test/support/openai_replay_server.py`，跨容器接线未打通，如实记录。
 
 ## 六、品牌归属与账号安全
 
 - **campaign 归属（Minor-A）**：注册渠道链接 `fluxionai.space/...?campaign=pisuan` 的 `campaign=pisuan` 为 pisuan 侧投放归属参数；`promo=YUXI` 为渠道方定义的取值（在 12 项 allowlist 内，勿改）。统计口径按 `campaign=pisuan` 归属。 <!-- rename-keep -->
 - **种子账号口令（Minor-B）**：`seed_initial_users.py` 的 `DEFAULT_USER_PASSWORD = "yuxi123456"` 仅供开发环境种子；任何对外环境必须轮换。该字面量在改名 allowlist 内——若轮换口令须同步更新 `scripts/test_apply_pisuan_rename.py` 的 `ResidueAllowlistTest` fixtures。 <!-- rename-keep -->
+- **存量库禁种（2026-09-27 实测补记）**：`seed_initial_users.py` 只允许在全新空库运行；迁移后的存量库运行会向真实数据插入默认账号（切换日实测：存量库无种子默认账号，误用种子凭据的 e2e 全部失败于登录 401）。存量部署的 e2e 一律按无凭据口径。
 
 ## 七、不可覆盖的本地定制清单
 
