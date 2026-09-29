@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-29-qingyun-theme-retheme-design.md`（Token 唯一色值依据）
 
-**执行状态**（断点续跑）：T1 ✅ `993e0e1f`、T2 ✅ `b3817d27`、T3 ✅ `558d892a`、T4 ✅ `1475a197`/`604b5725`/`5b027a87`/`bfd885af`/`3f8df8eb`、T5 ✅ `21a362ed`（均过规格+质量双审；T3 裁定：base.css 块级 [pisuan-custom] 标记达标、second-40 扩展档明度微逆可接受；T4 裁定：暗色 --main-color 收敛为 #7279f5 提亮档复刻旧体系落差结构，`--main-color-rgb` 落地值 明 `79, 70, 229` / 暗 `114, 121, 245`）。
+**执行状态**（断点续跑）：T1 ✅ `993e0e1f`、T2 ✅ `b3817d27`、T3 ✅ `558d892a`、T4 ✅ `1475a197`/`604b5725`/`5b027a87`/`bfd885af`/`3f8df8eb`、T5 ✅ `21a362ed`、T6 ✅ `2befe9ec`/`f77e828f`/`087cf28f`（均过规格+质量双审；T3 裁定：base.css 块级 [pisuan-custom] 标记达标、second-40 扩展档明度微逆可接受；T4 裁定：暗色 --main-color 收敛为 #7279f5 提亮档复刻旧体系落差结构，`--main-color-rgb` 落地值 明 `79, 70, 229` / 暗 `114, 121, 245`）。
 T4 口径裁定（T3 质量审查移交）：暗色图表锚点保留 `--chart-palette-1: var(--main-400)` 机制（解析为 indigo-400 #818cf8，暗底可读），palette 2..10 照抄浅色字面值；`--page-bg` 变量在 base.css 不存在，page 类 0 行为正确结果；chartColors.js:28/37 陈旧注释（「拂晓蓝」「know 项目」）随 T4 顺手修正。
 审查移交备注：① T3 注意图表变量实际名为 `--chart-palette-*`（非 --chart-N），且 chartColors.js 的 hex 为 getComputedStyle fallback，需同步换值；② T4 需在 base.css/base.dark.css 增设 `--main-color-rgb` 通道别名（明 79,70,229 / 暗 77,148,247）并改写组件内 rgba(22,119,255,*)/rgba(24,144,255,*) 旧蓝为 rgba(var(--main-color-rgb), 原透明度)（EtlWorkbench L1805/L1943、DomainFactoryView L411 等，grep 全量）；③ T6 需处理 KnowledgeGraphSection.vue:193 antd 旧蓝→绿渐变（SVG stop 不解析 var()，用字面 indigo 对 #4f46e5→#a5b4fc）+ 注释措辞、HomeViewV2 L652-660/L1202 rgba 旧蓝、4 处未定义变量引用规范化（ContextUsageRing --warning-color/--error-color、AgentPanel --error-600、PdfPreview --color-danger，仅 fallback==规范值时改名）、bug-307：EtlWorkbench.vue:2077 `var(--blue-400, #4096ff)` 未定义变量活 fallback（旧 antd 蓝存活，改 `var(--main-color)`）；④ T8 changelog 补披露 + 勘误：theme.js:9「上游默认拂晓蓝 #1890ff」为历史失准注释（上游原值实为青碧系 #24839b，#1890ff 系 pisuan 首个定制提交引入的中间态），随台账收尾勘误；OutlineTemplate.vue 预估 5 处均为既有 var() fallback 未动、语义变量名按 base.css 实际名替代（--color-*-500/700 系）、#dc2626→--color-error-700 与 #999→--gray-600 两处非精确等值、#1677ff/#1890ff→--main-color 为计划内就近映射。
 
@@ -414,17 +414,19 @@ Expected: 零输出。然后移除依赖：`web/package.json` 删除 `"@ant-desi
 
 ```bash
 cd C:/workspace/pisuan
-# 1. 裸 hex 归零（白名单外）
-grep -rcE "#[0-9a-fA-F]{6}\b" web/src --include="*.vue" --include="*.less" --include="*.js" | grep -v ":0$" | grep -vE "assets/css/base|品牌色|一次性装饰色" || echo "HEX_CLEAN"
+# 1. 裸 hex 归零（白名单：assets/css/base* 变量定义处 + 含 [pisuan-custom] 的行内来历注释行）
+grep -rnE "#[0-9a-fA-F]{6}\b" web/src --include="*.vue" --include="*.less" --include="*.js" \
+  | grep -v "assets/css/base" | grep -v "\[pisuan-custom\]" || echo "HEX_CLEAN"
 # 2. antd 图标归零
 grep -rn "@ant-design/icons-vue" web/src --include="*.vue" --include="*.js" || echo "ICONS_CLEAN"
 # 3. 定制标记不减
 git grep -l "\[pisuan-custom\]" -- web/src | wc -l
 ```
 
-Expected: `HEX_CLEAN`、`ICONS_CLEAN`、标记文件数 ≥ 改前（9）。
+Expected: `HEX_CLEAN`、`ICONS_CLEAN`、标记文件数 ≥ 改前（当前基线 15）。机检 #1 的豁免口径：变量定义文件（base.css/base.dark.css）与含 `[pisuan-custom]` 标记的来历注释行；其余任何命中行逐条人工判读，不允许扩大豁免。
 
-- [ ] **Step 2: 视觉巡检**——7 页 × 明暗：Landing `/`、登录 `/login`、工作台、对话、知识库、领域工厂、管理后台。截图存 `.wolf/designqc-captures/`（用户已登录态页面由用户确认，未登录态可自动化）
+- [ ] **Step 2: 视觉巡检**——7 页 × 明暗：Landing `/`、登录 `/login`、工作台、对话、知识库、领域工厂、管理后台。截图存 `.wolf/designqc-captures/`（用户已登录态页面由用户确认，未登录态可自动化）。暗色态特别留意 KnowledgeGraphSection 进度条（渐变为浅色字面对，SVG stop 限制下的既批准取舍）
+- [ ] **Step 2.5: 收尾杂项（T6 质量审查移交）**：①`HomeView.vue` / `LoginView.vue` 文件头各补一行 `[pisuan-custom]` 定制声明注释（对齐 HomeViewV2 形制，防上游覆盖无告警）②清理 EtlWorkbench.vue 3 个基线既有 no-unused-vars（`Plus`/`proposedDomainCode`/`parameterParagraphs`）与 LoginView.vue 1 个（`onUnmounted`），lint 清零，提交信息中披露为存量债务清理
 - [ ] **Step 3: pnpm 全量 lint**：`docker exec pisuan-localized-web-1 sh -c 'cd /app && ./node_modules/.bin/eslint src --ext .vue,.js'` → 零 error
 - [ ] **Step 4: changelog 条目**（`docs/develop-guides/changelog.md` v0.7.3 功能与修复节追加）：
 
