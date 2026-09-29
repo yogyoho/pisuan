@@ -334,7 +334,7 @@ watch(
         align-items: center;
         font-size: 12px;
         font-weight: 600;
-        color: var(--main-color, #1677ff);
+        color: var(--main-color);
         background: rgba(var(--main-color-rgb), 0.08);
         padding: 2px 10px;
         border-radius: 999px;
@@ -512,7 +512,7 @@ watch(
         transition: color 0.2s;
 
         &:hover {
-          color: var(--main-color, #1677ff);
+          color: var(--main-color);
         }
       }
 
@@ -527,8 +527,8 @@ watch(
           border-color: var(--gray-200, #e2e8f0);
 
           &:hover {
-            color: var(--main-color, #1677ff);
-            border-color: var(--main-color, #1677ff);
+            color: var(--main-color);
+            border-color: var(--main-color);
           }
         }
       }

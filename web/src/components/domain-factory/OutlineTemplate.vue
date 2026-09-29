@@ -578,7 +578,7 @@ onMounted(async () => {
       min-width: 18px;
       font-size: 13px;
       font-weight: 600;
-      color: var(--main-color, #1890ff);
+      color: var(--main-color);
       font-variant-numeric: tabular-nums;
       text-align: right;
     }
@@ -599,8 +599,8 @@ onMounted(async () => {
   }
 
   &.active {
-    background: var(--main-color-light, #e6f7ff);
-    color: var(--main-color, #1890ff);
+    background: var(--main-100); /* [pisuan-custom] 原 var(--main-color-light, #e6f7ff) 未定义变量激活 antd 淡蓝 */
+    color: var(--main-color);
     font-weight: 500;
   }
 }
@@ -618,7 +618,7 @@ onMounted(async () => {
 }
 
 .chapter-item.active .chapter-order {
-  background: var(--main-color, #1890ff);
+  background: var(--main-color);
   color: white;
 }
 
