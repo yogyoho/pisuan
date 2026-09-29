@@ -1714,7 +1714,7 @@ defineExpose({
   }
 
   .query-match {
-    color: #fa8c16; /* 一次性装饰色：明亮温润的金橘色，不随主题 */
+    color: #fa8c16; /* [pisuan-custom] 青云素雅：一次性装饰色：明亮温润的金橘色，不随主题 */
     font-weight: 700;
   }
 

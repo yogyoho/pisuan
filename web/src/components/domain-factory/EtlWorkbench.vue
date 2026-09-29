@@ -1749,7 +1749,7 @@ watch(() => props.task, async (newTask) => {
   .validation-item {
     display: flex; align-items: baseline; gap: 6px; padding: 3px 0; font-size: 12px;
     cursor: default; line-height: 1.5;
-    &.error-item { color: var(--red-600, #cf1322); }
+    &.error-item { color: var(--color-error-700); }
     &.warn-item { color: var(--orange-600, #d46b08); cursor: pointer; &:hover { text-decoration: underline; } }
     .vi-icon { font-size: 11px; flex-shrink: 0; }
     .vi-msg { flex: 1; }
@@ -2010,7 +2010,7 @@ watch(() => props.task, async (newTask) => {
 .commit-actions {
   display: flex; flex-direction: column; align-items: center; padding: 16px 0; gap: 10px;
 }
-.commit-validation-warn { font-size: 13px; color: var(--red-600, #cf1322); background: var(--red-50, #fff1f0); padding: 6px 14px; border-radius: 4px; }
+.commit-validation-warn { font-size: 13px; color: var(--color-error-700); background: var(--color-error-50); padding: 6px 14px; border-radius: 4px; }
 .commit-validation-ok { font-size: 13px; color: var(--color-success-700); background: var(--color-success-50); padding: 6px 14px; border-radius: 4px; }
 .commit-validation-hint { font-size: 12px; color: var(--gray-500); }
 

@@ -190,7 +190,7 @@
               <a-progress
                 v-if="isBuildActive"
                 :percent="graphBuildStatus?.build_task_progress ?? 0"
-                :stroke-color="{ '0%': '#4f46e5', '100%': '#a5b4fc' }"
+                :stroke-color="{ /* [pisuan-custom] 青云素雅：stroke-color 为 JS 对象 prop，SVG stop 不解析 var()，字面 indigo 对为计划内批准 */ '0%': '#4f46e5', '100%': '#a5b4fc' }"
                 size="small"
                 style="margin-bottom: 10px"
               />

@@ -27,25 +27,25 @@ const buildColorPalette = () => {
 
     // Base chart colors - AntD 语义色 + 靛蓝主色 fallback
     const baseVars = [
-      ['--main-500', '#6366f1'],
-      ['--color-success-500', '#52c41a'],
-      ['--color-warning-500', '#faad14'],
-      ['--color-error-500', '#ff4d4f'],
-      ['--color-accent-500', '#13c2c2']
+      ['--main-500', '#6366f1'], // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      ['--color-success-500', '#52c41a'], // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      ['--color-warning-500', '#faad14'], // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      ['--color-error-500', '#ff4d4f'], // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      ['--color-accent-500', '#13c2c2'] // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
     ]
 
     // Extended palette colors - 扩展图表色板（与 base.css --chart-palette-* 对齐）
     const paletteVars = [
-      ['--chart-palette-1', '#4f46e5'],
-      ['--chart-palette-2', '#0ea5e9'],
-      ['--chart-palette-3', '#8b5cf6'],
-      ['--chart-palette-4', '#14b8a6'],
-      ['--chart-palette-5', '#f59e0b'],
-      ['--chart-palette-6', '#f43f5e'],
-      ['--chart-palette-7', '#06b6d4'],
-      ['--chart-palette-8', '#10b981'],
-      ['--chart-palette-9', '#d946ef'],
-      ['--chart-palette-10', '#64748b']
+      ['--chart-palette-1', '#4f46e5'], // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      ['--chart-palette-2', '#0ea5e9'], // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      ['--chart-palette-3', '#8b5cf6'], // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      ['--chart-palette-4', '#14b8a6'], // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      ['--chart-palette-5', '#f59e0b'], // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      ['--chart-palette-6', '#f43f5e'], // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      ['--chart-palette-7', '#06b6d4'], // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      ['--chart-palette-8', '#10b981'], // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      ['--chart-palette-9', '#d946ef'], // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      ['--chart-palette-10', '#64748b'] // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
     ]
 
     const baseColors = baseVars.map(([n, f]) => pick(n, f))
@@ -62,16 +62,16 @@ const buildColorPalette = () => {
     console.warn('Failed to build color palette from CSS variables, using fallback:', e)
     // Fallback palette - 青云靛蓝锚点环
     colorPalette = [
-      '#4f46e5',
-      '#52c41a',
-      '#faad14',
-      '#ff4d4f',
-      '#13c2c2',
-      '#0ea5e9',
-      '#8b5cf6',
-      '#14b8a6',
-      '#f59e0b',
-      '#f43f5e'
+      '#4f46e5', // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      '#52c41a', // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      '#faad14', // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      '#ff4d4f', // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      '#13c2c2', // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      '#0ea5e9', // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      '#8b5cf6', // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      '#14b8a6', // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      '#f59e0b', // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
+      '#f43f5e' // [pisuan-custom] 青云素雅：CSS 变量不可用时的回退字面值
     ]
     isInitialized = true
   }

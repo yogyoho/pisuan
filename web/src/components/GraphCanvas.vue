@@ -118,30 +118,30 @@ const defaultLayout = {
 }
 
 const CHUNK_NODE_LABEL = 'Chunk'
-const CHUNK_NODE_COLOR = '#8c8c8c' // 数据可视化语义色（canvas 渲染，CSS 变量不可用，不随主题）
+const CHUNK_NODE_COLOR = '#8c8c8c' // [pisuan-custom] 青云素雅：数据可视化语义色（canvas 渲染，CSS 变量不可用，不随主题）
 const CHUNK_MENTION_EDGE_LABEL = 'MENTIONS'
 // 数据可视化语义色（canvas 渲染，CSS 变量不可用，不随主题）
 const NODE_LABEL_COLORS = [
-  '#3996ae',
-  '#5ad8a6',
-  '#f6bd16',
-  '#f27c7c',
-  '#9581cc',
-  '#6dc8ec',
-  '#ff9d4d',
-  '#92d050',
-  '#e885ba'
+  '#3996ae', // [pisuan-custom] 青云素雅：canvas 渲染色，CSS 变量不可用
+  '#5ad8a6', // [pisuan-custom] 青云素雅：canvas 渲染色，CSS 变量不可用
+  '#f6bd16', // [pisuan-custom] 青云素雅：canvas 渲染色，CSS 变量不可用
+  '#f27c7c', // [pisuan-custom] 青云素雅：canvas 渲染色，CSS 变量不可用
+  '#9581cc', // [pisuan-custom] 青云素雅：canvas 渲染色，CSS 变量不可用
+  '#6dc8ec', // [pisuan-custom] 青云素雅：canvas 渲染色，CSS 变量不可用
+  '#ff9d4d', // [pisuan-custom] 青云素雅：canvas 渲染色，CSS 变量不可用
+  '#92d050', // [pisuan-custom] 青云素雅：canvas 渲染色，CSS 变量不可用
+  '#e885ba' // [pisuan-custom] 青云素雅：canvas 渲染色，CSS 变量不可用
 ]
 // 数据可视化语义色（canvas 渲染，CSS 变量不可用，不随主题）
 const EDGE_LABEL_COLORS = [
-  '#99add1',
-  '#3996ae',
-  '#13c2c2',
-  '#faad14',
-  '#f27c7c',
-  '#9581cc',
-  '#52c41a',
-  '#ff9d4d'
+  '#99add1', // [pisuan-custom] 青云素雅：canvas 渲染色，CSS 变量不可用
+  '#3996ae', // [pisuan-custom] 青云素雅：canvas 渲染色，CSS 变量不可用
+  '#13c2c2', // [pisuan-custom] 青云素雅：canvas 渲染色，CSS 变量不可用
+  '#faad14', // [pisuan-custom] 青云素雅：canvas 渲染色，CSS 变量不可用
+  '#f27c7c', // [pisuan-custom] 青云素雅：canvas 渲染色，CSS 变量不可用
+  '#9581cc', // [pisuan-custom] 青云素雅：canvas 渲染色，CSS 变量不可用
+  '#52c41a', // [pisuan-custom] 青云素雅：canvas 渲染色，CSS 变量不可用
+  '#ff9d4d' // [pisuan-custom] 青云素雅：canvas 渲染色，CSS 变量不可用
 ]
 
 // CSS 变量解析工具函数

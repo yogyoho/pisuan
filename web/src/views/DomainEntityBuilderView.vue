@@ -1252,7 +1252,7 @@ const domainLabel = (code) => {
   }
 
   .extract-card-new { border-left: 3px solid var(--purple-color, #722ed1); }
-  .extract-card-matched { border-left: 3px solid var(--success-color, #52c41a); opacity: 0.75; }
+  .extract-card-matched { border-left: 3px solid var(--color-success-500); opacity: 0.75; }
   .extract-card-different { border-left: 3px solid var(--warning-color, #fa8c16); }
 
   .extract-import-bar {

@@ -1,3 +1,4 @@
+<!-- [pisuan-custom] pisuan 定制 Landing 首页（上游同步时保留本文件定制） -->
 <template>
   <div class="home-container">
     <!-- 动态背景装饰 -->
@@ -301,7 +302,7 @@ const actionLinks = computed(() => {
 <style scoped lang="less">
 .home-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #fafcfd 0%, #f5f7f7 100%);
+  background: linear-gradient(135deg, #fafcfd 0%, #f5f7f7 100%); /* [pisuan-custom] 青云素雅：品牌页背景微渐变为一次性装饰色（无精确对应 token），不随主题 */
   position: relative;
   overflow-x: hidden;
 }

@@ -403,7 +403,7 @@ watch(
 
           &.ai {
             background: rgba(114, 46, 209, 0.08);
-            color: #722ed1; /* 一次性装饰色 */
+            color: #722ed1; /* [pisuan-custom] 青云素雅：一次性装饰色（领域工厂状态点缀），不随主题 */
           }
 
           &.review {
@@ -560,7 +560,7 @@ watch(
           background: var(--main-color);
         }
         &.workbench {
-          background: #722ed1; /* 一次性装饰色 */
+          background: #722ed1; /* [pisuan-custom] 青云素雅：一次性装饰色（领域工厂状态点缀），不随主题 */
         }
       }
 
