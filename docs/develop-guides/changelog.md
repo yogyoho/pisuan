@@ -51,6 +51,7 @@
 
 ### 运行与维护
 
+- API 启动依赖补齐 Milvus 健康条件（`milvus: condition: service_healthy`）：Milvus 冷启动最慢，整机重启时 API 抢跑致 knowledge_base 启动组件失败且不重试，容器停留 unhealthy；现在 compose 先等 Milvus 健康再拉起 API。
 - 通用后台 Task 使用 PostgreSQL 持久执行意图与 ARQ worker，按 owner、heartbeat 和 lease 执行与收敛失联任务；知识库执行器和 Milvus 同步调用移出共享事件循环。
 - 优化任务领取、checkpoint 连接与模型请求前的等待，连接池可按 API/worker 分别配置；SSE 自适应轮询，取消改为 Redis key 轮询与 PostgreSQL 兜底。Sandbox 在首次文件或命令操作时创建，纯文本 Run 免去容器冷启动，首次工具调用仍可能等待启动。
 - AgentRun 持久保存准备完成、首次模型请求及首次输出时间，结果与历史统一派生阶段耗时；缺失指标保持为空。完成、取消和恢复按同一 Run 收敛 checkpoint、消息、审计与执行清理，保持同线程 FIFO 和 Workdir 持久化边界。
