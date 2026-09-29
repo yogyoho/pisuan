@@ -6,16 +6,16 @@ export const useThemeStore = defineStore('theme', () => {
   // 从 localStorage 读取保存的主题，默认为浅色
   const isDark = ref(localStorage.getItem('theme') === 'dark')
 
-  // [pisuan-custom] 公共主题配置 - 科技蓝主题 (Tailwind blue-600)：主色与字体均为 pisuan 定制（上游默认拂晓蓝 #1890ff + 系统字体栈），同步时保留
+  // [pisuan-custom] 公共主题配置 - 青云素雅主题 (Tailwind indigo-600)：主色与字体均为 pisuan 定制（上游默认拂晓蓝 #1890ff + 系统字体栈），同步时保留
   const commonTheme = {
     token: {
       fontFamily:
         '"Inter Variable", "Inter", "PingFang SC", "Noto Sans SC", "Microsoft Yahei", "微软雅黑", Arial, sans-serif',
-      colorPrimary: '#2563eb',
+      colorPrimary: '#4f46e5',
       colorLink: 'var(--main-color)',
       colorLinkHover: 'var(--main-600)',
       colorLinkActive: 'var(--main-800)',
-      borderRadius: 8,
+      borderRadius: 10,
       wireframe: false
     }
   }
@@ -25,13 +25,13 @@ export const useThemeStore = defineStore('theme', () => {
     ...commonTheme
   }
 
-  // 深色主题配置（shadcn zinc 暗色基准，主色提亮为 blue-500）
+  // 深色主题配置（shadcn zinc 暗色基准，主色提亮为 indigo-500）
   const darkTheme = {
     ...commonTheme,
     token: {
       ...commonTheme.token,
-      // [pisuan-custom] 暗色主色提亮为 blue-500（上游 darkAlgorithm 不覆盖主色），同步时保留
-      colorPrimary: '#3b82f6'
+      // [pisuan-custom] 暗色主色提亮为 indigo-500（上游 darkAlgorithm 不覆盖主色），同步时保留
+      colorPrimary: '#6366f1'
     },
     algorithm: theme.darkAlgorithm
   }
