@@ -105,6 +105,10 @@ services:
         condition: service_healthy
       sandbox-provisioner:
         condition: service_healthy
+      # Milvus 冷启动最慢（etcd 恢复 + 健康检查 start_period 120s），整机重启时
+      # API 抢跑会导致 knowledge_base 启动组件失败（bug-280），必须等其健康。
+      milvus:
+        condition: service_healthy
       storage-migrator:
         condition: service_completed_successfully
 
