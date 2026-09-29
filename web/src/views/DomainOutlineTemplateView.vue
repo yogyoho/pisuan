@@ -4,7 +4,7 @@
       <div>
         <div class="header-title-row">
           <a-button type="text" @click="handleBack" class="back-btn">
-            <template #icon><ArrowLeftOutlined /></template>
+            <template #icon><ArrowLeft :size="14" /></template>
             返回
           </a-button>
           <h2>大纲模板</h2>
@@ -20,7 +20,7 @@
           accept=".docx,.pdf"
         >
           <a-button type="primary" :loading="extracting">
-            <template #icon><FileSearchOutlined /></template>
+            <template #icon><FileSearch :size="14" /></template>
             从报告提取大纲
           </a-button>
         </a-upload>
@@ -33,7 +33,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeftOutlined, FileSearchOutlined } from '@ant-design/icons-vue'
+import { ArrowLeft, FileSearch } from '@lucide/vue'
 import OutlineTemplate from '@/components/domain-factory/OutlineTemplate.vue'
 
 const router = useRouter()
