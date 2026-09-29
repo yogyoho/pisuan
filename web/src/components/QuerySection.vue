@@ -125,7 +125,7 @@
               class="suggestion-row"
               @click="useQueryExample(example)"
             >
-              <Search class="suggestion-icon" />
+              <Search class="suggestion-icon" :size="14" />
               <span class="suggestion-text">{{ example }}</span>
             </button>
             <button
