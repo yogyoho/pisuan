@@ -1,3 +1,4 @@
+<!-- [pisuan-custom] pisuan 定制 Landing 页（上游无此文件），品牌色已对齐青云素雅（--main-color 系）；本文件整体为定制区 -->
 <template>
   <div class="lp">
     <header class="lp-header" :class="{ 'is-scrolled': isScrolled }">
@@ -649,15 +650,15 @@ onUnmounted(() => {
       0deg,
       transparent,
       transparent 31px,
-      rgba(24, 144, 255, 0.05) 31px,
-      rgba(24, 144, 255, 0.05) 32px
+      rgba(var(--main-color-rgb), 0.05) 31px,
+      rgba(var(--main-color-rgb), 0.05) 32px
     ),
     repeating-linear-gradient(
       90deg,
       transparent,
       transparent 31px,
-      rgba(24, 144, 255, 0.05) 31px,
-      rgba(24, 144, 255, 0.05) 32px
+      rgba(var(--main-color-rgb), 0.05) 31px,
+      rgba(var(--main-color-rgb), 0.05) 32px
     );
 }
 
@@ -1199,7 +1200,7 @@ onUnmounted(() => {
   text-align: center;
   color: var(--gray-0);
   background: linear-gradient(135deg, var(--main-800) 0%, var(--main-600) 100%);
-  box-shadow: 0 24px 60px rgba(9, 109, 217, 0.35);
+  box-shadow: 0 24px 60px rgba(var(--main-color-rgb), 0.35);
 
   h2 {
     margin: 0 0 12px;
