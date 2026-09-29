@@ -5,7 +5,7 @@
  *
  * 主题承载常量：运行时颜色以 base.css 的 --chart-palette-* / --main-* /
  * --color-*-500 变量为准（换肤只需改 base.css）；下方文件内所有 hex 均为
- * 变量缺失时的 fallback 常量，不随主题换肤修改，请勿在页面样式中直接引用。
+ * 变量缺失时的 fallback 常量，换肤时须与 base.css 同步更新，请勿在页面样式中直接引用。
  */
 
 let colorPalette = []
@@ -27,7 +27,7 @@ const buildColorPalette = () => {
 
     // Base chart colors - Ant Design 拂晓蓝主题
     const baseVars = [
-      ['--main-500', '#40a9ff'],
+      ['--main-500', '#6366f1'],
       ['--color-success-500', '#52c41a'],
       ['--color-warning-500', '#faad14'],
       ['--color-error-500', '#ff4d4f'],
@@ -36,16 +36,16 @@ const buildColorPalette = () => {
 
     // Extended palette colors - 从 know 项目导入
     const paletteVars = [
-      ['--chart-palette-1', '#40a9ff'],
-      ['--chart-palette-2', '#11cbe3'],
-      ['--chart-palette-3', '#00b8a9'],
-      ['--chart-palette-4', '#f2c94c'],
-      ['--chart-palette-5', '#eb5757'],
-      ['--chart-palette-6', '#2f80ed'],
-      ['--chart-palette-7', '#9b51e0'],
-      ['--chart-palette-8', '#56ccf2'],
-      ['--chart-palette-9', '#6fcf97'],
-      ['--chart-palette-10', '#333333']
+      ['--chart-palette-1', '#4f46e5'],
+      ['--chart-palette-2', '#0ea5e9'],
+      ['--chart-palette-3', '#8b5cf6'],
+      ['--chart-palette-4', '#14b8a6'],
+      ['--chart-palette-5', '#f59e0b'],
+      ['--chart-palette-6', '#f43f5e'],
+      ['--chart-palette-7', '#06b6d4'],
+      ['--chart-palette-8', '#10b981'],
+      ['--chart-palette-9', '#d946ef'],
+      ['--chart-palette-10', '#64748b']
     ]
 
     const baseColors = baseVars.map(([n, f]) => pick(n, f))
@@ -60,18 +60,18 @@ const buildColorPalette = () => {
     isInitialized = true
   } catch (e) {
     console.warn('Failed to build color palette from CSS variables, using fallback:', e)
-    // Fallback palette - Ant Design 拂晓蓝
+    // Fallback palette - 青云靛蓝锚点环
     colorPalette = [
-      '#40a9ff',
+      '#4f46e5',
       '#52c41a',
       '#faad14',
       '#ff4d4f',
       '#13c2c2',
-      '#11cbe3',
-      '#00b8a9',
-      '#f2c94c',
-      '#eb5757',
-      '#2f80ed'
+      '#0ea5e9',
+      '#8b5cf6',
+      '#14b8a6',
+      '#f59e0b',
+      '#f43f5e'
     ]
     isInitialized = true
   }
