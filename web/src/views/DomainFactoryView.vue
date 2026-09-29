@@ -322,7 +322,7 @@ watch(
       padding: 28px 32px 12px;
       gap: 40px;
       background:
-        radial-gradient(ellipse at top right, rgba(22, 119, 255, 0.06), transparent 50%),
+        radial-gradient(ellipse at top right, rgba(var(--main-color-rgb), 0.06), transparent 50%),
         linear-gradient(135deg, var(--main-10) 0%, var(--gray-0) 100%);
     }
 
@@ -335,7 +335,7 @@ watch(
         font-size: 12px;
         font-weight: 600;
         color: var(--main-color, #1677ff);
-        background: rgba(22, 119, 255, 0.08);
+        background: rgba(var(--main-color-rgb), 0.08);
         padding: 2px 10px;
         border-radius: 999px;
         margin-bottom: 12px;
@@ -367,7 +367,7 @@ watch(
         align-items: center;
         gap: 0;
         padding: 16px 24px;
-        background: linear-gradient(135deg, rgba(22, 119, 255, 0.03), rgba(82, 196, 26, 0.03));
+        background: linear-gradient(135deg, rgba(var(--main-color-rgb), 0.03), rgba(82, 196, 26, 0.03));
         border-radius: 14px;
         border: 1px solid var(--gray-100);
       }
@@ -389,8 +389,8 @@ watch(
         }
 
         &.accent {
-          border-color: rgba(22, 119, 255, 0.15);
-          background: rgba(22, 119, 255, 0.02);
+          border-color: rgba(var(--main-color-rgb), 0.15);
+          background: rgba(var(--main-color-rgb), 0.02);
         }
 
         &.success {
@@ -409,7 +409,7 @@ watch(
           flex-shrink: 0;
 
           &.upload {
-            background: rgba(22, 119, 255, 0.08);
+            background: rgba(var(--main-color-rgb), 0.08);
             color: var(--main-color);
           }
 

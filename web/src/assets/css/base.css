@@ -26,6 +26,7 @@
 
   /* 品牌色变量 */
   --main-color: #4f46e5; /* [pisuan-custom] 青云素雅 */
+  --main-color-rgb: 79, 70, 229; /* [pisuan-custom] 青云素雅 */
   --main-bright: #6366f1; /* [pisuan-custom] 青云素雅 */
 
   /* 辅助色：点缀橙 (Tailwind orange 刻度，基准 --second-500 #f97316)，刻度与 --main-* 对齐 [pisuan-custom] 青云素雅 */
