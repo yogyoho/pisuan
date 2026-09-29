@@ -48,6 +48,9 @@
 - 修复子智能体禁用工具后仍可调用后端执行的问题；禁用状态在执行端拒绝工具访问（[#1001](https://github.com/xerrors/Yuxi/pull/1001)）。
 - 修复书籍分块偶发遗漏短文档标题、将不同节错误合并的问题；标题识别使用无放回抽样，短文档保留全部段落。
 - 修复 PDF 预览偶发误报「无法加载 PDF 文件或文件格式受损」：生产 Nginx 为 `.mjs` 静态资源补充 JavaScript MIME，pdf.js Worker 不再被浏览器拒绝；前端区分渲染组件、网络与文件损坏错误，并修复快速切换文件时的过期加载竞态；CMap 字体映射改为随应用本地发布，不再依赖 jsDelivr CDN。
+- UI 主题整体更换为「青云素雅」：主色靛蓝（浅色 `#4f46e5` / 暗色 `#6366f1`），辅助色换点缀橙 `#f97316`，图表色环靛蓝锚点重排，阴影整体减淡转「微阴影 + 描边」形制，AntD 圆角 8→10；同时偿还风格债务——16 个文件残留的 `@ant-design/icons-vue` 全部迁移至 `@lucide/vue`（依赖移除），约 24 个文件的硬编码色值收编至 CSS 变量（值不变纯重构）。字体、头像套图、深色模式三底色不变。设计文档见 `docs/superpowers/specs/2026-09-29-qingyun-theme-retheme-design.md`。（本条替代上文同版本条目中的「科技蓝」主题方案）
+- 主题 token 换肤披露三处非精确等值就近映射：`#dc2626`→`--color-error-700`、`#999`→`--gray-600`、`#1677ff`/`#1890ff`→`--main-color`，均经换肤任务双审核验，无逐值等价承诺。
+- 收敛 `web/pnpm-lock.yaml`：移除 `@ant-design/icons-vue` 残留声明，补齐 fontsource 字体依赖缺失条目，`pnpm install --frozen-lockfile` 校验通过。
 
 ### 运行与维护
 
