@@ -314,13 +314,13 @@
               @click.stop="handleStatusAction(row)"
             >
               <span v-if="getStatusIcon(text)" :class="['file-status-icon', getStatusTone(text)]">
-                <component :is="getStatusIcon(text)" />
+                <component :is="getStatusIcon(text)" :size="12" />
               </span>
               <span>{{ getStatusText(text) }}</span>
             </button>
             <span v-else class="file-status-pill file-status-static">
               <span v-if="getStatusIcon(text)" :class="['file-status-icon', getStatusTone(text)]">
-                <component :is="getStatusIcon(text)" />
+                <component :is="getStatusIcon(text)" :size="12" />
               </span>
               <span>{{ getStatusText(text) }}</span>
             </span>
@@ -497,13 +497,6 @@ import {
   canMutateKnowledgeFiles
 } from '@/utils/knowledgeFileMutations'
 import {
-  CheckCircleFilled,
-  HourglassFilled,
-  CloseCircleFilled,
-  ClockCircleFilled,
-  FileTextFilled
-} from '@ant-design/icons-vue'
-import {
   Trash2,
   Download,
   RotateCw,
@@ -511,9 +504,13 @@ import {
   Ellipsis,
   FolderPlus,
   CheckSquare,
+  CircleCheck,
+  CircleX,
+  Clock,
   FileText,
   Database,
   Filter,
+  Hourglass,
   MoreHorizontal,
   Pencil,
   Search,
@@ -554,11 +551,11 @@ const handleStatusMenuClick = async (e) => {
 }
 
 const statusIconMap = {
-  success: CheckCircleFilled,
-  progress: HourglassFilled,
-  error: CloseCircleFilled,
-  clock: ClockCircleFilled,
-  file: FileTextFilled
+  success: CircleCheck,
+  progress: Hourglass,
+  error: CircleX,
+  clock: Clock,
+  file: FileText
 }
 
 const getStatusText = (status) => getFileStatusView(status).label

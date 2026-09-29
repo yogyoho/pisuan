@@ -17,15 +17,15 @@
             :class="{ completed: todo.status === 'completed' }"
           >
             <div class="todo-status">
-              <CheckCircleOutlined v-if="todo.status === 'completed'" class="icon completed" />
-              <SyncOutlined
+              <CircleCheck v-if="todo.status === 'completed'" :size="16" class="icon completed" />
+              <RefreshCw
                 v-else-if="todo.status === 'in_progress'"
+                :size="16"
                 class="icon in-progress"
-                spin
               />
-              <ClockCircleOutlined v-else-if="todo.status === 'pending'" class="icon pending" />
-              <CloseCircleOutlined v-else-if="todo.status === 'cancelled'" class="icon cancelled" />
-              <QuestionCircleOutlined v-else class="icon unknown" />
+              <Clock v-else-if="todo.status === 'pending'" :size="16" class="icon pending" />
+              <CircleX v-else-if="todo.status === 'cancelled'" :size="16" class="icon cancelled" />
+              <CircleHelp v-else :size="16" class="icon unknown" />
             </div>
             <span class="todo-text" :title="formatTodoNameTitle(todo.content)">
               {{ formatTodoName(todo.content) }}
@@ -43,13 +43,7 @@
 <script setup>
 import { computed } from 'vue'
 import BaseToolCall from '../BaseToolCall.vue'
-import {
-  CheckCircleOutlined,
-  SyncOutlined,
-  ClockCircleOutlined,
-  CloseCircleOutlined,
-  QuestionCircleOutlined
-} from '@ant-design/icons-vue'
+import { CircleCheck, CircleHelp, CircleX, Clock, RefreshCw } from '@lucide/vue'
 import { parseToolCallArgs } from '../toolRegistry'
 
 const props = defineProps({
@@ -148,6 +142,15 @@ const todoListData = (content) => {
 </script>
 
 <style lang="less" scoped>
+@keyframes todo-icon-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .todo-list-result {
   background: var(--gray-0);
   padding: 0px;
@@ -175,13 +178,12 @@ const todoListData = (content) => {
       margin-top: 2px;
 
       .icon {
-        font-size: 16px;
-
         &.completed {
           color: var(--color-success-500);
         }
         &.in-progress {
           color: var(--main-color);
+          animation: todo-icon-spin 1s linear infinite;
         }
         &.pending {
           color: var(--color-warning-500);
