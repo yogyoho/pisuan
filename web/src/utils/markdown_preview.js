@@ -195,7 +195,7 @@ export const createMarkdownRenderer = ({ themeName, highlighter }) =>
       : undefined
   })
     // KaTeX 错误色（库参数，非主题色，不收编）
-    .use(markdownKatexPlugin, { throwOnError: false, errorColor: '#cc0000', trust: false })
+    .use(markdownKatexPlugin, { throwOnError: false, errorColor: '#cc0000', trust: false }) // [pisuan-custom] 青云素雅：katex errorColor 为 JS 配置项，var() 不解析
     .use(taskLists, { enabled: false, label: false, labelAfter: false })
     .use(markdownItFrontmatterCard)
 

@@ -80,8 +80,8 @@ const currentTaskId = ref(null)
 const statusMap = {
   UPLOADED: { color: 'var(--gray-400)', text: '已上传' },
   PARSING: { color: 'var(--main-color)', text: '解析中' },
-  EXTRACTING: { color: '#722ed1', text: '提取中' }, /* 一次性装饰色 */
-  GENERALIZING: { color: '#722ed1', text: '泛化中' }, /* 一次性装饰色 */
+  EXTRACTING: { color: '#722ed1', text: '提取中' }, /* [pisuan-custom] 青云素雅：一次性装饰色（状态点缀），不随主题 */
+  GENERALIZING: { color: '#722ed1', text: '泛化中' }, /* [pisuan-custom] 青云素雅：一次性装饰色（状态点缀），不随主题 */
   WAITING_REVIEW: { color: 'var(--color-warning-500)', text: '待校验' },
   COMMITTED: { color: 'var(--color-success-500)', text: '已入库' },
   COMMIT_FAILED: { color: 'var(--color-error-500)', text: '入库失败' },

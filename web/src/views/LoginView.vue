@@ -743,7 +743,7 @@ onMounted(async () => {
   left: 0;
   right: 0;
   padding: 12px 20px;
-  background: linear-gradient(135deg, #ff4d4f, #ff7875);
+  background: linear-gradient(135deg, #ff4d4f, #ff7875); /* [pisuan-custom] 青云素雅：服务中断警示横幅一次性红色渐变（渐变第二停点无语义 token），不随主题 */
   color: white;
   z-index: 1000;
   box-shadow: 0 2px 8px rgba(255, 77, 79, 0.3);

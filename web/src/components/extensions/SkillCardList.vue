@@ -1404,7 +1404,7 @@ defineExpose({
 
     &:hover,
     &:focus {
-      border-color: var(--color-error-200, #ffccc7);
+      border-color: var(--color-error-100);
       background: var(--color-error-50, #fff2f0);
       color: var(--color-error-700, #cf1322);
 

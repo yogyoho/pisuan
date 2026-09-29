@@ -11,7 +11,7 @@ export const useThemeStore = defineStore('theme', () => {
     token: {
       fontFamily:
         '"Inter Variable", "Inter", "PingFang SC", "Noto Sans SC", "Microsoft Yahei", "微软雅黑", Arial, sans-serif',
-      colorPrimary: '#4f46e5',
+      colorPrimary: '#4f46e5', // [pisuan-custom] 青云素雅：AntD token 需参与主色派生计算，var() 不解析
       colorLink: 'var(--main-color)',
       colorLinkHover: 'var(--main-600)',
       colorLinkActive: 'var(--main-800)',
@@ -31,7 +31,7 @@ export const useThemeStore = defineStore('theme', () => {
     token: {
       ...commonTheme.token,
       // [pisuan-custom] 暗色主色提亮为 indigo-500（上游 darkAlgorithm 不覆盖主色），同步时保留
-      colorPrimary: '#6366f1'
+      colorPrimary: '#6366f1' // [pisuan-custom] 青云素雅：同上，AntD token 字面值，var() 不解析
     },
     algorithm: theme.darkAlgorithm
   }
