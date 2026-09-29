@@ -1,51 +1,51 @@
 /* color palette from <https://github.com/vuejs/theme> */
-/* [pisuan-custom] 科技蓝主题定制：本文件全部 token 值已按 pisuan 规范整体重写
-   （中性色 shadcn zinc、主色 Tailwind blue-600 #2563eb、辅助色 cyan），变量名结构与上游一致。
+/* [pisuan-custom] 青云素雅主题定制：本文件全部 token 值已按 pisuan 规范整体重写
+   （中性色 shadcn zinc、主色 Tailwind indigo-600 #4f46e5、辅助色 orange），变量名结构与上游一致。
    上游同步冲突时保留本文件版本，上游新增变量名可手工并入。 */
-/* 中性色基准：shadcn (zinc)；主色基准：Tailwind blue-600 科技蓝 */
+/* 中性色基准：shadcn (zinc)；主色基准：Tailwind indigo-600 青云素雅 */
 :root {
-  /* 主色调 - 科技蓝 (Tailwind blue 刻度，基准 --main-600 #2563eb) */
-  --main-1000: #172554;
-  --main-900: #1e3a8a;
-  --main-800: #1e40af;
-  --main-700: #1d4ed8;
-  --main-600: #2563eb;
-  --main-500: #3b82f6;
-  --main-400: #60a5fa;
-  --main-300: #93c5fd;
-  --main-200: #bfdbfe;
-  --main-100: #dbeafe;
-  --main-50: #eff6ff;
-  --main-40: #f4f8fe;
-  --main-30: #f8fbfe;
-  --main-20: #fbfdfe;
-  --main-10: #fcfeff;
-  --main-5: #feffff;
-  --main-1: #feffff;
+  /* 主色调 - 青云靛蓝 (Tailwind indigo 刻度，基准 --main-600 #4f46e5) [pisuan-custom] 青云素雅 */
+  --main-1000: #1e1b4b;
+  --main-900: #312e81;
+  --main-800: #3730a3;
+  --main-700: #4338ca;
+  --main-600: #4f46e5;
+  --main-500: #6366f1;
+  --main-400: #818cf8;
+  --main-300: #a5b4fc;
+  --main-200: #c7d2fe;
+  --main-100: #e0e7ff;
+  --main-50: #eef2ff;
+  --main-40: #f3f4fe;
+  --main-30: #f7f7fe;
+  --main-20: #faf9ff;
+  --main-10: #fbfaff;
+  --main-5: #fdfbff;
+  --main-1: #fdfbff;
   --main-0: #ffffff;
 
   /* 品牌色变量 */
-  --main-color: #2563eb;
-  --main-bright: #3b82f6;
+  --main-color: #4f46e5; /* [pisuan-custom] 青云素雅 */
+  --main-bright: #6366f1; /* [pisuan-custom] 青云素雅 */
 
-  /* 辅助色：科技青色系，基准 --second-500 #06b6d4，刻度与 --main-* 对齐 */
-  --second-1000: #083344;
-  --second-900: #164e63;
-  --second-800: #155e75;
-  --second-700: #0e7490;
-  --second-600: #0891b2;
-  --second-500: #06b6d4;
-  --second-400: #22d3ee;
-  --second-300: #67e8f9;
-  --second-200: #a5f3fc;
-  --second-100: #cffafe;
-  --second-50: #ecfeff;
-  --second-40: #f2fcfd;
-  --second-30: #f8fdfe;
-  --second-20: #fbfefe;
-  --second-10: #fdfeff;
-  --second-5: #feffff;
-  --second-1: #feffff;
+  /* 辅助色：点缀橙 (Tailwind orange 刻度，基准 --second-500 #f97316)，刻度与 --main-* 对齐 [pisuan-custom] 青云素雅 */
+  --second-1000: #431407;
+  --second-900: #7c2d12;
+  --second-800: #9a3412;
+  --second-700: #c2410c;
+  --second-600: #ea580c;
+  --second-500: #f97316;
+  --second-400: #fb923c;
+  --second-300: #fdba74;
+  --second-200: #fed7aa;
+  --second-100: #ffedd5;
+  --second-50: #fff7ed;
+  --second-40: #fff5eb;
+  --second-30: #fff6ec;
+  --second-20: #fff7ec;
+  --second-10: #fff8ed;
+  --second-5: #fff9ee;
+  --second-1: #fff9ee;
   --second-0: #ffffff;
 
   --second-color: var(--second-600);
@@ -103,12 +103,12 @@
   --color-warning-700: #d48806; /* 警告色-深 */
   --color-warning-900: #ad6800; /* 警告色-最深 */
 
-  --color-info-10: #f7faff; /* 信息色-极浅 */
-  --color-info-50: #eff6ff; /* 信息色-最浅 */
-  --color-info-100: #dbeafe; /* 信息色-浅 */
-  --color-info-500: #3b82f6; /* 信息色-标准 */
-  --color-info-700: #2563eb; /* 信息色-深 */
-  --color-info-900: #1e3a8a; /* 信息色-最深 */
+  --color-info-10: #f7f6ff; /* 信息色-极浅 [pisuan-custom] 青云素雅 */
+  --color-info-50: #eef2ff; /* 信息色-最浅 [pisuan-custom] 青云素雅 */
+  --color-info-100: #e0e7ff; /* 信息色-浅 [pisuan-custom] 青云素雅 */
+  --color-info-500: #6366f1; /* 信息色-标准 [pisuan-custom] 青云素雅 */
+  --color-info-700: #4f46e5; /* 信息色-深 [pisuan-custom] 青云素雅 */
+  --color-info-900: #312e81; /* 信息色-最深 [pisuan-custom] 青云素雅 */
 
   --color-accent-10: #f5fffe; /* 强调色-极浅 */
   --color-accent-50: #e6fffb; /* 强调色-最浅 */
@@ -117,17 +117,17 @@
   --color-accent-700: #08979c; /* 强调色-深 */
   --color-accent-900: #006d75; /* 强调色-最深 */
 
-  /* Chart Palette - 图表调色板 (科技蓝锚点 + 青/紫/靛辅助) */
-  --chart-palette-1: var(--main-500);
-  --chart-palette-2: #06b6d4;
+  /* Chart Palette - 图表调色板 (青云靛蓝锚点环) [pisuan-custom] 青云素雅 */
+  --chart-palette-1: var(--main-600);
+  --chart-palette-2: #0ea5e9;
   --chart-palette-3: #8b5cf6;
-  --chart-palette-4: #f59e0b;
-  --chart-palette-5: #ef4444;
-  --chart-palette-6: #6366f1;
-  --chart-palette-7: #ec4899;
-  --chart-palette-8: #14b8a6;
-  --chart-palette-9: #22c55e;
-  --chart-palette-10: #52525b;
+  --chart-palette-4: #14b8a6;
+  --chart-palette-5: #f59e0b;
+  --chart-palette-6: #f43f5e;
+  --chart-palette-7: #06b6d4;
+  --chart-palette-8: #10b981;
+  --chart-palette-9: #d946ef;
+  --chart-palette-10: #64748b;
 
   --bg-sider: var(--main-5);
 
@@ -157,20 +157,20 @@
   --dark-5: rgba(0, 0, 0, 0.05);
   --dark-0: rgba(0, 0, 0, 0);
 
-  /* Shadow System - 阴影系统 */
+  /* Shadow System - 阴影系统（青云素雅：逐档减淡） [pisuan-custom] 青云素雅 */
   --shadow-0: rgba(0, 0, 0, 0.02);
-  --shadow-1: rgba(0, 0, 0, 0.05);
-  --shadow-2: rgba(0, 0, 0, 0.08);
-  --shadow-3: rgba(0, 0, 0, 0.12);
-  --shadow-4: rgba(0, 0, 0, 0.16);
-  --shadow-5: rgba(0, 0, 0, 0.2);
+  --shadow-1: rgba(0, 0, 0, 0.04);
+  --shadow-2: rgba(0, 0, 0, 0.05);
+  --shadow-3: rgba(0, 0, 0, 0.08);
+  --shadow-4: rgba(0, 0, 0, 0.1);
+  --shadow-5: rgba(0, 0, 0, 0.12);
 
   --min-width: 400px;
 
   /* Page Padding - 响应式页面内边距 */
   --page-padding: 18px;
 
-  /* Ant Design 兼容变量 - 蓝色主题 */
+  /* Ant Design 兼容变量 - 靛蓝主题 [pisuan-custom] 青云素雅 */
   --color-bg-container: var(--main-0);
   --color-bg-elevated: var(--gray-10);
   --color-text: var(--gray-1000);
@@ -180,10 +180,10 @@
   --color-trans-dark: var(--dark-85);
 
   /* Ant Design 主色变量 */
-  --ant-primary-color: #2563eb;
+  --ant-primary-color: #4f46e5; /* [pisuan-custom] 青云素雅 */
 }
 
-/* 文本选中美化（科技蓝点睛） */
+/* 文本选中美化（靛蓝点睛） */
 ::selection {
   background: var(--main-100);
   color: var(--main-1000);
