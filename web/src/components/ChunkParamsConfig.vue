@@ -9,7 +9,7 @@
           <span class="chunk-preset-label">
             分块策略
             <a-tooltip :title="presetDescription">
-              <QuestionCircleOutlined class="chunk-preset-help-icon" />
+              <CircleHelp :size="14" class="chunk-preset-help-icon" />
             </a-tooltip>
           </span>
         </template>
@@ -31,7 +31,7 @@
             <span class="chunk-preset-label">
               最大 Token 数
               <a-tooltip title="每个文本片段的最大 token 数，留空时使用默认值 512">
-                <QuestionCircleOutlined class="chunk-preset-help-icon" />
+                <CircleHelp :size="14" class="chunk-preset-help-icon" />
               </a-tooltip>
             </span>
           </template>
@@ -48,7 +48,7 @@
             <span class="chunk-preset-label">
               重叠比例 (%)
               <a-tooltip title="相邻文本片段按 token 数计算的重叠比例，留空时使用默认值 0">
-                <QuestionCircleOutlined class="chunk-preset-help-icon" />
+                <CircleHelp :size="14" class="chunk-preset-help-icon" />
               </a-tooltip>
             </span>
           </template>
@@ -65,7 +65,7 @@
             <span class="chunk-preset-label">
               分隔符
               <a-tooltip title="支持 \\n、\\t 等转义字符。留空时使用默认分隔符 \\n">
-                <QuestionCircleOutlined class="chunk-preset-help-icon" />
+                <CircleHelp :size="14" class="chunk-preset-help-icon" />
               </a-tooltip>
             </span>
           </template>
@@ -82,7 +82,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { QuestionCircleOutlined } from '@ant-design/icons-vue'
+import { CircleHelp } from '@lucide/vue'
 import { useChunkPresetOptions } from '@/composables/useChunkPresetOptions'
 import { DEFAULT_CHUNK_PRESET_ID, isPlainObject } from '@/utils/chunkUtils'
 
@@ -202,6 +202,5 @@ onMounted(() => {
 .chunk-preset-help-icon {
   color: var(--gray-500);
   cursor: help;
-  font-size: 14px;
 }
 </style>

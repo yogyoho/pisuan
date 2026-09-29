@@ -40,8 +40,8 @@
             size="small"
           >
             <template #icon>
-              <LikeOutlined v-if="feedback.rating === 'like'" />
-              <DislikeOutlined v-else />
+              <ThumbsUp v-if="feedback.rating === 'like'" :size="11" />
+              <ThumbsDown v-else :size="11" />
             </template>
             {{ feedback.rating === 'like' ? '点赞' : '点踩' }}
           </a-tag>
@@ -104,7 +104,7 @@
         <!-- 卡片底部：时间信息 -->
         <div class="card-footer">
           <div class="time-info">
-            <ClockCircleOutlined />
+            <Clock :size="11" />
             <span>{{ formatFullDate(feedback.created_at) }}</span>
           </div>
         </div>
@@ -121,7 +121,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
-import { LikeOutlined, DislikeOutlined, ClockCircleOutlined } from '@ant-design/icons-vue'
+import { Clock, ThumbsDown, ThumbsUp } from '@lucide/vue'
 import { dashboardApi } from '@/apis/dashboard_api'
 import { formatFullDateTime } from '@/utils/time'
 import { generatePixelAvatar } from '@/utils/pixelAvatar'
