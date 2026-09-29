@@ -1078,7 +1078,7 @@ defineExpose({ refresh })
   }
 
   &:hover:not(.table-head) {
-    background: var(--main-20, #fafcff);
+    background: var(--main-20);
     color: var(--gray-1000, #0c0d0d);
   }
 
