@@ -2,7 +2,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { ChevronDown, ChevronUp, ClipboardCheck, CloudUpload, Database, FlaskConical, Layers, Robot, Zap } from '@lucide/vue'
+import { Bot, ChevronDown, ChevronUp, ClipboardCheck, CloudUpload, Database, FlaskConical, Layers, Zap } from '@lucide/vue'
 import DataSourceDashboard from '@/components/domain-factory/DataSourceDashboard.vue'
 import EtlWorkbench from '@/components/domain-factory/EtlWorkbench.vue'
 import RegulationEnrichPanel from '@/extensions/regulation-library/RegulationEnrichPanel.vue'
@@ -146,7 +146,7 @@ watch(
                 </div>
                 <div class="pipeline-arrow"><ChevronRight :size="10" /></div>
                 <div class="pipeline-node accent">
-                  <div class="node-icon-wrap ai"><Robot :size="18" /></div>
+                  <div class="node-icon-wrap ai"><Bot :size="18" /></div>
                   <div class="node-body">
                     <span class="node-title">AI 提取</span>
                     <span class="node-desc">智能泛化</span>
