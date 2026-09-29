@@ -34,17 +34,6 @@ const toTask = (raw = {}) => ({
 })
 
 
-// 任务类型标签映射
-const TASK_TYPE_LABELS = {
-  general: '后台任务',
-  manual: '手动任务',
-  knowledge_ingest: '知识库导入',
-  knowledge_rechunks: '文档重新分块',
-  graph_task: '图谱处理',
-  agent_job: '智能体任务',
-  domain_factory: '知识工厂报告解析',
-}
-
 // 知识工厂状态到任务中心状态的映射
 const DOMAIN_FACTORY_STATUS_MAP = {
   'UPLOADED': { status: 'running', progress: 5, message: '文件已上传，等待处理...' },
