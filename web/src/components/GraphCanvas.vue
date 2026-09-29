@@ -118,8 +118,9 @@ const defaultLayout = {
 }
 
 const CHUNK_NODE_LABEL = 'Chunk'
-const CHUNK_NODE_COLOR = '#8c8c8c'
+const CHUNK_NODE_COLOR = '#8c8c8c' // 数据可视化语义色（canvas 渲染，CSS 变量不可用，不随主题）
 const CHUNK_MENTION_EDGE_LABEL = 'MENTIONS'
+// 数据可视化语义色（canvas 渲染，CSS 变量不可用，不随主题）
 const NODE_LABEL_COLORS = [
   '#3996ae',
   '#5ad8a6',
@@ -131,6 +132,7 @@ const NODE_LABEL_COLORS = [
   '#92d050',
   '#e885ba'
 ]
+// 数据可视化语义色（canvas 渲染，CSS 变量不可用，不随主题）
 const EDGE_LABEL_COLORS = [
   '#99add1',
   '#3996ae',

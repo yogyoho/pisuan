@@ -194,6 +194,7 @@ export const createMarkdownRenderer = ({ themeName, highlighter }) =>
         }
       : undefined
   })
+    // KaTeX 错误色（库参数，非主题色，不收编）
     .use(markdownKatexPlugin, { throwOnError: false, errorColor: '#cc0000', trust: false })
     .use(taskLists, { enabled: false, label: false, labelAfter: false })
     .use(markdownItFrontmatterCard)

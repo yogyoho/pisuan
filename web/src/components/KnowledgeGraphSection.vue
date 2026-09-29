@@ -186,6 +186,7 @@
               </a-button>
             </div>
             <div class="panel-body">
+              <!-- 数据可视化语义色（组件渐变 prop，不收编） -->
               <a-progress
                 v-if="isBuildActive"
                 :percent="graphBuildStatus?.build_task_progress ?? 0"

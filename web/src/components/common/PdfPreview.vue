@@ -349,7 +349,7 @@ onBeforeUnmount(() => {
   box-shadow:
     0 4px 14px rgba(0, 0, 0, 0.07),
     0 1px 3px rgba(0, 0, 0, 0.03);
-  background: #ffffff;
+  background: #ffffff; /* 一次性装饰色：PDF 纸张白底，不随主题 */
   border-radius: 4px;
   transition: box-shadow 0.2s ease;
 }
@@ -365,7 +365,7 @@ onBeforeUnmount(() => {
   max-width: 100%;
   height: auto;
   border-radius: 4px;
-  background: #ffffff;
+  background: #ffffff; /* 一次性装饰色：PDF 纸张白底，不随主题 */
 }
 
 .pdf-page-number-tag {
