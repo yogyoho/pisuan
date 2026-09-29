@@ -2074,6 +2074,6 @@ mark {
     width: 32px; height: 3px; border-radius: 2px; background: var(--gray-300);
     transition: background 0.15s;
   }
-  &:hover .resize-grip { background: var(--blue-400, #4096ff); }
+  &:hover .resize-grip { background: var(--main-color); /* [pisuan-custom] 原 var(--blue-400, #4096ff) 未定义变量 */ }
 }
 </style>

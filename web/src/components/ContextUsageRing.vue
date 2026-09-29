@@ -132,13 +132,13 @@ const handleClick = (e) => {
 
 .context-usage-ring-btn.is-warning {
   .context-ring-fill {
-    stroke: var(--warning-color, #faad14);
+    stroke: var(--color-warning-500); /* [pisuan-custom] 规范化：原 --warning-color 未定义，fallback 与规范值一致 */
   }
 }
 
 .context-usage-ring-btn.is-danger {
   .context-ring-fill {
-    stroke: var(--error-color, #ff4d4f);
+    stroke: var(--color-error-500); /* [pisuan-custom] 规范化：原 --error-color 未定义，fallback 与规范值一致 */
   }
 }
 </style>
