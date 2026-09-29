@@ -32,7 +32,7 @@
                   class="search-button"
                   type="primary"
                   :disabled="!queryText.trim()"
-                  :icon="h(SearchOutlined)"
+                  :icon="h(Search, { size: 14 })"
                   shape="circle"
                 />
               </div>
@@ -125,7 +125,7 @@
               class="suggestion-row"
               @click="useQueryExample(example)"
             >
-              <SearchOutlined class="suggestion-icon" />
+              <Search class="suggestion-icon" />
               <span class="suggestion-text">{{ example }}</span>
             </button>
             <button
@@ -159,8 +159,7 @@ import { ref, computed, onMounted, watch, h } from 'vue'
 import { useDatabaseStore } from '@/stores/database'
 import { message } from 'ant-design-vue'
 import { queryApi } from '@/apis/knowledge_api'
-import { SearchOutlined } from '@ant-design/icons-vue'
-import { Braces, RefreshCw } from '@lucide/vue'
+import { Braces, RefreshCw, Search } from '@lucide/vue'
 
 const store = useDatabaseStore()
 const MAX_VISIBLE_EXAMPLES = 10
@@ -717,7 +716,6 @@ defineExpose({
 .suggestion-icon {
   flex: 0 0 auto;
   color: var(--main-color);
-  font-size: 14px;
   width: 14px;
   height: 14px;
   opacity: 0.82;

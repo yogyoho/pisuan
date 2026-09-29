@@ -751,18 +751,20 @@
                           <div class="state-list-item-body">
                             <div class="state-list-item-title state-subagent-title">
                               <span>{{ getSubagentRunName(run) }}</span>
-                              <CheckCircleOutlined
+                              <CircleCheck
                                 v-if="run.status === 'completed'"
+                                :size="13"
                                 class="state-subagent-status-icon state-subagent-completed-icon"
                               />
-                              <CloseCircleOutlined
+                              <CircleX
                                 v-else-if="run.status === 'failed'"
+                                :size="13"
                                 class="state-subagent-status-icon state-subagent-failed-icon"
                               />
-                              <SyncOutlined
+                              <RefreshCw
                                 v-else-if="run.status === 'running'"
-                                spin
-                                class="state-subagent-status-icon state-subagent-running-icon"
+                                :size="13"
+                                class="state-subagent-status-icon state-subagent-running-icon is-spinning"
                               />
                             </div>
                             <div class="state-list-item-meta">{{ run.description }}</div>
@@ -853,6 +855,8 @@ import { message } from 'ant-design-vue'
 import {
   Bug,
   ChevronDown,
+  CircleCheck,
+  CircleX,
   CornerDownRight,
   Folders,
   ListCollapse,
@@ -862,7 +866,6 @@ import {
 } from '@lucide/vue'
 import FileTypeIcon from '@/components/common/FileTypeIcon.vue'
 import { generateAgentAvatar } from '@/utils/pixelAvatar' // [pisuan-custom]
-import { CheckCircleOutlined, CloseCircleOutlined, SyncOutlined } from '@ant-design/icons-vue'
 import AgentInputArea from '@/components/AgentInputArea.vue'
 import ContextUsageRing from '@/components/ContextUsageRing.vue'
 import ToolApprovalModeSelector from '@/components/ToolApprovalModeSelector.vue'
@@ -5619,7 +5622,6 @@ watch(currentChatId, (threadId, oldThreadId) => {
 
 .state-subagent-status-icon {
   flex-shrink: 0;
-  font-size: 13px;
 }
 
 .state-subagent-completed-icon {
@@ -5632,6 +5634,7 @@ watch(currentChatId, (threadId, oldThreadId) => {
 
 .state-subagent-running-icon {
   color: var(--color-info-700);
+  animation: spin 1s linear infinite;
 }
 
 .hide-text {
