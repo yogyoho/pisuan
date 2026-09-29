@@ -8,7 +8,7 @@
     <template #result="{ resultContent }">
       <div class="calculator-result">
         <!-- <div class="calc-header">
-          <h4><NumberOutlined /> 计算结果</h4>
+          <h4><Hash :size="14" /> 计算结果</h4>
         </div> -->
 
         <div class="calc-display">

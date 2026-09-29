@@ -1,9 +1,10 @@
+<!-- [pisuan-custom] pisuan 定制登录页（上游同步时保留本文件定制，参考 HomeView） -->
 <template>
   <div class="login-view" :class="{ 'has-alert': serverStatus === 'error' }">
     <!-- 服务状态提示 -->
     <div v-if="serverStatus === 'error'" class="server-status-alert">
       <div class="alert-content">
-        <exclamation-circle-outlined class="alert-icon" />
+        <CircleAlert :size="20" class="alert-icon" />
         <div class="alert-text">
           <div class="alert-title">服务端连接失败</div>
           <div class="alert-message">{{ serverError }}</div>
@@ -135,7 +136,7 @@
                 >
                   <a-input v-model:value="loginForm.loginId" placeholder="用户ID或手机号">
                     <template #prefix>
-                      <user-outlined />
+                      <User :size="14" />
                     </template>
                   </a-input>
                 </a-form-item>
@@ -147,7 +148,7 @@
                 >
                   <a-input-password v-model:value="loginForm.password">
                     <template #prefix>
-                      <lock-outlined />
+                      <Lock :size="14" />
                     </template>
                   </a-input-password>
                 </a-form-item>
@@ -183,7 +184,7 @@
                       @click="handleOIDCLogin"
                     >
                       <template #icon>
-                        <key-outlined />
+                        <KeyRound :size="16" />
                       </template>
                       {{ oidcButtonText }}
                     </a-button>
@@ -212,12 +213,7 @@ import { useAgentStore } from '@/stores/agent'
 import { message } from 'ant-design-vue'
 import { healthApi } from '@/apis/system_api'
 import { authApi } from '@/apis/auth_api'
-import {
-  UserOutlined,
-  LockOutlined,
-  KeyOutlined,
-  ExclamationCircleOutlined
-} from '@ant-design/icons-vue'
+import { CircleAlert, KeyRound, Lock, User } from '@lucide/vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -759,7 +755,6 @@ onMounted(async () => {
     margin: 0 auto;
 
     .alert-icon {
-      font-size: 20px;
       margin-right: 12px;
       color: white;
     }
