@@ -893,7 +893,7 @@ onUnmounted(() => {
 
         &.superadmin {
           background: rgba(217, 119, 6, 0.08);
-          color: #d97706;
+          color: #d97706; /* 一次性装饰色：superadmin 徽章，不随主题 */
         }
 
         &.admin {
