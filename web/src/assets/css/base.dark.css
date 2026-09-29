@@ -1,6 +1,7 @@
 /* [pisuan-custom] 暗色青云素雅主题定制：token 值整体重写（zinc 暗色三层面 + Tailwind indigo 提亮），
    变量名与上游一致、刻度反转映射。上游同步冲突时保留本文件版本。 */
-/* 深色模式 - shadcn zinc 暗色基准 + 青云靛蓝 (Tailwind indigo) [pisuan-custom] 青云素雅 */
+/* 深色模式 - shadcn zinc 暗色基准 + 青云靛蓝 (Tailwind indigo) [pisuan-custom] 青云素雅
+   注：main-40 档以下（含 30..1 与 1000 档上方的深端值）为亮度保持换算的自造值，非 Tailwind 字面；--main-400 与 600 同值为图表锚点提亮，勿按 Tailwind 字面降档。 */
 :root.dark {
   --main-1000: #eef2ff;
   --main-900: #e0e7ff;
@@ -22,13 +23,13 @@
   --main-0: #000000;
 
   /* 品牌色变量 - 深色模式：主色取 indigo-400/500 中点 #7279f5 提亮档，与 --main-500 同值
-     （复刻旧体系 --main-color ≡ --main-500 同值结构与 1.2x 明度落差，AntD colorPrimary #6366f1 同构）
+     （复刻旧体系 --main-color ≡ --main-500 同值结构；1.2x 明度落差指相对 AntD colorPrimary #6366f1）
      [pisuan-custom] 青云素雅 */
   --main-color: #7279f5; /* [pisuan-custom] 青云素雅 */
   --main-color-rgb: 114, 121, 245; /* [pisuan-custom] 青云素雅 */
   --main-bright: #818cf8; /* [pisuan-custom] 青云素雅 */
 
-  /* 辅助色：点缀橙 (Tailwind orange)，深色模式反转刻度，与 --main-* 对齐 [pisuan-custom] 青云素雅 */
+  /* 辅助色：点缀橙 (Tailwind orange)，深色模式反转刻度，与 --main-* 对齐；40 档以下深端为亮度保持换算自造值，非 Tailwind 字面 [pisuan-custom] 青云素雅 */
   --second-1000: #fff7ed;
   --second-900: #ffedd5;
   --second-800: #fed7aa;
