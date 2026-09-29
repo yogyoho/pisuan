@@ -15,15 +15,17 @@
   --main-50: #312e81;
   --main-40: #1e1b4b;
   --main-30: #161642;
-  --main-20: #0c0c30;
-  --main-10: #06061a;
-  --main-5: #030310;
-  --main-1: #010108;
+  --main-20: #0d0d32;
+  --main-10: #07071b;
+  --main-5: #040411;
+  --main-1: #020208;
   --main-0: #000000;
 
-  /* 品牌色变量 - 深色模式 [pisuan-custom] 青云素雅 */
-  --main-color: #818cf8; /* [pisuan-custom] 青云素雅 */
-  --main-color-rgb: 129, 140, 248; /* [pisuan-custom] 青云素雅 */
+  /* 品牌色变量 - 深色模式：主色取 indigo-400/500 中点 #7279f5 提亮档，与 --main-500 同值
+     （复刻旧体系 --main-color ≡ --main-500 同值结构与 1.2x 明度落差，AntD colorPrimary #6366f1 同构）
+     [pisuan-custom] 青云素雅 */
+  --main-color: #7279f5; /* [pisuan-custom] 青云素雅 */
+  --main-color-rgb: 114, 121, 245; /* [pisuan-custom] 青云素雅 */
   --main-bright: #818cf8; /* [pisuan-custom] 青云素雅 */
 
   /* 辅助色：点缀橙 (Tailwind orange)，深色模式反转刻度，与 --main-* 对齐 [pisuan-custom] 青云素雅 */
@@ -39,11 +41,11 @@
   --second-100: #9a3412;
   --second-50: #7c2d12;
   --second-40: #431407;
-  --second-30: #241430;
-  --second-20: #160d20;
-  --second-10: #0a0710;
-  --second-5: #050308;
-  --second-1: #020102;
+  --second-30: #261d15;
+  --second-20: #19130e;
+  --second-10: #0c0a07;
+  --second-5: #060504;
+  --second-1: #050200;
   --second-0: #000000;
 
   --second-color: var(--second-500);
