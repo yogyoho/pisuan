@@ -1,8 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch, h } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { LeftOutlined, RightOutlined, UpOutlined, DownOutlined } from '@ant-design/icons-vue'
-import { FileText, Inbox, Plus, X } from '@lucide/vue'
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, FileText, Inbox, Plus, X } from '@lucide/vue'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { domainEntityBuilderApi } from '@/apis/domain_entity_builder_api'
 import { databaseApi } from '@/apis/knowledge_api'
@@ -1062,8 +1061,8 @@ watch(() => props.task, async (newTask) => {
               </template>
               <template #extra>
                 <a-button type="text" size="small" class="chapter-toggle-btn" @click="chapterNavCollapsed = !chapterNavCollapsed">
-                  <LeftOutlined v-if="!chapterNavCollapsed" style="font-size: 10px" />
-                  <RightOutlined v-else style="font-size: 10px" />
+                  <ChevronLeft v-if="!chapterNavCollapsed" :size="10" />
+                  <ChevronRight v-else :size="10" />
                 </a-button>
               </template>
               <div v-if="!chapterNavCollapsed" class="scroll-pane chapter-tree-pane">
@@ -1200,8 +1199,8 @@ watch(() => props.task, async (newTask) => {
                 <div class="collapse-panel">
                   <div class="collapse-header" @click="tableDetailExpanded = !tableDetailExpanded">
                     <span class="collapse-title">原始表格</span>
-                    <UpOutlined v-if="tableDetailExpanded" style="font-size: 10px" />
-                    <DownOutlined v-else style="font-size: 10px" />
+                    <ChevronUp v-if="tableDetailExpanded" :size="10" />
+                    <ChevronDown v-else :size="10" />
                   </div>
                   <div v-show="tableDetailExpanded" class="collapse-body table-detail-body" :style="{ height: tableDetailHeight + 'px' }">
                     <div class="table-detail-content">
@@ -1239,8 +1238,8 @@ watch(() => props.task, async (newTask) => {
                       </a-tag>
                       <span v-if="selectedParagraph.template?.table_schema?.columns?.length" class="collapse-meta">{{ selectedParagraph.template.table_schema.columns.length }} 列</span>
                     </span>
-                    <UpOutlined v-if="tableSchemaExpanded" style="font-size: 10px" />
-                    <DownOutlined v-else style="font-size: 10px" />
+                    <ChevronUp v-if="tableSchemaExpanded" :size="10" />
+                    <ChevronDown v-else :size="10" />
                   </div>
                   <div v-show="tableSchemaExpanded" class="collapse-body">
                     <template v-if="selectedParagraph.template?.table_schema">
@@ -1266,8 +1265,8 @@ watch(() => props.task, async (newTask) => {
                       结构行
                       <span class="collapse-meta">{{ selectedParagraph.template.table_schema.structural_rows.length }} 行</span>
                     </span>
-                    <UpOutlined v-if="tableStructRowsExpanded" style="font-size: 10px" />
-                    <DownOutlined v-else style="font-size: 10px" />
+                    <ChevronUp v-if="tableStructRowsExpanded" :size="10" />
+                    <ChevronDown v-else :size="10" />
                   </div>
                   <div v-show="tableStructRowsExpanded" class="collapse-body">
                     <a-table

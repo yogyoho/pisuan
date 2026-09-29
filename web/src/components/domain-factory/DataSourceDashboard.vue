@@ -1,18 +1,7 @@
 <script setup>
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { message, Modal, Upload } from 'ant-design-vue'
-import {
-  InboxOutlined,
-  FileTextOutlined,
-  DeleteOutlined,
-  FilePdfOutlined,
-  FileWordOutlined,
-  ReloadOutlined,
-  PlusOutlined,
-  EyeOutlined,
-  RedoOutlined
-} from '@ant-design/icons-vue'
-import { Search } from '@lucide/vue'
+import { Eye, FileText, FileType2, Inbox, Plus, Redo2, RotateCw, Search, Trash2 } from '@lucide/vue'
 import dayjs from 'dayjs'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { useTaskerStore } from '@/stores/tasker'
@@ -505,9 +494,9 @@ defineExpose({ refresh })
       </div>
       <div class="actions">
         <a-button class="refresh-btn" @click="refresh" :loading="taskLoading || historyLoading">
-          <ReloadOutlined /> 刷新
+          <RotateCw :size="14" /> 刷新
         </a-button>
-        <a-button type="primary" @click="openUploadModal"> <PlusOutlined /> 上传新报告 </a-button>
+        <a-button type="primary" @click="openUploadModal"> <Plus :size="14" /> 上传新报告 </a-button>
       </div>
     </div>
 
@@ -531,7 +520,7 @@ defineExpose({ refresh })
             size="small"
             @click="showCreateDomainModal"
           >
-            <PlusOutlined /> 新建领域
+            <Plus :size="12" /> 新建领域
           </a-button>
         </div>
       </div>
@@ -560,7 +549,7 @@ defineExpose({ refresh })
                 :loading="batchOperating"
                 @click="handleBatchDelete"
               >
-                <DeleteOutlined /> 批量删除
+                <Trash2 :size="12" /> 批量删除
               </a-button>
             </div>
           </transition>
@@ -599,7 +588,7 @@ defineExpose({ refresh })
               />
             </span>
             <span class="name-cell" :title="record.file_name">
-              <FileTextOutlined style="color: var(--main-500); font-size: 16px; flex-shrink: 0" />
+              <FileText :size="16" style="color: var(--main-500); flex-shrink: 0" />
               <span class="entry-name">{{ record.file_name }}</span>
             </span>
             <span class="col-center">{{ record.domain_label }}</span>
@@ -639,12 +628,12 @@ defineExpose({ refresh })
                     class="btn-view"
                     @click="handleViewMarkdown(record)"
                   >
-                    <EyeOutlined />
+                    <Eye :size="12" />
                   </a-button>
                 </a-tooltip>
                 <a-tooltip v-if="record.status === 'FAILED'" title="重新提取">
                   <a-button size="small" type="text" @click="handleRetryTask(record)">
-                    <RedoOutlined />
+                    <Redo2 :size="12" />
                   </a-button>
                 </a-tooltip>
                 <a-tooltip
@@ -654,13 +643,13 @@ defineExpose({ refresh })
                   title="重新入库"
                 >
                   <a-button size="small" type="text" @click="handleReingestTask(record)">
-                    <RedoOutlined />
+                    <Redo2 :size="12" />
                   </a-button>
                 </a-tooltip>
                 <a-popconfirm title="确定删除此任务吗？" @confirm="handleDeleteTask(record)">
                   <a-tooltip title="删除">
                     <a-button size="small" danger type="text" class="btn-delete">
-                      <DeleteOutlined />
+                      <Trash2 :size="12" />
                     </a-button>
                   </a-tooltip>
                 </a-popconfirm>
@@ -709,7 +698,7 @@ defineExpose({ refresh })
         <template v-for="record in filteredHistory" :key="record.id">
           <div class="file-row no-checkbox" @click="handleViewMarkdown(record)">
             <span class="name-cell" :title="record.file_name">
-              <FileTextOutlined style="color: var(--main-500); font-size: 16px; flex-shrink: 0" />
+              <FileText :size="16" style="color: var(--main-500); flex-shrink: 0" />
               <span class="entry-name">{{ record.file_name }}</span>
             </span>
             <span class="col-center">{{ record.domain_label }}</span>
@@ -729,13 +718,13 @@ defineExpose({ refresh })
                     class="btn-view"
                     @click="handleViewMarkdown(record)"
                   >
-                    <EyeOutlined />
+                    <Eye :size="12" />
                   </a-button>
                 </a-tooltip>
                 <a-popconfirm title="确定删除此记录吗？" @confirm="handleDeleteTask(record)">
                   <a-tooltip title="删除">
                     <a-button size="small" danger type="text" class="btn-delete">
-                      <DeleteOutlined />
+                      <Trash2 :size="12" />
                     </a-button>
                   </a-tooltip>
                 </a-popconfirm>
@@ -790,7 +779,7 @@ defineExpose({ refresh })
           class="custom-upload-dragger"
         >
           <div class="upload-icon-wrapper">
-            <InboxOutlined class="upload-icon" />
+            <Inbox :size="48" class="upload-icon" />
           </div>
           <p class="ant-upload-text">点击或拖拽文件至此</p>
           <p class="ant-upload-hint">支持 Word/PDF 格式，单个文件不超过 100MB</p>
@@ -806,15 +795,18 @@ defineExpose({ refresh })
             >
               <div class="file-status-dot"></div>
               <div class="file-icon-wrapper">
-                <FilePdfOutlined
+                <!-- PDF 用 FileText（lucide 无官方 PDF 图标） -->
+                <FileText
                   v-if="getFileIcon(file.name) === 'pdf'"
+                  :size="20"
                   class="file-icon pdf-icon"
                 />
-                <FileWordOutlined
+                <FileType2
                   v-else-if="getFileIcon(file.name) === 'doc'"
+                  :size="20"
                   class="file-icon doc-icon"
                 />
-                <FileTextOutlined v-else class="file-icon file-icon-default" />
+                <FileText v-else :size="20" class="file-icon file-icon-default" />
               </div>
               <div class="file-name" :title="file.name">{{ file.name }}</div>
               <div class="file-size">{{ formatFileSize(file.size) }}</div>
@@ -826,7 +818,7 @@ defineExpose({ refresh })
                 @click="handleFileRemove(file)"
                 :disabled="uploading"
               >
-                <DeleteOutlined />
+                <Trash2 :size="12" />
               </a-button>
             </div>
           </div>
@@ -1199,7 +1191,6 @@ defineExpose({ refresh })
       margin-bottom: 16px;
 
       .upload-icon {
-        font-size: 48px;
         color: var(--main-color);
       }
     }
@@ -1249,8 +1240,6 @@ defineExpose({ refresh })
 
       .file-icon-wrapper {
         .file-icon {
-          font-size: 20px;
-
           &.pdf-icon {
             color: var(--color-error-700);
           }

@@ -22,7 +22,7 @@
         </a-select>
         <a-tooltip title="为标准章节生成提取正则">
           <a-button :loading="generatingRegex" @click="handleGenerateRegex">
-            <template #icon><ToolOutlined /></template>
+            <template #icon><Wrench :size="14" /></template>
           </a-button>
         </a-tooltip>
       </div>
@@ -32,7 +32,7 @@
           placeholder="搜索章节..."
           allow-clear
         >
-          <template #prefix><SearchOutlined /></template>
+          <template #prefix><Search :size="14" /></template>
         </a-input>
       </div>
       <div class="chapter-list">
@@ -51,8 +51,8 @@
                 class="node-toggle"
                 @click.stop="toggleExpand(node.key)"
               >
-                <DownOutlined v-if="isExpanded(node.key)" />
-                <RightOutlined v-else />
+                <ChevronDown v-if="isExpanded(node.key)" :size="11" />
+                <ChevronRight v-else :size="11" />
               </span>
               <span v-else class="node-toggle node-toggle-leaf"></span>
               <span v-if="node._level === 0 && node.order" class="node-order">{{ node.order }}</span>
@@ -69,7 +69,7 @@
               :loading="seeding"
               @click="handleSeed"
             >
-              <template #icon><ThunderboltOutlined /></template>
+              <template #icon><Zap :size="14" /></template>
               初始化标准 13 章结构
             </a-button>
           </a-empty>
@@ -205,11 +205,11 @@
         <div class="editor-actions">
           <a-space>
             <a-button type="primary" @click="handleSave" :loading="saving" :disabled="!selectedKey">
-              <template #icon><SaveOutlined /></template>
+              <template #icon><Save :size="14" /></template>
               保存
             </a-button>
             <a-button @click="loadList" :loading="loadingList">
-              <template #icon><ReloadOutlined /></template>
+              <template #icon><RotateCw :size="14" /></template>
               刷新
             </a-button>
           </a-space>
@@ -249,7 +249,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
-import { ReloadOutlined, SaveOutlined, SearchOutlined, ThunderboltOutlined, ToolOutlined, DownOutlined, RightOutlined } from '@ant-design/icons-vue'
+import { ChevronDown, ChevronRight, RotateCw, Save, Search, Wrench, Zap } from '@lucide/vue'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 
 const loadingList = ref(false)
@@ -554,7 +554,6 @@ onMounted(async () => {
     .node-toggle {
       width: 16px;
       flex-shrink: 0;
-      font-size: 11px;
       color: var(--gray-500);
       display: inline-flex;
       align-items: center;
