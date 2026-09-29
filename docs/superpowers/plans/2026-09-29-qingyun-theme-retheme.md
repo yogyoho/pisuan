@@ -10,6 +10,9 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-29-qingyun-theme-retheme-design.md`（Token 唯一色值依据）
 
+**执行状态**（断点续跑）：T1 ✅ `993e0e1f`、T2 ✅ `b3817d27`（均过规格+质量双审）。
+审查移交备注：① T3 注意图表变量实际名为 `--chart-palette-*`（非 --chart-N），且 chartColors.js 的 hex 为 getComputedStyle fallback，需同步换值；② T3 需在 base.css/base.dark.css 增设 `--main-color-rgb` 通道别名并改写组件内 rgba(22,119,255,*)/rgba(24,144,255,*) 旧蓝（EtlWorkbench L1805/L1943、DomainFactoryView L411 等，grep 全量）；③ T6 需处理 KnowledgeGraphSection.vue:193 antd 旧蓝→绿渐变（SVG stop 不解析 var()，用字面 indigo 对 #4f46e5→#a5b4fc）+ 注释措辞、HomeViewV2 L652-660/L1202 rgba 旧蓝、4 处未定义变量引用规范化（ContextUsageRing --warning-color/--error-color、AgentPanel --error-600、PdfPreview --color-danger，仅 fallback==规范值时改名）；④ T8 changelog 补披露：OutlineTemplate.vue 预估 5 处均为既有 var() fallback 未动、语义变量名按 base.css 实际名替代（--color-*-500/700 系）、#dc2626→--color-error-700 与 #999→--gray-600 两处非精确等值、#1677ff/#1890ff→--main-color 为计划内就近映射。
+
 ---
 
 ## 执行环境约束（每个 Task 都适用）
