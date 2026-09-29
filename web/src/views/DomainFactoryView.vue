@@ -2,18 +2,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import {
-  DownOutlined,
-  UpOutlined,
-  ExperimentOutlined,
-  ThunderboltOutlined,
-  CloudUploadOutlined,
-  RobotOutlined,
-  AuditOutlined,
-  DatabaseOutlined,
-  RightOutlined
-} from '@ant-design/icons-vue'
-import { Database, Layers, Zap } from '@lucide/vue'
+import { ChevronDown, ChevronUp, ClipboardCheck, CloudUpload, Database, FlaskConical, Layers, Robot, Zap } from '@lucide/vue'
 import DataSourceDashboard from '@/components/domain-factory/DataSourceDashboard.vue'
 import EtlWorkbench from '@/components/domain-factory/EtlWorkbench.vue'
 import RegulationEnrichPanel from '@/extensions/regulation-library/RegulationEnrichPanel.vue'
@@ -138,7 +127,7 @@ watch(
           <div v-if="!heroCollapsed" class="hero-content">
             <div class="hero-text">
               <div class="badge">
-                <ExperimentOutlined style="margin-right: 4px" />Domain Knowledge Factory
+                <FlaskConical :size="12" style="margin-right: 4px" />Domain Knowledge Factory
               </div>
               <h1>人机协同的领域知识工厂</h1>
               <p class="desc">
@@ -149,31 +138,31 @@ watch(
             <div class="hero-illustration">
               <div class="pipeline-visual">
                 <div class="pipeline-node">
-                  <div class="node-icon-wrap upload"><CloudUploadOutlined /></div>
+                  <div class="node-icon-wrap upload"><CloudUpload :size="18" /></div>
                   <div class="node-body">
                     <span class="node-title">上传</span>
                     <span class="node-desc">报告文档</span>
                   </div>
                 </div>
-                <div class="pipeline-arrow"><RightOutlined /></div>
+                <div class="pipeline-arrow"><ChevronRight :size="10" /></div>
                 <div class="pipeline-node accent">
-                  <div class="node-icon-wrap ai"><RobotOutlined /></div>
+                  <div class="node-icon-wrap ai"><Robot :size="18" /></div>
                   <div class="node-body">
                     <span class="node-title">AI 提取</span>
                     <span class="node-desc">智能泛化</span>
                   </div>
                 </div>
-                <div class="pipeline-arrow"><RightOutlined /></div>
+                <div class="pipeline-arrow"><ChevronRight :size="10" /></div>
                 <div class="pipeline-node">
-                  <div class="node-icon-wrap review"><AuditOutlined /></div>
+                  <div class="node-icon-wrap review"><ClipboardCheck :size="18" /></div>
                   <div class="node-body">
                     <span class="node-title">专家审核</span>
                     <span class="node-desc">精校数据</span>
                   </div>
                 </div>
-                <div class="pipeline-arrow"><RightOutlined /></div>
+                <div class="pipeline-arrow"><ChevronRight :size="10" /></div>
                 <div class="pipeline-node success">
-                  <div class="node-icon-wrap store"><DatabaseOutlined /></div>
+                  <div class="node-icon-wrap store"><Database :size="18" /></div>
                   <div class="node-body">
                     <span class="node-title">入库</span>
                     <span class="node-desc">知识精品</span>
@@ -208,7 +197,7 @@ watch(
             </div>
           </div>
           <span class="hero-toggle" @click="toggleHero">
-            <component :is="heroCollapsed ? DownOutlined : UpOutlined" />
+            <component :is="heroCollapsed ? ChevronDown : ChevronUp" :size="12" />
             {{ heroCollapsed ? '展开简介' : '收起' }}
           </span>
           <div class="hero-actions">
@@ -218,7 +207,7 @@ watch(
               class="hero-nav-btn"
               @click="router.push('/domain-factory/prompt-config')"
             >
-              <ThunderboltOutlined /> Prompt 管理
+              <Zap :size="13" /> Prompt 管理
             </a-button>
             <a-button
               v-if="userStore.isAdmin"
@@ -405,7 +394,6 @@ watch(
           width: 36px;
           height: 36px;
           border-radius: 10px;
-          font-size: 18px;
           flex-shrink: 0;
 
           &.upload {
@@ -454,7 +442,6 @@ watch(
         width: 28px;
         flex-shrink: 0;
         color: var(--gray-300, #cbd5e1);
-        font-size: 10px;
       }
     }
 

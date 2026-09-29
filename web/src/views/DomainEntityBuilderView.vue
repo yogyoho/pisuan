@@ -4,7 +4,7 @@
       <div>
         <div class="header-title-row">
           <a-button type="text" @click="handleBack" class="back-btn">
-            <template #icon><ArrowLeftOutlined /></template>
+            <template #icon><ArrowLeft :size="14" /></template>
             返回
           </a-button>
           <h2>领域实体构建器</h2>
@@ -23,19 +23,19 @@
           @change="onDomainChange"
         />
         <a-button type="default" @click="handleExport">
-          <template #icon><DownloadOutlined /></template>
+          <template #icon><Download :size="14" /></template>
           导出
         </a-button>
         <a-button type="default" @click="handleImport">
-          <template #icon><UploadOutlined /></template>
+          <template #icon><Upload :size="14" /></template>
           导入
         </a-button>
         <a-button type="primary" @click="handleCreateEntity">
-          <template #icon><PlusOutlined /></template>
+          <template #icon><Plus :size="14" /></template>
           新建实体
         </a-button>
         <a-button type="primary" @click="handleOpenExtract">
-          <template #icon><RobotOutlined /></template>
+          <template #icon><Bot :size="14" /></template>
           AI 提取
         </a-button>
       </div>
@@ -61,7 +61,7 @@
             allow-clear
             @change="handleSearch"
           >
-            <template #prefix><SearchOutlined /></template>
+            <template #prefix><Search :size="14" /></template>
           </a-input>
         </div>
         <div class="taxonomy-tree">
@@ -89,10 +89,7 @@
                     placement="right"
                     @confirm.stop="handleTreeDelete(entity_id)"
                   >
-                    <DeleteOutlined
-                      class="tree-delete-icon"
-                      @click.stop
-                    />
+                    <Trash2 :size="12" class="tree-delete-icon" @click.stop />
                   </a-popconfirm>
                 </div>
               </template>
@@ -218,7 +215,7 @@
               </template>
             </a-table>
             <a-button type="dashed" block style="margin-top: 16px" @click="handleAddProperty">
-              <template #icon><PlusOutlined /></template>
+              <template #icon><Plus :size="14" /></template>
               添加属性
             </a-button>
           </a-card>
@@ -247,7 +244,7 @@
               </div>
             </div>
             <a-button type="dashed" block style="margin-top: 16px" @click="handleAddRule">
-              <template #icon><PlusOutlined /></template>
+              <template #icon><Plus :size="14" /></template>
               添加规则
             </a-button>
           </a-card>
@@ -258,11 +255,11 @@
               <a-button type="primary" @click="handleSave" :loading="saving">保存</a-button>
               <a-button @click="handleCancel">取消</a-button>
               <a-button v-if="editingEntity.entity_id" type="default" @click="handleClone">
-                <template #icon><CopyOutlined /></template>
+                <template #icon><Copy :size="14" /></template>
                 克隆
               </a-button>
               <a-button v-if="editingEntity.entity_id" type="default" @click="handleViewJson">
-                <template #icon><FileTextOutlined /></template>
+                <template #icon><FileText :size="14" /></template>
                 查看JSON
               </a-button>
               <a-popconfirm
@@ -361,7 +358,7 @@
     <!-- 导入配置弹窗 -->
     <a-modal v-model:open="importModalVisible" title="导入配置" @ok="handleConfirmImport">
       <a-upload-dragger v-model:fileList="importFileList" :before-upload="handleBeforeUpload" accept=".json" :max-count="1">
-        <p class="ant-upload-drag-icon"><InboxOutlined /></p>
+        <p class="ant-upload-drag-icon"><Inbox :size="48" /></p>
         <p class="ant-upload-text">点击或拖拽文件到此区域上传</p>
         <p class="ant-upload-hint">支持 JSON 格式配置文件</p>
       </a-upload-dragger>
@@ -372,8 +369,8 @@
       <div class="json-viewer">
         <div class="json-actions">
           <a-space>
-            <a-button type="default" @click="handleCopyJson"><template #icon><CopyOutlined /></template>复制</a-button>
-            <a-button type="default" @click="handleDownloadJson"><template #icon><DownloadOutlined /></template>下载</a-button>
+            <a-button type="default" @click="handleCopyJson"><template #icon><Copy :size="14" /></template>复制</a-button>
+            <a-button type="default" @click="handleDownloadJson"><template #icon><Download :size="14" /></template>下载</a-button>
           </a-space>
         </div>
         <pre class="json-content">{{ jsonContent }}</pre>
@@ -407,17 +404,17 @@
           </a-form-item>
           <a-form-item label="上传文档" required>
             <a-upload-dragger :before-upload="handleExtractUpload" :show-upload-list="false" accept=".txt,.md,.json">
-              <p class="ant-upload-drag-icon"><InboxOutlined /></p>
+              <p class="ant-upload-drag-icon"><Inbox :size="48" /></p>
               <p class="ant-upload-text">点击或拖拽文件到此区域上传</p>
               <p class="ant-upload-hint">支持 TXT、Markdown 格式文档，最大 5MB</p>
             </a-upload-dragger>
             <div v-if="extractFile" class="extract-file-info">
-              <FileTextOutlined /> {{ extractFile.name }} ({{ formatFileSize(extractFile.size) }})
+              <FileText :size="13" /> {{ extractFile.name }} ({{ formatFileSize(extractFile.size) }})
             </div>
           </a-form-item>
           <a-form-item>
             <a-button type="primary" :loading="extracting" :disabled="!extractFile || !extractDomain" @click="handleStartExtract" style="width: 100%">
-              <template #icon><ThunderboltOutlined /></template>
+              <template #icon><Zap :size="14" /></template>
               开始提取
             </a-button>
           </a-form-item>
@@ -495,7 +492,7 @@
             已选 <strong>{{ selectedCount }}</strong> 个实体
           </a-space>
           <a-button type="primary" :loading="importing" @click="handleImportExtracted">
-            <template #icon><DownloadOutlined /></template>
+            <template #icon><Download :size="14" /></template>
             导入数据库（{{ selectedCount }}）
           </a-button>
         </div>
@@ -508,12 +505,7 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import {
-  PlusOutlined, SearchOutlined,
-  DownloadOutlined, UploadOutlined, InboxOutlined,
-  FileTextOutlined, CopyOutlined, ArrowLeftOutlined,
-  DeleteOutlined, RobotOutlined, ThunderboltOutlined
-} from '@ant-design/icons-vue'
+import { ArrowLeft, Bot, Copy, Download, FileText, Inbox, Plus, Search, Trash2, Upload, Zap } from '@lucide/vue'
 import { domainEntityBuilderApi } from '@/apis/domain_entity_builder_api'
 
 const route = useRoute()
@@ -1161,7 +1153,7 @@ const domainLabel = (code) => {
       .tree-node-title { font-weight: 500; &.is-new { color: var(--main-color); font-style: italic; } }
       .tree-node-count { color: var(--gray-600); font-size: 12px; }
       .tree-delete-icon {
-        color: var(--gray-400); font-size: 12px; margin-left: auto; opacity: 0; transition: opacity 0.2s;
+        color: var(--gray-400); margin-left: auto; opacity: 0; transition: opacity 0.2s;
         &:hover { color: var(--color-error-500); }
       }
       &:hover .tree-delete-icon { opacity: 1; }
