@@ -25,7 +25,7 @@ const buildColorPalette = () => {
       return v && v.trim() ? v.trim() : fallback
     }
 
-    // Base chart colors - Ant Design 拂晓蓝主题
+    // Base chart colors - AntD 语义色 + 靛蓝主色 fallback
     const baseVars = [
       ['--main-500', '#6366f1'],
       ['--color-success-500', '#52c41a'],
@@ -34,7 +34,7 @@ const buildColorPalette = () => {
       ['--color-accent-500', '#13c2c2']
     ]
 
-    // Extended palette colors - 从 know 项目导入
+    // Extended palette colors - 扩展图表色板（与 base.css --chart-palette-* 对齐）
     const paletteVars = [
       ['--chart-palette-1', '#4f46e5'],
       ['--chart-palette-2', '#0ea5e9'],
