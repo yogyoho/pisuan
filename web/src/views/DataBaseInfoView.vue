@@ -339,7 +339,7 @@
                   <span class="chunk-preset-label">
                     分块策略
                     <a-tooltip :title="editPresetDescription">
-                      <QuestionCircleOutlined class="chunk-preset-help-icon" />
+                      <CircleHelp :size="14" class="chunk-preset-help-icon" />
                     </a-tooltip>
                   </span>
                 </template>
@@ -433,6 +433,7 @@ import {
   ChevronDown,
   ChevronRight,
   CircleAlert,
+  CircleHelp,
   Copy,
   Database as DatabaseIcon,
   FileText,
@@ -445,7 +446,6 @@ import {
   Search,
   Upload
 } from '@lucide/vue'
-import { QuestionCircleOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import ExtensionDetailLayout from '@/components/shared/ExtensionDetailLayout.vue'
 import FileTable from '@/components/FileTable.vue'
@@ -1503,7 +1503,6 @@ onUnmounted(() => {
 .chunk-preset-help-icon {
   color: var(--gray-500);
   cursor: help;
-  font-size: 14px;
 }
 
 .form-item-help-text {

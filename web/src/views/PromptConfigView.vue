@@ -2,13 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import {
-  ArrowLeftOutlined,
-  SaveOutlined,
-  ReloadOutlined,
-  FileTextOutlined,
-  SettingOutlined
-} from '@ant-design/icons-vue'
+import { ArrowLeft, RotateCw, Save } from '@lucide/vue'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 
 const router = useRouter()
@@ -203,7 +197,7 @@ onMounted(() => {
       <div class="title-group">
         <div class="title-with-back">
           <a-button type="text" class="back-btn" @click="router.back()">
-            <template #icon><ArrowLeftOutlined /></template>
+            <template #icon><ArrowLeft :size="14" /></template>
             返回
           </a-button>
           <div>
@@ -214,11 +208,11 @@ onMounted(() => {
       </div>
       <div class="header-actions">
         <a-button @click="handleRefresh" :loading="loading">
-          <template #icon><ReloadOutlined /></template>
+          <template #icon><RotateCw :size="14" /></template>
           刷新
         </a-button>
         <a-button type="primary" @click="handleSave" :loading="saving">
-          <template #icon><SaveOutlined /></template>
+          <template #icon><Save :size="14" /></template>
           保存配置
         </a-button>
       </div>
