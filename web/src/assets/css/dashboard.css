@@ -20,7 +20,7 @@
 
 /* Chart Area Gradient - 图表区域渐变 (蓝色主题) */
 .chart-area-gradient-primary {
-  background: linear-gradient(180deg, rgba(24, 144, 255, 0.3) 0%, rgba(24, 144, 255, 0.05) 100%);
+  background: linear-gradient(180deg, rgba(var(--main-color-rgb), 0.3) 0%, rgba(var(--main-color-rgb), 0.05) 100%);
 }
 
 .chart-area-gradient-success {
@@ -37,7 +37,7 @@
 
 /* Chart Shadow Effects - 图表阴影效果 (蓝色主题) */
 .chart-shadow-primary {
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(var(--main-color-rgb), 0.15);
 }
 
 .chart-shadow-success {
