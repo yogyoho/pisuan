@@ -258,7 +258,7 @@
           class="send-button"
         >
           <template #icon>
-            <component :is="getIcon" class="send-btn" />
+            <component :is="getIcon" :size="14" class="send-btn" />
           </template>
         </a-button>
       </a-tooltip>
@@ -282,8 +282,7 @@ import {
   h,
   render
 } from 'vue'
-import { SendOutlined, ArrowUpOutlined, PauseOutlined } from '@ant-design/icons-vue'
-import { Plus } from '@lucide/vue'
+import { ArrowUp, Pause, Plus, Send } from '@lucide/vue'
 import { searchMentionFiles } from '@/apis/mention_api'
 import FileTypeIcon from '@/components/common/FileTypeIcon.vue'
 import ActionDropdown from '@/components/common/ActionDropdown.vue'
@@ -345,7 +344,7 @@ const props = defineProps({
   },
   sendIcon: {
     type: String,
-    default: 'ArrowUpOutlined'
+    default: 'ArrowUp'
   },
   customClasses: {
     type: Object,
@@ -1029,17 +1028,17 @@ const hasOptionsLeft = computed(() => {
 
 // 图标映射
 const iconComponents = {
-  SendOutlined: SendOutlined,
-  ArrowUpOutlined: ArrowUpOutlined,
-  PauseOutlined: PauseOutlined
+  Send: Send,
+  ArrowUp: ArrowUp,
+  Pause: Pause
 }
 
 // 根据传入的图标名动态获取组件
 const getIcon = computed(() => {
   if (props.isLoading) {
-    return PauseOutlined
+    return Pause
   }
-  return iconComponents[props.sendIcon] || ArrowUpOutlined
+  return iconComponents[props.sendIcon] || ArrowUp
 })
 
 // 创建本地引用以进行双向绑定
