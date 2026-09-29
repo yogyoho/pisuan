@@ -6,7 +6,7 @@ export const useThemeStore = defineStore('theme', () => {
   // 从 localStorage 读取保存的主题，默认为浅色
   const isDark = ref(localStorage.getItem('theme') === 'dark')
 
-  // [pisuan-custom] 公共主题配置 - 青云素雅主题 (Tailwind indigo-600)：主色与字体均为 pisuan 定制（上游默认拂晓蓝 #1890ff + 系统字体栈），同步时保留
+  // [pisuan-custom] 公共主题配置 - 青云素雅主题 (Tailwind indigo-600)：主色与字体均为 pisuan 定制（上游默认青碧系 #24839b + 系统字体栈；「拂晓蓝 #1890ff」系 pisuan 首个定制提交引入的中间态，非上游原值），同步时保留
   const commonTheme = {
     token: {
       fontFamily:
