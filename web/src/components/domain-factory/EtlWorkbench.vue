@@ -308,9 +308,9 @@ const SUBTYPE_MAP = {
 }
 
 const getConfidenceColor = (conf) => {
-  if (conf >= 0.8) return '#52c41a'
-  if (conf >= 0.6) return '#faad14'
-  return '#ff4d4f'
+  if (conf >= 0.8) return 'var(--color-success-500)'
+  if (conf >= 0.6) return 'var(--color-warning-500)'
+  return 'var(--color-error-500)'
 }
 
 // ========== 计算属性 ==========
@@ -1017,14 +1017,14 @@ watch(() => props.task, async (newTask) => {
         </div>
 
         <div v-if="reviewProgress.total > 0" class="review-progress">
-          <a-progress :percent="reviewProgress.percent" :stroke-color="reviewProgress.percent >= 80 ? '#52c41a' : '#1677ff'" size="small" :format="() => `${reviewProgress.reviewed}/${reviewProgress.total}`" />
+          <a-progress :percent="reviewProgress.percent" :stroke-color="reviewProgress.percent >= 80 ? 'var(--color-success-500)' : 'var(--main-color)'" size="small" :format="() => `${reviewProgress.reviewed}/${reviewProgress.total}`" />
         </div>
 
         <!-- 校验结果面板 -->
         <div v-if="validationReport" class="validation-panel">
           <div class="validation-header">
-            <span v-if="validationReport.passed" style="color: #52c41a; font-weight: 600">校验通过</span>
-            <span v-else style="color: #ff4d4f; font-weight: 600">校验未通过</span>
+            <span v-if="validationReport.passed" style="color: var(--color-success-500); font-weight: 600">校验通过</span>
+            <span v-else style="color: var(--color-error-500); font-weight: 600">校验未通过</span>
             <span class="validation-summary">
               {{ validationReport.summary.total_errors }} 错误 · {{ validationReport.summary.total_warnings }} 警告 ·
               {{ validationReport.summary.total_paragraphs }} 段
@@ -1424,7 +1424,7 @@ watch(() => props.task, async (newTask) => {
               <a-select v-model:value="newSlotForm.entity_ref" placeholder="选择推荐绑定或留空不绑定" allow-clear style="width: 100%">
                 <a-select-option v-for="s in newSlotForm.suggestions" :key="s.entity_ref" :value="s.entity_ref">
                   {{ s.label }}
-                  <span :style="{ color: s.score >= 0.7 ? '#52c41a' : '#faad14', fontSize: '11px', marginLeft: '6px' }">{{ Math.round(s.score * 100) }}%</span>
+                  <span :style="{ color: s.score >= 0.7 ? 'var(--color-success-500)' : 'var(--color-warning-500)', fontSize: '11px', marginLeft: '6px' }">{{ Math.round(s.score * 100) }}%</span>
                 </a-select-option>
               </a-select>
               <div v-if="!newSlotForm.suggestions.length" style="font-size: 11px; color: var(--gray-400); margin-top: 4px">无匹配的实体属性推荐，可留空</div>
@@ -1489,7 +1489,7 @@ watch(() => props.task, async (newTask) => {
                     </template>
                     <template v-else-if="column.key === 'synonyms'">{{ (record.synonyms || []).join('、') }}</template>
                     <template v-else-if="column.key === 'confidence'">
-                      <span :style="{ color: Math.round((record.confidence || 0) * 100) >= 80 ? '#52c41a' : Math.round((record.confidence || 0) * 100) >= 60 ? '#faad14' : '#ff4d4f' }">{{ Math.round((record.confidence || 0) * 100) }}%</span>
+                      <span :style="{ color: Math.round((record.confidence || 0) * 100) >= 80 ? 'var(--color-success-500)' : Math.round((record.confidence || 0) * 100) >= 60 ? 'var(--color-warning-500)' : 'var(--color-error-500)' }">{{ Math.round((record.confidence || 0) * 100) }}%</span>
                     </template>
                     <template v-else-if="column.key === 'action'">
                       <a-space>
@@ -1692,12 +1692,12 @@ watch(() => props.task, async (newTask) => {
   transition: all 0.2s; cursor: default;
   &.clickable { cursor: pointer; &:hover { background: var(--gray-50); } }
   &.active {
-    color: #1677ff; font-weight: 600;
-    .flow-step-num { background: #1677ff; color: #fff; }
+    color: var(--main-color); font-weight: 600;
+    .flow-step-num { background: var(--main-color); color: #fff; /* 中性白，不随主题 */ }
   }
   &.done:not(.active) {
-    color: #52c41a;
-    .flow-step-num { background: #52c41a; color: #fff; }
+    color: var(--color-success-500);
+    .flow-step-num { background: var(--color-success-500); color: #fff; /* 中性白，不随主题 */ }
   }
 }
 .flow-step-num {
@@ -1802,10 +1802,10 @@ watch(() => props.task, async (newTask) => {
 
 .paragraph {
   padding: 10px 8px; border-bottom: 1px dashed var(--gray-150); cursor: pointer;
-  &.selected { background-color: rgba(24, 144, 255, 0.06); border-left: 3px solid #1890ff; padding-left: 5px; }
+  &.selected { background-color: rgba(24, 144, 255, 0.06); border-left: 3px solid var(--main-color); padding-left: 5px; }
   &.para-reviewed { opacity: 0.6; }
   &.para-reviewed.selected { opacity: 1; }
-  &.para-needs-review { border-left: 3px solid #faad14; padding-left: 5px; }
+  &.para-needs-review { border-left: 3px solid var(--color-warning-500); padding-left: 5px; }
 
   .para-title {
     display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-bottom: 4px;
@@ -1813,7 +1813,7 @@ watch(() => props.task, async (newTask) => {
     .para-subtype-tag { font-size: 10px; padding: 0 4px; line-height: 18px; height: 18px; }
   }
   .para-confidence { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .para-reviewed-badge { color: #52c41a; font-weight: 700; font-size: 13px; }
+  .para-reviewed-badge { color: var(--color-success-500); font-weight: 700; font-size: 13px; }
   .para-content { color: var(--gray-700); font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
   .table-content-clamped { max-height: 15em; overflow: hidden; }
   .para-summary { color: var(--gray-500); font-size: 11px; line-height: 1.4; margin-top: 3px; padding-left: 4px; border-left: 2px solid var(--gray-200); }
@@ -1898,7 +1898,7 @@ watch(() => props.task, async (newTask) => {
   .formula-var-arrow { color: var(--gray-400); }
   .formula-var-name { color: var(--gray-800); }
   .formula-var-unit { color: var(--gray-500); font-size: 11px; }
-  .formula-var-ref { color: #1890ff; font-size: 11px; margin-left: auto; }
+  .formula-var-ref { color: var(--main-color); font-size: 11px; margin-left: auto; }
   .step-order { font-weight: 600; color: var(--gray-500); min-width: 20px; }
 }
 
@@ -1910,12 +1910,12 @@ watch(() => props.task, async (newTask) => {
   .slot-chip-ref {
     font-size: 11px;
     margin: 0 2px;
-    &.bound { color: #52c41a; cursor: default; }
+    &.bound { color: var(--color-success-500); cursor: default; }
     &.unbound { color: var(--gray-400, #bfbfbf); cursor: default; }
   }
 }
 
-.slot-chip-del { padding: 0 2px; color: var(--gray-400); min-width: auto; height: auto; &:hover { color: #ff4d4f; } }
+.slot-chip-del { padding: 0 2px; color: var(--gray-400); min-width: auto; height: auto; &:hover { color: var(--color-error-500); } }
 
 .template-text-box {
   max-height: 100px;
@@ -1924,7 +1924,7 @@ watch(() => props.task, async (newTask) => {
     background: var(--color-warning-50); border: 1px solid var(--color-warning-100); border-radius: 3px; padding: 0 2px;
     cursor: pointer; transition: all 0.15s;
     &:hover { background: var(--color-warning-100); border-color: var(--color-warning-500); }
-    &.slot-active { background: var(--color-warning-500); border-color: var(--color-warning-700); color: #fff; }
+    &.slot-active { background: var(--color-warning-500); border-color: var(--color-warning-700); color: #fff; /* 中性白，不随主题 */ }
   }
 }
 
@@ -1940,13 +1940,13 @@ watch(() => props.task, async (newTask) => {
   padding: 8px; border: 1px solid var(--gray-100); border-radius: 6px; margin-bottom: 6px; cursor: pointer;
   transition: all 0.2s;
   &:hover { border-color: var(--gray-300); background: var(--gray-50); }
-  &.selected { border-color: #1890ff; background: rgba(24, 144, 255, 0.06); }
+  &.selected { border-color: var(--main-color); background: rgba(24, 144, 255, 0.06); }
 
   .para-item-header { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .para-item-text { font-size: 12px; color: var(--gray-700); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .para-item-slots { font-size: 10px; color: var(--gray-500); }
   .para-item-score { font-size: 11px; font-weight: 600; }
-  .para-reviewed-badge { color: #52c41a; font-weight: 700; font-size: 13px; }
+  .para-reviewed-badge { color: var(--color-success-500); font-weight: 700; font-size: 13px; }
 }
 
 .diff-section {
@@ -1986,7 +1986,7 @@ watch(() => props.task, async (newTask) => {
   .slot-edit-name { font-family: monospace; font-weight: 600; font-size: 13px; color: var(--gray-700); flex: 1; }
   .slot-remove-btn {
     flex-shrink: 0; color: var(--gray-400); padding: 0; width: 22px; height: 22px;
-    &:hover { color: #ff4d4f; background: rgba(255, 77, 79, 0.06); }
+    &:hover { color: var(--color-error-500); background: rgba(255, 77, 79, 0.06); }
   }
   .slot-edit-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
   .slot-edit-label { font-size: 11px; color: var(--gray-500); min-width: 36px; }

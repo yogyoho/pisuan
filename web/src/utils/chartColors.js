@@ -2,6 +2,10 @@
  * Chart Color Palette Utility
  * 统一的图表调色盘工具函数
  * 从 CSS 变量中动态获取颜色，确保与主题保持一致
+ *
+ * 主题承载常量：运行时颜色以 base.css 的 --chart-palette-* / --main-* /
+ * --color-*-500 变量为准（换肤只需改 base.css）；下方文件内所有 hex 均为
+ * 变量缺失时的 fallback 常量，不随主题换肤修改，请勿在页面样式中直接引用。
  */
 
 let colorPalette = []

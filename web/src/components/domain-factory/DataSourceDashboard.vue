@@ -90,14 +90,14 @@ const currentTaskId = ref(null)
 // 状态映射
 const statusMap = {
   UPLOADED: { color: 'var(--gray-400)', text: '已上传' },
-  PARSING: { color: '#1677ff', text: '解析中' },
-  EXTRACTING: { color: '#722ed1', text: '提取中' },
-  GENERALIZING: { color: '#722ed1', text: '泛化中' },
-  WAITING_REVIEW: { color: '#faad14', text: '待校验' },
-  COMMITTED: { color: '#52c41a', text: '已入库' },
-  COMMIT_FAILED: { color: '#ff4d4f', text: '入库失败' },
-  COMMIT_PARTIAL: { color: '#faad14', text: '部分入库' },
-  FAILED: { color: '#ff4d4f', text: '失败' }
+  PARSING: { color: 'var(--main-color)', text: '解析中' },
+  EXTRACTING: { color: '#722ed1', text: '提取中' }, /* 一次性装饰色 */
+  GENERALIZING: { color: '#722ed1', text: '泛化中' }, /* 一次性装饰色 */
+  WAITING_REVIEW: { color: 'var(--color-warning-500)', text: '待校验' },
+  COMMITTED: { color: 'var(--color-success-500)', text: '已入库' },
+  COMMIT_FAILED: { color: 'var(--color-error-500)', text: '入库失败' },
+  COMMIT_PARTIAL: { color: 'var(--color-warning-500)', text: '部分入库' },
+  FAILED: { color: 'var(--color-error-500)', text: '失败' }
 }
 
 // 计算属性
@@ -611,7 +611,7 @@ defineExpose({ refresh })
               <span class="status-dot">
                 <span
                   class="dot"
-                  :style="{ backgroundColor: statusMap[record.status]?.color || '#999' }"
+                  :style="{ backgroundColor: statusMap[record.status]?.color || 'var(--gray-500)' }"
                 ></span>
                 {{ statusMap[record.status]?.text || record.status }}
               </span>
@@ -1243,7 +1243,7 @@ defineExpose({ refresh })
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background: #52c41a;
+        background: var(--color-success-500);
         flex-shrink: 0;
       }
 
@@ -1252,10 +1252,10 @@ defineExpose({ refresh })
           font-size: 20px;
 
           &.pdf-icon {
-            color: #dc2626;
+            color: var(--color-error-700);
           }
           &.doc-icon {
-            color: #2563eb;
+            color: var(--main-color);
           }
           &.file-icon-default {
             color: var(--gray-500);
@@ -1325,7 +1325,7 @@ defineExpose({ refresh })
     color: var(--gray-400, #94a3b8);
 
     &:hover {
-      color: #ff4d4f;
+      color: var(--color-error-500);
       background: rgba(255, 77, 79, 0.06);
     }
   }
@@ -1343,12 +1343,12 @@ defineExpose({ refresh })
   }
 
   .btn-view:hover {
-    color: #1677ff;
+    color: var(--main-color);
     background: rgba(22, 119, 255, 0.06);
   }
 
   .btn-delete:hover {
-    color: #ff4d4f;
+    color: var(--color-error-500);
     background: rgba(255, 77, 79, 0.06);
   }
 }
@@ -1365,7 +1365,7 @@ defineExpose({ refresh })
   color: var(--gray-600, #475569);
 
   .batch-bar__label strong {
-    color: #ff4d4f;
+    color: var(--color-error-500);
     font-weight: 600;
   }
 }
@@ -1386,7 +1386,7 @@ defineExpose({ refresh })
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #1677ff;
+  background: var(--main-color);
   animation: pulse 1.5s ease-in-out infinite;
   vertical-align: middle;
   margin-right: 4px;

@@ -1162,7 +1162,7 @@ const domainLabel = (code) => {
       .tree-node-count { color: var(--gray-600); font-size: 12px; }
       .tree-delete-icon {
         color: var(--gray-400); font-size: 12px; margin-left: auto; opacity: 0; transition: opacity 0.2s;
-        &:hover { color: #ff4d4f; }
+        &:hover { color: var(--color-error-500); }
       }
       &:hover .tree-delete-icon { opacity: 1; }
     }
@@ -1267,7 +1267,7 @@ const domainLabel = (code) => {
     display: flex; justify-content: space-between; align-items: center;
     margin-top: 16px; padding: 12px 16px;
     background: var(--main-color); border-radius: 8px;
-    color: #fff;
+    color: #fff; /* 中性白，不随主题 */
     a-button { margin-left: auto; }
   }
 }

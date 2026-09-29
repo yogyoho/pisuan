@@ -410,22 +410,22 @@ watch(
 
           &.upload {
             background: rgba(22, 119, 255, 0.08);
-            color: #1677ff;
+            color: var(--main-color);
           }
 
           &.ai {
             background: rgba(114, 46, 209, 0.08);
-            color: #722ed1;
+            color: #722ed1; /* 一次性装饰色 */
           }
 
           &.review {
             background: rgba(250, 173, 20, 0.08);
-            color: #d48806;
+            color: var(--color-warning-700);
           }
 
           &.store {
             background: rgba(82, 196, 26, 0.08);
-            color: #389e0d;
+            color: var(--color-success-700);
           }
         }
 
@@ -570,10 +570,10 @@ watch(
         border-radius: 50%;
 
         &.data {
-          background: #1677ff;
+          background: var(--main-color);
         }
         &.workbench {
-          background: #722ed1;
+          background: #722ed1; /* 一次性装饰色 */
         }
       }
 
