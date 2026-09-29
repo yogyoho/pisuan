@@ -186,11 +186,11 @@
               </a-button>
             </div>
             <div class="panel-body">
-              <!-- 数据可视化语义色（组件渐变 prop，不收编） -->
+              <!-- [pisuan-custom] 主题靛蓝渐变（a-progress stroke-color 为对象 prop，SVG stop 不解析 var()，用字面值） -->
               <a-progress
                 v-if="isBuildActive"
                 :percent="graphBuildStatus?.build_task_progress ?? 0"
-                :stroke-color="{ '0%': '#108ee9', '100%': '#87d068' }"
+                :stroke-color="{ '0%': '#4f46e5', '100%': '#a5b4fc' }"
                 size="small"
                 style="margin-bottom: 10px"
               />
