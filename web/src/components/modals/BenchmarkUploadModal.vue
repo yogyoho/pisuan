@@ -104,10 +104,6 @@ const visible = computed({
   set: (val) => emit('update:visible', val)
 })
 
-// 说明文本
-const extraText = computed(() =>
-  h('span', {}, '需要了解评估基准格式？请查阅相关文档')
-)
 
 // 文件上传前验证
 const beforeUpload = async (file) => {

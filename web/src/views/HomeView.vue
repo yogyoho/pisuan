@@ -194,15 +194,6 @@ const goToDomainFactory = () => {
   router.push('/domain-factory')
 }
 
-const goToDashboard = () => {
-  if (!userStore.isLoggedIn) {
-    sessionStorage.setItem('redirect', '/dashboard')
-    router.push('/login')
-    return
-  }
-  router.push('/dashboard')
-}
-
 const handleInternalLink = (event, url) => {
   event.preventDefault()
   if (!userStore.isLoggedIn) {

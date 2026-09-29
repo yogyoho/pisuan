@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch, h } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, FileText, Inbox, Plus, X } from '@lucide/vue'
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, FileText, Inbox, X } from '@lucide/vue'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { domainEntityBuilderApi } from '@/apis/domain_entity_builder_api'
 import { databaseApi } from '@/apis/knowledge_api'
@@ -51,7 +51,6 @@ const entityCategories = ref([])
 const entityEditModalVisible = ref(false)
 const editingEntity = ref(null)
 const activeEntityCategory = ref('')
-const proposedDomainCode = ref('')
 const matchedCount = ref(0)
 const newCount = ref(0)
 
@@ -323,10 +322,6 @@ const classifyStats = computed(() => {
   })
   return stats
 })
-
-const parameterParagraphs = computed(() =>
-  sourceParagraphs.value.filter(p => p.classify_type === 'parameter')
-)
 
 const slotSummary = computed(() => {
   const map = {}

@@ -1,7 +1,7 @@
 import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete } from './base'
 
 const buildQuery = (params) => {
-  const filtered = Object.entries(params).filter(([_, v]) => v != null && v !== '')
+  const filtered = Object.entries(params).filter(([, v]) => v != null && v !== '')
   if (filtered.length === 0) return ''
   return '?' + new URLSearchParams(filtered).toString()
 }
