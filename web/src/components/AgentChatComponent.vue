@@ -764,7 +764,7 @@
                               <RefreshCw
                                 v-else-if="run.status === 'running'"
                                 :size="13"
-                                class="state-subagent-status-icon state-subagent-running-icon is-spinning"
+                                class="state-subagent-status-icon state-subagent-running-icon"
                               />
                             </div>
                             <div class="state-list-item-meta">{{ run.description }}</div>
