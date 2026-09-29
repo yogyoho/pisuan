@@ -548,7 +548,7 @@ onMounted(async () => {
     }
 
     &.active {
-      background: rgba(24, 144, 255, 0.1);
+      background: rgba(var(--main-color-rgb), 0.1);
     }
 
     .node-toggle {

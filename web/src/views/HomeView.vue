@@ -602,11 +602,11 @@ const actionLinks = computed(() => {
   &.primary {
     background: linear-gradient(135deg, var(--main-color) 0%, var(--main-bright) 100%);
     color: white;
-    box-shadow: 0 8px 24px rgba(24, 144, 255, 0.3);
+    box-shadow: 0 8px 24px rgba(var(--main-color-rgb), 0.3);
 
     &:hover {
       transform: translateY(-3px);
-      box-shadow: 0 12px 32px rgba(24, 144, 255, 0.4);
+      box-shadow: 0 12px 32px rgba(var(--main-color-rgb), 0.4);
     }
 
     &:active {
@@ -684,7 +684,7 @@ const actionLinks = computed(() => {
       border-radius: 1rem;
       background: linear-gradient(135deg, var(--main-100) 0%, var(--main-300) 100%);
       color: var(--main-color);
-      box-shadow: 0 4px 12px rgba(24, 144, 255, 0.2);
+      box-shadow: 0 4px 12px rgba(var(--main-color-rgb), 0.2);
     }
   }
 
@@ -804,7 +804,7 @@ const actionLinks = computed(() => {
       background: linear-gradient(135deg, var(--main-100) 0%, var(--main-300) 100%);
       color: var(--main-color);
       flex-shrink: 0;
-      box-shadow: 0 4px 12px rgba(24, 144, 255, 0.2);
+      box-shadow: 0 4px 12px rgba(var(--main-color-rgb), 0.2);
     }
   }
 

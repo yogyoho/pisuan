@@ -923,7 +923,7 @@ defineExpose({ refresh })
       &:hover {
         border-color: var(--main-color);
         color: var(--main-color);
-        background: rgba(22, 119, 255, 0.04);
+        background: rgba(var(--main-color-rgb), 0.04);
       }
     }
   }
@@ -1188,7 +1188,7 @@ defineExpose({ refresh })
 
       &:hover {
         border-color: var(--main-color);
-        background: rgba(22, 119, 255, 0.02);
+        background: rgba(var(--main-color-rgb), 0.02);
       }
     }
 
@@ -1344,7 +1344,7 @@ defineExpose({ refresh })
 
   .btn-view:hover {
     color: var(--main-color);
-    background: rgba(22, 119, 255, 0.06);
+    background: rgba(var(--main-color-rgb), 0.06);
   }
 
   .btn-delete:hover {

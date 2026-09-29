@@ -1802,7 +1802,7 @@ watch(() => props.task, async (newTask) => {
 
 .paragraph {
   padding: 10px 8px; border-bottom: 1px dashed var(--gray-150); cursor: pointer;
-  &.selected { background-color: rgba(24, 144, 255, 0.06); border-left: 3px solid var(--main-color); padding-left: 5px; }
+  &.selected { background-color: rgba(var(--main-color-rgb), 0.06); border-left: 3px solid var(--main-color); padding-left: 5px; }
   &.para-reviewed { opacity: 0.6; }
   &.para-reviewed.selected { opacity: 1; }
   &.para-needs-review { border-left: 3px solid var(--color-warning-500); padding-left: 5px; }
@@ -1940,7 +1940,7 @@ watch(() => props.task, async (newTask) => {
   padding: 8px; border: 1px solid var(--gray-100); border-radius: 6px; margin-bottom: 6px; cursor: pointer;
   transition: all 0.2s;
   &:hover { border-color: var(--gray-300); background: var(--gray-50); }
-  &.selected { border-color: var(--main-color); background: rgba(24, 144, 255, 0.06); }
+  &.selected { border-color: var(--main-color); background: rgba(var(--main-color-rgb), 0.06); }
 
   .para-item-header { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .para-item-text { font-size: 12px; color: var(--gray-700); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2017,7 +2017,7 @@ watch(() => props.task, async (newTask) => {
 
 // ========== 通用 ==========
 mark {
-  background: rgba(24, 144, 255, 0.2); padding: 0 2px; border-radius: 4px;
+  background: rgba(var(--main-color-rgb), 0.2); padding: 0 2px; border-radius: 4px;
 }
 
 .detail-empty {
@@ -2069,7 +2069,7 @@ mark {
 .table-detail-resize-handle {
   height: 6px; cursor: ns-resize; display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; margin-top: 2px;
-  &:hover, &:active { background: rgba(24, 144, 255, 0.08); }
+  &:hover, &:active { background: rgba(var(--main-color-rgb), 0.08); }
   .resize-grip {
     width: 32px; height: 3px; border-radius: 2px; background: var(--gray-300);
     transition: background 0.15s;
