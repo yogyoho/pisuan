@@ -102,3 +102,6 @@ backup_*.sql
 .wolf/cron-state.json
 .wolf/designqc-report.json
 .wolf/designqc-captures/
+
+# 脑暴可视化伴侣会话存档
+.superpowers/
