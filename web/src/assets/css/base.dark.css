@@ -1,48 +1,49 @@
-/* [pisuan-custom] 暗色科技蓝主题定制：token 值整体重写（zinc 暗色三层面 + Tailwind blue 提亮），
+/* [pisuan-custom] 暗色青云素雅主题定制：token 值整体重写（zinc 暗色三层面 + Tailwind indigo 提亮），
    变量名与上游一致、刻度反转映射。上游同步冲突时保留本文件版本。 */
-/* 深色模式 - shadcn zinc 暗色基准 + 科技蓝 (Tailwind blue) */
+/* 深色模式 - shadcn zinc 暗色基准 + 青云靛蓝 (Tailwind indigo) [pisuan-custom] 青云素雅 */
 :root.dark {
-  --main-1000: #eff6ff;
-  --main-900: #dbeafe;
-  --main-800: #bfdbfe;
-  --main-700: #93c5fd;
-  --main-600: #60a5fa;
-  --main-500: #4d94f7;
-  --main-400: #3b82f6;
-  --main-300: #2563eb;
-  --main-200: #1d4ed8;
-  --main-100: #1e40af;
-  --main-50: #1e3a8a;
-  --main-40: #172554;
-  --main-30: #101c42;
-  --main-20: #0a1230;
-  --main-10: #050a1a;
-  --main-5: #030610;
-  --main-1: #010308;
+  --main-1000: #eef2ff;
+  --main-900: #e0e7ff;
+  --main-800: #c7d2fe;
+  --main-700: #a5b4fc;
+  --main-600: #818cf8;
+  --main-500: #7279f5;
+  --main-400: #818cf8;
+  --main-300: #4f46e5;
+  --main-200: #4338ca;
+  --main-100: #3730a3;
+  --main-50: #312e81;
+  --main-40: #1e1b4b;
+  --main-30: #161642;
+  --main-20: #0c0c30;
+  --main-10: #06061a;
+  --main-5: #030310;
+  --main-1: #010108;
   --main-0: #000000;
 
-  /* 品牌色变量 - 深色模式 */
-  --main-color: #4d94f7;
-  --main-bright: #60a5fa;
+  /* 品牌色变量 - 深色模式 [pisuan-custom] 青云素雅 */
+  --main-color: #818cf8; /* [pisuan-custom] 青云素雅 */
+  --main-color-rgb: 129, 140, 248; /* [pisuan-custom] 青云素雅 */
+  --main-bright: #818cf8; /* [pisuan-custom] 青云素雅 */
 
-  /* 辅助色：科技青色系，深色模式反转刻度，与 --main-* 对齐 */
-  --second-1000: #ecfeff;
-  --second-900: #cffafe;
-  --second-800: #a5f3fc;
-  --second-700: #67e8f9;
-  --second-600: #22d3ee;
-  --second-500: #1ec9e4;
-  --second-400: #06b6d4;
-  --second-300: #0891b2;
-  --second-200: #0e7490;
-  --second-100: #155e75;
-  --second-50: #164e63;
-  --second-40: #083344;
-  --second-30: #062330;
-  --second-20: #041720;
-  --second-10: #020b10;
-  --second-5: #010608;
-  --second-1: #000304;
+  /* 辅助色：点缀橙 (Tailwind orange)，深色模式反转刻度，与 --main-* 对齐 [pisuan-custom] 青云素雅 */
+  --second-1000: #fff7ed;
+  --second-900: #ffedd5;
+  --second-800: #fed7aa;
+  --second-700: #fdba74;
+  --second-600: #fb923c;
+  --second-500: #fa8229;
+  --second-400: #f97316;
+  --second-300: #ea580c;
+  --second-200: #c2410c;
+  --second-100: #9a3412;
+  --second-50: #7c2d12;
+  --second-40: #431407;
+  --second-30: #241430;
+  --second-20: #160d20;
+  --second-10: #0a0710;
+  --second-5: #050308;
+  --second-1: #020102;
   --second-0: #000000;
 
   --second-color: var(--second-500);
@@ -86,12 +87,12 @@
   --color-warning-700: #ffc53d; /* 警告色-浅 */
   --color-warning-900: #ffd666; /* 警告色-最浅 */
 
-  --color-info-10: #050a14; /* 信息色-极深 */
-  --color-info-50: #0c1424; /* 信息色-最深 */
-  --color-info-100: #12203c; /* 信息色-深 */
-  --color-info-500: #3b82f6; /* 信息色-标准 */
-  --color-info-700: #60a5fa; /* 信息色-浅 */
-  --color-info-900: #93c5fd; /* 信息色-最浅 */
+  --color-info-10: #070714; /* 信息色-极深 [pisuan-custom] 青云素雅 */
+  --color-info-50: #101024; /* 信息色-最深 [pisuan-custom] 青云素雅 */
+  --color-info-100: #19193c; /* 信息色-深 [pisuan-custom] 青云素雅 */
+  --color-info-500: #6366f1; /* 信息色-标准 [pisuan-custom] 青云素雅 */
+  --color-info-700: #818cf8; /* 信息色-浅 [pisuan-custom] 青云素雅 */
+  --color-info-900: #a5b4fc; /* 信息色-最浅 [pisuan-custom] 青云素雅 */
 
   --color-accent-10: #081919; /* 强调色-极深 */
   --color-accent-50: #0f2e2e; /* 强调色-最深 */
@@ -100,16 +101,17 @@
   --color-accent-700: #36cfc9; /* 强调色-浅 */
   --color-accent-900: #5cdbd3; /* 强调色-最浅 */
 
+  /* 图表色板：palette-1 走 --main-400 通道（解析为靛蓝 #818cf8，暗底可读），2..10 与浅色新值对齐 [pisuan-custom] 青云素雅 */
   --chart-palette-1: var(--main-400);
-  --chart-palette-2: #06b6d4;
+  --chart-palette-2: #0ea5e9;
   --chart-palette-3: #8b5cf6;
   --chart-palette-4: #f59e0b;
-  --chart-palette-5: #ef4444;
-  --chart-palette-6: #6366f1;
-  --chart-palette-7: #ec4899;
-  --chart-palette-8: #14b8a6;
-  --chart-palette-9: #22c55e;
-  --chart-palette-10: #a1a1aa;
+  --chart-palette-5: #14b8a6;
+  --chart-palette-6: #f43f5e;
+  --chart-palette-7: #06b6d4;
+  --chart-palette-8: #10b981;
+  --chart-palette-9: #d946ef;
+  --chart-palette-10: #64748b;
 
   --bg-sider: #101012;
   --color-text: #fafafa;
@@ -147,8 +149,8 @@
   --color-text-secondary: rgba(255, 255, 255, 0.65);
   --color-text-tertiary: rgba(255, 255, 255, 0.45);
 
-  /* Ant Design 主色变量 - 深色模式 */
-  --ant-primary-color: #3b82f6;
+  /* Ant Design 主色变量 - 深色模式 [pisuan-custom] 青云素雅 */
+  --ant-primary-color: #6366f1;
 
   /* Shadow System - 深色模式阴影系统 */
   --shadow-0: rgba(255, 255, 255, 0.02);
@@ -162,10 +164,10 @@
   --color-trans-dark: rgba(255, 255, 255, 0.85);
 }
 
-/* 文本选中美化 - 深色模式（科技蓝点睛） */
+/* 文本选中美化 - 深色模式（靛蓝点睛）[pisuan-custom] 青云素雅 */
 :root.dark ::selection {
-  background: #1d4ed8;
-  color: #eff6ff;
+  background: #4338ca;
+  color: #eef2ff;
 }
 
 :root.dark .markmap {
