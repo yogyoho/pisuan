@@ -4262,5 +4262,17 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-08-20"
+  },
+  {
+    "id": "bug-316",
+    "timestamp": "2026-09-30T09:30:00+08:00",
+    "error_message": "git rebase --continue 反复报 'You must edit all merge conflicts and then mark them as resolved using git add'，即使 git ls-files -u 为 0、冲突文件已全部 add",
+    "file": ".wolf/ (session hooks)",
+    "root_cause": "builtin rebase 在 has_unstaged_changes 时直接 die（不止 unmerged index）；本项目 hooks 每次工具调用后重写 .wolf/anatomy.md 等 6 个文件，rebase 进行中工作区永远脏，continue 永远被拒。误判为真冲突会浪费大量排查",
+    "fix": "每次 continue 前 `git stash push -m wolf-during-rebase-N -- .wolf/` 再 `GIT_EDITOR=true git rebase --continue`（Bash 下前缀形式，PowerShell env 传递不可靠）；同一 commit 可能需连续多轮 stash→continue；LF→CRLF warning 无害。三分法：纯 wolf commit 用 rebase --skip 或 edit-todo 改 drop；混合 commit 的 .wolf 冲突 checkout --ours；autostash pop 的 .wolf 冲突同样取 ours。rerere 记录后自动复用",
+    "tags": ["git", "rebase", "wolf-hooks", "unstaged-changes", "false-conflict"],
+    "related_bugs": ["bug-315"],
+    "occurrences": 5,
+    "last_seen": "2026-09-30"
   }
 ]
