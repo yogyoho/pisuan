@@ -53,7 +53,7 @@ tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query
 **粒度铁律（D9，700 页约束）**：编辑器叶子 = **节**（≤ ~1.5 万字/叶，一个编辑器文档 ≈ 5–15 页）；单章 5–10 万字必须拆为节级文档派发与交付，组装回章级过门。项目章树由 KF 模板 seed 生成（见「KF 契约」），叶子=节。
 
 脚本调用统一前缀：`python -X utf8 /home/gem/skills/coal-eia-writer/scripts/<脚本> …`
-（容器内路径以 skills 容器挂载为准；下表 `STAGE=references/stages/<stage>.json` 相对技能根）
+（容器内路径以 skills 容器挂载为准；下表 `STAGE=references/stages/<stage>.json` 相对技能根；正文与速查表中 `--stage S` 的 S 一律填该文件路径——脚本只认路径，填纯名称会 FileNotFoundError）
 
 ## 管线（步骤 0–7，两层状态模型：派发/交付=节级，门禁=章级，节无独立门）
 
@@ -99,7 +99,7 @@ progress.py run-stage freeze --state-dir T   # 冻结二连一次 bash：chapter
 
 ### 步骤 4 · 节级派发（两层模型核心，控制器模式）
 
-主会话是**控制器**：薄上下文，只协调——读进度、分波派节、跑门、记账，**不亲自写节**。节稿写作全部走子代理派发——`subagent_start`（`subagent_slug="eia-section-writer"`，每节一次派发；波=一章的全部 PENDING 节，分批发起、在飞 ≤3，有完成即补位，直至波内全部发出），`subagent_status` 轮询收节。
+主会话是**控制器**：薄上下文，只协调——读进度、分波派节、跑门、记账，**不亲自写节**。节稿写作全部走子代理派发——`subagent_start`（`subagent_slug="eia-section-writer"`，每节一次派发；波=一章的全部 PENDING 节，分批发起、在飞 ≤3，有完成即补位，直至波内全部发出），`subagent_status` 轮询收节。脚本输出（`progress.py next` 等）中残留的源运行时词汇 batch_task/task() 一律按本条映射为 `subagent_start` 执行（本平台无 batch_task）；并发上限以本条「在飞 ≤3」为准，忽略输出文案中的其他并发表述。
 
 **Iron Law（门 FAIL 的唯一合法出路）**
 
