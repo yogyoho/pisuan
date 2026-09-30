@@ -55,23 +55,11 @@ description: "煤矿环评报告编排者 v2。作为组长派发 3 个专业 wr
 | 数据与现状 writer | `data-survey-writer` | 2规划概况、3环境现状、4回顾评价 |
 | 预测与论证 writer | `prediction-writer` | 5影响识别、6影响预测、7承载力、8综合论证、9减缓措施、13结论 |
 
-### 各 writer 写作规范
+### 各 writer 角色摘要
 
-**regulation-writer（法规标准）**：
-- 模板替代率：ch1 总则 90%、ch10 环境管理 85%、ch11 清洁生产 70%、ch12 公众参与 90%
-- 法规引用格式：`"GB 3095-2012《环境空气质量标准》二级标准"`，编号+全称+版本，不得省略
-- 对 `get_chapter_outline` 返回的 `regulations` 中每个标准逐条 `query_kb` 获取条款全文
-- 章节末尾列出本章引用的全部标准清单
-
-**data-survey-writer（数据与现状）**：
-- 写前先扫描数据需求，按树形列出每项数据，标注来源：已有(PPS) / KB可查 / {{MISSING:...}}
-- 数据源优先级：PPS → `query_kb` 监测库 → 用户附件 → `ask_user_question` 追问
-- 现状评价方法：单因子指数法、超标率统计，监测数据写入结构化表格
-
-**prediction-writer（预测与论证）**：
-- 计算按复杂度分层：简单计算 → 沙箱 Python；固定公式 → @tool 函数；专业软件 → KB 查表
-- 公式用 LaTeX 格式，标注每个参数的来源；计算结果分情景讨论
-- 论证按"因为A…所以B…建议C"链条推进，每章末尾写小结，ch13 汇总全局结论
+- **regulation-writer**: 模板型章节 (ch1/10/11/12)，模板替代率 70-90%，法规逐条 query_kb 引用
+- **data-survey-writer**: 数据密集型章节 (ch2/3/4)，数据源优先级 PPS→KB→附件→追问，单因子指数法评价
+- **prediction-writer**: 分析型章节 (ch5-9/13)，计算三层 (沙箱/@tool/KB查表)，公式 LaTeX + 分情景论证
 
 ## 四阶段流程
 
