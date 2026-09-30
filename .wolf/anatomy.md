@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-30T01:14:06.891Z
-> Files: 2 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-30T03:19:08.531Z
+> Files: 1 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -56,7 +56,6 @@
 
 ## backend/package/yuxi/agents/
 
-- `context.py` — Define the configurable parameters for the agent. (~5754 tok)
 
 ## backend/package/yuxi/agents/backends/
 
@@ -279,13 +278,13 @@
 
 ## docs/develop-guides/
 
-- `changelog.md` — 版本变更记录 (~18127 tok)
 
 ## docs/intro/
 
 
 ## docs/superpowers/plans/
 
+- `2026-09-29-qingyun-theme-retheme.md` — 青云素雅主题换肤实施计划 (~5270 tok)
 
 ## docs/superpowers/specs/
 

@@ -51,11 +51,17 @@
 - **规范库 §7 已被 compliance-checker skill 覆盖（2026-07-20）：** "条款引用匹配"功能目标（取章节 regulations.standard_code → query_kb 法规原文 → 逐章比对标准引用正确性 → 4 态矩阵）已由 `compliance-checker` skill 完整实现（KB 层），RegDocument 图谱层是内部结构。§8（写手查限值）缺，已补 buildin 工具 `lookup_standard_indicator` 调 `regulation_library.query_indicators`。模式：extension 的 query 函数暴露为 buildin 工具时，函数内 import + ImportError 兜底 + 无匹配 hint 引导 query_kb。
 - **ask_user_question 子 agent 全局禁用（subagent/graph.py:26 `_SUBAGENT_DISABLED_TOOLS`）→ 中继协议是正解（2026-07-20）：** data-survey-writer 要问缺数据但不能直接调 ask_user_question。修在 coal-eia-writer SKILL.md（在 BUILTIN_SKILLS，改完重启 worker + 新对话生效）：写手输出 `## MISSING_DATA` 结构化块 → 编排者解析后代调 ask_user_question。无独立 writer SKILL.md（目录都不存在），writer 行为由 DB system_prompt + 编排者 task 描述决定。
 
+- **上游 #1088（031e2c72，2026-09-30 同步）重构 skills 后端：** 删除 1813 行 `agents/skills/service.py`，拆为 `services/skills/` 包（`shared.py` 持 `init_builtin_skills` 与模块内 `get_skills_root_dir`；`remote_install.py`/`repository.py` 同删）。pisuan 在旧 service.py 的 6 行 .tmp-/.bak- 中断清理已移植到 `shared.py` 的 `init_builtin_skills`（`synced_items` 之后）。旧路径 import 直接崩，写 skills 相关代码先看新包。
+- **上游 #1081（同版）`BaseContext.knowledges` 升级 `ResourceSelection` 类型（default="all"）：** 且 `context.py` 原生含 `excluded_tools`（:242）+ ExcludedToolsMiddleware——pisuan 旧版手工加的 excluded_tools 6 行字段定制已被上游超越，rebase 取上游侧，勿加回旧字段。
+
 ## Do-Not-Repeat
 
 <!-- Mistakes made and corrected. Each entry prevents the same mistake recurring. -->
 <!-- Format: [YYYY-MM-DD] Description of what went wrong and what to do instead. -->
 
+- [2026-09-30] **rebase 期间 hooks 每次工具调用后重写 `.wolf/*`，`git rebase --continue` 会因 unstaged changes 误报 "You must edit all merge conflicts..."**（此时 `git ls-files -u` 为 0、冲突早已 add 过）。这不是真冲突：builtin rebase 在 has_unstaged_changes 时直接 die。修复模式：每次 continue 前 `git stash push -m wolf-during-rebase-N -- .wolf/`；LF→CRLF warning 无害；`GIT_EDITOR=true git ...` 前缀须走 Bash（PowerShell 的 $env:GIT_EDITOR 传递不可靠）。同一 commit 的 continue 可能要连续多次 stash→continue。
+- [2026-09-30] **上游大 rebase 的 .wolf 快照冲突三分法**：①纯 wolf 台账 commit（chore(wolf)/"chore: OpenWolf 台账…"）→ `git rebase --skip`，或 `GIT_SEQUENCE_EDITOR="sed -i 's/^pick X/drop X/'" git rebase --edit-todo` 批量 drop（须先解决当前冲突才能 edit-todo）；②混合 commit 中 .wolf 冲突 → `git checkout --ours -- .wolf/` + add（保留重放态版本，弃历史快照）；③rebase 完成后 autostash pop 在 .wolf 上冲突同样取 ours（hooks 会立刻刷新）。rerere 会记录全部解法，下次同类冲突自动复用。
+- [2026-09-30] **上游 rebase 后必做保护文件核验**：`git show HEAD:<file> | grep <定制特征>`——base.css indigo、info.template.yaml 华宇、HomeView home-container。257 pick 大 rebase 逐个解冲突后不能凭记忆断言无损。
 - [2026-07-16] `_parse_markdown_to_paragraphs` 中 Markdown 标题分支（`####` 格式）提取 `num_part` 后没有清洗 `title_text`（仍含编号前缀），导致 `current_section_title = num_part + " " + title_text` 拼接出重复编号如 `"3.1.1 3.1.1 地形地貌"`。数字标题分支（1107 行）正确调用了 `_clean_chapter_title`，Markdown 标题分支也应清洗。修复：在 `num_match` 匹配后直接取 `num_match.group(2).strip()` 作为清洗后的 `title_text`。
 - [2026-07-16] `_parse_markdown_to_paragraphs` 表格行收集循环因分隔符行（`|---|:---|`）被 `is_table_line` 判 False 而提前终止，导致 `table_lines` 只剩表头 1 条，`len==1` 被当作普通段落。修复：收集循环改为跳过 `|...|` 包裹的非数据行（分隔符行）但不终止收集，使 `table_lines` 包含表头+数据行，满足 `len>=2` 触发表格识别。
 
