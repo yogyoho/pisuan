@@ -9,8 +9,8 @@ import pytest
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from yuxi.storage.postgres.models_business import AgentRun, Conversation, Project, SubagentThread
-from yuxi.utils.datetime_utils import utc_now_naive
+from pisuan.storage.postgres.models_business import AgentRun, Conversation, Project, SubagentThread
+from pisuan.utils.datetime_utils import utc_now_naive
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 

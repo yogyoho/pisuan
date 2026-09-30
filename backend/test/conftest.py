@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from yuxi.storage.postgres.manager import pg_manager
+from pisuan.storage.postgres.manager import pg_manager
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:

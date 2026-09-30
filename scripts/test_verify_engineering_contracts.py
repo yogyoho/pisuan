@@ -115,7 +115,7 @@ jobs:
             """on:
   pull_request:
     paths:
-      - 'backend/package/yuxi/**'
+      - 'backend/package/pisuan/**'
       - 'backend/server/**'
       - 'backend/test/integration/**'
       - 'backend/test/e2e/**'
@@ -431,7 +431,7 @@ jobs:
         path = self.root / ".github/workflows/system-tests.yml"
         original = path.read_text(encoding="utf-8")
         for owning_path in (
-            "backend/package/yuxi/**",
+            "backend/package/pisuan/**",
             "backend/test/e2e/**",
             "backend/test/support/**",
             "docker/**",
@@ -571,15 +571,15 @@ jobs:
     def test_service_workspace_host_path_bypasses_are_rejected(self) -> None:
         cases = (
             (
-                "from yuxi.workspace.paths import user_workdir_host_dir\n",
+                "from pisuan.workspace.paths import user_workdir_host_dir\n",
                 "普通 Service/Repository 不得取得 UserWorkspace 宿主 Path",
             ),
             (
-                "import yuxi.workspace.paths as workspace_paths\n",
+                "import pisuan.workspace.paths as workspace_paths\n",
                 "普通 Service/Repository 不得取得 UserWorkspace 宿主 Path",
             ),
             (
-                "from yuxi.config import get_user_data_dir\n"
+                "from pisuan.config import get_user_data_dir\n"
                 "def scan():\n"
                 "    return list((get_user_data_dir() / 'shared').iterdir())\n",
                 "普通 Service/Repository 不得取得 UserWorkspace 宿主 Path",
@@ -587,11 +587,11 @@ jobs:
             (
                 "import os\nfrom pathlib import Path\n"
                 "def scan():\n"
-                "    return list(Path(os.environ['YUXI_USER_DATA_DIR']).iterdir())\n",
+                "    return list(Path(os.environ['PISUAN_USER_DATA_DIR']).iterdir())\n",
                 "不得读取 UserWorkspace 宿主根环境变量",
             ),
         )
-        path = "backend/package/yuxi/services/invalid_service.py"
+        path = "backend/package/pisuan/services/invalid_service.py"
         for source, expected_error in cases:
             with self.subTest(source=source):
                 self._write(path, source)
@@ -601,11 +601,11 @@ jobs:
 
     def test_personal_skill_service_is_the_only_service_with_workspace_root_access(self) -> None:
         """个人 Skill 文件 Owner 可定位用户根，其余 Service 仍被拒绝。"""
-        source = "from yuxi.workspace.paths import user_workspace_dir\n"
-        self._write("backend/package/yuxi/services/skills/personal.py", source)
+        source = "from pisuan.workspace.paths import user_workspace_dir\n"
+        self._write("backend/package/pisuan/services/skills/personal.py", source)
         self.assertFalse(any("UserWorkspace 宿主 Path" in error for error in self._errors()))
 
-        self._write("backend/package/yuxi/services/skills/other.py", source)
+        self._write("backend/package/pisuan/services/skills/other.py", source)
         self.assertTrue(any("UserWorkspace 宿主 Path" in error for error in self._errors()))
 
     def test_agents_instruction_file_missing_is_rejected(self) -> None:

@@ -2,7 +2,7 @@
 bold/plain table context lines are merged into table_context.
 """
 
-from yuxi.services.domain_factory_service import DomainFactoryService
+from pisuan.services.domain_factory_service import DomainFactoryService
 
 
 def _service():

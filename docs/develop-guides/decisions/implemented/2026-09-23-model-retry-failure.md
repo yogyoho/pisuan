@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：bug-fix
-Owner：backend/package/yuxi/agents/middlewares/network_retry.py
+Owner：backend/package/pisuan/agents/middlewares/network_retry.py
 
 ## 问题
 

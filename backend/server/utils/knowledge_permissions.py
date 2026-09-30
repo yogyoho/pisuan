@@ -3,14 +3,14 @@
 from fastapi import Depends, HTTPException
 
 from server.utils.auth_middleware import get_admin_user
-from yuxi.knowledge.read_models import KnowledgeBaseDetail
-from yuxi.knowledge.runtime import knowledge_base
-from yuxi.permissions import (
+from pisuan.knowledge.read_models import KnowledgeBaseDetail
+from pisuan.knowledge.runtime import knowledge_base
+from pisuan.permissions import (
     ResourcePermission,
     ResourcePermissionDenied,
     require_knowledge_base_permission,
 )
-from yuxi.storage.postgres.models_business import User
+from pisuan.storage.postgres.models_business import User
 
 
 async def ensure_knowledge_base_permission(

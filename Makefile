@@ -19,8 +19,8 @@ reset:
 		echo "Error: .env file not found. Please create it from .env.template"; \
 		exit 1; \
 	fi
-	@if [ -n "$$YUXI_STATE_DIR" ] || grep -Eq '^[[:space:]]*YUXI_STATE_DIR[[:space:]]*=[[:space:]]*[^[:space:]#]' .env; then \
-		echo "Refusing to delete an external YUXI_STATE_DIR; stop the slot and remove its exact state directory explicitly." >&2; \
+	@if [ -n "$$PISUAN_STATE_DIR" ] || grep -Eq '^[[:space:]]*PISUAN_STATE_DIR[[:space:]]*=[[:space:]]*[^[:space:]#]' .env; then \
+		echo "Refusing to delete an external PISUAN_STATE_DIR; stop the slot and remove its exact state directory explicitly." >&2; \
 		exit 1; \
 	fi
 	docker compose down
@@ -66,14 +66,14 @@ verify-trust:
 
 audit-dependencies:
 	cd backend && uv audit --locked --no-dev
-	cd packages/yuxi-cli && uv audit --locked --no-dev
+	cd packages/pisuan-cli && uv audit --locked --no-dev
 	cd web && pnpm audit --audit-level=high --prod
 	cd docs && pnpm audit --audit-level=high --prod
-	@if uv audit --script scripts/dependency-audit-fixtures/vulnerable.py > /tmp/yuxi-python-audit-negative.log 2>&1; then echo "Expected the vulnerable Python fixture to fail"; exit 1; fi
-	grep -q "aiohttp 3.14.1 has" /tmp/yuxi-python-audit-negative.log
-	grep -q "GHSA-cq5v-8q36-5273" /tmp/yuxi-python-audit-negative.log
+	@if uv audit --script scripts/dependency-audit-fixtures/vulnerable.py > /tmp/pisuan-python-audit-negative.log 2>&1; then echo "Expected the vulnerable Python fixture to fail"; exit 1; fi
+	grep -q "aiohttp 3.14.1 has" /tmp/pisuan-python-audit-negative.log
+	grep -q "GHSA-cq5v-8q36-5273" /tmp/pisuan-python-audit-negative.log
 	bash scripts/dependency-audit-fixtures/run-node-negative-control.sh
 
 audit-licenses:
 	cd backend && UV_PYTHON=$(BACKEND_PYTHON) uv run --isolated --no-dev --with pip-licenses pip-licenses --from mixed --format markdown
-	cd packages/yuxi-cli && uv run --isolated --no-dev --with pip-licenses pip-licenses --from mixed --format markdown
+	cd packages/pisuan-cli && uv run --isolated --no-dev --with pip-licenses pip-licenses --from mixed --format markdown

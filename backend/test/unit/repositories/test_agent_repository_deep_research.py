@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from yuxi.agents.presets import discover_agent_presets
-from yuxi.repositories.agent_repository import (
+from pisuan.agents.presets import discover_agent_presets
+from pisuan.repositories.agent_repository import (
     AgentRepository,
     DEFAULT_AGENT_BACKEND_ID,
     SUB_AGENT_BACKEND_ID,

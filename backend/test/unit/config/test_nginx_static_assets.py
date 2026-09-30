@@ -7,7 +7,7 @@ import pytest
 
 def _project_root() -> Path:
     """定位包含 Compose 文件的仓库根目录。"""
-    configured = os.environ.get("YUXI_PROJECT_ROOT")
+    configured = os.environ.get("PISUAN_PROJECT_ROOT")
     if configured:
         return Path(configured)
 

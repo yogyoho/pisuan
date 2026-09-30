@@ -72,8 +72,8 @@ git -C $loc fetch --quiet origin
 if ($LASTEXITCODE -ne 0) { Write-Warning "git fetch 失败（离线？），继续用本地 origin/pisuan-custom 旧基线" }
 
 # 2. 只挪 HEAD 指针到基线（--no-deref 脱离分支且不触碰 index/工作树）。
-#    千万不要用 checkout/reset 重置工作树：基线是 yuxi 命名，重置会把上轮改名层整树
-#    打回 yuxi 形态再靠 rename 改回来，每轮全树两次写入（vite 全量重启/容器抖动）。
+#    千万不要用 checkout/reset 重置工作树：基线是 pisuan 命名，重置会把上轮改名层整树
+#    打回 pisuan 形态再靠 rename 改回来，每轮全树两次写入（vite 全量重启/容器抖动）。
 #    rename 规则幂等（对已是 pisuan 形态的内容零替换不落盘），无需先回到基线内容。
 git -C $loc update-ref --no-deref HEAD (git -C $loc rev-parse origin/pisuan-custom)
 if ($LASTEXITCODE -ne 0) { throw "HEAD 指到 origin/pisuan-custom 失败" }
@@ -83,8 +83,8 @@ foreach ($p in $syncPaths) {
 }
 
 # 3. 拷贝工作树内容（python walker 单进程：路径翻译 + 内容变换 + 差异比较后才落盘）
-#    源树（pisuan 仓库）是 yuxi 命名，本地化树是 pisuan 命名——直接整目录拷贝会与改名层
-#    撞名（backend/package/yuxi vs pisuan）。walker 对每个文件：路径组件按 is_rename_dir
+#    源树（pisuan 仓库）是 pisuan 命名，本地化树是 pisuan 命名——直接整目录拷贝会与改名层
+#    撞名（backend/package/pisuan vs pisuan）。walker 对每个文件：路径组件按 is_rename_dir
 #    翻译、文件名与内容按 rewrite_text 变换，变换后与目标一致则不写（收敛轮零 mtime 事件，
 #    vite 不重启）。注意：python 代码必须经临时 .py 文件调用——PS 5.1 向原生命令传含双引号
 #    的 -c 代码会坏参
@@ -135,7 +135,7 @@ Remove-Item $pyFile -Force
 if ($walkerExit -ne 0) { throw "拷贝 walker 失败" }
 
 # 3.5 仓库级 add（不提交）：让索引镜像工作树的 pisuan 形态。改名脚本按 git ls-files
-# （索引）圈定范围——新拷贝文件不入索引会被漏改；索引若残留 yuxi 命名旧路径，rename
+# （索引）圈定范围——新拷贝文件不入索引会被漏改；索引若残留 pisuan 命名旧路径，rename
 # 会规划目录搬迁并撞上工作树已改名目标而崩溃，仓库级 add 使两者永远一致
 git -C $loc add -A
 if ($LASTEXITCODE -ne 0) { throw "git add 失败" }

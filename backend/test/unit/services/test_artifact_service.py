@@ -5,13 +5,13 @@ import threading
 from pathlib import Path
 
 import pytest
-import yuxi.services.artifact_service as svc
+import pisuan.services.artifact_service as svc
 from fastapi import HTTPException
-from yuxi.agents.backends.paths import workspace_scope_from_runtime_path
-from yuxi.services.skills import edit as skill_edit
-from yuxi.services.workdir_service import AuthorizedWorkdir
-from yuxi.workspace.errors import FileTransferLimitError
-from yuxi.workspace.workdir import Workdir
+from pisuan.agents.backends.paths import workspace_scope_from_runtime_path
+from pisuan.services.skills import edit as skill_edit
+from pisuan.services.workdir_service import AuthorizedWorkdir
+from pisuan.workspace.errors import FileTransferLimitError
+from pisuan.workspace.workdir import Workdir
 
 
 class _Workspace:

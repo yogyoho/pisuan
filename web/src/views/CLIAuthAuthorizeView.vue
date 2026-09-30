@@ -29,7 +29,7 @@
           <dl>
             <div>
               <dt>凭据名称</dt>
-              <dd>{{ session?.key_name || 'Yuxi CLI' }}</dd>
+              <dd>{{ session?.key_name || 'Pisuan CLI' }}</dd>
             </div>
             <div>
               <dt>状态</dt>

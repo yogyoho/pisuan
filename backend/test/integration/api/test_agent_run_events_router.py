@@ -8,8 +8,8 @@ from contextlib import suppress
 
 import asyncpg
 import pytest
-from yuxi.services.run_queue_service import append_run_stream_event, get_redis_client
-from yuxi.storage.redis import close_async_redis_client
+from pisuan.services.run_queue_service import append_run_stream_event, get_redis_client
+from pisuan.storage.redis import close_async_redis_client
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
@@ -24,7 +24,7 @@ async def isolated_run_events_redis_client():
 
 async def test_stream_batch_preserves_payload_and_expiry():
     """从真实 Redis 回读批量发布后的事件标识、内容和 TTL。"""
-    from yuxi.services.run_queue_service import RUN_EVENTS_STREAM_TTL_SECONDS
+    from pisuan.services.run_queue_service import RUN_EVENTS_STREAM_TTL_SECONDS
 
     run_id = str(uuid.uuid4())
     key = f"run:events:{run_id}"
@@ -44,7 +44,7 @@ async def test_stream_batch_preserves_payload_and_expiry():
 
 
 def _postgres_dsn() -> str:
-    return os.getenv("POSTGRES_URL", "postgresql+asyncpg://postgres:postgres@postgres:5432/yuxi").replace(
+    return os.getenv("POSTGRES_URL", "postgresql+asyncpg://postgres:postgres@postgres:5432/pisuan").replace(
         "+asyncpg", ""
     )
 
@@ -131,7 +131,7 @@ async def test_run_events_verbose_false_returns_compact_payload(test_client, sta
             run_id,
             "custom",
             {
-                "name": "yuxi.agent_state",
+                "name": "pisuan.agent_state",
                 "chunk": {
                     "request_id": request_id,
                     "response": None,

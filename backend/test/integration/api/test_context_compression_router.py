@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import uuid
 from unittest.mock import AsyncMock
-from yuxi.agents.context import BaseContext
+from pisuan.agents.context import BaseContext
 from typing import Annotated, Any, TypedDict
 
 import httpx
@@ -19,9 +19,9 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from server.routers.chat_router import chat
 from server.utils.auth_middleware import get_db, get_required_user
-from yuxi.services import context_compression_service
-from yuxi.storage.postgres.manager import pg_manager
-from yuxi.storage.postgres.models_business import Conversation, Project, User
+from pisuan.services import context_compression_service
+from pisuan.storage.postgres.manager import pg_manager
+from pisuan.storage.postgres.models_business import Conversation, Project, User
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 

@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：feature
-Owner：backend/package/yuxi/services/input_message_service.py
+Owner：backend/package/pisuan/services/input_message_service.py
 
 前端排队与派发的消息归属由[聊天多图的本地消息归属](./2026-09-27-chat-image-message-ownership.md)进一步收敛。
 
@@ -16,11 +16,11 @@ Owner：backend/package/yuxi/services/input_message_service.py
 2. **多图数据已经在持久化，因此不需要 schema 变更**。base64 今天已落两份（`messages.image_content` 列与 `extra_metadata.raw_message`），加 LangGraph checkpoint 是三份；新增列只会成为第四份而收益为零。`BUSINESS_SCHEMA_VERSION` 保持 8，运行进程仍只做相等校验。
 3. **硬顶来自体积**。单图压缩上限 5MB、base64 后约 6.8MB，**3 张大图就会撞** `nginx client_max_body_size 20M`；而 dev 拓扑没有 nginx，本地测不出这一点。
 
-事实分工：wire 契约与图片归一由 `backend/package/yuxi/services/input_message_service.py` 拥有；HTTP 模型由 `agent_router.py` 与 `agent_invocation_eval_router.py` 拥有；历史 DTO 由 `conversation_service.py` 拥有；前端逐项状态与拖拽分流由 `web/src/components/AgentInputArea.vue` 拥有；体积放行由 `docker/nginx/default.conf` 与 `normalize_image_contents` 共同拥有。本记录不反过来成为运行时事实源。
+事实分工：wire 契约与图片归一由 `backend/package/pisuan/services/input_message_service.py` 拥有；HTTP 模型由 `agent_router.py` 与 `agent_invocation_eval_router.py` 拥有；历史 DTO 由 `conversation_service.py` 拥有；前端逐项状态与拖拽分流由 `web/src/components/AgentInputArea.vue` 拥有；体积放行由 `docker/nginx/default.conf` 与 `normalize_image_contents` 共同拥有。本记录不反过来成为运行时事实源。
 
 ## 决策
 
-1. **wire 形态：宽化同一个字段**。`AgentRunCreate.image_content` 与 `AgentEvalRunCreate.image_content` 由 `str | None` 改为 `str | list[str] | None`。不新增字段，避免「两个字段谁优先」与别名退役条件。`image_content` 不删：CLI（`packages/yuxi-cli/src/yuxi_cli/client.py`）与已文档化的 API-key 用户是它的现存消费者。
+1. **wire 形态：宽化同一个字段**。`AgentRunCreate.image_content` 与 `AgentEvalRunCreate.image_content` 由 `str | None` 改为 `str | list[str] | None`。不新增字段，避免「两个字段谁优先」与别名退役条件。`image_content` 不删：CLI（`packages/pisuan-cli/src/pisuan_cli/client.py`）与已文档化的 API-key 用户是它的现存消费者。
 2. **张数与总量在同一个归一函数里闭合**。`MAX_CHAT_IMAGES = 10`、`MAX_CHAT_IMAGE_TOTAL_BYTES = 80MB` 与公开的 `normalize_image_contents` 判定张数、元素类型与总量；`build_chat_input_message` 接受单值或数组并在内部归一，两条路由只把 `ValueError` 映射为 422。归一放在构造器内，`image_content` 的现存调用方既有单值也有数组，参数名与 wire 字段同名，这样只有一个真值来源。
 3. **模型输入不加新字段**。多图事实由 `langchain_message` 承载；`AgentRunInputMessage.image_content` 保留为**首图**，仅作向下兼容与旧数据兜底。单图时 parts 逐字节不变（`data:image/jpeg;base64,` 前缀、text 在前、图片按请求顺序）。
 4. **历史回显走后端窄投影**。history DTO 增加 `image_contents: list[str]`（由公开 `extract_image_contents(raw_message)` 从 content parts 取内联 base64），`image_content` 原值保留；无 `raw_message` 的旧行退化为 `[image_content]`。不让前端解析 `raw_message`：那是 `HumanMessage.model_dump()` 的形状，让浏览器读它等于把 LangChain 形状升格为 wire 契约，且旧行兜底会散在每个渲染点。

@@ -3,7 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
-from yuxi.knowledge.manager import KnowledgeBaseManager
+from pisuan.knowledge.manager import KnowledgeBaseManager
 
 pytestmark = pytest.mark.unit
 
@@ -24,15 +24,15 @@ async def test_initialize_creates_executors_for_types_in_use(monkeypatch, tmp_pa
         return fake_instance
 
     monkeypatch.setattr(
-        "yuxi.repositories.knowledge_base_repository.KnowledgeBaseRepository.get_all",
+        "pisuan.repositories.knowledge_base_repository.KnowledgeBaseRepository.get_all",
         fake_get_all,
     )
     monkeypatch.setattr(
-        "yuxi.knowledge.manager.KnowledgeBaseFactory.is_type_supported",
+        "pisuan.knowledge.manager.KnowledgeBaseFactory.is_type_supported",
         classmethod(lambda cls, _kb_type: True),
     )
     monkeypatch.setattr(
-        "yuxi.knowledge.manager.KnowledgeBaseFactory.create",
+        "pisuan.knowledge.manager.KnowledgeBaseFactory.create",
         staticmethod(fake_create),
     )
 
@@ -52,15 +52,15 @@ async def test_initialize_propagates_failure_from_backend_already_in_use(monkeyp
         raise ConnectionError("milvus unavailable")
 
     monkeypatch.setattr(
-        "yuxi.repositories.knowledge_base_repository.KnowledgeBaseRepository.get_all",
+        "pisuan.repositories.knowledge_base_repository.KnowledgeBaseRepository.get_all",
         fake_get_all,
     )
     monkeypatch.setattr(
-        "yuxi.knowledge.manager.KnowledgeBaseFactory.is_type_supported",
+        "pisuan.knowledge.manager.KnowledgeBaseFactory.is_type_supported",
         classmethod(lambda cls, _kb_type: True),
     )
     monkeypatch.setattr(
-        "yuxi.knowledge.manager.KnowledgeBaseFactory.create",
+        "pisuan.knowledge.manager.KnowledgeBaseFactory.create",
         staticmethod(fail_create),
     )
 
@@ -76,7 +76,7 @@ async def test_initialize_rejects_persisted_unsupported_backend(monkeypatch, tmp
         return [SimpleNamespace(kb_id="kb_legacy", kb_type="removed-backend")]
 
     monkeypatch.setattr(
-        "yuxi.repositories.knowledge_base_repository.KnowledgeBaseRepository.get_all",
+        "pisuan.repositories.knowledge_base_repository.KnowledgeBaseRepository.get_all",
         fake_get_all,
     )
 

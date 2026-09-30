@@ -4,7 +4,7 @@ import re
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/package")
 
-from yuxi.services.domain_factory_service import DomainFactoryService
+from pisuan.services.domain_factory_service import DomainFactoryService
 
 async def main():
     service = DomainFactoryService()
@@ -13,7 +13,7 @@ async def main():
     test_file = "/app/saves/domain_factory/coal/1b014cf4-4da1-4112-8f48-24fe39566854_1新疆伊宁矿区北区总体规划_修编_环境影响报告书_-3.docx"
 
     # 直接测试段落解析
-    from yuxi.plugins.parser.unified import parse_source_to_markdown
+    from pisuan.plugins.parser.unified import parse_source_to_markdown
     parse_result = await parse_source_to_markdown(test_file)
 
     markdown = parse_result.markdown

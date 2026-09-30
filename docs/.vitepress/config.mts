@@ -5,7 +5,7 @@ import markdownItTaskCheckbox from 'markdown-it-task-checkbox'
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   lang: 'zh-CN',
-  title: "Yuxi",
+  title: "Pisuan",
   description: "EAI-FLow",
   base: '/Yuxi/',
   srcExclude: ['vibe/**'],
@@ -16,18 +16,18 @@ export default defineConfig({
     ['link', { rel: 'icon', href: '/Yuxi/favicon.svg' }],
     ['link', { rel: 'alternate icon', href: '/Yuxi/favicon.ico' }],
     ['meta', { name: 'theme-color', content: '#F3BA32' }],
-    ['meta', { name: 'keywords', content: 'Yuxi, AI Agent, RAG, knowledge graph, LangGraph, MCP, self-hosted, multi-agent, knowledge base' }],
+    ['meta', { name: 'keywords', content: 'Pisuan, AI Agent, RAG, knowledge graph, LangGraph, MCP, self-hosted, multi-agent, knowledge base' }],
     ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:site_name', content: 'Yuxi' }],
-    ['meta', { property: 'og:title', content: 'Yuxi · 让知识真正参与每一次行动' }],
+    ['meta', { property: 'og:site_name', content: 'Pisuan' }],
+    ['meta', { property: 'og:title', content: 'Pisuan · 让知识真正参与每一次行动' }],
     ['meta', { property: 'og:description', content: '可私有部署的多租户知识智能体平台，统一知识、工具、多智能体执行与团队治理。' }],
-    ['meta', { property: 'og:image', content: 'https://xerrors.oss-cn-shanghai.aliyuncs.com/github/yuxi/docs/home/yuxi-web-og-1200x630-v1.0.0.png' }],
+    ['meta', { property: 'og:image', content: 'https://xerrors.oss-cn-shanghai.aliyuncs.com/github/pisuan/docs/home/pisuan-web-og-1200x630-v1.0.0.png' }],
     ['meta', { property: 'og:image:width', content: '1200' }],
     ['meta', { property: 'og:image:height', content: '630' }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
-    ['meta', { name: 'twitter:title', content: 'Yuxi · Self-hosted knowledge agent platform' }],
+    ['meta', { name: 'twitter:title', content: 'Pisuan · Self-hosted knowledge agent platform' }],
     ['meta', { name: 'twitter:description', content: 'RAG, knowledge graphs, multi-agent execution, MCP/Skills, sandboxed artifacts, and access control in one workspace.' }],
-    ['meta', { name: 'twitter:image', content: 'https://xerrors.oss-cn-shanghai.aliyuncs.com/github/yuxi/docs/home/yuxi-web-og-1200x630-v1.0.0.png' }]
+    ['meta', { name: 'twitter:image', content: 'https://xerrors.oss-cn-shanghai.aliyuncs.com/github/pisuan/docs/home/pisuan-web-og-1200x630-v1.0.0.png' }]
   ],
   ignoreDeadLinks: [
     /localhost/
@@ -51,7 +51,7 @@ export default defineConfig({
         text: '简介',
         link: '/intro/',
         items: [
-          { text: '认识 Yuxi', link: '/intro/project-overview' },
+          { text: '认识 Pisuan', link: '/intro/project-overview' },
           { text: '快速开始', link: '/intro/quick-start' },
           { text: '命令行工具', link: '/intro/cli' },
           { text: '模型配置', link: '/intro/model-config' },
@@ -111,7 +111,7 @@ export default defineConfig({
         items: [
           { text: '参与贡献', link: '/develop-guides/contributing' },
           { text: '测试规范', link: '/develop-guides/testing-guidelines' },
-          { text: 'Yuxi Spec Loop', link: '/develop-guides/spec-loop' },
+          { text: 'Pisuan Spec Loop', link: '/develop-guides/spec-loop' },
           { text: '工程信任系统', link: '/develop-guides/engineering-trust' },
           { text: '并行 worktree 环境', link: '/develop-guides/parallel-worktree-environments' },
           {
@@ -143,7 +143,7 @@ export default defineConfig({
 
     footer: {
       message: '本项目基于 MIT License 开源，欢迎使用和贡献。',
-      copyright: 'Copyright © 2025-present Yuxi'
+      copyright: 'Copyright © 2025-present Pisuan'
     },
 
     editLink: {

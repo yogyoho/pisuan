@@ -1,6 +1,6 @@
 """Test that level-4 headings (e.g., ##### 3.3.1.1) get proper 4-level section_path."""
 
-from yuxi.services.domain_factory_service import DomainFactoryService
+from pisuan.services.domain_factory_service import DomainFactoryService
 
 
 def _service():

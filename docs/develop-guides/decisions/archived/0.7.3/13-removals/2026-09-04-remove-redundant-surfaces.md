@@ -10,7 +10,7 @@ Owner：web/src/apis/base.js
 - Web 测试入口：`web/package.json` 与 `.github/workflows/web.yml`
 - 对话队列恢复：`web/src/composables/useAgentRequestQueue.js`
 - 下载与 Agent 字段归一化：`web/src/utils/file_utils.js`、`web/src/utils/agentConfigUtils.js`
-- MySQL 展示与连接：`web/src/components/ToolCallingResult/tools/mysqlResultFormatter.js`、`backend/package/yuxi/agents/skills/buildin/mysql-reporter/scripts/_mysql_common.py`
+- MySQL 展示与连接：`web/src/components/ToolCallingResult/tools/mysqlResultFormatter.js`、`backend/package/pisuan/agents/skills/buildin/mysql-reporter/scripts/_mysql_common.py`
 - 后端运行时能力：各 service、repository、model factory 与持久化模型
 - Shipping 配置与 Docs 工具链：`docker-compose.yml`、`docker-compose.prod.yml`、`docs/package.json`、`.github/workflows/deploy.yml`
 

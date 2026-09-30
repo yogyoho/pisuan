@@ -4,7 +4,7 @@
 # 工作模式（三分支策略）：
 #   main             → 始终跟踪 upstream/main（纯净的上游代码）
 #   pisuan-custom    → 领域知识库工厂定制 + 上游基础（rebase 在 main 之上）
-#   pisuan-localized → pisuan-custom + 机械改名层（yuxi→pisuan, 脚本重建, 可丢弃）
+#   pisuan-localized → pisuan-custom + 机械改名层（pisuan→pisuan, 脚本重建, 可丢弃）
 #
 # 执行：.\scripts\sync-upstream.ps1
 # 冲突时手动解决后执行：git add -A; git rebase --continue
@@ -83,7 +83,7 @@ try {
     if ($LASTEXITCODE -eq 0) {
         Write-Host "   无变化, 跳过提交与推送"
     } else {
-        git -C $localizedDir commit -m "chore: 机械改名层 yuxi→pisuan（脚本重新生成）"
+        git -C $localizedDir commit -m "chore: 机械改名层 pisuan→pisuan（脚本重新生成）"
         if ($LASTEXITCODE -ne 0) { throw "git commit 失败" }
         git -C $localizedDir push github pisuan-localized --force-with-lease
         if ($LASTEXITCODE -ne 0) { throw "git push github 失败" }

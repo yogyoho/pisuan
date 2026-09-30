@@ -3,7 +3,7 @@
 入图谱前需将中文别名归一化为 DB code，防止"通用"等未归一值污染图谱。
 """
 
-from yuxi.services.domain_factory_service import DomainFactoryService
+from pisuan.services.domain_factory_service import DomainFactoryService
 
 
 def test_normalize_domain_chinese_to_code():

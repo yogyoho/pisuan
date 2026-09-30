@@ -6,8 +6,8 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from yuxi.storage.postgres.models_business import AgentRun, Conversation, Message, Project, User
-from yuxi.utils.datetime_utils import utc_now_naive
+from pisuan.storage.postgres.models_business import AgentRun, Conversation, Message, Project, User
+from pisuan.utils.datetime_utils import utc_now_naive
 
 
 async def create_agent_run(

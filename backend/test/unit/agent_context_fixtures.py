@@ -1,7 +1,7 @@
 """流服务测试使用已由 worker 准备的运行输入。"""
 
-from yuxi.agents.context import BaseContext
-from yuxi.services.agent_run_manifest_service import PreparedRunExecution
+from pisuan.agents.context import BaseContext
+from pisuan.services.agent_run_manifest_service import PreparedRunExecution
 
 
 def prepared_execution(*, backend_id="ChatbotAgent", **config):

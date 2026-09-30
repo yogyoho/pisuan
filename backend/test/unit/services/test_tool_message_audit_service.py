@@ -5,8 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from yuxi.services import tool_message_audit_service
-from yuxi.services.tool_message_audit_service import ToolMessageAuditCollector
+from pisuan.services import tool_message_audit_service
+from pisuan.services.tool_message_audit_service import ToolMessageAuditCollector
 
 
 class _FakeDb:

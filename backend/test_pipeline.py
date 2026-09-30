@@ -23,9 +23,9 @@ def find_test_file():
 
 
 async def run_test():
-    from yuxi.services.domain_factory_service import DomainFactoryService
-    from yuxi.repositories.domain_factory_repository import DomainFactoryRepository
-    from yuxi.storage.postgres.manager import pg_manager
+    from pisuan.services.domain_factory_service import DomainFactoryService
+    from pisuan.repositories.domain_factory_repository import DomainFactoryRepository
+    from pisuan.storage.postgres.manager import pg_manager
 
     pg_manager.initialize()
 
@@ -324,7 +324,7 @@ async def run_test():
     print("TEST 10: GraphBuilder 方法签名检查")
     print("=" * 60)
 
-    from yuxi.services.graph_builder import GraphBuilder
+    from pisuan.services.graph_builder import GraphBuilder
     gb = GraphBuilder()
 
     import inspect

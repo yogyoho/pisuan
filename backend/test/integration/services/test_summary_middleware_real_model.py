@@ -8,11 +8,11 @@ import pytest
 from langchain.agents.middleware.types import ModelRequest, ModelResponse
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage, get_buffer_string
 
-from yuxi.models.chat import load_chat_model
-from yuxi.agents.middlewares.summary import YuxiSummarizationMiddleware
-from yuxi.models.providers.cache import ModelInfo
-from yuxi.models.providers.builtin import BUILTIN_PROVIDERS
-from yuxi.agents.backends.paths import workdir_runtime_paths
+from pisuan.models.chat import load_chat_model
+from pisuan.agents.middlewares.summary import PisuanSummarizationMiddleware
+from pisuan.models.providers.cache import ModelInfo
+from pisuan.models.providers.builtin import BUILTIN_PROVIDERS
+from pisuan.agents.backends.paths import workdir_runtime_paths
 
 VIRTUAL_PATH_LARGE_TOOL_RESULTS, VIRTUAL_PATH_CONVERSATION_HISTORY = workdir_runtime_paths(
     "/home/gem/user-data/projects/11111111-1111-4111-8111-111111111111"
@@ -111,7 +111,7 @@ async def test_compacted_messages_call_real_chat_model(monkeypatch: pytest.Monke
     def get_model_info(current: str):
         return info if current == model_spec else None
 
-    monkeypatch.setattr("yuxi.models.chat.model_cache.get_model_info", get_model_info)
+    monkeypatch.setattr("pisuan.models.chat.model_cache.get_model_info", get_model_info)
 
     model_params = (model_config.get("extra") or {}).get("parameters") or {}
     real_model = load_chat_model(model_spec, **model_params)
@@ -123,7 +123,7 @@ async def test_compacted_messages_call_real_chat_model(monkeypatch: pytest.Monke
         ToolMessage(content=large_result, tool_call_id="call-1", name="query_kb"),
         HumanMessage(content="请只回答 OK。"),
     ]
-    middleware = YuxiSummarizationMiddleware(
+    middleware = PisuanSummarizationMiddleware(
         model=real_model,
         backend=backend,
         trigger=("tokens", 2000),

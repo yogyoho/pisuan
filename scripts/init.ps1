@@ -1,5 +1,5 @@
-# Yuxi Initialization Script for PowerShell
-# This script helps set up the environment for the Yuxi project
+# Pisuan Initialization Script for PowerShell
+# This script helps set up the environment for the Pisuan project
 
 param([switch]$ValidateSecurityEnv)
 
@@ -132,15 +132,15 @@ function Ensure-JwtEnv {
     Ensure-SecuritySecret "JWT_SECRET_KEY"
     Ensure-SecuritySecret "API_KEY_DERIVATION_SECRET" @("JWT_SECRET_KEY")
 
-    if (-not (Test-EnvValue "YUXI_INSTANCE_ID")) {
-        Write-Host "YUXI_INSTANCE_ID is missing in .env." -ForegroundColor Yellow
-        $YUXI_INSTANCE_ID = Read-Host "Please enter your YUXI_INSTANCE_ID (press Enter to auto-generate)"
-        if ([string]::IsNullOrEmpty($YUXI_INSTANCE_ID)) {
-            $YUXI_INSTANCE_ID = "instance-$(New-RandomHex 8)"
-            Write-Host "Generated YUXI_INSTANCE_ID and saved it to .env." -ForegroundColor Green
+    if (-not (Test-EnvValue "PISUAN_INSTANCE_ID")) {
+        Write-Host "PISUAN_INSTANCE_ID is missing in .env." -ForegroundColor Yellow
+        $PISUAN_INSTANCE_ID = Read-Host "Please enter your PISUAN_INSTANCE_ID (press Enter to auto-generate)"
+        if ([string]::IsNullOrEmpty($PISUAN_INSTANCE_ID)) {
+            $PISUAN_INSTANCE_ID = "instance-$(New-RandomHex 8)"
+            Write-Host "Generated PISUAN_INSTANCE_ID and saved it to .env." -ForegroundColor Green
         }
 
-        Set-EnvValue "YUXI_INSTANCE_ID" $YUXI_INSTANCE_ID
+        Set-EnvValue "PISUAN_INSTANCE_ID" $PISUAN_INSTANCE_ID
     }
 }
 
@@ -166,7 +166,7 @@ function Test-SkipExistingImage($ImageTag) {
     return $true
 }
 
-Write-Host "🚀 Initializing Yuxi project..." -ForegroundColor Cyan
+Write-Host "🚀 Initializing Pisuan project..." -ForegroundColor Cyan
 Write-Host "==================================" -ForegroundColor Cyan
 
 # Check if .env file exists
@@ -220,10 +220,10 @@ if (Test-Path ".env") {
     $JWT_SECRET_KEY = Read-SecuritySecret "JWT_SECRET_KEY"
     $API_KEY_DERIVATION_SECRET = Read-SecuritySecret "API_KEY_DERIVATION_SECRET" @($JWT_SECRET_KEY)
 
-    $YUXI_INSTANCE_ID = Read-Host "Please enter your YUXI_INSTANCE_ID (press Enter to auto-generate)"
-    if ([string]::IsNullOrEmpty($YUXI_INSTANCE_ID)) {
-        $YUXI_INSTANCE_ID = "instance-$(New-RandomHex 8)"
-        Write-Host "Generated YUXI_INSTANCE_ID and saved it to .env." -ForegroundColor Green
+    $PISUAN_INSTANCE_ID = Read-Host "Please enter your PISUAN_INSTANCE_ID (press Enter to auto-generate)"
+    if ([string]::IsNullOrEmpty($PISUAN_INSTANCE_ID)) {
+        $PISUAN_INSTANCE_ID = "instance-$(New-RandomHex 8)"
+        Write-Host "Generated PISUAN_INSTANCE_ID and saved it to .env." -ForegroundColor Green
     }
 
     $SANDBOX_PROVISIONER_TOKEN = Read-SecuritySecret "SANDBOX_PROVISIONER_TOKEN" @(
@@ -254,7 +254,7 @@ SILICONFLOW_API_KEY=$apiKey
 # JWT security settings
 JWT_SECRET_KEY=$JWT_SECRET_KEY
 API_KEY_DERIVATION_SECRET=$API_KEY_DERIVATION_SECRET
-YUXI_INSTANCE_ID=$YUXI_INSTANCE_ID
+PISUAN_INSTANCE_ID=$PISUAN_INSTANCE_ID
 SANDBOX_PROVISIONER_TOKEN=$SANDBOX_PROVISIONER_TOKEN
 "@
 
@@ -269,7 +269,7 @@ SANDBOX_PROVISIONER_TOKEN=$SANDBOX_PROVISIONER_TOKEN
     Remove-Variable -Name "TAVILY_API_KEY" -ErrorAction SilentlyContinue
     Remove-Variable -Name "JWT_SECRET_KEY" -ErrorAction SilentlyContinue
     Remove-Variable -Name "API_KEY_DERIVATION_SECRET" -ErrorAction SilentlyContinue
-    Remove-Variable -Name "YUXI_INSTANCE_ID" -ErrorAction SilentlyContinue
+    Remove-Variable -Name "PISUAN_INSTANCE_ID" -ErrorAction SilentlyContinue
     Remove-Variable -Name "SANDBOX_PROVISIONER_TOKEN" -ErrorAction SilentlyContinue
 }
 

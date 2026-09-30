@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from yuxi.services.entity_meta_service import (
+from pisuan.services.entity_meta_service import (
     EntityMetaAdapter,
     EntityMetaLoader,
     EntityMetaMatcher,

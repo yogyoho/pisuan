@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from yuxi.workspace import filesystem as workspace_filesystem_module
-from yuxi.workspace.filesystem import Workspace
+from pisuan.workspace import filesystem as workspace_filesystem_module
+from pisuan.workspace.filesystem import Workspace
 
 
 def test_upload_authorized_file_uses_owner_only_mode(

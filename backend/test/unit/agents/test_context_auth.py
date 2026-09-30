@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from unittest.mock import AsyncMock
 
 import pytest
-from yuxi.knowledge.read_models import KnowledgeBaseSummary
+from pisuan.knowledge.read_models import KnowledgeBaseSummary
 
 
 def _knowledge_summary(kb_id: str) -> KnowledgeBaseSummary:
@@ -27,7 +27,7 @@ def _knowledge_summary(kb_id: str) -> KnowledgeBaseSummary:
 
 
 def _load_context_module():
-    return importlib.import_module("yuxi.agents.context")
+    return importlib.import_module("pisuan.agents.context")
 
 
 context_module = _load_context_module()
@@ -160,7 +160,7 @@ async def test_resolve_agent_resource_options_empty_fields_loads_nothing(monkeyp
 
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.knowledge.runtime",
+        "pisuan.knowledge.runtime",
         types.SimpleNamespace(knowledge_base=types.SimpleNamespace(get_databases_by_user=fail_if_loaded)),
     )
 
@@ -201,7 +201,7 @@ async def test_normalize_agent_context_config_defaults_mcps_off_and_filters_expl
 
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.agents.toolkits.service",
+        "pisuan.agents.toolkits.service",
         types.SimpleNamespace(
             get_tool_metadata=lambda category=None: [
                 {"slug": "ask_user_question", "name": "Ask User", "description": ""},
@@ -211,12 +211,12 @@ async def test_normalize_agent_context_config_defaults_mcps_off_and_filters_expl
     )
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.knowledge.runtime",
+        "pisuan.knowledge.runtime",
         types.SimpleNamespace(knowledge_base=types.SimpleNamespace(get_databases_by_user=fake_get_databases_by_user)),
     )
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.agents.mcp.service",
+        "pisuan.agents.mcp.service",
         types.SimpleNamespace(
             get_all_mcp_servers=fake_get_all_mcp_servers,
             get_enabled_mcp_server_slugs=fake_get_enabled_mcp_server_slugs,
@@ -224,7 +224,7 @@ async def test_normalize_agent_context_config_defaults_mcps_off_and_filters_expl
     )
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.repositories.skill_repository",
+        "pisuan.repositories.skill_repository",
         types.SimpleNamespace(
             SkillRepository=lambda db: types.SimpleNamespace(
                 list_enabled_readable=lambda user: fake_list_skills(db, user)
@@ -233,7 +233,7 @@ async def test_normalize_agent_context_config_defaults_mcps_off_and_filters_expl
     )
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.repositories.agent_repository",
+        "pisuan.repositories.agent_repository",
         types.SimpleNamespace(AgentRepository=FakeAgentRepository),
     )
 
@@ -316,7 +316,7 @@ async def test_normalize_agent_context_config_defaults_mcps_off_and_filters_expl
 
 @pytest.mark.asyncio
 async def test_prepare_agent_runtime_context_filters_resources_and_derives_runtime_scope(monkeypatch):
-    from yuxi.agents import context as context_module
+    from pisuan.agents import context as context_module
 
     monkeypatch.setattr(context_module, "_load_workspace_agent_context", lambda uid: "workspace policy")
 
@@ -398,29 +398,29 @@ async def test_prepare_agent_runtime_context_filters_resources_and_derives_runti
 
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.agents.backends.knowledge_base_backend",
+        "pisuan.agents.backends.knowledge_base_backend",
         types.SimpleNamespace(resolve_visible_knowledge_bases_for_context=fake_resolve_visible_knowledge_bases),
     )
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.agents.skills.runtime",
+        "pisuan.agents.skills.runtime",
         types.SimpleNamespace(
             resolve_runtime_skills_for_context=fake_resolve_runtime_skills_for_context,
         ),
     )
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.repositories.user_repository",
+        "pisuan.repositories.user_repository",
         types.SimpleNamespace(UserRepository=FakeUserRepository),
     )
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.storage.postgres.manager",
+        "pisuan.storage.postgres.manager",
         types.SimpleNamespace(pg_manager=types.SimpleNamespace(get_async_session_context=lambda: FakeSessionContext())),
     )
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.agents.toolkits.service",
+        "pisuan.agents.toolkits.service",
         types.SimpleNamespace(
             get_tool_metadata=lambda category=None: [
                 {"slug": "ask_user_question", "name": "Ask User", "description": ""}
@@ -429,12 +429,12 @@ async def test_prepare_agent_runtime_context_filters_resources_and_derives_runti
     )
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.knowledge.runtime",
+        "pisuan.knowledge.runtime",
         types.SimpleNamespace(knowledge_base=types.SimpleNamespace(get_databases_by_user=fake_get_databases_by_user)),
     )
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.agents.mcp.service",
+        "pisuan.agents.mcp.service",
         types.SimpleNamespace(
             get_all_mcp_servers=fake_get_all_mcp_servers,
             get_enabled_mcp_server_slugs=fake_get_enabled_mcp_server_slugs,
@@ -442,7 +442,7 @@ async def test_prepare_agent_runtime_context_filters_resources_and_derives_runti
     )
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.repositories.skill_repository",
+        "pisuan.repositories.skill_repository",
         types.SimpleNamespace(
             SkillRepository=lambda db: types.SimpleNamespace(
                 list_enabled_readable=lambda user: fake_list_skills(db, user)
@@ -451,7 +451,7 @@ async def test_prepare_agent_runtime_context_filters_resources_and_derives_runti
     )
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.repositories.agent_repository",
+        "pisuan.repositories.agent_repository",
         types.SimpleNamespace(AgentRepository=FakeAgentRepository),
     )
     context = ChatBotContext(
@@ -485,7 +485,7 @@ async def test_prepare_agent_runtime_context_filters_resources_and_derives_runti
         AsyncMock(side_effect=AssertionError("同次执行不得再次规范化")),
     )
     monkeypatch.setattr(
-        sys.modules["yuxi.agents.skills.runtime"],
+        sys.modules["pisuan.agents.skills.runtime"],
         "resolve_runtime_skills_for_context",
         AsyncMock(side_effect=AssertionError("同次执行不得重新读取 Skill")),
     )
@@ -497,7 +497,7 @@ async def test_prepare_agent_runtime_context_filters_resources_and_derives_runti
 
 @pytest.mark.asyncio
 async def test_prepare_agent_runtime_context_clears_resources_for_missing_user(monkeypatch):
-    from yuxi.agents import context as context_module
+    from pisuan.agents import context as context_module
 
     monkeypatch.setattr(context_module, "_load_workspace_agent_context", lambda uid: "")
 
@@ -521,22 +521,22 @@ async def test_prepare_agent_runtime_context_clears_resources_for_missing_user(m
 
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.agents.backends.knowledge_base_backend",
+        "pisuan.agents.backends.knowledge_base_backend",
         types.SimpleNamespace(resolve_visible_knowledge_bases_for_context=lambda _context: None),
     )
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.agents.skills.runtime",
+        "pisuan.agents.skills.runtime",
         types.SimpleNamespace(resolve_runtime_skills_for_context=lambda _context, db=None, user=None: None),
     )
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.repositories.user_repository",
+        "pisuan.repositories.user_repository",
         types.SimpleNamespace(UserRepository=FakeUserRepository),
     )
     monkeypatch.setitem(
         sys.modules,
-        "yuxi.storage.postgres.manager",
+        "pisuan.storage.postgres.manager",
         types.SimpleNamespace(pg_manager=types.SimpleNamespace(get_async_session_context=lambda: FakeSessionContext())),
     )
 
@@ -565,7 +565,7 @@ async def test_prepare_agent_runtime_context_clears_resources_for_missing_user(m
 
 def test_persistent_config_cannot_replace_runtime_identity():
     """接入与执行共用的配置装载只接受可配置字段。"""
-    from yuxi.agents.context import BaseContext
+    from pisuan.agents.context import BaseContext
 
     context = BaseContext(uid="owner", worker_id="worker")
     context.update_config({"uid": "forged", "worker_id": "forged", "model": "chosen:model", "update": None})
@@ -578,8 +578,8 @@ def test_persistent_config_cannot_replace_runtime_identity():
 @pytest.mark.asyncio
 async def test_normalized_persistent_config_drops_subagent_runtime_flags():
     """状态查询与主动压缩的配置归一化不接受运行标记。"""
-    from yuxi.agents.buildin.subagent.context import SubAgentContext
-    from yuxi.agents.context import normalize_agent_context_config
+    from pisuan.agents.buildin.subagent.context import SubAgentContext
+    from pisuan.agents.context import normalize_agent_context_config
 
     normalized = await normalize_agent_context_config(
         {
@@ -665,14 +665,14 @@ async def test_resource_field_declarations_drive_write_runtime_and_schema(monkey
     """新增声明自动参与写入校验和展开，普通列表保持原样。"""
     from types import SimpleNamespace
 
-    from yuxi.repositories.agent_repository import merge_agent_config_json
-    from yuxi.services.agent_config_service import prepare_agent_config_write
+    from pisuan.repositories.agent_repository import merge_agent_config_json
+    from pisuan.services.agent_config_service import prepare_agent_config_write
 
     async def options(names, **kwargs):
         return {name: [{"key": "visible"}] for name in names}
 
     monkeypatch.setattr(context_module, "resolve_agent_resource_options", options)
-    monkeypatch.setattr("yuxi.services.agent_config_service.resolve_agent_resource_options", options)
+    monkeypatch.setattr("pisuan.services.agent_config_service.resolve_agent_resource_options", options)
     context = ResourceFieldContext()
     with pytest.raises(ValueError, match="selected_tools"):
         context.update_config({"selected_tools": None})
@@ -709,7 +709,7 @@ async def test_resource_field_declarations_drive_write_runtime_and_schema(monkey
 )
 async def test_chatbot_defaults_to_general_purpose_subagent(monkeypatch, selection, expected):
     """真实 Chatbot 默认仅通用角色，显式全部与空选择保持原意。"""
-    from yuxi.agents.buildin.chatbot.context import ChatBotContext
+    from pisuan.agents.buildin.chatbot.context import ChatBotContext
 
     async def options(names, **kwargs):
         return {name: [{"key": slug} for slug in ["general-purpose", "specialist"]] for name in names}
@@ -724,7 +724,7 @@ async def test_chatbot_defaults_to_general_purpose_subagent(monkeypatch, selecti
 @pytest.mark.asyncio
 async def test_invisible_default_subagent_does_not_enable_other_roles(monkeypatch):
     """默认通用角色不可见时不扩大选择范围。"""
-    from yuxi.agents.buildin.chatbot.context import ChatBotContext
+    from pisuan.agents.buildin.chatbot.context import ChatBotContext
 
     async def options(names, **kwargs):
         return {name: [{"key": "specialist"}] for name in names}

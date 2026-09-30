@@ -5,14 +5,14 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
-from yuxi.services.scheduled_agent_service import (
+from pisuan.services.scheduled_agent_service import (
     create_scheduled_job,
     delete_scheduled_job,
     list_scheduled_jobs,
     run_scheduled_job_now,
     update_scheduled_job,
 )
-from yuxi.storage.postgres.models_business import User
+from pisuan.storage.postgres.models_business import User
 
 from server.utils.auth_middleware import get_db, get_required_user
 

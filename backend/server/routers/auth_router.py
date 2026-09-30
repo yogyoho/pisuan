@@ -14,7 +14,7 @@ from server.utils.auth_middleware import (
     get_required_user,
     get_superadmin_user,
 )
-from yuxi.services.auth_service import (
+from pisuan.services.auth_service import (
     CLI_AUTH_POLL_INTERVAL_SECONDS,
     CLI_AUTH_SESSION_TTL_SECONDS,
     CLIAuthError,
@@ -23,31 +23,31 @@ from yuxi.services.auth_service import (
     exchange_cli_auth_token,
     get_cli_auth_session_for_user,
 )
-from yuxi.services.login_rate_limit_service import (
+from pisuan.services.login_rate_limit_service import (
     check_login_rate_limit,
     clear_login_failures,
     extract_client_ip,
     record_login_failure,
 )
-from yuxi.services.identity_admin_service import (
+from pisuan.services.identity_admin_service import (
     IdentityConflictError,
     SystemAlreadyInitializedError,
     initialize_system_admin,
     list_managed_users_page,
 )
-from yuxi.services.operation_log_service import log_operation
-from yuxi.services.user_identity_service import generate_unique_uid, is_valid_phone_number, validate_username
-from yuxi.storage.minio import upload_image_to_minio
-from yuxi.storage.minio.client import normalize_public_minio_url
-from yuxi.storage.postgres.models_business import User
-from yuxi.repositories.department_repository import DepartmentRepository
-from yuxi.repositories.user_repository import UserRepository
-from yuxi.utils import logger
-from yuxi.utils.auth_utils import AuthUtils
-from yuxi.utils.datetime_utils import utc_now_naive
+from pisuan.services.operation_log_service import log_operation
+from pisuan.services.user_identity_service import generate_unique_uid, is_valid_phone_number, validate_username
+from pisuan.storage.minio import upload_image_to_minio
+from pisuan.storage.minio.client import normalize_public_minio_url
+from pisuan.storage.postgres.models_business import User
+from pisuan.repositories.department_repository import DepartmentRepository
+from pisuan.repositories.user_repository import UserRepository
+from pisuan.utils import logger
+from pisuan.utils.auth_utils import AuthUtils
+from pisuan.utils.datetime_utils import utc_now_naive
 
 # OIDC 认证相关导入
-from yuxi.services.oidc_service import (
+from pisuan.services.oidc_service import (
     get_oidc_config_handler,
     oidc_callback_handler,
     oidc_exchange_code_handler,

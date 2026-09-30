@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：architecture
-Owner：backend/package/yuxi/services/skills/draft.py
+Owner：backend/package/pisuan/services/skills/draft.py
 
 ## 问题
 

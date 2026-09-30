@@ -1,6 +1,6 @@
-# 使用 API Key 调用 Yuxi
+# 使用 API Key 调用 Pisuan
 
-API Key 适合服务之间调用 Yuxi。它绑定到一个具体的 Yuxi 用户，请求会继承该用户的角色、部门和资源权限；它不是一个绕过权限的“超级凭证”。
+API Key 适合服务之间调用 Pisuan。它绑定到一个具体的 Pisuan 用户，请求会继承该用户的角色、部门和资源权限；它不是一个绕过权限的“超级凭证”。
 
 ## 创建 API Key
 
@@ -55,7 +55,7 @@ Content-Type: application/json
 API 服务在容器内监听 `5050`：
 
 - 开发环境可使用 `http://localhost:5050`；
-- 生产环境使用反向代理提供的 HTTPS 地址，例如 `https://yuxi.example.com`；
+- 生产环境使用反向代理提供的 HTTPS 地址，例如 `https://pisuan.example.com`；
 - 同一套 API 的 Web 入口通常是 `http://localhost:5173`（开发）或反向代理的根路径（生产）。
 
 API Key 通过 `Authorization` 请求头发送。生产环境必须使用 HTTPS，避免密钥在网络中被窃听或篡改。
@@ -73,7 +73,7 @@ Authorization: Bearer yxkey_<your-secret>
 通用 Run API 分为创建线程、提交运行和读取事件三步。创建线程时，`agent_id` 的值是智能体 slug，不是数据库自增 ID：
 
 ```bash
-BASE_URL=https://yuxi.example.com
+BASE_URL=https://pisuan.example.com
 API_KEY=yxkey_<your-secret>
 
 curl --fail "$BASE_URL/api/chat/thread" \

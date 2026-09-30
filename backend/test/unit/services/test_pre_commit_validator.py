@@ -1,5 +1,5 @@
 import pytest
-from yuxi.services.pre_commit_validator import PreCommitValidator, ValidationResult
+from pisuan.services.pre_commit_validator import PreCommitValidator, ValidationResult
 
 
 @pytest.mark.asyncio

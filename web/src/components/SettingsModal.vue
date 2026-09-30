@@ -98,7 +98,7 @@
               <X :size="14" />
             </button>
           </div>
-          <p class="star-card-title">给 Yuxi 点个 Star</p>
+          <p class="star-card-title">给 Pisuan 点个 Star</p>
           <p class="star-card-description">
             如果这个项目帮到了你，欢迎去 GitHub 点亮一个 Star，让更多人看到它。
           </p>
@@ -111,7 +111,7 @@
             <img
               class="star-card-link-image"
               src="https://img.shields.io/github/stars/xerrors/Yuxi?label=Yuxi&style=social"
-              alt="GitHub stars for Yuxi"
+              alt="GitHub stars for Pisuan"
             />
             <ExternalLink :size="13" />
           </a>
@@ -277,7 +277,7 @@ const activeTab = ref('account')
 const loadedTabs = ref(new Set())
 const showStarCard = ref(true)
 
-const STAR_CARD_STORAGE_KEY = 'yuxi-settings-star-card-dismissed'
+const STAR_CARD_STORAGE_KEY = 'pisuan-settings-star-card-dismissed'
 const projectRepoUrl = 'https://github.com/xerrors/Yuxi'
 
 const visible = computed({

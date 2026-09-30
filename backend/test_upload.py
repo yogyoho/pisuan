@@ -7,8 +7,8 @@ import os
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/package")
 
-from yuxi.services.domain_factory_service import DomainFactoryService
-from yuxi.repositories.domain_factory_repository import DomainFactoryRepository
+from pisuan.services.domain_factory_service import DomainFactoryService
+from pisuan.repositories.domain_factory_repository import DomainFactoryRepository
 
 
 async def main():

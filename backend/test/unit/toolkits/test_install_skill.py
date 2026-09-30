@@ -6,12 +6,12 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from yuxi.agents.toolkits.buildin import install_skill as exported_install_skill
-from yuxi.services.skills import personal as personal_service
-from yuxi.workspace.paths import user_workspace_dir
+from pisuan.agents.toolkits.buildin import install_skill as exported_install_skill
+from pisuan.services.skills import personal as personal_service
+from pisuan.workspace.paths import user_workspace_dir
 
-install_skill_module = importlib.import_module("yuxi.agents.toolkits.buildin.install_skill")
-sandbox_backend_module = importlib.import_module("yuxi.agents.backends.sandbox")
+install_skill_module = importlib.import_module("pisuan.agents.toolkits.buildin.install_skill")
+sandbox_backend_module = importlib.import_module("pisuan.agents.backends.sandbox")
 
 
 def _runtime(**context_values):
@@ -21,8 +21,8 @@ def _runtime(**context_values):
 @pytest.mark.asyncio
 async def test_install_personal_skill_does_not_require_agent_config_access(monkeypatch, tmp_path):
     """安装回读真实个人文件，数据库不可用也无需修改 Agent 配置。"""
-    from yuxi.storage.postgres.manager import pg_manager
-    from yuxi.workspace import paths
+    from pisuan.storage.postgres.manager import pg_manager
+    from pisuan.workspace import paths
 
     def fail_get_session():
         """拒绝安装过程访问数据库。"""

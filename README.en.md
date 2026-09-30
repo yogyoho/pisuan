@@ -1,6 +1,6 @@
 ![Yuxi: a self-hosted, multi-tenant knowledge agent platform](https://xerrors.oss-cn-shanghai.aliyuncs.com/posts/2026/08/20260818-151118-mac-1787037059154-8c08f48c.png)
 
-Yuxi is a self-hosted, multi-tenant knowledge agent platform. It brings knowledge base retrieval, knowledge graphs, LangGraph multi-agent orchestration, MCP/Skills, sandbox tools, and access control into one workspace.
+Pisuan is a self-hosted, multi-tenant knowledge agent platform. It brings knowledge base retrieval, knowledge graphs, LangGraph multi-agent orchestration, MCP/Skills, sandbox tools, and access control into one workspace.
 
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=ffffff)](https://github.com/xerrors/Yuxi/blob/main/docker-compose.yml)
 [![Release](https://img.shields.io/github/v/release/xerrors/Yuxi?color=046A82)](https://github.com/xerrors/Yuxi/releases/latest)
@@ -8,13 +8,13 @@ Yuxi is a self-hosted, multi-tenant knowledge agent platform. It brings knowledg
 [![DeepWiki](https://img.shields.io/badge/DeepWiki-blue.svg)](https://deepwiki.com/xerrors/Yuxi)
 [![Bilibili](https://img.shields.io/badge/Knowledge_Base_Demo-00A1D6?logo=bilibili&logoColor=fff)](https://www.bilibili.com/video/BV1erE26iEgv/)
 
-<a href="https://trendshift.io/repositories/24335" target="_blank"><img src="https://trendshift.io/api/badge/repositories/24335" alt="xerrors%2FYuxi | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+<a href="https://trendshift.io/repositories/24335" target="_blank"><img src="https://trendshift.io/api/badge/repositories/24335" alt="xerrors%2FPisuan | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
 [Project home](https://xerrors.github.io/Yuxi/) · [Quick start](https://xerrors.github.io/Yuxi/intro/quick-start) · [Demo video](https://www.bilibili.com/video/BV1erE26iEgv/) · [Releases](https://github.com/xerrors/Yuxi/releases) · [中文](README.md)
 
-## What Yuxi Can Do
+## What Pisuan Can Do
 
-Yuxi is built for teams that need control over their data, models, and permissions:
+Pisuan is built for teams that need control over their data, models, and permissions:
 
 - **Build knowledge-based Q&A**: Upload documents, parse and chunk them, build vector indexes, and let agents answer questions using retrieved content.
 - **Execute multi-step tasks**: Combine tools, MCP, Skills, sub-agents, and sandboxes to produce previewable, downloadable files.
@@ -42,7 +42,7 @@ Install [Docker Engine](https://docs.docker.com/get-docker/) and Docker Compose,
 
 ```bash
 git clone --branch v0.7.3 --depth 1 https://github.com/xerrors/Yuxi.git
-cd Yuxi
+cd Pisuan
 
 # Linux/macOS
 ./scripts/init.sh
@@ -82,7 +82,7 @@ When upgrading from v0.7.1 or v0.7.2 to the current version, do not run `docker 
 
 ## Feature Showcase
 
-Yuxi connects knowledge ingestion, agent execution, and team governance into one workflow. The following six modules introduce its core capabilities:
+Pisuan connects knowledge ingestion, agent execution, and team governance into one workflow. The following six modules introduce its core capabilities:
 
 | Module | What It Solves | Key Capabilities |
 | --- | --- | --- |
@@ -141,7 +141,7 @@ Support common formats including PDF, Word, PowerPoint, Excel, and Markdown. Bui
 
 **Knowledge base types and external sources**
 
-Alongside the built-in local vector knowledge base, Yuxi connects to external knowledge services such as Dify and Notion. A unified retriever makes them available to agents.
+Alongside the built-in local vector knowledge base, Pisuan connects to external knowledge services such as Dify and Notion. A unified retriever makes them available to agents.
 
 ![Knowledge base types](https://xerrors.oss-cn-shanghai.aliyuncs.com/github/image-20260825155356171.png)
 
@@ -319,7 +319,7 @@ Thanks to all contributors for supporting this project!
 
 ---
 
-Yuxi's implementation and documentation draw on the following excellent open-source projects:
+Pisuan's implementation and documentation draw on the following excellent open-source projects:
 
 - [LightRAG](https://github.com/HKUDS/LightRAG): Early graph construction and retrieval ideas.
 - [DeepAgents](https://github.com/langchain-ai/deepagents): Deep agent framework.

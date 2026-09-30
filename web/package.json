@@ -1,5 +1,5 @@
 {
-  "name": "yuxi-web",
+  "name": "pisuan-web",
   "version": "0.7.3",
   "private": true,
   "//": "[pisuan-custom] @fontsource-variable/inter 与 @fontsource/noto-sans-sc 为 pisuan 字体定制（src/main.js 引入），上游同步时保留",

@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-import yuxi.agents.toolkits.buildin.tools as tools_mod
+import pisuan.agents.toolkits.buildin.tools as tools_mod
 
 
 @pytest.mark.asyncio
@@ -22,7 +22,7 @@ async def test_lookup_returns_matching_indicators(monkeypatch):
 
     import sys
     fake_mod = type("M", (), {"query_indicators": _fake_query})
-    monkeypatch.setitem(sys.modules, "yuxi.extensions.regulation_library.enrichment_service", fake_mod)
+    monkeypatch.setitem(sys.modules, "pisuan.extensions.regulation_library.enrichment_service", fake_mod)
 
     out = await tools_mod.lookup_standard_indicator.ainvoke({"pollutant": "SO2", "doc_code": "GB 3095-2012"})
 
@@ -38,7 +38,7 @@ async def test_lookup_no_match_returns_hint(monkeypatch):
         return []
     import sys
     fake_mod = type("M", (), {"query_indicators": _fake_query})
-    monkeypatch.setitem(sys.modules, "yuxi.extensions.regulation_library.enrichment_service", fake_mod)
+    monkeypatch.setitem(sys.modules, "pisuan.extensions.regulation_library.enrichment_service", fake_mod)
 
     out = await tools_mod.lookup_standard_indicator.ainvoke({"pollutant": "罕见污染物"})
 

@@ -2,8 +2,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from yuxi.repositories.tool_message_audit_repository import ToolMessageAuditRepository
-from yuxi.storage.postgres.models_business import AgentRun
+from pisuan.repositories.tool_message_audit_repository import ToolMessageAuditRepository
+from pisuan.storage.postgres.models_business import AgentRun
 
 
 class _FakeDb:

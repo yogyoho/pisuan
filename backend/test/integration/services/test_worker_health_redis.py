@@ -7,8 +7,8 @@ import pytest
 import pytest_asyncio
 from arq import create_pool
 from arq.worker import Worker
-from yuxi.services import worker_health
-from yuxi.storage.redis import get_arq_redis_settings
+from pisuan.services import worker_health
+from pisuan.storage.redis import get_arq_redis_settings
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 

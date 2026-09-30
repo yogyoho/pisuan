@@ -12,11 +12,11 @@ import pytest
 from sqlalchemy import delete, select, text, update
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from yuxi.services.skills import projection as projection_service
-from yuxi.storage.postgres.manager import pg_manager
-from yuxi.storage.postgres.models_business import Skill, User
-from yuxi.storage_migrations import v071_skills
-from yuxi.workspace.paths import user_workspace_dir
+from pisuan.services.skills import projection as projection_service
+from pisuan.storage.postgres.manager import pg_manager
+from pisuan.storage.postgres.models_business import Skill, User
+from pisuan.storage_migrations import v071_skills
+from pisuan.workspace.paths import user_workspace_dir
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
@@ -79,7 +79,7 @@ async def test_projection_refresh_waits_for_lock_then_reloads_revoked_authorizat
     skill_id: int | None = None
     refresh_task: asyncio.Task[dict[str, str]] | None = None
     policy_task: asyncio.Task[None] | None = None
-    lock_scope = f"yuxi:skills:user-projection:v1:{uid}"
+    lock_scope = f"pisuan:skills:user-projection:v1:{uid}"
 
     try:
         async with session_factory() as db:
@@ -289,10 +289,10 @@ async def test_legacy_shared_skill_migrates_without_touching_personal_workspace(
     uid = f"pytest-skill-migration-{suffix}"
     shared_slug = f"shared-{suffix}"
     personal_slug = f"personal-{suffix}"
-    monkeypatch.setenv("YUXI_LEGACY_STORAGE_DIR", str(tmp_path))
-    monkeypatch.setenv("YUXI_USER_DATA_DIR", str(tmp_path / "threads"))
-    monkeypatch.setenv("YUXI_SKILL_DATA_DIR", str(tmp_path / "skill-sources"))
-    monkeypatch.setenv("YUXI_SKILL_PROJECTION_DIR", str(tmp_path / "skill-projections"))
+    monkeypatch.setenv("PISUAN_LEGACY_STORAGE_DIR", str(tmp_path))
+    monkeypatch.setenv("PISUAN_USER_DATA_DIR", str(tmp_path / "threads"))
+    monkeypatch.setenv("PISUAN_SKILL_DATA_DIR", str(tmp_path / "skill-sources"))
+    monkeypatch.setenv("PISUAN_SKILL_PROJECTION_DIR", str(tmp_path / "skill-projections"))
 
     legacy_shared = tmp_path / "skills" / shared_slug
     legacy_personal = tmp_path / "threads/shared" / uid / "workspace/agents/skills" / personal_slug

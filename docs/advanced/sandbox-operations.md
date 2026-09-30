@@ -1,6 +1,6 @@
 # 配置沙盒与 provisioner
 
-Yuxi 通过 `sandbox-provisioner` 为 Agent 提供文件和命令执行环境。本页面向部署和运维人员，说明如何选择 Docker 或 Kubernetes、配置连接参数以及排查沙盒问题。
+Pisuan 通过 `sandbox-provisioner` 为 Agent 提供文件和命令执行环境。本页面向部署和运维人员，说明如何选择 Docker 或 Kubernetes、配置连接参数以及排查沙盒问题。
 
 沙盒的身份、文件 Owner、虚拟路径和恢复语义见[沙盒与文件系统机制](../mechanisms/sandbox.md)。
 
@@ -132,11 +132,11 @@ services:
   sandbox-provisioner:
     environment:
       PROVISIONER_BACKEND: kubernetes
-      K8S_NAMESPACE: yuxi
+      K8S_NAMESPACE: pisuan
       KUBECONFIG_PATH: /root/.kube/config
       NODE_HOST: 203.0.113.10
-      USER_DATA_PVC: yuxi-user-data
-      SKILLS_PVC: yuxi-skills
+      USER_DATA_PVC: pisuan-user-data
+      SKILLS_PVC: pisuan-skills
     volumes:
       - ~/.kube/config:/root/.kube/config:ro
 ```
@@ -147,7 +147,7 @@ services:
 
 动态沙盒环境由两部分合并：provisioner 只读挂载的 `docker/sandbox_provisioner/sandbox.env` 全局变量，以及当前用户为 Agent 配置的变量；用户变量覆盖同名全局变量，运行规格的镜像服务开关最后应用且不能被前两者覆盖。
 
-开发和生产 Compose 都把该文件挂载到 provisioner 的 `/app/sandbox.env`。仓库当前默认文件只有 `CHECK_YUXI_SANDBOX_ENV_EXISTS=True`；如果需要全局变量，应在部署侧维护该文件并重新创建 provisioner。这些变量对沙盒内代码完全可见，选择和注入的安全边界见[沙盒与文件系统机制](../mechanisms/sandbox.md)。
+开发和生产 Compose 都把该文件挂载到 provisioner 的 `/app/sandbox.env`。仓库当前默认文件只有 `CHECK_PISUAN_SANDBOX_ENV_EXISTS=True`；如果需要全局变量，应在部署侧维护该文件并重新创建 provisioner。这些变量对沙盒内代码完全可见，选择和注入的安全边界见[沙盒与文件系统机制](../mechanisms/sandbox.md)。
 
 远程 Skill 安装使用 `inherit_env=False` 的一次性 Sandbox，不继承全局或用户 Agent 环境，也不挂载持久用户目录。
 

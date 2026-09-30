@@ -2,7 +2,7 @@
 
 状态：archived
 类型：feature
-Owner：backend/package/yuxi/knowledge/base.py
+Owner：backend/package/pisuan/knowledge/base.py
 
 ## 问题
 

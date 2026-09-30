@@ -5,10 +5,10 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
-from yuxi.services import agent_request_service as svc
-from yuxi.storage.postgres.models_business import AgentRunRequest
-from yuxi.services.input_message_service import build_chat_input_message
-from yuxi.services.workdir_service import WorkdirBinding
+from pisuan.services import agent_request_service as svc
+from pisuan.storage.postgres.models_business import AgentRunRequest
+from pisuan.services.input_message_service import build_chat_input_message
+from pisuan.services.workdir_service import WorkdirBinding
 
 
 class _EmptyRequestRepo:

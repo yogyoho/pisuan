@@ -6,8 +6,8 @@ import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from yuxi.config import options
-from yuxi.storage.postgres.models_business import Base
+from pisuan.config import options
+from pisuan.storage.postgres.models_business import Base
 
 
 @pytest.mark.parametrize("key", ["default_model", "fast_model"])

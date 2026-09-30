@@ -1,4 +1,4 @@
-from yuxi.services.ref_resolver import resolve_refs
+from pisuan.services.ref_resolver import resolve_refs
 
 
 def test_resolve_table_ref_and_flag_unresolved():
@@ -40,7 +40,7 @@ def test_resolve_section_ref():
 
 # ========== {{MISSING}} 占位符检测 ==========
 
-from yuxi.services.ref_resolver import _MISSING_RE
+from pisuan.services.ref_resolver import _MISSING_RE
 
 
 def test_missing_re_detects_single_placeholder():

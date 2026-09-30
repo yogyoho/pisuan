@@ -3,9 +3,9 @@ requires = ["setuptools>=80", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "yuxi"
+name = "pisuan"
 version = "0.7.3"
-description = "Yuxi 智能知识库与知识图谱平台核心后端包"
+description = "Pisuan 智能知识库与知识图谱平台核心后端包"
 readme = "README.md"
 license = { text = "MIT" }
 classifiers = [
@@ -90,7 +90,7 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["yuxi*"]
+include = ["pisuan*"]
 
 
 [tool.uv]
@@ -106,4 +106,4 @@ url = "https://mirrors.aliyun.com/pypi/simple/"
 default = true
 
 [tool.uv.sources]
-yuxi = { path = "package", editable = true }
+pisuan = { path = "package", editable = true }

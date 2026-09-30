@@ -6,19 +6,19 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from yuxi.knowledge.graphs.extractors import (
+from pisuan.knowledge.graphs.extractors import (
     GraphExtractorFactory,
     LLMGraphExtractor,
     normalize_extraction_result,
 )
-from yuxi.knowledge.graphs.extractors.base import (
+from pisuan.knowledge.graphs.extractors.base import (
     MAX_ENTITY_LABEL_LENGTH,
     MAX_ENTITY_NAME_LENGTH,
     MAX_RELATION_TYPE_LENGTH,
 )
-from yuxi.knowledge.graphs.milvus_graph_service import MilvusGraphService
-from yuxi.knowledge.graphs.milvus_graph_vector_store import MilvusGraphVectorStore
-from yuxi.storage.postgres.models_knowledge import KnowledgeGraphEntity, KnowledgeGraphTriple
+from pisuan.knowledge.graphs.milvus_graph_service import MilvusGraphService
+from pisuan.knowledge.graphs.milvus_graph_vector_store import MilvusGraphVectorStore
+from pisuan.storage.postgres.models_knowledge import KnowledgeGraphEntity, KnowledgeGraphTriple
 
 
 def _raw_graph_node(node_id: str, *, labels: list[str] | None = None, name: str | None = None) -> dict:
@@ -275,7 +275,7 @@ async def test_llm_graph_extractor_passes_configured_timeout_to_model(monkeypatc
         captured.update(kwargs)
         return FakeModel()
 
-    monkeypatch.setattr("yuxi.knowledge.graphs.extractors.llm.select_model", fake_select_model)
+    monkeypatch.setattr("pisuan.knowledge.graphs.extractors.llm.select_model", fake_select_model)
     extractor = LLMGraphExtractor({"model_spec": "test/model", "timeout_seconds": 300})
 
     await extractor.extract("某型发动机的涵道比设计值为 9.0")
@@ -297,7 +297,7 @@ async def test_llm_graph_extractor_defaults_timeout_when_absent(monkeypatch):
         captured.update(kwargs)
         return FakeModel()
 
-    monkeypatch.setattr("yuxi.knowledge.graphs.extractors.llm.select_model", fake_select_model)
+    monkeypatch.setattr("pisuan.knowledge.graphs.extractors.llm.select_model", fake_select_model)
 
     await LLMGraphExtractor({"model_spec": "test/model"}).extract("文本")
 
@@ -425,7 +425,7 @@ async def test_graph_extraction_retries_twice_before_third_attempt_succeeds(monk
     )
     service = MilvusGraphService(chunk_repo=chunk_repo)
     monkeypatch.setattr(
-        "yuxi.knowledge.graphs.milvus_graph_service.GRAPH_EXTRACTION_RETRY_DELAYS_SECONDS",
+        "pisuan.knowledge.graphs.milvus_graph_service.GRAPH_EXTRACTION_RETRY_DELAYS_SECONDS",
         (0, 0),
     )
 
@@ -545,7 +545,7 @@ async def test_graph_build_keeps_extraction_concurrency_full_while_writes_are_bl
     extractor = Extractor()
     monkeypatch.setattr(GraphExtractorFactory, "create", lambda extractor_type, options: extractor)
     monkeypatch.setattr(
-        "yuxi.knowledge.graphs.milvus_graph_service.GRAPH_EXTRACTION_RETRY_DELAYS_SECONDS",
+        "pisuan.knowledge.graphs.milvus_graph_service.GRAPH_EXTRACTION_RETRY_DELAYS_SECONDS",
         (0, 0),
     )
 
@@ -1322,7 +1322,7 @@ async def test_milvus_graph_service_early_returns_empty_for_missing_kb_id(method
 @pytest.mark.parametrize("operation", ["has_collection", "drop_collection"])
 def test_drop_graph_collections_propagates_storage_failure(monkeypatch, operation):
     """图集合检查或删除失败必须向上传播。"""
-    from yuxi.knowledge.graphs import milvus_graph_vector_store as module
+    from pisuan.knowledge.graphs import milvus_graph_vector_store as module
 
     store = MilvusGraphVectorStore.__new__(MilvusGraphVectorStore)
     store.connection_alias = "test"

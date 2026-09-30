@@ -1,10 +1,10 @@
 import pytest
 
-from yuxi.agents.backends.sandbox import backend as sandbox_backend
-from yuxi.agents.buildin.chatbot.state import merge_subagent_runs
-from yuxi.agents.state import merge_artifacts
-from yuxi.agents.toolkits.buildin.tools import _normalize_presented_artifact_path
-from yuxi.agents.backends.paths import CONVERSATION_HISTORY_DIR_NAME, LARGE_TOOL_RESULTS_DIR_NAME
+from pisuan.agents.backends.sandbox import backend as sandbox_backend
+from pisuan.agents.buildin.chatbot.state import merge_subagent_runs
+from pisuan.agents.state import merge_artifacts
+from pisuan.agents.toolkits.buildin.tools import _normalize_presented_artifact_path
+from pisuan.agents.backends.paths import CONVERSATION_HISTORY_DIR_NAME, LARGE_TOOL_RESULTS_DIR_NAME
 
 
 def _runtime_with_thread(thread_id: str, uid: str = "user-1"):

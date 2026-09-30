@@ -1,6 +1,6 @@
 # 生产部署
 
-本页说明如何用 Docker Compose 部署 Yuxi、验证服务状态，以及从 v0.7.1 或 v0.7.2 升级到 `v0.7.3`。重要数据上线前请先在备份环境演练恢复。
+本页说明如何用 Docker Compose 部署 Pisuan、验证服务状态，以及从 v0.7.1 或 v0.7.2 升级到 `v0.7.3`。重要数据上线前请先在备份环境演练恢复。
 
 ## 前置条件
 
@@ -33,7 +33,7 @@ MINIO_SECRET_KEY=<strong-minio-secret-key>
 JWT_SECRET_KEY=<random-value-at-least-32-characters>
 API_KEY_DERIVATION_SECRET=<another-random-value-at-least-32-characters>
 SANDBOX_PROVISIONER_TOKEN=<another-random-value-at-least-32-characters>
-YUXI_INSTANCE_ID=<stable-instance-name>
+PISUAN_INSTANCE_ID=<stable-instance-name>
 ```
 
 三个安全密钥必须彼此不同、没有首尾空白，并在重建或升级时保留原值。可以用下面的命令生成随机值，再把结果安全地写入 `.env.prod`：
@@ -48,16 +48,16 @@ openssl rand -hex 32
 
 ### 环境隔离与自定义配置文件
 
-开发配置的容器环境文件默认为 `.env`，生产配置默认为 `.env.prod`。使用其他文件时，同时指定 `YUXI_ENV_FILE` 和 `--env-file`，让容器注入与 Compose 插值读取同一份配置：
+开发配置的容器环境文件默认为 `.env`，生产配置默认为 `.env.prod`。使用其他文件时，同时指定 `PISUAN_ENV_FILE` 和 `--env-file`，让容器注入与 Compose 插值读取同一份配置：
 
 ```bash
-YUXI_ENV_FILE=.env.staging docker compose --env-file .env.staging -f docker-compose.prod.yml config --quiet
-YUXI_ENV_FILE=.env.staging docker compose --env-file .env.staging -f docker-compose.prod.yml up -d --build
+PISUAN_ENV_FILE=.env.staging docker compose --env-file .env.staging -f docker-compose.prod.yml config --quiet
+PISUAN_ENV_FILE=.env.staging docker compose --env-file .env.staging -f docker-compose.prod.yml up -d --build
 ```
 
-同机并行部署时，在各自的环境文件中设置不同的 `COMPOSE_PROJECT_NAME` 和 `YUXI_STATE_DIR`；项目名隔离容器、镜像、Compose 网络和动态沙盒名称，数据目录隔离持久文件。默认数据目录仍是 `./docker/volumes`，同一目录只允许一套运行中的环境写入。已有部署更换项目名或从固定容器名切换前，先结束任务和沙盒会话，用旧配置执行 `docker compose down`（保留数据，不加 `-v`），再用新配置启动；复用数据时保持状态目录和密钥不变。
+同机并行部署时，在各自的环境文件中设置不同的 `COMPOSE_PROJECT_NAME` 和 `PISUAN_STATE_DIR`；项目名隔离容器、镜像、Compose 网络和动态沙盒名称，数据目录隔离持久文件。默认数据目录仍是 `./docker/volumes`，同一目录只允许一套运行中的环境写入。已有部署更换项目名或从固定容器名切换前，先结束任务和沙盒会话，用旧配置执行 `docker compose down`（保留数据，不加 `-v`），再用新配置启动；复用数据时保持状态目录和密钥不变。
 
-生产 Web 端口通过 `YUXI_WEB_PORT` 设置，默认 80；API 默认发布到 `127.0.0.1:6050`，管理服务端口也只绑定回环地址。具体默认值由 `docker-compose.prod.yml` 的 `ports` 定义；多套生产环境还需分别设置端口，启用 `all` profile 时包括 `YUXI_MINERU_PORT` 和 `YUXI_PADDLEX_PORT`。开发环境的端口隔离示例见[并行工作树与隔离运行环境](../develop-guides/parallel-worktree-environments.md)。
+生产 Web 端口通过 `PISUAN_WEB_PORT` 设置，默认 80；API 默认发布到 `127.0.0.1:6050`，管理服务端口也只绑定回环地址。具体默认值由 `docker-compose.prod.yml` 的 `ports` 定义；多套生产环境还需分别设置端口，启用 `all` profile 时包括 `PISUAN_MINERU_PORT` 和 `PISUAN_PADDLEX_PORT`。开发环境的端口隔离示例见[并行工作树与隔离运行环境](../develop-guides/parallel-worktree-environments.md)。
 
 MinIO 将同一宿主数据目录挂载到容器 `/data`，Neo4j 将日志目录挂载到 `/logs`；这两个容器内路径的调整不要求移动宿主文件。
 
@@ -96,7 +96,7 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml --profile all up 
 - PostgreSQL 数据目录；
 - MinIO 数据目录；
 - Milvus、etcd、Neo4j 等已启用服务的持久数据；
-- `docker/volumes/yuxi` 中的历史文件、UserWorkspace 和 Skill 数据；
+- `docker/volumes/pisuan` 中的历史文件、UserWorkspace 和 Skill 数据；
 - 当前 Compose、`.env.prod` 和目标版本代码。
 
 使用各存储服务支持的一致性备份方式；直接复制数据目录时，先停止对应存储服务，备份完成后按原配置启动存储依赖，业务服务保持停止。备份后至少做一次成套恢复演练。只恢复数据库或只恢复文件卷，会让数据库记录与文件字节不一致。
@@ -158,7 +158,7 @@ curl --fail http://localhost/api/system/ready
 - `/api/system/health` 只表示 API 进程存活；
 - `/api/system/ready` 表示启动完成、PostgreSQL/Redis 可用，并且兼容 worker 正在提供健康租约。
 
-worker 的 Compose 健康检查通过 `python -m yuxi.services.worker_health` 轻量读取 `REDIS_URL` 中的 ARQ 心跳，不加载业务执行依赖。心跳缺失、过期、没有 TTL、TTL 超过约定上界或 Redis 连接失败时检查失败。该心跳表达共享队列的消费健康，多副本部署不能用它判断单个 worker 进程是否失活。
+worker 的 Compose 健康检查通过 `python -m pisuan.services.worker_health` 轻量读取 `REDIS_URL` 中的 ARQ 心跳，不加载业务执行依赖。心跳缺失、过期、没有 TTL、TTL 超过约定上界或 Redis 连接失败时检查失败。该心跳表达共享队列的消费健康，多副本部署不能用它判断单个 worker 进程是否失活。
 
 就绪接口返回 `ready` 后，再用浏览器完成登录和一次真实对话。健康或就绪状态不能证明知识库、模型、沙盒或外部服务的业务链路正确。
 
@@ -181,7 +181,7 @@ worker 的 Compose 健康检查通过 `python -m yuxi.services.worker_health` �
 
 `all` profile 下还有两个可选 OCR 服务：`mineru-api`（30001，`/file_parse` 接口）和 `paddlex`（8080，PP-Structure-V3）。etcd 只在 Compose 网络内供 Milvus 使用，没有发布到宿主机。
 
-PostgreSQL、Redis、MinIO、Milvus 和 Neo4j 的端口只绑定 `127.0.0.1`，不要把它们暴露到公网；Web 与 API 发布到所有接口。各端口可用环境变量覆盖（`YUXI_WEB_PORT`、`YUXI_API_PORT`、`YUXI_NEO4J_HTTP_PORT`、`YUXI_MINIO_API_PORT`、`YUXI_MILVUS_PORT`、`YUXI_POSTGRES_PORT`、`YUXI_REDIS_PORT`），完整映射以 [docker-compose.yml](https://github.com/xerrors/Yuxi/blob/main/docker-compose.yml) 为准。
+PostgreSQL、Redis、MinIO、Milvus 和 Neo4j 的端口只绑定 `127.0.0.1`，不要把它们暴露到公网；Web 与 API 发布到所有接口。各端口可用环境变量覆盖（`PISUAN_WEB_PORT`、`PISUAN_API_PORT`、`PISUAN_NEO4J_HTTP_PORT`、`PISUAN_MINIO_API_PORT`、`PISUAN_MILVUS_PORT`、`PISUAN_POSTGRES_PORT`、`PISUAN_REDIS_PORT`），完整映射以 [docker-compose.yml](https://github.com/xerrors/Yuxi/blob/main/docker-compose.yml) 为准。
 
 常用入口：Web <http://localhost:5173>，API 文档 <http://localhost:5050/docs>，Neo4j <http://localhost:7474>，沙盒 provisioner <http://localhost:8002/health>。health 与 ready 接口的语义见上方「验证部署」。
 
@@ -190,16 +190,16 @@ PostgreSQL、Redis、MinIO、Milvus 和 Neo4j 的端口只绑定 `127.0.0.1`，�
 生产环境不会默认允许浏览器跨域请求：
 
 ```dotenv
-YUXI_CORS_ORIGINS=https://frontend.example.com
+PISUAN_CORS_ORIGINS=https://frontend.example.com
 ```
 
 多个来源用逗号分隔：
 
 ```dotenv
-YUXI_CORS_ORIGINS=https://a.example.com,https://b.example.com
+PISUAN_CORS_ORIGINS=https://a.example.com,https://b.example.com
 ```
 
-前端与 API 同源时留空即可。设置为 `*` 会关闭 credentials，浏览器不会携带登录态，因此不适合需要 JWT Cookie/凭证的前端。开发环境在 `YUXI_ENV=development` 且未设置该变量时，默认允许 `http://localhost:5173` 和 `http://127.0.0.1:5173`；生产环境不会采用这个默认值。修改后重启 API。
+前端与 API 同源时留空即可。设置为 `*` 会关闭 credentials，浏览器不会携带登录态，因此不适合需要 JWT Cookie/凭证的前端。开发环境在 `PISUAN_ENV=development` 且未设置该变量时，默认允许 `http://localhost:5173` 和 `http://127.0.0.1:5173`；生产环境不会采用这个默认值。修改后重启 API。
 
 ## 维护与故障排查
 
@@ -229,7 +229,7 @@ PostgreSQL 可以在数据库容器内使用交互式命令修改，避免新密
 
 ```bash
 docker compose --env-file .env.prod -f docker-compose.prod.yml \
-  exec postgres psql -U postgres -d yuxi -c '\password postgres'
+  exec postgres psql -U postgres -d pisuan -c '\password postgres'
 ```
 
 Neo4j 使用 `cypher-shell` 的当前用户密码修改流程；MinIO 使用 `mc admin` 或部署采用的密钥管理流程。完成轮换后，把新值写入 `.env.prod`，再重建依赖这些凭据的服务：
@@ -251,14 +251,14 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml \
 
 ## 第三方组件和许可证
 
-Yuxi 本体使用 MIT License。Compose 依赖以独立进程运行，Yuxi 通过公开协议访问它们；第三方组件的许可证不会因为使用 Compose 就变成 MIT。
+Pisuan 本体使用 MIT License。Compose 依赖以独立进程运行，Pisuan 通过公开协议访问它们；第三方组件的许可证不会因为使用 Compose 就变成 MIT。
 
 当前 Compose 引用的主要组件如下。表中的版本是镜像 tag；只有明确写死的 tag 才能提供对应的版本预期，`postgres:16`、`mineru-vllm:latest` 和 `paddlex:latest` 仍可能随重新拉取而变化：
 
 | 组件 | 镜像引用 | 许可证 |
 | --- | --- | --- |
 | Neo4j Community | `neo4j:5.26.29` | GPL-3.0-only |
-| MinIO | 本地构建：`<项目名>-minio:RELEASE.2023-03-20T20-16-18Z`（`docker/minio/Dockerfile`；项目名取 `COMPOSE_PROJECT_NAME`，默认 `yuxi`） | AGPL-3.0 |
+| MinIO | 本地构建：`<项目名>-minio:RELEASE.2023-03-20T20-16-18Z`（`docker/minio/Dockerfile`；项目名取 `COMPOSE_PROJECT_NAME`，默认 `pisuan`） | AGPL-3.0 |
 | Milvus | `milvusdb/milvus:v2.5.6` | Apache-2.0 |
 | etcd | `quay.io/coreos/etcd:v3.5.5` | Apache-2.0 |
 | PostgreSQL | `postgres:16` | PostgreSQL License |

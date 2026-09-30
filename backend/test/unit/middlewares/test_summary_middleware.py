@@ -11,11 +11,11 @@ from deepagents.middleware.summarization import SummarizationMiddleware
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage, get_buffer_string
 from langchain_core.exceptions import ContextOverflowError
 
-from yuxi.agents.middlewares.summary import (
-    YuxiSummarizationMiddleware,
+from pisuan.agents.middlewares.summary import (
+    PisuanSummarizationMiddleware,
     create_summary_middleware,
 )
-from yuxi.agents.backends.paths import workdir_runtime_paths
+from pisuan.agents.backends.paths import workdir_runtime_paths
 
 WORKDIR_PATH = "/home/gem/user-data/projects/11111111-1111-4111-8111-111111111111"
 VIRTUAL_PATH_LARGE_TOOL_RESULTS, VIRTUAL_PATH_CONVERSATION_HISTORY = workdir_runtime_paths(WORKDIR_PATH)
@@ -106,7 +106,7 @@ class _FailingHistoryWriteBackend(_MemoryBackend):
 
 
 def _scoped_backend(memory: _MemoryBackend | None = None) -> CompositeBackend:
-    """按 Yuxi 契约构造 outputs 根的 CompositeBackend，验证前缀自动派生。"""
+    """按 Pisuan 契约构造 outputs 根的 CompositeBackend，验证前缀自动派生。"""
     return CompositeBackend(
         default=memory if memory is not None else _MemoryBackend(),
         routes={},
@@ -120,7 +120,7 @@ def _expected_tool_result_path(content: str, tool_name: str = "query_kb") -> str
 
 
 def _compact_messages(messages: list, backend, token_limit: int | None = 300) -> list:
-    middleware = YuxiSummarizationMiddleware(
+    middleware = PisuanSummarizationMiddleware(
         model=_DummyModel(),
         backend=backend,
         trigger=("messages", 100),
@@ -188,17 +188,17 @@ def _content_char_counter(messages, **_kwargs) -> int:
 
 @pytest.fixture
 def compression_events(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
-    """捕获 YuxiSummarizationMiddleware 通过 stream writer 推送的压缩事件。"""
+    """捕获 PisuanSummarizationMiddleware 通过 stream writer 推送的压缩事件。"""
     emitted: list[dict] = []
     monkeypatch.setattr(
-        "yuxi.agents.middlewares.summary.get_stream_writer",
+        "pisuan.agents.middlewares.summary.get_stream_writer",
         lambda: lambda payload: emitted.append(payload),
     )
     return emitted
 
 
 @pytest.mark.unit
-def test_create_summary_middleware_uses_deepagents_with_yuxi_outputs_root() -> None:
+def test_create_summary_middleware_uses_deepagents_with_pisuan_outputs_root() -> None:
     memory = _MemoryBackend()
     middleware = create_summary_middleware(
         model=_DummyModel(),
@@ -209,7 +209,7 @@ def test_create_summary_middleware_uses_deepagents_with_yuxi_outputs_root() -> N
     )
 
     assert isinstance(middleware, SummarizationMiddleware)
-    assert isinstance(middleware, YuxiSummarizationMiddleware)
+    assert isinstance(middleware, PisuanSummarizationMiddleware)
     assert middleware._backend.default is memory
     assert middleware._history_path_prefix == VIRTUAL_PATH_CONVERSATION_HISTORY
     assert middleware._large_tool_results_prefix == VIRTUAL_PATH_LARGE_TOOL_RESULTS
@@ -352,7 +352,7 @@ def test_compaction_does_not_replace_tool_result_when_recoverable_write_fails() 
     backend = _FailingWriteBackend()
     content = "important result" * 100
     messages = [ToolMessage(content=content, tool_call_id="call-1", name="query_kb")]
-    middleware = YuxiSummarizationMiddleware(
+    middleware = PisuanSummarizationMiddleware(
         model=_DummyModel(),
         backend=backend,
         trigger=("tokens", 1),
@@ -432,7 +432,7 @@ def test_query_kb_preview_preserves_document_identity_and_metadata() -> None:
 def test_web_search_preview_preserves_citations_and_reports_omitted_results() -> None:
     backend = _MemoryBackend()
     payload = {
-        "query": "Yuxi context compression",
+        "query": "Pisuan context compression",
         "response_time": 0.25,
         "results": [
             {
@@ -532,7 +532,7 @@ async def test_force_summary_returns_checkpoint_update_without_adding_messages()
         AIMessage(content="第二答"),
         HumanMessage(content="继续"),
     ]
-    middleware = YuxiSummarizationMiddleware(
+    middleware = PisuanSummarizationMiddleware(
         model=model,
         backend=backend,
         trigger=("tokens", 100_000),
@@ -566,7 +566,7 @@ async def test_force_summary_reports_persisted_uncompacted_tail_tokens() -> None
         AIMessage(content="", tool_calls=[{"id": "call-1", "name": "query_kb", "args": {}}]),
         ToolMessage(content=large_result, tool_call_id="call-1", name="query_kb"),
     ]
-    middleware = YuxiSummarizationMiddleware(
+    middleware = PisuanSummarizationMiddleware(
         model=_RecordingModel(),
         backend=backend,
         trigger=("tokens", 100_000),
@@ -652,7 +652,7 @@ def test_wrap_model_call_offloads_large_tool_results(scenario: dict) -> None:
     ]
     for index in range(scenario["extra_turns"]):
         messages.extend([AIMessage(content=f"可以继续{index}"), HumanMessage(content=f"新问题{index}")])
-    middleware = YuxiSummarizationMiddleware(
+    middleware = PisuanSummarizationMiddleware(
         model=model,
         backend=backend,
         trigger=("tokens", scenario["trigger_tokens"]),
@@ -737,7 +737,7 @@ async def test_awrap_model_call_emits_completed_for_compaction_without_summary(
         ToolMessage(content=large_result, tool_call_id="call-1", name="query_kb"),
         HumanMessage(content="继续"),
     ]
-    middleware = YuxiSummarizationMiddleware(
+    middleware = PisuanSummarizationMiddleware(
         model=_RecordingModel(),
         backend=backend,
         trigger=("tokens", 500),
@@ -795,7 +795,7 @@ def test_wrap_model_call_truncates_large_write_file_args_only_in_compacted_view(
         ToolMessage(content="ok", tool_call_id="call-1", name="write_file"),
         HumanMessage(content="继续"),
     ]
-    middleware = YuxiSummarizationMiddleware(
+    middleware = PisuanSummarizationMiddleware(
         model=_RecordingModel(),
         backend=backend,
         trigger=("tokens", 500),
@@ -837,7 +837,7 @@ def test_summary_event_reuses_original_preserved_window_on_later_calls() -> None
         AIMessage(content="资料已整理"),
         HumanMessage(content="继续"),
     ]
-    middleware = YuxiSummarizationMiddleware(
+    middleware = PisuanSummarizationMiddleware(
         model=_RecordingModel(),
         backend=backend,
         trigger=("messages", 5),
@@ -890,7 +890,7 @@ def test_summary_event_reuses_original_preserved_window_on_later_calls() -> None
 def test_create_summary_uses_sanitized_messages() -> None:
     backend = _MemoryBackend()
     model = _RecordingModel()
-    middleware = YuxiSummarizationMiddleware(
+    middleware = PisuanSummarizationMiddleware(
         model=model,
         backend=backend,
         trigger=("messages", 3),
@@ -914,7 +914,7 @@ def test_create_summary_uses_sanitized_messages() -> None:
 @pytest.mark.unit
 def test_offload_history_uses_tool_messages_with_replaced_content() -> None:
     backend = _MemoryBackend()
-    middleware = YuxiSummarizationMiddleware(
+    middleware = PisuanSummarizationMiddleware(
         model=_DummyModel(),
         backend=backend,
         trigger=("messages", 3),
@@ -944,9 +944,9 @@ def _make_compressing_middleware(
     backend: _MemoryBackend,
     *,
     model: _DummyModel | None = None,
-) -> tuple[YuxiSummarizationMiddleware, str]:
+) -> tuple[PisuanSummarizationMiddleware, str]:
     large_result = "BEGIN\n" + ("raw result payload\n" * 200)
-    middleware = YuxiSummarizationMiddleware(
+    middleware = PisuanSummarizationMiddleware(
         model=model or _RecordingModel(),
         backend=backend,
         trigger=("tokens", 100),
@@ -996,7 +996,7 @@ async def test_wrap_model_call_emits_started_and_completed(
     assert isinstance(result, ExtendedModelResponse)
     statuses = [event["status"] for event in compression_events]
     assert statuses == ["started", "completed"]
-    assert all(event["type"] == "yuxi.context_compression" for event in compression_events)
+    assert all(event["type"] == "pisuan.context_compression" for event in compression_events)
     completed = compression_events[-1]
     assert isinstance(completed.get("cutoff_index"), int)
     assert completed.get("file_path") is not None

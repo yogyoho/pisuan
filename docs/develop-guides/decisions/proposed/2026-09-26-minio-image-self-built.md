@@ -16,9 +16,9 @@ Owner：docker/minio/Dockerfile
 
 新增 `docker/minio/Dockerfile` 与 `docker/minio/docker-entrypoint.sh`。Dockerfile 基于 `alpine:3.20`，构建参数固定 MinIO 版本与两个架构各自的 sha256；RUN 阶段按 `TARGETARCH`（缺失时回落到 `apk --print-arch`）选择对应 Release 资产，用带 `--retry-all-errors` 的 curl 下载后以 `sha256sum -c` 校验，校验不通过即构建失败。二进制落在 `/opt/bin/minio` 并加入 `PATH`；入口脚本保留“命令首项不是 `minio` 时自动前置”的语义，使 `CMD ["minio"]` 与两份 Compose 现有的 `command: minio server /data …` 都能工作。
 
-`docker-compose.yml` 与 `docker-compose.prod.yml` 的 MinIO 服务增加 `build` 段，镜像名改为 `<项目名>-minio:RELEASE.2023-03-20T20-16-18Z`（项目名取 `COMPOSE_PROJECT_NAME`，默认 `yuxi`，与仓库其他自建镜像一致）；环境变量、卷、健康检查与 `command` 保持不变，因此既有数据卷和凭据无需调整。`docker/save_docker_images.sh|.ps1` 在导出前构建该镜像，并从 `docker compose config --images` 解析其镜像名：`.env` 里的 `COMPOSE_PROJECT_NAME` 不进 shell 环境，按它拼装出的名字会与 Compose 实际使用的名字漂移，目标机器上只能现场构建而离线环境无法构建。两个脚本同时切到仓库根执行并对构建失败显式退出。`scripts/init.sh|.ps1` 的预热步骤改为 `docker compose build minio`。
+`docker-compose.yml` 与 `docker-compose.prod.yml` 的 MinIO 服务增加 `build` 段，镜像名改为 `<项目名>-minio:RELEASE.2023-03-20T20-16-18Z`（项目名取 `COMPOSE_PROJECT_NAME`，默认 `pisuan`，与仓库其他自建镜像一致）；环境变量、卷、健康检查与 `command` 保持不变，因此既有数据卷和凭据无需调整。`docker/save_docker_images.sh|.ps1` 在导出前构建该镜像，并从 `docker compose config --images` 解析其镜像名：`.env` 里的 `COMPOSE_PROJECT_NAME` 不进 shell 环境，按它拼装出的名字会与 Compose 实际使用的名字漂移，目标机器上只能现场构建而离线环境无法构建。两个脚本同时切到仓库根执行并对构建失败显式退出。`scripts/init.sh|.ps1` 的预热步骤改为 `docker compose build minio`。
 
-`scripts/ci_build_topology_images.sh` 把 MinIO 纳入预构建（新增第三个缓存目录参数），`system-tests.yml` 的两个 job 各增加一个恢复 `/tmp/yuxi-buildkit-cache/minio` 的 `actions/cache` 步骤；层缓存按 `docker/minio/` 下文件哈希失效，命中后不再重复下载二进制。
+`scripts/ci_build_topology_images.sh` 把 MinIO 纳入预构建（新增第三个缓存目录参数），`system-tests.yml` 的两个 job 各增加一个恢复 `/tmp/pisuan-buildkit-cache/minio` 的 `actions/cache` 步骤；层缓存按 `docker/minio/` 下文件哈希失效，命中后不再重复下载二进制。
 
 `docs/advanced/deployment.md` 的组件表把 MinIO 标注为本地构建并说明校验方式。该组件仍是 AGPL-3.0，再分发义务不因构建位置改变。
 
@@ -50,6 +50,6 @@ Owner：docker/minio/Dockerfile
 
 arm64 资产的下载与校验路径已用 `--build-arg TARGETARCH=arm64` 构建验证通过；该次构建走的是 legacy builder（本机未安装 buildx），`TARGETARCH` 为手工传入，CI 用 BuildKit 由平台自动提供该参数。本机为 amd64，未在 arm64 主机上运行该镜像。
 
-镜像 tag 固定为 MinIO 的版本号、不随 `YUXI_VERSION` 变化，因此只改 `docker/minio/Dockerfile` 而不改版本号时，`docker compose up` 不会重建已有镜像；改动配方后需要显式 `--build`。
+镜像 tag 固定为 MinIO 的版本号、不随 `PISUAN_VERSION` 变化，因此只改 `docker/minio/Dockerfile` 而不改版本号时，`docker compose up` 不会重建已有镜像；改动配方后需要显式 `--build`。
 
 Dockerfile 中的版本号与校验值是外部事实的固化副本，MinIO 发布新版本时需要一并更新；不更新不影响既有部署。

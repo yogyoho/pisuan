@@ -4,7 +4,7 @@
 模板回流 chapter 标识不应退化为 section_path 全层 join 的乱码。
 """
 
-from yuxi.services.domain_factory_service import DomainFactoryService
+from pisuan.services.domain_factory_service import DomainFactoryService
 
 
 def _service() -> DomainFactoryService:
