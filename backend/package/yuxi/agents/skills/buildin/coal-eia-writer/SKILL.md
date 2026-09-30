@@ -190,7 +190,7 @@ run 级预算硬顶（按 run 计）：recursion_limit 1000 步、LoopDetection 
 | 波收口（章 VERIFIED/BLOCKED） | `next` 决定：要点包（发卡即停）/ 下一波 / 协商 |
 | 交付波 delivered 回执后 | 汇报波次进度停车，等下一波 |
 
-**步数预算意识（bug-3048，bash 60 硬顶）**：主循环单 run bash 目标 **≤25 次**——纯记账一律走批量原语（`mark --sections`/`delivered --sections` 批量、`gate` 一次跑完全部章门、`run-stage freeze/finalize` 合并固定序列、`subagent_start` 一回合批量发起），绝不逐节 next/mark 小步记账。被熔断的 run 侧仍报 success——续跑靠磁盘 progress.json 不靠对话记忆：新 run 首动作 `progress.py next` 即恢复现场。
+**步数预算意识（bug-3048，bash 60 硬顶）**：主循环单 run bash 目标 **≤25 次**——纯记账一律走批量原语（`mark --sections`/`delivered --sections` 批量、`gate` 一次跑完全部章门、`run-stage freeze/finalize` 合并固定序列、`subagent_start` 按派发协议分批补位发起），绝不逐节 next/mark 小步记账。被熔断的 run 侧仍报 success——续跑靠磁盘 progress.json 不靠对话记忆：新 run 首动作 `progress.py next` 即恢复现场。
 
 **修复轮规约（补写/过门循环）**：
 1. **只增补，禁重写**——修复轮禁删已有正文/整节重写；无来源数值 → 主动替换 `[待确认]`。
