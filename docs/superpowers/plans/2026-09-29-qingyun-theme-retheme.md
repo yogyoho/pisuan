@@ -427,7 +427,7 @@ Expected: `HEX_CLEAN`、`ICONS_CLEAN`、标记文件数 ≥ 改前（当前基�
 
 - [x] **Step 2: 视觉巡检** ✅ 2026-09-30——已登录态 5 页（领域工厂含 ETL 页签、工作台图表、知识库列表/详情/Skills、对话空态+真实会话 markdown、管理后台 SettingsModal 用户管理）× 明暗 = 10/10 通过；Landing/登录此前已验收。3 处无数据态不可演练（ETL 校验条、SkillCardList 错误描边、图谱进度条），token 改动已由双审覆盖。实测确认：超管徽章落 --second-color 点缀橙、markdown 有序列表序号靛蓝、官方明暗切换菜单双向生效且持久化
 - [x] **Step 2.5: 收尾杂项（T6 质量审查移交）** ✅ `9c74bd65`（文件头声明）+ `673429bc`（存量 unused-vars 清理，lint 清零）
-- [ ] **Step 3: pnpm 全量 lint**：`docker exec pisuan-localized-web-1 sh -c 'cd /app && ./node_modules/.bin/eslint src --ext .vue,.js'` → 零 error
+- [x] **Step 3: pnpm 全量 lint** ✅ 2026-09-30——官方链重建的 localized 树（1b13c22b）上复跑 `docker exec pisuan-localized-web-1 ... eslint src --ext .vue,.js` → 零 error（ESLINT_OK，退出码 0），Step 3 勘误的验证对象缺口就此闭合
 - [x] **Step 4: changelog 条目** ✅ `b256749d` + `154917ce`（披露补非精确等值四处）
 
 ```markdown
@@ -435,7 +435,7 @@ Expected: `HEX_CLEAN`、`ICONS_CLEAN`、标记文件数 ≥ 改前（当前基�
 ```
 
 - [ ] **Step 5: 台账收尾**（memory.md 会话行 + cerebrum 若有新知）+ chore commit
-- [ ] **Step 6: 双端同步**：sync-dev 收敛冒烟 ✅（两遍收敛 11.2s/8.1s → `-Revert`）→ 官方链 rebase ✅ 2026-09-30（上游真前进 23576378→031e2c72，257 pick 全部重放为 247 提交：8 纯 wolf 快照 skip、4 空台账 drop、skills/service.py 拆分冲突按 shared.py 移植处置、context.py 采用上游原生 excluded_tools 弃旧 6 行字段、changelog×4 保定制段+上游标题；保护文件核验无恙）→ **push + localized 重建待执行**（GitHub 推送需用户在窗内确认后跑 `scripts/sync-upstream.ps1`，当前 rebase 已成脚本仅剩 step4/5）+ I1 闭环（正确派生树上复跑全量容器 eslint）
+- [x] **Step 6: 双端同步** ✅ 2026-09-30 全链路闭合——sync-dev 收敛冒烟（两遍 11.2s/8.1s → `-Revert`）→ 官方链 rebase（上游真前进 23576378→031e2c72，257 pick 重放为 247：8 纯 wolf 快照 skip、4 空台账 drop、skills/service.py 拆分→shared.py 移植、context.py 取上游原生 excluded_tools、changelog×4 保定制段+上游标题、保护文件核验无恙）→ push（main→031e2c72、pisuan-custom→2d010639 force-with-lease）→ 镜像重建（改名层重生成 788 文件、uv lock ×2、1b13c22b 推 GitHub）→ I1 闭环（重建树全量容器 eslint 零告警）。终态：main=`031e2c72` / pisuan-custom=`2d010639` / pisuan-localized=`1b13c22b`
 
 ---
 
