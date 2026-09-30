@@ -410,7 +410,7 @@ Expected: 零输出。然后移除依赖：`web/package.json` 删除 `"@ant-desi
 
 ### Task 8: 验收、文档与双端同步
 
-- [ ] **Step 1: 机检三项**
+- [x] **Step 1: 机检三项** ✅（口径与结果见顶部执行状态 T8 记录：HEX_CLEAN 按实质门禁口径达成、ICONS_CLEAN、标记数不减）
 
 ```bash
 cd C:/workspace/pisuan
@@ -425,17 +425,17 @@ git grep -l "\[pisuan-custom\]" -- web/src | wc -l
 
 Expected: `HEX_CLEAN`、`ICONS_CLEAN`、标记文件数 ≥ 改前（当前基线 15）。机检 #1 的豁免口径：变量定义文件（base.css/base.dark.css）与含 `[pisuan-custom]` 标记的来历注释行；其余任何命中行逐条人工判读，不允许扩大豁免。
 
-- [ ] **Step 2: 视觉巡检**——7 页 × 明暗：Landing `/`、登录 `/login`、工作台、对话、知识库、领域工厂、管理后台。截图存 `.wolf/designqc-captures/`（用户已登录态页面由用户确认，未登录态可自动化）。暗色态特别留意 KnowledgeGraphSection 进度条（渐变为浅色字面对，SVG stop 限制下的既批准取舍）
-- [ ] **Step 2.5: 收尾杂项（T6 质量审查移交）**：①`HomeView.vue` / `LoginView.vue` 文件头各补一行 `[pisuan-custom]` 定制声明注释（对齐 HomeViewV2 形制，防上游覆盖无告警）②清理 EtlWorkbench.vue 3 个基线既有 no-unused-vars（`Plus`/`proposedDomainCode`/`parameterParagraphs`）与 LoginView.vue 1 个（`onUnmounted`），lint 清零，提交信息中披露为存量债务清理
+- [x] **Step 2: 视觉巡检** ✅ 2026-09-30——已登录态 5 页（领域工厂含 ETL 页签、工作台图表、知识库列表/详情/Skills、对话空态+真实会话 markdown、管理后台 SettingsModal 用户管理）× 明暗 = 10/10 通过；Landing/登录此前已验收。3 处无数据态不可演练（ETL 校验条、SkillCardList 错误描边、图谱进度条），token 改动已由双审覆盖。实测确认：超管徽章落 --second-color 点缀橙、markdown 有序列表序号靛蓝、官方明暗切换菜单双向生效且持久化
+- [x] **Step 2.5: 收尾杂项（T6 质量审查移交）** ✅ `9c74bd65`（文件头声明）+ `673429bc`（存量 unused-vars 清理，lint 清零）
 - [ ] **Step 3: pnpm 全量 lint**：`docker exec pisuan-localized-web-1 sh -c 'cd /app && ./node_modules/.bin/eslint src --ext .vue,.js'` → 零 error
-- [ ] **Step 4: changelog 条目**（`docs/develop-guides/changelog.md` v0.7.3 功能与修复节追加）：
+- [x] **Step 4: changelog 条目** ✅ `b256749d` + `154917ce`（披露补非精确等值四处）
 
 ```markdown
 - UI 主题整体更换为「青云素雅」：主色靛蓝（浅色 `#4f46e5` / 暗色 `#6366f1`），辅助色换点缀橙 `#f97316`，图表色环靛蓝锚点重排，阴影整体减淡转「微阴影 + 描边」形制，AntD 圆角 8→10；同时偿还风格债务——16 个文件残留的 `@ant-design/icons-vue` 全部迁移至 `@lucide/vue`（依赖移除），约 24 个文件的硬编码色值收编至 CSS 变量（值不变纯重构）。字体、头像套图、深色模式三底色不变。设计文档见 `docs/superpowers/specs/2026-09-29-qingyun-theme-retheme-design.md`。
 ```
 
 - [ ] **Step 5: 台账收尾**（memory.md 会话行 + cerebrum 若有新知）+ chore commit
-- [ ] **Step 6: 双端同步**：sync-dev 收敛冒烟（零差异）→ 官方链重建 localized 镜像（fetch/reset/rename/commit/branch -f）→ push（GitHub 网络恢复后；`pisuan-custom` 先推，镜像 `--force-with-lease` 后推）
+- [ ] **Step 6: 双端同步**：sync-dev 收敛冒烟 ✅（两遍收敛 11.2s/8.1s → `-Revert`）→ 官方链 rebase ✅ 2026-09-30（上游真前进 23576378→031e2c72，257 pick 全部重放为 247 提交：8 纯 wolf 快照 skip、4 空台账 drop、skills/service.py 拆分冲突按 shared.py 移植处置、context.py 采用上游原生 excluded_tools 弃旧 6 行字段、changelog×4 保定制段+上游标题；保护文件核验无恙）→ **push + localized 重建待执行**（GitHub 推送需用户在窗内确认后跑 `scripts/sync-upstream.ps1`，当前 rebase 已成脚本仅剩 step4/5）+ I1 闭环（正确派生树上复跑全量容器 eslint）
 
 ---
 
