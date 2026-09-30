@@ -83,6 +83,11 @@
 
 - 增量同步上游 5 个提交（`dee83624` → `23576378`）：MinIO 镜像本地构建（官方镜像下架修复）、Sandbox grep NUL 截断修复、模型供应商按用户统计用量（business schema 8）、Agent E2E 测试范围收敛、pyproject 补 e2e 测试标记与 pytest-timeout。pisuan-custom 212 个提交 rebase 重放，全部冲突仅 changelog（6 处，union 保留双方条目），代码零冲突。此前我方提前代记的 grep/供应商统计/E2E 三项与上游正式条目措辞一致，三方合并自动去重，无代码双份实现（`include_user_uid` 等均为上游单份实现）。定制红线核验：4 个保护文件在位、`[pisuan-custom]` 标记 9 文件与同步前一致、localized 改名层残余 `yuxi` 字样 12 处全为上游署名 URL（白名单范畴）。localized 镜像重建为 `7e8fdd5c` 并强推，运行栈 10 容器 healthy、`/api/system/ready` 200。破坏性注意事项（business 2→8 迁移、MinIO 首次构建需联网）见上文升级注意事项。
 
+### pisuan 定制增量同步（2026-09-30）
+
+- 增量同步上游 16 个提交（`23576378` → `031e2c72`）：Skills 后端重构——`agents/skills/service.py`（1813 行）拆为 `services/skills/` 包并支持共享 Skill 编辑、收敛安装服务边界（[#1088](https://github.com/xerrors/Yuxi/pull/1088)）；Context 字段声明统一智能体资源选择（`ResourceSelection` 类型），`excluded_tools` 成为原生字段（[#1081](https://github.com/xerrors/Yuxi/pull/1081)）；MCP 显式选择与资源配置投影收敛；worker 健康检查与前端轮询空闲开销降低（[#1086](https://github.com/xerrors/Yuxi/pull/1086)）；组合输入回车误发送修复（[#1085](https://github.com/xerrors/Yuxi/pull/1085)）；自动摘要失败原子性修复（[#1082](https://github.com/xerrors/Yuxi/pull/1082)）；供应商启用保存交互统一（[#1076](https://github.com/xerrors/Yuxi/pull/1076)）；聊天多图消息交接收敛；文档结构重组。
+- 我方处置：pisuan-custom 257 pick 重放为 247 提交（8 个纯 wolf 台账快照 skip、4 个空台账 drop）。代码冲突三处：skills `service.py` modify/delete——旧文件中 6 行 `.tmp-*/.bak-*` 中断清理移植至 `services/skills/shared.py` 的 `init_builtin_skills`；`context.py` 取上游侧、弃我方旧版手写 `excluded_tools` 字段（被 #1081 原生实现超越）；changelog 4 处标题冲突（保定制段、采上游 `v0.7.2 (2026-09-02)` 标题）。保护文件核验无恙（base.css 靛蓝、华宇页脚、HomeView）。双端闭环：main/pisuan-custom 推 origin，localized 改名层重建为 `1b13c22b` 推 GitHub（残余 yuxi 228 处均为保护词），重建树上全量容器 eslint 零告警。
+
 ## v0.7.2 (2026-09-02)
 
 ::: warning Beta 升级说明
