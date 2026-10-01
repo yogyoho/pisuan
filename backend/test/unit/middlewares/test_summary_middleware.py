@@ -940,6 +940,88 @@ def test_offload_history_uses_tool_messages_with_replaced_content() -> None:
     assert "TOOL_RESULT_SHOULD_NOT_BE_SUMMARIZED" not in history_content
 
 
+# [pisuan-custom] 压缩 offload aedit 失败回退整文件重写的单测（配套 _OffloadBackendFallback）
+class _FailingEditBackend(_MemoryBackend):
+    """aedit 恒失败（模拟沙箱大文件 edit 权限错误），write/awrite 正常。"""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.fallback_writes: list[str] = []
+
+    def edit(self, path: str, old_string: str, new_string: str) -> SimpleNamespace:
+        return SimpleNamespace(error="permission_denied")
+
+    async def aedit(self, path: str, old_string: str, new_string: str) -> SimpleNamespace:
+        return SimpleNamespace(error="permission_denied")
+
+    def write(self, path: str, content: str) -> SimpleNamespace:
+        self.fallback_writes.append(path)
+        return super().write(path, content)
+
+
+class _FailingEditAndWriteBackend(_FailingEditBackend):
+    def write(self, path: str, content: str) -> SimpleNamespace:
+        if path.startswith(VIRTUAL_PATH_CONVERSATION_HISTORY):
+            return SimpleNamespace(error="disk full")
+        return super().write(path, content)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("async_call", [False, True], ids=["sync", "async"])
+async def test_offload_history_falls_back_to_rewrite_when_edit_fails(async_call: bool) -> None:
+    backend = _FailingEditBackend()
+    middleware = YuxiSummarizationMiddleware(
+        model=_DummyModel(),
+        backend=backend,
+        trigger=("messages", 3),
+        keep=("messages", 1),
+        trim_tokens_to_summarize=None,
+        tool_result_offload_token_limit=0,
+    )
+    middleware._history_path_prefix = VIRTUAL_PATH_CONVERSATION_HISTORY
+    middleware._large_tool_results_prefix = VIRTUAL_PATH_LARGE_TOOL_RESULTS
+
+    history_path = middleware._get_history_path("session-test")
+    backend.files[history_path] = "EXISTING_HISTORY_V1\n"
+    compacted_messages = middleware._compact_messages(_tool_messages())
+
+    if async_call:
+        path = await middleware._aoffload_to_backend(backend, compacted_messages, "session-test")
+    else:
+        path = middleware._offload_to_backend(backend, compacted_messages, "session-test")
+
+    assert path == history_path
+    assert history_path in backend.fallback_writes
+    rewritten = backend.files[history_path]
+    assert "EXISTING_HISTORY_V1" in rewritten
+    assert "## Summarized at" in rewritten
+    assert "最终答案保留" in rewritten
+
+
+@pytest.mark.unit
+async def test_offload_history_returns_none_when_edit_and_rewrite_both_fail() -> None:
+    backend = _FailingEditAndWriteBackend()
+    middleware = YuxiSummarizationMiddleware(
+        model=_DummyModel(),
+        backend=backend,
+        trigger=("messages", 3),
+        keep=("messages", 1),
+        trim_tokens_to_summarize=None,
+        tool_result_offload_token_limit=0,
+    )
+    middleware._history_path_prefix = VIRTUAL_PATH_CONVERSATION_HISTORY
+    middleware._large_tool_results_prefix = VIRTUAL_PATH_LARGE_TOOL_RESULTS
+
+    history_path = middleware._get_history_path("session-test")
+    backend.files[history_path] = "EXISTING_HISTORY_V1\n"
+    compacted_messages = middleware._compact_messages(_tool_messages())
+
+    path = await middleware._aoffload_to_backend(backend, compacted_messages, "session-test")
+
+    assert path is None
+    assert backend.files[history_path] == "EXISTING_HISTORY_V1\n"
+
+
 def _make_compressing_middleware(
     backend: _MemoryBackend,
     *,

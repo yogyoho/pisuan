@@ -46,6 +46,49 @@ _SUMMARY_COMPRESSION_STATE: ContextVar[dict[str, bool] | None] = ContextVar(
 )
 
 
+# [pisuan-custom] Windows Docker Desktop 挂载上沙箱大文件 aedit（tmpfile 替换脚本 open('wb') 截断重写）
+# 易遭宿主侧共享冲突 permission_denied，导致自动压缩历史 offload 失败、整个 Run 报废；
+# 仅在压缩 offload 路径回退 awrite 整文件重写（内容等价、走 upload_files 独立通道）。
+class _OffloadBackendFallback:
+    """压缩历史 offload 专用 backend 代理：aedit 失败时回退整文件重写。
+
+    仅可用于 SummarizationMiddleware._(a)offload_to_backend 调用路径：该路径中
+    aedit/edit 的 new_string 恒为「既有内容 + 新段落」的全量合并文本，失败时用
+    write/awrite 整文件重写内容等价。其余 aedit 调用方（如 edit 工具）的
+    new_string 是局部片段，严禁套用此回退，否则会截断目标文件。
+    """
+
+    def __init__(self, backend) -> None:
+        self._backend = backend
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._backend, name)
+
+    async def aedit(self, path: str, old_string: str, new_string: str):
+        result = await self._backend.aedit(path, old_string, new_string)
+        if result is not None and not result.error:
+            return result
+        logger.warning(
+            "Compaction offload aedit failed on {} ({}), retrying with awrite.",
+            path,
+            getattr(result, "error", None) or "backend returned None",
+        )
+        fallback = await self._backend.awrite(path, new_string)
+        return fallback if fallback is not None and not fallback.error else result
+
+    def edit(self, path: str, old_string: str, new_string: str):
+        result = self._backend.edit(path, old_string, new_string)
+        if result is not None and not result.error:
+            return result
+        logger.warning(
+            "Compaction offload edit failed on {} ({}), retrying with write.",
+            path,
+            getattr(result, "error", None) or "backend returned None",
+        )
+        fallback = self._backend.write(path, new_string)
+        return fallback if fallback is not None and not fallback.error else result
+
+
 class YuxiSummarizationMiddleware(SummarizationMiddleware):
     """先确定性压缩工具结果，再按同一压力阈值决定是否生成摘要。"""
 
@@ -384,11 +427,13 @@ class YuxiSummarizationMiddleware(SummarizationMiddleware):
 
     def _offload_to_backend(self, backend, messages: list[AnyMessage], session_id: str) -> str | None:
         _emit_compression_started_once()
-        return super()._offload_to_backend(backend, messages, session_id)
+        # [pisuan-custom] offload 专用代理：aedit 失败回退 write（见 _OffloadBackendFallback）
+        return super()._offload_to_backend(_OffloadBackendFallback(backend), messages, session_id)
 
     async def _aoffload_to_backend(self, backend, messages: list[AnyMessage], session_id: str) -> str | None:
         _emit_compression_started_once()
-        return await super()._aoffload_to_backend(backend, messages, session_id)
+        # [pisuan-custom] offload 专用代理：aedit 失败回退 awrite（见 _OffloadBackendFallback）
+        return await super()._aoffload_to_backend(_OffloadBackendFallback(backend), messages, session_id)
 
     def _build_summary_event(
         self,
