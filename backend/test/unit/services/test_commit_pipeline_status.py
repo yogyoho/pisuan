@@ -11,12 +11,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 
 def _fake_context(task_payload):
-    """构造带 _tasker 的 fake context。task_payload 含 task_id/reviewer/kb_id/ingest_task_id。"""
+    """构造符合持久任务 TaskContext 协议的 fake context（payload 直读）。task_payload 含 task_id/reviewer/kb_id/ingest_task_id。"""
     ctx = MagicMock()
     ctx.task_id = "run_1"
-    task_obj = MagicMock()
-    task_obj.payload = task_payload
-    ctx._tasker._tasks = {ctx.task_id: task_obj}
+    ctx.payload = task_payload
     ctx.set_progress = AsyncMock()
     ctx.set_message = AsyncMock()
     return ctx

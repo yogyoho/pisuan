@@ -69,7 +69,7 @@ from yuxi.models.chat import select_model
 from yuxi.config.options import system_options
 from yuxi.repositories.domain_factory_repository import DomainFactoryRepository
 from yuxi.services.entity_meta_service import EntityMetaAdapter, EntityMetaMatcher, SlotEntityMapper
-from yuxi.services.task_service import tasker
+from yuxi.services.task_service import TaskContext, tasker
 from yuxi.utils import hashstr
 from yuxi.utils.datetime_utils import utc_isoformat
 from yuxi.utils.logging_config import logger
@@ -550,8 +550,7 @@ class DomainFactoryService:
                     "document_type": document_type,
                     "report_type_code": report_type_code,
                 },
-                coroutine=self._etl_pipeline_async,
-            )
+                            )
             logger.info(f"已注册 ETL 任务到任务中心: {task_id}")
         except Exception as e:
             logger.warning(f"注册任务中心失败，将继续执行: {e}")
@@ -582,15 +581,8 @@ class DomainFactoryService:
         from yuxi.services.domain_factory_service import get_domain_factory_service
         from yuxi.models.chat import select_model
 
-        # 从 payload 中获取知识工厂任务 ID
-        task_id = None
-        try:
-            if hasattr(context, "_tasker") and hasattr(context, "task_id"):
-                tasker_task = context._tasker._tasks.get(context.task_id)
-                if tasker_task and tasker_task.payload:
-                    task_id = tasker_task.payload.get("task_id")
-        except Exception as e:
-            logger.warning(f"获取任务ID失败: {e}")
+        # 从持久 payload 中获取知识工厂任务 ID
+        task_id = context.payload.get("task_id")
 
         if not task_id:
             logger.error("ETL 流水线：未找到任务 ID")
@@ -618,11 +610,18 @@ class DomainFactoryService:
                 raise ValueError(f"任务 {task_id} 没有存储路径")
 
             # 解析文档为 Markdown 和 HTML
-            from yuxi.knowledge.parser.unified import parse_source_to_markdown
+            # [pisuan-custom] 走 ocr_service.parse_document 标准入口（唯一业务解析入口，
+            # 负责解析系统默认 OCR 引擎与构造参数）；unified.parse_source_to_markdown
+            # 绕过配置解析，OCR 引擎配置中心(#843)后会直接报错。
+            from yuxi.knowledge.parser.unified import _markdown_to_html
+            from yuxi.services.ocr_service import parse_document
 
-            parse_result = await parse_source_to_markdown(file_path)
-            raw_markdown = parse_result.markdown
-            raw_html = parse_result.html  # HTML 格式，表格以 HTML 保存
+            raw_markdown = await parse_document(file_path)
+            raw_html = None  # HTML 格式，表格以 HTML 保存
+            try:
+                raw_html = _markdown_to_html(raw_markdown)
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"Markdown 转 HTML 失败，ETL 将回退 Markdown 表格: {e}")
             logger.info(f"文档解析完成，Markdown: {len(raw_markdown)} 字符, HTML: {len(raw_html or '')} 字符")
 
             # 按章节和段落切分文档（传入 HTML 内容用于存储完整表格）
@@ -4169,8 +4168,7 @@ class DomainFactoryService:
                     "reviewer": reviewer,
                     "ingest_task_id": ingest_task_id,
                 },
-                coroutine=self._commit_pipeline_async,
-            )
+                            )
             logger.info(f"已注册入库任务到任务中心: {task_id}")
         except Exception as e:
             logger.warning(f"注册入库任务失败: {e}")
@@ -4353,21 +4351,10 @@ class DomainFactoryService:
         """
         from yuxi.services.domain_factory_service import get_domain_factory_service
 
-        task_id = None
-        reviewer = None
-        knowledge_base_id = None
-        ingest_task_id = None
-
-        try:
-            if hasattr(context, "_tasker") and hasattr(context, "task_id"):
-                tasker_task = context._tasker._tasks.get(context.task_id)
-                if tasker_task and tasker_task.payload:
-                    task_id = tasker_task.payload.get("task_id")
-                    reviewer = tasker_task.payload.get("reviewer")
-                    knowledge_base_id = tasker_task.payload.get("knowledge_base_id")
-                    ingest_task_id = tasker_task.payload.get("ingest_task_id")
-        except Exception as e:
-            logger.warning(f"获取入库任务参数失败: {e}")
+        task_id = context.payload.get("task_id")
+        reviewer = context.payload.get("reviewer")
+        knowledge_base_id = context.payload.get("knowledge_base_id")
+        ingest_task_id = context.payload.get("ingest_task_id")
 
         if not task_id:
             return {"error": "task_id not found"}
@@ -5641,8 +5628,7 @@ class DomainFactoryService:
                     "file_name": task.file_name,
                     "reingest": True,
                 },
-                coroutine=self._reingest_pipeline_async,
-            )
+                            )
             logger.info(f"已注册再入库任务到任务中心: {task_id}")
         except Exception as e:
             logger.warning(f"注册再入库任务失败: {e}")
@@ -5656,16 +5642,8 @@ class DomainFactoryService:
         """再入库流水线异步执行 - 使用结构化入库逻辑"""
         from yuxi.services.domain_factory_service import get_domain_factory_service
 
-        task_id = None
-        knowledge_base_id = None
-        try:
-            if hasattr(context, "_tasker") and hasattr(context, "task_id"):
-                tasker_task = context._tasker._tasks.get(context.task_id)
-                if tasker_task and tasker_task.payload:
-                    task_id = tasker_task.payload.get("task_id")
-                    knowledge_base_id = tasker_task.payload.get("knowledge_base_id")
-        except Exception as e:
-            logger.warning(f"获取再入库任务ID失败: {e}")
+        task_id = context.payload.get("task_id")
+        knowledge_base_id = context.payload.get("knowledge_base_id")
 
         if not task_id:
             return {"error": "task_id not found"}
@@ -5864,8 +5842,7 @@ class DomainFactoryService:
                     "domain_name": domain.name if domain else "",
                     "file_name": updated_task.file_name,
                 },
-                coroutine=self._etl_pipeline_async,
-            )
+                            )
             logger.info(f"重试任务已注册到 Tasker: {task_id}")
         except Exception as e:
             logger.warning(f"重试任务注册 Tasker 失败: {e}")
@@ -6797,6 +6774,23 @@ class DomainFactoryService:
 def get_domain_factory_service() -> DomainFactoryService:
     """获取 DomainFactoryService 单例"""
     return DomainFactoryService()
+
+
+# [pisuan-custom] 任务中心持久 Handler：worker 进程按 task_type 从注册表导入这些模块级函数，
+# 从 TaskContext.payload 重建参数后委托给服务方法（旧栈 per-call coroutine 传递已废弃）。
+async def run_domain_factory_etl(context: TaskContext) -> dict[str, Any]:
+    """任务中心 Handler：知识工厂数据源 ETL（解析/切分/提取/泛化）。"""
+    return await get_domain_factory_service()._etl_pipeline_async(context)
+
+
+async def run_domain_factory_ingest(context: TaskContext) -> dict[str, Any]:
+    """任务中心 Handler：知识工厂审核通过后入库。"""
+    return await get_domain_factory_service()._commit_pipeline_async(context)
+
+
+async def run_domain_factory_reingest(context: TaskContext) -> dict[str, Any]:
+    """任务中心 Handler：知识工厂重新入库。"""
+    return await get_domain_factory_service()._reingest_pipeline_async(context)
 
 
 def _build_form_schema(variables: list[dict[str, Any]], snapshot: dict[str, Any] | None) -> list[dict[str, Any]]:
