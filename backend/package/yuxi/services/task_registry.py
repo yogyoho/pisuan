@@ -86,6 +86,23 @@ _TASK_DEFINITIONS = {
             success_function="finish_rag_evaluation_task",
             failure_function="fail_rag_evaluation_task",
         ),
+        # [pisuan-custom] 知识工厂（领域数据源）任务类型：pisuan 领域扩展，上游无此类型；
+        # Handler 为模块级函数，由 worker 进程按注册表惰性导入。
+        TaskDefinition(
+            "domain_factory",
+            "yuxi.services.domain_factory_service",
+            "run_domain_factory_etl",
+        ),
+        TaskDefinition(
+            "domain_factory_ingest",
+            "yuxi.services.domain_factory_service",
+            "run_domain_factory_ingest",
+        ),
+        TaskDefinition(
+            "domain_factory_reingest",
+            "yuxi.services.domain_factory_service",
+            "run_domain_factory_reingest",
+        ),
     )
 }
 
