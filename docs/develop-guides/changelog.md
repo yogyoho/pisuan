@@ -51,6 +51,9 @@
 - UI 主题整体更换为「青云素雅」：主色靛蓝（浅色 `#4f46e5` / 暗色 `#6366f1`），辅助色换点缀橙 `#f97316`，图表色环靛蓝锚点重排，阴影整体减淡转「微阴影 + 描边」形制，AntD 圆角 8→10；同时偿还风格债务——16 个文件残留的 `@ant-design/icons-vue` 全部迁移至 `@lucide/vue`（依赖移除），约 24 个文件的硬编码色值收编至 CSS 变量（值不变纯重构）。字体、头像套图、深色模式三底色不变。设计文档见 `docs/superpowers/specs/2026-09-29-qingyun-theme-retheme-design.md`。（本条替代上文同版本条目中的「科技蓝」主题方案）
 - 主题 token 换肤披露四处非精确等值就近映射：`#dc2626`→`--color-error-700`、`#999`→`--gray-600`、`#1677ff`/`#1890ff`→`--main-color`、`#fff1f0`→`--color-error-50`（EtlWorkbench，浅色端 1/255 绿通道微差 #fff1f0→#fff2f0，换取暗色端规范深端值），均经换肤任务双审核验，无逐值等价承诺。
 - 收敛 `web/pnpm-lock.yaml`：移除 `@ant-design/icons-vue` 残留声明，补齐 fontsource 字体依赖缺失条目，`pnpm install --frozen-lockfile` 校验通过。
+- 修复长对话智能体 Run 在 worker 重启后首次运行必失败的问题：`assemble_report` 等带 `ToolRuntime` 注入参数的 buildin 工具未显式声明 `args_schema`，langchain 推断 schema 时把 ToolRuntime（含 callable 字段）带进 JSON Schema，pydantic 拒绝生成，工具元数据加载崩溃；且 `_metadata_cache` 部分填充后后续调用不再重载，故障自锁（09-30 起所有重启后首跑 0.3s 内 `manifest_persist_failed`）。现与同族工具（present_artifacts/save_chapter 等）一致显式声明 `args_schema`，容器内单测与浏览器端到端复验通过。
+- 修复 Windows Docker Desktop 部署上自动压缩历史落盘失败导致整个 Run 报废的问题（前端报错「自动压缩无法保存可恢复的对话历史」）：沙箱大文件 edit（payload>50KB 走 tmpfile 替换脚本，末端 `open('wb')` 截断重写）在 gRPC-FUSE/virtiofs 挂载上易遭宿主侧共享冲突 `permission_denied`，而压缩 offload 恰以全量合并文本为 new_string。压缩专用路径的 aedit 失败时自动回退 awrite 整文件重写（内容等价、走 upload_files 独立传输通道）；edit 工具等其他 aedit 调用方（new_string 为局部片段）不受影响，双失败仍保持原失败语义防静默历史丢失。改动处已按 `[pisuan-custom]` 行内标记约定标注，单测 4 用例覆盖回退与双失败分支。
+- 修复知识工厂数据源上传后永远停在「已上传」不解析的问题：持久任务协议重构（PostgreSQL 意图 + ARQ worker 按注册表分发）后，知识工厂仍以旧栈 `Tasker.enqueue(coroutine=...)` 方式入队，TypeError 被吞成 warning（「注册任务中心失败，将继续执行」），ETL 从未调度。现按新协议接入：`task_registry.py` 注册 `domain_factory` / `domain_factory_ingest` / `domain_factory_reingest` 三个类型（上游文件，改动处加 `[pisuan-custom]` 标记），服务侧三条流水线改为模块级 Handler + `TaskContext.payload` 重建参数；ETL 解析改走 `ocr_service.parse_document` 标准入口（旧调用绕过 OCR 配置中心直接报「OCR 文件缺少已解析的 ocr_engine」）。注册表接线有单测覆盖（3 类型可惰性加载到模块级函数）。
 
 ### 运行与维护
 
@@ -86,7 +89,7 @@
 ### pisuan 定制增量同步（2026-09-30）
 
 - 增量同步上游 16 个提交（`23576378` → `031e2c72`）：Skills 后端重构——`agents/skills/service.py`（1813 行）拆为 `services/skills/` 包并支持共享 Skill 编辑、收敛安装服务边界（[#1088](https://github.com/xerrors/Yuxi/pull/1088)）；Context 字段声明统一智能体资源选择（`ResourceSelection` 类型），`excluded_tools` 成为原生字段（[#1081](https://github.com/xerrors/Yuxi/pull/1081)）；MCP 显式选择与资源配置投影收敛；worker 健康检查与前端轮询空闲开销降低（[#1086](https://github.com/xerrors/Yuxi/pull/1086)）；组合输入回车误发送修复（[#1085](https://github.com/xerrors/Yuxi/pull/1085)）；自动摘要失败原子性修复（[#1082](https://github.com/xerrors/Yuxi/pull/1082)）；供应商启用保存交互统一（[#1076](https://github.com/xerrors/Yuxi/pull/1076)）；聊天多图消息交接收敛；文档结构重组。
-- 我方处置：pisuan-custom 257 pick 重放为 247 提交（8 个纯 wolf 台账快照 skip、4 个空台账 drop）。代码冲突三处：skills `service.py` modify/delete——旧文件中 6 行 `.tmp-*/.bak-*` 中断清理移植至 `services/skills/shared.py` 的 `init_builtin_skills`；`context.py` 取上游侧、弃我方旧版手写 `excluded_tools` 字段（被 #1081 原生实现超越）；changelog 4 处标题冲突（保定制段、采上游 `v0.7.2 (2026-09-02)` 标题）。保护文件核验无恙（base.css 靛蓝、华宇页脚、HomeView）。双端闭环：main/pisuan-custom 推 origin，localized 改名层重建为 `1b13c22b` 推 GitHub（残余 yuxi 228 处均为保护词），重建树上全量容器 eslint 零告警。
+- 我方处置：pisuan-custom 257 pick 重放为 247 提交（8 个纯 wolf 台账快照 skip、4 个空台账 drop）。代码冲突三处：skills `service.py` modify/delete——旧文件中 6 行 `.tmp-*/.bak-*` 中断清理移植至 `services/skills/shared.py` 的 `init_builtin_skills`；`context.py` 取上游侧、弃我方旧版手写 `excluded_tools` 字段（被 #1081 原生实现超越）；changelog 4 处标题冲突（保定制段、采上游 `v0.7.2 (2026-09-02)` 标题）。保护文件核验无恙（base.css 靛蓝、华宇页脚、HomeView）。双端闭环：main/pisuan-custom 推 origin，localized 改名层重建为 `1b13c22b` 推 GitHub（残余 yuxi 228 处均为保护词），重建树上全量容器 eslint 零告警。**破坏性注意事项**：business schema 8→9（#1081 资源选择协议迁移）由一次性 `storage-migrator` 容器执行，代码热重载不会重新触发它——同步后须 `docker start <project>-storage-migrator-1` 重放迁移，否则 api/worker 启动被 `require_current_schema` 守卫拦截。
 
 ## v0.7.2 (2026-09-02)
 
