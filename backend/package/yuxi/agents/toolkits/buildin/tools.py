@@ -875,11 +875,18 @@ review(写完待审)章节也会进成稿;writing(进行中)章节被排除。�
 """
 
 
+class AssembleReportInput(BaseModel):
+    """Merge reviewed chapters of a report into the final markdown artifact."""
+
+    report_id: str = Field(description="报告 ID")
+
+
 @tool(
     category="buildin",
     tags=["报告", "装配"],
     display_name="装配报告",
     description=ASSEMBLE_REPORT_DESCRIPTION,
+    args_schema=AssembleReportInput,
 )
 async def assemble_report(report_id: str, runtime: ToolRuntime) -> dict:
     """合并 done/review 章节 + 解析 {{REF}} + 检测 {{MISSING}} + 写出 artifact,返回成稿信息。
