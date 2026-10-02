@@ -22,6 +22,8 @@
 
 ### 功能与修复
 
+- 知识工厂 ETL 泛化链路可靠性重设计（P0）：每次泛化 LLM 调用记录 StepOutcome 台账（success/fallback/error 及错误类型），provider 类错误（限流/配额/超时/服务端错误）按指数退避自动重试，连续 5 次即熔断——任务显式进入 `FAILED_PROVIDER` 状态并保留成功段落现场，不再静默兜底产出垃圾数据；`ai_confidence` 从「结构化覆盖率」重定义为真实成功率（兜底与失败计入分母），旧口径更名新列 `coverage_ratio`，质量数字可审计（新列 `step_stats`）；熔断任务重试时断点续跑，只补「无模板或上一轮兜底」的段落，LLM 调用量等于未成功段数；同时停机三项死产出：`logical_relations`（模型无此列、写库静默丢弃）、`list` 分类（解析层逐行切段使规则永不触发、恒 0 产出）与泛化内联第三版提示词（双括号契约与库层模板冲突）。运行中任务重复重试会被拒绝并提示。新增单测 `backend/test/unit/services/test_domain_factory_p0.py`（10 例），需求与验收口径见 `docs/vibe/2026-10-02-etl-redesign-requirements.md`。
+
 - 修复官方 MinIO 镜像下架导致的部署与 CI 中断：MinIO 在 Docker Hub 与 quay.io 上的镜像已不再公开分发，`dl.min.io` 返回 410。两份 Compose 改为按 `docker/minio/Dockerfile` 构建该镜像，构建时从官方 GitHub Release 下载固定版本的二进制并校验 sha256，运行与下架前完全相同的 MinIO 二进制；数据卷、凭据、端口与 `command` 不变，离线导出的脚本会先构建再打包。
 - 新增工程报告写作平台新版落地页 `/landing-v2`（`HomeViewV2.vue`）：面向工程报告智能写作场景，含核心能力、工作流程与应用场景展示；旧版首页 `/` 保持不变，两条路由并存便于对比验收。
 - 新增工程报告写作平台新版落地页（`HomeViewV2.vue`）：面向工程报告智能写作场景，含核心能力、工作流程与应用场景展示；`/` 默认首页已切换为新版（`keepAlive` 关闭以匹配其滚动监听生命周期），旧版 `HomeView.vue` 不再挂路由，`/landing-v2` 预览路由暂时保留便于回看。视觉上按钮、CTA 色带与系统主题蓝 `#1890ff` 对齐，hero 标题按短语边界受控断行，四步流程为数字+图标组合徽标。
@@ -54,6 +56,7 @@
 - 修复长对话智能体 Run 在 worker 重启后首次运行必失败的问题：`assemble_report` 等带 `ToolRuntime` 注入参数的 buildin 工具未显式声明 `args_schema`，langchain 推断 schema 时把 ToolRuntime（含 callable 字段）带进 JSON Schema，pydantic 拒绝生成，工具元数据加载崩溃；且 `_metadata_cache` 部分填充后后续调用不再重载，故障自锁（09-30 起所有重启后首跑 0.3s 内 `manifest_persist_failed`）。现与同族工具（present_artifacts/save_chapter 等）一致显式声明 `args_schema`，容器内单测与浏览器端到端复验通过。
 - 修复 Windows Docker Desktop 部署上自动压缩历史落盘失败导致整个 Run 报废的问题（前端报错「自动压缩无法保存可恢复的对话历史」）：沙箱大文件 edit（payload>50KB 走 tmpfile 替换脚本，末端 `open('wb')` 截断重写）在 gRPC-FUSE/virtiofs 挂载上易遭宿主侧共享冲突 `permission_denied`，而压缩 offload 恰以全量合并文本为 new_string。压缩专用路径的 aedit 失败时自动回退 awrite 整文件重写（内容等价、走 upload_files 独立传输通道）；edit 工具等其他 aedit 调用方（new_string 为局部片段）不受影响，双失败仍保持原失败语义防静默历史丢失。改动处已按 `[pisuan-custom]` 行内标记约定标注，单测 4 用例覆盖回退与双失败分支。
 - 修复知识工厂数据源上传后永远停在「已上传」不解析的问题：持久任务协议重构（PostgreSQL 意图 + ARQ worker 按注册表分发）后，知识工厂仍以旧栈 `Tasker.enqueue(coroutine=...)` 方式入队，TypeError 被吞成 warning（「注册任务中心失败，将继续执行」），ETL 从未调度。现按新协议接入：`task_registry.py` 注册 `domain_factory` / `domain_factory_ingest` / `domain_factory_reingest` 三个类型（上游文件，改动处加 `[pisuan-custom]` 标记），服务侧三条流水线改为模块级 Handler + `TaskContext.payload` 重建参数；ETL 解析改走 `ocr_service.parse_document` 标准入口（旧调用绕过 OCR 配置中心直接报「OCR 文件缺少已解析的 ocr_engine」）。注册表接线有单测覆盖（3 类型可惰性加载到模块级函数）。
+- 修复知识工厂段落泛化提示词单双括号自相矛盾导致泛化模板大面积混用花括号的问题：激活的 `prompt_templates.yaml` 段落泛化模板指令文字写「双层大括号」但全部示例均为单层 `{插槽名称}`，模型照示例输出单括号占位符（初报 217/224 段 2075 处系测量正则缺陷虚高，修正后为 22/224 段 49 处），与下游 `{{}}` 文法期望冲突。现统一示例与指令为 `{{双括号}}` 并显式禁止单层大括号；`_render_prompt` 为纯字符串替换，四个格式占位符（`{content}`/`{schema_text}`/`{chapter_hint}`/`{domain_label}`）保持单括号不受影响。生产复验 49→1（残留 1 处为模型畸形括号组，归 P1-1 结构化输出根治）。已 `sync-dev` 落运行栈；服务实例按任务新建，提示词缓存自然失效无需重启。
 
 ### 运行与维护
 
