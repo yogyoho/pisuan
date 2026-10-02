@@ -1031,6 +1031,9 @@ class PostgresManager(metaclass=SingletonMeta):
             "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS source_report_id VARCHAR(64)",
             "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS chapter_label VARCHAR(64)",
             "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS validation_report JSONB",
+            # [pisuan-custom] ETL P0：StepOutcome 台账 + 旧覆盖率口径列（旧库 create_all 不补列）
+            "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS step_stats JSONB",
+            "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS coverage_ratio INTEGER",
             # Domain Factory: 清理废弃列和表
             "ALTER TABLE IF EXISTS domain_factory_tasks DROP COLUMN IF EXISTS structured_data",
             "DROP TABLE IF EXISTS domain_factory_saved_sections",
@@ -1515,7 +1518,7 @@ class PostgresManager(metaclass=SingletonMeta):
             ON agent_run_requests(uid, agent_slug, conversation_thread_id, status, created_at, id)
             """,
             "CREATE INDEX IF NOT EXISTS ix_agent_run_requests_dispatched_run_id ON agent_run_requests(dispatched_run_id)",  # noqa: E501
-                        # Domain Factory tables
+            # Domain Factory tables
             "CREATE TABLE IF NOT EXISTS domain_factory_domains ("
             "    id SERIAL PRIMARY KEY,"
             "    code VARCHAR(64) UNIQUE NOT NULL,"

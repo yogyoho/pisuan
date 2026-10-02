@@ -71,6 +71,9 @@ class DomainFactoryTask(Base):
     source_report_id = Column(String(64), nullable=True, index=True)  # 所属源报告(分章上传合并)
     chapter_label = Column(String(64), nullable=True)  # 章节标签(如"3"/"5")
     validation_report = Column(JSONB, nullable=True)  # 最新校验报告
+    # [pisuan-custom] ETL P0：StepOutcome 质量台账 + 旧覆盖率口径字段（ai_confidence 重定义为真实成功率后，coverage_ratio 保留旧语义）
+    step_stats = Column(JSONB, nullable=True)
+    coverage_ratio = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
     committed_at = Column(DateTime, nullable=True)
