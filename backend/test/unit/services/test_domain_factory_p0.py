@@ -9,6 +9,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 import yuxi.services.domain_factory_service as dfs_mod
 from yuxi.services.domain_factory_service import DomainFactoryService
@@ -241,3 +243,40 @@ def test_list_classification_shutdown():
     ]
     out = service.classify_paragraphs(paras)
     assert out[0]["classify_type"] != "list"
+
+
+# ------------------------------------------------------------------
+# P0.1 停滞型断供超时（bug-340）/ durable 失败收敛注册（bug-341）
+# ------------------------------------------------------------------
+
+
+class HangingModel:
+    """模拟停滞端点：调用永不返回（超过超时窗口后由 asyncio.timeout 切断）"""
+
+    model_name = "fake-hang"
+
+    async def call(self, prompt: str):
+        await asyncio.sleep(30)
+
+
+@pytest.mark.asyncio
+async def test_stalled_endpoint_times_out_and_retries(monkeypatch):
+    monkeypatch.setattr(DomainFactoryService, "RETRY_BACKOFF_BASE_SECONDS", 0.0)
+    monkeypatch.setattr(DomainFactoryService, "LLM_CALL_TIMEOUT_SECONDS", 0.05)
+    model = HangingModel()
+    service = _make_service(monkeypatch, model)
+
+    text, meta = await service._call_llm_with_retry(model, "prompt")
+    assert text is None
+    assert meta["error_type"] == "timeout"  # timeout 属 provider 类 → 计入熔断
+    assert meta["attempts"] == 1 + service.PROVIDER_RETRY_MAX
+
+
+def test_domain_factory_failure_handler_registered():
+    """domain_factory 任务类型必须注册 failure handler，否则 lease 过期后 domain 行变僵尸"""
+    from yuxi.services.task_registry import get_failure_task_definition
+
+    definition = get_failure_task_definition("domain_factory", 1)
+    handler = definition.load_failure_handler()
+    assert handler is not None
+    assert handler.__name__ == "fail_domain_factory_etl"

@@ -61,7 +61,7 @@ const reviewedParagraphIds = ref(new Set())
 const classifyFilter = ref(null)
 
 // ========== 知识库 ==========
-const lightragKnowledgeBases = ref([])
+const milvusKnowledgeBases = ref([])
 const selectedKnowledgeBaseId = ref(null)
 const loadingKnowledgeBases = ref(false)
 
@@ -730,13 +730,13 @@ const deleteParagraph = (paraId) => {
 }
 
 // ========== 知识库 ==========
-const loadLightragKnowledgeBases = async () => {
+const loadMilvusKnowledgeBases = async () => {
   loadingKnowledgeBases.value = true
   try {
     const response = await databaseApi.getDatabases()
-    lightragKnowledgeBases.value = (response.databases || []).filter(db => db.kb_type === 'milvus' || db.type === 'milvus')
-    if (lightragKnowledgeBases.value.length === 1) {
-      selectedKnowledgeBaseId.value = lightragKnowledgeBases.value[0].kb_id
+    milvusKnowledgeBases.value = (response.databases || []).filter(db => db.kb_type === 'milvus' || db.type === 'milvus')
+    if (milvusKnowledgeBases.value.length === 1) {
+      selectedKnowledgeBaseId.value = milvusKnowledgeBases.value[0].kb_id
     }
   } catch (e) {
     console.error('加载知识库列表失败', e)
@@ -755,7 +755,7 @@ const handleCommit = async () => {
   Modal.confirm({
     title: '确认入库？',
     content: () => {
-      const selectedKB = lightragKnowledgeBases.value.find(kb => kb.kb_id === selectedKnowledgeBaseId.value)
+      const selectedKB = milvusKnowledgeBases.value.find(kb => kb.kb_id === selectedKnowledgeBaseId.value)
       return [
         h('p', { style: 'margin-bottom: 12px' }, '提交后模板将同步至知识图谱，确保已完成校验。'),
         h('p', {}, ['目标知识库：', h('strong', selectedKB?.name || selectedKnowledgeBaseId.value)])
@@ -921,7 +921,7 @@ onMounted(async () => {
   if (props.task?.id) {
     await fetchTaskDetail(props.task.id)
   }
-  await loadLightragKnowledgeBases()
+  await loadMilvusKnowledgeBases()
 })
 
 watch(() => props.task, async (newTask) => {
@@ -1614,7 +1614,7 @@ watch(() => props.task, async (newTask) => {
                 :loading="loadingKnowledgeBases"
                 style="max-width: 400px"
               >
-                <a-select-option v-for="kb in lightragKnowledgeBases" :key="kb.kb_id" :value="kb.kb_id">{{ kb.name }}</a-select-option>
+                <a-select-option v-for="kb in milvusKnowledgeBases" :key="kb.kb_id" :value="kb.kb_id">{{ kb.name }}</a-select-option>
               </a-select>
             </a-form-item>
           </a-form>

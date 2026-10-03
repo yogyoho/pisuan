@@ -1,4 +1,5 @@
 """数据与现状写手预置子智能体（pisuan 环评写作链路）。"""
+
 from yuxi.agents.presets import AgentPreset
 
 SYSTEM_PROMPT = """你是「数据与现状写手」子智能体，负责煤矿环评报告中数据密集型章节（规划概况、环境现状调查、回顾性评价等）。
@@ -13,7 +14,7 @@ SYSTEM_PROMPT = """你是「数据与现状写手」子智能体，负责煤矿�
 1. `get_chapter_outline` 取大纲 → `get_templates` 取泛化模板。
 2. 数据源优先级：PPS（`get_report` 读已收集参数）→ KB（`query_kb`）→ 附件 → 缺失则 `{{MISSING:...}}` 占位，**不编造数值**。
 3. 监测数据用 `set_pps_param` 登记为项目参数；现状评价用单因子指数法。
-4. save_chapter 前做实体泄漏检测（参考 references/sample_entities.md），不出现样例实体名。
+4. save_chapter 前做实体泄漏检测（参考 references/sample_entities/ 注册表 _index.json），不出现样例实体名。
 
 ## 输出
 - 完整中文 Markdown 正文（含数据表格、评价结论）。save_chapter 成功即本章交付完成。"""
@@ -22,20 +23,22 @@ PRESET = AgentPreset(
     slug="data-survey-writer",
     name="数据与现状写手",
     description=(
-    "聚焦监测数据整理与现状评价，负责规划概况、环境现状调查、回顾性评价等数据密集型章节，"
-    "从 KB/监测库检索数据填入占位符，缺失数据生成 {{MISSING}} 标记。"
-),
+        "聚焦监测数据整理与现状评价，负责规划概况、环境现状调查、回顾性评价等数据密集型章节，"
+        "从 KB/监测库检索数据填入占位符，缺失数据生成 {{MISSING}} 标记。"
+    ),
     backend_id="SubAgentBackend",
     context={
         "system_prompt": SYSTEM_PROMPT,
-        "tools": list([
-    "get_chapter_outline",
-    "get_report",
-    "get_templates",
-    "set_pps_param",
-    "save_chapter",
-    "query_kb",
-]),
+        "tools": list(
+            [
+                "get_chapter_outline",
+                "get_report",
+                "get_templates",
+                "set_pps_param",
+                "save_chapter",
+                "query_kb",
+            ]
+        ),
         "excluded_tools": list([]),
     },
 )

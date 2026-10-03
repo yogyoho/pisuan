@@ -427,6 +427,7 @@ def _runtime_scope_value(runtime: ToolRuntime, key: str) -> str | None:
             return value.strip()
     return None
 
+
 def _workdir_outputs_paths(runtime: ToolRuntime) -> tuple[Path, str]:
     """解析当前 Workdir 的宿主 outputs 目录与对应的 runtime 虚拟路径前缀。"""
     from yuxi.workspace.paths import user_workdir_host_dir
@@ -570,14 +571,18 @@ async def get_chapter_outline(domain: str, report_type: str, canonical_chapter_k
         finally:
             graph_svc.close()
     except Exception as e:
-        logger.warning(f"[graph-degraded] get_chapter_outline 图谱查询失败,回退 DB: {domain}/{report_type}/{canonical_chapter_key} - {e}")
+        logger.warning(
+            f"[graph-degraded] get_chapter_outline 图谱查询失败,回退 DB: {domain}/{report_type}/{canonical_chapter_key} - {e}"
+        )
         graph_errored = True
     repo = DomainFactoryRepository()
     out = await repo.get_outline(domain, report_type, canonical_chapter_key)
     if out:
         out["_source"] = "db_fallback" if graph_errored else "db"
         if graph_errored:
-            out["_degraded_note"] = "图谱查询失败，此为数据库回退数据（可能与图谱不完全一致），请在回复中告知用户当前图谱不可用"
+            out["_degraded_note"] = (
+                "图谱查询失败，此为数据库回退数据（可能与图谱不完全一致），请在回复中告知用户当前图谱不可用"
+            )
         return out
     types = await repo.list_report_types()
     valid_codes = [t["code"] for t in types]
@@ -602,6 +607,7 @@ domain/report_type code 是数据库精确匹配字段，get_chapter_outline / g
 async def list_report_types(domain: str) -> list[dict]:
     """查询数据字典中指定领域的报告类型 code。"""
     from yuxi.repositories.domain_entity_repository import DomainEntityRepository
+
     domain = _normalize_domain(domain)
     repo = DomainEntityRepository()
     return await repo.list_report_types(domain)
@@ -654,24 +660,45 @@ domain/report_type 必须使用数据字典中的 code（用 list_report_types �
     description=GET_TEMPLATES_DESCRIPTION,
 )
 async def get_templates(domain: str, report_type: str, canonical_chapter_key: str | None = None) -> list[dict]:
-    """获取结构化段落模板。优先查图谱,回退 DB。"""
+    """获取结构化段落模板。优先查图谱,回退 DB。回退条目带 _source 标注（对齐 get_chapter_outline）。"""
     from yuxi.services.graph_query_service import GraphQueryService
 
     domain = _normalize_domain(domain)
     report_type = _normalize_report_type(report_type)
+    templates: list[dict] = []
+    graph_errored = False
     if canonical_chapter_key:
         try:
             graph_svc = GraphQueryService()
             try:
                 templates = await graph_svc.get_templates(domain, report_type, canonical_chapter_key)
                 if templates:
+                    # [pisuan-custom] D5: mark the source so callers can tell graph
+                    # data from DB fallback data.
+                    for item in templates:
+                        if isinstance(item, dict):
+                            item.setdefault("_source", "graph")
                     return templates
             finally:
                 graph_svc.close()
         except Exception as e:
-            logger.warning(f"[graph-degraded] get_templates 图谱查询失败,回退 DB: {domain}/{report_type}/{canonical_chapter_key} - {e}")
+            logger.warning(
+                f"[graph-degraded] get_templates 图谱查询失败,回退 DB: "
+                f"{domain}/{report_type}/{canonical_chapter_key} - {e}"
+            )
+            graph_errored = True
     repo = DomainFactoryRepository()
-    return await repo.list_learned_templates_by_key(domain, report_type, canonical_chapter_key)
+    out = await repo.list_learned_templates_by_key(domain, report_type, canonical_chapter_key)
+    # [pisuan-custom] D5: surface the DB fallback instead of degrading silently,
+    # mirroring get_chapter_outline's _source/_degraded_note contract.
+    for item in out:
+        if isinstance(item, dict):
+            item["_source"] = "db_fallback" if graph_errored else "db"
+            if graph_errored:
+                item["_degraded_note"] = (
+                    "图谱查询失败，此为数据库回退数据（可能与图谱不完全一致），请在回复中告知用户当前图谱不可用"
+                )
+    return out
 
 
 CREATE_REPORT_DESCRIPTION = """
@@ -987,6 +1014,7 @@ CALCULATE_WATER_CAPACITY_DESCRIPTION = """
 async def calculate_water_capacity(C0: float, K: float, x: float, u: float) -> dict:
     """一维稳态水质模型: C(x) = C₀ exp(-Kx/u)"""
     import math
+
     exponent = -K * x / (u * 86400)  # u 从 m/s 转为 m/d
     Cx = C0 * math.exp(exponent)
     return {
@@ -995,14 +1023,15 @@ async def calculate_water_capacity(C0: float, K: float, x: float, u: float) -> d
         "formula": "C(x) = C₀ × exp(-Kx/u)",
         "steps": [
             {"step": "流速单位换算", "detail": f"u = {u} m/s = {u * 86400} m/d"},
-            {"step": "计算指数", "detail": f"-Kx/u = -{K}×{x}/{u*86400} = {exponent:.6f}"},
+            {"step": "计算指数", "detail": f"-Kx/u = -{K}×{x}/{u * 86400} = {exponent:.6f}"},
             {"step": "代入公式", "detail": f"C({x}) = {C0} × exp({exponent:.6f}) = {round(Cx, 4)}"},
         ],
     }
 
 
 LOOKUP_SUBSIDENCE_DESCRIPTION = """
-从知识库查询同类地质条件下的地表沉陷预计算结果（MSPS 软件输出）。
+从知识库（规范库/模板库等 milvus 库）检索地表沉陷预测相关内容：规范条文限值、
+同类矿区案例参数。用于数据调研章节快速取证。
 
 参数:
 - depth: 采深范围描述 (如 "300-500m")
@@ -1010,9 +1039,8 @@ LOOKUP_SUBSIDENCE_DESCRIPTION = """
 - angle: 煤层倾角描述 (如 "0-15°")
 
 返回:
-- matched: 匹配到的预计算结果列表 (null 如果没有匹配)
-- source: 数据来源报告
-- note: 适用性说明
+- matched: 检索命中列表 (content + source)，null 表示未命中
+- hint/error: 未命中或异常时的说明
 """
 
 
@@ -1023,35 +1051,33 @@ LOOKUP_SUBSIDENCE_DESCRIPTION = """
     description=LOOKUP_SUBSIDENCE_DESCRIPTION,
 )
 async def lookup_subsidence_params(depth: str, coal_seam: str, angle: str) -> dict:
-    """从 KB 查预计算的沉陷参数（Phase 5 数据到位后启用 KB 查询）。"""
+    """从 KB 检索地表沉陷预测相关条文与同类案例参数。"""
     try:
         from yuxi.knowledge.runtime import knowledge_base as kb_manager
 
-        databases = await kb_manager.get_databases_by_type("milvus")
-        if not databases:
-            return {"matched": None, "hint": "知识库中没有可用的监测数据库，建议委托专业建模"}
+        databases = await kb_manager.get_databases()
+        milvus_dbs = [d for d in databases if d.kb_type == "milvus"]
+        if not milvus_dbs:
+            return {"matched": None, "hint": "知识库中没有可用的 milvus 知识库，建议委托专业建模"}
 
-        kb_id = databases[0].get("kb_id")
         query = f"地表沉陷预测 采深{depth} 煤层{coal_seam} 倾角{angle}"
-        results = await kb_manager.query_kb(kb_id=kb_id, query=query, limit=3)
-        if not results:
+        matched: list[dict] = []
+        for db in milvus_dbs:
+            output = await kb_manager.retrieve(kb_id=db.kb_id, query=query, limit=3)
+            for r in (output or {}).get("results") or []:
+                content = str(r.get("content") or "")
+                if content:
+                    matched.append({"content": content[:500], "source": f"{db.name}({r.get('file_id', '')})"})
+        if not matched:
             return {
                 "matched": None,
                 "hint": f"未找到匹配的地质条件 ({depth}/{coal_seam}/{angle})，建议委托专业建模",
             }
 
         return {
-            "matched": [
-                {
-                    "content": (r.get("content") or r.get("text", ""))[:500],
-                    "source": r.get("source", ""),
-                }
-                for r in results[:3] if isinstance(r, dict)
-            ],
-            "note": "以上数据来自同类矿区 MSPS 软件预计算结果，引用时标注来源",
+            "matched": matched[:6],
+            "note": "以上为知识库检索结果，引用时标注来源并核对适用条件",
         }
-    except ImportError:
-        return {"matched": None, "hint": "KB 沉陷参数库尚未就绪（Phase 5 数据基础设施建设中）"}
     except Exception as e:
         return {"matched": None, "error": f"KB 查询失败: {e}"}
 
@@ -1085,10 +1111,12 @@ async def lookup_standard_indicator(pollutant: str, doc_code: str | None = None)
         logger.warning(f"[regulation] lookup_standard_indicator 查询失败 {pollutant}/{doc_code}: {e}")
         return {"matched": [], "error": f"查询失败: {e}"}
     if not rows:
-        return {"matched": [], "hint": f"未找到 {pollutant} 的限值记录（doc_code={doc_code or '全部'}），可能该规范未加工入库；可用 query_kb 检索原文"}
+        return {
+            "matched": [],
+            "hint": f"未找到 {pollutant} 的限值记录（doc_code={doc_code or '全部'}），可能该规范未加工入库；可用 query_kb 检索原文",
+        }
     return {
         "matched": rows[:20],
         "count": len(rows),
         "note": "限值来自标准规范库富化结果，引用时标注 doc_code + unit_no",
     }
-

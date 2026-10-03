@@ -92,6 +92,7 @@ _TASK_DEFINITIONS = {
             "domain_factory",
             "yuxi.services.domain_factory_service",
             "run_domain_factory_etl",
+            failure_function="fail_domain_factory_etl",
         ),
         TaskDefinition(
             "domain_factory_ingest",
