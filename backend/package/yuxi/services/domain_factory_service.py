@@ -6,74 +6,21 @@ import asyncio
 import json
 import re
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from datetime import UTC
 from pathlib import Path
 from typing import Any, ClassVar
 
-
-# ---------------------------------------------------------------------------
-# 结构化入库数据模型
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class StructuredChunk:
-    """结构化分片：领域工厂的一个段落/表格对应一个 chunk"""
-
-    id: str
-    content: str
-    chunk_order_index: int
-    section_id: str = ""
-    section_title: str = ""
-    parent_section_title: str = ""
-    template: dict | None = None
-    slots: list[dict] | None = None
-    meta: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class StructuredSection:
-    """结构化章节"""
-
-    section_id: str
-    title: str
-    level: int
-    order: int
-    parent_section: str | None = None
-    path: list[str] = field(default_factory=list)
-    chunk_indexes: list[int] = field(default_factory=list)
-
-
-@dataclass
-class StructuredDocument:
-    """结构化文档：保留完整语义元数据的中间结构
-
-    替代纯 Markdown 方案，保留章节层级、模板、插槽等信息，
-    供向量化时进行去噪和上下文重组。
-    """
-
-    file_id: str
-    filename: str
-    chunks: list[dict[str, Any]]
-    sections: list[dict[str, Any]]
-    industry: str = ""
-    report_type: str = ""
-    standard_code: str = ""
-    metadata: dict[str, Any] = field(default_factory=dict)
-
-
 import aiofiles
-
 from yuxi.config import get_user_data_dir
+from yuxi.config.options import domain_factory_llm_opts, system_options
 from yuxi.models.chat import select_model
-from yuxi.config.options import system_options
 from yuxi.repositories.domain_factory_repository import DomainFactoryRepository
 from yuxi.services.entity_meta_service import EntityMetaAdapter, EntityMetaMatcher, SlotEntityMapper
 from yuxi.services.task_service import TaskContext, tasker
 from yuxi.utils import hashstr
 from yuxi.utils.datetime_utils import utc_isoformat
 from yuxi.utils.logging_config import logger
-
 
 # ---------------------------------------------------------------------------
 # 入库工具函数：去噪与上下文重组
@@ -227,6 +174,10 @@ class DomainFactoryService:
     PROVIDER_RETRY_MAX: ClassVar[int] = 3  # provider 类错误指数退避重试次数（2/4/8s）
     JSON_RETRY_MAX: ClassVar[int] = 1  # json_parse/schema_invalid 重试次数
     RETRY_BACKOFF_BASE_SECONDS: ClassVar[float] = 2.0
+    # 单次 LLM 调用客户端超时：停滞型断供（端点不拒绝也不响应）时唯一可观测的失败信号；
+    # 取值需覆盖「串行端点 + 泛化并发」下的队尾排队等待（并发 2 × 单次 ~70s ≈ 2.5min），
+    # 再留余量取 5 分钟。2026-10-03 复盘：120s 在队尾等待场景会误杀健康调用，触发熔断误伤
+    LLM_CALL_TIMEOUT_SECONDS: ClassVar[float] = 300.0
 
     # ========== Prompt 模板管理 ==========
 
@@ -772,7 +723,6 @@ class DomainFactoryService:
         4. 校验 (WAITING_REVIEW): 等待人工审核
         """
         from yuxi.services.domain_factory_service import get_domain_factory_service
-        from yuxi.models.chat import select_model
 
         # 从持久 payload 中获取知识工厂任务 ID
         task_id = context.payload.get("task_id")
@@ -845,31 +795,21 @@ class DomainFactoryService:
                 # Phase 4：注入领域实体属性作为 Schema 变量提示，引导泛化优先匹配已有属性
                 schema_vars = await self._load_entity_schema_variables(domain_code)
 
+                # [pisuan-custom] 并发运行时可配（基础设置页「知识工厂 ETL」）；
+                # 钳制到 [1, 32]：0 值会让 Semaphore 永久阻塞
+                raw_concurrency = (await domain_factory_llm_opts.get()).get("max_concurrency")
+                try:
+                    etl_max_concurrency = max(1, min(int(raw_concurrency or 2), 32))
+                except (TypeError, ValueError):
+                    etl_max_concurrency = 2
                 gen_output = await self.generalize_paragraphs(
                     paragraphs=todo_paragraphs,
                     schema_variables=schema_vars,
                     domain_label=domain_label,
-                    max_concurrency=10,
+                    max_concurrency=etl_max_concurrency,
                 )
                 paragraph_results = gen_output["results"]
                 step_ledger.update(gen_output["stats"])
-
-                # 熔断（P0-1）：不再静默兜底，显式失败并保留现场供断点续跑
-                if step_ledger["breaker_tripped"]:
-                    await service.repo.update_task(
-                        task_id,
-                        {
-                            "source_paragraphs": paragraphs,
-                            "step_stats": step_ledger,
-                            "status": "FAILED_PROVIDER",
-                            "error_message": (
-                                f"LLM 服务连续断供（{step_ledger.get('breaker_position')}），已暂停泛化；"
-                                f"成功段落已保留，可重试触发断点续跑只补失败段"
-                            ),
-                        },
-                    )
-                    logger.error(f"ETL 任务 {task_id} 因 LLM 断供熔断终止: {step_ledger}")
-                    return {"error": "provider circuit breaker tripped", "step_stats": step_ledger}
 
                 # 将泛化结果回写到段落中
                 # 修复：para["template"] 应该是包含 generalized、slots 等字段的对象，而不是字符串
@@ -919,6 +859,24 @@ class DomainFactoryService:
                         generalized_count += 1
 
                 logger.info(f"段落级泛化完成: 成功 {generalized_count}/{len(todo_paragraphs)} 个参数型段落")
+
+                # 熔断（P0-1 / bug-342）：必须在回写之后再持久化，否则已成功模板全部丢失，
+                # 断点续跑退化为整卷重跑
+                if step_ledger["breaker_tripped"]:
+                    await service.repo.update_task(
+                        task_id,
+                        {
+                            "source_paragraphs": paragraphs,
+                            "step_stats": step_ledger,
+                            "status": "FAILED_PROVIDER",
+                            "error_message": (
+                                f"LLM 服务连续断供（{step_ledger.get('breaker_position')}），已暂停泛化；"
+                                f"成功段落已保留，可重试触发断点续跑只补失败段"
+                            ),
+                        },
+                    )
+                    logger.error(f"ETL 任务 {task_id} 因 LLM 断供熔断终止: {step_ledger}")
+                    return {"error": "provider circuit breaker tripped", "step_stats": step_ledger}
             except Exception as para_error:
                 logger.warning(f"段落级泛化失败: {para_error}")
 
@@ -929,7 +887,7 @@ class DomainFactoryService:
                     narrative_results = await self._extract_narrative_summaries(
                         narrative_paragraphs,
                         domain_label,
-                        max_concurrency=10,
+                        max_concurrency=etl_max_concurrency,
                     )
                     summarized = 0
                     for para in narrative_paragraphs:
@@ -1851,7 +1809,6 @@ class DomainFactoryService:
 
     def extract_formula(self, para: dict) -> dict | None:
         """提取公式结构 + 变量映射"""
-        import re as _re
 
         content = para.get("content", "")
         if not content:
@@ -2015,7 +1972,6 @@ class DomainFactoryService:
 
     def extract_legal_references(self, paragraphs: list[dict]) -> list[dict]:
         """从 legal_reference 类型段落中提取结构化法律引用"""
-        import re as _re
 
         results = []
         for para in paragraphs:
@@ -2137,7 +2093,6 @@ class DomainFactoryService:
 
     def _infer_authority(self, name: str, code: str) -> str:
         """推断制定机关"""
-        import re as _re
 
         if "中华人民共和国" in name:
             return "全国人大"
@@ -2454,7 +2409,6 @@ class DomainFactoryService:
 
     def _extract_table_schemas(self, paragraphs: list[dict]) -> int:
         """对 table 类型段落提取列定义模板（含列角色判定）"""
-        import re as _re
 
         count = 0
         for para in paragraphs:
@@ -3284,7 +3238,7 @@ class DomainFactoryService:
         self,
         paragraphs: list[dict],
         domain_label: str = "",
-        max_concurrency: int = 10,
+        max_concurrency: int = 2,
     ) -> dict[str, dict]:
         """对叙述型段落批量提取摘要"""
         import asyncio
@@ -3331,8 +3285,16 @@ class DomainFactoryService:
                         "original": content,
                     }
 
-        tasks = [_summarize_one(p) for p in paragraphs]
-        results = await asyncio.gather(*tasks)
+        total = len(paragraphs)
+        progress = {"done": 0}
+
+        async def _tracked(para: dict) -> tuple[str, dict]:
+            result = await _summarize_one(para)
+            progress["done"] += 1
+            logger.info(f"叙述摘要进度 [{progress['done']}/{total}] 段落 {result[0]}")
+            return result
+
+        results = await asyncio.gather(*(_tracked(p) for p in paragraphs))
         return dict(results)
 
     @staticmethod
@@ -3368,7 +3330,7 @@ class DomainFactoryService:
         paragraphs: list[dict[str, Any]],
         schema_variables: list[dict[str, Any]],
         domain_label: str = "通用",
-        max_concurrency: int = 10,
+        max_concurrency: int = 2,  # 兜底默认：串行端点安全值；流水线运行时从 domain_factory_llm 配置读取
     ) -> dict[str, Any]:
         """对分片后的段落逐一进行模板泛化，并产出 StepOutcome 质量台账（[pisuan-custom] ETL P0-1）
 
@@ -3407,6 +3369,7 @@ class DomainFactoryService:
         # 都证明链路存活、清零；仅 provider 类错误累加（兜底不是 provider 故障，不触发熔断）
         provider_streak = {"count": 0}
         _breaker_context = [""]
+        progress = {"done": 0}  # 已完成 LLM 泛化的段落数（用于 [done/total] 进度日志）
         results: dict[str, dict[str, Any]] = {}
 
         if not paragraphs:
@@ -3512,6 +3475,11 @@ class DomainFactoryService:
                 _breaker_context[0] = f"段落 {para_id}（章节 {chapter_hint or '未知'}）"
                 resp, outcome = await self._generalize_text_tracked(text[:1200], chapter_hint, prompt=prompt)
                 _record_outcome(outcome)
+                progress["done"] += 1
+                logger.info(
+                    f"泛化进度 [{progress['done']}/{len(paragraphs)}]"
+                    f" {outcome['status']} 段落 {para_id}（章节 {chapter_hint or '未知'}）"
+                )
                 if resp is not None:
                     results[para_id] = resp
 
@@ -3624,20 +3592,27 @@ class DomainFactoryService:
         while attempts < max_attempts:
             attempts += 1
             try:
-                response = await model.call(prompt)
+                # P0.1（bug-340）：停滞型断供没有异常可分类，必须由客户端超时兜底，
+                # 否则全部在途调用静默挂死，StepOutcome 与熔断同时失效
+                async with asyncio.timeout(self.LLM_CALL_TIMEOUT_SECONDS):
+                    response = await model.call(prompt)
                 response_text = response.content if hasattr(response, "content") else str(response)
                 return response_text, {"error_type": None, "attempts": attempts}
-            except Exception as exc:
-                error_type = self._classify_llm_error(exc)
-                if error_type not in self.PROVIDER_ERROR_TYPES or attempts >= max_attempts:
-                    logger.warning(f"LLM 调用失败（{error_type}，不再重试）: {exc}")
-                    return None, {"error_type": error_type, "attempts": attempts}
-                backoff = self.RETRY_BACKOFF_BASE_SECONDS * (2 ** (attempts - 1))
-                logger.warning(
-                    f"LLM provider 类错误（{error_type}），{backoff:.0f}s 后重试 "
-                    f"({attempts}/{self.PROVIDER_RETRY_MAX}): {exc}"
-                )
-                await asyncio.sleep(backoff)
+            except TimeoutError:
+                error_type = "timeout"
+                exc: Exception = TimeoutError(f"LLM 调用超过 {self.LLM_CALL_TIMEOUT_SECONDS:.0f}s 未响应")
+            except Exception as call_exc:
+                error_type = self._classify_llm_error(call_exc)
+                exc = call_exc
+            if error_type not in self.PROVIDER_ERROR_TYPES or attempts >= max_attempts:
+                logger.warning(f"LLM 调用失败（{error_type}，不再重试）: {exc}")
+                return None, {"error_type": error_type, "attempts": attempts}
+            backoff = self.RETRY_BACKOFF_BASE_SECONDS * (2 ** (attempts - 1))
+            logger.warning(
+                f"LLM provider 类错误（{error_type}），{backoff:.0f}s 后重试 "
+                f"({attempts}/{self.PROVIDER_RETRY_MAX}): {exc}"
+            )
+            await asyncio.sleep(backoff)
         return None, {"error_type": "other", "attempts": attempts}  # pragma: no cover
 
     async def _generalize_text_tracked(
@@ -4161,9 +4136,9 @@ class DomainFactoryService:
         }
 
         # 写入 DB
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        report["summary"]["checked_at"] = datetime.now(timezone.utc).isoformat()
+        report["summary"]["checked_at"] = datetime.now(UTC).isoformat()
         await self.repo.update_task(task_id, {"validation_report": report})
 
         return report
@@ -4456,11 +4431,10 @@ class DomainFactoryService:
 
         流水线阶段：
         1. 准备 (PREPARING): 更新任务状态为 COMMITTED
-        2. 同步 (SYNCING): 将结构化数据通过去噪+上下文重组写入知识库
+        2. 同步 (SYNCING): 通过 manager.index_file 以 Markdown 方案写入知识库
         3. 完成 (COMPLETING): 完成入库
 
-        入库策略：优先使用结构化入库（保留章节元数据、去噪、上下文重组），
-        若知识库实例不支持 _ingest_structured_document 则回退到 Markdown 方案。
+        入库策略：Markdown 方案（ragflow_like 切块）；LightRAG 结构化入库已随 v0.7.0 退役。[pisuan-custom]
         """
         from yuxi.services.domain_factory_service import get_domain_factory_service
 
@@ -4473,6 +4447,21 @@ class DomainFactoryService:
             return {"error": "task_id not found"}
 
         service = get_domain_factory_service()
+
+        # [pisuan-custom] D6: a commit without a target knowledge base would silently
+        # skip ingestion and end up COMMITTED with nothing indexed. Fail fast and keep
+        # the task in WAITING_REVIEW so the reviewer can pick a KB and resubmit.
+        if not knowledge_base_id:
+            message = "未指定目标知识库(knowledge_base_id)，已拒绝提交；请在审核工作台选择目标知识库后重新提交"
+            await service.repo.update_task(task_id, {"error_message": message})
+            await context.set_progress(100.0, "提交中止: 未指定目标知识库")
+            await context.set_message("提交中止: 未指定目标知识库")
+            return {
+                "task_id": task_id,
+                "status": "WAITING_REVIEW",
+                "error": message,
+                "message": "提交中止: 未指定目标知识库",
+            }
 
         # ========== 提交前校验关卡 ==========
         await context.set_progress(2.0, "正在校验数据...")
@@ -4513,8 +4502,8 @@ class DomainFactoryService:
             kb_ingested = False
             if knowledge_base_id:
                 try:
-                    from yuxi.knowledge.runtime import knowledge_base as kb_manager
                     from yuxi.knowledge.base import FileStatus
+                    from yuxi.knowledge.runtime import knowledge_base as kb_manager
 
                     await context.set_progress(40.0, "正在组装入库内容...")
                     await context.set_message("正在组装入库内容...")
@@ -4563,37 +4552,12 @@ class DomainFactoryService:
                     await context.set_progress(50.0, "正在写入知识库...")
                     await context.set_message("正在写入知识库...")
 
-                    # 3. 优先使用结构化入库（去噪 + 上下文重组）
-                    if hasattr(kb_instance, "_ingest_structured_document"):
-                        structured_doc = self._build_structured_document(task_detail, file_id, file_name)
-                        rag = await kb_instance._get_lightrag_instance(knowledge_base_id)
-                        if rag:
-                            await kb_instance._ingest_structured_document(
-                                rag=rag,
-                                db_id=knowledge_base_id,
-                                file_id=file_id,
-                                file_path=f"domain_factory/{task_id}/{file_name}",
-                                structured_doc=structured_doc,
-                            )
-                            # 更新文件状态为 INDEXED
-                            kb_instance.files_meta[file_id]["status"] = FileStatus.INDEXED
-                            kb_instance.files_meta[file_id]["updated_at"] = utc_isoformat()
-                            if reviewer:
-                                kb_instance.files_meta[file_id]["updated_by"] = reviewer
-                            await kb_instance._persist_file(file_id)
-                            logger.info(
-                                f"结构化入库完成: {task_id} -> {knowledge_base_id}, "
-                                f"file_id={file_id}, chunks={len(structured_doc.chunks)}"
-                            )
-                            kb_ingested = True
-                        else:
-                            raise ValueError(f"获取 LightRAG 实例失败: {knowledge_base_id}")
-                    else:
-                        # 回退到标准 Markdown 入库
-                        logger.info("知识库实例不支持结构化入库，回退到 Markdown 方案")
-                        await kb_manager.index_file(knowledge_base_id, file_id, operator_id=reviewer)
-                        logger.info(f"Markdown 入库完成: {task_id} -> {knowledge_base_id}, file_id={file_id}")
-                        kb_ingested = True
+                    # 3. [pisuan-custom] Markdown ingestion only: the structured LightRAG
+                    # path was retired in v0.7.0; every KB implementation goes through
+                    # manager.index_file (ragflow-like chunking).
+                    await kb_manager.index_file(knowledge_base_id, file_id, operator_id=reviewer)
+                    logger.info(f"Markdown 入库完成: {task_id} -> {knowledge_base_id}, file_id={file_id}")
+                    kb_ingested = True
 
                 except Exception as e:
                     logger.error(f"入库知识库失败: {e}")
@@ -4633,6 +4597,11 @@ class DomainFactoryService:
                 logger.warning(f"slot 校验失败(不阻断入库): {e}")
 
             # ========== 阶段2.5: 构建知识图谱 ==========
+            # [pisuan-custom] D2: pipeline_status/partial_errors are initialized here
+            # (not at stage 2.8) so graph-build degradation can be recorded as
+            # COMMIT_PARTIAL instead of being logged as a false success.
+            pipeline_status = "COMMITTED"
+            partial_errors: list[str] = []
             await context.set_progress(80.0, "正在构建知识图谱...")
             await context.set_message("正在构建知识图谱...")
 
@@ -4658,7 +4627,20 @@ class DomainFactoryService:
                             task_detail.get("report_type_code") or ""
                         ),
                     )
-                    logger.info(f"知识图谱构建完成: {graph_stats}")
+                    # [pisuan-custom] D2: GraphBuilder degrades internally — Neo4j
+                    # connection failure returns {"skipped": True} and write errors are
+                    # folded into {"error": ...} instead of raising — so inspect the
+                    # returned dict rather than assuming success.
+                    if graph_stats.get("skipped"):
+                        logger.warning(f"图谱构建跳过(Neo4j 不可用): {task_id}")
+                        pipeline_status = "COMMIT_PARTIAL"
+                        partial_errors.append("图谱构建跳过: Neo4j 连接失败")
+                    elif graph_stats.get("error"):
+                        logger.error(f"图谱构建失败: {graph_stats['error']}")
+                        pipeline_status = "COMMIT_PARTIAL"
+                        partial_errors.append(f"图谱构建失败: {graph_stats['error']}")
+                    else:
+                        logger.info(f"知识图谱构建完成: {graph_stats}")
                     graph_builder.close()
                 else:
                     logger.warning(f"任务 {task_id} 无 source_paragraphs，跳过图谱构建")
@@ -4678,8 +4660,6 @@ class DomainFactoryService:
                 }
 
             # ========== 阶段2.8: 模板回流 (LEARNED TEMPLATES) ==========
-            pipeline_status = "COMMITTED"
-            partial_errors: list[str] = []
             try:
                 await context.set_progress(90.0, "正在回写学习模板...")
                 await context.set_message("正在回写学习模板...")
@@ -4704,9 +4684,6 @@ class DomainFactoryService:
                 logger.warning(f"章节大纲产出失败(标记PARTIAL): {e}")
                 pipeline_status = "COMMIT_PARTIAL"
                 partial_errors.append(f"大纲产出失败: {e}")
-
-            if not knowledge_base_id:
-                logger.warning(f"任务 {task_id} 未指定目标知识库，跳过入库")
 
             # ========== 阶段2.10: 跨报告知识合并 (MERGE) ==========
             try:
@@ -4841,233 +4818,6 @@ class DomainFactoryService:
                     parts.append(f"| {name} | {desc} | {source} |")
 
         return "\n".join(parts)
-
-    def _build_structured_document(
-        self, task_detail: dict[str, Any], file_id: str, filename: str
-    ) -> StructuredDocument:
-        """将任务详情构建为 StructuredDocument，保留完整语义元数据
-
-        每个段落（source_paragraphs）对应一个 chunk，保留章节层级和模板信息，
-        供 _ingest_structured_document 进行去噪和上下文重组。
-        """
-        chunks: list[dict[str, Any]] = []
-        sections: list[dict[str, Any]] = []
-        chunk_idx = 0
-
-        # 从任务详情中提取行业和报告类型
-        domain_label = task_detail.get("domain_label", "")
-        document_type = task_detail.get("document_type", "")
-
-        # 从 base_info 中尝试获取更准确的行业信息
-        base_info = task_detail.get("base_info", {})
-        industry = base_info.get("行业", base_info.get("Industry", domain_label))
-        report_type = base_info.get("报告类型", base_info.get("Report_Type", document_type))
-
-        # 构建基础信息 chunk（将基础信息作为第一个 chunk）
-        if base_info:
-            info_lines: list[str] = []
-            for key, value in base_info.items():
-                if key.startswith("_") or value is None:
-                    continue
-                info_lines.append(f"{key}: {value}")
-            if info_lines:
-                chunks.append(
-                    {
-                        "id": f"{file_id}_info",
-                        "content": "\n".join(info_lines),
-                        "chunk_order_index": chunk_idx,
-                        "section_id": "base_info",
-                        "section_title": "基础信息",
-                        "parent_section_title": "",
-                        "template": None,
-                        "slots": None,
-                    }
-                )
-                sections.append(
-                    {
-                        "section_id": "base_info",
-                        "title": "基础信息",
-                        "level": 1,
-                        "order": 0,
-                        "parent_section": None,
-                        "path": ["基础信息"],
-                        "chunk_indexes": [chunk_idx],
-                    }
-                )
-                chunk_idx += 1
-
-        # 构建段落 chunks（公式段落跳过，由下方的公式 chunk 专门处理）
-        paragraphs = task_detail.get("source_paragraphs", [])
-        for para in paragraphs:
-            if para.get("classify_type") == "formula":
-                continue
-            title = para.get("title", "")
-            content = para.get("content", "")
-            section_path = para.get("section_path", [])
-
-            # 将内容转为纯文本（去除 HTML 标记）
-            plain_content = re.sub(r"<[^>]+>", "", content) if content else ""
-
-            # 段落正文 chunk
-            if plain_content:
-                section_id = para.get("section_id", f"sec_{chunk_idx}")
-
-                # 先临时填入 section_path[-2] 作为父级 ID，后面回填标题
-                parent_section_id = (
-                    ".".join(str(p) for p in section_path[:-1]) if section_path and len(section_path) > 1 else ""
-                )
-
-                chunks.append(
-                    {
-                        "id": f"{file_id}_chunk_{chunk_idx}",
-                        "content": plain_content,
-                        "chunk_order_index": chunk_idx,
-                        "section_id": section_id,
-                        "section_title": title,
-                        "parent_section_title": "",
-                        "parent_section_id": parent_section_id,
-                        "template": para.get("template"),
-                        "slots": para.get("template", {}).get("slots")
-                        if isinstance(para.get("template"), dict)
-                        else None,
-                    }
-                )
-
-                # 记录章节
-                level = min(len(section_path), 4) if section_path else 2
-                sections.append(
-                    {
-                        "section_id": section_id,
-                        "title": title,
-                        "level": level,
-                        "order": chunk_idx,
-                        "parent_section": parent_section_id or None,
-                        "path": [str(p) for p in section_path] if section_path else [title],
-                        "chunk_indexes": [chunk_idx],
-                    }
-                )
-                chunk_idx += 1
-
-        # 构建公式 chunks — 公式段落单独建 chunk，包含变量映射 + 图谱 FormulaTemplate 引用
-        for para in paragraphs:
-            if para.get("classify_type") != "formula":
-                continue
-            tmpl = para.get("template") or {}
-            formula_data = tmpl.get("formula")
-            if not isinstance(formula_data, dict):
-                continue
-
-            original = formula_data.get("original", "")
-            purpose = formula_data.get("purpose", "")
-            variables = formula_data.get("variables", [])
-            formula_id = f"FORMULA_{hashstr(original[:200], 12)}"
-
-            # 构建可检索文本：公式表达式 + 变量映射 + 用途
-            lines = [original]
-            if purpose:
-                lines.append(f"用途: {purpose}")
-            if variables:
-                var_descs = []
-                for v in variables:
-                    sym = v.get("symbol", "")
-                    name = v.get("name", sym)
-                    unit = v.get("unit", "")
-                    unit_str = f"({unit})" if unit else ""
-                    entity = v.get("entity_ref", "")
-                    entity_str = f" [{entity}]" if entity else ""
-                    var_descs.append(f"{sym} = {name}{unit_str}{entity_str}")
-                lines.append("变量: " + "; ".join(var_descs))
-
-            chunks.append(
-                {
-                    "id": f"{file_id}_formula_{chunk_idx}",
-                    "content": "\n".join(lines),
-                    "chunk_order_index": chunk_idx,
-                    "section_id": f"formula_{para.get('id', chunk_idx)}",
-                    "section_title": para.get("title", "公式"),
-                    "parent_section_title": "",
-                    "template": tmpl,
-                    "slots": tmpl.get("slots"),
-                    "formula_template_id": formula_id,
-                }
-            )
-            chunk_idx += 1
-
-        # 构建表格 chunks
-        structured_blocks = task_detail.get("structured_blocks", [])
-        for block in structured_blocks:
-            headers = block.get("headers", [])
-            rows = block.get("rows", [])
-            if headers and rows:
-                # 将表格序列化为文本
-                table_lines = [" | ".join(str(h) for h in headers)]
-                table_lines.append(" | ".join("---" for _ in headers))
-                for row in rows:
-                    table_lines.append(" | ".join(str(c) for c in row))
-
-                chunks.append(
-                    {
-                        "id": f"{file_id}_tbl_{chunk_idx}",
-                        "content": "\n".join(table_lines),
-                        "chunk_order_index": chunk_idx,
-                        "section_id": block.get("section_id", ""),
-                        "section_title": block.get("title", "结构化表格"),
-                        "parent_section_title": "",
-                        "template": None,
-                        "slots": None,
-                    }
-                )
-                chunk_idx += 1
-
-        # 构建 section_id -> section 映射，回填 parent_section_title 和 section summary
-        section_map = {s["section_id"]: s for s in sections}
-        for chunk in chunks:
-            pid = chunk.pop("parent_section_id", "")
-            if pid and pid in section_map:
-                chunk["parent_section_title"] = section_map[pid]["title"]
-        for section in sections:
-            if not section.get("summary") and section.get("chunk_indexes"):
-                first_idx = section["chunk_indexes"][0]
-                if first_idx < len(chunks):
-                    section["summary"] = chunks[first_idx].get("content", "")[:200]
-
-        return StructuredDocument(
-            file_id=file_id,
-            filename=filename,
-            chunks=chunks,
-            sections=sections,
-            industry=industry,
-            report_type=report_type,
-            standard_code="",
-            metadata={
-                "domain_label": domain_label,
-                "document_type": document_type,
-                "task_id": task_detail.get("task_id", ""),
-            },
-        )
-
-    async def _increment_learned_template_match_counts(self, paragraphs: list[dict]) -> None:
-        """ETL 匹配阶段后，对被命中的学习模板累加 match_count"""
-        learned_ids: set[int] = set()
-        for para in paragraphs:
-            tpl_id = (para.get("template_match") or {}).get("template_id", "")
-            if tpl_id.startswith("learned_"):
-                try:
-                    learned_ids.add(int(tpl_id.removeprefix("learned_")))
-                except ValueError:
-                    pass
-        if not learned_ids:
-            return
-        from sqlalchemy import text as sa_text
-
-        async with pg_manager.get_async_session_context() as session:
-            await session.execute(
-                sa_text(
-                    "UPDATE domain_factory_learned_templates SET match_count = match_count + 1 WHERE id = ANY(:ids)"
-                ),
-                {"ids": list(learned_ids)},
-            )
-        logger.info(f"学习模板 match_count 更新: {learned_ids}")
 
     @staticmethod
     def _group_assets_by_chapter(task_detail: dict) -> dict[str, dict]:
@@ -5732,7 +5482,7 @@ class DomainFactoryService:
         return result
 
     async def _reingest_pipeline_async(self, context) -> dict[str, Any]:
-        """再入库流水线异步执行 - 使用结构化入库逻辑"""
+        """再入库流水线异步执行 - Markdown 方案入库（LightRAG 结构化入库已退役）[pisuan-custom]"""
         from yuxi.services.domain_factory_service import get_domain_factory_service
 
         task_id = context.payload.get("task_id")
@@ -5763,8 +5513,8 @@ class DomainFactoryService:
                 await context.set_progress(30.0, "正在组装入库内容...")
                 await context.set_message("正在组装入库内容...")
 
-                from yuxi.knowledge.runtime import knowledge_base as kb_manager
                 from yuxi.knowledge.base import FileStatus
+                from yuxi.knowledge.runtime import knowledge_base as kb_manager
 
                 ingest_markdown = self._build_ingest_markdown(task_detail)
 
@@ -5811,32 +5561,9 @@ class DomainFactoryService:
                 await context.set_progress(50.0, "正在写入知识库...")
                 await context.set_message("正在写入知识库...")
 
-                # 3. 优先使用结构化入库
-                if hasattr(kb_instance, "_ingest_structured_document"):
-                    structured_doc = self._build_structured_document(task_detail, file_id, file_name)
-                    rag = await kb_instance._get_lightrag_instance(knowledge_base_id)
-                    if rag:
-                        await kb_instance._ingest_structured_document(
-                            rag=rag,
-                            db_id=knowledge_base_id,
-                            file_id=file_id,
-                            file_path=f"domain_factory/reingest_{task_id}/{file_name}",
-                            structured_doc=structured_doc,
-                        )
-                        kb_instance.files_meta[file_id]["status"] = FileStatus.INDEXED
-                        kb_instance.files_meta[file_id]["updated_at"] = utc_isoformat()
-                        await kb_instance._persist_file(file_id)
-                        logger.info(
-                            f"结构化再入库完成: {task_id} -> {knowledge_base_id}, "
-                            f"file_id={file_id}, chunks={len(structured_doc.chunks)}"
-                        )
-                    else:
-                        raise ValueError(f"获取 LightRAG 实例失败: {knowledge_base_id}")
-                else:
-                    # 回退到标准 Markdown 入库
-                    logger.info("知识库实例不支持结构化入库，回退到 Markdown 方案")
-                    await kb_manager.index_file(knowledge_base_id, file_id)
-                    logger.info(f"再入库成功: {task_id} -> 知识库 {knowledge_base_id}, file_id={file_id}")
+                # 3. [pisuan-custom] Markdown ingestion only (structured LightRAG path retired).
+                await kb_manager.index_file(knowledge_base_id, file_id)
+                logger.info(f"再入库成功: {task_id} -> 知识库 {knowledge_base_id}, file_id={file_id}")
             else:
                 logger.warning(f"再入库任务 {task_id} 未指定目标知识库，跳过入库")
 
@@ -6897,6 +6624,26 @@ async def run_domain_factory_ingest(context: TaskContext) -> dict[str, Any]:
 async def run_domain_factory_reingest(context: TaskContext) -> dict[str, Any]:
     """任务中心 Handler：知识工厂重新入库。"""
     return await get_domain_factory_service()._reingest_pipeline_async(context)
+
+
+async def fail_domain_factory_etl(session, task_record, error: str) -> None:
+    """任务失败收敛（[pisuan-custom] P0.1 / bug-341）：durable 层失败时把执行态残留的 ETL 任务落为 FAILED。
+
+    未注册 failure handler 时，lease 过期/任务取消只会终结 durable 记录，
+    domain 行会永久停留在 GENERALIZING（僵尸态），用户既看不到失败也无法重试。
+    """
+    from sqlalchemy import select
+    from yuxi.storage.postgres.models_domain_factory import DomainFactoryTask
+
+    task_id = (task_record.payload or {}).get("task_id")
+    if not task_id:
+        return
+    task = await session.scalar(select(DomainFactoryTask).where(DomainFactoryTask.id == task_id).with_for_update())
+    if task is None or task.status not in ("UPLOADED", "PARSING", "GENERALIZING"):
+        return  # 已进入 WAITING_REVIEW/提交链等后续状态的，不覆盖既有结果
+    task.status = "FAILED"
+    task.error_message = f"任务执行中断（durable 收敛）：{error}"
+    logger.warning(f"ETL 任务 {task_id} 执行态残留，durable 收敛落为 FAILED: {error}")
 
 
 def _build_form_schema(variables: list[dict[str, Any]], snapshot: dict[str, Any] | None) -> list[dict[str, Any]]:

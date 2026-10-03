@@ -48,6 +48,21 @@
               </div>
             </div>
           </div>
+          <div class="setting-row">
+            <div class="setting-label">知识工厂 ETL 泛化并发数</div>
+            <div class="setting-content etl-concurrency">
+              <a-input-number
+                v-model:value="etlConcurrency"
+                :min="1"
+                :max="32"
+                :precision="0"
+                style="width: 120px"
+                @pressEnter="saveEtlConcurrency"
+                @blur="saveEtlConcurrency"
+              />
+              <span class="etl-concurrency-hint">同时进行的泛化 LLM 调用数：串行本地模型建议 2，云端高速模型可调大，下一次运行生效</span>
+            </div>
+          </div>
         </div>
       </template>
 
@@ -122,10 +137,12 @@
 </template>
 
 <script setup>
-import { computed, h } from 'vue'
+import { computed, h, onMounted, ref } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import { useUserStore } from '@/stores/user'
+import { message } from 'ant-design-vue'
 import { Globe } from '@lucide/vue'
+import { configOptionsApi } from '@/apis/system_api'
 import ModelSelectorComponent from '@/components/ModelSelectorComponent.vue'
 import EmbeddingModelSelector from '@/components/EmbeddingModelSelector.vue'
 import RerankModelSelector from '@/components/RerankModelSelector.vue'
@@ -153,6 +170,33 @@ const handleFastModelSelect = (spec) => {
 const openLink = (url) => {
   window.open(url, '_blank')
 }
+
+const ETL_CONCURRENCY_KEY = 'domain_factory_llm'
+const etlConcurrency = ref(2)
+
+const loadEtlConcurrency = async () => {
+  try {
+    const data = await configOptionsApi.getOptions()
+    const option = (data.options || []).find((item) => item.key === ETL_CONCURRENCY_KEY)
+    const parsed = parseInt(option?.value?.max_concurrency, 10)
+    if (!Number.isNaN(parsed)) etlConcurrency.value = parsed
+  } catch {
+    // 读取失败保持默认值，不阻塞设置页
+  }
+}
+
+const saveEtlConcurrency = async () => {
+  const target = Math.min(32, Math.max(1, Math.round(etlConcurrency.value || 2)))
+  etlConcurrency.value = target
+  try {
+    await configOptionsApi.updateOption(ETL_CONCURRENCY_KEY, { max_concurrency: target })
+    message.success('知识工厂 ETL 并发数已保存')
+  } catch {
+    message.error('保存失败，请稍后重试')
+  }
+}
+
+onMounted(loadEtlConcurrency)
 </script>
 
 <style lang="less" scoped>
@@ -165,6 +209,17 @@ const openLink = (url) => {
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+
+  .etl-concurrency {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .etl-concurrency-hint {
+    font-size: 12px;
+    color: var(--gray-500);
   }
 
   .setting-row {

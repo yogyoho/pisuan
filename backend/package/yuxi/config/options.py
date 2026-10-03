@@ -223,6 +223,25 @@ remote_skill_source_policy = Option(
     },
 )
 
+# [pisuan-custom] 知识工厂 ETL 的 LLM 调用参数：泛化并发需随端点能力调整
+# （串行本地模型如 llama.cpp 建议 2，云端高速模型可调大），故开放为管理员配置。
+domain_factory_llm_opts = Option(
+    key="domain_factory_llm",
+    name="知识工厂 ETL",
+    description="领域知识工厂 ETL 的 LLM 调用参数。",
+    params={
+        "fields": [
+            {
+                "key": "max_concurrency",
+                "label": "泛化并发数",
+                "type": "str",
+                "default": 2,
+                "help": "同时进行的泛化 LLM 调用数：串行本地模型建议 2；云端高速模型可调大。下一次运行即生效。",
+            }
+        ]
+    },
+)
+
 OPTION_DEFINITIONS = {
     option.key: option
     for option in (
@@ -231,6 +250,7 @@ OPTION_DEFINITIONS = {
         pp_structure_v3_ocr_host_opts,
         paddleocr_api_opts,
         remote_skill_source_policy,
+        domain_factory_llm_opts,
         system_options,
     )
 }
