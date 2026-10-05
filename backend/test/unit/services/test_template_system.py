@@ -332,3 +332,72 @@ class TestTemplateMatcher:
         # 应该回退到关键词匹配
         assert result.matched is True
         assert result.confidence == 0.6
+
+
+# ------------------------------------------------------------------
+# bug-359: 学习模板 match_rule 注入与匹配
+# ------------------------------------------------------------------
+
+
+def _learned_row(overrides: dict | None = None) -> dict:
+    """构造一条与 repo.list_learned_templates 返回形态一致的学习模板行"""
+    row = {
+        "id": 42,
+        "chapter": "6.3.1.1 建设期水环境影响分析",
+        "generalized": "受采动影响，{{数值}} 范围内…",
+        "domain_code": "coal",
+        "source_count": 3,
+        "slots": [],
+        "extra_meta": {},
+    }
+    if overrides:
+        row.update(overrides)
+    return row
+
+
+def test_add_templates_from_list_generates_fallback_keywords(tmp_path):
+    lib = TemplateLibrary(tmp_path / "none")
+    lib.add_templates_from_list([_learned_row()])
+    tpl = lib.templates["learned_42"]
+    assert tpl["match_rule"]["fallback_keywords"] == ["建设期水环境影响分析"]
+
+
+def test_add_templates_from_list_strips_numbering_variants(tmp_path):
+    lib = TemplateLibrary(tmp_path / "none")
+    lib.add_templates_from_list(
+        [
+            _learned_row({"id": 1, "chapter": "1.2.2 法律、法规"}),
+            _learned_row({"id": 2, "chapter": "5地表沉陷对建构筑物和水体影响预测评价"}),
+        ]
+    )
+    assert lib.templates["learned_1"]["match_rule"]["fallback_keywords"] == ["法律、法规"]
+    assert lib.templates["learned_2"]["match_rule"]["fallback_keywords"] == ["地表沉陷对建构筑物和水体影响预测评价"]
+
+
+def test_add_templates_from_list_skips_empty_stripped_chapter(tmp_path):
+    lib = TemplateLibrary(tmp_path / "none")
+    lib.add_templates_from_list(
+        [
+            _learned_row({"id": 3, "chapter": "1"}),
+            _learned_row({"id": 4, "chapter": ""}),
+        ]
+    )
+    assert "match_rule" not in lib.templates["learned_3"]
+    assert "match_rule" not in lib.templates["learned_4"]
+
+
+def test_learned_template_matches_numbered_title(tmp_path):
+    lib = TemplateLibrary(tmp_path / "none")
+    lib.add_templates_from_list([_learned_row()])
+    matcher = TemplateMatcher(lib.get_all_templates())
+    result = matcher.match("5.1 建设期水环境影响分析", context={"domain": "coal"})
+    assert result.matched
+    assert result.template_id == "learned_42"
+
+
+def test_learned_template_rejects_domain_mismatch_and_other_title(tmp_path):
+    lib = TemplateLibrary(tmp_path / "none")
+    lib.add_templates_from_list([_learned_row()])
+    matcher = TemplateMatcher(lib.get_all_templates())
+    assert not matcher.match("5.1 建设期水环境影响分析", context={"domain": "chem"}).matched
+    assert not matcher.match("5.1 施工期噪声影响分析", context={"domain": "coal"}).matched
