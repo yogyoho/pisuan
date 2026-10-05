@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -131,6 +132,12 @@ class TemplateLibrary:
                 "routing": tpl.get("extra_meta", {}).get("routing", ""),
                 "source": "learned",
             }
+            # bug-359: 按 chapter 生成 fallback 关键词（去编号全串），
+            # 命中语义 = 新文档标题精确再现语料标题（容忍编号差异）
+            chapter = tpl.get("chapter", "") or ""
+            stripped = re.sub(r"^[\d.、\s]+", "", chapter).strip()
+            if stripped:
+                converted["match_rule"] = {"fallback_keywords": [stripped]}
             self.templates[converted["template_id"]] = converted
 
         logger.info(f"从外部注入 {len(templates)} 个学习模板")
