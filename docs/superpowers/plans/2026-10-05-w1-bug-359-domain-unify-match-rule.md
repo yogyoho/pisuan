@@ -234,7 +234,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/sync-dev.ps1
 MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 pytest /app/test/unit/services/test_template_system.py -q --no-header 2>&1 | tail -5
 ```
 
-Expected: **5 failed**（`match_rule` KeyError / `matched` False）——红字必须是"功能缺失"型失败，其他失败形态说明环境问题，先停。
+Expected: **3 failed / 2 passed**——失败的是 1/2/4（match_rule KeyError、matched False）；测试 3/5 是守卫型断言（无 match_rule 时反向断言空转通过），红字阶段通过属预期，绿字阶段才有判别力。其他失败形态（如 import error）说明环境问题，先停。
 
 - [ ] **Step 3: 最小实现（template_library.py）**
 
@@ -309,6 +309,28 @@ asyncio.run(main())
 ```
 
 Expected: `learned=211`（或接近），`hits > 0`，`templates total` = 静态 30 + 学习注入数（静态共存证明）。冒烟前确保已跑过一次 sync-dev（Task 2 Step 4 之后无代码改动则免）。
+
+追加热核（质量评审 Minor 3，确认 DB 无遗留 coal_mining 词形）：
+
+```bash
+MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 python -c "
+import asyncio
+from sqlalchemy import select
+from pisuan.storage.postgres import pg_manager
+from pisuan.storage.postgres.models_domain_factory import DomainFactoryDomain, DomainFactoryLearnedTemplate
+
+async def main():
+    async with pg_manager.get_async_session_context() as s:
+        d = set((await s.execute(select(DomainFactoryDomain.code))).scalars().all())
+        l = set((await s.execute(select(DomainFactoryLearnedTemplate.domain_code))).scalars().all())
+        print(f'domains={d} learned_domain_codes={l}')
+        assert 'coal_mining' not in d | l, '发现遗留 coal_mining 词形'
+
+asyncio.run(main())
+"
+```
+
+Expected: 两个集合均无 `coal_mining`（domains 应含 `coal`，可能含 chem 等）。
 
 - [ ] **Step 2: changelog**
 

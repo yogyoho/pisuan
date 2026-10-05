@@ -68,7 +68,7 @@ match_rule = {"fallback_keywords": [chapter 去编号全串]}
 
 ## 6. 已知局限（本期接受）
 
-- `_get_template_matcher` 单例缓存：多领域混跑会串域（当前全库单领域 coal，无实际影响）；多领域扩展属 roadmap 后续阶段。
+- `_get_template_matcher` 结果缓存在 service 实例上；`get_domain_factory_service()` 每次返回新实例，缓存作用域 = 单次 ETL pipeline 运行 = 单任务单域，多领域混跑不会跨运行串域（质量评审实证，比初稿担忧更安全）。真正的多领域支持（模板库按域加载）仍属 roadmap 后续阶段。
 - 去编号正则不处理 "（一）" 式中文序号前缀（语料观测全为数字编号，接受）。
 - 学习模板 `slots` 仅作为元数据随 `template_match` 附带；fallback 命中路径无 named group 捕获、不触发 slots 语义锚校验，无风险。
 - 目录名 `templates/coal/` 与 DB code 一致纯属观感，加载逻辑不依赖目录名。
