@@ -284,7 +284,7 @@
 - (2026-10-05, W1/bug-359 收口) Decision Log: W1 首项终审 READY（unit 2681/0/61 复跑、冒烟 hits=200/200 对 W0 0/5 翻转、DB 热核零遗留）。累积 Minor 裁决：T2-M2（confidence==0.6 断言）/T2-M3（_learned_row 漂移守卫）与 W0-1/2 归 W2 同文件捆绑做；W0-3（set[asyncio.Task] 注解）永不主动；W0-4（32 处 ruff 旧账）仅独立 chore；W0-5 流程句已入计划 preamble。终审新发现：学习模板 converted 缺 name 键 → template_match.template_name=None（纯展示层，W2 补一行）。Do-Not-Repeat: 容器内 docker exec python 脚本默认加 -u（连接池线程挂住 + 块缓冲假死，bug-364）。
 
 ### Key Learnings（2026-10-05 bug-363 传播补缺追加）
-- sync-dev.ps1 的 $copyFiles 单件清单现已纳入 docker-compose.yml 与 docker/api.Dockerfile（commit f884d9d0）：walker 对单文件与目录同路——rewrite_text 无扩展名门槛（逐行套 STRUCTURAL+BARE 规则，与官方改名链同一函数），localized 产出按构造一致。部署面改动不再绕行官方链长链路。验证法：`git -C C:/workspace/pisuan-localized diff github/pisuan-localized -- docker-compose.yml docker/api.Dockerfile` 应只含源树新增行；出现其他差异 = rename 规则或双树漂移异常，停手核查。
+- sync-dev.ps1 的 $copyFiles 单件清单现已纳入 docker-compose.yml 与 docker/api.Dockerfile（commit 2723e3e9，原 f884d9d0）：walker 对单文件与目录同路——rewrite_text 无扩展名门槛（逐行套 STRUCTURAL+BARE 规则，与官方改名链同一函数），localized 产出按构造一致。部署面改动不再绕行官方链长链路。验证法：`git -C C:/workspace/pisuan-localized diff github/pisuan-localized -- docker-compose.yml docker/api.Dockerfile` 应只含源树新增行；出现其他差异 = rename 规则或双树漂移异常，停手核查。
 
 ### Key Learnings（2026-10-05 bug-363 清淤追加）
 - localized 树曾存 9 月 26 日旧词形 `backend/templates/coal_mining/`（含 index 暂存 R 条目）——`backend/templates` 当时不在 $syncPaths（恰因它此前不是挂载路径），热同步永不覆盖、自检 diff（口径=清单内路径）天然不可见。教训：sync-dev 的可见域 = 清单域，清单外任何漂移（陈旧目录/index 暂存）都会无声留存；新路径一旦变成挂载目标，必须同时纳入 $syncPaths 并清淤。
@@ -301,3 +301,7 @@
 - (2026-10-05) 容器内 LLM 探活用 select_model(...).call()，不用 .ainvoke（AttributeError 假报不可达）；宿主侧 kill docker exec 会在容器内留孤儿 python 进程，须 docker exec kill 清理
 - (2026-10-05) 长时间任务轮询不用 docker exec python 循环（后台输出缓冲丢失 + worker 忙时拖死），改用 postgres 容器 psql 直查状态表
 - (2026-10-05) ETL 重跑观测对象要选 2026-10 以后上传的任务（storage_path 为绝对路径）；2026-07 旧任务 retry 会因 saves/ 相对路径直接 PackageNotFoundError（bug-365）
+
+### Do-Not-Repeat（2026-10-05 bug-363 终审追加）
+- 2026-10-05: `.wolf/buglog.json` 仓库惯例是 json `indent=2`——用 python json.dump 打补丁必须 indent=2，写 indent=1 会整文件重排（5258+/5258- 的噪声提交）；amend 前被 `git show --stat` 拦下。同理一切 JSON 台账补丁：先 `git show HEAD:file | head -3` 看缩进惯例再动手，提交后必看 stat 数字是否与预期改动面相符。
+- 2026-10-05: 容器内裸 `python -u -c` + pg_manager 挂连池与 -u 无关（-u 只治输出缓冲，不治池初始化挂起）——独立 exec 查 DB 一律走 `docker exec pisuan-localized-postgres-1 psql -U postgres -d yuxi_know`；杀宿主侧 docker exec 后容器内 python 会残留孤儿（Task2 收尾时双侧 7 个），kill 后必须容器内 ps 复核。
