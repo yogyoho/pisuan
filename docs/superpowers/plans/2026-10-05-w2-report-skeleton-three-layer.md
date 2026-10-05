@@ -639,8 +639,9 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 ```bash
 python backend/scripts/render_report_skeletons.py --conditions backend/test/data/corpus_census/conditions.json --out backend/templates/coal_mining/report_skeletons/rendered --only "$(python -c "import json;d=json.load(open('backend/test/data/corpus_census/conditions.json',encoding='utf-8'))['universe'];print(next(f for f,v in d.items() if v['report_family']=='planning_eia' and v['round']=='first'))")"
-# 依次对 planning_eia(revision)、project_eia(underground)、project_eia(openpit)、post_eia、tracking_eia 各渲染一份
+# 依次对 planning_eia(first+revision)、project_eia(underground)、project_eia(openpit)、post_eia、tracking_eia 各渲染一份（共 6 份）
 # 每份产物重命名为 <stage_id>_<关键条件>.json（如 planning_eia_first.json / project_eia_underground.json）
+# optional 章渲染键 = OPT_N（小写），落 slot_id 独立命名空间——防与 canonical CH 键冲突（openpit 产物含 underground 全部 CH 键）
 git add backend/templates/coal_mining/report_skeletons/rendered/
 ```
 
@@ -650,7 +651,8 @@ git add backend/templates/coal_mining/report_skeletons/rendered/
 cd backend/package/yuxi/agents/skills/buildin/coal-eia-writer
 python scripts/seed_gen.py gen --stage "C:/workspace/pisuan/backend/templates/coal_mining/report_skeletons/rendered/planning_eia_first.json" --output /tmp/w2-seed-planning.json
 ```
-Expected: `SEED_READY: stage=...(planning_eia) chapters=13 sections=...` + `SEED_SELFCHECK` 通过（断言数 >0）。对 4 份存档各跑一次。
+Expected: `SEED_READY: stage=...(planning_eia) chapters=13 sections=...` + `SEED_SELFCHECK` 通过（断言数 >0）。完整 gen 名单 = planning_eia_first / project_eia_underground / post_eia / tracking_eia（章键与各自 depth_targets 键集完全对齐）；
+**结构断言名单** = planning_eia_revision（含 OPT_1/OPT_2 注入章）与 project_eia_openpit（含 OPT_1 爆破章）——两者章键集超出各自 depth_targets 键集，seed_gen 缺章即 FAIL 是设计行为（禁静默默认地板），v1 不为 optional 章造深度表。
 若 build_seed 因渲染产物缺字段报错：**把缺的字段加进渲染器输出**（这就是兼容契约的发现过程），在提交说明里记录「seed_gen 要求字段 X/Y/Z」，然后重跑。禁止改 seed_gen 本体。
 
 **depth_targets 对齐约束（实测确认）**：`--depth-targets` 按**矿型分文件**（`project_eia_underground.json` / `project_eia_openpit.json`，键 = stage 原章键 ch0..），seed_gen 未传时按 stage_id 推断会失配。v1 冒烟范围：
@@ -688,7 +690,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 1. `conditions.json`（38+3）+ 三层源文件（4 族 + rules + 4 份每章配置）+ 渲染器 + 适配度测试全部入库。
 2. 适配度达标：槽位 ≥34/35、章序 ≥28/35（spec §3.6 勘误后口径，见全局上下文 3），差异单全处理（豁免显式留痕）。
-3. 4 份渲染存档过 seed_gen 消费方冒烟（SEED_READY + selfcheck 断言 >0）。
+3. 6 份渲染存档：4 份过 seed_gen 完整冒烟（SEED_READY + selfcheck 断言 >0），2 份（planning revision / project openpit）过结构断言。
 4. 零运行时后端改动（`backend/package/`、`backend/server/` 无 diff）；零 LLM 调用。
 
 ## Out of scope
