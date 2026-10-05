@@ -47,8 +47,9 @@
         "round": "revision"
       },
       "require": [
-        "回顾评价"
+        "矿区开发环境影响回顾性评价"
       ],
+      "note": "require 目标绑定 canonical 全称章题（spec §3.3 抽象槽名「回顾评价」的 stage 定稿绑定）；require 语义=校验性保证在场，canonical 已含则为 no-op 留痕",
       "evidence": "修编 18/18 必含回顾性评价章"
     },
     {
