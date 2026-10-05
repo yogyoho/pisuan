@@ -297,7 +297,7 @@ backend/server/standard_code_mapping_list.json
 
 backend/scripts/import_domain_factory_data.sql
 backend/scripts/migrate_domain_factory.sql
-backend/templates/coal_mining/
+backend/templates/coal/
 ```
 
 **前端新增：**

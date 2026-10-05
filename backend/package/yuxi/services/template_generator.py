@@ -34,7 +34,7 @@ class TemplateGenerator:
         self,
         title: str,
         section_path: list[str] | None = None,
-        domain: str = "coal_mining",
+        domain: str = "coal",
     ) -> dict[str, Any] | None:
         """为未匹配的章节标题生成模板
 

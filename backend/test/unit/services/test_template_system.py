@@ -19,7 +19,7 @@ SAMPLE_TEMPLATES = [
         "template_id": "TPL_HEADER_WATER_01",
         "name": "水资源承载力分析章节",
         "category": "header",
-        "domain": "coal_mining",
+        "domain": "coal",
         "priority": 10,
         "match_rule": {
             "strategy": "regex_anchor",
@@ -58,7 +58,7 @@ SAMPLE_TEMPLATES = [
         "template_id": "TPL_HEADER_ECOLOGY_01",
         "name": "生态环境影响评价章节",
         "category": "header",
-        "domain": "coal_mining",
+        "domain": "coal",
         "priority": 90,
         "match_rule": {
             "strategy": "regex_anchor",
@@ -88,7 +88,7 @@ SAMPLE_TEMPLATES = [
 @pytest.fixture
 def template_dir(tmp_path):
     """创建临时模板目录"""
-    tpl_dir = tmp_path / "templates" / "coal_mining" / "headers"
+    tpl_dir = tmp_path / "templates" / "coal" / "headers"
     tpl_dir.mkdir(parents=True)
 
     for tpl in SAMPLE_TEMPLATES:
@@ -101,7 +101,7 @@ def template_dir(tmp_path):
 @pytest.fixture
 def template_library(template_dir):
     """创建已加载的 TemplateLibrary"""
-    lib = TemplateLibrary(template_dir / "coal_mining" / "headers")
+    lib = TemplateLibrary(template_dir / "coal" / "headers")
     lib.load_templates()
     return lib
 
@@ -120,7 +120,7 @@ def matcher():
 class TestTemplateLibrary:
     def test_load_from_directory(self, template_dir):
         """从目录加载模板"""
-        lib = TemplateLibrary(template_dir / "coal_mining" / "headers")
+        lib = TemplateLibrary(template_dir / "coal" / "headers")
         result = lib.load_templates()
         assert len(result) == 2
         assert "TPL_HEADER_WATER_01" in result
@@ -148,7 +148,7 @@ class TestTemplateLibrary:
 
     def test_caching(self, template_dir):
         """第二次调用返回缓存"""
-        lib = TemplateLibrary(template_dir / "coal_mining" / "headers")
+        lib = TemplateLibrary(template_dir / "coal" / "headers")
         r1 = lib.load_templates()
         r2 = lib.load_templates()
         assert r1 is r2
@@ -160,12 +160,12 @@ class TestTemplateLibrary:
         assert template_library.get_template("nonexistent") is None
 
     def test_get_templates_by_domain(self, template_library):
-        result = template_library.get_templates_by_domain("coal_mining")
+        result = template_library.get_templates_by_domain("coal")
         assert len(result) == 2
         assert len(template_library.get_templates_by_domain("other")) == 0
 
     def test_add_remove(self, template_dir):
-        lib = TemplateLibrary(template_dir / "coal_mining" / "headers")
+        lib = TemplateLibrary(template_dir / "coal" / "headers")
         lib.load_templates()
 
         new_tpl = {"template_id": "TPL_TEST", "name": "test", "domain": "test"}
@@ -180,7 +180,7 @@ class TestTemplateLibrary:
         stats = template_library.get_statistics()
         assert stats["total_templates"] == 2
         assert "Environmental_Impact_Prediction" in stats["categories"]
-        assert "coal_mining" in stats["domains"]
+        assert "coal" in stats["domains"]
 
     def test_missing_path(self, tmp_path):
         lib = TemplateLibrary(tmp_path / "nonexistent")
@@ -188,7 +188,7 @@ class TestTemplateLibrary:
         assert result == {}
 
     def test_save_and_load(self, template_dir, tmp_path):
-        lib = TemplateLibrary(template_dir / "coal_mining" / "headers")
+        lib = TemplateLibrary(template_dir / "coal" / "headers")
         lib.load_templates()
         output = tmp_path / "output.json"
         lib.save_templates(output)
@@ -206,7 +206,7 @@ class TestTemplateLibrary:
 class TestTemplateMatcher:
     def test_match_regex_success(self, matcher):
         """正则匹配成功"""
-        result = matcher.match("7.1 矿区水资源承载力分析", context={"domain": "coal_mining"})
+        result = matcher.match("7.1 矿区水资源承载力分析", context={"domain": "coal"})
         assert result.matched is True
         assert result.template_id == "TPL_HEADER_WATER_01"
         assert result.slots.get("chapter_id") == "7.1"
@@ -215,21 +215,21 @@ class TestTemplateMatcher:
     def test_match_higher_priority_first(self, matcher):
         """高优先级模板先匹配"""
         # "3.1 矿区生态影响评价" 可能匹配 ecology（优先级90）或 water（优先级10）
-        result = matcher.match("3.1 矿区生态环境影响评价", context={"domain": "coal_mining"})
+        result = matcher.match("3.1 矿区生态环境影响评价", context={"domain": "coal"})
         assert result.matched is True
         # ecology 模板优先级更高
         assert result.template_id == "TPL_HEADER_ECOLOGY_01"
 
     def test_match_fallback_keywords(self, matcher):
         """正则不匹配时，回退到关键词匹配"""
-        result = matcher.match("水资源综合分析报告", context={"domain": "coal_mining"})
+        result = matcher.match("水资源综合分析报告", context={"domain": "coal"})
         assert result.matched is True
         assert result.confidence == 0.6  # 关键词匹配置信度
         assert "matched_keywords" in result.slots
 
     def test_match_no_match(self, matcher):
         """不匹配的标题"""
-        result = matcher.match("噪声环境影响评价", context={"domain": "coal_mining"})
+        result = matcher.match("噪声环境影响评价", context={"domain": "coal"})
         assert result.matched is False
 
     def test_match_domain_filter(self, matcher):
@@ -279,14 +279,14 @@ class TestTemplateMatcher:
 
     def test_match_routing_included(self, matcher):
         """匹配结果包含 semantic_routing"""
-        result = matcher.match("7.1 矿区水资源承载力分析", context={"domain": "coal_mining"})
+        result = matcher.match("7.1 矿区水资源承载力分析", context={"domain": "coal"})
         assert result.matched is True
         assert result.routing is not None
         assert result.routing.get("standard_code") == "SEC_WATER_RESOURCE"
 
     def test_match_template_name(self, matcher):
         """匹配结果包含模板名称"""
-        result = matcher.match("7.1 矿区水资源承载力分析", context={"domain": "coal_mining"})
+        result = matcher.match("7.1 矿区水资源承载力分析", context={"domain": "coal"})
         assert result.template_name == "水资源承载力分析章节"
 
     def test_confidence_scoring(self):
