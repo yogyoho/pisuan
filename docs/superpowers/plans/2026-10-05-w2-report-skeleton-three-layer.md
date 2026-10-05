@@ -215,7 +215,9 @@ for t, n in freq.most_common(): print(n, t)
   { "id": "R3", "when": {"report_family": "planning_eia", "guideline_version": "revised2019"},
     "add": ["三线一单及空间管控", "不确定性分析"], "evidence": "五间房章级;淖毛湖报批版节级" },
   { "id": "R4", "when": {"report_family": "planning_eia", "round": "revision"},
-    "require": ["回顾评价"], "evidence": "修编 18/18 必含回顾性评价章" },
+    "require": ["矿区开发环境影响回顾性评价"],
+    "note": "require 目标绑定 canonical 全称章题（spec §3.3 抽象槽名「回顾评价」的 stage 定稿绑定）；require 语义=校验性保证在场，canonical 已含则为 no-op 留痕。禁止绑裸名——裸名不在 chapters 键会触发 optional 注入造成重复回顾章",
+    "evidence": "修编 18/18 必含回顾性评价章" },
   { "id": "R5", "when": {"sensitive_targets": "*"},
     "add_section_under": {"host": "预测与评价", "template": "对{sensitive_target}影响分析"}, "evidence": "淖毛湖 6.10/6.11" },
   { "id": "R6", "when": {"policy_flags": "total_control"},
@@ -347,6 +349,7 @@ def render(conds: dict, layers: dict) -> dict:
             chapters.pop(t, None)
             applied.append(rid)
         for t in rule.get("require", []):
+            # require=校验性保证在场（缺失才注入）；目标必须用 canonical/optional 词汇，禁止裸名/抽象槽名
             if t not in chapters:
                 src = optional.get(t) or l1["chapters"].get(t)
                 if src is None:
