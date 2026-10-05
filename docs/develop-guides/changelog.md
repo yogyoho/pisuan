@@ -105,6 +105,7 @@
 - domain_factory_tool_usage 台账表 + 写手侧 4 个工厂产物读取工具的取用率埋点（W0，roadmap v2 测量基础）
 - fix(bug-359): domain 词形全栈统一到 `coal`（删 `_get_template_matcher` replace 映射链、静态模板 30 json + 目录改名）；学习模板注入按 `chapter` 生成 fallback match_rule（标题精确再现语义），match_count 数据通路打通
 - fix(bug-363): 静态模板容器激活（镜像 COPY + compose api/worker 双挂载），附激活行为观测与 /app 资产断裂清查
+- fix(bug-365): 存量任务 storage_path 一次性迁移（saves/ → /app/user-data，全库唯一受影响行，零代码）
 
 ## v0.7.2 (2026-09-02)
 
