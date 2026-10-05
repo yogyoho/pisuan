@@ -29,7 +29,7 @@ class PreCommitValidator:
             return ValidationResult(passed=False, errors=errors, warnings=warnings)
 
         for para in paragraphs:
-            if para.get("type") != "parameter":
+            if para.get("classify_type") != "parameter":
                 continue
             para_id = para.get("id", "?")
             tmpl = para.get("template") or {}

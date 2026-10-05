@@ -1,3 +1,5 @@
+"""bug-354: pre_commit_validator 按 classify_type 识别 parameter 段落（原读不存在的 type 字段导致校验空转）。"""
+
 import pytest
 from yuxi.services.pre_commit_validator import PreCommitValidator, ValidationResult
 
@@ -10,7 +12,7 @@ async def test_structure_valid_paragraphs_pass():
         "source_paragraphs": [
             {
                 "id": "p1",
-                "type": "parameter",
+                "classify_type": "parameter",
                 "template": {"generalized": "{{矿区}}位于{{位置}}", "text_pattern": "{{矿区}}位于{{位置}}"},
             }
         ]
@@ -28,7 +30,7 @@ async def test_structure_empty_text_pattern_fails():
         "source_paragraphs": [
             {
                 "id": "p1",
-                "type": "parameter",
+                "classify_type": "parameter",
                 "template": {"generalized": "", "text_pattern": ""},
             }
         ]
@@ -55,7 +57,7 @@ async def test_slot_quality_empty_name_fails():
         "source_paragraphs": [
             {
                 "id": "p1",
-                "type": "parameter",
+                "classify_type": "parameter",
                 "template": {
                     "text_pattern": "{{}}",
                     "slots": [{"name": "", "type": "string"}],
@@ -77,7 +79,7 @@ async def test_slot_quality_too_many_slots_warns():
         "source_paragraphs": [
             {
                 "id": "p1",
-                "type": "parameter",
+                "classify_type": "parameter",
                 "template": {"text_pattern": "x", "slots": slots},
             }
         ]
@@ -95,7 +97,7 @@ async def test_slot_quality_pure_digit_name_fails():
         "source_paragraphs": [
             {
                 "id": "p1",
-                "type": "parameter",
+                "classify_type": "parameter",
                 "template": {
                     "text_pattern": "{{123}}",
                     "slots": [{"name": "123", "type": "string"}],
@@ -116,7 +118,7 @@ async def test_slot_quality_duplicate_signature_warns():
         "source_paragraphs": [
             {
                 "id": "p1",
-                "type": "parameter",
+                "classify_type": "parameter",
                 "template": {
                     "text_pattern": "{{矿区}}{{矿区}}",
                     "slots": [
@@ -139,3 +141,28 @@ async def test_none_task_detail_returns_failed():
     result = await validator.validate(None)
     assert result.passed is False
     assert any("任务不存在" in e for e in result.errors)
+
+
+@pytest.mark.asyncio
+async def test_parameter_para_by_classify_type_is_validated():
+    """classify_type=parameter 且 text_pattern 为空 → 必须报错（bug-354 回归：修复前校验空转直接 passed）"""
+    validator = PreCommitValidator()
+    task_detail = {
+        "source_paragraphs": [
+            {"id": "p1", "classify_type": "parameter", "template": {}}
+        ]
+    }
+    result = await validator.validate(task_detail)
+    assert result.passed is False
+    assert any("text_pattern" in e for e in result.errors)
+
+
+@pytest.mark.asyncio
+async def test_narrative_para_skipped():
+    """非 parameter 段落不参与模板校验"""
+    validator = PreCommitValidator()
+    task_detail = {
+        "source_paragraphs": [{"id": "p1", "classify_type": "narrative"}]
+    }
+    result = await validator.validate(task_detail)
+    assert result.passed is True
