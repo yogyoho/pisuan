@@ -1,7 +1,7 @@
 """bug-354: pre_commit_validator 按 classify_type 识别 parameter 段落（原读不存在的 type 字段导致校验空转）。"""
 
 import pytest
-from yuxi.services.pre_commit_validator import PreCommitValidator, ValidationResult
+from yuxi.services.pre_commit_validator import PreCommitValidator
 
 
 @pytest.mark.asyncio
@@ -147,11 +147,7 @@ async def test_none_task_detail_returns_failed():
 async def test_parameter_para_by_classify_type_is_validated():
     """classify_type=parameter 且 text_pattern 为空 → 必须报错（bug-354 回归：修复前校验空转直接 passed）"""
     validator = PreCommitValidator()
-    task_detail = {
-        "source_paragraphs": [
-            {"id": "p1", "classify_type": "parameter", "template": {}}
-        ]
-    }
+    task_detail = {"source_paragraphs": [{"id": "p1", "classify_type": "parameter", "template": {}}]}
     result = await validator.validate(task_detail)
     assert result.passed is False
     assert any("text_pattern" in e for e in result.errors)
@@ -161,8 +157,6 @@ async def test_parameter_para_by_classify_type_is_validated():
 async def test_narrative_para_skipped():
     """非 parameter 段落不参与模板校验"""
     validator = PreCommitValidator()
-    task_detail = {
-        "source_paragraphs": [{"id": "p1", "classify_type": "narrative"}]
-    }
+    task_detail = {"source_paragraphs": [{"id": "p1", "classify_type": "narrative"}]}
     result = await validator.validate(task_detail)
     assert result.passed is True

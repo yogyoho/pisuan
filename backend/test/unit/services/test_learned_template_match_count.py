@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-
 # ---------- 纯提取逻辑 ----------
+
 
 def test_extract_learned_match_ids():
     """只取 learned_ 前缀 id；静态标题模板 id / 缺失 / 非数字全部跳过；去重排序"""
@@ -17,9 +17,9 @@ def test_extract_learned_match_ids():
     paras = [
         {"template_match": {"template_id": "learned_7"}},
         {"template_match": {"template_id": "learned_3"}},
-        {"template_match": {"template_id": "learned_7"}},      # 重复
+        {"template_match": {"template_id": "learned_7"}},  # 重复
         {"template_match": {"template_id": "HDR_CONCLUSION"}},  # 静态标题模板
-        {"template_match": {"template_id": "learned_abc"}},     # 非数字
+        {"template_match": {"template_id": "learned_abc"}},  # 非数字
         {"template_match": {}},
         {"other": 1},
     ]
@@ -27,6 +27,7 @@ def test_extract_learned_match_ids():
 
 
 # ---------- service 方法 ----------
+
 
 @pytest.mark.asyncio
 async def test_service_increment_forwards_ids_to_repo():
@@ -53,13 +54,12 @@ async def test_increment_noop_when_no_learned_match():
     svc = DomainFactoryService()
     svc.repo = MagicMock()
     svc.repo.increment_learned_template_match_counts = AsyncMock()
-    await svc._increment_learned_template_match_counts(
-        [{"template_match": {"template_id": "HDR_X"}}]
-    )
+    await svc._increment_learned_template_match_counts([{"template_match": {"template_id": "HDR_X"}}])
     svc.repo.increment_learned_template_match_counts.assert_not_awaited()
 
 
 # ---------- repo 方法（fake session，验证 UPDATE 语句与 rowcount 透传） ----------
+
 
 class _FakeResult:
     rowcount = 2
