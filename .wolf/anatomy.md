@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-05T04:12:09.009Z
-> Files: 12 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-05T06:58:19.792Z
+> Files: 15 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -180,6 +180,7 @@
 
 - `domain_factory_service.py` — Domain Factory Service - 领域知识工厂服务层 (~77057 tok)
 - `pre_commit_validator.py` — 提交前验证关卡:commit 前校验任务数据质量,校验失败阻止提交。 (~599 tok)
+- `template_library.py` — 模板库：加载、管理和查询段落模板定义 (~1843 tok)
 
 ## backend/package/yuxi/storage/minio/
 
@@ -203,10 +204,11 @@
 ## backend/server/utils/
 
 
-## backend/templates/coal_mining/
+## backend/templates/coal/
 
+词形已统一到 coal（bug-359），目录名不参与加载、领域只认 JSON domain 字段。
 
-## backend/templates/coal_mining/headers/
+## backend/templates/coal/headers/
 
 
 ## backend/test/
@@ -258,6 +260,7 @@
 
 - `test_learned_template_match_count.py` — bug-353: _increment_learned_template_match_counts 原方法不存在被静默吞，match_count 永不增量。 (~928 tok)
 - `test_pre_commit_validator.py` — bug-354: pre_commit_validator 按 classify_type 识别 parameter 段落（原读不存在的 type 字段导致校验空转）。 (~1494 tok)
+- `test_template_system.py` — 单元测试：模板系统三件套（TemplateLibrary / TemplateMatcher / TemplateGenerator） (~4017 tok)
 - `test_tool_usage_tracking.py` — W0 取用率埋点：台账表 repo 方法与 tools.py 接线辅助。 (~650 tok)
 - `test_validate_task_report.py` — bug-354 同族：validate_task 报告统计/L2 过滤应读 classify_type（原读 type 全部落空）。 (~531 tok)
 
@@ -302,6 +305,7 @@
 
 ## docs/develop-guides/
 
+- `changelog.md` — 版本变更记录 (~20852 tok)
 
 ## docs/intro/
 
@@ -309,11 +313,11 @@
 ## docs/superpowers/plans/
 
 - `2026-10-05-w0-bugfix-and-usage-tracking.md` — W0：bug-353/354 修复 + 工厂产物取用率埋点 实施计划 (~6810 tok)
-- `2026-10-05-w1-bug-359-domain-unify-match-rule.md` — bug-359 W1 首项实施计划：domain 词形统一 + 学习模板 match_rule 注入 (~3573 tok)
+- `2026-10-05-w1-bug-359-domain-unify-match-rule.md` — bug-359 W1 首项实施计划：domain 词形统一 + 学习模板 match_rule 注入 (~3921 tok)
 
 ## docs/superpowers/specs/
 
-- `2026-10-05-bug-359-domain-unify-match-rule-design.md` — bug-359 修复设计：domain 词形统一 + 学习模板 match_rule 注入 (~1096 tok)
+- `2026-10-05-bug-359-domain-unify-match-rule-design.md` — bug-359 修复设计：domain 词形统一 + 学习模板 match_rule 注入 (~1121 tok)
 
 ## docs/vibe/
 

@@ -4270,9 +4270,951 @@
     "file": ".wolf/ (session hooks)",
     "root_cause": "builtin rebase 在 has_unstaged_changes 时直接 die（不止 unmerged index）；本项目 hooks 每次工具调用后重写 .wolf/anatomy.md 等 6 个文件，rebase 进行中工作区永远脏，continue 永远被拒。误判为真冲突会浪费大量排查",
     "fix": "每次 continue 前 `git stash push -m wolf-during-rebase-N -- .wolf/` 再 `GIT_EDITOR=true git rebase --continue`（Bash 下前缀形式，PowerShell env 传递不可靠）；同一 commit 可能需连续多轮 stash→continue；LF→CRLF warning 无害。三分法：纯 wolf commit 用 rebase --skip 或 edit-todo 改 drop；混合 commit 的 .wolf 冲突 checkout --ours；autostash pop 的 .wolf 冲突同样取 ours。rerere 记录后自动复用",
-    "tags": ["git", "rebase", "wolf-hooks", "unstaged-changes", "false-conflict"],
-    "related_bugs": ["bug-315"],
+    "tags": [
+      "git",
+      "rebase",
+      "wolf-hooks",
+      "unstaged-changes",
+      "false-conflict"
+    ],
+    "related_bugs": [
+      "bug-315"
+    ],
     "occurrences": 5,
     "last_seen": "2026-09-30"
+  },
+  {
+    "id": "bug-317",
+    "timestamp": "2026-09-30T12:20:00+08:00",
+    "error_message": "RuntimeError: Database schema migration is incomplete or incompatible: business=8 (required 9) —— api 启动失败退出（lifespan require_current_schema 守卫）",
+    "file": "docker-compose.yml (storage-migrator) / backend/package/yuxi/storage/postgres/manager.py",
+    "root_cause": "上游 #1081 将 BUSINESS_SCHEMA_VERSION 8→9 并新增 upgrade_agent_resource_selection 迁移；Schema 设计上只由一次性 storage-migrator 容器修改（API/worker 仅校验），而该容器 restart:no、跑完即退——代码热重载更新了 api/worker 却永不重新触发 migrator，DB 停留旧版本，版本守卫拦截启动",
+    "fix": "docker start pisuan-localized-storage-migrator-1 重放迁移（挂载实时代码，幂等，version=9 早退）；验证 pisuan_schema_migrations 表 business=9；api 下一次 watchfiles reload 即通过守卫恢复 healthy",
+    "tags": [
+      "postgres",
+      "schema-migration",
+      "storage-migrator",
+      "one-shot-job",
+      "upstream-sync",
+      "hot-reload"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-09-30"
+  },
+  {
+    "id": "bug-318",
+    "timestamp": "2026-09-30T12:20:00+08:00",
+    "error_message": "worker 崩溃循环 ModuleNotFoundError: No module named 'yuxi'（/app/server/worker_main.py 导入 yuxi，而运行包目录为 pisuan）",
+    "file": "pisuan-localized backend/server/worker_main.py（镜像树磁盘瞬时状态）",
+    "root_cause": "镜像树磁盘在 11:13-11:54 窗口短暂处于 yuxi 命名空间 server/ 文件的混合态（非官方链产物，疑似并行手工操作所致；git HEAD 与最终磁盘均正确）；watchfiles 子进程崩溃后无新文件变更不会自拉起，且容器 healthcheck 只探容器不探 worker 子进程，healthy 掩盖崩溃循环",
+    "fix": "确认磁盘已收敛回 HEAD（pisuan 导入）后 docker restart worker 强制重建子进程；日志出现 'Starting worker for 2 functions: process_agent_run, process_task' 才算真恢复。教训：worker healthy ≠ 子进程存活，判活看 arq Starting worker 日志",
+    "tags": [
+      "worker",
+      "watchfiles",
+      "rename-layer",
+      "healthcheck-blindspot",
+      "arq"
+    ],
+    "related_bugs": [
+      "bug-317"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-09-30"
+  },
+  {
+    "id": "bug-319",
+    "timestamp": "2026-09-30",
+    "error_message": "实现子代理把文件拷贝委派给『后台监视器』异步执行，两轮共 ~67k tokens 后目标目录仍不存在、无提交——工作看似在进行实际零产出",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/（未落地）",
+    "root_cause": "实现者自作主张用后台监视器/deferred execution 执行同步性文件操作，监视器未生效也无报错；且未按步骤逐步核验 Expected 就继续推进",
+    "fix": "重派全新实现者，提示词开头加 CRITICAL 执行铁律：每条命令同步亲自跑、逐步核对 Expected、禁止后台监视器/watcher/deferred 执行；派发前控制器先只读核查实际状态（目录/提交存在性），不轻信子代理的中途汇报",
+    "tags": [
+      "subagent",
+      "background-monitor",
+      "zero-output",
+      "dispatch-discipline"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-09-30"
+  },
+  {
+    "id": "bug-320",
+    "timestamp": "2026-09-30",
+    "error_message": "质量审查：SKILL.md:72/:262 称 project_eia_underground「stage 文件在编」、openpit/post_eia「文件未立」，与同提交搬运落库的 5 个 stage JSON 及 frontmatter 自相矛盾",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md",
+    "root_cause": "源包自身叙述过期（写于 stage 文件落地前），忠实移植搬运了文件却未同步这段可用性叙事；spec「映射表之外逐字保留」未覆盖源包内部的自相矛盾",
+    "fix": "0f02f659: :72/:262 改为政策性表述「stage 文件已随包就绪，一期未验收、暂不启用」；:102/:193 并发措辞统一为「分批发起、在飞 ≤3，有完成即补位」",
+    "tags": [
+      "skill-port",
+      "stale-narrative",
+      "skill-md-adaptation",
+      "verbatim-preservation"
+    ],
+    "related_bugs": [
+      "bug-319"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-09-30"
+  },
+  {
+    "id": "bug-321",
+    "timestamp": "2026-09-30T19:50:00+08:00",
+    "error_message": "Task 3 验证：skill-projections 下无 coal-eia-writer 副本（worker 重启后投影未出现）",
+    "file": "backend/package/yuxi/services/skills/shared.py (init_builtin_skills) + services/skills/projection.py",
+    "root_cause": "非移植缺陷：skills 表存在 2026-05-11 admin 创建的 coal-eia-writer 旧行且 enabled=False；init_builtin_skills 设计上保留 enabled 只更新 version/hash/文件；用户投影只收录 enabled=true 且在 Agent Run 初始化时才懒刷新，故新技能投影不出现",
+    "fix": "未改代码（验证任务）。remediation：管理员在技能管理里启用 coal-eia-writer，或经技能服务 API 置 enabled=true（勿直改 SQL）；随后任意一次 Agent Run 或授权变更即重建投影",
+    "tags": [
+      "skills",
+      "projection",
+      "builtin",
+      "coal-eia-writer",
+      "enabled-flag",
+      "lazy-refresh"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-09-30"
+  },
+  {
+    "id": "bug-322",
+    "timestamp": "2026-09-30",
+    "error_message": "ERROR: function jsonb_array_length(json) does not exist (agents.config_json)",
+    "file": "db:public.agents.config_json @ pisuan-localized-postgres-1/yuxi_know",
+    "root_cause": "agents.config_json 列类型是 json 而非 jsonb，jsonb_* 函数不能直接作用于 json 列/操作符结果",
+    "fix": "只读断言查询中对 config_json 显式 ::jsonb 后再用 jsonb_array_length；UPDATE 写入用 ::json cast 与列类型一致，无需改",
+    "tags": [
+      "postgres",
+      "json",
+      "jsonb",
+      "agents",
+      "docker-psql",
+      "coal-eia-v2-port"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-09-30"
+  },
+  {
+    "id": "bug-323",
+    "timestamp": "2026-09-30",
+    "error_message": "progress.py init / chapter_planner / formula_runner 对 --stage planning_eia（名称式）裸 FileNotFoundError traceback；且 progress.py next 输出文案残留源运行时词汇 batch_task/task()，与 SKILL.md 的 subagent_start 映射正面冲突（编排者 system_prompt 恰以 next 输出为准，会放大冲突）",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md",
+    "root_cause": "源包脚本 --stage 形参只解析文件路径（速查表 S 占位符未定义语义，唯一例外 ingest.py 自带名称兼容）；progress.py 内嵌文案为源运行时词汇，忠实移植保真但与目标运行时映射层冲突",
+    "fix": "da4991a0: SKILL.md :56 补 S=STAGE 文件路径定义、:102 加卫兵句（脚本输出词汇一律映射 subagent_start，并发以在飞 ≤3 为准）；编排者 system_prompt 注入同句（DB UPDATE）；同步链重走（worker 重启+投影刷新，三方 md5=7d68f4d1）",
+    "tags": [
+      "skill-port",
+      "stage-path",
+      "runtime-vocabulary-conflict",
+      "task6-precheck"
+    ],
+    "related_bugs": [
+      "bug-320",
+      "bug-322"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-09-30"
+  },
+  {
+    "id": "bug-082",
+    "timestamp": "2026-09-30T22:30:00",
+    "error_message": "bash heredoc (cat >> file <<'PYEOF') failed: unexpected EOF while looking for matching quote when appending one very large multi-family python chunk",
+    "file": "docs/vibe/assets/2026-09-30-coal-eia-v2-port/eia-sample-fixtures/_gen_values.py",
+    "root_cause": "single oversized heredoc chunk through the Bash tool wrapper mangled parsing at ~line 98; smaller identical-pattern chunks worked",
+    "fix": "split the chunk into multiple smaller heredoc appends with a python ast.parse syntax check after each; all subsequent chunks parsed and executed cleanly",
+    "tags": [
+      "bash",
+      "heredoc",
+      "windows",
+      "git-bash",
+      "quoting"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-09-30T22:30:00"
+  },
+  {
+    "id": "bug-324",
+    "timestamp": "2026-09-30",
+    "error_message": "ingest.py forms 对数组族裸 JSON 数组 --rows rc=1「JSON 表单用 --values」，须包 schema wrapper 键（如 {\"targets\":[…]}）才收；ingest.py file 对 planning_eia 全族 rc=1（仅支持 CSV 族 08a/13a，本 stage 无注册）",
+    "file": "coal-eia-writer/scripts/ingest.py（源包行为，未改）",
+    "root_cause": "--rows 通道仅适配 CSV 型族；对象型数组族的落盘契约是 wrapper 键 --values；file 通道按 stage 声明的 CSV 族路由",
+    "fix": "未改代码（方案一保真）：SKILL.md 三步协议第③步本就走 forms --values，rc=1 回执自解释；实测结论记入 fixture README 与 gaps F-L-01/F-L-02",
+    "tags": [
+      "ingest",
+      "array-family",
+      "wrapper-key",
+      "file-channel",
+      "fixture"
+    ],
+    "related_bugs": [
+      "bug-323"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-09-30"
+  },
+  {
+    "id": "bug-325",
+    "timestamp": "2026-09-30",
+    "error_message": "冻结 anomaly 回执「noise.sources[N] level 缺失或 type 非法（合法: 点源/线源）——行跳过」但实际 type 合法、level 为报告区间字符串（如 88~103 dB(A)）数值解析失败——回执误指 type",
+    "file": "coal-eia-writer/scripts/formula_runner.py（源包行为，未改）",
+    "root_cause": "noise 源行解析失败的错误文案未区分「level 不可解析」与「type 非法」两种情形",
+    "fix": "未改代码；改进候选上报（措辞：应报 level 解析失败并给出行号）；真实数据下该类行需人工把区间转代表值后重灌",
+    "tags": [
+      "formula_runner",
+      "anomaly-wording",
+      "upstream-issue"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-09-30"
+  },
+  {
+    "id": "bug-326",
+    "timestamp": "2026-09-30",
+    "error_message": "门 1 把 air.boilers=[] 空数组计入缺失判据（rc=2 GATE1_MISSING），但「无燃煤锅炉」是报告事实（全清洁能源供热）——零值事实无法通过 ingest 表达为已收集",
+    "file": "coal-eia-writer/scripts/ingest.py（源包行为，未改）",
+    "root_cause": "门 1 缺失判据 (None,\"\",[]) 不区分「未收集」与「用户已确认的空」；零值事实类字段（无锅炉/无储罐）缺少确认落盘机制",
+    "fix": "未改代码；fixture 按 rc=2+F-air-boilers 事实凭据标定为该数据集的门 1 签名；真实项目试跑时由控制器声明后继续（禁编造），设计层改进进 backlog",
+    "tags": [
+      "gate1",
+      "empty-array",
+      "zero-fact",
+      "fixture-calibration"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-09-30"
+  },
+  {
+    "id": "bug-327",
+    "timestamp": "2026-10-01T17:58:00",
+    "error_message": "Cannot generate a JsonSchema for core_schema.CallableSchema -> Failed to persist AgentRun manifest: run=a5ae4f98 -> run 0.33s terminal-failed (manifest_persist_failed), 前端无回复",
+    "file": "backend/package/yuxi/agents/toolkits/buildin/tools.py",
+    "root_cause": "assemble_report 带 runtime: ToolRuntime 注入参数但未配显式 args_schema，langchain 推断 schema 把 ToolRuntime dataclass（含 callable 字段）卷进 args model；get_tool_metadata->_extract_tool_info 调 .schema() 时 pydantic 崩溃，prepare_run_execution 失败，09-30 起全平台所有 chat run 均秒挂。次因：run_worker 用 loguru logger.error(msg, exc_info=True)，loguru 把 exc_info 当 extra 吞掉不打印栈，掩盖 traceback。",
+    "fix": "新增 AssembleReportInput(BaseModel){report_id: str} 并在 @tool 装饰器传 args_schema（与 present_artifacts/save_chapter/install_skill 同惯例）；sync-dev.ps1 同步 + worker watchfiles 热重载后容器重放 prepare_run_execution 通过（manifest 9 键就绪，24 工具元数据加载成功）。",
+    "tags": [
+      "langchain",
+      "pydantic",
+      "ToolRuntime",
+      "args_schema",
+      "manifest_persist_failed",
+      "run_worker",
+      "loguru",
+      "toolkits"
+    ],
+    "related_bugs": [],
+    "occurrences": 2,
+    "last_seen": "2026-10-01T17:58:00"
+  },
+  {
+    "id": "bug-328",
+    "timestamp": "2026-10-01T19:45:00+08:00",
+    "error_message": "Error during resume: 自动压缩无法保存可恢复的对话历史 (compaction offload permission_denied)",
+    "file": "backend/package/yuxi/agents/middlewares/summary.py",
+    "root_cause": "deepagents sandbox aedit 大 payload(>50KB)走 tmpfile 替换脚本，最后 open(target,'wb') 截断重写在 Windows Docker Desktop gRPC-FUSE 挂载上遭遇宿主侧共享冲突→PermissionError→permission_denied；offload 失败导致整个 run 报废（设计如此，防历史丢失）。同 uid 直接 append 探针成功，awrite/upload_files 通道也正常。",
+    "fix": "YuxiSummarizationMiddleware._offload_to_backend/_aoffload_to_backend 用 _OffloadBackendFallback 代理 backend：仅在压缩 offload 路径（new_string 恒为全量合并文本）aedit 失败时回退 write/awrite 整文件重写（内容等价、不同传输通道）；edit 工具等其他 aedit 调用方不受影响。单测 test_offload_history_falls_back_to_rewrite_when_edit_fails ×2。",
+    "tags": [
+      "compaction",
+      "offload",
+      "sandbox",
+      "aedit",
+      "permission_denied",
+      "windows",
+      "grpc-fuse",
+      "summary-middleware"
+    ],
+    "related_bugs": [
+      "bug-327"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-01T19:45:00+08:00"
+  },
+  {
+    "id": "bug-329",
+    "timestamp": "2026-10-01T20:10:00+08:00",
+    "error_message": "AgnesAI 429 rate limit storm: 编排者单回合批量派发 8 个节写者，全部 18-46s 内 OpenAIRateLimitError 死亡；编排者 run max retries exceeded",
+    "file": "DB agents.id=9 config_json.context.system_prompt",
+    "root_cause": "免费档 AgnesAI 并发配额极低；编排者（弱模型）无视 SKILL.md「在飞 ≤3」纪律，修复轮单回合派 8 个 subagent（20:03:33/20:03:54 两波），瞬时并发触发限流，整波全灭（6 分钟 94 条 429 日志）。18:17 首次发生，限流约 10 分钟自愈，但批量派发复现即复触发。",
+    "fix": "编排者 system_prompt 追加硬约束：任何时刻在飞节写者 ≤1、禁批量/波次派发、遇 429 立即停车报告勿连续重试（DB UPDATE config_json，下次 run init 生效；da4991a0 同层先例）。ch3 修复轮虽经 24 次派发仍扛过并 PASS，但串行是免费档唯一可持续模式。",
+    "tags": [
+      "429",
+      "rate-limit",
+      "agnesai",
+      "free-tier",
+      "subagent-wave",
+      "serial-dispatch",
+      "orchestrator-discipline"
+    ],
+    "related_bugs": [
+      "bug-327",
+      "bug-328"
+    ],
+    "occurrences": 2,
+    "last_seen": "2026-10-01T20:04:26+08:00"
+  },
+  {
+    "id": "bug-330",
+    "timestamp": "2026-10-02T00:20:00+08:00",
+    "error_message": "知识工厂上传 PDF 后永远停在 UPLOADED；api 日志：Tasker.enqueue() got an unexpected keyword argument 'coroutine'",
+    "file": "backend/package/yuxi/services/domain_factory_service.py + backend/package/yuxi/services/task_registry.py",
+    "root_cause": "持久任务协议重构（PG 意图 + ARQ 按注册表分发）后知识工厂未迁移：仍用旧栈 per-call coroutine 入队，TypeError 被 catch-and-continue 吞掉；且 domain_factory* 三个 task_type 未注册，去参也无法执行",
+    "fix": "task_registry 注册 domain_factory/domain_factory_ingest/domain_factory_reingest（[pisuan-custom] 标记）；服务侧三流水线改模块级 Handler + TaskContext.payload 重建；enqueue 去掉 coroutine kwarg；单测覆盖注册表接线",
+    "tags": [
+      "task-center",
+      "domain-factory",
+      "arq",
+      "upstream-sync"
+    ],
+    "related_bugs": [
+      "bug-331"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-02"
+  },
+  {
+    "id": "bug-331",
+    "timestamp": "2026-10-02T00:20:00+08:00",
+    "error_message": "ETL 解析 PDF 报 ValueError: OCR 文件缺少已解析的 ocr_engine，请通过 parse_document() 解析",
+    "file": "backend/package/yuxi/services/domain_factory_service.py (_etl_pipeline_async)",
+    "root_cause": "ETL 直调 unified.parse_source_to_markdown（绕过 ocr_service.parse_document）；上游 #843 OCR 配置中心后 unified 内部入口要求预解析的 ocr_engine，不再有默认引擎回退",
+    "fix": "ETL 改走 parse_document 标准入口（系统默认引擎+构造参数解析），HTML 转换保留 _markdown_to_html + 失败回退 None",
+    "tags": [
+      "domain-factory",
+      "ocr",
+      "parser",
+      "upstream-sync"
+    ],
+    "related_bugs": [
+      "bug-330"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-02"
+  },
+  {
+    "id": "bug-332",
+    "timestamp": "2026-10-02T00:50:00+08:00",
+    "error_message": "worker 容器内 watchfiles 报 _rust_notify.WatchfilesRustInternalError: Cannot allocate memory (os error 12) 后 SIGINT/SIGKILL 重启，在跑任务标记「执行中断，无法安全自动恢复」",
+    "file": "pisuan-localized/compose-worker-noreload.yml（临时 override）",
+    "root_cause": "Windows Docker Desktop 上 watchfiles 的 rust inotify 监视器在 virtiofs 挂载卷 + OCR 重负载下内核侧内存分配失败自爆（当晚 00:13/00:42 两次，第二次无任何代码同步也发生），连带杀死 worker 与在跑任务",
+    "fix": "长任务期间用 compose override 去掉 worker 热重载（command 改 python -m server.worker_main），删掉 watchfiles 崩溃向量；完成后删除 override 并恢复原 command",
+    "tags": [
+      "docker-desktop",
+      "watchfiles",
+      "oom",
+      "worker",
+      "hot-reload"
+    ],
+    "related_bugs": [
+      "bug-330"
+    ],
+    "occurrences": 2,
+    "last_seen": "2026-10-02"
+  },
+  {
+    "id": "bug-333",
+    "timestamp": "2026-10-02T02:51:56.801823Z",
+    "error_message": "知识工厂提取解析五症状（用户报告+12代理评审+DB实测证实）：①泛化真实成功率≈0（横城任务761/761槽位全为fallback名「数值」，_generalize_fallback无重试+贪婪正则）②法规场景B存活0/1997（para[template]被泛化/摘要整体替换覆盖, svc:668-684 vs :841-847/:864-867）③narrative摘要实为输入前50字（setdefault generalized回显, :3596 vs :3288）④公式符号跨域撞名（W→产能/产量, SYMBOL_MAP 15项+12停用词, 下标字母成变量）⑤图片URL HTTP401+databases/unknown路径 ⑥list类型=0（逐行成段致≥2行规则永不触发）⑦logical_relations模型无列setattr静默丢弃 ⑧结构化入库死分支（MilvusKB无_ingest_structured_document, 恒Markdown兜底）⑨_chinese_to_arabic逐字替换（十二→102）⑩MD表↔HTML表纯位置配对无校验",
+    "file": "backend/package/yuxi/services/domain_factory_service.py",
+    "root_cause": "无统一产物模型+容错不可见（静默降级+静默覆盖）+段落级局部生成无全局槽位身份+无结构化输出契约；分类单标签正则链系统性丢数值段",
+    "fix": "未修——已产出重设计方向：统一产物模型(merge语义禁整体替换)+StepOutcome质量台账+槽位注册表/封闭词表+结构化输出+死产出停机；详见本次office-hours终报",
+    "tags": [
+      "domain-factory",
+      "etl",
+      "generalize",
+      "legal",
+      "narrative",
+      "silent-failure",
+      "classification"
+    ],
+    "related_bugs": [
+      "bug-016",
+      "bug-128",
+      "bug-317",
+      "bug-318"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-02T02:51:56.801866Z"
+  },
+  {
+    "id": "bug-334",
+    "timestamp": "2026-10-02T11:20:00+08:00",
+    "error_message": "伊宁3.1单章(29段)泛化质量远好于横城全本(2789段)",
+    "file": "backend/package/yuxi/services/domain_factory_service.py",
+    "root_cause": "横城窗口内761/761次泛化调用全部走_generalize_fallback(系统性失败，指向siliconflow免费档配额/限流)，3.1任务13/13全成功；同代码同提示词同模型。无重试+静默兜底+ai_confidence按覆盖率计算，把100%失败消化成50分无警报；worker 01:20重建日志丢失",
+    "fix": "未修复(重设计范畴)：StepOutcome记账+失败重试+失败率熔断；短期验证=重跑横城全本",
+    "tags": [
+      "generalization",
+      "fallback",
+      "rate-limit",
+      "quota",
+      "ai-confidence",
+      "silent-failure"
+    ],
+    "related_bugs": [
+      "bug-333"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-02"
+  },
+  {
+    "id": "bug-335",
+    "timestamp": "2026-10-02T12:30:00+08:00",
+    "error_message": "泛化模板残留单括号（修正后真实规模：修复前22/224段49处，修复后1/13段1处）",
+    "file": "backend/package/yuxi/config/static/prompt_templates.yaml + domain_factory_service.py",
+    "root_cause": "激活的YAML泛化提示词自相矛盾：指令文字写\"双层大括号\"，但全部5个示例、要求6、输出格式示例均为单括号{插槽名称}；模型照示例输出单括号，与下游{{}}语法期望冲突",
+    "fix": "未修复：统一提示词示例为{{双括号}}（一行修改）；下游明确唯一括号文法；生产复验(ed5c52f5)：49→1，残留1处为模型畸形括号{{行政区划3}境内河段长度}}（槽名内stray}），归一化只处理well-formed组属正确行为，根治归P1-1结构化输出",
+    "tags": [
+      "generalization",
+      "prompt",
+      "brace-style",
+      "template"
+    ],
+    "related_bugs": [
+      "bug-333",
+      "bug-334"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-02"
+  },
+  {
+    "id": "bug-337",
+    "timestamp": "2026-10-02T12:30:00+08:00",
+    "error_message": "槽位type字段99.7%为\"parameter\"(1721/1726)，enum/descriptive/reference从未使用，类型系统死亡",
+    "file": "backend/package/yuxi/config/static/prompt_templates.yaml + domain_factory_service.py",
+    "root_cause": ":3660合法类型集{parameter,enum,descriptive,reference}与模型输出词表不匹配，:3663对非法type一律强转parameter；下游无法按类型区分数值/文本/引用槽",
+    "fix": "未修复：结构化输出约束类型词表，或对齐合法集与提示词示例",
+    "tags": [
+      "slot-type",
+      "schema",
+      "coercion"
+    ],
+    "related_bugs": [
+      "bug-333",
+      "bug-334"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-02"
+  },
+  {
+    "id": "bug-338",
+    "timestamp": "2026-10-02T20:10:00+08:00",
+    "error_message": "单括号统计自相矛盾：同一任务先测出2075处后测出0处",
+    "file": "（测量方法，非项目代码）",
+    "root_cause": "两个错误模式叠加：①PG ARE无lookbehind，用(?!\\{)\\{写\"非双括号\"实际把每个开括号都排除了（前瞻在消费前看到的就是要匹配的{）——模式自废恒返回0；②\\{[^{] 会命中合法双括号的内部{——把165个双括号也计成单括号。正确方法：先regexp_replace剥离\\{\\{[^{}]*\\}\\}再数剩余\\{[^{}]+\\}",
+    "fix": "已改用strip-then-count法重测：修复前49处/修复后1处；教训：正则计数必须用已知样本双向验证（构造含双括号+单括号的样例先测模式本身）",
+    "tags": [
+      "measurement",
+      "regex",
+      "postgresql",
+      "lookahead",
+      "self-inflicted"
+    ],
+    "related_bugs": [
+      "bug-335"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-02"
+  },
+  {
+    "id": "bug-339",
+    "timestamp": "2026-10-02T19:50:00+08:00",
+    "error_message": "F821 Undefined name 'domain_code'（_etl_pipeline_async 3 处）",
+    "file": "backend/package/yuxi/services/domain_factory_service.py",
+    "root_cause": "P0-3 把解析阶段抽为 _etl_parse_stage 方法时，domain_code 的初始化（原 :729-731）随阶段体一起移入新方法，流水线后续 _load_entity_schema_variables(domain_code) 等调用失去定义",
+    "fix": "domain_code 改为在流水线 resume 分支前解析一次，作为参数传入 _etl_parse_stage；方法内重复查询删除",
+    "tags": [
+      "domain-factory",
+      "refactor",
+      "static-analysis",
+      "ruff"
+    ],
+    "related_bugs": [
+      "bug-334"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-02"
+  },
+  {
+    "id": "bug-340",
+    "timestamp": "2026-10-03",
+    "error_message": "泛化阶段全部在途 LLM 调用静默挂死 3 小时（本地 gemma4 端点停滞：不拒绝也不响应），无任何错误日志，最终靠 arq lease 过期(21600s)才暴露",
+    "file": "backend/package/yuxi/services/domain_factory_service.py",
+    "root_cause": "_call_llm_with_retry 没有客户端超时；停滞型断供不抛异常，_classify_llm_error 无从分类，重试/台账/熔断全部失效",
+    "fix": "model.call 包 asyncio.timeout(LLM_CALL_TIMEOUT_SECONDS=120.0)；TimeoutError 归类 error_type=timeout（provider 类），进入退避重试与熔断计数",
+    "tags": [
+      "etl",
+      "llm",
+      "timeout",
+      "circuit-breaker",
+      "p0.1"
+    ],
+    "related_bugs": [
+      "bug-341"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-03"
+  },
+  {
+    "id": "bug-341",
+    "timestamp": "2026-10-03",
+    "error_message": "durable 任务 lease 过期收敛后 domain_factory_tasks 行永久停留 GENERALIZING（僵尸态），用户看不到失败也无法重试",
+    "file": "backend/package/yuxi/services/task_registry.py",
+    "root_cause": "domain_factory TaskDefinition 未注册 failure_function；reconcile_expired_leases 的 finalize_task_failure 找不到 handler 静默 no-op",
+    "fix": "注册 failure_function=fail_domain_factory_etl；handler 仅当 domain 行处于 UPLOADED/PARSING/GENERALIZING 时落 FAILED（附 durable 错误信息），不覆盖 WAITING_REVIEW 及之后的既有结果",
+    "tags": [
+      "durable-task",
+      "zombie",
+      "failure-handler",
+      "lease",
+      "p0.1"
+    ],
+    "related_bugs": [
+      "bug-340"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-03"
+  },
+  {
+    "id": "bug-342",
+    "timestamp": "2026-10-03",
+    "error_message": "熔断触发的 FAILED_PROVIDER 任务重试后 templated=0，断点续跑退化为整卷重跑（224 段全部重跑而非只补失败段）",
+    "file": "backend/package/yuxi/services/domain_factory_service.py",
+    "root_cause": "流水线中熔断分支位于模板回写循环之前：熔断时 asyncio.gather 已完成的部分成功结果还没写回 para[template] 就 return 了，持久化的 source_paragraphs 全是无模板的解析期快照",
+    "fix": "把回写循环（含日志行）挪到熔断持久化之前；熔断时落盘的段落已携带成功模板，续跑过滤才能真正只补失败段",
+    "tags": [
+      "etl",
+      "resume",
+      "circuit-breaker",
+      "ordering",
+      "p0-3"
+    ],
+    "related_bugs": [
+      "bug-340",
+      "bug-341"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-03"
+  },
+  {
+    "id": "bug-343",
+    "timestamp": "2026-10-03",
+    "error_message": "续跑任务仅发出 2 次泛化调用后彻底静默 21558s（≈6h），期间 300s 客户端超时零触发、零告警，直到 arq job timeout(21600s) 强杀",
+    "file": "backend/package/yuxi/services/domain_factory_service.py",
+    "root_cause": "Windows 宿主机自动休眠（空闲定时器只看用户输入，后台 LLM 跑批不算活动）：休眠时 WSL2/Docker VM 整体冻结，在途 HTTP 连接死、asyncio 定时器停摆、lease 无法续期；唤醒后 arq 记录 job 结束、durable 收敛器按 worker_lease_expired 落 FAILED。两次现场（6h 静默与 65/224 后 64min 静默）均与休眠窗口吻合",
+    "fix": "宿主机关闭自动休眠（powercfg /change standby-timeout-ac 0 或电源设置=从不）后再跑长任务。应用侧无需修码：P0 durable 链（lease 过期收敛 → FAILED → 可重试）在真实冻结场景验证通过，无僵尸行",
+    "tags": [
+      "etl",
+      "llm",
+      "hang",
+      "timeout",
+      "solved",
+      "host-sleep",
+      "wsl2"
+    ],
+    "related_bugs": [
+      "bug-340"
+    ],
+    "occurrences": 2,
+    "last_seen": "2026-10-03"
+  },
+  {
+    "id": "bug-344",
+    "timestamp": "2026-10-03",
+    "error_message": "lookup_subsidence_params 工具恒返回 KB 查询失败",
+    "file": "backend/package/yuxi/agents/toolkits/buildin/tools.py",
+    "root_cause": "调用 KnowledgeBaseManager.get_databases_by_type(:1030)与 query_kb(:1036)，两方法在 manager 上均不存在（LightRAG 时代旧接口），恒 AttributeError 被 except Exception 吞成 {matched:null,error}",
+    "fix": "待修：改用 manager.get_databases()+retrieve 重写，或按 docstring Phase 5 计划延后下线",
+    "tags": [
+      "agent-tools",
+      "kb",
+      "dead-code",
+      "lightrag-residue",
+      "unsolved"
+    ],
+    "related_bugs": [
+      "bug-346"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-03"
+  },
+  {
+    "id": "bug-345",
+    "timestamp": "2026-10-03",
+    "error_message": "图谱构建失败时任务仍 COMMITTED 且日志误报「知识图谱构建完成」",
+    "file": "backend/package/yuxi/services/graph_builder.py",
+    "root_cause": "_get_driver 连接失败静默返回 {skipped:True}(:110-113)，build_knowledge_graph 内部 catch-all Neo4j 写异常返回 error dict(:117-183)，异常不冒泡到 domain_factory_service.py:4698 的 COMMIT_FAILED 分支（近乎不可达），:4694 无条件打印成功日志；图谱可静默缺失",
+    "fix": "待决策：把 graph_builder 的 skipped/error 上抛或在 commit 显式检查返回值并标 COMMIT_PARTIAL；涉及「图谱失败是否阻断」的产品语义",
+    "tags": [
+      "neo4j",
+      "etl-commit",
+      "silent-failure",
+      "unsolved"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-03"
+  },
+  {
+    "id": "bug-346",
+    "timestamp": "2026-10-03",
+    "error_message": "LightRAG 退役残留死代码/过时文案多处",
+    "file": "backend/package/yuxi/services/domain_factory_service.py",
+    "root_cause": "v0.7.0 (commit a8c4a45f) 下线 LightRAG 后残留：domain_factory_service.py:4600-4630/5848-5871 结构化入库死分支（hasattr _ingest_structured_document 恒 False）、_persist_file 悬空调用(:4616/5861 全包无定义)、lightrag.py 1173 行未注册死文件、EtlWorkbench.vue:737 lightragKnowledgeBases 变量名（实际过滤 milvus）、backend/pyproject.toml:4 描述仍写 LightRAG 架构",
+    "fix": "待清理（pisuan-custom 分支）：删死分支改为直接 index_file、删 lightrag.py、改变量名与描述；注意 docs/vibe/2026-10-03-knowledge-storage-code-truth.md §七 D3",
+    "tags": [
+      "lightrag",
+      "dead-code",
+      "cleanup",
+      "unsolved"
+    ],
+    "related_bugs": [
+      "bug-344"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-03"
+  },
+  {
+    "id": "bug-347",
+    "timestamp": "2026-10-03",
+    "error_message": "写手子 agent 实体泄漏检查引用的样例实体清单是 v1 旧文件",
+    "file": "backend/package/yuxi/agents/presets/subagents/data_survey_writer.py",
+    "root_cause": "三个写手 preset 系统提示词(:16)要求参考 references/sample_entities.md，但技能 v2 已改 per-sample 目录 references/sample_entities/（_index.json+25 个 json），SKILL.md:270 明确旧 md 不再作为管线输入；preset 与技能版本漂移，且 preset 链路本就无代码级泄漏校验（只有技能脚本 consistency.py SL3 门，不经 preset）",
+    "fix": "待修：更新三个 preset 提示词指向 sample_entities/ 目录；或把泄漏扫描下沉为 save_chapter 前代码校验",
+    "tags": [
+      "presets",
+      "entity-leak",
+      "skill-drift",
+      "unsolved"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-03"
+  },
+  {
+    "id": "bug-348",
+    "timestamp": "2026-10-04",
+    "error_message": "graph extraction 失败：extraction_result 必须是对象（gemma-4-E4B 全部 chunk 失败）",
+    "file": "backend/package/yuxi/knowledge/milvus_graph_service.py",
+    "root_cause": "gemma-4-E4B 把 chain-of-thought 散文当作 content 输出（'Here's a thinking process...'），json_repair 解析出非 dict；llama.cpp response_format json_object 虽可约束格式但 110s/chunk 不可行（2856 chunk ≈ 26h）",
+    "fix": "切换模型为 openai2:agnes-2.5-flash（~5-7s/chunk）+ extra_body response_format json_object",
+    "tags": [
+      "graph-extraction",
+      "gemma",
+      "json-mode",
+      "model-selection"
+    ],
+    "related_bugs": [
+      "bug-349"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-04"
+  },
+  {
+    "id": "bug-349",
+    "timestamp": "2026-10-04",
+    "error_message": "AgnesAI 429: You've reached the API rate limit for free users（并发抽取风暴）",
+    "file": "backend/package/yuxi/knowledge/milvus_graph_service.py",
+    "root_cause": "agnes 免费层只 sustains 单并发请求：concurrency 3+3 或 2 必 429 风暴；两个 KB 的 graph-build job 并行运行同样等于 2 路并发",
+    "fix": "extractor concurrency_count 固定 1；只允许一个 graph-build job 在跑（前一个终态后再触发下一个）；attempt 1/3-2/3 的瞬态 429 由重试吸收",
+    "tags": [
+      "agnes",
+      "rate-limit",
+      "graph-extraction",
+      "concurrency"
+    ],
+    "related_bugs": [
+      "bug-348"
+    ],
+    "occurrences": 3,
+    "last_seen": "2026-10-04"
+  },
+  {
+    "id": "bug-350",
+    "timestamp": "2026-10-04",
+    "error_message": "pytest INTERNALERROR: ValueError: '//app/test/...' is not in the subpath of '/app'",
+    "file": "backend/test/unit/services/test_commit_pipeline_status.py",
+    "root_cause": "一次以 //app 前缀参数运行 pytest 后，assertion-rewrite pyc（cpython-313-pytest-9.1.1.pyc）以 mtime+size 校验恰好命中被持续复用，item path 被污染为 //app 导致所有该文件用例 INTERNALERROR",
+    "fix": "find /app/test -name __pycache__ -type d -exec rm -rf {} +；此后容器内 pytest 禁止传 //app 路径参数",
+    "tags": [
+      "pytest",
+      "pycache",
+      "internalerror",
+      "msys-path-mangling"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-04"
+  },
+  {
+    "id": "bug-351",
+    "timestamp": "2026-10-04",
+    "error_message": "4 个 commit 管线测试失败：知识库入库失败: Database kb1 not found",
+    "file": "backend/test/unit/services/test_commit_pipeline_status.py",
+    "root_cause": "D3 让入库阶段从死代码变为真实调用（manager.get_kb_executor/index_file），且管线阶段顺序是入库(阶段2.x)在图谱(2.5)之前；旧测试 payload 从 kb_id=None 改为 kb1 后打到真实 Milvus 管理器",
+    "fix": "测试夹具 mock yuxi.knowledge.runtime.knowledge_base（get_kb_executor/index_file/_save_markdown_to_minio/_persist_file_meta）与 service._upload_original_to_minio，统一收进 _partial_pipeline_env",
+    "tags": [
+      "tests",
+      "mock",
+      "commit-pipeline",
+      "d3-cleanup"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-04"
+  },
+  {
+    "id": "bug-352",
+    "timestamp": "2026-10-04",
+    "error_message": "graph 抽取停滞 6 小时无任何日志（02:39 卡在 150 块，08:47 才恢复 1 块），timeout_seconds=120 未生效",
+    "file": "backend/package/yuxi/knowledge/milvus_graph_service.py",
+    "root_cause": "agnes 免费端点白天大量无响应挂起；停滞期间 worker 日志零 warn/retry/timeout——说明 extractor 的 timeout_seconds 没有真正约束该 HTTP 调用（429 快速失败路径有重试日志，挂起路径没有），卡在无超时的调用上直到 arq 6h 函数级超时/持久任务 lease 收敛杀死 job",
+    "fix": "临时：重新触发续跑（台账断点续接，零成本）；待查：timeout_seconds 是否真正传入 openai2 客户端（yuxi 上游代码，改动需标记 [pisuan-custom]）；或改到 agnes 夜间健康窗口跑",
+    "tags": [
+      "graph-extraction",
+      "stall",
+      "timeout-not-enforced",
+      "agnes",
+      "durable-task-convergence"
+    ],
+    "related_bugs": [
+      "bug-348",
+      "bug-349"
+    ],
+    "occurrences": 2,
+    "last_seen": "2026-10-04"
+  },
+  {
+    "id": "bug-353",
+    "timestamp": "2026-10-04",
+    "error_message": "learned_templates.match_count 经 ETL 永无增量（模板 0 复用表象的第二根因）",
+    "file": "backend/package/yuxi/services/domain_factory_service.py:648",
+    "root_cause": "service:648 调用 service._increment_learned_template_match_counts，但该 def 在 domain_factory_service.py(6683行) 与 domain_factory_repository.py(738行) 均不存在（全文件 0 命中），调用必抛 AttributeError 且被 :649-650 try/except 静默吞掉；同时 matched_entities（写 :835-858）全链零读方",
+    "fix": "未修（工作流对抗验证新发现）。建议随 Phase 1 写手取用率埋点一并修复：补 def 或改直调 repo；matched_entities 停写或指认消费者",
+    "tags": [
+      "domain_factory",
+      "learned_templates",
+      "match_count",
+      "静默吞异常",
+      "取用率",
+      "etl-dataplane"
+    ],
+    "related_bugs": [
+      "bug-334"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-04"
+  },
+  {
+    "id": "bug-354",
+    "timestamp": "2026-10-04",
+    "error_message": "L1 PreCommitValidator / L2 SlotValidationService / validate_task 在真实数据下全部空转（校验恒 0 段落）",
+    "file": "backend/package/yuxi/services/pre_commit_validator.py:32",
+    "root_cause": "pre_commit_validator.py:32 与 domain_factory_service.py:4101/:4131 读 para[\"type\"]，而 ETL 段落链路统一字段名是 classify_type（:1614-1669 赋值），无段落级 type 字段 → 过滤器恒跳过全部段落、parameter_paragraphs 恒 0、paragraph_slots 恒空 → :4104 SlotValidationService 整体不被调用（连带 entity_schemas 恒传 {} 断连）；单测 fixture 用合成 type 字段掩盖了错位",
+    "fix": "未修。裁决为 Phase 0 硬前置：先修字段错位（type→classify_type），单测 fixture 同步改用 classify_type；所有校验/台账/门禁产物产生真实价值的前提 [2026-10-05 已修复部分] pre_commit_validator.py:32 改读 classify_type；既有单测 fixture 由合成 type 字段改为 classify_type（6 处，slot 级 type:string 不动），新增 bug-354 回归测试（classify_type=parameter 空 template 必须报错 + narrative 跳过）。见 commit d0711db2（pisuan-custom）。domain_factory_service.py:4101/:4131 同源错位另行处理。",
+    "tags": [
+      "domain_factory",
+      "validation",
+      "字段错位",
+      "空转",
+      "etl-dataplane"
+    ],
+    "related_bugs": [
+      "bug-334"
+    ],
+    "occurrences": 2,
+    "last_seen": "2026-10-05"
+  },
+  {
+    "id": "bug-355",
+    "timestamp": "2026-10-05",
+    "error_message": "语料普查中 3 份 docx（九龙川/巴拉素/塔然高勒）被记为 0 字空文件，用户指出九龙川/巴拉素能正常打开且有内容",
+    "file": ".wolf/corpus-census/census.json (生成脚本)",
+    "root_cause": "三重：(1) 九龙川/巴拉素是 WPS 生成的病态 docx，.rels 引用不存在的 'NULL' 部件，python-docx 严格解析抛 KeyError，census 脚本 except 后静默记零；(2) 塔然高勒文件头为 UniDocSa（WPS 私有格式），真损坏；(3) census 脚本对解析失败无显式告警标记，0 与'解析失败'不可区分",
+    "fix": "zip 级手术：重写 .rels 剥除 Target=NULL 的 Relationship 条目后 python-docx 正常解析；census 失败需记 error 字段而非零值；塔然高勒确认损坏弃用",
+    "tags": [
+      "docx",
+      "WPS",
+      "NULL-relationship",
+      "python-docx",
+      "静默失败",
+      "语料普查"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-05"
+  },
+  {
+    "id": "bug-356",
+    "timestamp": "2026-10-05T09:30:00+08:00",
+    "error_message": "commit 004c6337 显示 2 files changed +26/-131：任务书称测试文件为『新建』，实际 backend/test/unit/services/test_pre_commit_validator.py 已存在（141 行、8 个测试），Write 直接覆盖丢失既有测试",
+    "file": "backend/test/unit/services/test_pre_commit_validator.py",
+    "root_cause": "未核实目标文件是否存在就执行 Write 覆盖（Write 返回 'updated successfully' 即为文件已存在的信号）；同时任务描述『新建』与仓库实际状态不符，未质疑",
+    "fix": "git checkout HEAD~1 -- 恢复原 141 行套件；6 处段落级 fixture type→classify_type（原 fixture 正是掩盖 bug-354 的合成字段）；追加 2 个 bug-354 回归测试；amend 为 d0711db2；10 passed",
+    "tags": [
+      "overwrite",
+      "test-file",
+      "verify-before-write",
+      "bug-354"
+    ],
+    "related_bugs": [
+      "bug-354"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-05"
+  },
+  {
+    "id": "bug-357",
+    "timestamp": "2026-10-05T09:25:00+08:00",
+    "error_message": "docker exec pytest /app/test/unit/services/ 全量回归 3 failed：test_formula_chunk.py 三例 AttributeError: 'DomainFactoryService' object has no attribute '_build_structured_document'",
+    "file": "backend/test/unit/services/test_formula_chunk.py",
+    "root_cause": "9b74874d（ETL 可靠性补强/D1-D6 清理）删除或改名了 _build_structured_document 方法，但 test_formula_chunk.py 未同步更新——预存失败，与本轮 classify_type 修复（b71d301d）无关",
+    "fix": "未修。遗留测试腐化：需按 9b74874d 之后的产物结构重写或归档 test_formula_chunk.py；本轮按 surgical changes 原则不越界修",
+    "tags": [
+      "stale-test",
+      "attribute-error",
+      "formula-chunk",
+      "pre-existing"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-05"
+  },
+  {
+    "id": "bug-353",
+    "timestamp": "2026-10-05",
+    "error_message": "ETL 解析阶段调用 service._increment_learned_template_match_counts(paragraphs) 但方法不存在，AttributeError 被 try/except 静默吞掉，学习模板 match_count 永不增量",
+    "file": "backend/package/yuxi/services/domain_factory_service.py",
+    "root_cause": "调用点先于实现写入（约 :648 调用一个从未定义的方法），外层 except Exception 把 AttributeError 当作可容忍错误吞掉",
+    "fix": "补齐三层链路：service 新增 _extract_learned_match_ids（纯提取 learned_ 前缀 id）与 _increment_learned_template_match_counts（转发 repo）；repo 新增 increment_learned_template_match_counts（SQLAlchemy update + match_count+1，返回 rowcount）。调用点未动",
+    "tags": [
+      "domain_factory",
+      "learned_template",
+      "match_count",
+      "silent_exception",
+      "etl"
+    ],
+    "related_bugs": [
+      "bug-354"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-05"
+  },
+  {
+    "id": "bug-358",
+    "timestamp": "2026-10-05T10:45:00+08:00",
+    "error_message": "W0 台账表 domain_factory_tool_usage 模型已同步进容器、api 重载 startup complete，但 to_regclass 查不到表",
+    "file": "backend/package/yuxi/storage/postgres/manager.py",
+    "root_cause": "存量库 business schema 版本已达 9（== BUSINESS_SCHEMA_VERSION），storage_migration.main() 的全部 DDL 分支都有版本门槛：create_business_tables 仅 business_version is None、ensure_business_schema 仅 {None,2,7}、upgrade_agent_resource_selection 仅 {None,2,7,8}——版本=9 时迁移器对 schema 是 no-op，新增模型表永远不会经热重载 create_all 落到存量库（任务书『models 改动经热重载触发 lifespan create_all』的假设仅对全新库成立）",
+    "fix": "双管齐下：①ensure_business_schema 的 DDL 列表补 CREATE TABLE IF NOT EXISTS domain_factory_tool_usage + 索引（覆盖全新库与 2/7 版本库）；②存量 v9 库用 psql 手工执行同一 DDL（与 match_count 列先例一致）。验证：to_regclass 非 None + \\d 结构与模型一致",
+    "tags": [
+      "domain-factory",
+      "schema-migration",
+      "create_all",
+      "ensure_business_schema",
+      "postgresql",
+      "w0"
+    ],
+    "related_bugs": [
+      "bug-353"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-05"
+  },
+  {
+    "id": "bug-359",
+    "timestamp": "2026-10-05T11:40:00",
+    "error_message": "E2E 冒烟：学习模板注入 matcher 成功但自匹配 0/5，match_count 自增链在真实 ETL 永远不触发",
+    "file": "backend/package/yuxi/services/template_library.py",
+    "root_cause": "双缺陷叠加：(1) add_templates_from_list 构造学习模板字典无 match_rule 键，_try_match_template 读 {} 后 regex/fallback 均跳过，恒 matched=False，generalized 的 {{数值}} 占位符从未转 regex；(2) 领域过滤不匹配，模板 domain=coal 而 ETL 匹配传 context domain=coal_mining，match() 直接 continue",
+    "fix": "已修（W1，2026-10-05）：Task 1 词形全栈统一到 coal——删 _get_template_matcher 的 coal_mining→coal replace 映射链，静态模板 30 json domain 字段与目录统一改名 coal_mining→coal；Task 2 add_templates_from_list 注入学习模板时按 chapter 生成 fallback match_rule（标题精确再现语义），match_count 自增数据通路打通。容器栈冒烟 hits=200/200（W0 为 0/5），DB 热核无 coal_mining 遗留",
+    "tags": [
+      "domain-factory",
+      "template-matcher",
+      "bug-353",
+      "match_count",
+      "e2e-smoke",
+      "w1"
+    ],
+    "related_bugs": [
+      "bug-353",
+      "bug-363"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-05"
+  },
+  {
+    "id": "bug-360",
+    "timestamp": "2026-10-05",
+    "error_message": "pytest /app/test 全量收集报 3 个 'import file mismatch'（test_builtin_discovery / test_mcp_router / test_memory_service），Interrupted: 3 errors during collection",
+    "file": "backend/test/unit/agents/test_builtin_discovery.py 等 6 个同名测试文件",
+    "root_cause": "unit 与 integration 目录存在同名测试文件且目录链上无 __init__.py，pytest 默认 prepend importmode 下模块名扁平化，同一会话先收集 integration 版即占用模块名，收集 unit 版时报 __file__ 不一致；与业务代码改动无关（容器内重复文件 mtime 2026-09-30 已存在）",
+    "fix": "分目录运行：回归基线口径用 pytest /app/test/unit/services（=1018 passed/3 skipped）；需要全量时分 unit、integration、e2e 三次运行。根治需为同名测试改唯一文件名或全测试树加 __init__.py / importmode=importlib（未做，超出本次任务）",
+    "tags": [
+      "pytest",
+      "import-mismatch",
+      "test-layout",
+      "collection-error",
+      "bug-359-w1"
+    ],
+    "related_bugs": [
+      "bug-359"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-05"
+  },
+  {
+    "id": "bug-361",
+    "timestamp": "2026-10-05",
+    "error_message": "Task 2 追加测试块时混入任务文本中不存在的行 lib.add_templates_from_from_list = None（自纠错，未进入测试运行）",
+    "file": "backend/test/unit/services/test_template_system.py",
+    "root_cause": "追加任务提供的测试代码时未严格逐字照抄，凭空即兴加了一行占位代码",
+    "fix": "下一 Edit 立即删除该行；追加后用 git diff 核对纯新增+零删除、并与任务文本逐行比对",
+    "tags": [
+      "tdd",
+      "append-discipline",
+      "verbatim-copy",
+      "bug-359-w1"
+    ],
+    "related_bugs": [
+      "bug-356"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-05"
+  },
+  {
+    "id": "bug-362",
+    "timestamp": "2026-10-05",
+    "error_message": "ImportError: cannot import name 'pg_manager' from 'pisuan.storage.postgres'",
+    "file": "docs/superpowers/plans/2026-10-05-w1-bug-359-domain-unify-match-rule.md",
+    "root_cause": "namespace 包无 re-export，pg_manager 实例在 pisuan.storage.postgres.manager:1842，计划冒烟脚本用了包根导入",
+    "fix": "冒烟脚本改用 from pisuan.storage.postgres.manager import pg_manager（主控已同步修正计划文件）",
+    "tags": [
+      "smoke-script",
+      "plan-bug"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-05"
+  },
+  {
+    "id": "bug-363",
+    "timestamp": "2026-10-05",
+    "error_message": "冒烟 templates total=200 ≠ 预期 230（静态 30 未加载），/app/templates 不存在",
+    "file": "docker-compose.yml + docker/api.Dockerfile",
+    "root_cause": "compose api 服务仅 bind mount server/package/test，镜像层也无 backend/templates 拷贝；TEMPLATES_DIR 解析 /app/templates 落空，容器栈 ETL 静态模板从未参与匹配（learned-only）",
+    "fix": "本期不改（超 W1 范围）；已立案为 W1 后续候选项：Dockerfile 增加 templates 拷贝 + compose 增加 bind mount，需评估静态模板突然参与匹配的行为影响",
+    "tags": [
+      "deployment",
+      "templates",
+      "etl",
+      "w1-candidate"
+    ],
+    "related_bugs": [
+      "bug-359"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-05"
   }
 ]

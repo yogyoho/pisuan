@@ -3133,3 +3133,35 @@
 | 12:11 | Created docs/superpowers/plans/2026-10-05-w1-bug-359-domain-unify-match-rule.md | — | ~3797 |
 | 12:12 | Edited docs/superpowers/plans/2026-10-05-w1-bug-359-domain-unify-match-rule.md | inline fix | ~32 |
 | 12:12 | bug-359 spec + W1 计划定稿落盘（3 任务：词形统一原子翻转/match_rule TDD/冒烟收尾），自审修正 DoD grep 范围 | docs/superpowers/specs/2026-10-05-bug-359-*.md plans/2026-10-05-w1-bug-359-*.md | 已落盘待提交 | ~9k |
+| 12:12 | Session end: 3 writes across 2 files (2026-10-05-bug-359-domain-unify-match-rule-design.md, 2026-10-05-w1-bug-359-domain-unify-match-rule.md) | 0 reads | ~5355 tok |
+| 13:43 | W1 计划执行启动（subagent-driven，用户选 1）：Task 1 implementer 已派发（词形统一原子翻转，基线 0683dc2a） | plans/2026-10-05-w1-bug-359-*.md | 执行中 | ~2k |
+| 13:43 | Session end: 3 writes across 2 files (2026-10-05-bug-359-domain-unify-match-rule-design.md, 2026-10-05-w1-bug-359-domain-unify-match-rule.md) | 3 reads | ~5355 tok |
+| 14:09 | W1-T1 domain 词形统一原子翻转：coal_mining→coal（目录+30 headers JSON+service 4 处+generator 缺省+matcher docstring+测试 16 处+sync-guide）；基线套件 unit/services 复现 1018/0/3；发现 pytest /app/test 全量跑有既有 unit vs integration 同名测试 basename 冲突（与本次改动无关） | domain_factory_service.py template_generator.py template_matcher.py templates/coal test_template_system.py sync-guide | DONE a303c936 | ~60k |
+| 14:12 | Edited docs/superpowers/plans/2026-10-05-w1-bug-359-domain-unify-match-rule.md | "MSYS_NO_PATHCONV=1 docker" → "MSYS_NO_PATHCONV=1 docker" | ~31 |
+| 14:12 | Edited docs/superpowers/plans/2026-10-05-w1-bug-359-domain-unify-match-rule.md | 7→7 lines | ~113 |
+| 14:12 | Edited docs/superpowers/plans/2026-10-05-w1-bug-359-domain-unify-match-rule.md | inline fix | ~26 |
+| 14:12 | Edited docs/superpowers/plans/2026-10-05-w1-bug-359-domain-unify-match-rule.md | inline fix | ~80 |
+| 14:12 | Session end: 7 writes across 2 files (2026-10-05-bug-359-domain-unify-match-rule-design.md, 2026-10-05-w1-bug-359-domain-unify-match-rule.md) | 3 reads | ~5624 tok |
+| 14:16 | Task 1 实现 a303c936 + 计划口径修正 c5b4a08c（bug-360：/app/test 收集冲突，回归改 unit 全量）；spec 评审 ✅ 8/8；质量评审派发中 | plans/2026-10-05-w1-* | 质量评审进行中 | ~3k |
+| 14:16 | Session end: 7 writes across 2 files (2026-10-05-bug-359-domain-unify-match-rule-design.md, 2026-10-05-w1-bug-359-domain-unify-match-rule.md) | 4 reads | ~5624 tok |
+| 14:25 | Edited docs/superpowers/plans/2026-10-05-w1-bug-359-domain-unify-match-rule.md | inline fix | ~46 |
+| 14:25 | Edited docs/superpowers/plans/2026-10-05-w1-bug-359-domain-unify-match-rule.md | modified main() | ~247 |
+| 14:25 | Edited docs/superpowers/specs/2026-10-05-bug-359-domain-unify-match-rule-design.md | inline fix | ~49 |
+| 14:26 | Task 1 完结（质量评审 Yes，0C/0I/3M；M3 DB 词形热核并入 Task 3，matcher 缓存作用域实证修正进 spec，0b1ad172）；Task 2 implementer 派发（match_rule TDD，红字口径 3F/2P） | plans/2026-10-05-w1-* | Task 2 执行中 | ~4k |
+| 14:26 | Session end: 10 writes across 2 files (2026-10-05-bug-359-domain-unify-match-rule-design.md, 2026-10-05-w1-bug-359-domain-unify-match-rule.md) | 4 reads | ~5989 tok |
+| 14:28 | Edited backend/test/unit/services/test_template_system.py | modified _learned_row() | ~778 |
+| 14:28 | Edited backend/test/unit/services/test_template_system.py | 4→3 lines | ~40 |
+| 14:28 | Edited backend/package/yuxi/services/template_library.py | added 1 import(s) | ~14 |
+| 14:28 | Edited backend/package/yuxi/services/template_library.py | expanded (+6 lines) | ~145 |
+| 14:35 | bug-359 W1 Task2：学习模板 fallback match_rule 注入（TDD 红字 3F/绿字 26P/unit 2681P），commit 4c745505 | template_library.py +7, test_template_system.py +69 | DONE | ~30k |
+| 14:34 | Task 2 实现 4c745505（+76/-0，红 3F/2P 精确命中、绿 unit 全量 2681/0/61）；实现者自纠误插行（bug-361）；spec 评审派发中 | plans/2026-10-05-w1-* | spec 评审进行中 | ~2k |
+| 14:34 | Session end: 14 writes across 4 files (2026-10-05-bug-359-domain-unify-match-rule-design.md, 2026-10-05-w1-bug-359-domain-unify-match-rule.md, test_template_system.py, template_library.py) | 7 reads | ~6966 tok |
+| 14:37 | Session end: 14 writes across 4 files (2026-10-05-bug-359-domain-unify-match-rule-design.md, 2026-10-05-w1-bug-359-domain-unify-match-rule.md, test_template_system.py, template_library.py) | 7 reads | ~6966 tok |
+| 14:46 | Task 2 完结（质量评审 Yes，0C/0I/4M；M1/M4 不动留档 W2，M2/M3 测试加固记入终审批次）；Task 3 implementer 派发（冒烟 hits>0 + DB 词形热核 + changelog/buglog/anatomy 收尾） | plans/2026-10-05-w1-* | Task 3 执行中 | ~3k |
+| 14:46 | Session end: 14 writes across 4 files (2026-10-05-bug-359-domain-unify-match-rule-design.md, 2026-10-05-w1-bug-359-domain-unify-match-rule.md, test_template_system.py, template_library.py) | 8 reads | ~12676 tok |
+| 14:53 | Edited docs/superpowers/plans/2026-10-05-w1-bug-359-domain-unify-match-rule.md | 3→3 lines | ~52 |
+| 14:53 | Edited docs/superpowers/plans/2026-10-05-w1-bug-359-domain-unify-match-rule.md | inline fix | ~39 |
+| 14:54 | Edited docs/superpowers/plans/2026-10-05-w1-bug-359-domain-unify-match-rule.md | "learned=211" → "learned=200" | ~66 |
+| 14:54 | Session end: 17 writes across 4 files (2026-10-05-bug-359-domain-unify-match-rule-design.md, 2026-10-05-w1-bug-359-domain-unify-match-rule.md, test_template_system.py, template_library.py) | 8 reads | ~12844 tok |
+| 14:58 | Edited docs/develop-guides/changelog.md | modified fix() | ~65 |
+| 14:58 | Task 3 收尾：冒烟 hits=200/200 判定翻转成立（W0 为 0/5）；total 形态偏差（/app/templates 缺失、静态模板从不加载，既有环境事实）经主控裁决按 (a) 口径收口，立案 bug-362/363；changelog/buglog/anatomy/cerebrum 回填并提交 | changelog.md, .wolf/buglog.json, .wolf/anatomy.md, .wolf/cerebrum.md | 提交完成 | ~30k |
