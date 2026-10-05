@@ -367,4 +367,4 @@
 ## web/src/views/
 
 
-- docs/vibe/2026-10-05-kf-roadmap-v2-gap-audit.md (~2.2k tokens) roadmap v2 spec 实现差距审计：W0 落地/W1-W4 未动逐项实证 + 排期依赖图 + 建议序（供拍板）；后续排期会话的输入文档
+- docs/superpowers/specs/2026-10-05-kf-product-roadmap-v2-gap-audit.md (~2.2k tokens) roadmap v2 spec 实现差距审计：W0 落地/W1-W4 未动逐项实证 + 排期依赖图 + 建议序（供拍板）；后续排期会话的输入文档

@@ -240,3 +240,4 @@
 - 前序设计：`docs/superpowers/specs/2026-09-30-coal-eia-writer-v2-port-design.md`、`docs/vibe/2026-10-02-etl-redesign-requirements.md`
 - 规范本体：HJ 463-2009 附录 A/B（`.wolf/hj463_extract.md`）、HJ 130-2019 附录 C/E/F（`.wolf/hj130_extract.md`）
 - 工作流产物：roadmap `tasks/wtp5kvzey.output`、取材地图 `tasks/wg1rj4gim.output`
+- 实现差距审计（2026-10-05，基线 e227a57a）：[2026-10-05-kf-product-roadmap-v2-gap-audit.md](2026-10-05-kf-product-roadmap-v2-gap-audit.md)——W0 落地/W1-W4 未动逐项实证 + 排期依赖图
