@@ -1,0 +1,93 @@
+{
+  "rules": [
+    {
+      "id": "R1",
+      "when": {
+        "report_family": "project_eia",
+        "mine_type": "underground"
+      },
+      "add": [
+        "地表沉陷预测与影响评价"
+      ],
+      "remove": [
+        "爆破影响评价"
+      ],
+      "evidence": "井工 7/7 有沉陷章 0 爆破章"
+    },
+    {
+      "id": "R2",
+      "when": {
+        "report_family": "project_eia",
+        "mine_type": "openpit"
+      },
+      "add": [
+        "爆破影响评价"
+      ],
+      "remove": [
+        "地表沉陷预测与影响评价"
+      ],
+      "evidence": "露天 6/6 反之"
+    },
+    {
+      "id": "R3",
+      "when": {
+        "report_family": "planning_eia",
+        "guideline_version": "revised2019"
+      },
+      "add": [
+        "三线一单及空间管控",
+        "不确定性分析"
+      ],
+      "evidence": "五间房章级;淖毛湖报批版节级"
+    },
+    {
+      "id": "R4",
+      "when": {
+        "report_family": "planning_eia",
+        "round": "revision"
+      },
+      "require": [
+        "回顾评价"
+      ],
+      "evidence": "修编 18/18 必含回顾性评价章"
+    },
+    {
+      "id": "R5",
+      "when": {
+        "sensitive_targets": "*"
+      },
+      "add_section_under": {
+        "host": "预测与评价",
+        "template": "对{sensitive_target}影响分析"
+      },
+      "evidence": "淖毛湖 6.10/6.11"
+    },
+    {
+      "id": "R6",
+      "when": {
+        "policy_flags": "total_control"
+      },
+      "add": [
+        "总量控制"
+      ],
+      "evidence": "郭家台 ch16"
+    },
+    {
+      "id": "R8",
+      "when": {
+        "report_family": "post_eia"
+      },
+      "base": "self",
+      "note": "post_eia.json stage 已按『项目环评(露天)骨架+后评价口径章名』定稿（白音华 2/2），v1 直接用其 canonical；渲染器的 base 克隆+rename_suffix 机制保留，待第三份后评价语料需要时启用",
+      "evidence": "白音华 2/2 沿用项目环评(露天)骨架"
+    },
+    {
+      "id": "R9",
+      "when": {
+        "report_family": "tracking_eia"
+      },
+      "base": "self",
+      "evidence": "淖毛湖跟踪 11 章独有骨架（canonical 即 standalone）"
+    }
+  ]
+}
