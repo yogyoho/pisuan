@@ -166,6 +166,28 @@ class DomainFactoryService:
 
         return self._template_matcher
 
+    @staticmethod
+    def _extract_learned_match_ids(paragraphs: list[dict]) -> list[int]:
+        """从段落 template_match 提取学习模板 id（template_id 形如 learned_42，见 template_library.add_templates_from_list）。"""
+        ids: set[int] = set()
+        for p in paragraphs:
+            tm = p.get("template_match") or {}
+            tid = str(tm.get("template_id") or "")
+            if tid.startswith("learned_"):
+                try:
+                    ids.add(int(tid[len("learned_"):]))
+                except ValueError:
+                    continue
+        return sorted(ids)
+
+    async def _increment_learned_template_match_counts(self, paragraphs: list[dict]) -> None:
+        """ETL 标题命中学习模板后自增 match_count（bug-353：原调用点方法不存在，AttributeError 被吞）。"""
+        ids = self._extract_learned_match_ids(paragraphs)
+        if not ids:
+            return
+        await self.repo.increment_learned_template_match_counts(ids)
+        logger.info(f"学习模板 match_count 自增: {len(ids)} 个模板")
+
     # ========== LLM 调用治理（[pisuan-custom] ETL P0-1：StepOutcome 台账 / 重试 / 熔断） ==========
 
     # provider 类错误：可退避重试并计入熔断；json_parse/schema_invalid 仅重试不计熔断；other 不重试

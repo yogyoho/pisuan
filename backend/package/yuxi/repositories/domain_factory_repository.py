@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select, text, update
 
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_domain_factory import (
@@ -309,6 +309,19 @@ class DomainFactoryRepository:
                 if extra_meta:
                     existing.extra_meta = extra_meta
         return existing if existing else template
+
+    async def increment_learned_template_match_counts(self, template_ids: list[int]) -> int:
+        """批量自增学习模板 match_count（ETL 标题命中留痕，bug-353）。"""
+        if not template_ids:
+            return 0
+        async with pg_manager.get_async_session_context() as session:
+            stmt = (
+                update(DomainFactoryLearnedTemplate)
+                .where(DomainFactoryLearnedTemplate.id.in_(template_ids))
+                .values(match_count=DomainFactoryLearnedTemplate.match_count + 1)
+            )
+            result = await session.execute(stmt)
+            return result.rowcount or 0
 
     # ========== Outline ==========
 
