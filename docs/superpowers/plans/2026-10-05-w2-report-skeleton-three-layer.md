@@ -333,6 +333,17 @@ def _resolve_base(family: str, conds: dict, layers: dict, seen: tuple[str, ...] 
     return list(l1["canonical_order"])
 
 
+def _copy_ch(title: str, src: dict) -> dict:
+    """layer-1 章定义 → 渲染中间体。sections 为富对象（id/title/elements/uses/slots/role）深拷贝，
+    章级 key_elements/writing_patterns（seed_gen 消费面）逐字随迁。"""
+    return {
+        "slot_id": src.get("slot_id", ""),
+        "key_elements": list(src.get("key_elements", [])),
+        "writing_patterns": list(src.get("writing_patterns", [])),
+        "sections": [dict(sec) for sec in src.get("sections", [])],
+    }
+
+
 def render(conds: dict, layers: dict) -> dict:
     """渲染单份骨架。conds=6 维条件；layers={family: {"l1":..., "l3":...}, "rules": [...]}."""
     family = conds["report_family"]
@@ -343,7 +354,7 @@ def render(conds: dict, layers: dict) -> dict:
     chapters: dict[str, dict] = {}
     for t in order:
         src = l1["chapters"].get(t, {})
-        chapters[t] = {"slot_id": src.get("slot_id", ""), "sections": list(src.get("sections", []))}
+        chapters[t] = _copy_ch(t, src)
 
     optional = l1.get("optional_chapters", {})
     for rule in layers["rules"]:
@@ -357,7 +368,7 @@ def render(conds: dict, layers: dict) -> dict:
             if src is None:
                 raise KeyError(f"{rid}: add 章不在 layer-1 词汇表: {t}")
             if t not in chapters:
-                chapters[t] = {"slot_id": "", "sections": list(src.get("sections", []))}
+                chapters[t] = _copy_ch(t, (optional.get(t) or l1["chapters"][t]))
             applied.append(rid)
         for t in rule.get("remove", []):
             chapters.pop(t, None)
@@ -368,33 +379,55 @@ def render(conds: dict, layers: dict) -> dict:
                 src = optional.get(t) or l1["chapters"].get(t)
                 if src is None:
                     raise KeyError(f"{rid}: require 章无定义: {t}")
-                chapters[t] = {"slot_id": src.get("slot_id", ""), "sections": list(src.get("sections", []))}
+                chapters[t] = _copy_ch(t, src)
             applied.append(rid)
         if "add_section_under" in rule:
             spec_ = rule["add_section_under"]
             host, template = spec_["host"], spec_["template"]
-            for target in conds.get("sensitive_targets", []):
-                sec_title = template.replace("{sensitive_target}", target)
-                for ch in chapters.values():
-                    pass  # host 章定位在下方按题名处理
-                # v1 host 匹配 = 精确或子串（R5 用 stage 全称章题规避误命中；sections 级定位留待 v2）
-                host_ch = next((c for c in chapters if c == host or host in c), None)
-                if host_ch and sec_title not in chapters[host_ch]["sections"]:
-                    chapters[host_ch]["sections"].append(sec_title)
+            # v1 host 匹配 = 精确或子串（R5 host 用 planning stage 全称章题规避误命中；sections 级定位留待 v2）
+            host_ch = next((c for c in chapters if c == host or host in c), None)
+            if host_ch:
+                existing = {sec.get("title") for sec in chapters[host_ch]["sections"]}
+                for target in conds.get("sensitive_targets", []):
+                    sec_title = template.replace("{sensitive_target}", target)
+                    if sec_title in existing:
+                        continue
+                    # 注入节 = 最小合法富对象；elements 留空（无语料要素依据，不臆造），role 留痕
+                    chapters[host_ch]["sections"].append({
+                        "id": "", "title": sec_title, "elements": [],
+                        "uses": {"slots": [], "formulas": [], "contracts": []},
+                        "slots": [], "role": "rule_injected",
+                    })
+                    existing.add(sec_title)
             applied.append(rid)
 
-    # layer-3 覆盖（深度/表格/节菜单）
+    # layer-3 覆盖：v1 只消费 depth + tables。实测 l3 sections 短词菜单对 layer-1 定稿节题
+    # 0 命中（既非 exact 也非子串全覆盖），属早期语料配置遗留——v1 渲染器不消费，
+    # 保留在源文件中作为 P2（O2 全量表单作业）参考数据
     for t, cfg in l3.items():
         if t in chapters:
-            chapters[t].update({k: v for k, v in cfg.items() if k in ("depth", "tables", "sections")})
+            chapters[t].update({k: v for k, v in cfg.items() if k in ("depth", "tables")})
 
+    # 输出章键 = slot_id 小写（CH3→ch3），与 depth_targets/{stage_id}.json 键同形——
+    # 重编号 ch1..chN 会与 depth_targets 的 stage 原编号错位，seed_gen 按
+    # 产物章键查表（缺章即 FAIL，禁静默默认地板），必须保持原键
     out_chapters = {}
-    for i, (t, body) in enumerate(chapters.items(), 1):
-        secs = {f"ch{i}_S{j:02d}": {"id": f"ch{i}_S{j:02d}", "title": s} for j, s in enumerate(body["sections"], 1)}
-        out_chapters[f"ch{i}"] = {
+    for t, body in chapters.items():
+        ch_key = body["slot_id"].lower()
+        if not ch_key:
+            raise ValueError(f"章「{t}」缺 slot_id——渲染输出键必须对齐 depth_targets")
+        secs = {}
+        for j, sec_src in enumerate(body["sections"], 1):
+            sec = dict(sec_src)
+            sec["id"] = f"{ch_key}_S{j:02d}"   # 节 id 前缀跟随渲染后章键
+            secs[sec["id"]] = sec
+        out_chapters[ch_key] = {
             "title": t,
             "slot_id": body["slot_id"],
+            "key_elements": body["key_elements"],
+            "writing_patterns": body["writing_patterns"],
             "depth": body.get("depth", "normal"),
+            "tables": body.get("tables", []),
             "sections": secs,
         }
     return {
@@ -619,6 +652,10 @@ python scripts/seed_gen.py gen --stage "C:/workspace/pisuan/backend/templates/co
 ```
 Expected: `SEED_READY: stage=...(planning_eia) chapters=13 sections=...` + `SEED_SELFCHECK` 通过（断言数 >0）。对 4 份存档各跑一次。
 若 build_seed 因渲染产物缺字段报错：**把缺的字段加进渲染器输出**（这就是兼容契约的发现过程），在提交说明里记录「seed_gen 要求字段 X/Y/Z」，然后重跑。禁止改 seed_gen 本体。
+
+**depth_targets 对齐约束（实测确认）**：`--depth-targets` 按**矿型分文件**（`project_eia_underground.json` / `project_eia_openpit.json`，键 = stage 原章键 ch0..），seed_gen 未传时按 stage_id 推断会失配。v1 冒烟范围：
+- planning_eia / post_eia / tracking_eia / **project_eia(underground)** 产物：跑完整 gen（underground 产物章键 ch0..ch19 与 project_eia_underground.json 键集完全对齐）
+- **project_eia(openpit) 产物：只做结构断言**（章键集 = ch0..ch19 去沉陷 + 爆破 openpit 侧键，20 章、applied_rules 含 R2）——它喂 openpit depth_targets 必缺 2 章（underground 独有的沉陷/总控对应键不在 openpit 表），seed_gen 缺章即 FAIL 是设计行为（禁静默默认地板），v1 不为它造深度表
 
 - [ ] **Step 3: 提交**
 
