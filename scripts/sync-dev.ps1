@@ -13,7 +13,7 @@
 # pisuan-localized 分支引用全程不被触碰。
 #
 # 边界（务必知悉）：
-#   1. 只同步容器挂载的代码路径 + 上述单文件清单（含部署文件）；docs/packages 等其余路径不随 dev 同步更新；
+#   1. 只同步容器挂载的代码路径 + 脚本内单文件清单（含部署文件）；docs/packages 等其余路径不随 dev 同步更新；
 #   2. 不搬运 backend/uv.lock（锁文件必须由 uv lock 机生，手搬即损坏）；依赖变更后需跑
 #      官方链 scripts/sync-upstream.ps1 重生成锁文件，否则镜像重建会失败（热重载不受影响）；
 #   3. 「删除文件」不被同步（本地化树会保留旧文件；索引中的对应条目由 git add -A 自动清退）
@@ -153,4 +153,4 @@ $sw.Stop()
 $dirty = (git -C $loc diff --name-only github/pisuan-localized -- @($syncPaths + $copyFiles) | Measure-Object).Count
 Write-Host "✅ dev 同步完成（$([math]::Round($sw.Elapsed.TotalSeconds, 1))s），容器热重载即会生效"
 Write-Host "   分支指针未动：pisuan-localized = $(git -C $loc log -1 --format='%h' pisuan-localized)"
-Write-Host "   相对镜像 tip 差异 $dirty 个文件（= pisuan 当前未提交改动数，行尾噪声除外）；跑官方链前先 -Revert"
+Write-Host "   相对镜像 tip 差异 $dirty 个文件（≈ pisuan 当前未提交改动数，行尾噪声除外；官方链再生前 templates/部署文件含滞后基线差异，属过渡期预期）；跑官方链前先 -Revert"
