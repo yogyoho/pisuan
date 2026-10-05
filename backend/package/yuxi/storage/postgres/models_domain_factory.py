@@ -323,3 +323,34 @@ class DomainFactoryReportPps(Base):
             "unit": self.unit,
             "source": self.source,
         }
+
+
+class DomainFactoryToolUsage(Base):
+    """领域知识工厂 - 写作侧工具取用台账（W0 埋点）
+
+    只增不改：每次工厂产物读取类工具调用记一行，供 D2 取用率测量。
+    """
+
+    __tablename__ = "domain_factory_tool_usage"
+    __table_args__ = (Index("idx_dftu_tool_time", "tool_name", "created_at"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tool_name = Column(String(64), nullable=False)
+    domain = Column(String(64), nullable=True)
+    report_type = Column(String(64), nullable=True)
+    args_summary = Column(JSON, nullable=True, default=dict)
+    result_count = Column(Integer, nullable=False, default=0)
+    source = Column(String(32), nullable=True)  # graph / db / db_fallback / miss
+    created_at = Column(DateTime, default=utc_now_naive)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "tool_name": self.tool_name,
+            "domain": self.domain,
+            "report_type": self.report_type,
+            "args_summary": self.args_summary or {},
+            "result_count": self.result_count,
+            "source": self.source,
+            "created_at": format_utc_datetime(self.created_at),
+        }
