@@ -7,7 +7,10 @@
       "round": "first",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：地表水章位、固废/土壤互换、资源综合利用章位"
+      }
     },
     "016审查会后 最新排版后（黑字版）改七台河矿区（修编）环评2024.7.9.docx": {
       "report_family": "planning_eia",
@@ -25,7 +28,10 @@
       "round": "revision",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：识别与回顾互换、环管与跟踪评价章位"
+      }
     },
     "2横城矿区总体规划（修编）环评——报告书报批版2021.1.docx": {
       "report_family": "planning_eia",
@@ -61,7 +67,10 @@
       "round": "revision",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：识别与回顾互换、环管与跟踪评价章位"
+      }
     },
     "三塘湖矿区规划环评修编（报批版）.docx": {
       "report_family": "planning_eia",
@@ -70,7 +79,10 @@
       "round": "revision",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：识别与回顾互换、环管与跟踪评价章位"
+      }
     },
     "九龙川矿井及选煤厂800万吨项目环评-2026.2.docx": {
       "report_family": "project_eia",
@@ -79,7 +91,14 @@
       "round": "first",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "slots": [
+          "前言"
+        ],
+        "note": "结构外章（四族骨架无此槽位）：院家前言",
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：资源综合利用章位（选址之前）"
+      }
     },
     "五间房矿区总体规划环评-报批-终稿.docx": {
       "report_family": "planning_eia",
@@ -88,7 +107,14 @@
       "round": "first",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "slots": [
+          "-2013年气象资料统计"
+        ],
+        "note": "结构外章（四族骨架无此槽位）：年份区间资料汇编，norm 剥离前导数字 2011- 得 -2013年气象资料统计",
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：年份区间资料汇编，norm 剥离前导数字 2011- 得 -2013年气象资料统计"
+      }
     },
     "伊敏3500万吨环评项目---最终2024.4.11.docx": {
       "report_family": "project_eia",
@@ -97,7 +123,14 @@
       "round": "first",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "slots": [
+          "附录"
+        ],
+        "note": "结构外章（四族骨架无此槽位）：附录",
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：附录"
+      }
     },
     "出版最终 会后修改——伊泰煤矿（露天部分）及选煤厂环评2021.12.docx": {
       "report_family": "project_eia",
@@ -106,7 +139,10 @@
       "round": "revision",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：固废/土壤互换、爆破章位、选址/风险章位"
+      }
     },
     "华亭矿区总体规划修编环境影响报告书-正式评审会后修改2024.11（加一句话在铁路建成前，采用清洁能源运输车运输）.docx": {
       "report_family": "planning_eia",
@@ -124,7 +160,10 @@
       "round": "first",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：固废/土壤互换、爆破章位、资源综合利用与选址互换"
+      }
     },
     "吐鲁东露天矿环评-报批版（2023.7）.docx": {
       "report_family": "project_eia",
@@ -133,7 +172,10 @@
       "round": "first",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：固废/土壤互换、资源综合利用与选址互换"
+      }
     },
     "巴拉素调整建设规模项目环境影响报告书（报批版）-2023.4.docx": {
       "report_family": "project_eia",
@@ -142,7 +184,10 @@
       "round": "revision",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：地表水章位、固废/土壤互换"
+      }
     },
     "文字——牙克石-五九煤田矿区总规环评2026.docx": {
       "report_family": "planning_eia",
@@ -169,7 +214,12 @@
       "round": "revision",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "slots": [
+          "附录"
+        ],
+        "note": "结构外章（四族骨架无此槽位）：附 录"
+      }
     },
     "横城矿区总体规划（修编）环评——报告书报批版2021.1-185a7e758338.docx": {
       "report_family": "planning_eia",
@@ -187,7 +237,10 @@
       "round": "revision",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：环管章位于清洁生产/公众参与之后"
+      }
     },
     "活鸡兔煤矿改扩建项目环评报告-2023.9.docx": {
       "report_family": "project_eia",
@@ -196,7 +249,10 @@
       "round": "revision",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：地表水章位、固废/土壤互换"
+      }
     },
     "淖毛湖总规（修编）环评2025.11.docx": {
       "report_family": "planning_eia",
@@ -205,7 +261,10 @@
       "round": "revision",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：环管章位于清洁生产/公众参与之后"
+      }
     },
     "淖毛湖规划（修编）环境影响跟踪评价报告书（报批版）.docx": {
       "report_family": "tracking_eia",
@@ -223,7 +282,12 @@
       "round": "first",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "slots": [
+          "附录"
+        ],
+        "note": "结构外章（四族骨架无此槽位）：附 录"
+      }
     },
     "白音华煤田三号露天矿项目环境影响后评价报告书-2021.10.docx": {
       "report_family": "post_eia",
@@ -232,7 +296,12 @@
       "round": "first",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "slots": [
+          "附录"
+        ],
+        "note": "结构外章（四族骨架无此槽位）：附 录"
+      }
     },
     "纳林希里矿区总体规划环境影响报告书-审查会后修改(补充).docx": {
       "report_family": "planning_eia",
@@ -241,7 +310,14 @@
       "round": "revision",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "slots": [
+          "前言"
+        ],
+        "note": "结构外章（四族骨架无此槽位）：院家前言",
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：院家前言"
+      }
     },
     "英格玛二号项目环评（报批版）2024.12.docx": {
       "report_family": "project_eia",
@@ -250,7 +326,10 @@
       "round": "first",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：地表水章位、固废/土壤互换、资源综合利用章位"
+      }
     },
     "评审会后修改韦州矿区总体规划（修编）环评报告书 2022.12.7.docx": {
       "report_family": "planning_eia",
@@ -270,7 +349,10 @@
       "policy_flags": [
         "total_control"
       ],
-      "exemptions": {}
+      "exemptions": {
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：资源综合利用章位（选址之前）"
+      }
     },
     "郭家台二号煤矿环评报告（报批稿）5.15.docx": {
       "report_family": "project_eia",
@@ -281,7 +363,10 @@
       "policy_flags": [
         "total_control"
       ],
-      "exemptions": {}
+      "exemptions": {
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：资源综合利用章位（选址之前）"
+      }
     },
     "鄂尔多斯市东胜煤田高头窑矿区总体规划修编环境影响报告书2023.5.docx": {
       "report_family": "planning_eia",
@@ -299,7 +384,10 @@
       "round": "first",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：地表水章位、土壤/固废互换、爆破章位、资源综合利用章位"
+      }
     },
     "黑龙江省鹤岗煤炭矿区总体规划（修编）环境影响报告书 .docx": {
       "report_family": "planning_eia",
@@ -308,7 +396,10 @@
       "round": "revision",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：环管章位于清洁生产/公众参与之后"
+      }
     },
     "（报批版）国能集团红沙泉一号露天矿改扩建项目2000万吨年项目排版.docx": {
       "report_family": "project_eia",
@@ -317,7 +408,10 @@
       "round": "revision",
       "sensitive_targets": [],
       "policy_flags": [],
-      "exemptions": {}
+      "exemptions": {
+        "order": true,
+        "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：地表水章位、土壤/固废互换、爆破章位、资源综合利用章位"
+      }
     }
   },
   "excluded": [
