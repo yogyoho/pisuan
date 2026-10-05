@@ -68,9 +68,10 @@
         "report_family": "project_eia",
         "policy_flags": "total_control"
       },
-      "add": [
-        "总量控制"
+      "require": [
+        "污染物排放总量控制分析"
       ],
+      "note": "目标绑 underground stage canonical 精确章题；郭家台 ch16 语料章题「污染物总量控制分析」经该章既有 alias 命中（语料无裸「总量控制」章题，optional 裸题槽位为死配置已删）；canonical 已含 → no-op 留痕（R4 语义）。when 限 project_eia——语料中仅项目环评出现总控章",
       "evidence": "郭家台 ch16"
     },
     {
