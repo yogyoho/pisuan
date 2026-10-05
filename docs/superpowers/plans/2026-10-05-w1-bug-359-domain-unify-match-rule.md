@@ -308,7 +308,7 @@ asyncio.run(main())
 "
 ```
 
-Expected: `learned=211`（或接近），`hits > 0`，`templates total` = 静态 30 + 学习注入数（静态共存证明）。冒烟前确保已跑过一次 sync-dev（Task 2 Step 4 之后无代码改动则免）。
+Expected: `learned=200`（limit 封顶，全表 211），`hits > 0`（W0 冒烟为 0/5，判定翻转成立）。`templates total` 在容器栈 = 学习注入数——**静态模板在本栈从不加载**：`/app/templates` 在镜像层与 compose 挂载中均不存在（bug-363，既有部署缺陷，W1 后续候选），"静态共存"由 unit 套件承担验证。冒烟前确保已跑过一次 sync-dev（Task 2 Step 4 之后无代码改动则免）。
 
 追加热核（质量评审 Minor 3，确认 DB 无遗留 coal_mining 词形）：
 
@@ -316,7 +316,7 @@ Expected: `learned=211`（或接近），`hits > 0`，`templates total` = 静态
 MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 python -c "
 import asyncio
 from sqlalchemy import select
-from pisuan.storage.postgres import pg_manager
+from pisuan.storage.postgres.manager import pg_manager
 from pisuan.storage.postgres.models_domain_factory import DomainFactoryDomain, DomainFactoryLearnedTemplate
 
 async def main():
@@ -359,7 +359,7 @@ Expected: 两个集合均无 `coal_mining`（domains 应含 `coal`，可能含 c
 }
 ```
 
-（若 bug-359 已在 W0 期间登记过 entry，则原位更新 root_cause/fix，勿重复建条。）
+（若 bug-359 已在 W0 期间登记过 entry，则原位更新 root_cause/fix，勿重复建条。冒烟执行中发现的脚本缺陷与部署缺陷另立新条：bug-362 冒烟脚本 pg_manager 导入路径、bug-363 容器栈 /app/templates 缺失静态模板从不加载。）
 
 - [ ] **Step 4: anatomy + memory**
 
