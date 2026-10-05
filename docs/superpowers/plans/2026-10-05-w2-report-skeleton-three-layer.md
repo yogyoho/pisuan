@@ -499,7 +499,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 **Files:**
 - Create: `backend/test/unit/test_report_skeleton_fit.py`
 
-- [ ] **Step 1: 写测试（完整代码）**
+- [x] **Step 1: 写测试（完整代码）**
 
 ```python
 """语料适配度测试（roadmap v2 spec §3.6）。
@@ -617,13 +617,13 @@ def test_fit_thresholds(env):
     assert order_ok >= 28, f"章序匹配 {order_ok}/35 < 28\n{report}"
 ```
 
-- [ ] **Step 2: 调参循环（预期需要 2-4 轮）**
+- [x] **Step 2: 调参循环（预期需要 2-4 轮）**
 
 Run: `python -m pytest backend/test/unit/test_report_skeleton_fit.py -x -q 2>&1 | tail -30`
 对每份不匹配：**(a)** 改 layer-1 aliases（语料别名漏登记）或 **(b)** 改 rules.json（规则缺失/误加）或 **(c)** 在 conditions.json 该文件 `exemptions` 登记 `{"order": true}` 或 `{"slots": ["章题"]}`（院家风豁免，必须显式留痕）。禁止放宽阈值、禁止吞断言。
 每轮记录：`slot_ok/order_ok` 数字轨迹，写入提交说明。
 
-- [ ] **Step 3: 达标提交**
+- [x] **Step 3: 达标提交**
 
 ```bash
 git add backend/test/unit/test_report_skeleton_fit.py backend/templates/coal_mining/report_skeletons/ backend/test/data/corpus_census/conditions.json
@@ -635,6 +635,8 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 （x≥34、y≥28，以实际数字填。）
 
 ---
+
+> **Task 4 执行记录（2026-10-06）**：8abc8a11（测试基线 RED：slot 18/35、order 14/35）→ 46cbea73（调优达标：alias +8 条全 census 溯源、豁免登记 slots 7 处/7 文件 + order 21 份、合计 24 文件留痕）→ 终值 slot 35/35、order 35/35。宿主机 --noconftest 37 passed + Docker 临时容器（pisuan-api:0.7.3 只读挂载）37 passed。评审 ✅ APPROVED：声明外差异零、豁免边界互不越界、21+7−4=24 账目闭合、无豁免滥用。**实测发现（v2 输入）**：order 自然值仅 14/35——21 份院家风章序分歧（project 族：地表水/声、固废/土壤互换、资源综合利用章位、爆破章位；planning 族：环管章位、识别与回顾互换），建议 v2 评估互换对白名单 + R2 插入位语义。Task 6 顺手项：fit 测试 :57 docstring 元素序校准 + 提交说明计数以 8 alias/7 slot 文件落账。
 
 ### Task 5: 渲染产物存档 + seed_gen 消费方冒烟
 
