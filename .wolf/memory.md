@@ -3165,3 +3165,73 @@
 | 14:54 | Session end: 17 writes across 4 files (2026-10-05-bug-359-domain-unify-match-rule-design.md, 2026-10-05-w1-bug-359-domain-unify-match-rule.md, test_template_system.py, template_library.py) | 8 reads | ~12844 tok |
 | 14:58 | Edited docs/develop-guides/changelog.md | modified fix() | ~65 |
 | 14:58 | Task 3 收尾：冒烟 hits=200/200 判定翻转成立（W0 为 0/5）；total 形态偏差（/app/templates 缺失、静态模板从不加载，既有环境事实）经主控裁决按 (a) 口径收口，立案 bug-362/363；changelog/buglog/anatomy/cerebrum 回填并提交 | changelog.md, .wolf/buglog.json, .wolf/anatomy.md, .wolf/cerebrum.md | 提交完成 | ~30k |
+| 15:02 | Task 3 完结 66900c0d（hits=200/200 判定翻转、DB 词形热核清洁、bug-359 原位更新+立案 362/363）；终审派发（0683dc2a..66900c0d 全程 + 容器复跑 + Minor 积压裁决意见） | plans/2026-10-05-w1-* | 终审进行中 | ~3k |
+| 15:02 | Session end: 18 writes across 5 files (2026-10-05-bug-359-domain-unify-match-rule-design.md, 2026-10-05-w1-bug-359-domain-unify-match-rule.md, test_template_system.py, template_library.py, changelog.md) | 9 reads | ~12914 tok |
+| 15:14 | Session end: 18 writes across 5 files (2026-10-05-bug-359-domain-unify-match-rule-design.md, 2026-10-05-w1-bug-359-domain-unify-match-rule.md, test_template_system.py, template_library.py, changelog.md) | 9 reads | ~12914 tok |
+| 15:35 | W1 首项（bug-359）终审 READY 收口：提交链 a303c936/4c745505/66900c0d + docs 三笔；执行记录入计划、bug-364 立案、cerebrum 裁决入库 | plans/2026-10-05-w1-bug-359-*.md | 已交卷待用户裁决（推送/W1 下一项） | ~4k |
+| 15:35 | Session end: 18 writes across 5 files (2026-10-05-bug-359-domain-unify-match-rule-design.md, 2026-10-05-w1-bug-359-domain-unify-match-rule.md, test_template_system.py, template_library.py, changelog.md) | 9 reads | ~12914 tok |
+| 15:41 | Session end: 18 writes across 5 files (2026-10-05-bug-359-domain-unify-match-rule-design.md, 2026-10-05-w1-bug-359-domain-unify-match-rule.md, test_template_system.py, template_library.py, changelog.md) | 9 reads | ~12914 tok |
+| 16:06 | Session end: 18 writes across 5 files (2026-10-05-bug-359-domain-unify-match-rule-design.md, 2026-10-05-w1-bug-359-domain-unify-match-rule.md, test_template_system.py, template_library.py, changelog.md) | 9 reads | ~12914 tok |
+| 16:13 | Session end: 18 writes across 5 files (2026-10-05-bug-359-domain-unify-match-rule-design.md, 2026-10-05-w1-bug-359-domain-unify-match-rule.md, test_template_system.py, template_library.py, changelog.md) | 9 reads | ~12914 tok |
+| 16:26 | Created docs/superpowers/specs/2026-10-05-bug-363-static-templates-activation-design.md | — | ~555 |
+| 16:27 | Created docs/superpowers/plans/2026-10-05-w1-bug-363-static-templates-activation.md | — | ~1952 |
+| 16:28 | 用户拍板：推送已执行（d687c812..202ad1b5）+ W1 第二项=bug-363 三拍板按推荐；spec+plan 落盘提交；Task 1（部署修复+即时激活验证）即将派发 | plans/2026-10-05-w1-bug-363-*.md | 执行启动 | ~3k |
+| 16:29 | Session end: 20 writes across 7 files (2026-10-05-bug-359-domain-unify-match-rule-design.md, 2026-10-05-w1-bug-359-domain-unify-match-rule.md, test_template_system.py, template_library.py, changelog.md) | 11 reads | ~15599 tok |
+| 16:30 | Edited docker/api.Dockerfile | 3→4 lines | ~39 |
+| 16:30 | Edited docker-compose.yml | 16→17 lines | ~190 |
+| 16:30 | Edited docker-compose.yml | 17→18 lines | ~213 |
+| 16:32 | bug-363 T1: 源树加 Dockerfile COPY+compose 双挂载；sync-dev 后 localized grep 无命中→确认 sync-dev 不携带部署文件，按预案 BLOCKED | docker/api.Dockerfile, docker-compose.yml, scripts/sync-dev.ps1 | BLOCKED 上报，源树改动未提交 | ~25k |
+
+## Session: 2026-10-05 16:36
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:37 | Edited scripts/sync-dev.ps1 | 1→3 lines | ~63 |
+| 16:37 | Edited scripts/sync-dev.ps1 | inline fix | ~19 |
+| 16:40 | bug-363 Task1 BLOCKER 裁决：sync-dev 单件清单纳入部署文件，传播验证 3 行 diff，提交 f884d9d0；实施者复工 Step 4 | scripts/sync-dev.ps1, .wolf/buglog.json | unblocked | ~6k |
+| 16:40 | Session end: 2 writes across 1 files (sync-dev.ps1) | 1 reads | ~88 tok |
+| 16:46 | Edited scripts/sync-dev.ps1 | 10→11 lines | ~52 |
+| 17:05 | bug-363 Task1 二次停闸：localized 陈旧 coal_mining 模板目录暴露（templates 不在 sync 清单）；搬迁备份+.w/scripts 纳清单（2723e3e9），容器双侧 30@coal 验证通过 | scripts/sync-dev.ps1, .wolf/bug363-stale-coal_mining-backup/ | unblocked | ~8k |
+| 16:51 | Session end: 3 writes across 1 files (sync-dev.ps1) | 1 reads | ~144 tok |
+| 16:53 | bug-363 T1 完成：部署改动提交 beb1942e；冒烟 30/230、probe 30/30、self-match 200；unit 2681/0/61 | docker/api.Dockerfile, docker-compose.yml | DONE | ~45k |
+| 16:54 | Session end: 3 writes across 1 files (sync-dev.ps1) | 1 reads | ~144 tok |
+| 16:57 | Session end: 3 writes across 1 files (sync-dev.ps1) | 3 reads | ~6666 tok |
+| 17:04 | Edited scripts/sync-dev.ps1 | inline fix | ~19 |
+| 17:04 | Edited scripts/sync-dev.ps1 | "   相对镜像 tip 差异 $dirty 个文件" → "   相对镜像 tip 差异 $dirty 个文件" | ~31 |
+| 17:35 | bug-363 Task1 完成 beb1942e：冒烟 230/probe 30-30/self 200、unit 2681/0/61；spec+quality 双评审通过，2 Minor 已修 0ecaa024；Task2 观测收尾实施者已派发 | docker/api.Dockerfile, docker-compose.yml, scripts/sync-dev.ps1 | done | ~12k |
+| 17:06 | Session end: 5 writes across 1 files (sync-dev.ps1) | 5 reads | ~8421 tok |
+| 18:31 | bug-363 Task2：真实 ETL 观测（横城 phase-1 template_match 317=static 277+learned 40，激活前 0）、tool_usage 基线 total=8、D3 清查零缺失+bug-365 存量 storage_path 断裂立案、changelog/anatomy/cerebrum 收尾并提交 | changelog.md, buglog.json, anatomy.md, cerebrum.md | DONE | ~90k |
+| 18:40 | Task2 主控核查：0428dd57 4文件 53+/5- 核实、psql 复核两任务终态与 tool_usage=8；清理 api 容器 7 个孤儿 python（实施者 6 + 主控 1，自报「0 残留」不准）；spec 评审已派 | .wolf/* 台账 | in-review | ~5k |
+| 18:39 | Session end: 5 writes across 1 files (sync-dev.ps1) | 6 reads | ~8421 tok |
+| 18:55 | Task2 spec 评审合规（6 Minor）；主控补丁：bug-363 补通道偏离/基线 total=8/sync-dev 句恢复，bug-334 复发计数+1；评审员 1762 NULL 观察证伪（0/211） | .wolf/buglog.json | patched | ~4k |
+| 19:05 | 台账补丁 indent 事故：json.dump indent=1 整文件重排 5258 行，amend 前被 stat 拦下归一 indent=2（5+/5-，d19fac84）；Task2 质量评审已派 | .wolf/buglog.json, .wolf/cerebrum.md | fixed | ~3k |
+| 18:50 | Session end: 5 writes across 1 files (sync-dev.ps1) | 6 reads | ~8421 tok |
+| 19:25 | Task2 双评审过（spec 6 Minor 已收 45a095b3）；计划勾账 11 框 + 执行记录 2f344178；终审已派（4d7953fc..2f344178） | docs/superpowers/plans/*bug-363*, .wolf/* | in-final-review | ~4k |
+| 19:02 | Session end: 5 writes across 1 files (sync-dev.ps1) | 6 reads | ~8421 tok |
+| 19:07 | Edited docs/develop-guides/upstream-sync-guide.md | 1→3 lines | ~138 |
+| 19:45 | bug-363 终审 READY，guide 7.2 部署面补列 441bdccc，9 笔推送 202ad1b5..441bdccc；W1 第二项全闭环 | 全范围 | pushed+closed | ~6k |
+| 19:08 | Session end: 6 writes across 2 files (sync-dev.ps1, upstream-sync-guide.md) | 7 reads | ~8569 tok |
+| 19:28 | Session end: 6 writes across 2 files (sync-dev.ps1, upstream-sync-guide.md) | 7 reads | ~8569 tok |
+| 19:34 | Created docs/superpowers/specs/2026-10-05-bug-365-storage-path-migration-design.md | — | ~520 |
+| 19:35 | Created docs/superpowers/plans/2026-10-05-w1-bug-365-storage-path-migration.md | — | ~1075 |
+| 19:55 | bug-365 spec+plan 落档提交（D1 迁移/D2 轻验证/D3 删备份，用户三案拍板），实施者待派 | docs/superpowers/*bug-365* | committed | ~4k |
+| 19:36 | Session end: 8 writes across 4 files (sync-dev.ps1, upstream-sync-guide.md, 2026-10-05-bug-365-storage-path-migration-design.md, 2026-10-05-w1-bug-365-storage-path-migration.md) | 7 reads | ~10278 tok |
+| 20:00 | 用户指令：推送后择机续跑横城 a44afc93 retry（resume 自 p128）；完成即按 Step 2 口径采集，闭 bug-363 挂起判定 | - | queued | ~0.5k |
+| 19:39 | Session end: 8 writes across 4 files (sync-dev.ps1, upstream-sync-guide.md, 2026-10-05-bug-365-storage-path-migration-design.md, 2026-10-05-w1-bug-365-storage-path-migration.md) | 7 reads | ~10278 tok |
+| 19:39 | Edited docs/develop-guides/changelog.md | modified fix() | ~49 |
+| 19:39 | Edited docs/superpowers/plans/2026-10-05-w1-bug-365-storage-path-migration.md | inline fix | ~4 |
+| 19:39 | Edited docs/superpowers/plans/2026-10-05-w1-bug-365-storage-path-migration.md | expanded (+7 lines) | ~142 |
+| 19:39 | bug-365 Task1：storage_path 迁移 UPDATE 1 行 + 冒烟 423 段 + 清淤备份删除 + 三件台账落账，零代码 diff | .wolf/buglog.json, docs/develop-guides/changelog.md, docs/superpowers/plans/2026-10-05-w1-bug-365-storage-path-migration.md | DONE | ~4k |
+| 19:42 | Session end: 11 writes across 5 files (sync-dev.ps1, upstream-sync-guide.md, 2026-10-05-bug-365-storage-path-migration-design.md, 2026-10-05-w1-bug-365-storage-path-migration.md, changelog.md) | 9 reads | ~32346 tok |
+| 19:46 | Session end: 11 writes across 5 files (sync-dev.ps1, upstream-sync-guide.md, 2026-10-05-bug-365-storage-path-migration-design.md, 2026-10-05-w1-bug-365-storage-path-migration.md, changelog.md) | 9 reads | ~32346 tok |
+
+## Session: 2026-10-05 19:56
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:07 | bug-365 批次推送成功（441bdccc..1ee68c87，哨兵 6 试过墙） | git | OK | ~0 |
+| 20:09 | 横城 retry 第 2 跑终态：agnes 免费档配额耗尽型熔断（FAILED_PROVIDER，49 尝试 13 可用，熔断位 p128→p222 真实推进）；「择机窗口」前提证伪，换模型/升 key 待用户拍板 | domain_factory_tasks a44afc93 | 已报终态 | ~2k |
+| 20:14 | 用户拍板 D：横城任务挂起静置（FAILED_PROVIDER 终态安全，resume 点 p222 固化）；不换模型不重试，待用户提供新 key/provider 再续 | - | 已留痕 | ~0 |
+| 20:22 | 审计 roadmap v2 spec 实现度：仅 W0 落地（bug-353/354/埋点），W1-W4 与 §9 八项拍板除埋点外全部未动；spec-W1 与会话-W1 窗口错位（实际 W1 做了 bug-359/363/365） | specs/2026-10-05-kf-product-roadmap-v2-design.md | 已报用户 | ~3k |
+| 22:11 | Created docs/vibe/2026-10-05-kf-roadmap-v2-gap-audit.md | — | ~1262 |
+| 20:26 | 差距清单落档 docs/vibe/2026-10-05-kf-roadmap-v2-gap-audit.md（排期输入，含依赖图与建议序） | docs/vibe | 已提交待推 | ~2k |

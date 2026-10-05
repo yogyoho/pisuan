@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-05T09:04:33.530Z
-> Files: 20 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-05T14:11:05.512Z
+> Files: 22 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -23,7 +23,6 @@
 
 ## ./
 
-- `docker-compose.yml` — Docker Compose services；api/worker 均 :ro 挂载 backend/templates → /app/templates（bug-363 静态模板容器激活，~5867 tok）
 
 ## .claude/
 
@@ -272,7 +271,6 @@
 
 ## docker/
 
-- `api.Dockerfile` — 使用轻量级Python基础镜像；含 COPY backend/templates /app/templates（bug-363 镜像内置静态模板，~655 tok）
 
 ## docker/nginx/
 
@@ -306,7 +304,8 @@
 
 ## docs/develop-guides/
 
-- `changelog.md` — 版本变更记录 (~20852 tok)
+- `changelog.md` — 版本变更记录 (~20736 tok)
+- `upstream-sync-guide.md` — 上游代码同步与本地化扩展实施方案 (~3920 tok)
 
 ## docs/intro/
 
@@ -316,14 +315,17 @@
 - `2026-10-05-w0-bugfix-and-usage-tracking.md` — W0：bug-353/354 修复 + 工厂产物取用率埋点 实施计划 (~6810 tok)
 - `2026-10-05-w1-bug-359-domain-unify-match-rule.md` — bug-359 W1 首项实施计划：domain 词形统一 + 学习模板 match_rule 注入 (~3921 tok)
 - `2026-10-05-w1-bug-363-static-templates-activation.md` — bug-363 W1 第二项实施计划：静态模板容器激活 + 部署一致性清查 (~1830 tok)
+- `2026-10-05-w1-bug-365-storage-path-migration.md` — bug-365 W1 第三项实施计划：存量 storage_path 一次性迁移 (~1109 tok)
 
 ## docs/superpowers/specs/
 
 - `2026-10-05-bug-359-domain-unify-match-rule-design.md` — bug-359 修复设计：domain 词形统一 + 学习模板 match_rule 注入 (~1121 tok)
 - `2026-10-05-bug-363-static-templates-activation-design.md` — bug-363 修复设计：静态模板容器激活 + 部署一致性清查 (~520 tok)
+- `2026-10-05-bug-365-storage-path-migration-design.md` — bug-365 修复设计：存量任务 storage_path 一次性迁移 (~488 tok)
 
 ## docs/vibe/
 
+- `2026-10-05-kf-roadmap-v2-gap-audit.md` — 知识工厂产物路线 v2 实现差距清单（排期输入） (~1183 tok)
 
 ## docs/vibe/assets/2026-09-30-coal-eia-v2-port/
 
@@ -364,3 +366,5 @@
 
 ## web/src/views/
 
+
+- docs/vibe/2026-10-05-kf-roadmap-v2-gap-audit.md (~2.2k tokens) roadmap v2 spec 实现差距审计：W0 落地/W1-W4 未动逐项实证 + 排期依赖图 + 建议序（供拍板）；后续排期会话的输入文档
