@@ -153,24 +153,30 @@ files = [
     from_stage('planning_eia', 'planning_eia', 'HJ463 规划环评 13 章定稿序'),
     from_stage('tracking_eia', 'tracking_eia', '跟踪评价独有 11 章骨架（淖毛湖跟踪）'),
 ]
-# project_eia：合并 underground+openpit 两 stage（其差集恰为沉陷/爆破章）
-ug, op = from_stage('project_eia_underground', 'project_eia', ''), from_stage('project_eia_openpit', 'project_eia', '')
-merged_order, merged_ch = [], {}
-for src in (ug, op):
-    for t in src['canonical_order']:
-        if t not in merged_ch:
-            merged_ch[t] = src['chapters'][t]; merged_order.append(t)
-files.append({'family': 'project_eia', 'base_source': 'project_eia_underground+project_eia_openpit',
-              'note': '两矿型 stage 合并；沉陷(井工)/爆破(露天)为 optional，由 R1/R2 激活',
-              'canonical_order': merged_order, 'optional_chapters': {}, 'chapters': merged_ch})
+# project_eia：基准 = underground stage 逐字 20 章（质量评审裁决：双 stage 机械合并
+# 实测产出 6 组双拼变体 + 位置交错的 26 章缝合骨架，R1/R2 永不命中——原「差集恰为
+# 沉陷/爆破章」假设证伪）。openpit 差异改由规则表达：变体章题 → 对应章 aliases、
+# 独有章 → optional_chapters，由 R1(require 校验留痕)/R2(remove 沉陷 + add 爆破) 激活
+ug = from_stage('project_eia_underground', 'project_eia',
+                '井工基准骨架；openpit 差异由 R1/R2 表达，openpit 变体/独有章见对照分类')
+files.append(ug)
+# openpit 对照分类（以 openpit stage 19 章逐题对照 underground 20 章，人工裁决后写死）：
+op = json.load(open(S + 'project_eia_openpit.json', encoding='utf-8'))
+for t in [c['title'] for c in op['chapters'].values()]:
+    if t in [c['title'] for c in ug['chapters'].values()]:
+        continue                      # exact 同名 → 已在基准
+    print(f'{t!r} → 变体(挂靠哪章 alias) 或 独有(optional)')  # 逐题裁决，禁止臆造
 files.append(from_stage('post_eia', 'post_eia', 'v1 由 R8 从 project_eia 派生；本文件仅存已知差异节题（后评价口径）'))
 
 # 规则可激活的槽位（spec §3.3 R1-R9 指名章）登记为 optional
 EXTRA = {
     'planning_eia': {'三线一单及空间管控': ['三线一单', '空间管控'], '不确定性分析': ['不确定性', '环境不确定']},
-    'project_eia': {'地表沉陷预测与影响评价': ['地表沉陷预测', '沉陷预测'], '爆破影响评价': ['爆破影响', '爆破'],
-                    '总量控制': ['总量控制']},
-    'post_eia': {'措施优化与调整': ['措施优化调整', '优化调整']},
+    # project_eia：沉陷章 = 井工基准 canonical 自带；「总量控制」死 optional 已删——
+    # canonical 真章「污染物排放总量控制分析」承接，语料短题「总量控制」登记为其 alias
+    # （郭家台 ch16 命中路径）；openpit 独有章（爆破等）由上面的对照分类直接落进 project_eia.json
+    'project_eia': {},
+    # post_eia「措施优化与调整」已删：canonical 已有真章「环境保护措施优化调整」，裸 optional 是死配置
+    'post_eia': {},
 }
 for f in files:
     for t, aliases in EXTRA.get(f['family'], {}).items():
@@ -186,7 +192,7 @@ Run 后人工拆分为 4 份 `<family>.json`（键：`family/canonical_order/opt
 
 - [ ] **Step 2: 从语料派生 aliases（ad-hoc）**
 
-对 38 份语料的归一化章题做频次统计，凡与 layer-1 章题**不相等但编辑距离 ≤4 或含相同 4-gram** 的，登记进该章 `aliases`。示例（预期出现的真实对）：语料「总论」→ planning「总则」alias；「地表沉陷预测及影响评价」→「地表沉陷预测与影响评价」alias。**纯机械聚类 + 人工过目，禁止臆造**。统计脚本模板：
+对 38 份语料的归一化章题做频次统计，凡与 layer-1 章题**不相等但编辑距离 ≤4 或含相同 4-gram** 的，登记进该章 `aliases`。示例（预期出现的真实对）：语料「总论」→ planning「总则」alias；语料「地表沉陷预测与影响评价」（「与」变体）→ 井工基准 canonical「地表沉陷预测及影响评价」alias；语料短题「总量控制」→「污染物排放总量控制分析」alias。**纯机械聚类 + 人工过目，禁止臆造**。统计脚本模板：
 
 ```python
 import json, re
@@ -209,9 +215,13 @@ for t, n in freq.most_common(): print(n, t)
 ```json
 { "rules": [
   { "id": "R1", "when": {"report_family": "project_eia", "mine_type": "underground"},
-    "add": ["地表沉陷预测与影响评价"], "remove": ["爆破影响评价"], "evidence": "井工 7/7 有沉陷章 0 爆破章" },
+    "require": ["地表沉陷预测及影响评价"],
+    "note": "base 即井工骨架（质量评审裁决），沉陷章天然在场；require 为校验性留痕（R4 语义），目标绑 underground stage 精确章题「及」",
+    "evidence": "井工 7/7 有沉陷章 0 爆破章" },
   { "id": "R2", "when": {"report_family": "project_eia", "mine_type": "openpit"},
-    "add": ["爆破影响评价"], "remove": ["地表沉陷预测与影响评价"], "evidence": "露天 6/6 反之" },
+    "remove": ["地表沉陷预测及影响评价"], "add": ["爆破环境影响评价"],
+    "note": "remove/add 目标绑各自 stage 定稿精确章题（exact-title 绑定，同 R4）；add 目标须已登记为 project_eia.json 的 optional 槽位。露天语料若出现疑似笔误章题（如「地表水环境影响影响评价」）按定稿词汇原样登记 + 注记",
+    "evidence": "露天 6/6 反之" },
   { "id": "R3", "when": {"report_family": "planning_eia", "guideline_version": "revised2019"},
     "add": ["三线一单及空间管控", "不确定性分析"], "evidence": "五间房章级;淖毛湖报批版节级" },
   { "id": "R4", "when": {"report_family": "planning_eia", "round": "revision"},
@@ -219,9 +229,13 @@ for t, n in freq.most_common(): print(n, t)
     "note": "require 目标绑定 canonical 全称章题（spec §3.3 抽象槽名「回顾评价」的 stage 定稿绑定）；require 语义=校验性保证在场，canonical 已含则为 no-op 留痕。禁止绑裸名——裸名不在 chapters 键会触发 optional 注入造成重复回顾章",
     "evidence": "修编 18/18 必含回顾性评价章" },
   { "id": "R5", "when": {"sensitive_targets": "*"},
-    "add_section_under": {"host": "预测与评价", "template": "对{sensitive_target}影响分析"}, "evidence": "淖毛湖 6.10/6.11" },
-  { "id": "R6", "when": {"policy_flags": "total_control"},
-    "add": ["总量控制"], "evidence": "郭家台 ch16" },
+    "add_section_under": {"host": "规划实施环境影响预测与评价", "template": "对{sensitive_target}影响分析"},
+    "note": "host 绑 planning stage 精确章题全称——v1 host 匹配为 c == host or host in c 子串匹配，裸词「预测与评价」会误命中任意含该词的章题，v1 用全称规避；sections 级 host 定位留待 v2",
+    "evidence": "淖毛湖 6.10/6.11" },
+  { "id": "R6", "when": {"report_family": "project_eia", "policy_flags": "total_control"},
+    "require": ["污染物排放总量控制分析"],
+    "note": "目标绑 underground stage canonical 精确章题；语料短题「总量控制」登记为该章 alias（郭家台 ch16 命中路径）；canonical 已含 → no-op 留痕（R4 语义，禁止绑裸名）。when 限 project_eia——语料中仅项目环评出现总控章",
+    "evidence": "郭家台 ch16" },
   { "id": "R8", "when": {"report_family": "post_eia"}, "base": "self",
     "note": "post_eia.json stage 已按『项目环评(露天)骨架+后评价口径章名』定稿（白音华 2/2），v1 直接用其 canonical；渲染器的 base 克隆+rename_suffix 机制保留，待第三份后评价语料需要时启用", "evidence": "白音华 2/2 沿用项目环评(露天)骨架" },
   { "id": "R9", "when": {"report_family": "tracking_eia"},
@@ -233,7 +247,7 @@ for t, n in freq.most_common(): print(n, t)
 
 - [ ] **Step 4: 写 layer-3 每章配置（v1 只配高频差异章，spec O2）**
 
-`<family>-chapters.json` 格式：`{ "章题": { "depth": "deep|normal", "tables": ["表名"...], "sections": ["节菜单"...] } }`。v1 范围（spec §3.3 示例 + 高频差异）：project_eia 的「地表沉陷预测与影响评价」（depth=deep，tables=["地表沉陷敏感目标一览表","保护煤柱留设表","预测参数表"]，sections=["预测模型","预测参数","预测方案","移动变形预测","影响分析","岩移观测计划"]）、「爆破影响评价」（depth=deep，sections=["爆破器材与起爆方式","爆破安全距离","爆破影响预测","防护措施"]）；planning_eia 的「承载力分析」「综合论证」（depth=deep）；其余章 v1 不配置（渲染时缺省 depth=normal、无 tables、sections 取 layer-1）。**全量表单清单是 P2 数据作业（O2），不在本窗口**。
+`<family>-chapters.json` 格式：`{ "章题": { "depth": "deep|normal", "tables": ["表名"...], "sections": ["节菜单"...] } }`。v1 范围（spec §3.3 示例 + 高频差异）：project_eia 的「地表沉陷预测及影响评价」（depth=deep，tables=["地表沉陷敏感目标一览表","保护煤柱留设表","预测参数表"]，sections=["预测模型","预测参数","预测方案","移动变形预测","影响分析","岩移观测计划"]）、「爆破环境影响评价」（depth=deep，sections=["爆破器材与起爆方式","爆破安全距离","爆破影响预测","防护措施"]）——l3 为 exact-key merge，键必须与 layer-1 章题逐字相等；planning_eia 的「承载力分析」「综合论证」（depth=deep）；其余章 v1 不配置（渲染时缺省 depth=normal、无 tables、sections 取 layer-1）。**全量表单清单是 P2 数据作业（O2），不在本窗口**。
 
 - [ ] **Step 5: 结构自检 + 提交**
 
@@ -363,6 +377,7 @@ def render(conds: dict, layers: dict) -> dict:
                 sec_title = template.replace("{sensitive_target}", target)
                 for ch in chapters.values():
                     pass  # host 章定位在下方按题名处理
+                # v1 host 匹配 = 精确或子串（R5 用 stage 全称章题规避误命中；sections 级定位留待 v2）
                 host_ch = next((c for c in chapters if c == host or host in c), None)
                 if host_ch and sec_title not in chapters[host_ch]["sections"]:
                     chapters[host_ch]["sections"].append(sec_title)
@@ -485,16 +500,17 @@ def _norm(s: str) -> str:
 
 
 def _alias_index(l1: dict) -> dict[str, str]:
-    """归一化题/别名 → 章题。"""
+    """归一化题/别名 → 章题。alias 与任意已登记章题同名时跳过（防同名误挂）。"""
     idx = {}
     for t, body in l1["chapters"].items():
         idx[_norm(t)] = t
-        for a in body.get("aliases", []):
-            idx[_norm(a)] = t
     for t, body in l1.get("optional_chapters", {}).items():
         idx.setdefault(_norm(t), t)
-        for a in body.get("aliases", []):
-            idx.setdefault(_norm(a), t)
+    for src in (l1["chapters"], l1.get("optional_chapters", {})):
+        for t, body in src.items():
+            for a in body.get("aliases", []):
+                if _norm(a) not in idx:      # alias==norm(章题) 时以章题为准，跳过 alias
+                    idx[_norm(a)] = t
     return idx
 
 
