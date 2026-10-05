@@ -40,7 +40,7 @@
 
 这是等价交换型重构：翻转前后系统行为不变（coal 领域内），以既有全量回归套件为守护测试，不新增测试。
 
-- [ ] **Step 1: 目录改名 + 静态 JSON 词形**
+- [x] **Step 1: 目录改名 + 静态 JSON 词形**
 
 ```bash
 git mv backend/templates/coal_mining backend/templates/coal
@@ -50,7 +50,7 @@ grep -rn "coal_mining" backend/templates/ && echo "FAIL: 残留词形" || echo "
 
 Expected: `OK: 静态模板词形清洁`（routing_config.json 本无 coal_mining，headers 30 个文件各 1 处）。
 
-- [ ] **Step 2: service 三处词形（domain_factory_service.py）**
+- [x] **Step 2: service 三处词形（domain_factory_service.py）**
 
 :134 默认参数：
 
@@ -91,7 +91,7 @@ Expected: `OK: 静态模板词形清洁`（routing_config.json 本无 coal_minin
                     match_result = matcher.match(title, context={"domain": domain_code or "coal"})
 ```
 
-- [ ] **Step 3: generator 缺省参 + matcher docstring**
+- [x] **Step 3: generator 缺省参 + matcher docstring**
 
 template_generator.py:37：
 
@@ -115,7 +115,7 @@ template_matcher.py:36,38（类 docstring 用法示例）：
         result = matcher.match("7.1 矿区水资源承载力分析", context={"domain": "coal"})
 ```
 
-- [ ] **Step 4: 测试词形跟随 + sync-guide 路径**
+- [x] **Step 4: 测试词形跟随 + sync-guide 路径**
 
 ```bash
 sed -i 's/coal_mining/coal/g' backend/test/unit/services/test_template_system.py
@@ -125,7 +125,7 @@ grep -rn "coal_mining" backend/test backend/package backend/templates docs/devel
 
 Expected: `OK: 全部清洁`（web/ 与 docs/vibe 历史文档中的 coal 不在本任务范围）。
 
-- [ ] **Step 5: 容器全量回归（等价交换验证）**
+- [x] **Step 5: 容器全量回归（等价交换验证）**
 
 ```bash
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/sync-dev.ps1
@@ -134,7 +134,7 @@ MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 pytest /app/test -q --no-h
 
 Expected: `≥1018 passed, 3 skipped, 0 failed`。任何失败都要先查明是否本任务引起（对照 main 基线），不是则停手上报。
 
-- [ ] **Step 6: ruff + 提交**
+- [x] **Step 6: ruff + 提交**
 
 ```bash
 cd backend && uv run ruff format package/yuxi/services/domain_factory_service.py package/yuxi/services/template_generator.py package/yuxi/services/template_matcher.py package/yuxi/services/template_library.py test/unit/services/test_template_system.py && uv run ruff check package/yuxi/services/domain_factory_service.py package/yuxi/services/template_generator.py package/yuxi/services/template_matcher.py package/yuxi/services/template_library.py test/unit/services/test_template_system.py; cd ..
@@ -157,7 +157,7 @@ Expected: 提交成功，`git status` 中无禁碰文件。
 
 matcher 本身零改动：`match_rule` 无 `strategy` 键 → `_try_match_template` 跳过 regex 块 → 走既有 fallback 分支（子串命中、置信度 0.6、不过阈值闸）。
 
-- [ ] **Step 1: 写失败测试（test_template_system.py 尾部追加）**
+- [x] **Step 1: 写失败测试（test_template_system.py 尾部追加）**
 
 ```python
 # ------------------------------------------------------------------
@@ -227,7 +227,7 @@ def test_learned_template_rejects_domain_mismatch_and_other_title(tmp_path):
     assert not matcher.match("5.1 施工期噪声影响分析", context={"domain": "coal"}).matched
 ```
 
-- [ ] **Step 2: 红字验证**
+- [x] **Step 2: 红字验证**
 
 ```bash
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/sync-dev.ps1
@@ -236,7 +236,7 @@ MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 pytest /app/test/unit/serv
 
 Expected: **3 failed / 2 passed**——失败的是 1/2/4（match_rule KeyError、matched False）；测试 3/5 是守卫型断言（无 match_rule 时反向断言空转通过），红字阶段通过属预期，绿字阶段才有判别力。其他失败形态（如 import error）说明环境问题，先停。
 
-- [ ] **Step 3: 最小实现（template_library.py）**
+- [x] **Step 3: 最小实现（template_library.py）**
 
 顶部 import 块加 `import re`（排在 `import json` 后，isort 序）：
 
@@ -258,7 +258,7 @@ from typing import Any
                 converted["match_rule"] = {"fallback_keywords": [stripped]}
 ```
 
-- [ ] **Step 4: 绿字验证 + 全量回归**
+- [x] **Step 4: 绿字验证 + 全量回归**
 
 ```bash
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/sync-dev.ps1
@@ -268,7 +268,7 @@ MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 pytest /app/test/unit -q -
 
 Expected: 文件级全绿；unit 全量 `≥2681 passed, 0 failed, 61 skipped`（bug-360 口径，勿用 `/app/test`）。
 
-- [ ] **Step 5: ruff + 提交**
+- [x] **Step 5: ruff + 提交**
 
 ```bash
 cd backend && uv run ruff format package/yuxi/services/template_library.py test/unit/services/test_template_system.py && uv run ruff check package/yuxi/services/template_library.py test/unit/services/test_template_system.py; cd ..
@@ -286,7 +286,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 **Files:**
 - Modify: `docs/develop-guides/changelog.md`、`.wolf/buglog.json`、`.wolf/anatomy.md`、`.wolf/memory.md`（均无代码）
 
-- [ ] **Step 1: 自匹配冒烟（W0 方法论，bug-359 失败判定翻转）**
+- [x] **Step 1: 自匹配冒烟（W0 方法论，bug-359 失败判定翻转）**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 python -c "
@@ -332,7 +332,7 @@ asyncio.run(main())
 
 Expected: 两个集合均无 `coal_mining`（domains 应含 `coal`，可能含 chem 等）。
 
-- [ ] **Step 2: changelog**
+- [x] **Step 2: changelog**
 
 `docs/develop-guides/changelog.md` 的 `### pisuan 定制增量（2026-10-05）` 小节追加一条：
 
@@ -340,7 +340,7 @@ Expected: 两个集合均无 `coal_mining`（domains 应含 `coal`，可能含 c
 - fix(bug-359): domain 词形全栈统一到 `coal`（删 `_get_template_matcher` replace 映射链、静态模板 30 json + 目录改名）；学习模板注入按 `chapter` 生成 fallback match_rule（标题精确再现语义），match_count 数据通路打通
 ```
 
-- [ ] **Step 3: buglog（bug-359 修复回填）**
+- [x] **Step 3: buglog（bug-359 修复回填）**
 
 `.wolf/buglog.json` 的 bugs 数组追加（`last_seen` 用当天日期）：
 
@@ -361,11 +361,11 @@ Expected: 两个集合均无 `coal_mining`（domains 应含 `coal`，可能含 c
 
 （若 bug-359 已在 W0 期间登记过 entry，则原位更新 root_cause/fix，勿重复建条。冒烟执行中发现的脚本缺陷与部署缺陷另立新条：bug-362 冒烟脚本 pg_manager 导入路径、bug-363 容器栈 /app/templates 缺失静态模板从不加载。）
 
-- [ ] **Step 4: anatomy + memory**
+- [x] **Step 4: anatomy + memory**
 
 `.wolf/anatomy.md`：`## backend/templates/coal_mining/` 相关节标题与描述中的路径改为 `coal/`，并补一行说明"词形已统一到 coal（bug-359）"。`.wolf/memory.md` 追加一行任务记录。
 
-- [ ] **Step 5: 终检 + 提交**
+- [x] **Step 5: 终检 + 提交**
 
 ```bash
 git status --short   # 确认只有预期文件，禁碰文件不在列
@@ -383,3 +383,9 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 2. 容器回归：unit/services 1023 passed / 0 failed；unit 全量 ≥2681 passed / 0 failed（bug-360 口径，见全局上下文）。
 3. 冒烟 `hits > 0` 输出留档（贴入任务报告）。
 4. `grep -rn "coal_mining" backend/package backend/test backend/templates backend/scripts` 0 命中（web/docs/vibe 历史层不要求）。
+
+---
+
+## 执行记录（2026-10-05 收口，终审 READY）
+
+三任务全部完成并通过双评审。提交链：`a303c936`（词形统一）→ `4c745505`（match_rule 注入）→ `66900c0d`（收尾），中间 docs 修正 `c5b4a08c`/`0b1ad172`/`c160a8fc`。终审独立复跑：unit 全量 **2681 passed / 0 failed / 61 skipped** 精确命中、冒烟自匹配 **hits=200/200**（W0 为 0/5，判定翻转）、DB 词形热核零 `coal_mining` 遗留。执行中新立案：bug-360（pytest 收集冲突→回归口径改 unit 全量）、bug-362（冒烟脚本 pg_manager 导入）、bug-363（容器栈 /app/templates 缺失，静态模板从不加载，W1 后续候选）、bug-364（docker exec python 需 -u）。累积 Minor 裁决：T2-M2/M3 与 W0-1/2 归 W2（同文件捆绑），W0-3 永不主动，W0-4 独立 chore，W0-5 已体现于本计划 preamble。终审新发现 Minor：学习模板命中缺 `name` 键致 template_match.template_name=None（W2 补 `"name": chapter`）。

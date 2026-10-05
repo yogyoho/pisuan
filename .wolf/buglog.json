@@ -5216,5 +5216,24 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-10-05"
+  },
+  {
+    "id": "bug-364",
+    "timestamp": "2026-10-05",
+    "error_message": "docker exec python -c 冒烟/热核脚本 120s 无输出且进程挂住不退出（pg_manager 连接池线程 + stdout 块缓冲）",
+    "file": "docs/superpowers/plans/2026-10-05-w1-bug-359-domain-unify-match-rule.md",
+    "root_cause": "容器内 python -c 使用 pg_manager 后连接池非守护线程阻止进程退出；无 -u 时 stdout 块缓冲导致输出延迟不可见，误判为挂死",
+    "fix": "容器内冒烟/热核脚本统一 python -u；代码路径不变时 -u 复跑立即出结果（W1 终审实证）。后续计划脚本默认带 -u",
+    "tags": [
+      "docker-exec",
+      "smoke-script",
+      "buffering",
+      "w1"
+    ],
+    "related_bugs": [
+      "bug-362"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-05"
   }
 ]
