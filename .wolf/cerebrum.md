@@ -281,3 +281,23 @@
 
 - 容器栈 /app/templates 不存在：compose api 服务仅 bind mount server/package/test，镜像层 docker/api.Dockerfile 亦无 templates COPY；TemplateLibrary() 默认路径（__file__ 上溯四级 + templates）在容器内解析 /app/templates 落空，静态模板从不参与容器栈 ETL 匹配（learned-only），立案 bug-363（W1 后续候选：Dockerfile+compose 补 templates，需评估静态模板参与匹配的行为影响）
 - pisuan.storage.postgres 是 namespace 包无 re-export，pg_manager 实例在 manager.py:1842，规范导入 from pisuan.storage.postgres.manager import pg_manager（bug-362）
+- (2026-10-05, W1/bug-359 收口) Decision Log: W1 首项终审 READY（unit 2681/0/61 复跑、冒烟 hits=200/200 对 W0 0/5 翻转、DB 热核零遗留）。累积 Minor 裁决：T2-M2（confidence==0.6 断言）/T2-M3（_learned_row 漂移守卫）与 W0-1/2 归 W2 同文件捆绑做；W0-3（set[asyncio.Task] 注解）永不主动；W0-4（32 处 ruff 旧账）仅独立 chore；W0-5 流程句已入计划 preamble。终审新发现：学习模板 converted 缺 name 键 → template_match.template_name=None（纯展示层，W2 补一行）。Do-Not-Repeat: 容器内 docker exec python 脚本默认加 -u（连接池线程挂住 + 块缓冲假死，bug-364）。
+
+### Key Learnings（2026-10-05 bug-363 传播补缺追加）
+- sync-dev.ps1 的 $copyFiles 单件清单现已纳入 docker-compose.yml 与 docker/api.Dockerfile（commit f884d9d0）：walker 对单文件与目录同路——rewrite_text 无扩展名门槛（逐行套 STRUCTURAL+BARE 规则，与官方改名链同一函数），localized 产出按构造一致。部署面改动不再绕行官方链长链路。验证法：`git -C C:/workspace/pisuan-localized diff github/pisuan-localized -- docker-compose.yml docker/api.Dockerfile` 应只含源树新增行；出现其他差异 = rename 规则或双树漂移异常，停手核查。
+
+### Key Learnings（2026-10-05 bug-363 清淤追加）
+- localized 树曾存 9 月 26 日旧词形 `backend/templates/coal_mining/`（含 index 暂存 R 条目）——`backend/templates` 当时不在 $syncPaths（恰因它此前不是挂载路径），热同步永不覆盖、自检 diff（口径=清单内路径）天然不可见。教训：sync-dev 的可见域 = 清单域，清单外任何漂移（陈旧目录/index 暂存）都会无声留存；新路径一旦变成挂载目标，必须同时纳入 $syncPaths 并清淤。
+- walker 只增不删：源树目录改名（coal_mining→coal）后，localized 侧旧行名会与新名并存被 rglob 双份加载（60 条）。删除类漂移在 dev 同步域永远需要人工/官方链处理（边界 #3 条款）。
+- 可逆清淤模式：同盘 `mv` 陈旧目录至 `.wolf/` 备份位（字节保全 + 镜像 tip git 对象双重可恢复），替代 `git checkout -f` + `git clean -fd`（auto-mode 分类器正确拦截了不可逆删除：用户未点名目标，且指令链源自子代理报告）。
+
+## Key Learnings (append 2026-10-05 bug-363 Task 2)
+- 领域工厂 ETL 两阶段结构：phase-1（parse/split/classify/模板匹配）在 PARSING 态完成并持久化 source_paragraphs，phase-2（GENERALIZING，LLM 泛化）失败不回滚 phase-1 产物；模板匹配（TemplateMatcher.match，仅 is_title 段）在 phase-1 尾部执行，matched>0 时自增学习模板 match_count（bug-353 链路已在真实 ETL 验证：命中模板 match_count 落库为 1）
+- pisuan.models.chat.select_model 返回的 LangChainChatAdapter 只有 .call(message, stream=False)，没有 .ainvoke
+- worker 忙时（大文档 OCR/抽取）docker exec python 查询会拖到分钟级甚至超时；轻量状态通道 = postgres 容器内 psql -U postgres -d <db> 直查（实际库名 yuxi_know，来自 .env，compose 默认 yuxi 会被覆盖）
+- 云 API（apihub.agnes）对 ETL 批量抽取会 rate_limit 熔断：横城 2789 段重跑 success=12/rate_limit=8/skipped=741/3867s 终止 FAILED_PROVIDER，P0-3 断点续跑语义（FAILED_PROVIDER + source_paragraphs 非空 → retry 自动 resume）
+
+## Do-Not-Repeat (2026-10-05 bug-363 Task 2)
+- (2026-10-05) 容器内 LLM 探活用 select_model(...).call()，不用 .ainvoke（AttributeError 假报不可达）；宿主侧 kill docker exec 会在容器内留孤儿 python 进程，须 docker exec kill 清理
+- (2026-10-05) 长时间任务轮询不用 docker exec python 循环（后台输出缓冲丢失 + worker 忙时拖死），改用 postgres 容器 psql 直查状态表
+- (2026-10-05) ETL 重跑观测对象要选 2026-10 以后上传的任务（storage_path 为绝对路径）；2026-07 旧任务 retry 会因 saves/ 相对路径直接 PackageNotFoundError（bug-365）

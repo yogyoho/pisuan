@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-05T06:58:19.792Z
-> Files: 15 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-05T09:04:33.530Z
+> Files: 20 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -23,6 +23,7 @@
 
 ## ./
 
+- `docker-compose.yml` — Docker Compose services；api/worker 均 :ro 挂载 backend/templates → /app/templates（bug-363 静态模板容器激活，~5867 tok）
 
 ## .claude/
 
@@ -206,7 +207,6 @@
 
 ## backend/templates/coal/
 
-词形已统一到 coal（bug-359），目录名不参与加载、领域只认 JSON domain 字段。
 
 ## backend/templates/coal/headers/
 
@@ -272,6 +272,7 @@
 
 ## docker/
 
+- `api.Dockerfile` — 使用轻量级Python基础镜像；含 COPY backend/templates /app/templates（bug-363 镜像内置静态模板，~655 tok）
 
 ## docker/nginx/
 
@@ -314,10 +315,12 @@
 
 - `2026-10-05-w0-bugfix-and-usage-tracking.md` — W0：bug-353/354 修复 + 工厂产物取用率埋点 实施计划 (~6810 tok)
 - `2026-10-05-w1-bug-359-domain-unify-match-rule.md` — bug-359 W1 首项实施计划：domain 词形统一 + 学习模板 match_rule 注入 (~3921 tok)
+- `2026-10-05-w1-bug-363-static-templates-activation.md` — bug-363 W1 第二项实施计划：静态模板容器激活 + 部署一致性清查 (~1830 tok)
 
 ## docs/superpowers/specs/
 
 - `2026-10-05-bug-359-domain-unify-match-rule-design.md` — bug-359 修复设计：domain 词形统一 + 学习模板 match_rule 注入 (~1121 tok)
+- `2026-10-05-bug-363-static-templates-activation-design.md` — bug-363 修复设计：静态模板容器激活 + 部署一致性清查 (~520 tok)
 
 ## docs/vibe/
 
@@ -327,6 +330,10 @@
 
 ## docs/vibe/assets/2026-09-30-coal-eia-v2-port/eia-sample-fixtures/
 
+
+## scripts/
+
+- `sync-dev.ps1` — sync-dev.ps1 — 开发期快速同步：pisuan 工作树 → pisuan-localized 运行栈 (~1712 tok)
 
 ## web/
 
