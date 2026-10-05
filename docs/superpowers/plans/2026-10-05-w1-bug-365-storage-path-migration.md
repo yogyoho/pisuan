@@ -42,7 +42,7 @@ MSYS_NO_PATHCONV=1 docker exec pisuan-localized-postgres-1 psql -U postgres -d y
 MSYS_NO_PATHCONV=1 docker exec pisuan-localized-postgres-1 psql -U postgres -d yuxi_know -t -c "SELECT storage_path FROM domain_factory_tasks WHERE id LIKE 'f7b40b18%';"
 ```
 
-Expected: `UPDATE 1`；迁移后值为 `/app/user-data/domain_factory/coal/c5451b85-...docx`（`substring(... from 7)` 剥掉 `saves/` 7 字符）。**非 UPDATE 1 即停手上报。**
+Expected: `UPDATE 1`；迁移后值为 `/app/user-data/domain_factory/coal/c5451b85-...docx`（`substring(... from 7)` 跳过前 6 字符（`saves/` 为 6 字符，from 7 即从第 7 字符起取））。**非 UPDATE 1 即停手上报。**
 
 - [x] **Step 3: 轻冒烟（秒级）**
 
