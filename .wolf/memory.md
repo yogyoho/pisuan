@@ -2607,3 +2607,529 @@
 ## Session Summary (2026-09-30)
 青云素雅靛蓝换肤全案闭环：T1-T8 执行完毕，已登录态视觉验收 10/10；官方链上游同步（23576378→031e2c72）rebase 257 pick 完成、冲突按三分法处置、保护文件核验无恙；push + localized 镜像重建 + GitHub 推送 + I1 全量 eslint 闭环。终态 main=031e2c72 / pisuan-custom=2d010639（本地 41e99c43 领先 1 docs 提交，下次同步顺带推）/ pisuan-localized=1b13c22b。遗留债（记录在案非本次范围）：AgentChatComponent is-spinning 动态绑定+死规则、TodoListTool scoped keyframes、非精确等值 ghost vars 若干；SettingsModal.vue 用户 WIP 仍未提交（归属任务收口）。
 | 11:22 | Session end: 43 writes across 18 files (.gitignore, __init__.py, info.template.yaml, config.mts, manager.py) | 20 reads | ~23458 tok |
+| 11:30 | Edited docs/develop-guides/changelog.md | 1→6 lines | ~302 |
+| 09:58 | 收口三件：wolf 台账 chore（bede185e）、changelog 补 2026-09-30 同步段（507a9845）、.superpowers/ 定性已 ignore；两笔均推 origin | git, changelog.md | pisuan-custom 与远端对齐 507a9845，收口完成 | ~3k |
+| 11:33 | Session end: 44 writes across 18 files (.gitignore, __init__.py, info.template.yaml, config.mts, manager.py) | 20 reads | ~23781 tok |
+
+## Session: 2026-09-30 11:42
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-30 11:42
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:23 | Edited docs/develop-guides/changelog.md | inline fix | ~175 |
+| 12:26 | 16 提交同步验证：unit 2644P+58S+0F（基线2530+上游新增114测）；integration 153P+1F(bug-281同flake复跑自愈)+211S+3E(基线内FK)；schema 8→9 已迁移生效；重建窗口瞬态错误已收敛归零；worker 12:16 新代码干净重启 | docker/logs | 全部通过 | ~2000 |
+| 12:31 | Session end: 1 writes across 1 files (changelog.md) | 0 reads | ~187 tok |
+
+## Session: 2026-09-30 12:59
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:33 | Created docs/superpowers/specs/2026-09-30-coal-eia-writer-v2-port-design.md | — | ~1919 |
+| 13:34 | Edited docs/superpowers/specs/2026-09-30-coal-eia-writer-v2-port-design.md | inline fix | ~30 |
+| 13:34 | Committed coal-eia-writer v2 port design spec (brainstorming closed, user-approved) | docs/superpowers/specs/2026-09-30-coal-eia-writer-v2-port-design.md | commit 159bfa9e | ~1200 |
+| 13:35 | Session end: 2 writes across 1 files (2026-09-30-coal-eia-writer-v2-port-design.md) | 0 reads | ~2088 tok |
+| 13:47 | Created docs/superpowers/plans/2026-09-30-coal-eia-writer-v2-port.md | — | ~6459 |
+| 13:48 | Edited docs/superpowers/plans/2026-09-30-coal-eia-writer-v2-port.md | inline fix | ~19 |
+| 13:49 | Edited docs/superpowers/plans/2026-09-30-coal-eia-writer-v2-port.md | 2→3 lines | ~75 |
+| 13:49 | Edited docs/superpowers/plans/2026-09-30-coal-eia-writer-v2-port.md | inline fix | ~41 |
+| 13:49 | Edited docs/superpowers/plans/2026-09-30-coal-eia-writer-v2-port.md | "ingest.py check" → "present_artifacts" | ~90 |
+| 14:05 | Wrote + committed coal-eia-writer v2 port implementation plan (8 tasks, self-reviewed) | docs/superpowers/plans/2026-09-30-coal-eia-writer-v2-port.md | commit done | ~4800 |
+| 13:49 | Session end: 7 writes across 2 files (2026-09-30-coal-eia-writer-v2-port-design.md, 2026-09-30-coal-eia-writer-v2-port.md) | 0 reads | ~9248 tok |
+| 14:03 | Edited docs/superpowers/plans/2026-09-30-coal-eia-writer-v2-port.md | 6→6 lines | ~88 |
+| 18:23 | Session end: 8 writes across 2 files (2026-09-30-coal-eia-writer-v2-port-design.md, 2026-09-30-coal-eia-writer-v2-port.md) | 0 reads | ~9342 tok |
+| 18:35 | Session end: 8 writes across 2 files (2026-09-30-coal-eia-writer-v2-port-design.md, 2026-09-30-coal-eia-writer-v2-port.md) | 0 reads | ~9342 tok |
+| 18:35 | Session end: 8 writes across 2 files (2026-09-30-coal-eia-writer-v2-port-design.md, 2026-09-30-coal-eia-writer-v2-port.md) | 0 reads | ~9342 tok |
+| 18:43 | Session end: 8 writes across 2 files (2026-09-30-coal-eia-writer-v2-port-design.md, 2026-09-30-coal-eia-writer-v2-port.md) | 0 reads | ~9342 tok |
+| 18:50 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | 18→16 lines | ~204 |
+| 18:50 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | "fields" → "ask_user_question" | ~71 |
+| 18:50 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | "label" → "question" | ~37 |
+| 18:50 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | "batch_task" → "subagent_start" | ~49 |
+| 18:50 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~76 |
+| 18:50 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~75 |
+| 18:50 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | "knowledge-factory_kf_reso" → "list_report_types" | ~41 |
+| 18:51 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | "kf_resolve_template" → "list_report_types" | ~69 |
+| 18:54 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~14 |
+| 18:54 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | "batch_task" → "subagent_start" | ~10 |
+| 18:54 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~12 |
+| 18:55 | Session end: 19 writes across 3 files (2026-09-30-coal-eia-writer-v2-port-design.md, 2026-09-30-coal-eia-writer-v2-port.md, SKILL.md) | 1 reads | ~10048 tok |
+| 18:57 | Session end: 19 writes across 3 files (2026-09-30-coal-eia-writer-v2-port-design.md, 2026-09-30-coal-eia-writer-v2-port.md, SKILL.md) | 1 reads | ~10048 tok |
+| 18:58 | Session end: 19 writes across 3 files (2026-09-30-coal-eia-writer-v2-port-design.md, 2026-09-30-coal-eia-writer-v2-port.md, SKILL.md) | 1 reads | ~10048 tok |
+| 19:05 | 复核 73692847 coal-eia-writer v2 移植：清单/逐字节/scripts/8+3改编/grep 全过 | backend/.../coal-eia-writer/SKILL.md | 符合规格（3 处无害备注） | ~40k |
+
+## Session: 2026-09-30 19:08
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:21 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~52 |
+| 19:21 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~12 |
+| 19:21 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~19 |
+| 19:23 | Edited docs/superpowers/plans/2026-09-30-coal-eia-writer-v2-port.md | 1→3 lines | ~147 |
+| 19:23 | Session end: 4 writes across 2 files (SKILL.md, 2026-09-30-coal-eia-writer-v2-port.md) | 3 reads | ~5552 tok |
+| 19:24 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~18 |
+| 19:25 | Edited docs/superpowers/plans/2026-09-30-coal-eia-writer-v2-port.md | inline fix | ~85 |
+| 20:05 | Unit A 双阶段审查闭环：spec PASS + quality NEEDS_FIXES→修复 0f02f659/783ab1f4→复审 APPROVED；Task 3 实现子代理已派发 | SKILL.md, plan 执行修正记录, buglog-320 | DONE | ~120k |
+| 19:26 | Session end: 6 writes across 2 files (SKILL.md, 2026-09-30-coal-eia-writer-v2-port.md) | 3 reads | ~5662 tok |
+| 19:50 | Task 3 验证：sync-dev OK(23.7s)、容器内 7/7 测试 PASS、worker 重启 init_builtin_skills 同步成功；投影缺失根因=coal-eia-writer DB 行 2026-05-11 建、enabled=False（init 不改 enabled，投影懒刷新且只含 enabled）| skill-sources/shared/coal-eia-writer, skills 表, projection.py | DONE+1 发现 | ~60k |
+| 19:48 | Edited docs/superpowers/plans/2026-09-30-coal-eia-writer-v2-port.md | 1→2 lines | ~227 |
+| 19:48 | Session end: 7 writes across 2 files (SKILL.md, 2026-09-30-coal-eia-writer-v2-port.md) | 3 reads | ~5905 tok |
+| 19:54 | Session end: 7 writes across 2 files (SKILL.md, 2026-09-30-coal-eia-writer-v2-port.md) | 3 reads | ~5905 tok |
+| 19:56 | Task4 coal-eia v2: 备份+UPDATE 编排者 config（subagents=eia-section-writer, tools 7, steps 1000, prompt len 171），UPDATE 1，断言全过 | docs/vibe/assets/2026-09-30-coal-eia-v2-port/orchestrator-config-backup.json | DONE | ~3000 |
+| 19:57 | Session end: 7 writes across 2 files (SKILL.md, 2026-09-30-coal-eia-writer-v2-port.md) | 3 reads | ~5905 tok |
+| 20:01 | Task5 coal-eia v2: eia-section-writer 建档(psql INSERT 0 1, 697字符prompt)+3旧writer prompt存档(83行)+提交33507661 | agents表, docs/vibe/assets/2026-09-30-coal-eia-v2-port/writer-prompts-archive.md | DONE | ~6k |
+| 20:02 | Edited docs/superpowers/plans/2026-09-30-coal-eia-writer-v2-port.md | 1→2 lines | ~275 |
+| 20:03 | Session end: 8 writes across 2 files (SKILL.md, 2026-09-30-coal-eia-writer-v2-port.md) | 3 reads | ~6199 tok |
+| 20:17 | Created ../../Users/Lenovo/AppData/Local/Temp/eia-values/all_values.json | — | ~3729 |
+| 20:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~87 |
+| 20:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~36 |
+| 20:29 | Edited docs/superpowers/plans/2026-09-30-coal-eia-writer-v2-port.md | 1→2 lines | ~367 |
+| 20:29 | Edited docs/superpowers/specs/2026-09-30-coal-eia-writer-v2-port-design.md | 2→2 lines | ~90 |
+| 20:35 | Task 6 闭环：门1 rc2→0、freeze rc=3+1能力边界anomaly、缺参双层显式暴露；裁决修 SKILL.md :56/:102+system_prompt（da4991a0），spec V4/V5 勘误，同步链重走 | SKILL.md, spec, plan-10, buglog-323 | DONE | ~200k |
+| 20:30 | Session end: 13 writes across 4 files (SKILL.md, 2026-09-30-coal-eia-writer-v2-port.md, all_values.json, 2026-09-30-coal-eia-writer-v2-port-design.md) | 3 reads | ~10550 tok |
+| 20:59 | Session end: 13 writes across 4 files (SKILL.md, 2026-09-30-coal-eia-writer-v2-port.md, all_values.json, 2026-09-30-coal-eia-writer-v2-port-design.md) | 3 reads | ~10550 tok |
+| 21:19 | Session end: 13 writes across 4 files (SKILL.md, 2026-09-30-coal-eia-writer-v2-port.md, all_values.json, 2026-09-30-coal-eia-writer-v2-port-design.md) | 3 reads | ~10550 tok |
+
+## Session: 2026-09-30 21:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:30 | coal-eia-writer v2 fixtures: 31 values JSON + 35 CSV(BOM) + values-gaps.md + family-sources.md authored from fulltext.md (all real report values; gaps logged) | docs/vibe/assets/2026-09-30-coal-eia-v2-port/eia-sample-fixtures/{values,csv,values-gaps.md,family-sources.md} | DONE 31/31 | ~200k |
+| 21:10 | 伊宁 fixture 取值完成（31族真值+35CSV+gaps台账30条，锚点抽查过），容器装载验证代理已派 | eia-sample-fixtures/* | PENDING | ~170k |
+| 22:23 | Edited docs/vibe/assets/2026-09-30-coal-eia-v2-port/eia-sample-fixtures/README.md | inline fix | ~40 |
+| 21:45 | 伊宁 fixture 闭环：31族装载零修正、门1 rc=2(air.boilers空值事实)、冻结 rc=3 slots=117 anomalies=46 标定、README 成文；三步协议与file通道关系澄清 | eia-sample-fixtures/README, buglog-324/325/326 | DONE | ~90k |
+| 22:24 | Edited docs/superpowers/plans/2026-09-30-coal-eia-writer-v2-port.md | 1→2 lines | ~464 |
+| 22:24 | Session end: 2 writes across 2 files (README.md, 2026-09-30-coal-eia-writer-v2-port.md) | 0 reads | ~539 tok |
+| 17:26 | Session end: 2 writes across 2 files (README.md, 2026-09-30-coal-eia-writer-v2-port.md) | 0 reads | ~539 tok |
+| 17:36 | Session end: 2 writes across 2 files (README.md, 2026-09-30-coal-eia-writer-v2-port.md) | 0 reads | ~539 tok |
+
+## Session: 2026-10-01 17:47
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:55 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | modified AssembleReportInput() | ~171 |
+| 17:58 | 定位并修复全平台 chat run 秒挂（bug-327）：assemble_report 缺显式 args_schema 致 ToolRuntime 卷进 schema，pydantic CallableSchema 崩；重放验证 PREPARE OK | backend/package/yuxi/agents/toolkits/buildin/tools.py | fixed+verified | ~24k |
+| 18:02 | Created ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/minimize-yuxi-core-changes.md | — | ~153 |
+| 18:12 | 浏览器 E2E 推进中：卡1-4 已答（project/mine_plan/sensitive_targets/standards_confirm），ingest.py --stage 路径+wrapper-key 均正确，data/ 落盘校验通过；questions JSON 首投解析失败×5 均自愈 | sandbox eia-report/state | 流转正常 | ~18k |
+| 18:25 | E2E 关键证据落地：gate1 MISSING→补采(14族)、freeze rc=3 仅1条能力边界anomaly卡、35公式槽位、V6契约全文合规、11节稿落盘(部分429前产出)；429风暴×9条subagent | eia-report/state | 机制验证过半 | ~20k |
+| 18:27 | Session end: 2 writes across 2 files (tools.py, minimize-yuxi-core-changes.md) | 3 reads | ~335 tok |
+| 18:29 | Session end: 2 writes across 2 files (tools.py, minimize-yuxi-core-changes.md) | 4 reads | ~335 tok |
+| 18:34 | Session end: 2 writes across 2 files (tools.py, minimize-yuxi-core-changes.md) | 4 reads | ~335 tok |
+| 18:38 | Session end: 2 writes across 2 files (tools.py, minimize-yuxi-core-changes.md) | 4 reads | ~335 tok |
+| 18:58 | Session end: 2 writes across 2 files (tools.py, minimize-yuxi-core-changes.md) | 4 reads | ~335 tok |
+
+## Session: 2026-10-01 19:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:29 | Edited backend/package/yuxi/agents/middlewares/summary.py | modified __init__() | ~491 |
+| 19:29 | Edited backend/package/yuxi/agents/middlewares/summary.py | modified _offload_to_backend() | ~143 |
+| 19:32 | Edited backend/test/unit/middlewares/test_summary_middleware.py | modified __init__() | ~923 |
+| 19:34 | Edited backend/test/unit/middlewares/test_summary_middleware.py | modified write() | ~81 |
+| 19:45 | bug-328 压缩offload aedit失败→_OffloadBackendFallback回退awrite修复；单测38过；resume run a7b29551压缩成功(696KB落盘)，管线恢复 | backend/package/yuxi/agents/middlewares/summary.py, backend/test/unit/middlewares/test_summary_middleware.py | FIXED+VERIFIED | ~9k || 19:41 | Edited backend/package/yuxi/agents/middlewares/summary.py | 1→4 lines | ~68 |
+| 19:42 | Edited backend/package/yuxi/agents/middlewares/summary.py | modified _offload_to_backend() | ~191 |
+| 19:42 | Edited backend/test/unit/middlewares/test_summary_middleware.py | modified _FailingEditBackend() | ~34 |
+| 19:43 | Created docs/vibe/2026-09-30-coal-eia-v2-port.md | — | ~733 |
+| 19:45 | Session end: 8 writes across 3 files (summary.py, test_summary_middleware.py, 2026-09-30-coal-eia-v2-port.md) | 2 reads | ~13514 tok |
+| 19:58 | Session end: 8 writes across 3 files (summary.py, test_summary_middleware.py, 2026-09-30-coal-eia-v2-port.md) | 2 reads | ~13514 tok |
+| 20:04 | Session end: 8 writes across 3 files (summary.py, test_summary_middleware.py, 2026-09-30-coal-eia-v2-port.md) | 2 reads | ~13514 tok |
+| 20:07 | Session end: 8 writes across 3 files (summary.py, test_summary_middleware.py, 2026-09-30-coal-eia-v2-port.md) | 2 reads | ~13514 tok |
+| 20:13 | Session end: 8 writes across 3 files (summary.py, test_summary_middleware.py, 2026-09-30-coal-eia-v2-port.md) | 2 reads | ~13514 tok |
+
+| 20:30 | E2E 用户叫停：ch3 VERIFIED(3/13章)后编排者死于429风暴；已加串行派发纪律(DB agents.id=9)+bug-329；用户去知识工厂补传全书语料后再恢复全面测试 | .wolf/cerebrum.md, backend/package/yuxi/agents/middlewares/summary.py | PAUSED | ~4k || 20:15 | Session end: 8 writes across 3 files (summary.py, test_summary_middleware.py, 2026-09-30-coal-eia-v2-port.md) | 2 reads | ~13514 tok |
+
+## Session: 2026-10-01 23:50
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:20 | 修复知识工厂 ETL 入队协议失配（bug-330/331）+ 注册表接线单测 | task_registry.py, domain_factory_service.py, test_task_registry.py | 30 单测过；横城 PDF 已进 PARSING | ~40k |
+| 00:50 | 横城 ETL 两次被 watchfiles inotify OOM 杀死；worker 临时去热重载重建后第三跑 | compose-worker-noreload.yml | 第三跑 running，OCR 406 页约 75min | ~25k |
+| 01:35 | 横城 ETL 第三跑成功：WAITING_REVIEW，md=354KB/24680段/泛化1425；worker 热重载已还原；提交 30b17c60+417ff5c1 | - | 用户可在知识工厂审核入库 | ~15k |
+
+## Session: 2026-10-02 09:53
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:01 | office-hours 会话：梳理知识工厂 ETL 提取解析流水线（_etl_pipeline_async 全链读码）| domain_factory_service.py | 流水线地图完成，待需求对齐 | ~25k |
+| 10:30 | ETL 架构评审启动：7 并行读码代理（解析/分类/旁路/泛化/入库链/接线/需求史）| domain_factory_service.py 等 | 后台运行中，待 4 镜头评审+对抗核实 | ~15k |
+| 10:36 | Round1 深读回收 6/7（M1解析/M2分类/M3旁路/M4泛化/M5入库链/M7需求史），critical 级发现≥10 项，待 M6 接线 | domain_factory_service.py | 进入 Round2 前最后等待 | ~5k |
+| 10:51 | ETL 评审终局：12代理+3核实(全confirmed)+CR+横城任务DB实测；761/761槽位=fallback、法规B存活0、图片401；终报交付 | domain_factory_service.py + 运行栈DB | 终报完成待用户拍板 | ~120k |
+
+## Session: 2026-10-02 11:08
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:20 | 横城全本vs伊宁3.1对比定位：761/761泛化全兜底(系统性失败) vs 13/13全成功，同代码同提示词同模型，指向provider级失败(配额/限流)，被静默兜底+覆盖率指标掩盖 | domain_factory_service.py / DB取证 | 结论交付 | ~8k |
+| 11:40 | 横城-6.docx逐段时间线取证：调用序2-70成功19/21，6.1.3.3起210段仅4段漏网=运行中途provider硬墙；四任务拼出配额耗尽→重置→再耗尽完整时间线 | domain_factory_service.py / DB取证 | bug-334更新occ=2 | ~6k |
+| 12:30 | gemma4运行(a8645f5d)质量审查：兜底6/224墙消失(配假设终审结案)；缺陷=提示词单双括号自相矛盾(2075处)、type系统死亡(99.7% parameter)、项目名称误绑任家庄、叙述332/332截断(代码bug换模型无效)、ai_confidence双71失明 | DB取证+YAML+service:3660 | bug-335/336/337 | ~9k |
+| 13:05 | 修复YAML泛化提示词单括号问题：9处→双括号+禁令行；验证yaml.safe_load+render复刻+负向正则零残留；sync-dev落栈(68文件)；get_domain_factory_service实为per-call新实例故缓存免重启 | prompt_templates.yaml / changelog.md | bug-335已修 | ~7k |
+| 17:45 | 双括号修复生产验证(ed5c52f5伊宁3.1重传)：13/13参数段165个占位符0单括号(修前横城6为97%段2075处)；槽位质量保持153/138语义名/1兜底；样本目检idx4/7语义正常 | DB取证 | bug-335验证通过 | ~4k |
+| 18:11 | Created docs/vibe/2026-10-02-etl-redesign-requirements.md | — | ~1407 |
+| 18:20 | D2决策确认：验收换轨(写手取用率+成稿要素覆盖率为北极星)、死产出停机均同意，范围仅ETL；需求文档已落 docs/vibe | docs/vibe/2026-10-02-etl-redesign-requirements.md | 文档交付 | ~5k |
+| 18:11 | Session end: 1 writes across 1 files (2026-10-02-etl-redesign-requirements.md) | 0 reads | ~1507 tok |
+| 19:30 | 泛化逻辑四项设计决议：①参数/叙述区分产物不区分段落身份(P1-0统一双产物)②公式=解析层先修OMML→LaTeX+对象化+式中符号表+废SYMBOL_MAP③图片入MinIO自有命名空间+图题推断类型+废假VLM+鉴权展示④列表停机(0产出0消费,解析层逐行切段致规则永不触发) | docs/vibe/2026-10-02-etl-redesign-requirements.md 第九节 | 文档更新 | ~8k |
+| 18:22 | Session end: 1 writes across 1 files (2026-10-02-etl-redesign-requirements.md) | 0 reads | ~1507 tok |
+| 20:10 | 发现并修正bug-335测量错误（bug-338）：单括号真实49处(非2075)/修复后1处(畸形括号组非归一化缺口)；changelog/buglog已改 | buglog+changelog | 记录修正 | ~3k |
+
+## Session: 2026-10-02 19:10
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:10 | Edited backend/package/yuxi/storage/postgres/models_domain_factory.py | 4→7 lines | ~130 |
+| 19:11 | Edited backend/package/yuxi/storage/postgres/manager.py | 1→4 lines | ~113 |
+| 19:22 | Created ../../Users/Lenovo/AppData/Local/Temp/p0_edits_a.py | — | ~3996 |
+| 19:22 | Edited ../../Users/Lenovo/AppData/Local/Temp/p0_edits_a.py | "\\{[\\s\\S]*\\}" → "\{[\s\S]*\}" | ~20 |
+| 19:25 | Created ../../Users/Lenovo/AppData/Local/Temp/p0_edits_b.py | — | ~2305 |
+| 19:33 | Created backend/test/unit/services/test_domain_factory_p0.py | — | ~2299 |
+| 19:45 | ETL P0 实施：台账+熔断+重试+断点续跑+死产出停机，10 单测全过 | domain_factory_service.py +10处, models/manager, test_domain_factory_p0.py | OK | ~45k |
+| 19:42 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 19:46 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 19:47 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 19:50 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 20:00 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 20:01 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 20:33 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 20:45 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 20:54 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 20:56 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 21:06 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 21:16 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 21:31 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 21:46 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 22:01 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 22:16 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 22:32 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 22:47 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 23:02 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 23:17 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 08:26 | Session end: 6 writes across 5 files (models_domain_factory.py, manager.py, p0_edits_a.py, p0_edits_b.py, test_domain_factory_p0.py) | 0 reads | ~8863 tok |
+| 08:30 | Created ../../Users/Lenovo/AppData/Local/Temp/p01_fixes.py | — | ~1596 |
+| 08:31 | Edited backend/test/unit/services/test_domain_factory_p0.py | added 1 import(s) | ~19 |
+| 08:31 | Edited backend/test/unit/services/test_domain_factory_p0.py | modified call() | ~406 |
+
+## Session: 2026-10-03 08:37
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:44 | Created ../../Users/Lenovo/AppData/Local/Temp/retry_zombie.py | — | ~142 |
+| 08:47 | Edited ../../Users/Lenovo/AppData/Local/Temp/retry_zombie.py | inline fix | ~21 |
+| 08:51 | P0.1 修 bug-340/341/342；僵尸修复为 FAILED_PROVIDER 后重试，断点续跑确认（693 段载入/224 参数段重跑） | domain_factory_service.py, task_registry.py | 12+19 测试过，运行中 |
+| 08:52 | Session end: 2 writes across 1 files (retry_zombie.py) | 0 reads | ~163 tok |
+| 08:57 | Session end: 2 writes across 1 files (retry_zombie.py) | 0 reads | ~163 tok |
+| 09:00 | Created ../../Users/Lenovo/AppData/Local/Temp/cerebrum_update.py | — | ~236 |
+| 09:01 | Session end: 3 writes across 2 files (retry_zombie.py, cerebrum_update.py) | 0 reads | ~399 tok |
+| 09:08 | Session end: 3 writes across 2 files (retry_zombie.py, cerebrum_update.py) | 0 reads | ~399 tok |
+| 09:11 | Created ../../Users/Lenovo/AppData/Local/Temp/calibration_a.py | — | ~373 |
+| 09:12 | Created ../../Users/Lenovo/AppData/Local/Temp/calibration_a.py | — | ~523 |
+| 09:13 | Created ../../Users/Lenovo/AppData/Local/Temp/calibration_a.py | — | ~548 |
+| 09:21 | Created ../../Users/Lenovo/AppData/Local/Temp/calib_backend.py | — | ~1138 |
+| 09:21 | Created ../../Users/Lenovo/AppData/Local/Temp/calib_frontend.py | — | ~1036 |
+| 09:24 | Created ../../Users/Lenovo/AppData/Local/Temp/calib_backend_service.py | — | ~790 |
+| 09:31 | Created ../../Users/Lenovo/AppData/Local/Temp/changelog_p01.py | — | ~264 |
+| 09:32 | Created ../../Users/Lenovo/AppData/Local/Temp/wolf_wrapup.py | — | ~439 |
+| 09:32 | 并发可配化+校准（方案A）：domain_factory_llm Option、超时300s、并发默认2；UI 落基础设置页；19 测试过；重试触发 211 段段落级续跑运行中 | options.py, domain_factory_service.py, BasicSettingsSection.vue | 完成，跑批监控中 |
+| 09:33 | Session end: 11 writes across 8 files (retry_zombie.py, cerebrum_update.py, calibration_a.py, calib_backend.py, calib_frontend.py) | 1 reads | ~5510 tok |
+| 09:39 | Session end: 11 writes across 8 files (retry_zombie.py, cerebrum_update.py, calibration_a.py, calib_backend.py, calib_frontend.py) | 2 reads | ~5510 tok |
+
+## Session: 2026-10-03 15:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-03 15:34
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:47 | Created ../../Users/Lenovo/AppData/Local/Temp/progress_logs.py | — | ~605 |
+| 15:52 | Created ../../Users/Lenovo/AppData/Local/Temp/bug343_log.py | — | ~437 |
+| 15:52 | 泛化/叙述进度序号日志上线；发现 bug-343（6h 静默挂死、超时未触发，根因未明）；全新跑批 v3 15:49 起跑 | domain_factory_service.py | 19 测试过，监控中 |
+| 15:52 | Session end: 2 writes across 2 files (progress_logs.py, bug343_log.py) | 0 reads | ~1042 tok |
+| 16:00 | Created ../../Users/Lenovo/AppData/Local/Temp/endpoint_switch.py | — | ~316 |
+| 16:00 | LLM 端点切 host.docker.internal:8080（宿主机 IP 变更，127.0.0.1 容器内不通）；跑批 v4 15:59 起跑 | .env ×2, api/worker 重建 | 推理 1.0s 验证通过，监控中 |
+| 16:01 | Session end: 3 writes across 3 files (progress_logs.py, bug343_log.py, endpoint_switch.py) | 0 reads | ~1358 tok |
+| 16:23 | Session end: 3 writes across 3 files (progress_logs.py, bug343_log.py, endpoint_switch.py) | 0 reads | ~1358 tok |
+| 16:40 | Created ../../Users/Lenovo/AppData/Local/Temp/rebuild_model_cache.py | — | ~138 |
+
+## Session: 2026-10-03 16:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:51 | Created ../../Users/Lenovo/AppData/Local/Temp/rebuild_model_cache.py | — | ~225 |
+| 16:56 | Created ../../Users/Lenovo/AppData/Local/Temp/wolf_update.py | — | ~483 |
+| 16:56 | 端点切换破案：生效缓存键为 pisuan:model_cache（改名层连带改名），此前查错键；DB 行与缓存均已 host.docker.internal:8080/v1，探测 200/0.6s；74e1fb28 断点续跑 16:54 重试入队 | model_providers DB, Redis, /tmp 脚本 | 三层就位，监控中 |
+| 16:57 | Session end: 2 writes across 2 files (rebuild_model_cache.py, wolf_update.py) | 1 reads | ~708 tok |
+| 16:59 | Session end: 2 writes across 2 files (rebuild_model_cache.py, wolf_update.py) | 2 reads | ~708 tok |
+| 17:20 | Session end: 2 writes across 2 files (rebuild_model_cache.py, wolf_update.py) | 2 reads | ~708 tok |
+| 17:30 | Created ../../Users/Lenovo/AppData/Local/Temp/wolf_update2.py | — | ~300 |
+| 17:30 | 澄清台账语义（skipped=熔断剩余非复用）；确认续跑只复用解析层；224 段全量重跑中 28+ success | domain_factory_service.py | 监控重上，ETA ~18:30 |
+| 17:31 | Session end: 3 writes across 3 files (rebuild_model_cache.py, wolf_update.py, wolf_update2.py) | 2 reads | ~1008 tok |
+| 18:01 | Session end: 3 writes across 3 files (rebuild_model_cache.py, wolf_update.py, wolf_update2.py) | 2 reads | ~1008 tok |
+| 18:01 | Session end: 3 writes across 3 files (rebuild_model_cache.py, wolf_update.py, wolf_update2.py) | 2 reads | ~1008 tok |
+| 19:16 | Created ../../Users/Lenovo/AppData/Local/Temp/bug343_solve.py | — | ~568 |
+| 19:16 | bug-343 破案：宿主机 Windows 自动休眠冻结 VM（18:08-19:12 静默窗口），durable 收敛器正确落 FAILED；任务待关休眠后重试 | .wolf/buglog.json, cerebrum | 已确认端点唤醒后 200/3.3s |
+| 19:16 | Session end: 4 writes across 4 files (rebuild_model_cache.py, wolf_update.py, wolf_update2.py, bug343_solve.py) | 2 reads | ~1576 tok |
+
+## Session: 2026-10-03 22:42
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:58 | office-hours：知识工厂六问分析（数据支撑/KG必要性），对照代码验证完 |
+| 事实基线：入库三重存储+双层图谱（LightRAG emergent+GraphBuilder 阻断式）；大纲/模板工具 graph-first+PG回退；规范库=standard_indicators 精确查询 |
+| docs/vibe/knowledge-factory-design.md, lightrag.py:428/162, tools.py:546-1093, regulation_library | 分析已交付，KG 修法待用户决策 |
+| 23:19 | LightRAG 退役实锤（runtime.py 只注册 Milvus/Dify/Notion）；KB 级图谱引擎 MilvusGraphService 从未跑过；ETL commit 走 Markdown 回退 | runtime.py, manager.py, milvus.py, milvus_graph_service.py | 六问重答待工作流汇合 |
+| 23:44 | Created docs/vibe/2026-10-03-knowledge-storage-code-truth.md | — | ~2100 |
+| 23:45 | 6维读码+3维对抗复核完成：LightRAG 退役实锤(v0.7.0/a8c4a45f/未注册/依赖移除)；KB级图谱引擎就绪未运行；ETL 走 Markdown 回退；弃PG不成立；新文档落盘；bug-344~347 登记 |
+|  | docs/vibe/2026-10-03-knowledge-storage-code-truth.md, buglog.json, anatomy.md | 9 agents/526k tokens；待决策清单见文档 §八 || 23:45 | Session end: 1 writes across 1 files (2026-10-03-knowledge-storage-code-truth.md) | 40 reads | ~2250 tok |
+
+## Session: 2026-10-03 00:24
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:36 | Created ../../Users/Lenovo/AppData/Local/Temp/gemma_probe.py | — | ~427 |
+| 00:39 | Created ../../Users/Lenovo/AppData/Local/Temp/gemma_probe2.py | — | ~487 |
+| 00:45 | Session end: 2 writes across 2 files (gemma_probe.py, gemma_probe2.py) | 0 reads | ~914 tok |
+| 00:46 | Created ../../Users/Lenovo/AppData/Local/Temp/agnes_probe.py | — | ~558 |
+| 01:02 | Created docs/vibe/2026-10-04-d1-d6-cleanup.md | — | ~960 |
+| 01:02 | Edited backend/package/yuxi/services/domain_factory_service.py | expanded (+15 lines) | ~314 |
+| 01:02 | Edited backend/package/yuxi/services/domain_factory_service.py | service_repo_update_error() → update_task() | ~252 |
+| 01:03 | Edited backend/package/yuxi/services/domain_factory_service.py | modified get() | ~762 |
+| 01:03 | Edited backend/package/yuxi/services/domain_factory_service.py | 4→2 lines | ~24 |
+| 01:03 | Edited backend/package/yuxi/services/domain_factory_service.py | 6→3 lines | ~33 |
+| 01:05 | Edited backend/package/yuxi/services/domain_factory_service.py | reduced (-25 lines) | ~138 |
+| 01:05 | Edited backend/package/yuxi/services/domain_factory_service.py | removed 26 lines | ~76 |
+| 01:06 | Created ../../Users/Lenovo/AppData/Local/Temp/d3_orphan_removal.py | — | ~465 |
+| 01:07 | Edited ../../Users/Lenovo/AppData/Local/Temp/d3_orphan_removal.py | 3→3 lines | ~35 |
+| 01:07 | Edited backend/package/yuxi/services/domain_factory_service.py | 3→2 lines | ~27 |
+| 01:08 | Edited backend/package/yuxi/services/domain_factory_service.py | 8→6 lines | ~37 |
+| 01:08 | Edited backend/package/yuxi/services/domain_factory_service.py | inline fix | ~10 |
+| 01:08 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | modified lookup_subsidence_params() | ~478 |
+| 01:09 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | modified get_templates() | ~504 |
+| 01:09 | Edited backend/package/yuxi/agents/presets/subagents/data_survey_writer.py | inline fix | ~24 |
+| 01:09 | Edited backend/package/yuxi/agents/presets/subagents/prediction_writer.py | inline fix | ~24 |
+| 01:09 | Edited backend/package/yuxi/agents/presets/subagents/regulation_writer.py | inline fix | ~36 |
+| 01:11 | Edited backend/test/unit/services/test_commit_pipeline_status.py | 13→13 lines | ~157 |
+| 01:11 | Edited backend/test/unit/services/test_commit_pipeline_status.py | 14→14 lines | ~198 |
+
+## Session: 2026-10-03 01:19
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 01:19 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | 3→4 lines | ~51 |
+| 01:23 | Edited docs/develop-guides/changelog.md | 1→2 lines | ~387 |
+| 01:26 | Created ../../Users/Lenovo/AppData/Local/Temp/pytest_run.sh | — | ~43 |
+| 01:27 | Created ../../Users/Lenovo/AppData/Local/Temp/pytest_debug.sh | — | ~32 |
+| 01:29 | Created ../../Users/Lenovo/AppData/Local/Temp/pytest_debug2.sh | — | ~106 |
+| 01:29 | Created ../../Users/Lenovo/AppData/Local/Temp/pytest_debug3.sh | — | ~32 |
+| 01:30 | Created ../../Users/Lenovo/AppData/Local/Temp/pytest_debug4.sh | — | ~32 |
+| 01:31 | Created ../../Users/Lenovo/AppData/Local/Temp/pytest_debug5.sh | — | ~108 |
+| 01:32 | Created ../../Users/Lenovo/AppData/Local/Temp/pytest_debug6.sh | — | ~70 |
+| 01:33 | Created ../../Users/Lenovo/AppData/Local/Temp/pytest_debug7.sh | — | ~78 |
+| 01:35 | Created ../../Users/Lenovo/AppData/Local/Temp/pytest_debug8.sh | — | ~74 |
+| 01:35 | Created ../../Users/Lenovo/AppData/Local/Temp/pytest_debug9.sh | — | ~91 |
+| 01:36 | Created ../../Users/Lenovo/AppData/Local/Temp/pytest_probe.sh | — | ~215 |
+| 01:38 | Created ../../Users/Lenovo/AppData/Local/Temp/pytest_pyc.sh | — | ~150 |
+| 01:39 | Created ../../Users/Lenovo/AppData/Local/Temp/pytest_fail.sh | — | ~61 |
+| 01:42 | Edited backend/test/unit/services/test_commit_pipeline_status.py | modified _partial_pipeline_env() | ~458 |
+| 01:42 | Edited backend/test/unit/services/test_commit_pipeline_status.py | 9→10 lines | ~154 |
+| 01:42 | Edited backend/test/unit/services/test_commit_pipeline_status.py | 9→10 lines | ~158 |
+| 01:43 | Edited backend/test/unit/services/test_commit_pipeline_status.py | modified fake_update() | ~313 |
+| 01:43 | Edited backend/test/unit/services/test_commit_pipeline_status.py | modified test_graph_build_failure_marks_commit_failed() | ~513 |
+| 01:44 | Edited backend/test/unit/services/test_commit_pipeline_status.py | modified _fake_context() | ~45 |
+| 01:44 | Created ../../Users/Lenovo/AppData/Local/Temp/pytest_final.sh | — | ~97 |
+| 01:46 | Created ../../Users/Lenovo/AppData/Local/Temp/d6_list.py | — | ~236 |
+| 01:46 | Created ../../Users/Lenovo/AppData/Local/Temp/d6_commit.py | — | ~260 |
+| 01:50 | Created ../../Users/Lenovo/AppData/Local/Temp/graph_status.py | — | ~211 |
+| 01:51 | Created ../../Users/Lenovo/AppData/Local/Temp/graph_trigger.py | — | ~573 |
+| 01:5x | D1-D6 收官：tools.py:686 折行、changelog 补条目、sync-dev、容器 pytest 37 passed（清被污染 pycache 后）、D6 端到端复验通过、提交 9b74874d（15 files，排除 4 个他人 WIP 与 .wolf） | backend/test/unit/services/test_commit_pipeline_status.py 等 | done | ~60k |
+| 02:0x | graph build 重触发：规范库 concurrency 2→1 后触发（实际 redo 74 块，非 6），模板库入队 51fc0527（3066 pending）；两 job 意外并行致 429 重现（重试吸收中），监控 bsi23v1cw 布防 | .wolf/cerebrum.md, .wolf/buglog.json | in-progress | ~15k |
+| 02:00 | Session end: 26 writes across 21 files (tools.py, changelog.md, pytest_run.sh, pytest_debug.sh, pytest_debug2.sh) | 4 reads | ~15852 tok |
+| 02:19 | Created ../../Users/Lenovo/AppData/Local/Temp/neo4j_count.py | — | ~241 |
+| 02:2x | 规范库图谱构建完成 74/74 零失败（终态措辞"图谱构建结束"，监控未匹配）；模板库单流 17.1s/chunk 零永久失败，ETA ~14h 需 3 个触发周期；Neo4j 验证 95 Chunk/941 Entity/1013 MENTIONS 落图 | milvus_graph_service (运行栈) | done | ~8k |
+| 02:20 | Session end: 27 writes across 22 files (tools.py, changelog.md, pytest_run.sh, pytest_debug.sh, pytest_debug2.sh) | 4 reads | ~16093 tok |
+| 08:54 | Session end: 27 writes across 22 files (tools.py, changelog.md, pytest_run.sh, pytest_debug.sh, pytest_debug2.sh) | 4 reads | ~16093 tok |
+| 09:00 | Session end: 27 writes across 22 files (tools.py, changelog.md, pytest_run.sh, pytest_debug.sh, pytest_debug2.sh) | 5 reads | ~16093 tok |
+| 09:04 | Session end: 27 writes across 22 files (tools.py, changelog.md, pytest_run.sh, pytest_debug.sh, pytest_debug2.sh) | 5 reads | ~16093 tok |
+
+## Session: 2026-10-04 09:10
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:30 | 知识工厂模块全面分析（brainstorming）：读设计文档/ETL重设计需求/D1-D6/数据模型/五服务骨架/路由/前端Tab | domain_factory_service.py, models_domain_factory.py, graph_*.py, tools.py | 完成 | ~35k |
+| 10:22 | Created ../../Users/Lenovo/AppData/Local/Temp/claude/read_wf_output.py | — | ~388 |
+| 10:20 | ETL 数据平面设计工作流（10 代理）：21 persist/11 drop 裁决 + 对抗验证发现 bug-353(match_count 断链)/bug-354(校验字段错位) | domain_factory_service.py, pre_commit_validator.py | 完成 | ~812k |
+| 10:43 | Session end: 1 writes across 1 files (read_wf_output.py) | 20 reads | ~388 tok |
+| 11:06 | Session end: 1 writes across 1 files (read_wf_output.py) | 21 reads | ~388 tok |
+| 10:45 | 知识工厂×v2 写作场景差距分析+整合设计工作流启动（10 代理：3 核查/差距/双方向设计/合成/验证） | coal-eia-writer skill, tools.py, graph_query_service.py | 运行中 wf_b642b53d | ~800k 预估 |
+| 11:13 | Session end: 1 writes across 1 files (read_wf_output.py) | 21 reads | ~388 tok |
+| 12:12 | Created ../../Users/Lenovo/AppData/Local/Temp/claude/read_wf2_output.py | — | ~267 |
+| 11:50 | 知识工厂×v2 差距分析+整合设计工作流完成：10 环节 0 gap/7 partial；推荐杂交架构（最小整合为骨+T1/T2/T3+测量回流）；C4 翻案；验证 68 支持/3 refuted 已修正/2 uncertain | coal-eia-writer, tools.py, consistency.py | 完成 | ~665k |
+
+## Session: 2026-10-04 14:00
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-04 14:00
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:40 | Created docs/vibe/2026-10-04-kf-eia-writer-review-and-integration.md | — | ~1958 |
+
+## Session: 2026-10-04 21:42
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:45 | 整理本 session 全部问答为记录文档（模块分析/数据平面裁决/差距分析与整合设计/通俗版/8 项待拍板/工件路径） | docs/vibe/2026-10-04-kf-eia-writer-review-and-integration.md | 已创建，待用户确认架构后进入 PR-1 拍板 | ~1.8k |
+| 22:39 | 写作侧区域取数通道只读勘察（query_kb/LightRAG白名单/Milvus expr/K组织粒度/SKILL纪律） | kbs/tools.py, knowledge/*, SKILL.md | findings 已交 StructuredOutput | ~40k |
+| 01:40 | 子任务：样例报告 7-10 章（行 2303-2810）写作者取材分析，B/A/D 分类+原文引用；发现全部表体在 md 抽取中丢失 | backend/test/横城矿区总体规划环评报告书.md | done，已交 StructuredOutput | ~30k |
+| 22:45 | 通读样例报告 ch1-3（行1-1021）做 A/B/C/D 价值分类 | backend/test/横城矿区总体规划环评报告书.md; .wolf/cerebrum.md | 完成，含原文引用的 takeaways 已交回编排器 | ~52k |
+| 22:46 | 伊宁样例结构勘察：grep^#得13章+前言+11附录，与横城13章骨架对比（4/5章及10-12章次序异），抽读3/9/12/1.7/13等章，产出A-D写作价值takeaways | docs/vibe/assets/2026-09-30-coal-eia-v2-port/eia-sample-fixtures/extract/fulltext.md | done | ~45k |
+
+## Session: 2026-10-04 22:51
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:52 | subagent: 样例报告11-13章素材分析(ch11清洁生产/ch12公众参与/ch13结论, L2811-3090) | 横城矿区总体规划环评报告书.md | takeaway含原文引用; 全书md表格块=0(仅171表题),数值密度ch6>ch4>ch2>ch3>ch1,ch11最低 | ~28k |
+| 23:05 | 合并7组深读结果为写作者取材地图（9工作步骤×ABCD类别；伊宁31族作demand_model统计证据） | backend/test/横城矿区总体规划环评报告书.md; docs/vibe/assets/2026-09-30-coal-eia-v2-port/eia-sample-fixtures/ | 关键引文grep验证通过（行3082/10820收束句、横城表体0行、31族schema计数），StructuredOutput已提交 | ~5000 |
+| 23:08 | 深读工作流完成：横城13章+伊宁全文+31族fixture 逐章取证，产出写作者取材地图（A7/B7/C10/D6，横城表体全失等6大发现） | tasks/wg1rj4gim.output | 已提取 synth，待与 region-roadmap 工作流合并 | ~35k |
+| 23:12 | 用户纠正：HJ463-2009 已入库 KB；cerebrum 补 4 条学习（运行栈名/.env 无凭据/横城表体全失/取材单位） | .wolf/cerebrum.md | 已记录 | ~0.8k |
+| 23:13 | 验证代理：写作现实性核查（产物路线修正路线图）——核实 SKILL.md:30/:140 红线、planning_eia ch3/ch9 消费点、forms monitoring/sensitive/measures 字段、port design §5.2 子代理无 query_kb、bug-353、lightrag.py:920 kwargs 白名单 | SKILL.md, planning_eia.json, port-design.md, domain_factory_service.py | verdicts 已产出：3 refuted/corrected（子代理取数通道、豁免分支两处说、source 枚举缺口） | ~45k |
+| 23:16 | 路线工作流完成：scope×region 维度设计+产物升降格+三期消费通道；验证 2 refuted 修正（子代理无 query_kb→编排者主路径；SKILL.md 豁免须补红线6/source枚举）+2 勘误（24矿非22；manager.py 上游共有改加法白名单） | tasks/wtp5kvzey.output | 已提取，待用户确认方案 | ~30k |
+| 23:38 | 用户认可产物路线 v2 + 措施库两步走；新增 50 份样例报告事实与条件化报告模板设想 | cerebrum/memory | 决策已记录 | ~0.5k |
+
+## Session: 2026-10-04 00:58
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 01:20 | 语料普查收口：41 份 docx→census.json+chapters.json+labels.json；36 份完整章树；五族骨架签名分组（规划环评 4 变体/项目环评 井工vs露天） | .wolf/corpus-census/* | 完成 | ~40k |
+| 01:20 | docx 标题方言 4 种：第一章/第1章/N 标题/自定义样式；Heading1 样式匹配失效，目录行 \t页码 签名最可靠 | corpus-census 脚本 | 学到 | ~1k |
+| 01:55 | bug-355 修复：巴拉素(17章)/九龙川(19章) zip手术剥NULL关系后解析入库；塔然高勒UniDocSa真损坏弃用；census三条件修正 | chapters.json/census.json | 完成 | ~15k |
+| 08:25 | Created docs/superpowers/specs/2026-10-05-kf-product-roadmap-v2-design.md | — | ~2652 |
+| 08:26 | Edited docs/superpowers/specs/2026-10-05-kf-product-roadmap-v2-design.md | "backend/templates/coal_mi" → "backend/scripts/render_re" | ~26 |
+| 02:30 | roadmap v2 spec 写就并提交(17804315)：三层模板形态+scope×region+消费三期+W0-W4；用户确认 6 维词表与三层形态 | docs/superpowers/specs/2026-10-05-kf-product-roadmap-v2-design.md | 已提交待用户审 | ~30k |
+| 08:26 | Session end: 2 writes across 1 files (2026-10-05-kf-product-roadmap-v2-design.md) | 12 reads | ~2870 tok |
+| 08:49 | Edited docs/superpowers/specs/2026-10-05-kf-product-roadmap-v2-design.md | inline fix | ~44 |
+| 08:49 | Session end: 3 writes across 1 files (2026-10-05-kf-product-roadmap-v2-design.md) | 12 reads | ~2918 tok |
+| 09:02 | Created docs/superpowers/plans/2026-10-05-w0-bugfix-and-usage-tracking.md | — | ~6013 |
+| 03:10 | W0 计划写就并提交：5 任务（bug-354 一行修/bug-353 三层实现/台账表+4工具埋点/changelog 收尾）；match_count=ETL语料命中、写作侧消费走新台账，语义分离 | docs/superpowers/plans/2026-10-05-w0-bugfix-and-usage-tracking.md | 已提交 | ~25k |
+| 09:03 | Session end: 4 writes across 2 files (2026-10-05-kf-product-roadmap-v2-design.md, 2026-10-05-w0-bugfix-and-usage-tracking.md) | 12 reads | ~9360 tok |
+| 09:06 | Created backend/test/unit/services/test_pre_commit_validator.py | — | ~337 |
+| 09:08 | Edited backend/package/yuxi/services/pre_commit_validator.py | "type" → "classify_type" | ~16 |
+
+## Session: 2026-10-05 09:08
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:11 | Edited backend/test/unit/services/test_pre_commit_validator.py | 2→4 lines | ~54 |
+| 09:11 | Edited backend/test/unit/services/test_pre_commit_validator.py | modified test_none_task_detail_returns_failed() | ~318 |
+| 09:40 | bug-354 修复：pre_commit_validator.py:32 改读 classify_type，既有测试 fixture 同步迁移+2 回归测试，10 passed；中途误覆盖既有测试文件已恢复（bug-356） | pre_commit_validator.py, test_pre_commit_validator.py | commit d0711db2 | ~20k |
+| 09:18 | Task 1 bug-354 spec 合规审查：R1-R4 全过，D1/D2 偏差独立验证合理，10 passed in container，结论 SPEC COMPLIANT | pre_commit_validator.py, test_pre_commit_validator.py | SPEC COMPLIANT | ~6k |
+| 09:18 | Edited docs/superpowers/plans/2026-10-05-w0-bugfix-and-usage-tracking.md | modified _fake_detail() | ~905 |
+| 09:18 | Edited docs/superpowers/plans/2026-10-05-w0-bugfix-and-usage-tracking.md | 3→4 lines | ~74 |
+| 09:18 | Edited docs/superpowers/plans/2026-10-05-w0-bugfix-and-usage-tracking.md | 1→2 lines | ~47 |
+| 09:19 | Edited docs/superpowers/plans/2026-10-05-w0-bugfix-and-usage-tracking.md | 2→2 lines | ~39 |
+| 09:20 | Session end: 6 writes across 2 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md) | 2 reads | ~3605 tok |
+| 09:20 | Session end: 6 writes across 2 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md) | 2 reads | ~3605 tok |
+| 09:21 | Created backend/test/unit/services/test_validate_task_report.py | — | ~296 |
+| 09:22 | Edited backend/package/yuxi/services/domain_factory_service.py | inline fix | ~31 |
+| 09:22 | Edited backend/package/yuxi/services/domain_factory_service.py | "type" → "classify_type" | ~29 |
+| 09:23 | Edited backend/package/yuxi/services/domain_factory_service.py | 2→2 lines | ~38 |
+| 09:30 | Task 1b done: bug-354 同族 3 处 type→classify_type（validate_task L2 过滤 :4101 + 报告统计 :4131 + commit 阶段 2.4b :4586），TDD 先红后绿，新测试 1 passed，services 回归 1009 passed / 3 failed（预存 test_formula_chunk 腐化，记 bug-357），commit b71d301d | domain_factory_service.py + test_validate_task_report.py | OK | ~45 |
+| 09:28 | Edited docs/superpowers/plans/2026-10-05-w0-bugfix-and-usage-tracking.md | 1→5 lines | ~72 |
+| 09:28 | Session end: 11 writes across 4 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py) | 3 reads | ~4077 tok |
+| 09:29 | Session end: 11 writes across 4 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py) | 3 reads | ~4077 tok |
+| 09:32 | Edited docs/superpowers/plans/2026-10-05-w0-bugfix-and-usage-tracking.md | inline fix | ~34 |
+| 09:32 | Edited docs/superpowers/plans/2026-10-05-w0-bugfix-and-usage-tracking.md | expanded (+10 lines) | ~118 |
+| 09:32 | Edited docs/superpowers/plans/2026-10-05-w0-bugfix-and-usage-tracking.md | 6→6 lines | ~79 |
+| 09:32 | Session end: 14 writes across 4 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py) | 3 reads | ~4324 tok |
+| 09:33 | Session end: 14 writes across 4 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py) | 3 reads | ~4324 tok |
+| 09:36 | Session end: 14 writes across 4 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py) | 4 reads | ~4620 tok |
+| 09:37 | Session end: 14 writes across 4 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py) | 4 reads | ~4620 tok |
+| 09:44 | bug-354 同族 qualrev: 3处 classify_type 修复验证一致；新测试绿侧容器实测通过，红侧推演必失败；L2 过滤未被测试钉住(Important) | domain_factory_service.py, test_validate_task_report.py | report sent | ~30k |
+| 09:46 | Session end: 14 writes across 4 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py) | 4 reads | ~4620 tok |
+| 09:46 | Session end: 14 writes across 4 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py) | 4 reads | ~4620 tok |
+| 09:46 | Edited backend/test/unit/services/test_validate_task_report.py | modified test_validate_task_sends_parameter_slots_to_l2() | ~275 |
+| 09:46 | Edited backend/package/yuxi/services/domain_factory_service.py | 2→2 lines | ~36 |
+| 09:47 | Edited backend/package/yuxi/services/domain_factory_service.py | 2→2 lines | ~38 |
+| 09:45 | Task 1b 跟进: 补 L2 过滤钉住测试（patch SlotValidationService 源模块），红侧验证 :4101 回退时 test 2 独独 FAIL（validate_slots awaited 0 次）且 test 1 仍绿，恢复后 2 passed；全量 1010 passed/3 failed 基线不变；amend 后 0d140e92 | test_validate_task_report.py | OK | ~30 |
+| 09:49 | Session end: 17 writes across 4 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py) | 4 reads | ~4969 tok |
+| 09:50 | Session end: 17 writes across 4 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py) | 4 reads | ~4969 tok |
+| 09:51 | bug-354 qualrev 复核 amend 0d140e92: 新测试兑现处方且更强(全列表钉住), 容器实测 2 passed; 生产文件零改动 | test_validate_task_report.py | 最终通过 | ~8k |
+| 09:52 | Session end: 17 writes across 4 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py) | 4 reads | ~4969 tok |
+| 09:53 | Session end: 17 writes across 4 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py) | 4 reads | ~4969 tok |
+| 09:53 | Created backend/test/unit/services/test_learned_template_match_count.py | — | ~928 |
+| -- | bug-353 修复：补齐 match_count 自增链（service 2 方法 + repo 1 方法 + 5 单测），红→绿，回归 1015/3 基线 | domain_factory_service.py, domain_factory_repository.py, test_learned_template_match_count.py | done, commit 748d2b13 | ~45k |
+| 09:58 | Session end: 18 writes across 5 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 4 reads | ~5897 tok |
+| 09:58 | Session end: 18 writes across 5 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 4 reads | ~5897 tok |
+| 10:01 | Session end: 18 writes across 5 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 5 reads | ~6825 tok |
+| 10:02 | Session end: 18 writes across 5 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 5 reads | ~6825 tok |
+| 10:08 | Session end: 18 writes across 5 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 5 reads | ~6825 tok |
+| 10:08 | Session end: 18 writes across 5 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 5 reads | ~6825 tok |
+| 10:10 | Session end: 18 writes across 5 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 5 reads | ~6825 tok |
+| 10:10 | Session end: 18 writes across 5 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 5 reads | ~6825 tok |
+| 10:12 | Session end: 18 writes across 5 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 5 reads | ~6825 tok |
+| 10:12 | Session end: 18 writes across 5 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 5 reads | ~6825 tok |
+| 10:14 | Created backend/test/unit/services/test_tool_usage_tracking.py | — | ~499 |
+| 10:15 | Edited backend/package/yuxi/repositories/domain_factory_repository.py | 3→4 lines | ~26 |
+| 10:15 | Edited backend/package/yuxi/repositories/domain_factory_repository.py | modified record_tool_usage() | ~251 |
+| 10:17 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | modified _track_usage() | ~311 |
+| 10:17 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | 4→8 lines | ~142 |
+| 10:17 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | 5→9 lines | ~120 |
+| 10:17 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | 4→8 lines | ~124 |
+| 10:17 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | 3→6 lines | ~69 |
+| 10:17 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | 3→6 lines | ~92 |
+| 10:17 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | 3→7 lines | ~108 |
+| 10:17 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | modified isinstance() | ~144 |
+| 10:17 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | 5→9 lines | ~127 |
+| 10:25 | Edited backend/package/yuxi/storage/postgres/manager.py | expanded (+12 lines) | ~328 |
+| 10:45 | W0 取用率埋点：DomainFactoryToolUsage 模型+record_tool_usage+tools.py 8 处接线（9b260b07）；发现 v9 存量库迁移器跳过 DDL，manager.py 补 DDL + psql 手工建表；回归 1017/3 | models_domain_factory.py, domain_factory_repository.py, tools.py, manager.py, test_tool_usage_tracking.py | 完成，1017 passed / 3 failed(基线) | ~60k |
+| 10:36 | Edited docs/superpowers/plans/2026-10-05-w0-bugfix-and-usage-tracking.md | 3→4 lines | ~127 |
+| 10:36 | Edited docs/superpowers/plans/2026-10-05-w0-bugfix-and-usage-tracking.md | inline fix | ~38 |
+| 10:36 | Session end: 33 writes across 9 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 7 reads | ~9343 tok |
+| 10:36 | Session end: 33 writes across 9 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 7 reads | ~9343 tok |
+| 10:42 | Session end: 33 writes across 9 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 7 reads | ~9343 tok |
+| 10:42 | Session end: 33 writes across 9 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 7 reads | ~9343 tok |
+| 10:50 | Session end: 33 writes across 9 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 7 reads | ~9343 tok |
+| 10:50 | Session end: 33 writes across 9 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 7 reads | ~9343 tok |
+| 10:50 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | 5→5 lines | ~72 |
+| 10:50 | Edited backend/test/unit/services/test_tool_usage_tracking.py | modified test_record_tool_usage_defaults() | ~264 |
+| 10:50 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | modified _run() | ~105 |
+| 10:51 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | modified _run() | ~139 |
+| 11:05 | Task 3 跟进：list_chapter_keys DB 回退空表记 miss（source 三态修复）+ 新增 fire-and-forget 失败隔离测试（红侧摘 try/except 实证外溢后恢复）；amend 1c40ad02，回归 1018/3 | tools.py, test_tool_usage_tracking.py | 完成，1018 passed / 3 failed(基线) | ~15k |
+| 10:54 | Edited docs/superpowers/plans/2026-10-05-w0-bugfix-and-usage-tracking.md | 3 → 2 | ~8 |
+| 10:55 | Session end: 38 writes across 9 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 7 reads | ~9932 tok |
+| 10:55 | Session end: 38 writes across 9 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 7 reads | ~9932 tok |
+| 10:57 | Session end: 38 writes across 9 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 7 reads | ~9932 tok |
+| 10:57 | Session end: 38 writes across 9 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 7 reads | ~9932 tok |
+| 11:11 | W0收尾: ruff format/check 定向清理(新违规清零+移除F401)、test_formula_chunk 3例 skip标注(bug-357)、changelog v0.7.3 pisuan 定制增量(2026-10-05)、回归 1018 passed/0 failed/3 skipped | tools.py repo service validator 4 test changelog | commit d687c812 | ~45k |
+| 11:13 | Session end: 38 writes across 9 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 7 reads | ~9932 tok |
+| 11:13 | Session end: 38 writes across 9 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 7 reads | ~9932 tok |
+| 11:15 | W0 全流程：Task1/1b/2/3/4 全部两段审通过 + 最终审 READY（5eaa25b2..d687c812，5 commit，回归 1018/0/3） | 7 文件 | READY，余 E2E 冒烟 | ~120k |
+| 11:25 | Session end: 38 writes across 9 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 8 reads | ~10817 tok |
+| 11:25 | Session end: 38 writes across 9 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 8 reads | ~10817 tok |
+| 11:40 | W0 E2E 冒烟 match_count 自增链：repo 自增 OK(1729 0→1) 但学习模板无 match_rule+domain 不匹配恒不命中，链路死路，报 team-lead | .wolf/buglog.json | SMOKE_FAIL | ~12k |
+| 11:35 | E2E 冒烟 SMOKE_FAIL：repo 自增 +1 实证通过，但学习模板 0/5 匹配不中（bug-359：match_rule 缺失 + domain coal vs coal_mining 不一致），真实 ETL 自增永不触发 | template_library/template_matcher/domain_factory_service | bug-359 已记录，修复建议 W1 首项 | ~30k |
+| 11:31 | Session end: 38 writes across 9 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 8 reads | ~10817 tok |
+| 11:31 | Session end: 38 writes across 9 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 8 reads | ~10817 tok |
+
+## W0 会话总结（2026-10-05）
+
+- W0 计划（bug-353/354 + 取用率埋点）经 subagent-driven-development 全流程执行完毕：5 commit（d0711db2/0d140e92/7237d42a/1c40ad02/d687c812），每任务两段审（spec+质量）+ 红侧判别力实证，最终整体审 READY，回归基线 1018 passed / 0 failed / 3 skipped。
+- E2E 冒烟发现 bug-359（学习模板 match_rule 缺失 + domain coal vs coal_mining 不一致 → 真实 ETL match_count 永不增量）；repo 自增层 +1 落库实证通过。
+- 用户裁决：W0 即此关闭；bug-359 为 W1 首项；分支已推送 origin/pisuan-custom。
+- W1 待办入场清单：bug-359（首项）、P1-0/P1-2/P1-1a 批次 + classifier collapse（spec §6）、终审 5 条 Minor 建议、test_formula_chunk 重写。
+| 11:34 | Session end: 38 writes across 9 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 8 reads | ~10817 tok |
+| 11:44 | Session end: 38 writes across 9 files (test_pre_commit_validator.py, 2026-10-05-w0-bugfix-and-usage-tracking.md, test_validate_task_report.py, domain_factory_service.py, test_learned_template_match_count.py) | 8 reads | ~10817 tok |
+
+## Session: 2026-10-05 11:51
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:51 | bug-359 设计分析呈报：generalized=正文非标题式、词形三阵营(coal/coal_mining)、fallback 精确串方案 + 3 拍板点(D1 词形统一 coal_mining / D2 fallback-only / D3 接受 static 遮蔽)待用户拍板 | template_library.py template_matcher.py | 待拍板 | ~3k |
+| 12:00 | D1 拍板：domain 词形统一到 coal（真实统一无映射），审计完毕——代码 5 处 + 30 json + 目录改名 + 1 测试文件，DB/图/前端零迁移 | domain_factory_service.py template_library.py 等 | 设计定稿待 D2/D3 确认 | ~4k |
+| 12:09 | Created docs/superpowers/specs/2026-10-05-bug-359-domain-unify-match-rule-design.md | — | ~1169 |
+| 12:11 | Created docs/superpowers/plans/2026-10-05-w1-bug-359-domain-unify-match-rule.md | — | ~3797 |
+| 12:12 | Edited docs/superpowers/plans/2026-10-05-w1-bug-359-domain-unify-match-rule.md | inline fix | ~32 |
+| 12:12 | bug-359 spec + W1 计划定稿落盘（3 任务：词形统一原子翻转/match_rule TDD/冒烟收尾），自审修正 DoD grep 范围 | docs/superpowers/specs/2026-10-05-bug-359-*.md plans/2026-10-05-w1-bug-359-*.md | 已落盘待提交 | ~9k |

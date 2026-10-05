@@ -5,6 +5,8 @@
 > Last updated: 2026-05-16
 
 ## User Preferences
+- (2026-10-05) 消除词形/口径分裂时拒绝映射层（replace 链、别名兼容补丁），要求真实数据统一——直接改 DB 字典/存量/静态资产，前后一个词形；方案选择上偏好爆炸半径小的方向（coal vs coal_mining 一案选定 coal：DB 主导词形，零数据迁移）
+- [2026-10-01] 最大限度不修改 yuxi 核心代码（上游共有代码面），否则上游同步/rebase 麻烦。改前先 git 判定代码块出处：pisuan 自有扩展（如领域工厂 report 工具链）可改；上游共有代码必须动时先向用户说明。判据：git log -S + git show upstream/main:<path>。
 
 <!-- How the user likes things done. Code style, tools, patterns, communication. -->
 
@@ -12,6 +14,19 @@
 - Large changes should have a requirements document in `docs/vibe/` with date prefix
 
 ## Key Learnings
+- (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
+- [2026-10-03] KB 存储层现状（代码+现场双重验证，推翻 7 月设计文档）：LightRAG 已退役——knowledge/runtime.py:12-14 只注册 Milvus/Dify/Notion，lightrag.py 未注册不可创建，运行栈 2 个 KB 全是 milvus 型（煤矿环评报告模板库 id=3 / 环评标准规范库 id=4），默认类型 = row.kb_type or "milvus"（manager.py:73）。MilvusKB 检索 = Milvus 向量+BM25 稀疏+混合融合+可选 reranker。KB 级图谱新引擎 = knowledge/graphs/MilvusGraphService（knowledge_graph_index 任务，LLM 抽取 chunk→Entity→RELATION 写 Neo4j + MilvusGraphVectorStore 实体向量），当前栈从未跑过（PG 图谱表 0 行、Neo4j 无 Chunk/Entity 标签）。Neo4j（容器名 graph!）里活着的是领域工厂结构图谱（ParagraphTemplate 870/ChapterTemplate 571/...）。domain_factory commit 的结构化入库分支（_ingest_structured_document/_get_lightrag_instance）在 milvus 栈上是死代码，hasattr 守卫使其永远走 manager.index_file Markdown 回退（PG knowledge_chunks 3169 行即其产物）。
+- [2026-10-03] 本宿主机是 Windows 且默认自动休眠：休眠冻结整个 Docker VM（容器日志静止、连接死亡、lease 过期），唤醒后被 durable 收敛器落 FAILED。判定「应用挂死」前先排除宿主机休眠——看容器日志里每 30s 的 arq health 心跳是否中断，心跳断=宿主机睡了，不是 bug。长任务前须关休眠：powercfg /change standby-timeout-ac 0。
+- [2026-10-03] 改名栈（pisuan-localized）的 Redis 模型缓存键是 `pisuan:model_cache`——cache.py 里的 REDIS_CACHE_KEY 字符串也被机械改名层改掉了；db0 里另有旧栈遗留 `yuxi:model_cache:v2` 与本栈无关。查/删缓存前必须 `redis-cli --scan --pattern '*model*'` + `INFO keyspace` 先定位真实键。模型端点换地址要动三层：.env OPENAI_API_BASE、DB model_providers.base_url、Redis pisuan:model_cache（rebuild 只在 provider UI 保存或 lifespan 启动时触发；手工重建=容器内跑 get_all_model_providers+model_cache.rebuild，脚本结尾要 os._exit(0) 否则 pg_manager 挂住进程）。
+- [2026-10-03] 容器内访问宿主机服务（如 llama.cpp gemma4）必须用 `http://host.docker.internal:<port>`，不能用 127.0.0.1（那是容器自身 loopback）；宿主机 LAN IP 变更后旧地址全断。改动走两份 .env（pisuan/ 与 pisuan-localized/）+ `docker compose stop/rm api worker && up -d --no-deps --no-build`（--no-deps 必加：compose 会因 env 漂移连依赖一起重建，而 minio 镜像本地已缺失会炸）。容器是临时文件系统：docker cp 进 /tmp 的脚本在重建后消失，重拷即可。
+- [2026-10-03] pisuan-localized 运行栈容器内 Python import 名是 `pisuan`（不是 `yuxi`）：sync-dev 同步时会做机械改名，连测试文件也改（所以容器内 pytest 引 `pisuan.services...`）；裸 docker exec python 需 `import pisuan.*`。
+- [2026-10-03] 运行栈 HTTP 层不能用 seed_initial_users.py 的种子密码登录（用户已改密）；对已批准的服务层动作，走 `docker exec api python /tmp/xx.py` 直接调 service 方法（import pisuan.*），不绕 Web 认证。
+- [2026-10-03] 运行栈 postgres 库名是 `yuxi_know`（容器内 env POSTGRES_DB），不是 yuxi；worker 用 watchfiles 监听 /app/server /app/package 热重载，sync-dev 后 P0.1 代码即时生效，无需重启。
+
+- [2026-10-02] 任务中心新协议：Tasker.enqueue(*, name, task_type, payload, timeout_seconds) 无 coroutine 参数；执行按 task_registry.py 的 _TASK_DEFINITIONS 分发，Handler 必须是模块级函数、签名 handler(context: TaskContext)，参数一律从 context.payload 重建；新任务类型必须注册，否则 _build_task_data 直接 ValueError。
+- [2026-10-02] 文档解析唯一业务入口是 yuxi.services.ocr_service.parse_document（解析系统默认 OCR 引擎+构造参数）；unified.parse_source_to_markdown/parse_resolved_document 是内部入口，上游 #843 后直调会报「OCR 文件缺少已解析的 ocr_engine」。
+- [2026-10-02] 运行栈是 pisuan-localized 容器组（pisuan-localized-api-1/worker-1/postgres-1，端口 5050），代码经 scripts/sync-dev.ps1 同步并机械改名（yuxi→pisuan）；容器内无 yuxi 模块、无 ruff。
+- [2026-10-01] 带 runtime: ToolRuntime 注入参数的 @tool 必须配显式 args_schema（BaseModel），否则 langchain 推断 schema 会把 ToolRuntime dataclass 卷进 args model，pydantic .schema() 崩 -> 全平台 chat run manifest_persist_failed。现有 24 工具均遵守，assemble_report 曾漏（bug-327）。
 
 - **ETL Pipeline stages:** PARSE → CLASSIFY → GENERALIZE → WAITING_REVIEW → COMMIT
 - **Frontend tab alignment:** ETL workbench 4 tabs map to pipeline: parse → generalize → entities → commit
@@ -54,7 +69,30 @@
 - **上游 #1088（031e2c72，2026-09-30 同步）重构 skills 后端：** 删除 1813 行 `agents/skills/service.py`，拆为 `services/skills/` 包（`shared.py` 持 `init_builtin_skills` 与模块内 `get_skills_root_dir`；`remote_install.py`/`repository.py` 同删）。pisuan 在旧 service.py 的 6 行 .tmp-/.bak- 中断清理已移植到 `shared.py` 的 `init_builtin_skills`（`synced_items` 之后）。旧路径 import 直接崩，写 skills 相关代码先看新包。
 - **上游 #1081（同版）`BaseContext.knowledges` 升级 `ResourceSelection` 类型（default="all"）：** 且 `context.py` 原生含 `excluded_tools`（:242）+ ExcludedToolsMiddleware——pisuan 旧版手工加的 excluded_tools 6 行字段定制已被上游超越，rebase 取上游侧，勿加回旧字段。
 
+- **storage-migrator 是一次性任务，代码同步后必须手动重跑（2026-09-30 bug-317）：** Schema 只由 Compose 的 `storage-migrator` 容器修改（`restart: "no"`、跑完即退），api/worker 进程仅做 `require_current_schema` 版本守卫。热重载会让 api/worker 拿到新代码（含更高的 BUSINESS_SCHEMA_VERSION），但**永远不会重新触发 migrator** → 上游同步后 api 启动即被 `Database schema migration is incomplete or incompatible: business=8 (required 9)` 拦截。修法：`docker start <project>-storage-migrator-1`（挂载实时代码，迁移幂等）。**每次官方链同步/大版本追赶后都应重跑 migrator**，与 2026-07-10 的"同步后补列"条目同族。
+- **镜像树迁移表名是 `pisuan_schema_migrations`（2026-09-30）：** 源码常量 `SCHEMA_VERSION_TABLE = "yuxi_schema_migrations"`，改名层在镜像里连表名字符串一起改为 `pisuan_schema_migrations`——手工 psql 验证时用后者，用源码常量名会报 relation does not exist。
+- **worker 的 healthy ≠ 子进程存活（2026-09-30 bug-318）：** watchfiles 崩溃循环期间容器 healthcheck 仍报 healthy（只探容器不探 arq 子进程），且子进程死后无新文件变更不会自拉起。判活标准：日志出现 `Starting worker for N functions: ...`。修完因后 `docker restart` worker 强制重建子进程最稳。
+
+
+- [2026-10-02] 本机 Bash 工具的 heredoc 会多吃一层反斜杠（脚本里写 \n 到达 python 时已是 
+），且超过 ~8KB 的长命令会被截断报 "unexpected EOF"。长编辑脚本一律用 Write 工具写到临时文件再 `python 文件` 执行；heredoc 只放短脚本且避免反斜杠。
+- [2026-10-02] 本机 `python -` 从 stdin 读脚本用 GBK 默认编码，UTF-8 中文锚点会乱码不匹配。必须 `export PYTHONUTF8=1 PYTHONIOENCODING=utf-8`。ruff 用 `python -m ruff`（0.15.12 可用）；容器内无 ruff，`uv run` 因 site-packages 权限失败。sync-dev.ps1 后容器内路径是 /app/package/pisuan/（yuxi→pisuan 改名）。
+
+- [2026-10-05] 存量库（business schema 已达 9==BUSINESS_SCHEMA_VERSION）上新增 ORM 模型表不会自动落库：storage_migration.main() 所有 DDL 分支都有版本门槛（create_business_tables 仅 None；ensure_business_schema 仅 {None,2,7}；upgrade_agent_resource_selection 仅 {None,2,7,8}），版本=9 时迁移器对 schema 是 no-op，热重载也不跑 create_all（lifespan 只 initialize+require_current_schema）。新表落地双路径：①ensure_business_schema DDL 列表补 CREATE TABLE IF NOT EXISTS（覆盖全新库/旧版本库）；②存量 v9 库 psql 手工建表（match_count 列先例同此）。另：migrator 容器 docker start 可重跑（bind mount ./backend/package:ro，sync 后代码即时生效）；api 容器里裸 python -c 独立初始化 pg_manager 会因未走 lifespan 初始化而挂连池，别用它验证 DB。
+
 ## Do-Not-Repeat
+- [2026-10-03] domain_factory 泛化台账 `段落级泛化完成: ... skipped=N` 的 skipped 指「熔断后剩余未尝试段落」（domain_factory_service.py:3505/3531），不是模板复用数；模板复用判定在「泛化过滤」日志（todo=template 缺失或 fallback）。误读 skipped=209 为「复用失效」白查一场。断点续跑现状：复用解析（693 段载入），泛化层因历轮熔断未达持久化点而全量重跑——「只补失败段」尚不对泛化层成立。
+- [2026-10-03] 排查 Redis 缓存问题时，未 `--scan` 键空间就按 worktree 源码里的键名 GET/DEL，查的是无人使用的残骸键 `yuxi:model_cache`，连环误判为「缓存被投毒/清空」折腾一小时。改名栈里一切字面量（键名、模块名、表名）都可能被改，先观察实际数据再下结论。
+- [2026-10-03] Python str.count/replace 是子串匹配：深缩进文本包含浅缩进模式（24 空格行内含 20 空格模式），锚点替换必须先深后浅，且写盘前 assert count==1；连续两次替换失败说明先浅后深。
+- [2026-10-03] Git Bash heredoc 除剥反斜杠外还会把中文全角引号「“”」压成 ASCII 双引号，含引号/中文标点的代码或文本一律 Write 落盘后执行，勿走 heredoc（本次 SyntaxError U+FF0C 实证）。
+- [2026-10-03] 不要假设容器内与工作树同构：localized 栈 import 名/库名/凭据都与工作树不同（yuxi→pisuan、yuxi_know、密码已改），先探测再动手（用户纠正：容器中 yuxi 都替换成 pisuan）。
+- [2026-10-03] 熔断/失败分支必须在结果回写之后才能 return/持久化——先落盘已成功产物再退场，否则断点续跑退化为整卷重跑（bug-342）。
+- [2026-10-02] Windows Docker Desktop 上 worker 的 watchfiles 热重载在重负载长任务中会 inotify OOM 自爆（Cannot allocate memory os error 12）并连带 SIGKILL 任务——跑长 OCR/批处理前先用 compose override 去掉热重载，结束后还原；worker 重建后代码变更需手动 restart 容器才生效。
+
+- [2026-10-02] 对从未 format 过的存量文件跑 `ruff format` 会整文件重排（domain_factory_service.py 596 行漂移），污染上游同步 diff——存量文件只做定向编辑+`python -m ruff format --check --diff` 预览，漂移超改动面就不 format；`git stash -- <file>` 会把工作树改动收进 stash，用完必须立刻 pop。
+- [2026-10-01] loguru 不认 stdlib 的 exc_info kwarg：logger.error(msg, exc_info=True) 把它当 extra 静默吞掉，不打印栈。要栈用 logger.exception() 或 logger.opt(exception=True)。worker 排障别信 exc_info=True 有输出。
+- [2026-10-05] 任务书写『新建』的测试文件可能实际已存在：Write 覆盖已有 141 行测试套件后才从 commit stat 的 -131 察觉。动手 Write 前先 `ls`/`git log --` 核实目标；Write 返回 "updated successfully" 即文件已存在的信号。另外 commit 后必看 --stat 数字是否与预期改动面相符（bug-356）。
+- [2026-10-05] Edit 工具的 old_string 前导缩进不可作唯一性依据：domain_factory_service.py :4101（16 空格）与 :4586（20 空格）内容仅缩进不同，用 16 空格 old_string 仍报『Found 2 matches』——工具匹配会归一化前导空白。同文件多处相似行必须带相邻上下文行（如前一行的 `for p in paragraphs`）锁定唯一；改完必 grep 复核逐行落点。
 
 <!-- Mistakes made and corrected. Each entry prevents the same mistake recurring. -->
 <!-- Format: [YYYY-MM-DD] Description of what went wrong and what to do instead. -->
@@ -73,6 +111,8 @@
 - [2026-07-10] 领域工厂 commit/reingest 曾按 LightRAG 接口写文件记录（`kb_instance.files_meta[...]` + `_persist_file` + `database_id` 命名），LightRAG v0.7.0 移除后在 Milvus 上崩 `'MilvusKB' object has no attribute 'files_meta'`，任务转 FAILED 且 KB 无内容。改动领域工厂入库时一律用基类 `_persist_file_meta(file_id, {..., "kb_id": ...})` + `kb_manager.index_file`。相关：`slot_signature` 曾是 `VARCHAR(255)`，参数密集段落签名超限被截断、模板回流被 try/except 静默吞掉 → 已改 `TEXT`。
 
 ## Decision Log
+- [2026-10-03] ETL 并发校准（方案 A 演进为可配置）：并发 10 对串行 llama.cpp 只放大队列等待（队尾 ~10min >> 客户端超时）造成健康调用被误杀、熔断误伤；超时 120→300s；并发改为管理员可配（Option 体系：domain_factory_llm，基础设置页渲染，默认 2 钳制 1-32，运行时读取下一次生效）。不放入领域工厂页面：该 knob 是端点级全局参数（模型本身是全局默认），与默认模型同屏最贴心智。配置面扩展模式：options.py 加 Option 实例 + OPTION_DEFINITIONS 注册（[pisuan-custom] 标记），lifespan ensure_options_in_db 自动建行，零迁移零前端框架改动。
+- [2026-10-03] ETL 跑批遇本地端点推理停滞（12h 内第二次）：用户拍板「不干预，让超时→重试→熔断链自己走完」。运行期故障优先让 P0.1 自愈链收敛，人工只处理终态；用户自己的 llama.cpp 服务器不可擅动。
 
 <!-- Significant technical decisions with rationale. Why X was chosen over Y. -->
 
@@ -82,3 +122,147 @@
 - [2026-07-13] **源报告归并（分章上传）判定为过度设计并回滚**：曾计划建一等 `domain_factory_source_reports` 表 + 完整性QA/大纲隔离/重传去重，CEO 复审推翻。读码确认 `DomainFactoryOutline` 唯一键 = (domain_code, report_type_code, canonical_chapter_key)，**不同章节 → 不同 key → 不同大纲行**，传"第3章"+"第5章"自动归并成同报告类型的完整大纲——分章上传零代码已可用。`upsert_outline` 的"覆盖"语义（`domain_factory_repository.py:374`，注释"聚合合并在后续版本"）只在**同一章节被多份不同报告重复上传**时触发，那是"跨报告聚合"另一诉求，非分章上传。**教训：复审先问"现有 (domain, report_type) 归并是否已满足"，别默认加表。**
 
 - [2026-07-14] **Neo4j result.single() 多记录 warning 修复模式**：当 Cypher MATCH 可能返回多条同属性节点时，在 MATCH 后加 `WITH ch LIMIT 1` 再做 OPTIONAL MATCH/collect 聚合，确保 result 只有一行。比 `next(iter(result), None)` 更干净（Cypher 层面解决，Python 层不变）。治理脚本去重 Cypher 需分步执行（先迁移关系、再删重复节点），不能用单条 Cypher 动态设置关系类型——Neo4j MERGE 不支持动态 relationship type。
+
+- [2026-09-30] **coal-eia-writer 管线化 v2 移植设计定稿（brainstorming 闭环，commit 159bfa9e）**：五项决策——①slug 原地替换（context.skills 绑定零改动）②一期只走独立路径（单文件交付，mapping/章树绑定缓行）③新建通用 eia-section-writer 子代理（3 旧角色 writer 摘除不删，prompt 蒸馏进新子代理 DB system_prompt——不改技能包文件）④一期只验收 planning_eia ⑤合成项目进验收 checklist、真实项目上线前独立试跑。移植机制=忠实移植：scripts/references 一行不改，SKILL.md 只按映射表改编。**关键实证：** pisuan 沙箱与 v2 原运行时同构——技能挂载 `/home/gem/skills/{slug}/`（VIRTUAL_SKILLS_PATH）、workdir 虚拟根 `/home/gem/user-data/`、文件工具 7 件套同名；上传附件确认后落 workdir `/uploads/{file_id}_{name}`（attachment_service._store_attachment:188），ingest.py file 可直连。**唯一实质语义适配：** ask_user_question 是问题制（1–5 questions/次，question_id→answer），非 v2 假设的 16 项字段制表单 → 16 项/卡改 5 项/卡，字段 name→question_id、label+placeholder 合并进 question 文本、数值校验交给 ingest.py（「ingest 唯一校验者」哲学）。spec：`docs/superpowers/specs/2026-09-30-coal-eia-writer-v2-port-design.md`。
+
+
+- [2026-10-02] 本机 Bash 工具的 heredoc 会多吃一层反斜杠（脚本里写 \n 到达 python 时已是 
+），且超过 ~8KB 的长命令会被截断报 "unexpected EOF"。长编辑脚本一律用 Write 工具写到临时文件再 `python 文件` 执行；heredoc 只放短脚本且避免反斜杠。
+- [2026-10-02] 本机 `python -` 从 stdin 读脚本用 GBK 默认编码，UTF-8 中文锚点会乱码不匹配。必须 `export PYTHONUTF8=1 PYTHONIOENCODING=utf-8`。ruff 用 `python -m ruff`（0.15.12 可用）；容器内无 ruff，`uv run` 因 site-packages 权限失败。sync-dev.ps1 后容器内路径是 /app/package/pisuan/（yuxi→pisuan 改名）。
+
+## Do-Not-Repeat
+
+- [2026-09-30] **派发实现子代理必须禁用后台监视器模式**：首个 Tasks 1+2 实现者把文件拷贝委派给「后台监视器」异步执行，两轮 ~67k tokens 后目标目录不存在、零提交，且中途汇报听起来进展正常（buglog-319 同源）。修复：提示词开头加 CRITICAL 铁律（每条命令同步亲自跑、逐步核对 Expected、禁 watcher/deferred）；控制器在派发前与收到完成通知后都先做只读状态核查（目录存在性/git log），不轻信汇报文字。
+
+## Key Learnings (append 2026-09-30 task3)
+- (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
+- Skill 投影链路：worker 启动 init_builtin_skills 只把 buildin 同步到 skill-sources/shared/<slug> 并 upsert skills 表（保留 enabled 不动）；用户投影 skill-projections/<uid>/ 是 DB 驱动、只含 enabled=true 的技能，且在 Agent Run 初始化时才懒刷新（composite.py sync_agent_context_skills）。新增 buildin 技能若 DB 已有同名 disabled 行（历史残留），投影永远不出现。
+- 运行栈容器内包名是 pisuan（改名层），python -c 需 import pisuan.* 而非 yuxi.*；POSTGRES_URL 为 +asyncpg 形式。skills 表无 is_deleted 列。
+- 长时间 docker exec python + pg_manager 池偶发 "error connecting in pool-1" 挂起；一次性查询用 asyncpg.connect 直连更稳。
+- **docs/vibe 被 .gitignore 忽略（2026-09-30 Task5）：** 存档类文件（assets/...）要进 git 必须 `git add -f`（精确列文件，勿整目录），`git add docs/vibe/...` 会被静默拒绝且 git status 不显示未跟踪。Task5 提交 33507661 即用 -f 提交了 2 个存档文件。
+
+
+- **[2026-10-01] 修改 yuxi 核心代码必须加行内定制标记**（用户明确要求）：上游文件中任何语义改动，改动处加 `# [pisuan-custom] <语义说明>` 注释（Python；CSS/JS/Vue 各有对应形态，见 upstream-sync-guide.md 第七节）。用途：rebase 冲突解决后 `git grep -n '\[pisuan-custom\]'` 核对定制语义存活。此前已修的 bug-327（tools.py，pisuan 自有代码无需标记）与 bug-328（summary.py，上游文件已补 3 处标记）。
+
+- **[2026-10-01] 知识工厂模板访问词汇错位（E2E V3 误判未命中的根因）**：弱模型凭直觉调用 `list_report_types(domain="coal_mining")`、`get_templates(report_type="planning_eia")`——字典真实 code 是 `coal` + `eia_report`（planning_eia 是技能 stage 名非 report_type）。库内 coal/eia_report 实有 604 条大纲（445 条含 purpose/overview/key_points/writing_hints）+ 28 条段落模板（全部是 ch3 现状调查节，伊宁语料）。修复方向：SKILL.md 开题/修复轮补词汇指南（code 枚举 + list_chapter_keys 先行）。模板泛化只遮蔽 1 个数值，实体裸露 → 只能作结构/句式参照，配合 sample_entities/yining.json 禁入清单。
+- **[2026-10-01] 章门深度口径**：build_output.py `_effective`（:310 附近）= 非表格行、非标题行，剥 `\s\|-*#{}` 后计数——表格不计入有效字符，深度地板靠正文散文达成。ch3 floor=27100 为全书第三高（ch6 47300 > ch4 32900 > ch3 27100）。
+
+- **[2026-10-01][Decision Log] E2E 暂停点：知识工厂补语料优先于继续跑章节**（用户决策）：coal 域只有 ch3 一章正文（伊宁 -3.docx），ch4-13 无段落模板参照；用户先上传加工样例报告全书，再恢复 coal-eia-writer 全面测试。恢复时的 nudge 应带知识工厂词汇指南（list_report_types() 无参 → coal/eia_report → list_chapter_keys → get_templates）。编排者 system_prompt 已含串行派发纪律（在飞 ≤1 + 429 停车令），DB agents.id=9，404 字符。
+- **[2026-10-02] 知识工厂 ETL 评审结论（office-hours 全链评审，12 代理+DB 实测）：** 五症状全根因化——泛化在横城任务(a44afc93)真实成功率≈0：761/761 槽位全为 `_generalize_fallback` 名「数值」；法规场景B 存活 0/1997（para["template"] 被泛化/摘要整体替换，svc:668-684 写 vs :841-847/:864-867 覆盖）；narrative 摘要=输入前 50 字（setdefault generalized 回显 :3596 vs :3288）；公式 SYMBOL_MAP 15 项跨域撞名（下沉公式 W→产能/产量）+12 停用词致下标字母成变量；图片 URL HTTP401+`databases/unknown` 路径（<img> 带不了 token）；list=0（逐行成段致「≥2行」规则永不触发）；logical_relations 模型无列 setattr 静默丢弃；结构化入库死分支（MilvusKB 无 _ingest_structured_document，恒 Markdown 兜底，runtime.py 注册表只有 Dify/Milvus/Notion）；_chinese_to_arabic 逐字替换「十二」→「102」；MD表↔HTML表 html_table_index++ 纯位置配对。default_model 默认 DeepSeek-V4-Flash（siliconflow）。评审四镜头 verdict：数据面/失败模式/需求对齐=structurally_flawed，可维护性=sound_with_flaws；共识=阶段骨架保留、产物数据平面重构。终报待用户拍板验收标准换轨/死产出停机/范围三决策。
+- 2026-10-02 泛化规模化天然实验：横城全本761/761兜底 vs 伊宁3.1 13/13成功(141个语义槽名0兜底)。同代码同提示词同模型→失败是provider级(配额/限流)而非内容/模型能力级。教训：①槽位机制本身没坏，坏在无重试+静默兜底+覆盖率指标；②逐段独立调用下文档规模对单次调用质量零贡献，规模只是失败放大器；③worker重建丢日志，重负载夜间任务后必须保留日志才能取证。
+- 2026-10-02 ad99f4c9逐段时间线：参数段调用序2-70成功19/21，6.1.3.3起210段仅4段漏网→泛化失败突变点在调用顺序而非内容/章节，坐实provider级硬墙(配额/限流)。叙述段摘要全文档(含成功窗口)均为≤50字echo截断+0 key_points=独立代码bug(读取generalized回显字段)，与断供无关。
+- 2026-10-02 gemma4 A/B审查：同文档换有额度模型→兜底2.7% vs DeepSeek 94%，配额假设终审结案。泛化LLM环节本身可用；剩余缺陷全在机制层：①YAML提示词文字\"双层大括号\"但示例全单括号→2075处混用；②type合法集4类从未命中，非法强转parameter；③跨模型同段槽名/覆盖不稳定(idx7: 1槽vs5槽；同义异名)，77%唯一率使slot_signature聚合失效→槽位注册表必要性实锤；④叙述提取读错字段=模型无关的代码bug；⑤ai_confidence两次均71与真实成功率6%→97%完全脱钩。
+- 2026-10-02 提示词括号修复学到的：①_render_prompt是纯字符串replace不是format——YAML写{{}}原样到达模型，无需转义；但{content}等4个占位符必须保持单括号（replace按字面找{content}，写成{{content}}会残留杂括号）；②代码内联f-string版提示词的{{}}运行时塌缩为单括号，要出双括号需四重{{{{}}}}；③YAML旧版提示词遮蔽_PROMPT_DEFAULTS新版（新版含5槽上限+语义命名规则），切换是D2决策；④get_domain_factory_service docstring写单例实为per-call新实例→prompt缓存按任务失效。
+## Decision Log 追加
+- 2026-10-02 D2决策（用户确认）：①验收换轨——北极星从ai_confidence覆盖率改为写手取用率+成稿要素覆盖率（用户认可"产出必须被下游取用"的验收观）；②死产出停机——无消费者产物停止计算写入；③本轮范围仅ETL，commit/入库链（graph假成功、structured ingest孤儿、learned template upsert塌缩、retry无守卫）后续单独立项。需求文档=docs/vibe/2026-10-02-etl-redesign-requirements.md。注意用户节奏偏好：先修确定性小缺陷（如双括号）验证方向，再批准大改。
+- 2026-10-02 泛化逻辑四项决议（用户发起第二轮设计评审后定稿）：Q1参数/叙述=区分产物不区分段落身份，散文段统一一次泛化产双产物；Q2公式正确提取的前提是解析层OMML→LaTeX（线性化已丢失下标/上标信息），产物为命名计算对象，符号表从「式中」规约行提取、严禁静态SYMBOL_MAP；Q3图片已在解析时上传MinIO但挂databases/unknown域+前端裸连401，改ETL自有命名空间+图题规则推断figure_type+鉴权API展示；Q4列表类型产出恒为0的根因是解析层逐行切段先于分类发生，决议停机（行内枚举由统一泛化吸收）。
+- 2026-10-02 测量教训（bug-338）：PG ARE 无 lookbehind，(?!\{)\{ 自废恒0；\{[^{] 把双括号内部{也计数。正确法=先剥双括号再数剩余。修正后bug-335真实规模：修复前49处/修复后1处（残留=模型畸形括号组，非归一化缺口）。任何正则计数先用构造样本双向验证。
+
+## Key Learnings (append 2026-10-04 D1-D6 + graph build)
+- (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
+
+- agnes 免费层只 sustains 单并发请求：graph 抽取 extractor concurrency_count 必须 =1，且同一时间只允许一个 graph-build job（两个 KB 并行 = 2 路并发 → 429 风暴）；attempt 1/3、2/3 的瞬态 429 由内置重试（delay 2s）吸收，无需干预。
+- worker/api 由 watchfiles 热重载：任何 backend 文件保存都会重启 worker 并杀掉在跑的 arq graph job。策略 = 改完全部代码 + 提交后，最后触发构建，之后不再碰 backend 文件。
+- commit 管线阶段顺序：入库(阶段2.x，~4503) 在图谱构建(阶段2.5) 之前；D3 后入库是真实调用（yuxi.knowledge.runtime.knowledge_base 的 get_kb_executor/index_file），相关单测必须 mock 该 runtime 与 service._upload_original_to_minio。
+- 容器内 pytest 的 INTERNALERROR '//app not in subpath of /app' = assertion-rewrite pyc 被污染（//app 参数跑过一次后按 mtime+size 持续复用）；rm -rf /app/test/**/__pycache__ 即愈。永远不要给容器内 pytest 传 //app 路径。
+- GitBash 的 MSYS 路径改写对 docker exec 参数无孔不入（引号内、MSYS_NO_PATHCONV 均不可靠）；可靠通道 = Write 写 $TEMP 脚本 + tr -d '\r' | docker exec -i sh；Write 工具产物是 CRLF，管道前必须 tr。
+- api 容器内服务端口是 5050（localhost:8000 连接拒绝）；容器内自调 API 用 minted token + http://localhost:5050。
+- docs/vibe/ 整体 gitignore（.gitignore:78），需求文档只留本地，不入库。
+- graph-build 触发链：POST /api/knowledge/databases/{kb}/graph-build/config（锁 extractor，仅 extractor_type 锁定，模型/并发可改）→ POST .../graph-build/index（409 若同库在跑；不同库可并行——这正是 429 风险）。status 端点不返回 running/progress 字段（键名未知），监控进度用 worker 日志 grep "图谱构建：抽取"。
+- pre-existing lint 欠账先例：HEAD 上 domain_factory_service.py 16 处 E501、tools.py 3 处、test_commit_pipeline_status.py 1 处——判定归属用 `git stash` 对拍 HEAD；自己的新行必须 ≤120。
+- agnes key 在 Redis pisuan:model_cache 内、经环境变量传递不落盘；API key UI 只做掩码显示。
+
+## Do-Not-Repeat (2026-10-04)
+
+- 不要在上一个 graph-build job 未到终态时触发第二个（不同 KB 可并行 → agnes 429 风暴）。触发前用 worker 日志确认前一个已 构建完成/构建失败。
+- 不要给容器内 pytest 传 //app 或未 tr 的 CRLF 脚本；一次污染整个文件的 pyc。
+- 不要用 sleep N 链等待容器状态——被 harness 拦截；用 Monitor until-loop。
+
+## Decision Log (2026-10-04)
+
+- 图谱抽取模型选定 openai2:agnes-2.5-flash（免费层，~5-7s/chunk，json_object 约束输出）；本地 gemma-4-E4B 因 thinking-prose 不可用；付费 deepseek 被否（未获批准不得自行动用付费 API）。
+- D1-D6 与 P0.1 合并为单个提交 9b74874d（两批改动在同批文件中交织，hunk 级拆分风险大于收益）。
+- lightrag.py 删除与 pyproject.toml 残留依赖（上游共有）按"最大限度不动上游"原则推迟，已记录在 vibe 文档 deferred 清单。
+
+## Key Learnings (append 2026-10-04 ETL 数据平面裁决)
+- (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
+
+- **match_count ETL 增量断链（bug-353）**：service:648 调的 _increment_learned_template_match_counts 根本不存在，:649-650 try/except 静默吞 → 「1107 模板 0 复用」有两个根因：槽名 77% 唯一率（已知）+ match_count 永无增量（新发现）。修复前任何「模板复用率」观测都是 0，观察期判停标准会失真。
+- **段落级校验链字段错位（bug-354）**：pre_commit_validator.py:32 / service:4101/:4131 读 para["type"]，段落真实字段是 classify_type → L1 恒跳过全部段落、L2 整体不被调用、parameter_paragraphs 恒 0。单测 fixture 合成 type 字段是掩盖源——校验类单测必须用生产真实字段名。
+- **「大纲管理页只写 Neo4j」是过时说法**：confirm_outline_extract（service:5144-5168）已双写 PG+Neo4j（:5162 注释自证）；只有 updateOutlineTemplate（OutlineTemplate.vue:493→PUT outline-templates）落点待核。2026-07-16 的 knowledge-factory-design.md §7.2 叙述已不准确。另 OutlineTemplate.vue:173/:467/:490 对 expected_charts 有 read+write 人工闭环——ETL 停写恒空数组可以，删列删 API 字段不行。
+- **Neo4j FormulaTemplate 疑似写而无读**：get_templates 返回载荷（graph_query_service:194-200）只有 text_pattern/slots/legal_references 不含公式；expected_formulas 断链（task_detail 无顶层键）。公式对象化（Q2/P2）落地时必须先指认消费通道，否则派生面按 D2② 复议。
+
+## Do-Not-Repeat (2026-10-04 ETL 数据平面)
+
+- 不要把「模板 0 复用」单归因于槽名碎片化就设计观察期判停——match_count 增量断链（bug-353）不修，观察期数据恒为 0，会误判停回流。
+- 校验/守卫类改动不要再写合成 type 字段的 fixture（bug-354 教训）；改前先 grep 生产赋值链确认字段名（classify_type）。
+- 「写而无读」判定必须全仓 grep（web/src + backend/test + scripts + agents md），只查 service 会漏掉 OutlineTemplate.vue 这类 UI 人工闭环消费者（expected_charts 差点误删列）。
+
+## Key Learnings (append 2026-10-04 KF×v2 整合设计)
+- (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
+
+- **coal-eia-writer v2 实施状态**：资产已落地（scripts/10 脚本+references 全套），eia-section-writer 是 DB-only 子代理（agents id=13，无代码 preset）——环境重建即失。SKILL.md tool_dependencies=6 件无 save_chapter。
+- **v2 文档口径三处漂移（对账成本源）**：合约计数 SKILL.md L167「XS1-XS18」/L264「XS1-XS12+EO1-EO3」/consistency_contracts.json 实测「XS1-XS20+EO1-EO3(23 条)」三者互相矛盾；data_expectations 是 31 族不是 33（spec V4 勘误：派生视图族不产空白不进门）；冻结槽位 35 vs 有值槽位 49 口径未对账。
+- **v2 门禁的 doc-impl 断层**：standards_index.json gate1_code_checks 在册但 scripts/ 零实现（门1 标准号体检宣称无实现）；consistency.py 无 sample_entities 消费代码（实体泄漏防线纯 prompt 纪律，SL3 范文指纹门因 references/samples/ 缺失恒休眠）——实体链是 v2 全管线最薄防线。
+- **seed_gen.py 落库端 verified-absent**：_import_template_outline/knowledge_factory schemas 在 pisuan 仓库与运行栈容器双向不存在——v2→工厂的出向通道实际是跨栈人工通道。
+- **工厂三件套在 v2 语境的现状**：运行时取用率=0（纪律性调用+found=false 兜底常态化）；get_templates 图 831 vs PG 211 双库漂移+39 Slot 未 canonical；KB 库内唯一语料=样例书本身（横城同一文件×3 重复），query_kb 召回天然带样例实体与「范文数值禁入」红线冲突。
+- **「数字链」是 v2 最强环节**：formula_runner 唯一写者→Decimal+ROUND_HALF_EVEN→make_inject 未知键硬 FAIL→残留扫描→XS2 ±2% warn，机制/实现/E2E 三层齐备——工厂任何供给改造不得进入该热路径（{{SLOT}} 词汇真源=state/formula_state.json）。
+- check_content_contract 从未接线（tools.py 仅 L880 定义+单测引用）——v2 语境翻案依据：consistency.py 23 合约终验能力覆盖面远超它，且它对 {{SLOT}} 注入正文会系统性误报。
+
+## Key Learnings (append 2026-10-04 样例报告价值分析 ch1-3)
+- (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
+- backend/test/横城矿区总体规划环评报告书.md 是 coal-eia-writer v2 的样例语料（即红线3/standards_index「横城 9 处实证」来源）；该 md 副本所有表格仅存表题（表1.4-1…表3.4-25），表体数值在 md 中不可得，引用样例表值必须回查原始 PDF/DOCX。
+
+## Key Learnings (append 2026-10-04 样例报告与导则)
+- (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
+
+- **运行栈为 pisuan-localized-*（非 api-dev）**：当前 docker ps 显示 pisuan-localized-api-1/worker-1/web-1 等；两个工作树（pisuan / pisuan-localized）的 .env 都**没有管理员凭据**（CLAUDE.md「从 .env 读取管理员账户」已过期）。验证运行栈数据：优先 API 只读查询（需向用户要凭据），docker exec 须先报批。
+- **HJ 463-2009 已由用户入库 KB**（2026-10-04 用户确认）：不要再说「KB 里只有样例报告没有规范本体」。导则相关路线设计的焦点是**角色标记与消费方式**（normative vs sample），不是导入。HJ 130-2019 是否已入库未确认。hj130.pdf（.wolf/ 下 800KB）= HJ 130-2019 总纲发布稿本体，非样例报告；hj463_extract.md / hj130_extract.md 为本地转写文本。
+- **横城 md（backend/test/横城矿区总体规划环评报告书.md）表体全失**：grep 管道表格 0 行，仅存 171 个表题；伊宁 extract/fulltext.md 291 表有表体。工厂 6 轮 ETL 跑的是残本——表格类产物贫瘠的结构性原因之一；横城关键表（8.7-1 优化建议汇总/10.2-1 监测计划/11.1-1 清洁生产对标）须回源 docx。
+- **写作者取材单位=表单行不是散文摘要**（31 族 fixture 铁证）；31 族分布 A≈7/B≈7/C≈10/D≈6，C 类（向业主要数）最多——数字链供给形态是表单而非语料检索；query_kb 召回预测章必然带出样例实体，是实体禁入红线最高危区。
+
+## Decision Log (2026-10-04 产物路线 v2)
+- **用户拍板**：①产物路线修正方案整体认可（scope×region 双标签、regional_facts 立项、一地区一 KB、learned_templates 冻结扩容、P2 重排、4 处验证修正全收）；②措施库两步走接受（一期散文级+区域库保底，行级抽取器后置）。spec 待写：docs/superpowers/specs/2026-10-04-kf-product-roadmap-v2-design.md。
+- **工厂定位重述（用户已认可）**：模板产物冻结 ≠ 工厂没用——工厂从「模板工厂」转型为「文档结构化提取器 + 区域事实仓库」，写作管线上游供料商；取用率电表对工厂整体生效，转型后仍 0 取用则 D2 停机原则一视同仁。
+- **用户新增事实**：手头有约 50 份样例报告（此前仅知 2 份全文本）；设想「基于导则从 50 份提取通用报告模板、按条件生成多份变体」——分析方向：导则定骨架（HJ463 附录A）、样例定变体（条件统计），交付走 PR-1 冷替换链；变体条件必须从语料实测归纳，不许猜。
+
+### Key Learnings（2026-10-05 语料普查追加）
+- 样例语料 docx 标题格式四种方言：①第X章（中文数字+加粗）②第1章（阿拉伯数字）③N 标题（无第/章字，如"1 总 则"）④自定义样式（如"标题 4(一)条"）。Heading 1 样式匹配在多数文件上失效；**目录行带 \t页码 后缀是最可靠的章树来源**（census.json headings_sample 已含）。
+- WPS 生成的 docx 两种病态：.rels 引用 'NULL' 部件（python-docx KeyError，需 zip 手术剥关系条目）；UniDocSa 文件头（私有格式，真损坏）。census 脚本必须记 error 而非静默零值（bug-355）。
+- 五大报告族骨架实测：规划环评 13 章 4 变体（回顾↔识别换序阵营 + 10-12 章轮转 + 新导则三线一单/不确定性）；项目环评 17-19 章（井工=沉陷章 / 露天=爆破章系统性分岔）；复垦方案 9 章三份同构；后评价沿用项目环评骨架；跟踪评价 11 章独有。
+
+### Decision Log（2026-10-05 追加）
+- 模板产物形态裁决：三层（骨架+变体规则+每章配置）胜出固化 N 份。决定性证据是 v2 技能 references/stages/ 下 5 份手写 stage JSON 正是固化形态及其维护之苦；三层渲染产物直接兼容该格式（消费者现成，D2 合规）。固化模板降级为渲染导出物。6 维条件词表用户已确认。
+- 章序轮转（大气↔地表水等 5-6 种排法）判定为院家风，不进变体规则、不做配置；canonical_order 取语料多数派。
+
+### Key Learnings（2026-10-05 KB 角色追加）
+- 环评规范本体 KB：「环评标准规范库」kb_9ks49hyvfj，HJ 463-2009 与 HJ 130-2019 均已入库（用户确认）。KB 角色分三类：规范库（全局共享不分区）/ 样例库（可按 region_key 分区）/ 写手产物库。此前"KB 内容未验证勿断言"的教训由此部分解除：规范库内容已知，样例库构成仍需盘点。
+
+### Decision Log（2026-10-05 W0 计划追加）
+- match_count 语义裁决：learned_templates.match_count 只记 ETL 语料标题命中（语料适配度信号，bug-353 修复即此）；写作侧消费计数走新台账表 domain_factory_tool_usage。两种语义不共用一列（可信度随行原则）。
+- matcher 注入链关键事实：_get_template_matcher = 静态 headers 库 + add_templates_from_list 注入 DB 学习模板，学习模板 template_id = f"learned_{db_id}"——只有该前缀回写 match_count。
+- tools.py 是上游共享：任何改动带 [pisuan-custom] 注释；埋点为 fire-and-forget（module 级 task set 防 GC），绝不阻断工具主流程。
+
+### Key Learnings（2026-10-05 bug-354 审查追加）
+- Windows 宿主 Git Bash 跑 `docker exec <c> pytest /app/...` 会被 MSYS 路径转换改写成 `C:/Program Files/Git/app/...` → pytest 报 file not found（exit 4），极易误判为容器里没文件。加 `MSYS_NO_PATHCONV=1` 前缀即可。
+- pre_commit_validator 段落 dispatch 字段是 classify_type（与 graph_builder/domain_factory_service 一致）；段落级 fixture 必须写 classify_type，slot 级的 "type" 是 slot 属性，两者别混。
+
+## Do-Not-Repeat (2026-10-05 bug-354 qualrev)
+- 2026-10-05: 不要假设 pisuan-localized 工作树文件内容 == 其 git HEAD。sync-dev.ps1 会把源仓未提交改动同步过去（工作树 HEAD 可能停在旧 commit 但文件已是新版）。做"对旧代码跑测试"的变异验证前，先 grep 实际文件内容确认基线，否则红/绿侧结论会反转。
+
+## Do-Not-Repeat (2026-10-05 W0 收尾)
+- 2026-10-05: 宿主机 `cd backend && uv run ...` 会改写 backend/uv.lock（本机 uv 与锁定 lock 版本漂移），跑 ruff 后必须 `git checkout -- backend/uv.lock`，否则会把锁文件噪声带进提交。
+- 2026-10-05: 上游共享文件做定向 format 前先验证基线干净：`git show <base>:<file> | ruff format --check --stdin-filename <path> -` 通过 ⇒ 整文件 format 的 diff 只会落在新增块，可安全执行；基线不干净才需要手动只排新增行。
+
+### Key Learnings（2026-10-05 W0 收尾追加）
+- changelog 惯例：无「未发布」区块，定制工作以 `### pisuan 定制增量（日期）` 日期小节挂在当前版本节（v0.7.3）内、扁平 bullet，插入位置在该版本最后一个日期小节之后、下一个 `## ` 版本节之前。
+- 本仓 ruff 门禁实际范围 = `backend/package`（CI ruff.yml + make lint 均不含 test/）；ruff 版本以 backend/uv.lock 锁定为准（勿用宿主机全局 ruff，版本不同 format 规则可能有差异）。
+- 项目 isort 配置（ruff I）要求 `import pytest` 与 yuxi 一方 import 之间不留空行、段间不空行——与常见 isort 空行风格不同，手写 import 后须跑 `ruff check --select I --fix` 校准。
+
+## Decision Log (2026-10-05 W0)
+
+- **W0 关闭裁决**：E2E 冒烟暴露 bug-359（学习模板匹配死路）后，用户裁决不入 W0、作 W1 首项。理由：占位符→regex 语义直接决定 match_count 数据质量，修得糙会污染测量数据本身；W1 本就是模板/语料适配窗口；先例 template_generator.py:252-256 可循。
+- **冒烟方法论**：单元三层全绿 ≠ 链路通电——「用 matcher 对学习模板标题自匹配」是低成本端到端证伪手段，W1 修完 bug-359 后必须复跑同款冒烟验证。
+- **W0 交付点**：d687c812（已推送 origin/pisuan-custom），回归基线 1018/0/3；后续窗口以此为准。
+
+- (2026-10-05, W1/bug-359) Decision Log: D1 词形统一方向定为 coal（DB 主导词形，真实统一无映射，删 replace 链；备选 coal_mining 因需迁移字典/静态侧被否）；D2 学习模板 match_rule=fallback_keywords[chapter 去编号全串]，命中语义=标题精确再现，拒二元组防假阳；D3 接受 static 遮蔽，match_count 语义=学习模板提供静态集没有的覆盖。交付点=spec 2026-10-05-bug-359 + plan 2026-10-05-w1-bug-359。

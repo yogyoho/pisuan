@@ -1,9 +1,21 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-30T03:19:08.531Z
-> Files: 1 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-05T04:12:09.009Z
+> Files: 12 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
+
+
+## ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/
+
+
+## ../../Users/Lenovo/AppData/Local/Temp/
+
+
+## ../../Users/Lenovo/AppData/Local/Temp/claude/
+
+
+## ../../Users/Lenovo/AppData/Local/Temp/eia-values/
 
 
 ## ../../tmp/
@@ -75,6 +87,9 @@
 ## backend/package/yuxi/agents/middlewares/
 
 
+## backend/package/yuxi/agents/presets/subagents/
+
+
 ## backend/package/yuxi/agents/skills/buildin/
 
 
@@ -101,6 +116,7 @@
 
 ## backend/package/yuxi/agents/toolkits/buildin/
 
+- `tools.py` — Pydantic: DoubaoSearchInput (~12030 tok)
 
 ## backend/package/yuxi/agents/toolkits/debug/
 
@@ -158,15 +174,19 @@
 
 ## backend/package/yuxi/repositories/
 
+- `domain_factory_repository.py` — Domain Factory 数据访问层 - Repository (~9628 tok)
 
 ## backend/package/yuxi/services/
 
+- `domain_factory_service.py` — Domain Factory Service - 领域知识工厂服务层 (~77057 tok)
+- `pre_commit_validator.py` — 提交前验证关卡:commit 前校验任务数据质量,校验失败阻止提交。 (~599 tok)
 
 ## backend/package/yuxi/storage/minio/
 
 
 ## backend/package/yuxi/storage/postgres/
 
+- `manager.py` — PostgreSQL 数据库管理器 - 支持知识库和业务数据 (~27877 tok)
 
 ## backend/package/yuxi/utils/
 
@@ -236,6 +256,10 @@
 
 ## backend/test/unit/services/
 
+- `test_learned_template_match_count.py` — bug-353: _increment_learned_template_match_counts 原方法不存在被静默吞，match_count 永不增量。 (~928 tok)
+- `test_pre_commit_validator.py` — bug-354: pre_commit_validator 按 classify_type 识别 parameter 段落（原读不存在的 type 字段导致校验空转）。 (~1494 tok)
+- `test_tool_usage_tracking.py` — W0 取用率埋点：台账表 repo 方法与 tools.py 接线辅助。 (~650 tok)
+- `test_validate_task_report.py` — bug-354 同族：validate_task 报告统计/L2 过滤应读 classify_type（原读 type 全部落空）。 (~531 tok)
 
 ## backend/test/unit/storage/
 
@@ -284,12 +308,20 @@
 
 ## docs/superpowers/plans/
 
-- `2026-09-29-qingyun-theme-retheme.md` — 青云素雅主题换肤实施计划 (~5270 tok)
+- `2026-10-05-w0-bugfix-and-usage-tracking.md` — W0：bug-353/354 修复 + 工厂产物取用率埋点 实施计划 (~6810 tok)
+- `2026-10-05-w1-bug-359-domain-unify-match-rule.md` — bug-359 W1 首项实施计划：domain 词形统一 + 学习模板 match_rule 注入 (~3573 tok)
 
 ## docs/superpowers/specs/
 
+- `2026-10-05-bug-359-domain-unify-match-rule-design.md` — bug-359 修复设计：domain 词形统一 + 学习模板 match_rule 注入 (~1096 tok)
 
 ## docs/vibe/
+
+
+## docs/vibe/assets/2026-09-30-coal-eia-v2-port/
+
+
+## docs/vibe/assets/2026-09-30-coal-eia-v2-port/eia-sample-fixtures/
 
 
 ## web/
