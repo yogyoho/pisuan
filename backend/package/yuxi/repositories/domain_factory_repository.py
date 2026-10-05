@@ -14,6 +14,7 @@ from yuxi.storage.postgres.models_domain_factory import (
     DomainFactoryReport,
     DomainFactoryReportChapter,
     DomainFactoryReportPps,
+    DomainFactoryToolUsage,
 )
 from yuxi.utils import hashstr
 from yuxi.utils.datetime_utils import utc_now_naive
@@ -322,6 +323,29 @@ class DomainFactoryRepository:
             )
             result = await session.execute(stmt)
             return result.rowcount or 0
+
+    async def record_tool_usage(
+        self,
+        tool_name: str,
+        *,
+        domain: str | None = None,
+        report_type: str | None = None,
+        args_summary: dict | None = None,
+        result_count: int = 0,
+        source: str | None = None,
+    ) -> None:
+        """记一条工具取用台账（W0 埋点）。失败上抛，由调用方决定是否吞。"""
+        async with pg_manager.get_async_session_context() as session:
+            session.add(
+                DomainFactoryToolUsage(
+                    tool_name=tool_name,
+                    domain=domain,
+                    report_type=report_type,
+                    args_summary=args_summary or {},
+                    result_count=result_count,
+                    source=source,
+                )
+            )
 
     # ========== Outline ==========
 

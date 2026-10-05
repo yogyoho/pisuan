@@ -1656,6 +1656,18 @@ class PostgresManager(metaclass=SingletonMeta):
             "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
             "    UNIQUE(domain_code, prompt_type)"
             ")",
+            # [pisuan-custom] W0 取用率埋点：工具取用台账（旧库 create_all 不补表，对齐其余 domain_factory 表）
+            "CREATE TABLE IF NOT EXISTS domain_factory_tool_usage ("
+            "    id SERIAL PRIMARY KEY,"
+            "    tool_name VARCHAR(64) NOT NULL,"
+            "    domain VARCHAR(64),"
+            "    report_type VARCHAR(64),"
+            "    args_summary JSONB,"
+            "    result_count INTEGER NOT NULL DEFAULT 0,"
+            "    source VARCHAR(32),"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+            ")",
+            "CREATE INDEX IF NOT EXISTS idx_dftu_tool_time ON domain_factory_tool_usage(tool_name, created_at)",
             # Seed default domains if not exist
             "INSERT INTO domain_factory_domains (code, name, description) VALUES "
             "('coal', '煤炭采掘', '煤矿/露天矿环评项目') ON CONFLICT (code) DO NOTHING",

@@ -29,6 +29,39 @@ from yuxi.repositories.domain_factory_repository import (
 from yuxi.utils import logger
 from yuxi.utils.question_utils import normalize_questions
 
+# [pisuan-custom] W0 取用率埋点：工厂产物读取类工具的取用留痕（fire-and-forget，
+# 埋点失败绝不阻断工具主流程）。台账表 domain_factory_tool_usage，只增不改。
+_tracking_tasks: set = set()
+
+
+def _track_usage(
+    tool_name: str,
+    *,
+    domain: str | None = None,
+    report_type: str | None = None,
+    args_summary: dict | None = None,
+    result_count: int = 0,
+    source: str | None = None,
+) -> None:
+    async def _run():
+        try:
+            repo = DomainFactoryRepository()
+            await repo.record_tool_usage(
+                tool_name=tool_name,
+                domain=domain,
+                report_type=report_type,
+                args_summary=args_summary,
+                result_count=result_count,
+                source=source,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"[tool-usage] 埋点失败(忽略): {tool_name} - {exc}")
+
+    task = asyncio.create_task(_run())
+    _tracking_tasks.add(task)
+    task.add_done_callback(_tracking_tasks.discard)
+
+
 _OCR_OUTPUT_DIR_NAME = "ocr"
 _OCR_PREVIEW_LIMIT = 1200
 _SAFE_OUTPUT_STEM_RE = re.compile(r"[^A-Za-z0-9._\-\u4e00-\u9fff]+")
@@ -567,6 +600,10 @@ async def get_chapter_outline(domain: str, report_type: str, canonical_chapter_k
             outline = await graph_svc.get_chapter_outline(domain, report_type, canonical_chapter_key)
             if outline:
                 outline.setdefault("_source", "graph")
+                # [pisuan-custom] W0 埋点
+                _track_usage("get_chapter_outline", domain=domain, report_type=report_type,
+                             args_summary={"canonical_chapter_key": canonical_chapter_key},
+                             result_count=1, source="graph")
                 return outline
         finally:
             graph_svc.close()
@@ -583,9 +620,17 @@ async def get_chapter_outline(domain: str, report_type: str, canonical_chapter_k
             out["_degraded_note"] = (
                 "图谱查询失败，此为数据库回退数据（可能与图谱不完全一致），请在回复中告知用户当前图谱不可用"
             )
+        # [pisuan-custom] W0 埋点
+        _track_usage("get_chapter_outline", domain=domain, report_type=report_type,
+                     args_summary={"canonical_chapter_key": canonical_chapter_key},
+                     result_count=1, source=out["_source"])
         return out
     types = await repo.list_report_types()
     valid_codes = [t["code"] for t in types]
+    # [pisuan-custom] W0 埋点（未命中也记，0 结果是查询质量信号）
+    _track_usage("get_chapter_outline", domain=domain, report_type=report_type,
+                 args_summary={"canonical_chapter_key": canonical_chapter_key},
+                 result_count=0, source="miss")
     return {
         "error": f"未找到章节大纲: {domain}/{report_type}/{canonical_chapter_key}",
         "hint": f"该 domain 合法 report_type: {valid_codes}（请用 list_report_types 确认数据字典 code）",
@@ -610,7 +655,10 @@ async def list_report_types(domain: str) -> list[dict]:
 
     domain = _normalize_domain(domain)
     repo = DomainEntityRepository()
-    return await repo.list_report_types(domain)
+    # [pisuan-custom] W0 埋点
+    out = await repo.list_report_types(domain)
+    _track_usage("list_report_types", domain=domain, result_count=len(out))
+    return out
 
 
 LIST_CHAPTER_KEYS_DESCRIPTION = """
@@ -636,13 +684,20 @@ async def list_chapter_keys(domain: str, report_type: str) -> list[str]:
         try:
             keys = await graph_svc.list_chapter_keys(domain, report_type)
             if keys:
+                # [pisuan-custom] W0 埋点
+                _track_usage("list_chapter_keys", domain=domain, report_type=report_type,
+                             result_count=len(keys), source="graph")
                 return keys
         finally:
             graph_svc.close()
     except Exception as e:
         logger.warning(f"[graph-degraded] list_chapter_keys 图谱查询失败,回退 DB: {domain}/{report_type} - {e}")
     repo = DomainFactoryRepository()
-    return await repo.list_chapter_keys(domain, report_type)
+    # [pisuan-custom] W0 埋点
+    out = await repo.list_chapter_keys(domain, report_type)
+    _track_usage("list_chapter_keys", domain=domain, report_type=report_type,
+                 result_count=len(out), source="db" if out else "miss")
+    return out
 
 
 GET_TEMPLATES_DESCRIPTION = """
@@ -678,6 +733,10 @@ async def get_templates(domain: str, report_type: str, canonical_chapter_key: st
                     for item in templates:
                         if isinstance(item, dict):
                             item.setdefault("_source", "graph")
+                    # [pisuan-custom] W0 埋点
+                    _track_usage("get_templates", domain=domain, report_type=report_type,
+                                 args_summary={"canonical_chapter_key": canonical_chapter_key},
+                                 result_count=len(templates), source="graph")
                     return templates
             finally:
                 graph_svc.close()
@@ -698,6 +757,10 @@ async def get_templates(domain: str, report_type: str, canonical_chapter_key: st
                 item["_degraded_note"] = (
                     "图谱查询失败，此为数据库回退数据（可能与图谱不完全一致），请在回复中告知用户当前图谱不可用"
                 )
+    # [pisuan-custom] W0 埋点
+    _track_usage("get_templates", domain=domain, report_type=report_type,
+                 args_summary={"canonical_chapter_key": canonical_chapter_key},
+                 result_count=len(out), source=out[0].get("_source") if out else "miss")
     return out
 
 
