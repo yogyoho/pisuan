@@ -59,7 +59,7 @@
         "host": "规划实施环境影响预测与评价",
         "template": "对{sensitive_target}影响分析"
       },
-      "note": "v1 已知限制：host 仅命中 planning/tracking；project/post 族敏感目标专节不生效（v1 语料 sensitive_targets 全 0，暂无消费方）",
+      "note": "host 绑 planning stage 精确章题全称——v1 host 匹配为 c == host or host in c 子串匹配；实测仅精确命中 planning ch6，tracking 章题（「矿区总体规划后续实施环境影响预测与评价」）因「总体」「后续」打断子串不命中，tracking 敏感目标专节 v1 不生效（sections 级定位留待 v2）；host miss 为静默 no-op（对齐 R4 require no-op 留痕语义）",
       "evidence": "淖毛湖 6.10/6.11"
     },
     {
