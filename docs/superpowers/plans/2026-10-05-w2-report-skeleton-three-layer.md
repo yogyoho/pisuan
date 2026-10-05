@@ -16,7 +16,7 @@
 
 1. **词汇权威源**：4 份既有 stage JSON 是语料定稿词汇——`backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/stages/{planning_eia, project_eia_openpit, project_eia_underground, post_eia, tracking_eia}.json`。其 `chapters` 为 `{"ch1": {"title": ..., "sections": {"ch1_S01": {"id","title","elements":[...]}, ...}}, ...}` dict。**layer-1 章题/节菜单从此派生，不凭记忆造章名**。
 2. **语料数据**：`.wolf/corpus-census/{chapters,labels}.json`（41 份，键=docx 文件名）。`chapters.json` 条目 `{"chapters": [{"n": "1 总 论 5", "src": "toc"}]}`（章题带数字前缀+页码尾，需归一化）；`labels.json` 值 `{"family": "项目环评|规划环评|后评价|跟踪评价|复垦方案|简本?", "mine_type": "井工|露天|null", "revision_hint": bool}`。
-3. **适配度宇宙 = 38 份**：排除三类——`family=="简本?"`（横城简本）、`note` 键存在（塔然高勒坏档）、章数 <5（淖毛湖报批版部分骨架）。41 − 3 = 38。
+3. **适配度宇宙 = 35 份（勘误）**：census 41 = 35 份四族完整章树 + 3 份复垦方案 + 简本（横城）+ 坏档（塔然高勒）+ 部分骨架（淖毛湖报批版）。spec §3.6 写「38」是把 3 份复垦计入——与 §3.7 非目标「不覆盖复垦方案族」矛盾，按非目标执行：复垦 3 份排除，适配宇宙 35。**阈值等比收紧**：spec ≥36/38（94.7%）→ **≥34/35**（97.1%）；≥30/38（78.9%）→ **≥28/35**（80%）。R6（total_control）唯一证据档郭家台系复垦、在宇宙外——规则保留（条件驱动），v1 无语料可测，如实记录。
 4. **spec 内部张力裁决**：§3.3 注释「layer-1 5 份」vs §3.7 非目标「不覆盖复垦方案族」——**按 §3.7 执行，v1 建 4 族**（planning_eia / project_eia / post_eia / tracking_eia），复垦挂账 O5 不变。
 5. **渲染器纯函数无 LLM**；任何步骤都不调用模型、不访问 DB、不写 `backend/package/`。
 6. **禁碰文件**（严禁卷入提交）：`backend/package/yuxi/agents/buildin/chatbot/prompt.py`、`backend/server/utils/lifespan.py`、`web/src/components/AgentChatComponent.vue`、`web/src/components/SettingsModal.vue`、`docs/superpowers/specs/2026-09-30-coal-eia-writer-v2-port-design.md`（他会话未提交改动）。提交只用明确列出的 `git add <files>`。
@@ -84,7 +84,7 @@ for fname, lab in labels.items():
     }
     out[fname] = conds
 
-assert len(out) == 38, f'适配宇宙应 38 份，实得 {len(out)}'
+assert len(out) == 35, f'适配宇宙应 35 份（四族，复垦按 §3.7 排除），实得 {len(out)}'
 (CENSUS/'conditions.json').write_text(
     json.dumps({'universe': out, 'excluded': excluded}, ensure_ascii=False, indent=2) + '\n',
     encoding='utf-8')
@@ -95,7 +95,7 @@ for e in excluded: print('  -', e['file'][:40], '→', e['reason'])
 - [ ] **Step 2: 运行并核对**
 
 Run: `cd /c/workspace/pisuan && python .wolf/corpus-census/derive_conditions.py`
-Expected: `conditions: 38 份；excluded: 3 份`，排除清单恰为横城简本/塔然高勒/淖毛湖报批版。**非 38 即停手上报**（派生规则或 census 数据问题）。
+Expected: `conditions: 35 份；excluded: 6 份`，排除清单 = 横城简本/塔然高勒坏档/淖毛湖报批版 + 3 份复垦方案（§3.7 非目标）。**非 35 即停手上报**（派生规则或 census 数据问题）。
 
 - [ ] **Step 3: 抽检 6 个代表性条件**
 
@@ -447,9 +447,9 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 ```python
 """语料适配度测试（roadmap v2 spec §3.6）。
 
-对 38 份语料逐份渲染骨架，与 chapters.json 实测章树对比：
-- 槽位集合完全匹配 >= 36/38
-- 章序完全一致 >= 30/38（声明院家风豁免后计）
+对 35 份语料（四族，复垦按 §3.7 排除）逐份渲染骨架，与 chapters.json 实测章树对比：
+- 槽位集合完全匹配 >= 34/35（spec 36/38 等比收紧）
+- 章序完全一致 >= 28/35（spec 30/38 等比收紧；声明院家风豁免后计）
 不匹配项必须落差异单（--report 模式），改规则或登记豁免二选一，禁止静默忽略。
 """
 from __future__ import annotations
@@ -508,8 +508,8 @@ FIT_UNIVERSE = json.loads((Path(__file__).resolve().parent.parent.parent / "test
 FIT_FILES = sorted(FIT_UNIVERSE)
 
 
-def test_universe_is_38():
-    assert len(FIT_FILES) == 38
+def test_universe_is_35():
+    assert len(FIT_FILES) == 35
 
 
 def _match_file(env, fname):
@@ -555,8 +555,8 @@ def test_fit_thresholds(env):
         else:
             diffs.append((fname, "order", list(zip(expected, hit_seq))))
     report = "\n".join(f"{k} {f[:40]}: {v}" for f, k, v in diffs)
-    assert slot_ok >= 36, f"槽位匹配 {slot_ok}/38 < 36\n{report}"
-    assert order_ok >= 30, f"章序匹配 {order_ok}/38 < 30\n{report}"
+    assert slot_ok >= 34, f"槽位匹配 {slot_ok}/35 < 34\n{report}"
+    assert order_ok >= 28, f"章序匹配 {order_ok}/35 < 28\n{report}"
 ```
 
 - [ ] **Step 2: 调参循环（预期需要 2-4 轮）**
@@ -569,12 +569,12 @@ Run: `python -m pytest backend/test/unit/test_report_skeleton_fit.py -x -q 2>&1 
 
 ```bash
 git add backend/test/unit/test_report_skeleton_fit.py backend/templates/coal_mining/report_skeletons/ backend/test/data/corpus_census/conditions.json
-git commit -m "test(w2): 语料适配度测试达标（槽位 x/38 章序 y/38，差异单全处理）
+git commit -m "test(w2): 语料适配度测试达标（槽位 x/35 章序 y/35，差异单全处理）
 
 Co-Authored-By: Claude Code <noreply@anthropic.com>"
 ```
 
-（x≥36、y≥30，以实际数字填。）
+（x≥34、y≥28，以实际数字填。）
 
 ---
 
@@ -631,7 +631,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 ## 完成定义（DoD）
 
 1. `conditions.json`（38+3）+ 三层源文件（4 族 + rules + 4 份每章配置）+ 渲染器 + 适配度测试全部入库。
-2. 适配度达标：槽位 ≥36/38、章序 ≥30/38，差异单全处理（豁免显式留痕）。
+2. 适配度达标：槽位 ≥34/35、章序 ≥28/35（spec §3.6 勘误后口径，见全局上下文 3），差异单全处理（豁免显式留痕）。
 3. 4 份渲染存档过 seed_gen 消费方冒烟（SEED_READY + selfcheck 断言 >0）。
 4. 零运行时后端改动（`backend/package/`、`backend/server/` 无 diff）；零 LLM 调用。
 
