@@ -5241,7 +5241,7 @@
     "timestamp": "2026-10-05",
     "error_message": "D3 部署一致性清查：Path(__file__).parent 资产引用 5 处容器内全部在位（/app/templates/coal、/app/server/coal_eia_entity_types.json、/app/server、/app/package/pisuan/config/static/prompt_templates.yaml、agents/presets 包内 rglob），grep 范围零缺失；但实测发现存量任务 storage_path 断裂——2026-07 旧任务（f7b40b18 伊宁）DB 记相对路径 saves/domain_factory/coal/...，重跑即 docx PackageNotFoundError",
     "file": "backend/package/yuxi/services/domain_factory_service.py",
-    "root_cause": "存储根从 saves/ 迁移到 YUXI_USER_DATA_DIR（/app/user-data）后，存量任务行的 storage_path 未做数据迁移；ETL 解析入口 _run_parsing 直接把 DB 值透传 parse_document（python-docx），无 legacy 路径回退（config 有 get_legacy_storage_dir 但 domain factory ETL 未使用）。文件实体实际在 /app/user-data/domain_factory/coal/（两容器均在）；2026-10 起新任务已写绝对路径，仅旧任务受影响（当前库内 1 条）",
+    "root_cause": "存储根从 saves/ 迁移到 YUXI_USER_DATA_DIR（/app/user-data）后，存量任务行的 storage_path 未做数据迁移；ETL 解析入口 _etl_parse_stage（domain_factory_service.py:553）在 :566 读 storage_path 直接透传 parse_document（python-docx），无 legacy 路径回退（config 有 get_legacy_storage_dir 但 domain factory ETL 未使用）。文件实体实际在 /app/user-data/domain_factory/coal/（两容器均在）；2026-10 起新任务已写绝对路径，仅旧任务受影响（当前库内 1 条）",
     "fix": "立案不修复（bug-363 Task 2 观测中实测发现）。诊断性重跑失败后已将该任务状态还原 COMMITTED（committed_at/reviewer 未受影响）。修复方向：存量行 storage_path 数据迁移，或 ETL 解析入口加 user-data/legacy 路径解析；D3 grep 清查本身零缺失，无需代码改动",
     "tags": [
       "deployment",
