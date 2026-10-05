@@ -22,7 +22,7 @@
 
 ### Task 1: 迁移 + 冒烟 + 收尾
 
-- [ ] **Step 1: 迁移前三连取证**
+- [x] **Step 1: 迁移前三连取证**
 
 ```bash
 # 病灶值与守卫条件确认（应返回恰好 1 行，saves/ 前缀）
@@ -35,7 +35,7 @@ docker ps --format "{{.Names}}" | grep -i postgres
 
 Expected: SQL 恰 1 行 `saves/domain_factory/coal/c5451b85-...docx`；文件在位 ~13.9MB；第二套栈若存在则如实记录（主控裁决是否同修，通常只有 pisuan-localized-postgres-1）。
 
-- [ ] **Step 2: 1 行 UPDATE（双守卫）**
+- [x] **Step 2: 1 行 UPDATE（双守卫）**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker exec pisuan-localized-postgres-1 psql -U postgres -d yuxi_know -t -c "UPDATE domain_factory_tasks SET storage_path = '/app/user-data/' || substring(storage_path from 7) WHERE id LIKE 'f7b40b18%' AND storage_path LIKE 'saves/%';"
@@ -44,7 +44,7 @@ MSYS_NO_PATHCONV=1 docker exec pisuan-localized-postgres-1 psql -U postgres -d y
 
 Expected: `UPDATE 1`；迁移后值为 `/app/user-data/domain_factory/coal/c5451b85-...docx`（`substring(... from 7)` 剥掉 `saves/` 7 字符）。**非 UPDATE 1 即停手上报。**
 
-- [ ] **Step 3: 轻冒烟（秒级）**
+- [x] **Step 3: 轻冒烟（秒级）**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 python -u -c "
@@ -59,7 +59,7 @@ assert len(paras) > 100
 
 Expected: `opened OK, non-empty paragraphs =` 数百量级（354 段来自此文件），assert 过。（文件名以 Step 1 的 ls 输出为准，若有出入以实际为准并如实记录。）
 
-- [ ] **Step 4: 清淤备份删除（用户已拍板 D3）**
+- [x] **Step 4: 清淤备份删除（用户已拍板 D3）**
 
 ```bash
 rm -rf /c/workspace/pisuan/.wolf/bug363-stale-coal_mining-backup
@@ -68,7 +68,7 @@ git -C /c/workspace/pisuan status --porcelain | grep -i "coal_mining" || echo "n
 
 Expected: 目录删除、git status 无残留。
 
-- [ ] **Step 5: 台账收尾 + 提交**
+- [x] **Step 5: 台账收尾 + 提交**
 
 - buglog：bug-365 fix 原位更新为实际动作（UPDATE 1 行 + 冒烟结果 + 零代码 diff 声明）；
 - changelog：`### pisuan 定制增量（2026-10-05）` 小节追加 `- fix(bug-365): 存量任务 storage_path 一次性迁移（saves/ → /app/user-data，全库唯一受影响行，零代码）`
@@ -89,3 +89,10 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 1. UPDATE 1 行留痕 + 冒烟过（段落数 >0）；零代码 diff。
 2. 备份目录已删、无残留。
 3. 台账三件 + spec/plan 入提交，落 pisuan-custom 顶端（推送由主控评审后执行）。
+
+---
+
+## 执行记录
+
+- 2026-10-05 五步全过、无偏离：Step 1 三连取证全中（SQL 恰 1 行 `saves/domain_factory/coal/c5451b85-...docx`；文件在位 13930396 字节 ≈13.9MB；仅 pisuan-localized-postgres-1 一套栈，无第二套）；Step 2 `UPDATE 1`，迁移后值 `/app/user-data/domain_factory/coal/c5451b85-...docx`；Step 3 冒烟 opened OK、非空段落 423（assert >100 过）；Step 4 备份目录已删、git status 无 coal_mining 残留。零代码 diff。
+- spec 已在先前提交 c46b5308 入库，本项提交仅含 changelog + buglog + 本计划三文件。
