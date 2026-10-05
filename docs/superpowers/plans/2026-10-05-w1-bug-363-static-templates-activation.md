@@ -31,14 +31,14 @@
 - Modify: `docker/api.Dockerfile`（:61 `COPY backend/server /app/server` 之后加一行）
 - Modify: `docker-compose.yml`（api 服务 volumes 块 + worker 服务 volumes 块各加一行）
 
-- [ ] **Step 1: Dockerfile 加 COPY**
+- [x] **Step 1: Dockerfile 加 COPY**
 
 ```dockerfile
 # 在 COPY backend/server /app/server 之后加：
 COPY backend/templates /app/templates
 ```
 
-- [ ] **Step 2: compose api + worker 双挂载**
+- [x] **Step 2: compose api + worker 双挂载**
 
 api 服务（:56 volumes 块）与 worker 服务（:122 volumes 块）各加：
 
@@ -46,7 +46,7 @@ api 服务（:56 volumes 块）与 worker 服务（:122 volumes 块）各加：
       - ./backend/templates:/app/templates:ro
 ```
 
-- [ ] **Step 3: 同步 + 验证传播**
+- [x] **Step 3: 同步 + 验证传播**
 
 ```bash
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/sync-dev.ps1
@@ -56,7 +56,7 @@ grep -n "templates" C:/workspace/pisuan-localized/docker/api.Dockerfile
 
 Expected: 两个 grep 各有命中。**若无命中 → localized compose/Dockerfile 未被 sync 携带 → 停手上报（BLOCKED），勿直接改 localized 树。**
 
-- [ ] **Step 4: 重建容器 + 验证挂载**
+- [x] **Step 4: 重建容器 + 验证挂载**
 
 ```bash
 cd /c/workspace/pisuan-localized && docker compose up -d api worker && cd /c/workspace/pisuan
@@ -66,7 +66,7 @@ MSYS_NO_PATHCONV=1 docker exec pisuan-localized-worker-1 ls /app/templates/coal/
 
 Expected: api 侧列出 `coal` 目录；worker 侧 30 个文件。
 
-- [ ] **Step 5: 激活冒烟（-u！）**
+- [x] **Step 5: 激活冒烟（-u！）**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 python -u -c "
@@ -96,7 +96,7 @@ asyncio.run(main())
 
 Expected: `static loaded=30, domains={'coal'}`；`total=230`；`static-probe hits ≥28/30`（个别正则怪癖可容忍，低于 28 要逐个人工核查原因）；`learned self-match ≥1`。
 
-- [ ] **Step 6: unit 全量回归**
+- [x] **Step 6: unit 全量回归**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 pytest /app/test/unit -q --no-header 2>&1 | tail -3
@@ -104,7 +104,7 @@ MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 pytest /app/test/unit -q -
 
 Expected: `2681 passed, 0 failed, 61 skipped`。
 
-- [ ] **Step 7: 提交**
+- [x] **Step 7: 提交**
 
 ```bash
 git add docker/api.Dockerfile docker-compose.yml
@@ -120,13 +120,13 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 **Files:**
 - Modify: `docs/develop-guides/changelog.md`、`.wolf/buglog.json`、`.wolf/anatomy.md`、`.wolf/memory.md`
 
-- [ ] **Step 1: 真实 ETL 观测**
+- [x] **Step 1: 真实 ETL 观测**
 
 用 `.env` 管理员凭据调 API 重解析一个既有已提交任务（先 `grep -n "重新\|reparse\|reprocess\|重跑" backend/server/routers/domain_factory_router.py` 定位端点；无现成端点则改用上传-审核一条新样例的完整链，凭据只从 .env 读）。ARQ 任务在 worker 执行，`docker logs pisuan-localized-worker-1 --tail 100` 观测。完成后记录该任务段落 `template_match` 的 static（非 `learned_` 前缀）/learned 构成。
 
 **降级预案**：模型端点容器不可达或无可用样例 → 观察窗挂起，在 buglog-363 与 changelog 写明「待自然流量，判定标准 = 首次真实 ETL 完成后按本步口径采集」，不得造假数据。
 
-- [ ] **Step 2: 写手侧观测基线**
+- [x] **Step 2: 写手侧观测基线**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 python -u -c "
@@ -145,7 +145,7 @@ asyncio.run(main())
 
 记录为激活后基线（激活前 total=6 全 graph 冒烟）；后续 O6 裁决时对比 graph→db 转移。
 
-- [ ] **Step 3: 部署一致性清查（D3，只立案不修复）**
+- [x] **Step 3: 部署一致性清查（D3，只立案不修复）**
 
 ```bash
 grep -rn 'Path(__file__).parent' backend/package backend/server --include="*.py" | grep -v test | grep -vE 'parent\"\)$|parent, ' | head -40
@@ -153,7 +153,7 @@ grep -rn 'Path(__file__).parent' backend/package backend/server --include="*.py"
 
 对每处向上跳目录后落在 package/server 之外的资产引用，逐一在容器内 `ls` 验证存在性（`/app` 下 package、server、templates 之外缺什么）。产出清单（file:line → 容器内目标路径 → 存在/缺失），缺失项写入 buglog 新条目（一条汇总条即可，id 顺延 bug-365）。
 
-- [ ] **Step 4: 收尾**
+- [x] **Step 4: 收尾**
 
 - changelog：`### pisuan 定制增量（2026-10-05）` 追加 `- fix(bug-363): 静态模板容器激活（镜像 COPY + compose api/worker 双挂载），附激活行为观测与 /app 资产断裂清查`
 - buglog：bug-363 原位更新（fix 写实际修复 + 观测结果；ETL 观测降级时如实标注挂起）
@@ -175,3 +175,17 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 2. 容器内 `/app/templates` 于 api+worker 双双在位；冒烟 30 静态 + 学习共存、static-probe ≥28/30。
 3. unit 全量 2681/0/61 不回归。
 4. ETL 观测数据或挂起判定标准落档；写手侧基线记录；清查清单立案。
+
+---
+
+## 执行记录（2026-10-05 终审前归档）
+
+**交付**：2723e3e9（sync-dev 传播面补缺，主控）→ beb1942e（Task 1 部署修复）→ 0ecaa024（sync-dev 文案 Minor）→ 0428dd57（Task 2 观测收尾）→ d19fac84 / 45a095b3（评审补丁，主控）。
+
+**与计划的偏离（均经主控裁决）**：
+1. Task 1 Step 3 两次停闸，均属 sync-dev 传播盲区（清单外改动不可见）：①部署文件不在 $copyFiles；②backend/templates 不在 $syncPaths，localized 陈旧 coal_mining/（含 index 暂存 R）暴露。修法 = 清单补全 + 可逆搬迁清淤（.wolf/bug363-stale-coal_mining-backup/），容器实测双侧 coal/30。
+2. Task 2 Step 1 通道偏离：两份 .env 无管理员凭据，重解析走容器内直调 retry_task/ARQ（与端点同链路），HTTP 层跳过。
+3. Task 2 Step 1 观测结果：横城 a44afc93 重跑 phase-1 完成，template_match=317/335（static 277 + learned 40，21/30 headers），bug-353 自增链真实流量打通（match_count=1×40）；phase-2 云 API rate_limit 熔断（FAILED_PROVIDER，p128），按降级预案挂起 + 判定标准落档 bug-363；伊宁 f7b40b18 因存量 storage_path 断裂首试失败（bug-365 立案），已还原 COMMITTED。
+4. 质量评审 Important：bug-365 的 `_run_parsing` 系不存在符号，已原位修正为 `_etl_parse_stage`（:553/:566）。
+
+**DoD 核对**：容器 /app/templates 双侧在位 ✓；冒烟 230=30+200、probe 30/30 ✓；unit 2681/0/61 ✓；ETL 观测数据 + 挂起判定标准 + 写手基线 total=8 + 清查零缺失/broken 立案 ✓。
