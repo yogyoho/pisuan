@@ -50,9 +50,9 @@ def _resolve_base(family: str, conds: dict, layers: dict, seen: tuple[str, ...] 
     return list(l1["canonical_order"])
 
 
-def _copy_ch(title: str, src: dict) -> dict:
-    """layer-1 章定义 → 渲染中间体。sections 为富对象（id/title/elements/uses/slots/role）深拷贝，
-    章级 key_elements/writing_patterns（seed_gen 消费面）逐字随迁。"""
+def _copy_ch(src: dict) -> dict:
+    """layer-1 章定义 → 渲染中间体。sections 为富对象（id/title/elements/uses/slots/role）节级浅拷贝
+    （嵌套只读共享），章级 key_elements/writing_patterns（seed_gen 消费面）逐字随迁。"""
     return {
         "slot_id": src.get("slot_id", ""),
         "key_elements": list(src.get("key_elements", [])),
@@ -71,7 +71,7 @@ def render(conds: dict, layers: dict) -> dict:
     chapters: dict[str, dict] = {}
     for t in order:
         src = l1["chapters"].get(t, {})
-        chapters[t] = _copy_ch(t, src)
+        chapters[t] = _copy_ch(src)
 
     optional = l1.get("optional_chapters", {})
     for rule in layers["rules"]:
@@ -85,7 +85,7 @@ def render(conds: dict, layers: dict) -> dict:
             if src is None:
                 raise KeyError(f"{rid}: add 章不在 layer-1 词汇表: {t}")
             if t not in chapters:
-                chapters[t] = _copy_ch(t, (optional.get(t) or l1["chapters"][t]))
+                chapters[t] = _copy_ch(optional.get(t) or l1["chapters"][t])
             applied.append(rid)
         for t in rule.get("remove", []):
             chapters.pop(t, None)
@@ -96,7 +96,7 @@ def render(conds: dict, layers: dict) -> dict:
                 src = optional.get(t) or l1["chapters"].get(t)
                 if src is None:
                     raise KeyError(f"{rid}: require 章无定义: {t}")
-                chapters[t] = _copy_ch(t, src)
+                chapters[t] = _copy_ch(src)
             applied.append(rid)
         if "add_section_under" in rule:
             spec_ = rule["add_section_under"]
@@ -138,11 +138,11 @@ def render(conds: dict, layers: dict) -> dict:
         ch_key = body["slot_id"].lower()
         if not ch_key:
             raise ValueError(f"章「{t}」缺 slot_id——渲染输出键必须对齐 depth_targets")
-        secs = {}
+        secs = []
         for j, sec_src in enumerate(body["sections"], 1):
             sec = dict(sec_src)
             sec["id"] = f"{ch_key}_S{j:02d}"  # 节 id 前缀跟随渲染后章键
-            secs[sec["id"]] = sec
+            secs.append(sec)
         out_chapters[ch_key] = {
             "title": t,
             "slot_id": body["slot_id"],
