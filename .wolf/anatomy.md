@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-05T14:11:05.512Z
-> Files: 22 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-05T14:34:17.715Z
+> Files: 1 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -116,7 +116,6 @@
 
 ## backend/package/yuxi/agents/toolkits/buildin/
 
-- `tools.py` — Pydantic: DoubaoSearchInput (~12030 tok)
 
 ## backend/package/yuxi/agents/toolkits/debug/
 
@@ -174,20 +173,15 @@
 
 ## backend/package/yuxi/repositories/
 
-- `domain_factory_repository.py` — Domain Factory 数据访问层 - Repository (~9628 tok)
 
 ## backend/package/yuxi/services/
 
-- `domain_factory_service.py` — Domain Factory Service - 领域知识工厂服务层 (~77057 tok)
-- `pre_commit_validator.py` — 提交前验证关卡:commit 前校验任务数据质量,校验失败阻止提交。 (~599 tok)
-- `template_library.py` — 模板库：加载、管理和查询段落模板定义 (~1843 tok)
 
 ## backend/package/yuxi/storage/minio/
 
 
 ## backend/package/yuxi/storage/postgres/
 
-- `manager.py` — PostgreSQL 数据库管理器 - 支持知识库和业务数据 (~27877 tok)
 
 ## backend/package/yuxi/utils/
 
@@ -257,11 +251,6 @@
 
 ## backend/test/unit/services/
 
-- `test_learned_template_match_count.py` — bug-353: _increment_learned_template_match_counts 原方法不存在被静默吞，match_count 永不增量。 (~928 tok)
-- `test_pre_commit_validator.py` — bug-354: pre_commit_validator 按 classify_type 识别 parameter 段落（原读不存在的 type 字段导致校验空转）。 (~1494 tok)
-- `test_template_system.py` — 单元测试：模板系统三件套（TemplateLibrary / TemplateMatcher / TemplateGenerator） (~4017 tok)
-- `test_tool_usage_tracking.py` — W0 取用率埋点：台账表 repo 方法与 tools.py 接线辅助。 (~650 tok)
-- `test_validate_task_report.py` — bug-354 同族：validate_task 报告统计/L2 过滤应读 classify_type（原读 type 全部落空）。 (~531 tok)
 
 ## backend/test/unit/storage/
 
@@ -304,28 +293,19 @@
 
 ## docs/develop-guides/
 
-- `changelog.md` — 版本变更记录 (~20736 tok)
-- `upstream-sync-guide.md` — 上游代码同步与本地化扩展实施方案 (~3920 tok)
 
 ## docs/intro/
 
 
 ## docs/superpowers/plans/
 
-- `2026-10-05-w0-bugfix-and-usage-tracking.md` — W0：bug-353/354 修复 + 工厂产物取用率埋点 实施计划 (~6810 tok)
-- `2026-10-05-w1-bug-359-domain-unify-match-rule.md` — bug-359 W1 首项实施计划：domain 词形统一 + 学习模板 match_rule 注入 (~3921 tok)
-- `2026-10-05-w1-bug-363-static-templates-activation.md` — bug-363 W1 第二项实施计划：静态模板容器激活 + 部署一致性清查 (~1830 tok)
-- `2026-10-05-w1-bug-365-storage-path-migration.md` — bug-365 W1 第三项实施计划：存量 storage_path 一次性迁移 (~1109 tok)
+- `2026-10-05-w2-report-skeleton-three-layer.md` — W2 条件化模板三层形态实施计划（三层源文件 v1 + 渲染器 + 语料适配度） (~7117 tok)
 
 ## docs/superpowers/specs/
 
-- `2026-10-05-bug-359-domain-unify-match-rule-design.md` — bug-359 修复设计：domain 词形统一 + 学习模板 match_rule 注入 (~1121 tok)
-- `2026-10-05-bug-363-static-templates-activation-design.md` — bug-363 修复设计：静态模板容器激活 + 部署一致性清查 (~520 tok)
-- `2026-10-05-bug-365-storage-path-migration-design.md` — bug-365 修复设计：存量任务 storage_path 一次性迁移 (~488 tok)
 
 ## docs/vibe/
 
-- `2026-10-05-kf-roadmap-v2-gap-audit.md` — 知识工厂产物路线 v2 实现差距清单（排期输入） (~1183 tok)
 
 ## docs/vibe/assets/2026-09-30-coal-eia-v2-port/
 
@@ -335,7 +315,6 @@
 
 ## scripts/
 
-- `sync-dev.ps1` — sync-dev.ps1 — 开发期快速同步：pisuan 工作树 → pisuan-localized 运行栈 (~1712 tok)
 
 ## web/
 
@@ -367,4 +346,4 @@
 ## web/src/views/
 
 
-- docs/superpowers/specs/2026-10-05-kf-product-roadmap-v2-gap-audit.md (~2.2k tokens) roadmap v2 spec 实现差距审计：W0 落地/W1-W4 未动逐项实证 + 排期依赖图 + 建议序（供拍板）；后续排期会话的输入文档
+- docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md (~4.5k tokens) W2 三层模板实施计划：6 任务（标注/fixtures→三层源文件→渲染器→适配度测试→seed_gen 冒烟→收尾），含完整派生/渲染/测试代码与 R8 self-base 偏离记录
