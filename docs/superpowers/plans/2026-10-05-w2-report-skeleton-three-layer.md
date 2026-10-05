@@ -172,8 +172,8 @@ files.append(from_stage('post_eia', 'post_eia', 'v1 由 R8 从 project_eia 派�
 EXTRA = {
     'planning_eia': {'三线一单及空间管控': ['三线一单', '空间管控'], '不确定性分析': ['不确定性', '环境不确定']},
     # project_eia：沉陷章 = 井工基准 canonical 自带；「总量控制」死 optional 已删——
-    # canonical 真章「污染物排放总量控制分析」承接，语料短题「总量控制」登记为其 alias
-    # （郭家台 ch16 命中路径）；openpit 独有章（爆破等）由上面的对照分类直接落进 project_eia.json
+    # canonical 真章「污染物排放总量控制分析」承接，郭家台 ch16 语料章题「污染物总量控制分析」
+    # 经其既有 alias 命中（语料无裸「总量控制」章题）；openpit 独有章（爆破等）由上面的对照分类直接落进 project_eia.json
     'project_eia': {},
     # post_eia「措施优化与调整」已删：canonical 已有真章「环境保护措施优化调整」，裸 optional 是死配置
     'post_eia': {},
@@ -192,7 +192,7 @@ Run 后人工拆分为 4 份 `<family>.json`（键：`family/canonical_order/opt
 
 - [ ] **Step 2: 从语料派生 aliases（ad-hoc）**
 
-对 38 份语料的归一化章题做频次统计，凡与 layer-1 章题**不相等但编辑距离 ≤4 或含相同 4-gram** 的，登记进该章 `aliases`。示例（预期出现的真实对）：语料「总论」→ planning「总则」alias；语料「地表沉陷预测与影响评价」（「与」变体）→ 井工基准 canonical「地表沉陷预测及影响评价」alias；语料短题「总量控制」→「污染物排放总量控制分析」alias。**纯机械聚类 + 人工过目，禁止臆造**。统计脚本模板：
+对 38 份语料的归一化章题做频次统计，凡与 layer-1 章题**不相等但编辑距离 ≤4 或含相同 4-gram** 的，登记进该章 `aliases`。示例（预期出现的真实对）：语料「总论」→ planning「总则」alias；语料「地表沉陷预测与影响评价」（「与」变体）→ 井工基准 canonical「地表沉陷预测及影响评价」alias；郭家台 ch16「污染物总量控制分析」→「污染物排放总量控制分析」alias（既有聚类登记）。**纯机械聚类 + 人工过目，禁止臆造**。统计脚本模板：
 
 ```python
 import json, re
@@ -234,7 +234,7 @@ for t, n in freq.most_common(): print(n, t)
     "evidence": "淖毛湖 6.10/6.11" },
   { "id": "R6", "when": {"report_family": "project_eia", "policy_flags": "total_control"},
     "require": ["污染物排放总量控制分析"],
-    "note": "目标绑 underground stage canonical 精确章题；语料短题「总量控制」登记为该章 alias（郭家台 ch16 命中路径）；canonical 已含 → no-op 留痕（R4 语义，禁止绑裸名）。when 限 project_eia——语料中仅项目环评出现总控章",
+    "note": "目标绑 underground stage canonical 精确章题；郭家台 ch16 语料章题「污染物总量控制分析」经该章既有 alias 命中（语料无裸「总量控制」章题，optional 裸题槽位为死配置已删）；canonical 已含 → no-op 留痕（R4 语义，禁止绑裸名）。when 限 project_eia——语料中仅项目环评出现总控章",
     "evidence": "郭家台 ch16" },
   { "id": "R8", "when": {"report_family": "post_eia"}, "base": "self",
     "note": "post_eia.json stage 已按『项目环评(露天)骨架+后评价口径章名』定稿（白音华 2/2），v1 直接用其 canonical；渲染器的 base 克隆+rename_suffix 机制保留，待第三份后评价语料需要时启用", "evidence": "白音华 2/2 沿用项目环评(露天)骨架" },
