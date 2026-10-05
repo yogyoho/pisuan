@@ -156,6 +156,16 @@
             "XS2"
           ]
         }
+      ],
+      "key_elements": [
+        "任务由来段承载规划脉络三环：原规划批复（发改能源〔2012〕2131 号）→修编规划批复（发改能源〔2022〕1855 号）→修编规划环评审查意见（环审〔2022〕10 号）——文号逐字人工比对（门 1 禁生成）",
+        "双口径总声明：原规划 29.00Mt/a vs 修编规划 143.00Mt/a（{{SLOT:mine_plan.total_scale_mt_a_before}}/{{SLOT:mine_plan.total_scale_mt_a_after}}——XS1 绑 revision_before_after）；现状基准年与现状规模（{{SLOT:project.base_year}}/{{SLOT:project.current_scale}}）全书唯一",
+        "评价标准三元组表直渲（{{TABLE:standards_confirm}}——门 1 标准号体检 XS3）；保护目标清单=XS2 事实源"
+      ],
+      "writing_patterns": [
+        "文号/标准号/坐标逐项人工比对（门 1）",
+        "条款类小节固定模板直出",
+        "禁引入规划清单外矿点实体"
       ]
     },
     "区域自然、社会及经济概况": {
@@ -227,6 +237,15 @@
           ],
           "role": "受体"
         }
+      ],
+      "key_elements": [
+        "区域本底直读，敏感目标不展开（归 ch1_S05）",
+        "气象与水系数据标年份序列与来源",
+        "三节型排布"
+      ],
+      "writing_patterns": [
+        "区域描述禁引入表单外实体",
+        "数据全部标注年份与来源"
       ]
     },
     "规划实施及环境管理落实情况": {
@@ -326,6 +345,16 @@
           ],
           "role": "推演"
         }
+      ],
+      "key_elements": [
+        "规划内容段=修编规划方案转录（矿点构成/规模/时序——{{TABLE:mine_plan.mines}} 实施状态域登记：已建成|在建|先期开发|适时开发|暂缓）",
+        "开发强度对比表=三口径（规划量/已实施量/现状量）逐列带标签（{{SLOT:project.current_scale}} 现状锚点——XS1）",
+        "环境管理落实=规划环评审查意见要求逐条对照（{{TABLE:retrospective.approvals_fulfilled}}——已落实/部分落实/未落实三态；未落实项必须挂原因与整改衔接→ch5_S08/ch7）"
+      ],
+      "writing_patterns": [
+        "矿点状态逐点登记（禁笼统表述）",
+        "三口径数值全槽位（表单/台账），禁手填",
+        "落实状态逐条可追溯（对照条款号）"
       ]
     },
     "区域生态环境演变趋势": {
@@ -414,6 +443,16 @@
             "XS12"
           ]
         }
+      ],
+      "key_elements": [
+        "趋势=多年例行监测序列转录（{{TABLE:monitoring.trends}} 逐要素——监测年份区间/点位/因子登记，禁重算趋势）",
+        "生态演变=多期遥感解译对照（{{TABLE:eco.land_use}}、{{TABLE:eco.vegetation}} 多时相序列——解译期次与 source 登记，本样本砾幕层/风蚀试验区成果为特色域）",
+        "承载力=水资源承载核算（{{TABLE:water.balance}} 现状台账+capacity:water 冻结输出——XS12；承载力结论三档：有承载余量|接近承载上限|超载）"
+      ],
+      "writing_patterns": [
+        "序列数据逐项标 source 与年份区间",
+        "趋势结论与序列一致（禁两套结论）",
+        "承载力阈值判定走合约禁自造阈值"
       ]
     },
     "矿区开发环境影响对比评估与有效性分析": {
@@ -651,6 +690,17 @@
             "XS20"
           ]
         }
+      ],
+      "key_elements": [
+        "逐要素对比评估三段式：环评阶段预测/要求 vs 实际监测实况 vs 偏差判读（实测走 {{TABLE:monitoring.trends}}/{{TABLE:monitoring.items}}，禁重算预测）",
+        "措施有效性判定走 XS20：{{TABLE:measure_effectiveness.items}} 逐措施四档判定（有效|基本有效|需优化调整|未达预期——首现 canon）；非「有效」判定必须挂 {{TABLE:measure_effectiveness.problems}} 整改条目（在场断言，禁只判不改）",
+        "土壤回顾性评价节（{{TABLE:soil_score}}——淖毛湖 5.7 型；评价类型=生态影响型口径维持）",
+        "问题整改收口节=ch7 优化调整的源清单（{{TABLE:measure_effectiveness.problems}} 全域——ch7 禁出现清单外全新问题）"
+      ],
+      "writing_patterns": [
+        "对比三段式逐要素排布（预期/实际/判读）",
+        "有效性判定词四档 canon 一致",
+        "问题清单逐条归属要素与整改去向"
       ]
     },
     "矿区总体规划后续实施环境影响预测与评价": {
@@ -954,6 +1004,17 @@
             "XS8"
           ]
         }
+      ],
+      "key_elements": [
+        "后续方案段=适时开发矿点清单与开发强度（{{TABLE:mine_plan.mines}} 先期/适时/暂缓状态域——XS1 同源禁两套矿点清单）",
+        "沉陷预测仅适用后续井工矿点（{{TABLE:subsidence_params}}+{{SLOT:subsidence.W_max}} 型冻结输出——露天矿点禁用概率积分法）",
+        "敏感目标专节=data 驱动（{{TABLE:sensitive_targets}} aspect=后续开发——本样本伊吾胡杨林沙漠公园/淖毛湖镇/线性工程三专节型）",
+        "容量与总量=capacity:air/capacity:water 冻结输出+总量控制分析（XS8）"
+      ],
+      "writing_patterns": [
+        "预测参数逐项标 source（设计/勘察/规划）",
+        "井露分轨：沉陷公式只挂井工矿点",
+        "预测结论禁替代修编审批表述"
       ]
     },
     "后续生态环境保护措施及优化调整建议": {
@@ -1053,6 +1114,16 @@
             "XS20"
           ]
         }
+      ],
+      "key_elements": [
+        "整改响应段：{{TABLE:measure_effectiveness.problems}} 清单逐条响应（ch5_S08 源清单外全新问题=章级门 FAIL——XS20 反向断言）",
+        "措施分域：生态整治（{{TABLE:eco_restoration.zoning}}）+污染控制（{{TABLE:measures}} 各域）+线性工程减缓",
+        "优化调整与环境准入=建议性表述（{{TABLE:tracking_plan.next_eia_focus}} 下一轮跟踪关注域——禁许可类判定词）"
+      ],
+      "writing_patterns": [
+        "问题-措施一一对应（双清单对账）",
+        "措施逐条可执行（时限/责任域登记）",
+        "准入要求逐矿点（禁全矿笼统表述）"
       ]
     },
     "矿区清洁生产与循环经济跟踪评价": {
@@ -1099,6 +1170,14 @@
           ],
           "role": "响应"
         }
+      ],
+      "key_elements": [
+        "对标=现有生产煤矿逐矿对标（{{TABLE:cleaner_production.benchmarks}}——对标表逐项禁自造基准）",
+        "循环经济建议域=后续矿区层面（{{TABLE:circular_economy}} 矿区级口径）"
+      ],
+      "writing_patterns": [
+        "对标表逐项直渲禁自造基准",
+        "建议性表述"
       ]
     },
     "矿区环境管理体系跟踪评价": {
@@ -1177,6 +1256,14 @@
             "XS3"
           ]
         }
+      ],
+      "key_elements": [
+        "现状=体系与机构台账直读（{{TABLE:retrospective.facilities_effect}} 管理域）",
+        "跟踪监测要求={{TABLE:monitoring_plan.plans}}/{{TABLE:tracking_plan.contents}} 双域（后续监测+下一轮跟踪安排）"
+      ],
+      "writing_patterns": [
+        "现状台账直读",
+        "跟踪要求逐项可执行"
       ]
     },
     "公众意见调查": {
@@ -1229,6 +1316,14 @@
             "XS11"
           ]
         }
+      ],
+      "key_elements": [
+        "参与过程与计数=公参台账（{{TABLE:public_participation.rounds}}、{{SLOT:public_participation.questionnaires}}——计数 XS11 全书唯一）",
+        "投诉处理=实施期间投诉台账（{{TABLE:public_participation.opinions}} 含投诉处理实况域——逐条处理状态登记）"
+      ],
+      "writing_patterns": [
+        "公参计数 canon 逐字一致",
+        "投诉逐条处理状态登记"
       ]
     },
     "结论与建议": {
@@ -1327,6 +1422,16 @@
             "XS20"
           ]
         }
+      ],
+      "key_elements": [
+        "实施与强度结论=ch3 投影（{{SLOT:project.current_scale}}/{{TABLE:mine_plan.mines}} 状态域——XS1 复现禁两套数）",
+        "质量趋势与后续影响结论=ch4/ch6 投影（趋势判读+EO3 预测→结论呼应）",
+        "总体判定词=XS10 canon（跟踪评价口径：规划后续实施环境可行总体判定——首现以本章为准，禁许可类表述）"
+      ],
+      "writing_patterns": [
+        "结论数值全槽位（投影），禁手填",
+        "一要素一段禁展开",
+        "判定词 canon 一致（XS10/XS12）"
       ]
     }
   }
