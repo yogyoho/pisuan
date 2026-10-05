@@ -5204,7 +5204,7 @@
     "error_message": "冒烟 templates total=200 ≠ 预期 230（静态 30 未加载），/app/templates 不存在",
     "file": "docker-compose.yml + docker/api.Dockerfile",
     "root_cause": "compose api 服务仅 bind mount server/package/test，镜像层也无 backend/templates 拷贝；TEMPLATES_DIR 解析 /app/templates 落空，容器栈 ETL 静态模板从未参与匹配（learned-only）",
-    "fix": "本期不改（超 W1 范围）；已立案为 W1 后续候选项：Dockerfile 增加 templates 拷贝 + compose 增加 bind mount，需评估静态模板突然参与匹配的行为影响",
+    "fix": "最终修复落地 commit beb1942e：镜像内 COPY backend/templates → /app/templates + compose api/worker 双 :ro 挂载，重建容器生效。激活冒烟（Task 1 两阶段评审通过）：total=230 / probe 30/30 / self-match 200；unit 2681 passed/0 failed/61 skipped。真实 ETL 行为观测（Task 2，横城 a44afc93 重跑）：激活前该任务 template_match=0（static 0/learned 0），激活后 phase-1 实测 template_match=317/335 标题段（static 277 + learned 40，30 个静态 headers 命中 21 个，最高频 TPL_HEADER_ECOLOGICAL_IMPACT_01 ×117），bug-353 学习模板 match_count 自增链在真实流量打通（命中模板 match_count=1）。该次重跑 phase-2（GENERALIZING）因云 API rate_limit 熔断终止（FAILED_PROVIDER，success=12/rate_limit=8/skipped=741，全程 3867s），任务按 P0-3 断点续跑设计保留可恢复状态；泛化阶段观测与写手侧取用率『待自然流量』口径仍挂起，判定标准 = 下一次完整 ETL（含 phase-2）完成后按 Step 2 口径采集。",
     "tags": [
       "deployment",
       "templates",
@@ -5214,7 +5214,7 @@
     "related_bugs": [
       "bug-359"
     ],
-    "occurrences": 1,
+    "occurrences": 2,
     "last_seen": "2026-10-05"
   },
   {
@@ -5232,6 +5232,26 @@
     ],
     "related_bugs": [
       "bug-362"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-05"
+  },
+  {
+    "id": "bug-365",
+    "timestamp": "2026-10-05",
+    "error_message": "D3 部署一致性清查：Path(__file__).parent 资产引用 5 处容器内全部在位（/app/templates/coal、/app/server/coal_eia_entity_types.json、/app/server、/app/package/pisuan/config/static/prompt_templates.yaml、agents/presets 包内 rglob），grep 范围零缺失；但实测发现存量任务 storage_path 断裂——2026-07 旧任务（f7b40b18 伊宁）DB 记相对路径 saves/domain_factory/coal/...，重跑即 docx PackageNotFoundError",
+    "file": "backend/package/yuxi/services/domain_factory_service.py",
+    "root_cause": "存储根从 saves/ 迁移到 YUXI_USER_DATA_DIR（/app/user-data）后，存量任务行的 storage_path 未做数据迁移；ETL 解析入口 _run_parsing 直接把 DB 值透传 parse_document（python-docx），无 legacy 路径回退（config 有 get_legacy_storage_dir 但 domain factory ETL 未使用）。文件实体实际在 /app/user-data/domain_factory/coal/（两容器均在）；2026-10 起新任务已写绝对路径，仅旧任务受影响（当前库内 1 条）",
+    "fix": "立案不修复（bug-363 Task 2 观测中实测发现）。诊断性重跑失败后已将该任务状态还原 COMMITTED（committed_at/reviewer 未受影响）。修复方向：存量行 storage_path 数据迁移，或 ETL 解析入口加 user-data/legacy 路径解析；D3 grep 清查本身零缺失，无需代码改动",
+    "tags": [
+      "deployment",
+      "storage-path",
+      "etl",
+      "d3-audit",
+      "w1-candidate"
+    ],
+    "related_bugs": [
+      "bug-363"
     ],
     "occurrences": 1,
     "last_seen": "2026-10-05"
