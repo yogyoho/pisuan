@@ -4643,7 +4643,7 @@
     "error_message": "伊宁3.1单章(29段)泛化质量远好于横城全本(2789段)",
     "file": "backend/package/yuxi/services/domain_factory_service.py",
     "root_cause": "横城窗口内761/761次泛化调用全部走_generalize_fallback(系统性失败，指向siliconflow免费档配额/限流)，3.1任务13/13全成功；同代码同提示词同模型。无重试+静默兜底+ai_confidence按覆盖率计算，把100%失败消化成50分无警报；worker 01:20重建日志丢失",
-    "fix": "未修复(重设计范畴)：StepOutcome记账+失败重试+失败率熔断；短期验证=重跑横城全本",
+    "fix": "未修复(重设计范畴)：StepOutcome记账+失败重试+失败率熔断；短期验证=重跑横城全本 | 2026-10-05 再现：横城重跑 phase-2 泛化批量调用云 API（62 次尝试 8 次 rate_limit），熔断在段落 p128 → FAILED_PROVIDER；StepOutcome 熔断按设计工作（显式 skipped=741 而非旧版静默兜底），断点续跑语义保留（retry 即 resume）。详见 bug-363 fix 字段观测记录。",
     "tags": [
       "generalization",
       "fallback",
@@ -4655,8 +4655,8 @@
     "related_bugs": [
       "bug-333"
     ],
-    "occurrences": 1,
-    "last_seen": "2026-10-02"
+    "occurrences": 2,
+    "last_seen": "2026-10-05"
   },
   {
     "id": "bug-335",
@@ -5204,7 +5204,7 @@
     "error_message": "冒烟 templates total=200 ≠ 预期 230（静态 30 未加载），/app/templates 不存在",
     "file": "docker-compose.yml + docker/api.Dockerfile",
     "root_cause": "compose api 服务仅 bind mount server/package/test，镜像层也无 backend/templates 拷贝；TEMPLATES_DIR 解析 /app/templates 落空，容器栈 ETL 静态模板从未参与匹配（learned-only）",
-    "fix": "最终修复落地 commit beb1942e：镜像内 COPY backend/templates → /app/templates + compose api/worker 双 :ro 挂载，重建容器生效。激活冒烟（Task 1 两阶段评审通过）：total=230 / probe 30/30 / self-match 200；unit 2681 passed/0 failed/61 skipped。真实 ETL 行为观测（Task 2，横城 a44afc93 重跑）：激活前该任务 template_match=0（static 0/learned 0），激活后 phase-1 实测 template_match=317/335 标题段（static 277 + learned 40，30 个静态 headers 命中 21 个，最高频 TPL_HEADER_ECOLOGICAL_IMPACT_01 ×117），bug-353 学习模板 match_count 自增链在真实流量打通（命中模板 match_count=1）。该次重跑 phase-2（GENERALIZING）因云 API rate_limit 熔断终止（FAILED_PROVIDER，success=12/rate_limit=8/skipped=741，全程 3867s），任务按 P0-3 断点续跑设计保留可恢复状态；泛化阶段观测与写手侧取用率『待自然流量』口径仍挂起，判定标准 = 下一次完整 ETL（含 phase-2）完成后按 Step 2 口径采集。",
+    "fix": "最终修复落地 commit beb1942e：镜像内 COPY backend/templates → /app/templates + compose api/worker 双 :ro 挂载，重建容器生效。激活冒烟（Task 1 两阶段评审通过）：total=230 / probe 30/30 / self-match 200；unit 2681 passed/0 failed/61 skipped。真实 ETL 行为观测（Task 2，横城 a44afc93 重跑）：激活前该任务 template_match=0（static 0/learned 0），激活后 phase-1 实测 template_match=317/335 标题段（static 277 + learned 40，30 个静态 headers 命中 21 个，最高频 TPL_HEADER_ECOLOGICAL_IMPACT_01 ×117），bug-353 学习模板 match_count 自增链在真实流量打通（命中模板 match_count=1）。该次重跑 phase-2（GENERALIZING）因云 API rate_limit 熔断终止（FAILED_PROVIDER，success=12/rate_limit=8/skipped=741，全程 3867s），任务按 P0-3 断点续跑设计保留可恢复状态；泛化阶段观测与写手侧取用率『待自然流量』口径仍挂起，判定标准 = 下一次完整 ETL（含 phase-2）完成后按 Step 2 口径采集。另记三点（终审补记）：①本任务台账的通道事实——两份 .env 无管理员凭据，重解析未走 HTTP 层，为容器内直调 service.retry_task / ARQ enqueue（与端点同链路），证据效力不受通道影响；②修复传播曾有第二层根因：sync-dev.ps1 不携带部署文件（$copyFiles 无 compose/Dockerfile），已扩单件清单修通（commit 2723e3e9，原 f884d9d0），localized diff 实测仅含新增行——occurrences=2 即此；③写手侧取用率激活后基线（committed 层留档）：total=8，get_templates graph=5 / get_chapter_outline graph=2 / list_chapter_keys graph=1，暂无 writer 来源调用。",
     "tags": [
       "deployment",
       "templates",
