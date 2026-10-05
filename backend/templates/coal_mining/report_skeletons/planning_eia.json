@@ -19,6 +19,7 @@
   ],
   "optional_chapters": {
     "三线一单及空间管控": {
+      "slot_id": "OPT_1",
       "aliases": [
         "三线一单",
         "空间管控",
@@ -29,6 +30,7 @@
       "writing_patterns": []
     },
     "不确定性分析": {
+      "slot_id": "OPT_2",
       "aliases": [
         "不确定性",
         "环境不确定",

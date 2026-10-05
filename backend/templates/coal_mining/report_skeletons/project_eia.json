@@ -26,6 +26,7 @@
   ],
   "optional_chapters": {
     "爆破环境影响评价": {
+      "slot_id": "OPT_1",
       "aliases": [
         "爆破环境影响分析"
       ],
