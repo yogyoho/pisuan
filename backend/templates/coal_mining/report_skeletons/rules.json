@@ -6,12 +6,10 @@
         "report_family": "project_eia",
         "mine_type": "underground"
       },
-      "add": [
-        "地表沉陷预测与影响评价"
+      "require": [
+        "地表沉陷预测及影响评价"
       ],
-      "remove": [
-        "爆破影响评价"
-      ],
+      "note": "base 即井工骨架，require 为校验性留痕（对齐 R4 模式）",
       "evidence": "井工 7/7 有沉陷章 0 爆破章"
     },
     {
@@ -20,11 +18,11 @@
         "report_family": "project_eia",
         "mine_type": "openpit"
       },
-      "add": [
-        "爆破影响评价"
-      ],
       "remove": [
-        "地表沉陷预测与影响评价"
+        "地表沉陷预测及影响评价"
+      ],
+      "add": [
+        "爆破环境影响评价"
       ],
       "evidence": "露天 6/6 反之"
     },
@@ -58,14 +56,16 @@
         "sensitive_targets": "*"
       },
       "add_section_under": {
-        "host": "预测与评价",
+        "host": "规划实施环境影响预测与评价",
         "template": "对{sensitive_target}影响分析"
       },
+      "note": "v1 已知限制：host 仅命中 planning/tracking；project/post 族敏感目标专节不生效（v1 语料 sensitive_targets 全 0，暂无消费方）",
       "evidence": "淖毛湖 6.10/6.11"
     },
     {
       "id": "R6",
       "when": {
+        "report_family": "project_eia",
         "policy_flags": "total_control"
       },
       "add": [

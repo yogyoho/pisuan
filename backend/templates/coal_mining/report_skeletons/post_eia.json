@@ -21,15 +21,7 @@
     "环境保护措施优化调整",
     "后评价结论与建议"
   ],
-  "optional_chapters": {
-    "措施优化与调整": {
-      "aliases": [
-        "措施优化调整",
-        "优化调整"
-      ],
-      "sections": []
-    }
-  },
+  "optional_chapters": {},
   "chapters": {
     "前言": {
       "slot_id": "CH0",

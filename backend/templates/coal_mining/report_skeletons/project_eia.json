@@ -1,7 +1,7 @@
 {
   "family": "project_eia",
   "base_source": "project_eia_underground+project_eia_openpit",
-  "note": "两矿型 stage 合并；沉陷(井工)/爆破(露天)为 optional，由 R1/R2 激活",
+  "note": "井工 20 章基准（quality review C1 重构：废弃 26 章双拼合并）；openpit 同实异名 5 章登记为 alias、独有章爆破环境影响评价入 optional（sections 随迁），R1/R2 按精确章题激活",
   "canonical_order": [
     "概述",
     "总论",
@@ -22,34 +22,104 @@
     "污染物排放总量控制分析",
     "资源综合利用与清洁生产评价",
     "环境经济损益分析",
-    "结论与建议",
-    "总则",
-    "地表水环境影响影响评价",
-    "爆破环境影响评价",
-    "项目选址环境可行性分析",
-    "资源综合利用与清洁生产分析",
-    "评价结论与建议"
+    "结论与建议"
   ],
   "optional_chapters": {
-    "地表沉陷预测与影响评价": {
-      "aliases": [
-        "地表沉陷预测",
-        "沉陷预测"
-      ],
-      "sections": []
-    },
-    "爆破影响评价": {
-      "aliases": [
-        "爆破影响",
-        "爆破"
-      ],
-      "sections": []
-    },
     "总量控制": {
       "aliases": [
         "总量控制"
       ],
       "sections": []
+    },
+    "爆破环境影响评价": {
+      "aliases": [
+        "爆破环境影响分析"
+      ],
+      "sections": [
+        {
+          "id": "ch12_S01",
+          "title": "爆破源分析",
+          "elements": [
+            "源段：爆破工艺/孔网参数/一次起爆药量/年爆破次数（{{SLOT:openpit_engineering.mining_system}} 钻爆项——采矿设计转录，门 1）。",
+            "收束句：源分析收束。"
+          ],
+          "uses": {
+            "slots": [
+              "{{SLOT:openpit_engineering.mining_system}}"
+            ],
+            "formulas": [],
+            "contracts": []
+          },
+          "slots": [
+            "{{SLOT:openpit_engineering.mining_system}}"
+          ],
+          "role": "驱动源"
+        },
+        {
+          "id": "ch12_S02",
+          "title": "爆破振动与冲击波环境影响分析",
+          "elements": [
+            "振动段：质点振动速度与安全距离判定（安全允许距离=GB 6722 表值判据——tier1 人工核实后可断言；{{TABLE:sensitive_targets}} aspect=爆破 逐对象登记）。",
+            "冲击波段：个别飞散物与冲击波影响范围分析。",
+            "收束句：振动冲击波收束。"
+          ],
+          "uses": {
+            "slots": [
+              "{{TABLE:sensitive_targets}}"
+            ],
+            "formulas": [],
+            "contracts": []
+          },
+          "slots": [
+            "{{TABLE:sensitive_targets}}"
+          ],
+          "role": "响应"
+        },
+        {
+          "id": "ch12_S03",
+          "title": "爆破噪声与大气环境影响分析",
+          "elements": [
+            "噪声段：爆破噪声衰减与达标分析（{{TABLE:noise.sources}} 爆破项——与 ch9 口径一致）。",
+            "大气段：炮烟与粉尘影响分析（{{TABLE:air.dust_source_strength}} 爆破项——与 ch7 口径一致）。",
+            "收束句：噪声大气收束。"
+          ],
+          "uses": {
+            "slots": [
+              "{{TABLE:noise.sources}}",
+              "{{TABLE:air.dust_source_strength}}"
+            ],
+            "formulas": [],
+            "contracts": []
+          },
+          "slots": [
+            "{{TABLE:noise.sources}}",
+            "{{TABLE:air.dust_source_strength}}"
+          ],
+          "role": "响应"
+        },
+        {
+          "id": "ch12_S04",
+          "title": "爆破环境保护措施与结论",
+          "elements": [
+            "措施段：优化爆破参数/控制一次药量/时段约束/警戒（{{TABLE:measures.noise}} 爆破项+{{TABLE:measures.air}} 爆破项直渲）。",
+            "结论段：爆破环境影响结论与建议（判定词与要素章一致）。",
+            "收束句：本章收束，过渡到风险章。"
+          ],
+          "uses": {
+            "slots": [
+              "{{TABLE:measures.noise}}",
+              "{{TABLE:measures.air}}"
+            ],
+            "formulas": [],
+            "contracts": []
+          },
+          "slots": [
+            "{{TABLE:measures.noise}}",
+            "{{TABLE:measures.air}}"
+          ],
+          "role": "收束"
+        }
+      ]
     }
   },
   "chapters": {
@@ -145,7 +215,9 @@
     },
     "总论": {
       "slot_id": "CH1",
-      "aliases": [],
+      "aliases": [
+        "总则"
+      ],
       "sections": [
         {
           "id": "ch1_S01",
@@ -1227,7 +1299,9 @@
     },
     "地表水环境影响评价": {
       "slot_id": "CH8",
-      "aliases": [],
+      "aliases": [
+        "地表水环境影响影响评价"
+      ],
       "sections": [
         {
           "id": "ch8_S01",
@@ -1951,7 +2025,9 @@
     },
     "项目选址环境可行性": {
       "slot_id": "CH14",
-      "aliases": [],
+      "aliases": [
+        "项目选址环境可行性分析"
+      ],
       "sections": [
         {
           "id": "ch14_S01",
@@ -2138,7 +2214,10 @@
     },
     "资源综合利用与清洁生产评价": {
       "slot_id": "CH17",
-      "aliases": [],
+      "aliases": [
+        "资源综合利用与清洁生产分析",
+        "资源综合利用及清洁生产分析"
+      ],
       "sections": [
         {
           "id": "ch17_S01",
@@ -2237,7 +2316,10 @@
     },
     "结论与建议": {
       "slot_id": "CH19",
-      "aliases": [],
+      "aliases": [
+        "评价结论与建议",
+        "环境影响评价结论与建议"
+      ],
       "sections": [
         {
           "id": "ch19_S01",
@@ -2335,639 +2417,6 @@
             ]
           },
           "role": "收束"
-        }
-      ]
-    },
-    "总则": {
-      "slot_id": "CH1",
-      "aliases": [],
-      "sections": [
-        {
-          "id": "ch1_S01",
-          "title": "评价目的与指导思想",
-          "elements": [
-            "目的段：从露天矿项目特征导出本次评价目的（控生态挖损压占与恢复、控疏干影响、控扬尘与噪声、提出措施优化建议——methodology 承载）。",
-            "指导思想段：条款化表述（固定模板直出）。",
-            "收束句：过渡到编制依据。"
-          ],
-          "uses": {
-            "slots": [
-              "{{SLOT:mine_plan.total_scale_mt_a_after}}"
-            ],
-            "formulas": [],
-            "contracts": [
-              "XS1"
-            ]
-          },
-          "slots": [
-            "{{SLOT:mine_plan.total_scale_mt_a_after}}"
-          ],
-          "role": "推演",
-          "contracts": [
-            "XS1"
-          ]
-        },
-        {
-          "id": "ch1_S02",
-          "title": "编制依据",
-          "elements": [
-            "六分类依据段：按任务依据、法律法规、规章、技术规范、相关规划、主要技术资料六类分列（{{TABLE:legal_basis}} 直渲）。",
-            "法规纪律：所列法律法规/规章/导则仅从 standards_index 枚举，pending 条目年份留待核实禁补猜（红线 websearch-unreliable）。",
-            "资质句：写明编制单位与资质证书号（{{SLOT:legal_basis.task_doc_no}}——委托函文号；{{SLOT:project.compiler_qualification}} 人工比对）。",
-            "收束句：技术规范类依据引出评价标准的三元组体系。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:legal_basis}}",
-              "{{SLOT:legal_basis.task_doc_no}}",
-              "{{SLOT:project.compiler_qualification}}"
-            ],
-            "formulas": [],
-            "contracts": []
-          },
-          "slots": [
-            "{{TABLE:legal_basis}}",
-            "{{SLOT:legal_basis.task_doc_no}}",
-            "{{SLOT:project.compiler_qualification}}"
-          ],
-          "role": "推演"
-        },
-        {
-          "id": "ch1_S03",
-          "title": "环境功能区划与评价标准",
-          "elements": [
-            "功能区划段：逐要素写明环境功能区类别（{{TABLE:standards_confirm}} function_zone 字段——戈壁/荒漠区声与生态功能区划按地方区划登记）。",
-            "标准三元组表：前置引入段+表（要素-功能区/质量类别-标准号，{{TABLE:standards_confirm}} 直渲）+后置解读段。",
-            "门 1 义务：标准号非空（禁「（）」空括号占位——横城 9 处实证沿用纪律）+格式体检（standards_index.gate1_code_checks.allowed_patterns）+年份与登记一致。",
-            "限值纪律：限值档位引用须查 standards_index.limit_tables，needs_verification=true 未录入档输出「需人工对照」禁自动断言（XS3）；同一要素标准号字符串全书唯一。",
-            "收束句：标准体系统领后续现状评价与预测判定。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:standards_confirm}}"
-            ],
-            "formulas": [],
-            "contracts": [
-              "XS3"
-            ]
-          },
-          "slots": [
-            "{{TABLE:standards_confirm}}"
-          ],
-          "role": "受体",
-          "contracts": [
-            "XS3"
-          ]
-        },
-        {
-          "id": "ch1_S04",
-          "title": "评价工作等级、范围及评价因子",
-          "elements": [
-            "等级判定段：逐要素交代评价等级判定依据与结果（生态 HJ 19、地下水 HJ 610、大气 HJ 2.2、地表水 HJ 2.3、声 HJ 2.4、土壤 HJ 964、风险 HJ 169——等级由 methodology 规则判定，禁行文自造）。",
-            "范围表：逐要素评价范围（{{TABLE:standards_confirm}} evaluation_scope 字段直渲），写明范围确定依据（导则要求+采掘场/排土场/疏干影响边界）。",
-            "收束句：范围与评价分区衔接下节保护目标。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:standards_confirm}}"
-            ],
-            "formulas": [],
-            "contracts": [
-              "XS3"
-            ]
-          },
-          "slots": [
-            "{{TABLE:standards_confirm}}"
-          ],
-          "role": "推演",
-          "contracts": [
-            "XS3"
-          ]
-        },
-        {
-          "id": "ch1_S05",
-          "title": "环境保护目标",
-          "elements": [
-            "清单表：环境保护目标表（{{TABLE:sensitive_targets}} 直渲——列：名称/类别/保护等级/与矿区位置关系/距离/影响途径（挖损|压占|疏干|扬尘|噪声）/保护要求）。",
-            "逐目标分述：按清单登记名逐项成段（名称登记全称为 canon，简称须与登记变体一致——XS2）。",
-            "完整性义务：本清单是 XS2 跨 5 章合约（总则/概况/生态/选址/结论）唯一事实源，门 1 校验清单完整性与列齐性；缺失目标不得由行文补造。",
-            "收束句：目标清单统领后续预测与措施的受体保护主线。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:sensitive_targets}}"
-            ],
-            "formulas": [],
-            "contracts": [
-              "XS2"
-            ]
-          },
-          "slots": [
-            "{{TABLE:sensitive_targets}}"
-          ],
-          "role": "受体",
-          "contracts": [
-            "XS2"
-          ]
-        },
-        {
-          "id": "ch1_S06",
-          "title": "评价内容与工作程序",
-          "elements": [
-            "重点段：按露天矿特征列出评价重点（生态环境与恢复居首、地下水疏干、排土场扬尘与稳定、敏感目标、清洁生产等——methodology+{{TABLE:impact_identification.factors}} 投影，与后文要素章一一对应）。",
-            "程序段：评价技术路线与工作程序固定模板直出。",
-            "收束句：重点清单即后续要素章的权重声明，过渡到项目概况。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:impact_identification.factors}}"
-            ],
-            "formulas": [],
-            "contracts": []
-          },
-          "slots": [
-            "{{TABLE:impact_identification.factors}}"
-          ],
-          "role": "推演"
-        }
-      ]
-    },
-    "地表水环境影响影响评价": {
-      "slot_id": "CH8",
-      "aliases": [],
-      "sections": [
-        {
-          "id": "ch8_S01",
-          "title": "地表水环境影响评价总则",
-          "elements": [
-            "等级范围段：评价等级/范围/受纳水体（{{TABLE:standards_confirm}} evaluation_scope——HJ 2.3 水污染影响型判定）。",
-            "收束句：总则收束。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:standards_confirm}}"
-            ],
-            "formulas": [],
-            "contracts": []
-          },
-          "slots": [
-            "{{TABLE:standards_confirm}}"
-          ],
-          "role": "推演"
-        },
-        {
-          "id": "ch8_S02",
-          "title": "地表水环境质量现状监测与评价",
-          "elements": [
-            "水系段：区域地表水系与水文特征（{{SLOT:geography.hydrogeology}} 地表水项——季节性沟谷特征登记）。",
-            "监测段：水质现状监测与评价（{{TABLE:monitoring.items}} 地表水项——断点/因子/频次；XS3 限值绑定）。",
-            "收束句：现状收束。"
-          ],
-          "uses": {
-            "slots": [
-              "{{SLOT:geography.hydrogeology}}",
-              "{{TABLE:monitoring.items}}"
-            ],
-            "formulas": [],
-            "contracts": [
-              "XS3"
-            ]
-          },
-          "slots": [
-            "{{SLOT:geography.hydrogeology}}",
-            "{{TABLE:monitoring.items}}"
-          ],
-          "role": "受体",
-          "contracts": [
-            "XS3"
-          ]
-        },
-        {
-          "id": "ch8_S03",
-          "title": "建设期与运营期水污染影响及防治措施",
-          "elements": [
-            "建设期段：施工废水/生活污水影响与防治（{{TABLE:water.sources}} 建设期项）。",
-            "运营期段：矿坑水/疏干水/生活污水产生量与处理回用（{{SLOT:openpit_engineering.dewatering}} 同源、{{TABLE:water.balance}}——water_balance 冻结输出供/需/回用/排水与回用率）。",
-            "非正常工况段：处理设施故障情景排放影响分析（{{TABLE:water.sources}} 非正常项）。",
-            "防治措施段：处理工艺/回用管线/事故池（{{TABLE:measures.water}} 直渲——对应对应源清单禁缺位）。",
-            "收束句：影响与措施收束，过渡到回顾（如适用）。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:water.sources}}",
-              "{{SLOT:openpit_engineering.dewatering}}",
-              "{{TABLE:water.balance}}",
-              "{{TABLE:measures.water}}"
-            ],
-            "formulas": [
-              "water_balance"
-            ],
-            "contracts": []
-          },
-          "slots": [
-            "{{TABLE:water.sources}}",
-            "{{SLOT:openpit_engineering.dewatering}}",
-            "{{TABLE:water.balance}}",
-            "{{TABLE:measures.water}}"
-          ],
-          "role": "响应",
-          "formulas": [
-            "water_balance"
-          ]
-        },
-        {
-          "id": "ch8_S04",
-          "title": "地表水环境影响回顾（条件）",
-          "elements": [
-            "回顾段：已建水处理设施运行与排放实况（{{SLOT:retrospective.facilities_effect}} 水项——伊敏 7.3 影响回顾型）。",
-            "收束句：回顾收束。"
-          ],
-          "uses": {
-            "slots": [
-              "{{SLOT:retrospective.facilities_effect}}"
-            ],
-            "formulas": [],
-            "contracts": []
-          },
-          "slots": [
-            "{{SLOT:retrospective.facilities_effect}}"
-          ],
-          "role": "响应",
-          "conditional": {
-            "driver": "project_kind",
-            "type": "variant_track",
-            "when": "expansion",
-            "on_absent": "ABSENT（新建轨整节 ABSENT——吐鲁东实证；改扩建轨激活：伊敏 7.3 回顾型）"
-          }
-        },
-        {
-          "id": "ch8_S05",
-          "title": "地表水环境影响评价小结",
-          "elements": [
-            "小结段：水环境影响结论（达标判定词与现状/预测一致——XS3）。",
-            "自查表段：地表水环境影响评价自查表（导则附表直出）。",
-            "收束句：本章收束，过渡到声环境章。"
-          ],
-          "uses": {
-            "slots": [],
-            "formulas": [],
-            "contracts": [
-              "XS12"
-            ]
-          },
-          "slots": [],
-          "role": "收束",
-          "contracts": [
-            "XS12"
-          ]
-        }
-      ]
-    },
-    "爆破环境影响评价": {
-      "slot_id": "CH12",
-      "aliases": [
-        "爆破环境影响分析"
-      ],
-      "sections": [
-        {
-          "id": "ch12_S01",
-          "title": "爆破源分析",
-          "elements": [
-            "源段：爆破工艺/孔网参数/一次起爆药量/年爆破次数（{{SLOT:openpit_engineering.mining_system}} 钻爆项——采矿设计转录，门 1）。",
-            "收束句：源分析收束。"
-          ],
-          "uses": {
-            "slots": [
-              "{{SLOT:openpit_engineering.mining_system}}"
-            ],
-            "formulas": [],
-            "contracts": []
-          },
-          "slots": [
-            "{{SLOT:openpit_engineering.mining_system}}"
-          ],
-          "role": "驱动源"
-        },
-        {
-          "id": "ch12_S02",
-          "title": "爆破振动与冲击波环境影响分析",
-          "elements": [
-            "振动段：质点振动速度与安全距离判定（安全允许距离=GB 6722 表值判据——tier1 人工核实后可断言；{{TABLE:sensitive_targets}} aspect=爆破 逐对象登记）。",
-            "冲击波段：个别飞散物与冲击波影响范围分析。",
-            "收束句：振动冲击波收束。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:sensitive_targets}}"
-            ],
-            "formulas": [],
-            "contracts": []
-          },
-          "slots": [
-            "{{TABLE:sensitive_targets}}"
-          ],
-          "role": "响应"
-        },
-        {
-          "id": "ch12_S03",
-          "title": "爆破噪声与大气环境影响分析",
-          "elements": [
-            "噪声段：爆破噪声衰减与达标分析（{{TABLE:noise.sources}} 爆破项——与 ch9 口径一致）。",
-            "大气段：炮烟与粉尘影响分析（{{TABLE:air.dust_source_strength}} 爆破项——与 ch7 口径一致）。",
-            "收束句：噪声大气收束。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:noise.sources}}",
-              "{{TABLE:air.dust_source_strength}}"
-            ],
-            "formulas": [],
-            "contracts": []
-          },
-          "slots": [
-            "{{TABLE:noise.sources}}",
-            "{{TABLE:air.dust_source_strength}}"
-          ],
-          "role": "响应"
-        },
-        {
-          "id": "ch12_S04",
-          "title": "爆破环境保护措施与结论",
-          "elements": [
-            "措施段：优化爆破参数/控制一次药量/时段约束/警戒（{{TABLE:measures.noise}} 爆破项+{{TABLE:measures.air}} 爆破项直渲）。",
-            "结论段：爆破环境影响结论与建议（判定词与要素章一致）。",
-            "收束句：本章收束，过渡到风险章。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:measures.noise}}",
-              "{{TABLE:measures.air}}"
-            ],
-            "formulas": [],
-            "contracts": []
-          },
-          "slots": [
-            "{{TABLE:measures.noise}}",
-            "{{TABLE:measures.air}}"
-          ],
-          "role": "收束"
-        }
-      ]
-    },
-    "项目选址环境可行性分析": {
-      "slot_id": "CH14",
-      "aliases": [],
-      "sections": [
-        {
-          "id": "ch14_S01",
-          "title": "首采区及初始拉沟位置方案环境可行性",
-          "elements": [
-            "方案段：备选方案概述与技术经济比较（{{TABLE:openpit_engineering.pits}} 登记方案域——伊泰 17.1 型三节组：概述/比选/环境可行性）。",
-            "可行性段：环境可行性分析（占地类型/敏感目标距离/疏干影响——{{TABLE:sensitive_targets}} 距离字段 XS6 同源）。",
-            "收束句：首采区收束。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:openpit_engineering.pits}}",
-              "{{TABLE:sensitive_targets}}"
-            ],
-            "formulas": [],
-            "contracts": [
-              "XS2",
-              "XS6"
-            ]
-          },
-          "slots": [
-            "{{TABLE:openpit_engineering.pits}}",
-            "{{TABLE:sensitive_targets}}"
-          ],
-          "role": "推演",
-          "contracts": [
-            "XS2",
-            "XS6"
-          ]
-        },
-        {
-          "id": "ch14_S02",
-          "title": "外排土场及场地选址环境可行性",
-          "elements": [
-            "排土场段：外排土场选址环境可行性（{{TABLE:openpit_engineering.dump_sites}} 逐场——与居民点/水系/生态红线位置关系 XS6；伊泰 17.2 型）。",
-            "场地段：选煤厂/储煤场等场地选址（{{TABLE:mine_plan.facilities}} 场地项——伊泰 17.3/17.4 型；无对应设施记 ABSENT）。",
-            "收束句：场地选址收束。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:openpit_engineering.dump_sites}}",
-              "{{TABLE:mine_plan.facilities}}"
-            ],
-            "formulas": [],
-            "contracts": [
-              "XS6"
-            ]
-          },
-          "slots": [
-            "{{TABLE:openpit_engineering.dump_sites}}",
-            "{{TABLE:mine_plan.facilities}}"
-          ],
-          "role": "推演",
-          "contracts": [
-            "XS6"
-          ]
-        },
-        {
-          "id": "ch14_S03",
-          "title": "项目选址环境可行性综合评价",
-          "elements": [
-            "综合段：逐方案综合评价与推荐结论（结论词=选址章 canon——「从环境保护角度可行」措辞与结论章一致）。",
-            "收束句：本章收束，过渡到资源综合利用章。"
-          ],
-          "uses": {
-            "slots": [],
-            "formulas": [],
-            "contracts": []
-          },
-          "slots": [],
-          "role": "收束"
-        }
-      ]
-    },
-    "资源综合利用与清洁生产分析": {
-      "slot_id": "CH15",
-      "aliases": [
-        "资源综合利用及清洁生产分析"
-      ],
-      "sections": [
-        {
-          "id": "ch15_S01",
-          "title": "资源综合利用",
-          "elements": [
-            "利用段：剥离物（内排/复垦利用）/煤矸石/疏干水与矿坑水回用/瓦斯与余热（{{TABLE:circular_economy.gangue_reuse}}、{{SLOT:circular_economy.mine_water_reuse}}、{{TABLE:openpit_engineering.dewatering}} 回用去向同源）。",
-            "收束句：综合利用收束。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:circular_economy.gangue_reuse}}",
-              "{{SLOT:circular_economy.mine_water_reuse}}",
-              "{{TABLE:openpit_engineering.dewatering}}"
-            ],
-            "formulas": [],
-            "contracts": []
-          },
-          "slots": [
-            "{{TABLE:circular_economy.gangue_reuse}}",
-            "{{SLOT:circular_economy.mine_water_reuse}}",
-            "{{TABLE:openpit_engineering.dewatering}}"
-          ],
-          "role": "响应"
-        },
-        {
-          "id": "ch15_S02",
-          "title": "清洁生产分析",
-          "elements": [
-            "对标段：生产工艺与装备/资源能源利用/污染物产生/废物回收利用/环境管理五类指标对标（{{TABLE:cleaner_production.benchmarks}} 直渲）。",
-            "结论段：清洁生产水平判定（判定词与对标表一致）。",
-            "收束句：本章收束，过渡到环境管理与监测计划章。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:cleaner_production.benchmarks}}"
-            ],
-            "formulas": [],
-            "contracts": []
-          },
-          "slots": [
-            "{{TABLE:cleaner_production.benchmarks}}"
-          ],
-          "role": "推演"
-        }
-      ]
-    },
-    "评价结论与建议": {
-      "slot_id": "CH18",
-      "aliases": [
-        "环境影响评价结论与建议"
-      ],
-      "sections": [
-        {
-          "id": "ch18_S01",
-          "title": "项目概况及政策符合性结论",
-          "elements": [
-            "概况段：项目概况与主要建设内容复现（{{SLOT:mine_plan.total_scale_mt_a_after}}、{{SLOT:project.project_kind}}——XS1 同源逐字一致）。",
-            "符合性段：产业政策/三线一单/矿区规划及规划环评符合性结论摘要（{{TABLE:compliance_plans}} 结论字段投影——一句一结论）。",
-            "收束句：符合性结论收束。"
-          ],
-          "uses": {
-            "slots": [
-              "{{SLOT:mine_plan.total_scale_mt_a_after}}",
-              "{{SLOT:project.project_kind}}",
-              "{{TABLE:compliance_plans}}"
-            ],
-            "formulas": [],
-            "contracts": [
-              "XS1"
-            ]
-          },
-          "slots": [
-            "{{SLOT:mine_plan.total_scale_mt_a_after}}",
-            "{{SLOT:project.project_kind}}",
-            "{{TABLE:compliance_plans}}"
-          ],
-          "role": "收束",
-          "contracts": [
-            "XS1"
-          ]
-        },
-        {
-          "id": "ch18_S02",
-          "title": "项目环境影响结论（逐要素）",
-          "elements": [
-            "要素段：生态环境（居首）/地下水/地表水/大气/声/固废/土壤/风险逐要素一段（各章小结投影——{{TABLE:eco.land_use}}、{{SLOT:openpit_engineering.dewatering}} 等冻结值复现；防护距离判定词 XS7 canon、标准达标口径 XS3、目标保护口径 XS2 逐字一致）。",
-            "收束句：要素结论收束，过渡到公众参与（如适用）。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:eco.land_use}}",
-              "{{SLOT:openpit_engineering.dewatering}}"
-            ],
-            "formulas": [],
-            "contracts": [
-              "XS2",
-              "XS3",
-              "XS7",
-              "XS12",
-              "EO3"
-            ]
-          },
-          "slots": [
-            "{{TABLE:eco.land_use}}",
-            "{{SLOT:openpit_engineering.dewatering}}"
-          ],
-          "role": "收束",
-          "contracts": [
-            "XS2",
-            "XS3",
-            "XS7",
-            "XS12",
-            "EO3"
-          ]
-        },
-        {
-          "id": "ch18_S03",
-          "title": "公众参与意见处理结论",
-          "elements": [
-            "公参段：公参过程与意见采纳结论（{{TABLE:public_participation.rounds}}、{{SLOT:public_participation.questionnaires}}、{{TABLE:public_participation.opinions}}——计数 XS11 全书唯一；单刻本公参卷册不在本报告重复，只结论引用）。",
-            "收束句：公参结论收束。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:public_participation.rounds}}",
-              "{{SLOT:public_participation.questionnaires}}",
-              "{{TABLE:public_participation.opinions}}"
-            ],
-            "formulas": [],
-            "contracts": [
-              "XS11"
-            ]
-          },
-          "slots": [
-            "{{TABLE:public_participation.rounds}}",
-            "{{SLOT:public_participation.questionnaires}}",
-            "{{TABLE:public_participation.opinions}}"
-          ],
-          "role": "收束",
-          "contracts": [
-            "XS11"
-          ],
-          "conditional": {
-            "driver": "public_participation",
-            "type": "d8_data_driven",
-            "title_rule": "节标题=「公众参与」；公参登记（rounds/opinions）在场才激活，缺席整节 ABSENT（记 skip 非 fail——样本外公参以单独卷册承载常态）",
-            "on_absent": "ABSENT"
-          }
-        },
-        {
-          "id": "ch18_S04",
-          "title": "评价结论与建议",
-          "elements": [
-            "总量与清洁生产段：总量控制符合性（XS8 接账复现）与清洁生产水平结论。",
-            "总体判定句：从环境保护角度的总体判定词（XS10 canon 首现——与 ch0_S03 预告同措辞逐字一致）。",
-            "建议段：条款化建议直出（生态恢复/疏干管控/监测执行等——每条可执行）。",
-            "收束句：全书收束。"
-          ],
-          "uses": {
-            "slots": [],
-            "formulas": [],
-            "contracts": [
-              "XS8",
-              "XS10"
-            ]
-          },
-          "slots": [],
-          "role": "收束",
-          "contracts": [
-            "XS8",
-            "XS10"
-          ]
         }
       ]
     }
