@@ -124,7 +124,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 - Create: `backend/templates/coal_mining/report_skeletons/rules.json`（layer-2）
 - Create: `backend/templates/coal_mining/report_skeletons/{planning_eia,project_eia,post_eia,tracking_eia}-chapters.json`（layer-3）
 
-- [ ] **Step 1: 写 layer-1 派生脚本（ad-hoc，不提交）存 `.wolf/corpus-census/derive_layer1.py`**
+- [x] **Step 1: 写 layer-1 派生脚本（ad-hoc，不提交）存 `.wolf/corpus-census/derive_layer1.py`**
 
 ```python
 """从既有 stage JSON（语料定稿词汇）派生 layer-1 骨架。运行: python derive_layer1.py"""
@@ -190,7 +190,7 @@ print('draft →', OUT/'_layer1_draft.json')
 
 Run 后人工拆分为 4 份 `<family>.json`（键：`family/canonical_order/optional_chapters/chapters`；`chapters[题] = {slot_id, aliases, sections[]}`）。
 
-- [ ] **Step 2: 从语料派生 aliases（ad-hoc）**
+- [x] **Step 2: 从语料派生 aliases（ad-hoc）**
 
 对 38 份语料的归一化章题做频次统计，凡与 layer-1 章题**不相等但编辑距离 ≤4 或含相同 4-gram** 的，登记进该章 `aliases`。示例（预期出现的真实对）：语料「总论」→ planning「总则」alias；语料「地表沉陷预测与影响评价」（「与」变体）→ 井工基准 canonical「地表沉陷预测及影响评价」alias；郭家台 ch16「污染物总量控制分析」→「污染物排放总量控制分析」alias（既有聚类登记）。**纯机械聚类 + 人工过目，禁止臆造**。统计脚本模板：
 
@@ -210,7 +210,7 @@ for f in conds:
 for t, n in freq.most_common(): print(n, t)
 ```
 
-- [ ] **Step 3: 写 `rules.json`（layer-2，spec §3.3 R1-R9 原样落地）**
+- [x] **Step 3: 写 `rules.json`（layer-2，spec §3.3 R1-R9 原样落地）**
 
 ```json
 { "rules": [
@@ -245,11 +245,11 @@ for t, n in freq.most_common(): print(n, t)
 
 注意 R7 缺号是有意的（spec 原文即无 R7，保持 id 对齐 spec 便于审计）。R8 用 self-base 是对 spec §3.3 的有记录偏离：base 克隆+改名机制在渲染器 `_resolve_base` 中保留可用，但 v1 数据不启用（理由见 note）——spec §2 实测后评价仅 2 份且 post_eia.json stage 已是该骨架的定稿。
 
-- [ ] **Step 4: 写 layer-3 每章配置（v1 只配高频差异章，spec O2）**
+- [x] **Step 4: 写 layer-3 每章配置（v1 只配高频差异章，spec O2）**
 
 `<family>-chapters.json` 格式：`{ "章题": { "depth": "deep|normal", "tables": ["表名"...], "sections": ["节菜单"...] } }`。v1 范围（spec §3.3 示例 + 高频差异）：project_eia 的「地表沉陷预测及影响评价」（depth=deep，tables=["地表沉陷敏感目标一览表","保护煤柱留设表","预测参数表"]，sections=["预测模型","预测参数","预测方案","移动变形预测","影响分析","岩移观测计划"]）、「爆破环境影响评价」（depth=deep，sections=["爆破器材与起爆方式","爆破安全距离","爆破影响预测","防护措施"]）——l3 为 exact-key merge，键必须与 layer-1 章题逐字相等；planning_eia 的「承载力分析」「综合论证」（depth=deep）；其余章 v1 不配置（渲染时缺省 depth=normal、无 tables、sections 取 layer-1）。**全量表单清单是 P2 数据作业（O2），不在本窗口**。
 
-- [ ] **Step 5: 结构自检 + 提交**
+- [x] **Step 5: 结构自检 + 提交**
 
 Run: `python -c "
 import json, pathlib
@@ -273,6 +273,8 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 ```
 
 ---
+
+> **Task 2 执行记录（2026-10-06）**：实现提交链 1f92038a → c9b0e391(R4) → 0d3abee8(质量评审六件) → 73233749(R6 retarget) → f7ba64e0(章级 ke/wp 随迁) → b9cd1fd9(OPT_N) → R5 note 更正(终件)。双评审：spec ✅ PASS（A-H 全过）；quality ✅ APPROVED（3 Minor 维持现状：optional 节 id 保 stage 对齐、CRLF 惯例、CH0/CH1 起号必需）。fit 预检 493/515（95.7%），余量全部为 Task 4 alias 登记级。
 
 ### Task 3: 渲染器 `render_report_skeletons.py`
 
