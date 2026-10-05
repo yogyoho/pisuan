@@ -4643,7 +4643,7 @@
     "error_message": "伊宁3.1单章(29段)泛化质量远好于横城全本(2789段)",
     "file": "backend/package/yuxi/services/domain_factory_service.py",
     "root_cause": "横城窗口内761/761次泛化调用全部走_generalize_fallback(系统性失败，指向siliconflow免费档配额/限流)，3.1任务13/13全成功；同代码同提示词同模型。无重试+静默兜底+ai_confidence按覆盖率计算，把100%失败消化成50分无警报；worker 01:20重建日志丢失",
-    "fix": "未修复(重设计范畴)：StepOutcome记账+失败重试+失败率熔断；短期验证=重跑横城全本 | 2026-10-05 再现：横城重跑 phase-2 泛化批量调用云 API（62 次尝试 8 次 rate_limit），熔断在段落 p128 → FAILED_PROVIDER；StepOutcome 熔断按设计工作（显式 skipped=741 而非旧版静默兜底），断点续跑语义保留（retry 即 resume）。详见 bug-363 fix 字段观测记录。",
+    "fix": "未修复(重设计范畴)：StepOutcome记账+失败重试+失败率熔断；短期验证=重跑横城全本 | 2026-10-05 再现：横城重跑 phase-2 泛化批量调用云 API（62 次尝试 8 次 rate_limit），熔断在段落 p128 → FAILED_PROVIDER；StepOutcome 熔断按设计工作（显式 skipped=741 而非旧版静默兜底），断点续跑语义保留（retry 即 resume）。详见 bug-363 fix 字段观测记录。；第三次观测（2026-10-05 20:03，横城 retry 第 2 跑）：等 2h 后 resume 仍即触熔断——agnes 免费档配额为耗尽型非冷却型（报错语義「reached the API rate limit for free users, upgrade to Token Plan」）。49 次尝试 success=12 fallback=1 rate_limit=8 skipped=728，熔断位从 p128 推进至 p222（resume 点真实推进 ~94 段）。择机重试前提证伪：无窗口可等，需换模型/升级 key/接受本地 gguf 质量折衷，待用户拍板。用户拍板（2026-10-05）：D=挂起静置，不换模型不重试；待用户提供新 key/provider 或拍板换档再从 p222 续跑（一条 retry_task 即可）。",
     "tags": [
       "generalization",
       "fallback",
@@ -4655,7 +4655,7 @@
     "related_bugs": [
       "bug-333"
     ],
-    "occurrences": 2,
+    "occurrences": 3,
     "last_seen": "2026-10-05"
   },
   {
