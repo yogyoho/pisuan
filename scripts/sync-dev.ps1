@@ -13,7 +13,7 @@
 # pisuan-localized 分支引用全程不被触碰。
 #
 # 边界（务必知悉）：
-#   1. 只同步容器挂载的代码路径；docs/packages 等非挂载路径不随 dev 同步更新；
+#   1. 只同步容器挂载的代码路径 + 上述单文件清单（含部署文件）；docs/packages 等其余路径不随 dev 同步更新；
 #   2. 不搬运 backend/uv.lock（锁文件必须由 uv lock 机生，手搬即损坏）；依赖变更后需跑
 #      官方链 scripts/sync-upstream.ps1 重生成锁文件，否则镜像重建会失败（热重载不受影响）；
 #   3. 「删除文件」不被同步（本地化树会保留旧文件；索引中的对应条目由 git add -A 自动清退）
@@ -45,6 +45,7 @@ $syncPaths = @(
   'backend/package',
   'backend/test',
   'backend/scripts',
+  'backend/templates',
   'docker/sandbox_provisioner',
   'web/src',
   'web/test',
@@ -88,7 +89,9 @@ foreach ($p in $syncPaths) {
 #    翻译、文件名与内容按 rewrite_text 变换，变换后与目标一致则不写（收敛轮零 mtime 事件，
 #    vite 不重启）。注意：python 代码必须经临时 .py 文件调用——PS 5.1 向原生命令传含双引号
 #    的 -c 代码会坏参
-$copyFiles = @('web/index.html', 'web/vite.config.js', 'backend/pyproject.toml')
+# 单文件清单：随挂载代码一起经 walker 传播（同样的内容变换）。部署文件（compose/Dockerfile）
+# 也在列——否则部署面改动只能走官方链长链路，dev 栈永远慢一拍（bug-363 教训）
+$copyFiles = @('web/index.html', 'web/vite.config.js', 'backend/pyproject.toml', 'docker-compose.yml', 'docker/api.Dockerfile')
 $pyFile = Join-Path $env:TEMP 'syncdev_copy.py'
 @'
 import sys, hashlib
