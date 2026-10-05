@@ -18,12 +18,12 @@
 - 任何容器验证前先同步运行栈：`powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/sync-dev.ps1`（把 C:\workspace\pisuan 工作树同步到 localized 树并再生 yuxi→pisuan 改名层）。
 - `docker exec` 一律加 `MSYS_NO_PATHCONV=1` 前缀（Git Bash MSYS 路径转换坑）。
 - 容器内包名是 `pisuan`（直写 python -c 用 `pisuan.*` 导入）；**测试文件写 `yuxi.*` 是正确的**（sync 会改名）。
-- 全量基线：**≥1018 passed / 0 failed / 3 skipped**（3 skip = bug-357 test_formula_chunk，勿动）。
+- 回归基线（bug-360 裁决口径，2026-10-05）：`pytest /app/test/unit` → **2676 passed / 0 failed / 61 skipped**；其中 unit/services 子套件 **1018 passed / 3 skipped / 0 failed**（3 skip = bug-357 test_formula_chunk，勿动）。**勿用 `pytest /app/test`**——unit 与 integration 存在同名单测文件（bug-360），全量收集 import file mismatch 报 3 errors。
 - ruff：`cd backend && uv run ruff format <files> && uv run ruff check <files>`；**uv run 会改写 uv.lock，用完 `git checkout -- uv.lock` 还原**。host ruff 版本（0.15.12）与锁（0.16.4）不一致，勿用裸 ruff。
 - **禁碰文件**（其他会话的未提交改动，严禁卷入提交）：`backend/package/yuxi/agents/buildin/chatbot/prompt.py`、`backend/server/utils/lifespan.py`、`web/src/components/AgentChatComponent.vue`、`web/src/components/SettingsModal.vue`。
 - 本次所有改动文件均 pisuan-owned（`git cat-file -e main:<path>` 验证过 templates/ 与三个 service 文件），**无需 `[pisuan-custom]` 标记**。
 - 提交信息：中文 Conventional Commits，结尾加 `Co-Authored-By: Claude Code <noreply@anthropic.com>`。
-- 全量回归命令：`MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 pytest /app/test -q --no-header 2>&1 | tail -5`
+- 全量回归命令：`MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 pytest /app/test/unit -q --no-header 2>&1 | tail -3`
 
 ---
 
@@ -263,10 +263,10 @@ from typing import Any
 ```bash
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/sync-dev.ps1
 MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 pytest /app/test/unit/services/test_template_system.py -q --no-header 2>&1 | tail -3
-MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 pytest /app/test -q --no-header 2>&1 | tail -3
+MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 pytest /app/test/unit -q --no-header 2>&1 | tail -3
 ```
 
-Expected: 文件级全绿；全量 `≥1023 passed, 3 skipped, 0 failed`。
+Expected: 文件级全绿；unit 全量 `≥2681 passed, 0 failed, 61 skipped`（bug-360 口径，勿用 `/app/test`）。
 
 - [ ] **Step 5: ruff + 提交**
 
@@ -358,6 +358,6 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 ## 完成定义（DoD）
 
 1. Task 1/2/3 全部 checkbox 勾完，三次提交落在 pisuan-custom 分支顶端。
-2. 全量容器回归 ≥1023 passed / 0 failed / 3 skipped。
+2. 容器回归：unit/services 1023 passed / 0 failed；unit 全量 ≥2681 passed / 0 failed（bug-360 口径，见全局上下文）。
 3. 冒烟 `hits > 0` 输出留档（贴入任务报告）。
 4. `grep -rn "coal_mining" backend/package backend/test backend/templates backend/scripts` 0 命中（web/docs/vibe 历史层不要求）。
