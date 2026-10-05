@@ -255,6 +255,8 @@ e2e 已知限制：确定性回放路径依赖模型端点从容器内可达；�
 | `web/src/components/model-management/AgentEditModal.vue` | 编辑弹窗预览头像图源（thumbs） | 同上 |
 | `web/src/layouts/AppLayout.vue` | ① 领域工厂导航项 (`Layers` 图标) ② 任务中心独立位置 ③ UserInfoComponent 简化用法 ④ GitHub 已移除 | 保留我们的导航结构和组件用法，上游新增的 ConversationNavSection 等特性可以合并 |
 | `backend/package/yuxi/config/static/info.template.yaml` | 页脚版权: `"© 北京华宇工程有限公司 2026 v1.6.0"` | 始终使用我们的版本 |
+| `docker-compose.yml` | ① api/worker 双 `./backend/templates:/app/templates:ro` 挂载（bug-363）② worker `depends_on: milvus`（ff68f20a）③ `UV_HTTP_TIMEOUT` 类 env 定制 | 保留定制行，上游新增服务/变量并入；dev 栈传播见 scripts/sync-dev.ps1（$copyFiles 已携带本文件） |
+| `docker/api.Dockerfile` | `COPY backend/templates /app/templates`（bug-363）；`ENV UV_HTTP_TIMEOUT=600` | 保留定制行，上游层序变化时手工并入同位置（templates COPY 须在 uv sync 之后、entrypoint COPY 之前） |
 
 ### 7.3 追加合并类（双方保留）
 
