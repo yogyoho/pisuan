@@ -4098,7 +4098,7 @@ class DomainFactoryService:
                     "slots": (p.get("template") or {}).get("slots", []),
                 }
                 for p in paragraphs
-                if p.get("type") == "parameter" and isinstance(p.get("template"), dict)
+                if p.get("classify_type") == "parameter" and isinstance(p.get("template"), dict)
             ]
             if paragraph_slots:
                 val_report = await svc.validate_slots(paragraph_slots, {})
@@ -4128,7 +4128,7 @@ class DomainFactoryService:
                 "total_errors": len(errors),
                 "total_warnings": len(warnings),
                 "total_paragraphs": len(paragraphs),
-                "parameter_paragraphs": sum(1 for p in paragraphs if p.get("type") == "parameter"),
+                "parameter_paragraphs": sum(1 for p in paragraphs if p.get("classify_type") == "parameter"),
                 "checked_at": None,  # 前端填充
             },
             "errors": errors,
@@ -4583,7 +4583,7 @@ class DomainFactoryService:
                         "slots": (p.get("template") or {}).get("slots", []),
                     }
                     for p in task_detail.get("source_paragraphs", [])
-                    if p.get("type") == "parameter" and isinstance(p.get("template"), dict)
+                    if p.get("classify_type") == "parameter" and isinstance(p.get("template"), dict)
                 ]
                 if paragraph_slots:
                     val_report = await svc.validate_slots(paragraph_slots, {})
