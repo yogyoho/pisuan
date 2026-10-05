@@ -103,6 +103,7 @@
 - bug-354 同族: domain_factory_service 三处 type 改读 classify_type（validate_task 参数段统计与 L2/2.4b slot 校验恢复生效）
 - bug-353: 实现 _increment_learned_template_match_counts，学习模板 match_count 恢复自增（ETL 标题命中留痕）
 - domain_factory_tool_usage 台账表 + 写手侧 4 个工厂产物读取工具的取用率埋点（W0，roadmap v2 测量基础）
+- fix(bug-359): domain 词形全栈统一到 `coal`（删 `_get_template_matcher` replace 映射链、静态模板 30 json + 目录改名）；学习模板注入按 `chapter` 生成 fallback match_rule（标题精确再现语义），match_count 数据通路打通
 
 ## v0.7.2 (2026-09-02)
 

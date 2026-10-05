@@ -266,3 +266,18 @@
 - **W0 交付点**：d687c812（已推送 origin/pisuan-custom），回归基线 1018/0/3；后续窗口以此为准。
 
 - (2026-10-05, W1/bug-359) Decision Log: D1 词形统一方向定为 coal（DB 主导词形，真实统一无映射，删 replace 链；备选 coal_mining 因需迁移字典/静态侧被否）；D2 学习模板 match_rule=fallback_keywords[chapter 去编号全串]，命中语义=标题精确再现，拒二元组防假阳；D3 接受 static 遮蔽，match_count 语义=学习模板提供静态集没有的覆盖。交付点=spec 2026-10-05-bug-359 + plan 2026-10-05-w1-bug-359。
+
+### 2026-10-05 W1-T1 会话补充（bug-359 词形统一）
+
+- **Key Learning**：所谓"全量回归基线 1018 passed/0 failed/3 skipped"实际对应 `pytest /app/test/unit/services`（恰好 1021 collected）。命令 `pytest /app/test` 在本仓会因 unit 与 integration 存在同名测试文件（test_builtin_discovery / test_mcp_router / test_memory_service，均无 __init__.py，pytest 默认 prepend importmode）触发 "import file mismatch" 收集错误——这是仓库既有结构问题，与任何代码改动无关；分目录跑（unit、integration、e2e 分开）可绕开。
+- **Key Learning**：`uv run` 首次运行会重建 backend/.venv 并改写 backend/uv.lock（3 行），用完必须 `git checkout -- backend/uv.lock`。ruff format 对基线不 clean 的文件会产生任务无关 diff（如 template_generator.py ~L159 空行），应只保留语义改动、回退 format 噪声。
+- **Do-Not-Repeat (2026-10-05)**：不要用 `pytest /app/test` 单会话跑全量当作回归守护——会撞既有 basename 冲突误判为改动引入；用 `/app/test/unit/services`（基线口径）或分目录跑。
+
+## Do-Not-Repeat (2026-10-05 bug-359 W1 Task 2)
+- 2026-10-05: 追加任务书提供的测试代码块时必须逐字照抄，不要即兴加"占位/防御"行——本次混入一行任务文本中不存在的 `add_templates_from_from_list = None`（自纠错，未进测试运行即删）。追加后固定两步核对：git diff 纯新增+零删除、与任务文本逐行比对（bug-361）。
+- (2026-10-05, W1/bug-359 Task 3) Key Learning ×2: ①容器运行栈内 /app/templates 不存在——compose api 服务只 bind mount server/package/test，镜像层也无 backend/templates；TEMPLATES_DIR 落空 → 容器栈 ETL 静态模板从未参与匹配（learned-only）。冒烟断言"静态共存"在本栈不可满足。已立案 bug-363（Dockerfile+compose 补挂载是 W1 候选，需评估静态模板突然参匹配的行为影响）。②pisuan.storage.postgres 是 namespace 包无 re-export，pg_manager 必须从 pisuan.storage.postgres.manager 导入（冒烟脚本曾踩坑，bug-362）。Do-Not-Repeat: 写跨栈验证脚本前先确认容器内路径/挂载布局与包导入路径。
+
+### Key Learnings（2026-10-05 W1 bug-359 收尾追加）
+
+- 容器栈 /app/templates 不存在：compose api 服务仅 bind mount server/package/test，镜像层 docker/api.Dockerfile 亦无 templates COPY；TemplateLibrary() 默认路径（__file__ 上溯四级 + templates）在容器内解析 /app/templates 落空，静态模板从不参与容器栈 ETL 匹配（learned-only），立案 bug-363（W1 后续候选：Dockerfile+compose 补 templates，需评估静态模板参与匹配的行为影响）
+- pisuan.storage.postgres 是 namespace 包无 re-export，pg_manager 实例在 manager.py:1842，规范导入 from pisuan.storage.postgres.manager import pg_manager（bug-362）
