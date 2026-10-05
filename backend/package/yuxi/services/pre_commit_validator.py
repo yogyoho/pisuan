@@ -54,6 +54,4 @@ class PreCommitValidator:
                     warnings.append(f"段落 {para_id}: 重复 slot 签名: {slot_name}")
                 seen.add(slot_name)
 
-        return ValidationResult(
-            passed=len(errors) == 0, errors=errors, warnings=warnings
-        )
+        return ValidationResult(passed=len(errors) == 0, errors=errors, warnings=warnings)

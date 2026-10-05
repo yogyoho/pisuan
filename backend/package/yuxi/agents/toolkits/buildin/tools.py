@@ -601,9 +601,14 @@ async def get_chapter_outline(domain: str, report_type: str, canonical_chapter_k
             if outline:
                 outline.setdefault("_source", "graph")
                 # [pisuan-custom] W0 埋点
-                _track_usage("get_chapter_outline", domain=domain, report_type=report_type,
-                             args_summary={"canonical_chapter_key": canonical_chapter_key},
-                             result_count=1, source="graph")
+                _track_usage(
+                    "get_chapter_outline",
+                    domain=domain,
+                    report_type=report_type,
+                    args_summary={"canonical_chapter_key": canonical_chapter_key},
+                    result_count=1,
+                    source="graph",
+                )
                 return outline
         finally:
             graph_svc.close()
@@ -621,16 +626,26 @@ async def get_chapter_outline(domain: str, report_type: str, canonical_chapter_k
                 "图谱查询失败，此为数据库回退数据（可能与图谱不完全一致），请在回复中告知用户当前图谱不可用"
             )
         # [pisuan-custom] W0 埋点
-        _track_usage("get_chapter_outline", domain=domain, report_type=report_type,
-                     args_summary={"canonical_chapter_key": canonical_chapter_key},
-                     result_count=1, source=out["_source"])
+        _track_usage(
+            "get_chapter_outline",
+            domain=domain,
+            report_type=report_type,
+            args_summary={"canonical_chapter_key": canonical_chapter_key},
+            result_count=1,
+            source=out["_source"],
+        )
         return out
     types = await repo.list_report_types()
     valid_codes = [t["code"] for t in types]
     # [pisuan-custom] W0 埋点（未命中也记，0 结果是查询质量信号）
-    _track_usage("get_chapter_outline", domain=domain, report_type=report_type,
-                 args_summary={"canonical_chapter_key": canonical_chapter_key},
-                 result_count=0, source="miss")
+    _track_usage(
+        "get_chapter_outline",
+        domain=domain,
+        report_type=report_type,
+        args_summary={"canonical_chapter_key": canonical_chapter_key},
+        result_count=0,
+        source="miss",
+    )
     return {
         "error": f"未找到章节大纲: {domain}/{report_type}/{canonical_chapter_key}",
         "hint": f"该 domain 合法 report_type: {valid_codes}（请用 list_report_types 确认数据字典 code）",
@@ -685,8 +700,9 @@ async def list_chapter_keys(domain: str, report_type: str) -> list[str]:
             keys = await graph_svc.list_chapter_keys(domain, report_type)
             if keys:
                 # [pisuan-custom] W0 埋点
-                _track_usage("list_chapter_keys", domain=domain, report_type=report_type,
-                             result_count=len(keys), source="graph")
+                _track_usage(
+                    "list_chapter_keys", domain=domain, report_type=report_type, result_count=len(keys), source="graph"
+                )
                 return keys
         finally:
             graph_svc.close()
@@ -695,8 +711,13 @@ async def list_chapter_keys(domain: str, report_type: str) -> list[str]:
     repo = DomainFactoryRepository()
     # [pisuan-custom] W0 埋点
     out = await repo.list_chapter_keys(domain, report_type)
-    _track_usage("list_chapter_keys", domain=domain, report_type=report_type,
-                 result_count=len(out), source="db" if out else "miss")
+    _track_usage(
+        "list_chapter_keys",
+        domain=domain,
+        report_type=report_type,
+        result_count=len(out),
+        source="db" if out else "miss",
+    )
     return out
 
 
@@ -734,9 +755,14 @@ async def get_templates(domain: str, report_type: str, canonical_chapter_key: st
                         if isinstance(item, dict):
                             item.setdefault("_source", "graph")
                     # [pisuan-custom] W0 埋点
-                    _track_usage("get_templates", domain=domain, report_type=report_type,
-                                 args_summary={"canonical_chapter_key": canonical_chapter_key},
-                                 result_count=len(templates), source="graph")
+                    _track_usage(
+                        "get_templates",
+                        domain=domain,
+                        report_type=report_type,
+                        args_summary={"canonical_chapter_key": canonical_chapter_key},
+                        result_count=len(templates),
+                        source="graph",
+                    )
                     return templates
             finally:
                 graph_svc.close()
@@ -758,9 +784,14 @@ async def get_templates(domain: str, report_type: str, canonical_chapter_key: st
                     "图谱查询失败，此为数据库回退数据（可能与图谱不完全一致），请在回复中告知用户当前图谱不可用"
                 )
     # [pisuan-custom] W0 埋点
-    _track_usage("get_templates", domain=domain, report_type=report_type,
-                 args_summary={"canonical_chapter_key": canonical_chapter_key},
-                 result_count=len(out), source=out[0].get("_source") if out else "miss")
+    _track_usage(
+        "get_templates",
+        domain=domain,
+        report_type=report_type,
+        args_summary={"canonical_chapter_key": canonical_chapter_key},
+        result_count=len(out),
+        source=out[0].get("_source") if out else "miss",
+    )
     return out
 
 

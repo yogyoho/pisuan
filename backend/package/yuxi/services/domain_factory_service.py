@@ -168,14 +168,14 @@ class DomainFactoryService:
 
     @staticmethod
     def _extract_learned_match_ids(paragraphs: list[dict]) -> list[int]:
-        """从段落 template_match 提取学习模板 id（template_id 形如 learned_42，见 template_library.add_templates_from_list）。"""
+        """从段落 template_match 提取学习模板 id（形如 learned_42，见 template_library.add_templates_from_list）。"""
         ids: set[int] = set()
         for p in paragraphs:
             tm = p.get("template_match") or {}
             tid = str(tm.get("template_id") or "")
             if tid.startswith("learned_"):
                 try:
-                    ids.add(int(tid[len("learned_"):]))
+                    ids.add(int(tid[len("learned_") :]))
                 except ValueError:
                     continue
         return sorted(ids)
