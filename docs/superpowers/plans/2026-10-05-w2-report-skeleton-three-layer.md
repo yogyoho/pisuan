@@ -281,7 +281,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 **Files:**
 - Create: `backend/scripts/render_report_skeletons.py`
 
-- [ ] **Step 1: 实现渲染器（完整代码如下）**
+- [x] **Step 1: 实现渲染器（完整代码如下）**
 
 ```python
 """条件化报告骨架渲染器（roadmap v2 spec §3.4）。
@@ -476,12 +476,12 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-- [ ] **Step 2: 冒烟——渲染 1 份井工项目环评**
+- [x] **Step 2: 冒烟——渲染 1 份井工项目环评**
 
 Run: `python backend/scripts/render_report_skeletons.py --conditions backend/test/data/corpus_census/conditions.json --only "$(python -c "import json;d=json.load(open('backend/test/data/corpus_census/conditions.json',encoding='utf-8'))['universe'];print(next(f for f,v in d.items() if v['report_family']=='project_eia' and v['mine_type']=='underground'))")" --out /tmp/w2-smoke`
 Expected: `RENDERED ... chapters=... rules=['R1']`（含沉陷章、无爆破章——`python -c "import json,glob; d=json.load(open(sorted(glob.glob('/tmp/w2-smoke/*.json'))[0],encoding='utf-8')); ts=[c['title'] for c in d['chapters'].values()]; assert any('沉陷' in t for t in ts) and not any('爆破' in t for t in ts); print('R1 生效 OK')"`）。
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```bash
 git add backend/scripts/render_report_skeletons.py
@@ -491,6 +491,8 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 ```
 
 ---
+
+> **Task 3 执行记录（2026-10-06）**：0a1230e8（初版，AST 级逐字计划代码）→ 66654a9d（评审修正：sections 输出 dict→list 对齐 seed_gen 消费契约——计划级事实错误由评审捕获，5 份 stage 实测均 list；连带 _copy_ch 死参清理 + docstring 校准）。评审 VERDICT：spec 逐字一致（3 处 ruff 机械归一备案）+ quality 3 Strengths / 1 Important（已修）/ 3 Minor（2 修 1 留）。23/23 断言 PASS（35 份渲染、四族静态断言、R5 合成自测、幂等字节级）。实测：R3×R4 语料交集为空（revised2019 仅五间房且 round=first）。
 
 ### Task 4: 语料适配度测试 + 差异单
 
