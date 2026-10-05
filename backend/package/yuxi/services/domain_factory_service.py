@@ -131,7 +131,7 @@ class DomainFactoryService:
         # Prompt 模板缓存
         self._prompt_templates: dict[str, str] | None = None
 
-    async def _get_template_matcher(self, domain: str = "coal_mining") -> Any:
+    async def _get_template_matcher(self, domain: str = "coal") -> Any:
         """获取或创建模板匹配器（延迟加载，含 DB 学习模板）"""
         if self._template_matcher is not None:
             return self._template_matcher
@@ -147,8 +147,7 @@ class DomainFactoryService:
 
             # 从 DB 加载学习模板并注入
             try:
-                domain_code = domain.replace("_mining", "").replace("_", "") or "coal"
-                db_templates = await self.repo.list_learned_templates(domain_code=domain_code)
+                db_templates = await self.repo.list_learned_templates(domain_code=domain)
                 if db_templates:
                     library.add_templates_from_list(db_templates)
             except Exception as db_err:
@@ -644,7 +643,7 @@ class DomainFactoryService:
 
         # 模板匹配：对标题段落进行模板匹配，附加 template_id / semantic_routing
         try:
-            matcher = await service._get_template_matcher()
+            matcher = await service._get_template_matcher(domain_code or "coal")
             if matcher:
                 matched_count = 0
                 for para in paragraphs:
@@ -653,7 +652,7 @@ class DomainFactoryService:
                     if not is_title or not title:
                         continue
 
-                    match_result = matcher.match(title, context={"domain": "coal_mining"})
+                    match_result = matcher.match(title, context={"domain": domain_code or "coal"})
                     if match_result.matched:
                         para["template_match"] = {
                             "template_id": match_result.template_id,

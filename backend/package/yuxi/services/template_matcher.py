@@ -33,9 +33,9 @@ class TemplateMatcher:
     """模板匹配引擎：将章节标题与模板库中的模板进行匹配
 
     用法：
-        library = TemplateLibrary("templates/coal_mining/headers")
+        library = TemplateLibrary("templates/coal/headers")
         matcher = TemplateMatcher(library.get_all_templates())
-        result = matcher.match("7.1 矿区水资源承载力分析", context={"domain": "coal_mining"})
+        result = matcher.match("7.1 矿区水资源承载力分析", context={"domain": "coal"})
     """
 
     def __init__(self, templates: list[dict[str, Any]]):
