@@ -21,7 +21,7 @@
 - Create: `backend/package/yuxi/services/docx_guard.py`
 - Test: `backend/test/unit/test_docx_guard.py`
 
-- [ ] **Step 1: 写测试（完整文件）**
+- [x] **Step 1: 写测试（完整文件）**
 
 ```python
 """docx_guard 单测（bug-355）：全内存合成 fixture，不依赖外部文件。
@@ -243,12 +243,12 @@ def test_guarded_reparse_non_docx_passthrough(fake_fetch):
     assert calls["n"] == 0  # 非 docx 不取字节
 ```
 
-- [ ] **Step 2: 跑测试确认失败（模块不存在）**
+- [x] **Step 2: 跑测试确认失败（模块不存在）**
 
 Run: `python -m pytest backend/test/unit/test_docx_guard.py --noconftest -q`（repo 根目录）
 Expected: collection error —— `ModuleNotFoundError: No module named 'yuxi.services.docx_guard'`
 
-- [ ] **Step 3: 写实现（完整文件）**
+- [x] **Step 3: 写实现（完整文件）**
 
 ```python
 """docx 入口防护：病态文件诊断 + 悬空关系项 zip 手术（bug-355）。
@@ -435,19 +435,19 @@ async def guarded_reparse(file_path: str, original_error: Exception, parse_fn) -
             Path(temp_path).unlink(missing_ok=True)
 ```
 
-- [ ] **Step 4: 跑测试确认全过**
+- [x] **Step 4: 跑测试确认全过**
 
 Run: `python -m pytest backend/test/unit/test_docx_guard.py --noconftest -q`
 Expected: `13 passed`（若 host 导入 `yuxi` 失败，改用容器跑，见 Task 4 Step 1 的发现步骤；两者必须有一处绿）
 
-- [ ] **Step 5: 容器内复跑（依赖隔离验证）**
+- [x] **Step 5: 容器内复跑（依赖隔离验证）**
 
 先发现容器内 yuxi 安装位置：`docker run --rm pisuan-api:0.7.3 python -c "import yuxi; print(yuxi.__file__)"`
 - 若输出 `/app/package/yuxi/__init__.py`：`docker run --rm -v "C:\workspace\pisuan\backend:/app:ro" pisuan-api:0.7.3 python -m pytest /app/test/unit/test_docx_guard.py --noconftest -q`
 - 若输出 site-packages 路径（pip 安装）：改挂单文件覆盖——`-v "C:\workspace\pisuan\backend\package\yuxi\services\docx_guard.py:<site-packages>/yuxi/services/docx_guard.py:ro"` + `-v "C:\workspace\pisuan\backend\test:/app/test:ro"`，`-w /app`
 Expected: `13 passed`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/package/yuxi/services/docx_guard.py backend/test/unit/test_docx_guard.py
@@ -456,6 +456,8 @@ git commit -m "fix(etl): docx_guard 模块——病态 docx 四态诊断 + 悬�
 Co-Authored-By: Claude Code <noreply@anthropic.com>"
 ```
 
+> 执行记录：实现者对计划测试 fixture 做两处必要修正（OFFICE_DOC_RELTYPE 真类型 + word/_rels 内相对目标改 document.xml，见 2d547e24 与 bug-368），实现文件逐字未改，双评审通过。
+
 ---
 
 ### Task 2: ETL 主解析接线 + 空产物守卫
@@ -463,7 +465,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 **Files:**
 - Modify: `backend/package/yuxi/services/domain_factory_service.py:577-587`（`_etl_parse_stage` 内）
 
-- [ ] **Step 1: 接线解析守卫（替换 ：577 单行为 try/except）**
+- [x] **Step 1: 接线解析守卫（替换 ：577 单行为 try/except）**
 
 现文件 ：570-577 上下文（`from yuxi.knowledge.parser.unified import ...` 之后）：
 
@@ -483,7 +485,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
             raw_markdown = await guarded_reparse(file_path, parse_error, parse_document)
 ```
 
-- [ ] **Step 2: 空产物守卫（:586 `paragraphs = ...` 之后紧跟）**
+- [x] **Step 2: 空产物守卫（:586 `paragraphs = ...` 之后紧跟）**
 
 现文件 ：586-587：
 
@@ -507,7 +509,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 （稀疏只告警不阻断——正常简本文件可能就是小。）
 
-- [ ] **Step 3: 语法验证 + diff 行数核对**
+- [x] **Step 3: 语法验证 + diff 行数核对**
 
 ```bash
 python -c "import ast; ast.parse(open('backend/package/yuxi/services/domain_factory_service.py', encoding='utf-8').read()); print('OK')"
@@ -516,7 +518,7 @@ git diff --stat backend/package/yuxi/services/domain_factory_service.py
 
 Expected: `OK`；本任务后 diff 约 +14/-1 行。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/package/yuxi/services/domain_factory_service.py
@@ -532,7 +534,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 **Files:**
 - Modify: `backend/package/yuxi/services/domain_factory_service.py:5085`（`extract_outline_preview` 内）
 
-- [ ] **Step 1: 守卫前置（`Document()` 所在的 `_extract_headings_from_docx` 本体零改动，守卫放有 `filename` 上下文的调用点）**
+- [x] **Step 1: 守卫前置（`Document()` 所在的 `_extract_headings_from_docx` 本体零改动，守卫放有 `filename` 上下文的调用点）**
 
 现文件 ：5085：
 
@@ -549,7 +551,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
         headings = self._extract_headings_from_docx(file_bytes)
 ```
 
-- [ ] **Step 2: 语法验证 + 调用面核对**
+- [x] **Step 2: 语法验证 + 调用面核对**
 
 ```bash
 python -c "import ast; ast.parse(open('backend/package/yuxi/services/domain_factory_service.py', encoding='utf-8').read()); print('OK')"
@@ -558,7 +560,7 @@ grep -rn "_extract_headings_from_docx" backend/ --include="*.py"
 
 Expected: `OK`；grep 恰 2 处（def :5126 + 调用 :5085），无其他消费面遗漏。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/package/yuxi/services/domain_factory_service.py
@@ -574,7 +576,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 **Files:**
 - Modify: `docs/develop-guides/changelog.md`、`.wolf/buglog.json`（worktree-only，不提交 .wolf）、`docs/superpowers/plans/2026-10-06-bug355-etl-docx-guard.md`（本文件勾账）
 
-- [ ] **Step 1: patched/ 真实病态文件冒烟（容器内，文件名 CJK 用 os.listdir 规避 CLI 转码）**
+- [x] **Step 1: patched/ 真实病态文件冒烟（容器内，文件名 CJK 用 os.listdir 规避 CLI 转码）**
 
 ```bash
 docker run --rm \
@@ -598,7 +600,7 @@ for name in sorted(os.listdir('/patched')):
 
 Expected: 两行输出，diag 均为 `dangling_rels`，paras 为千级正数，尾部 `OK`。若容器内 yuxi 不在 /app/package（Task 1 Step 5 已探明），按同一步骤的挂载变体调整。
 
-- [ ] **Step 2: 全量单测回归（防接线破坏既有面）**
+- [x] **Step 2: 全量单测回归（防接线破坏既有面）**
 
 ```bash
 python -m pytest backend/test/unit/test_docx_guard.py --noconftest -q
@@ -607,7 +609,7 @@ python -m pytest backend/test/unit/test_report_skeleton_fit.py --noconftest -q
 
 Expected: `13 passed` + `37 passed`。
 
-- [ ] **Step 3: changelog 落账**
+- [x] **Step 3: changelog 落账**
 
 `docs/develop-guides/changelog.md` 新增小节（日期小节制，现有 `### pisuan 定制增量（2026-10-05）` 之后）：
 
@@ -617,11 +619,11 @@ Expected: `13 passed` + `37 passed`。
 - fix(etl): bug-355 docx 入口防护——`yuxi/services/docx_guard.py` 四态诊断（ok/dangling_rels/unidocsa/corrupt）+ 悬空关系项 zip 手术自动修复重试恰一次；ETL 主解析与大纲提取两消费面接线；空产物 0 段落显式失败。原文件永不修改，unified.py/ocr_service 零改动
 ```
 
-- [ ] **Step 4: buglog 更新（worktree-only，不提交）**
+- [x] **Step 4: buglog 更新（worktree-only，不提交）**
 
 `.wolf/buglog.json` 的 bug-355 条目：`fix` 追加「；2026-10-06 ETL 侧落地：docx_guard 四态诊断 + 悬空关系项手术 + guarded_reparse 重试恰一次 + 空产物守卫（spec: docs/superpowers/specs/2026-10-06-bug355-etl-docx-guard-design.md）」；`last_seen` → `2026-10-06`；`tags` 追加 `etl-guard`。
 
-- [ ] **Step 5: 计划勾账 + Commit**
+- [x] **Step 5: 计划勾账 + Commit**
 
 本文件全部 checkbox 勾选 + 末尾追加执行记录 blockquote（跑数实测：13/37 passed、冒烟 paras 数、diff 行数）。
 
@@ -644,3 +646,5 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 ## Out of scope
 
 - census 脚本转正（gap-audit 风险①独立挂账）；unified.py 底层防护（方案 C 否决）；非 docx 类型防护；复垦族/全量表单（O5/O2）。
+
+> **W(bug-355) 执行记录（2026-10-06）**：Task1 de71785d（docx_guard 182 行 + 13 测试）→ 质量评审 1 Important（损坏 .rels 裸抛泄四态契约）→ 2d547e24（corrupt 态防护 + 3 补测 + 3 Minor，16 测试）；Task2 d0ac3525（ETL 接守卫 + 空守卫，+13/-1）；Task3 99a215b4（大纲接线，+3）；Task2+3 合并双焦点评审 APPROVED（接线与下发代码逐字节一致，异常传播链核验至驱动层 FAILED 落账 :1028-1030）。冒烟：patched/ 两份实为普查术后副本 diag=ok 直通零损伤（paras 4416/4808）；内存注入 Target="NULL" 复现原病灶 → dangling_rels 诊断命中 → 守卫剔除悬空项（日志 rIdNULLINJECT->NULL）→ 术后 ok、段落 4416/4808 与原件一致，2/2 PASS（容器 pisuan-api:0.7.3）。回归：53 passed（16 docx_guard + 37 report_skeleton_fit，--noconftest）。unified.py/ocr_service 零 diff（de71785d^..HEAD 实测 0 行）。
