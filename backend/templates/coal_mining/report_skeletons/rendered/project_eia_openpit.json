@@ -12,7 +12,6 @@
       "sensitive_targets": [],
       "policy_flags": [],
       "exemptions": {
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：固废/土壤互换、资源综合利用与选址互换"
       }
     },
