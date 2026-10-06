@@ -370,6 +370,51 @@ async def confirm_entities(
         raise HTTPException(status_code=500, detail=f"确认实体失败: {str(e)}")
 
 
+@domain_factory.post("/tasks/{task_id}/confirm-region")
+async def confirm_region(
+    task_id: str,
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """[pisuan-custom] W3 L3：归属人工确认——落任务四列并级联（facts 确认 + 归因集模板重算）"""
+    try:
+        region_label = str(payload.get("region_label", "")).strip()
+        if not region_label:
+            raise HTTPException(status_code=400, detail="region_label 不能为空")
+        service = get_domain_factory_service()
+        result = await service.confirm_region(
+            task_id, region_label, payload.get("region_key"), payload.get("scope")
+        )
+        if result.get("error"):
+            raise HTTPException(status_code=400, detail=result["error"])
+        return {"success": True, **result}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to confirm region for {task_id}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"归属确认失败: {str(e)}")
+
+
+@domain_factory.post("/regional-facts/retire")
+async def retire_regional_facts(
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """[pisuan-custom] W3 泄漏处置：批量退役区域事实（不删行，留审计）"""
+    try:
+        raw_ids = payload.get("fact_ids", [])
+        if not raw_ids:
+            raise HTTPException(status_code=400, detail="fact_ids 不能为空")
+        service = get_domain_factory_service()
+        retired = await service.retire_regional_facts([int(i) for i in raw_ids])
+        return {"success": True, "retired": retired}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to retire regional facts: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"事实退役失败: {str(e)}")
+
+
 # =============================================================================
 # File Upload
 # =============================================================================
