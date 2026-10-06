@@ -81,3 +81,47 @@ class TestClassifyConvergence:
     def test_prose_types_triple(self):
         assert DomainFactoryService._PROSE_TYPES == ("prose", "parameter", "narrative")
         assert DomainFactoryService.VALID_SLOT_TYPES == ("parameter", "enum", "descriptive", "reference")
+
+
+class TestDualProductAndVocab:
+    def test_prompt_v2_contains_vocab_and_summary_fields(self):
+        svc = make_svc()
+        prompt = svc._build_text_generalize_prompt("测试文本内容超过二十个字符了吧", "", "1.2", "煤矿")
+        assert "parameter|enum|descriptive|reference" in prompt
+        assert '"summary"' in prompt
+        assert '"key_points"' in prompt
+
+    def test_normalize_coerces_invalid_type_and_counts(self):
+        svc = make_svc()
+        resp = {
+            "generalized": "涌水量为 {{涌水量}}",
+            "slots": [
+                {"name": "涌水量", "type": "数值", "value": "300"},   # 非法 → 强转+计数
+                {"name": "方式", "value": "集中排水"},                  # 缺 type → 补 parameter 不计数
+                {"name": "口径", "type": "enum", "value": "x"},        # 合法保留
+            ],
+        }
+        out = svc._normalize_template_response(resp)
+        types = [s["type"] for s in out["slots"]]
+        assert types == ["parameter", "parameter", "enum"]
+        assert out["metadata"]["slot_type_coerced"] == 1
+
+    def test_normalize_defaults_dual_product_fields(self):
+        svc = make_svc()
+        out = svc._normalize_template_response({"generalized": "x", "slots": []})
+        assert out["summary"] == ""
+        assert out["key_points"] == []
+
+    def test_prose_coverage_denominator(self):
+        paras = [
+            {"classify_type": "prose", "template": {"generalized": "x"}},
+            {"classify_type": "prose"},                                    # 无模板
+            {"classify_type": "parameter", "template": {"generalized": "y"}},  # legacy 计入
+            {"classify_type": "narrative"},                                # legacy 计入分母
+            {"classify_type": "heading"},
+            {"classify_type": "table", "template": {"generalized": "z"}},  # 结构类不计
+        ]
+        generalized, total = DomainFactoryService.compute_prose_coverage(paras)
+        # 任务书原文误写 (2, 3)：按其自身口径（分母=prose/parameter/narrative 三值段落，
+        # 与 _PROSE_TYPES 及上方四行注释一致）应为 (2, 4)，实测亦为 (2, 4)
+        assert (generalized, total) == (2, 4)
