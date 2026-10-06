@@ -975,13 +975,17 @@ class DomainFactoryService:
 
                 logger.info(f"段落级泛化完成: 成功 {generalized_count}/{len(todo_paragraphs)} 个散文段落")
 
-                # [pisuan-custom] W3：任务级归属——L1 文档身份词表优先，L2 便车建议仅填 NULL 列
-                task_row = await service.repo.get_task(task_id)
-                if task_row is not None:
-                    attribution_patch = self._build_attribution_patch(task_row, paragraph_results)
-                    if attribution_patch:
-                        await service.repo.update_task(task_id, attribution_patch)
-                        logger.info(f"任务归属建议落列: {task_id} -> {attribution_patch}")
+                # [pisuan-custom] W3：任务级归属——L1 文档身份词表优先，L2 便车建议仅填 NULL 列。
+                # 独立守卫：repo 瞬时异常不得冒泡至外层泛型 except（会误报泛化失败并跳过下方熔断持久化，bug-342）
+                try:
+                    task_row = await service.repo.get_task(task_id)
+                    if task_row is not None:
+                        attribution_patch = self._build_attribution_patch(task_row, paragraph_results)
+                        if attribution_patch:
+                            await service.repo.update_task(task_id, attribution_patch)
+                            logger.info(f"任务归属建议落列: {task_id} -> {attribution_patch}")
+                except Exception as attr_err:
+                    logger.warning(f"任务归属建议落列失败（不影响主流程）: {attr_err}")
 
                 # 熔断（P0-1 / bug-342）：必须在回写之后再持久化，否则已成功模板全部丢失，
                 # 断点续跑退化为整卷重跑
