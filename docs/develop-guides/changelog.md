@@ -108,6 +108,10 @@
 - fix(bug-365): 存量任务 storage_path 一次性迁移（saves/ → /app/user-data，全库唯一受影响行，零代码）
 - feat(w2): 条件化报告模板三层形态落地——4 族骨架 + R1-R9 条件规则 + 渲染器 + 渲染存档 6 份（seed_gen 冒烟 4 份全 PASS）+ 35 份语料适配度 slot 35/35、order 35/35
 
+### pisuan 定制增量（2026-10-06）
+
+- fix(etl): bug-355 docx 入口防护——`yuxi/services/docx_guard.py` 四态诊断（ok/dangling_rels/unidocsa/corrupt）+ 悬空关系项 zip 手术自动修复重试恰一次；ETL 主解析与大纲提取两消费面接线；空产物 0 段落显式失败。原文件永不修改，unified.py/ocr_service 零改动
+
 ## v0.7.2 (2026-09-02)
 
 ::: warning Beta 升级说明
