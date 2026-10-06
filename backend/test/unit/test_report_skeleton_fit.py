@@ -9,14 +9,17 @@
 from __future__ import annotations
 
 import importlib.util
+import heapq
 import json
 import re
+from collections import Counter
 from pathlib import Path
 
 import pytest
 
 BACKEND = Path(__file__).resolve().parent.parent.parent
 FIXTURES = BACKEND / "test/data/corpus_census"
+ORDER_WHITELIST = json.loads((FIXTURES / "order_whitelist.json").read_text(encoding="utf-8"))["moves"]
 RENDERER = BACKEND / "scripts/render_report_skeletons.py"
 
 
@@ -91,9 +94,43 @@ def test_per_file_slot_match(env, fname):
     assert not effective_unmatched, f"{fname[:40]} 未命中槽位（差异单必须处理）: {effective_unmatched}"
 
 
+def _order_pass(expected: list[str], hit_seq: list[str], moves_by_chapter: dict[str, set[str]]) -> bool:
+    """序差判定（W2v2 spec §4.3）：精确全等 OR hit_seq 可由 expected 经
+    「摘 mover→重插允许前置章之后」精确到达（best-first 搜索，启发式=与 target 的差异位数，
+    visited 去重，mover 可多次跳移；可达性判定与探索顺序无关，仅影响收敛速度）。
+    multiset 不等直接 False（槽位异常归 slots 判定管）。"""
+    if expected == hit_seq:
+        return True
+    if Counter(expected) != Counter(hit_seq):
+        return False
+    target = tuple(hit_seq)
+    start = tuple(expected)
+    seen = {start}
+    heap = [(sum(a != b for a, b in zip(start, target)), 0, start)]
+    tick = 1
+    while heap:
+        _, _, seq = heapq.heappop(heap)
+        for i, ch in enumerate(seq):
+            allowed = moves_by_chapter.get(ch)
+            if not allowed:
+                continue
+            rest = seq[:i] + seq[i + 1 :]
+            for j, pred in enumerate(rest):
+                if pred in allowed:
+                    nxt = rest[: j + 1] + (ch,) + rest[j + 1 :]
+                    if nxt == target:
+                        return True
+                    if nxt not in seen:
+                        seen.add(nxt)
+                        heapq.heappush(heap, (sum(a != b for a, b in zip(nxt, target)), tick, nxt))
+                        tick += 1
+    return False
+
+
 def test_fit_thresholds(env):
     rrs, layers, _, chapters = env
     slot_ok, order_ok, diffs = 0, 0, []
+    modes = {"natural": 0, "whitelist": 0, "exempt": 0}
     for fname in FIT_FILES:
         rendered_titles, hits, unmatched = _match_file(env, fname)
         ex = FIT_UNIVERSE[fname].get("exemptions", {})
@@ -101,13 +138,26 @@ def test_fit_thresholds(env):
             slot_ok += 1
         else:
             diffs.append((fname, "slots", unmatched))
-        rendered_set = [t for t in rendered_titles]
-        hit_seq = [t for t in hits]
-        expected = [t for t in rendered_set if t in set(hit_seq)]
-        if expected == hit_seq or ex.get("order"):
+        hit_set = set(hits)
+        expected = [t for t in rendered_titles if t in hit_set]
+        hit_seq = list(hits)
+        fam_moves: dict[str, set[str]] = {}
+        for e in ORDER_WHITELIST:
+            if e["family"] == FIT_UNIVERSE[fname]["report_family"]:
+                fam_moves.setdefault(e["chapter"], set()).update(e["after"])
+        if expected == hit_seq:
             order_ok += 1
+            modes["natural"] += 1
+        elif _order_pass(expected, hit_seq, fam_moves):
+            order_ok += 1
+            modes["whitelist"] += 1
+        elif ex.get("order"):
+            order_ok += 1
+            modes["exempt"] += 1
         else:
             diffs.append((fname, "order", list(zip(expected, hit_seq))))
     report = "\n".join(f"{k} {f[:40]}: {v}" for f, k, v in diffs)
+    summary = f"[natural={modes['natural']} whitelist={modes['whitelist']} exempt={modes['exempt']}]"
     assert slot_ok >= 34, f"槽位匹配 {slot_ok}/35 < 34\n{report}"
-    assert order_ok >= 28, f"章序匹配 {order_ok}/35 < 28\n{report}"
+    assert order_ok >= 33, f"章序匹配 {order_ok}/35 < 33 {summary}\n{report}"
+    assert modes["exempt"] <= 2, f"order 豁免 {modes['exempt']} 份 > 2 {summary}"
