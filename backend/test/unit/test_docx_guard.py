@@ -104,6 +104,14 @@ def test_absolute_null_target_variant():
     assert docx_guard.diagnose_docx(docx_guard.repair_dangling_rels(broken)).kind == "ok"
 
 
+def test_parent_traversal_target_dangling():
+    broken = make_minimal_docx(
+        _rels_xml([_rel("rId1", "document.xml"), _rel("rIdX", "../evil.xml")])
+    )
+    assert docx_guard.diagnose_docx(broken).kind == "dangling_rels"
+    assert docx_guard.diagnose_docx(docx_guard.repair_dangling_rels(broken)).kind == "ok"
+
+
 def test_absolute_legit_target_not_dangling():
     data = make_minimal_docx(_rels_xml([_rel("rId1", "/word/document.xml")]))
     assert docx_guard.diagnose_docx(data).kind == "ok"
@@ -132,6 +140,14 @@ def test_repair_preserves_other_members_byte_for_byte():
         assert zf.read("word/document.xml") == DOC_XML
 
 
+def test_guard_docx_bytes_repairs_dangling():
+    broken = make_minimal_docx(
+        _rels_xml([_rel("rId1", "document.xml"), _rel("rId7", "NULL")])
+    )
+    fixed = docx_guard.guard_docx_bytes(broken, label="t.docx")
+    assert docx_guard.diagnose_docx(fixed).kind == "ok"
+
+
 def test_unidocsa_header():
     payload = b"UniDocSa" + b"\x00" * 64
     assert docx_guard.diagnose_docx(payload).kind == "unidocsa"
@@ -141,6 +157,20 @@ def test_unidocsa_header():
 
 def test_corrupt_bytes():
     assert docx_guard.diagnose_docx(b"\xd0\xcf\x11\xe0not-a-zip-at-all").kind == "corrupt"
+
+
+def test_truncated_rels_member_is_corrupt():
+    members = {
+        "[Content_Types].xml": CONTENT_TYPES_XML,
+        "_rels/.rels": _rels_xml([_rel("rId1", "word/document.xml")]),
+        "word/document.xml": DOC_XML,
+        "word/_rels/document.xml.rels": b"<not-xml",
+    }
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for name, payload in members.items():
+            zf.writestr(name, payload)
+    assert docx_guard.diagnose_docx(buf.getvalue()).kind == "corrupt"
 
 
 # ---------- guarded_reparse（异步；fake fetch + fake parse_fn） ----------
