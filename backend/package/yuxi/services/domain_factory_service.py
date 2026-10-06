@@ -18,8 +18,12 @@ from yuxi.config.options import domain_factory_llm_opts, system_options
 from yuxi.models.chat import select_model
 from yuxi.repositories.domain_factory_repository import DomainFactoryRepository
 from yuxi.services.domain_factory_region import (
+    VALID_SCOPES,
+    apply_min_permissive,
     extract_fact_signal,
     extract_region_signal,
+    extract_year,
+    fact_type_for_category,
     l1_task_attribution,
     region_key_for_label,
 )
@@ -4699,7 +4703,7 @@ class DomainFactoryService:
             try:
                 await context.set_progress(90.0, "正在回写学习模板...")
                 await context.set_message("正在回写学习模板...")
-                learned_count = await service._save_learned_templates_from_task(task_detail)
+                learned_count = await service._save_learned_templates_from_task(task_detail, task_id)
                 logger.info(f"模板回流: {learned_count} 个段落模板已保存")
             except Exception as e:
                 logger.warning(f"模板回流失败(标记PARTIAL): {e}")
@@ -5435,11 +5439,12 @@ class DomainFactoryService:
         finally:
             graph_svc.close()
 
-    async def _save_learned_templates_from_task(self, task_detail: dict[str, Any]) -> int:
+    async def _save_learned_templates_from_task(self, task_detail: dict[str, Any], task_id: str) -> int:
         """从已提交任务中提取高质量模板，回流到学习模板库"""
         domain_code = task_detail.get("domain", "coal")
         report_type_code = task_detail.get("report_type_code")
         paragraphs = task_detail.get("source_paragraphs", [])
+        template_ids: list[int] = []
         saved = 0
 
         for para in paragraphs:
@@ -5461,7 +5466,7 @@ class DomainFactoryService:
             sample_original = para.get("original", para.get("content", ""))
             metadata = template.get("metadata", {})
 
-            await self.repo.upsert_learned_template(
+            template_id = await self.repo.upsert_learned_template(
                 domain_code=domain_code,
                 chapter=chapter,
                 generalized=generalized,
@@ -5471,9 +5476,13 @@ class DomainFactoryService:
                 extra_meta=metadata,
                 report_type_code=report_type_code,
             )
+            if template_id:
+                template_ids.append(template_id)
             saved += 1
 
         if saved > 0:
+            # [pisuan-custom] W3：写时聚合——min-permissive + 归因集
+            await self._aggregate_template_scopes(template_ids, task_id)
             logger.info(f"模板回流完成: 领域={domain_code}, 保存/更新={saved} 个模板")
         return saved
 
@@ -6378,6 +6387,14 @@ class DomainFactoryService:
                 await repo.create(data)
                 saved += 1
                 logger.info(f"保存新实体: {name_cn} ({entity_key})")
+                # [pisuan-custom] W3：B 类实体确认 → 区域事实草稿（C 类/非 B 类自动拒绝）
+                try:
+                    task_row = await self.repo.get_task(task_id)
+                    fact_status = await self._insert_facts_for_entity(task_id, task_row, entity_data)
+                    if fact_status == "created":
+                        logger.info(f"区域事实草稿: {name_cn} ({entity_key})")
+                except Exception as fact_err:
+                    logger.warning(f"区域事实写入失败（不影响实体保存）: {fact_err}")
 
         # 触发同领域待审核任务的重映射
         remapped = 0
@@ -6438,6 +6455,79 @@ class DomainFactoryService:
 
         if updated > 0:
             logger.info(f"实体重映射完成: 领域={domain_code}, 更新={updated} 个任务")
+        return updated
+
+    async def _insert_facts_for_entity(self, task_id: str, task_row, entity_data: dict[str, Any]) -> str:
+        """[pisuan-custom] W3：B 类确认实体 → 区域事实草稿；非 B 类拒绝。返回 created|skipped|not_b_class。"""
+        name_cn = str(entity_data.get("name_cn", ""))
+        description = str(entity_data.get("description", ""))
+        content = f"{name_cn}：{description}".rstrip("：")
+        fact_type = fact_type_for_category(str(entity_data.get("category", "")), content)
+        if not fact_type:
+            return "not_b_class"
+        return await self.repo.insert_regional_fact(
+            fact_type=fact_type,
+            content=content,
+            source_task_id=task_id,
+            entity_key=str(entity_data.get("entity_key", "")),
+            region_key=task_row.region_key if task_row else None,
+            year=extract_year(f"{name_cn} {description}"),
+            source_ref=str(entity_data.get("source_ref") or ""),
+        )
+
+    async def confirm_region(
+        self, task_id: str, region_label: str, region_key: str | None, scope: str | None
+    ) -> dict[str, Any]:
+        """[pisuan-custom] W3 L3：人工归属确认——任务四列落定 + 级联（facts 确认 → 归因集模板重算）。"""
+        if scope is not None and scope not in VALID_SCOPES:
+            return {"error": f"scope 非法: {scope}"}
+        task = await self.repo.get_task(task_id)
+        if task is None:
+            return {"error": "任务不存在"}
+        rk = region_key or region_key_for_label(region_label)
+        if rk is None:
+            return {"error": f"未登记区域且未提供 region_key: {region_label}"}
+        patch: dict[str, Any] = {"region_label": region_label, "region_key": rk}
+        if scope:
+            patch["scope"] = scope
+        await self.repo.update_task(task_id, patch)
+        facts_confirmed = await self.repo.confirm_facts_for_task(task_id, rk)
+        templates_recalculated = await self._reaggregate_templates_for_task(task_id)
+        logger.info(f"归属确认: {task_id} -> {rk} (facts={facts_confirmed}, templates={templates_recalculated})")
+        return {"region_key": rk, "facts_confirmed": facts_confirmed, "templates_recalculated": templates_recalculated}
+
+    async def retire_regional_facts(self, fact_ids: list[int]) -> int:
+        """[pisuan-custom] W3 泄漏处置：批量退役区域事实。"""
+        return await self.repo.retire_regional_facts(fact_ids)
+
+    async def _reaggregate_templates_for_task(self, task_id: str) -> int:
+        """归因集含 task_id 的模板，按当前任务 scope 证据重算（confirm-region 级联步骤 3）。"""
+        templates = await self.repo.get_learned_templates_by_contributing_task(task_id)
+        if not templates:
+            return 0
+        return await self._aggregate_template_scopes([t["id"] for t in templates], task_id)
+
+    async def _aggregate_template_scopes(self, template_ids: list[int], task_id: str) -> int:
+        """[pisuan-custom] W3：min-permissive 模板 scope 聚合（归因集落 extra_meta.contributing_task_ids）。
+
+        证据 = 归因集（union 本任务）内任务当前 task.scope；NULL 证据不参与；永不升级。
+        """
+        templates = await self.repo.get_learned_templates_by_ids(template_ids)
+        if not templates:
+            return 0
+        contributing = sorted(
+            {task_id} | {tid for t in templates for tid in (t.get("extra_meta", {}).get("contributing_task_ids") or [])}
+        )
+        scopes = await self.repo.get_task_scopes(contributing)
+        updated = 0
+        for t in templates:
+            extra = dict(t.get("extra_meta") or {})
+            ids = sorted(set(extra.get("contributing_task_ids") or []) | {task_id})
+            extra["contributing_task_ids"] = ids
+            new_scope = apply_min_permissive(t.get("scope"), [scopes.get(i) for i in ids])
+            if new_scope != t.get("scope") or extra != (t.get("extra_meta") or {}):
+                await self.repo.update_learned_template_scope(t["id"], new_scope, extra)
+                updated += 1
         return updated
 
     def _match_slots_to_existing_entities(
