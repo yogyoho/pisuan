@@ -1722,6 +1722,29 @@ class PostgresManager(metaclass=SingletonMeta):
             "INSERT INTO report_types (code, name, domain_code, sort_order) "
             "SELECT 'eia_report', '环境影响评价报告', 'coal', 2 "
             "WHERE NOT EXISTS (SELECT 1 FROM report_types WHERE code = 'eia_report')",
+            # [pisuan-custom] W3 scope×region：任务/模板归属列（存量库补列，create_all 不补列）
+            "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS project_name VARCHAR(255)",
+            "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS region_label VARCHAR(255)",
+            "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS region_key VARCHAR(128)",
+            "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS scope VARCHAR(32)",
+            "CREATE INDEX IF NOT EXISTS idx_df_tasks_region ON domain_factory_tasks(region_key)",
+            "ALTER TABLE IF EXISTS domain_factory_learned_templates ADD COLUMN IF NOT EXISTS scope VARCHAR(32)",
+            # [pisuan-custom] W3 scope×region：区域事实表（仿 tool_usage 先例；create_all 不补表）
+            "CREATE TABLE IF NOT EXISTS domain_factory_regional_facts ("
+            "    id SERIAL PRIMARY KEY,"
+            "    fact_type VARCHAR(32) NOT NULL,"
+            "    region_key VARCHAR(128),"
+            "    content TEXT NOT NULL,"
+            "    source_task_id VARCHAR(64) REFERENCES domain_factory_tasks(id) ON DELETE SET NULL,"
+            "    entity_key VARCHAR(255),"
+            "    status VARCHAR(32) NOT NULL DEFAULT 'draft',"
+            "    year INTEGER,"
+            "    source_ref TEXT,"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+            ")",
+            "CREATE INDEX IF NOT EXISTS idx_dfrf_region_type_status ON domain_factory_regional_facts(region_key, fact_type, status)",
+            "CREATE INDEX IF NOT EXISTS idx_dfrf_source_task ON domain_factory_regional_facts(source_task_id)",
             *TASK_DURABLE_SCHEMA_STATEMENTS,
         ]
         async with self.async_engine.begin() as conn:

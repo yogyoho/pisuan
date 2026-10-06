@@ -193,4 +193,30 @@ VALUES
     ('mineral_assessment', '矿产资源评估报告', 'mineral', 4)
 ON CONFLICT (code, domain_code) DO NOTHING;
 
+-- ============================================================================
+-- 9. W3 scope×region 归属维度（pisuan-custom）
+-- ============================================================================
+ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS project_name VARCHAR(255);
+ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS region_label VARCHAR(255);
+ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS region_key VARCHAR(128);
+ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS scope VARCHAR(32);
+CREATE INDEX IF NOT EXISTS idx_df_tasks_region ON domain_factory_tasks(region_key);
+ALTER TABLE IF EXISTS domain_factory_learned_templates ADD COLUMN IF NOT EXISTS scope VARCHAR(32);
+
+CREATE TABLE IF NOT EXISTS domain_factory_regional_facts (
+    id SERIAL PRIMARY KEY,
+    fact_type VARCHAR(32) NOT NULL,
+    region_key VARCHAR(128),
+    content TEXT NOT NULL,
+    source_task_id VARCHAR(64) REFERENCES domain_factory_tasks(id) ON DELETE SET NULL,
+    entity_key VARCHAR(255),
+    status VARCHAR(32) NOT NULL DEFAULT 'draft',
+    year INTEGER,
+    source_ref TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_dfrf_region_type_status ON domain_factory_regional_facts(region_key, fact_type, status);
+CREATE INDEX IF NOT EXISTS idx_dfrf_source_task ON domain_factory_regional_facts(source_task_id);
+
 COMMIT;
