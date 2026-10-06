@@ -240,16 +240,19 @@ class DomainFactoryService:
             '3. 如果段落包含判断逻辑（如"因此"、"所以"、"如果...则"、"当...时"等），提取触发该模板的前提条件；\n'
             "4. 严格只输出 JSON，不要输出任何自然语言解释或前后缀文本；\n"
             "5. 严格禁止输出代码块标记（例如 ```json 或 ```）；\n"
-            "6. 插槽名称必须统一使用中文，格式为 {{中文名称}}。\n\n"
+            "6. 插槽名称必须统一使用中文，格式为 {{中文名称}}。\n"
+            "7. 同时给出该段落的通用摘要与关键要点（双产物：模板+槽位 ‖ 摘要+要点）；\n\n"
             "文本：\n{content}\n\n"
             "Schema 变量提示：\n{schema_text}\n\n"
             "输出 JSON 结构：\n"
             "{{\n"
             '  "generalized": "...包含 {{产能数值}} ...",\n'
+            '  "summary": "一句话摘要（不超过50字，无则空串）",\n'
+            '  "key_points": ["要点1", "要点2"],\n'
             '  "slots": [\n'
             "     {{\n"
             '       "name": "插槽中文名称",\n'
-            '       "type": "类型",\n'
+            '       "type": "parameter|enum|descriptive|reference 四选一（参数/枚举/描述/引用）",\n'
             '       "value": "被替换前的原文文字（必填，如 \\"7.9℃\\"）",\n'
             '       "description": "插槽含义描述",\n'
             '       "suggested_source": "推荐数据来源"\n'
@@ -805,7 +808,7 @@ class DomainFactoryService:
             }
 
             # ========== 段落级泛化（参考源系统 pipeline.py）==========
-            # 只对 parameter 型段落调用 LLM 泛化；断点续跑时仅补「无模板或上一轮兜底」的段落
+            # 只对散文三值段落（prose/parameter/narrative）调用 LLM 泛化；断点续跑时仅补「无模板或上一轮兜底」的段落
             step_ledger: dict[str, Any] = {
                 "success": 0,
                 "fallback": 0,
@@ -819,11 +822,11 @@ class DomainFactoryService:
                 todo_paragraphs = [
                     p
                     for p in paragraphs
-                    if p.get("classify_type") == "parameter"
+                    if p.get("classify_type") in DomainFactoryService._PROSE_TYPES
                     and (not isinstance(p.get("template"), dict) or p["template"].get("metadata", {}).get("fallback"))
                 ]
                 skipped_count = len(paragraphs) - len(todo_paragraphs)
-                logger.info(f"泛化过滤: {len(todo_paragraphs)} 个参数型段落待泛化, {skipped_count} 个段落跳过")
+                logger.info(f"泛化过滤: {len(todo_paragraphs)} 个散文段落待泛化, {skipped_count} 个段落跳过")
 
                 # Phase 4：注入领域实体属性作为 Schema 变量提示，引导泛化优先匹配已有属性
                 schema_vars = await self._load_entity_schema_variables(domain_code)
@@ -886,6 +889,8 @@ class DomainFactoryService:
                             "slots": raw_slots,
                             "metadata": gen_result.get("metadata", {}),
                             "quality_score": self.evaluate_template_quality(generalized_text, raw_slots),
+                            "summary": gen_result.get("summary", ""),
+                            "key_points": gen_result.get("key_points", []),
                         }
                         if matched_entities:
                             para["matched_entities"] = matched_entities
@@ -952,8 +957,8 @@ class DomainFactoryService:
             # 计算 AI 置信度（[pisuan-custom] ETL P0-2）
             # ai_confidence 重定义为真实成功率 success/(success+fallback+error)，兜底与失败都计入分母；
             # 旧「结构化覆盖率」口径更名为 coverage_ratio，避免消费方静默变义
-            total_paras = len([p for p in paragraphs if p.get("classify_type") not in (None, "heading", "narrative")])
-            generalized_paras = len([p for p in paragraphs if p.get("template", {}).get("generalized")])
+            # spec-W1：分母改为散文三值段落（prose/parameter/narrative），结构类不参与泛化
+            generalized_paras, total_paras = self.compute_prose_coverage(paragraphs)
             coverage_ratio = int((generalized_paras / max(total_paras, 1)) * 100) if total_paras > 0 else 0
             llm_calls = step_ledger["success"] + step_ledger["fallback"] + sum(step_ledger["error"].values())
             ai_confidence = int(step_ledger["success"] / llm_calls * 100) if llm_calls > 0 else coverage_ratio
@@ -1676,6 +1681,14 @@ class DomainFactoryService:
             para["classify_tags"] = tags
 
         return paragraphs
+
+    @staticmethod
+    def compute_prose_coverage(paragraphs: list[dict]) -> tuple[int, int]:
+        """覆盖率口径（spec-W1 修订 2026-10-06）：分母 = 散文三值段落（prose/parameter/narrative）；
+        结构类与未分类段不参与泛化不计入。Returns: (generalized_paras, total_prose)"""
+        prose = [p for p in paragraphs if p.get("classify_type") in DomainFactoryService._PROSE_TYPES]
+        generalized = [p for p in prose if isinstance(p.get("template"), dict) and p["template"].get("generalized")]
+        return len(generalized), len(prose)
 
     def _match_table_subtype(self, content: str, title: str) -> str:
         text = f"{title} {content}".lower()
@@ -3697,6 +3710,9 @@ class DomainFactoryService:
         generalized = response.get("generalized", "")
         slots = response.get("slots", [])
 
+        response.setdefault("summary", "")
+        response.setdefault("key_points", [])
+
         if not slots:
             return response
 
@@ -3704,6 +3720,9 @@ class DomainFactoryService:
         slot_mapping: dict[str, str] = {}  # 旧名称 -> 新名称的映射
 
         normalized_slots = []
+        # slot type 兜底校验（spec-W1 闭式词表；强转计数上浮至 metadata）
+        _valid_types = set(self.VALID_SLOT_TYPES)
+        coerced = 0
         for slot in slots:
             if not isinstance(slot, dict):
                 continue
@@ -3730,21 +3749,24 @@ class DomainFactoryService:
             # 如果原响应包含 type 和 attribute，保留它们
             if "type" in slot:
                 normalized_slot["type"] = slot["type"]
+                if normalized_slot["type"] not in _valid_types:
+                    normalized_slot["type"] = "parameter"
+                    coerced += 1
+            else:
+                normalized_slot.setdefault("type", "parameter")
             if "attribute" in slot:
                 normalized_slot["attribute"] = slot["attribute"]
             if "value" in slot:
                 normalized_slot["value"] = slot["value"]
 
-            # slot type 兜底校验（spec-W1 闭式词表）
-            _valid_types = set(self.VALID_SLOT_TYPES)
-            st = normalized_slot.get("type", "")
-            if st not in _valid_types:
-                normalized_slot["type"] = "parameter"
             # enum 类型必须有 vocabulary
             if normalized_slot["type"] == "enum" and not normalized_slot.get("vocabulary"):
                 normalized_slot["vocabulary"] = slot.get("vocabulary", [])
 
             normalized_slots.append(normalized_slot)
+
+        if coerced:
+            response.setdefault("metadata", {})["slot_type_coerced"] = coerced
 
         # 更新 generalized 文本中的插槽占位符
         if slot_mapping and generalized:
