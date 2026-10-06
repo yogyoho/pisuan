@@ -186,7 +186,7 @@ export const domainFactoryApi = {
             total_errors: 0,
             total_warnings: 0,
             total_paragraphs: 0,
-            parameter_paragraphs: 0,
+            prose_paragraphs: 0,
             checked_at: ''
           },
           errors: [],

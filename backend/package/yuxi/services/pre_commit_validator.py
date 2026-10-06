@@ -29,13 +29,18 @@ class PreCommitValidator:
             return ValidationResult(passed=False, errors=errors, warnings=warnings)
 
         for para in paragraphs:
-            if para.get("classify_type") != "parameter":
+            # [pisuan-custom] spec-W1 (2026-10-06, D7 裁决): generalized 门收敛 prose/parameter 两类。
+            # narrative 不入门——它仅存 legacy 值（旧摘要形态模板无 generalized，bug-336 产物），
+            # 纳入会让 legacy 任务新增性提交失败（违反消费面双读不回归）；新分类器不再产出 narrative。
+            # 原 text_pattern 检查改查 generalized：text_pattern 在段落侧无任何写入方（bug-370 恒假门，
+            # bug-354 修复激活 L1 门后凡含参数段任务必 COMMIT_FAILED）。
+            if para.get("classify_type") not in ("prose", "parameter"):
                 continue
             para_id = para.get("id", "?")
             tmpl = para.get("template") or {}
-            text_pattern = (tmpl.get("text_pattern") or "").strip()
-            if not text_pattern:
-                errors.append(f"段落 {para_id}: text_pattern 为空")
+            generalized = (tmpl.get("generalized") or "").strip()
+            if not generalized:
+                errors.append(f"段落 {para_id}: generalized 为空")
                 continue
 
             slots = tmpl.get("slots") or []

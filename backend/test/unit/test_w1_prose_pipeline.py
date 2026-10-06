@@ -215,7 +215,9 @@ class TestStructuredChannel:
 
         lc = FakeLCModel(data=GeneralizedTemplate(generalized="", slots=[]))
         svc = self._make_svc(monkeypatch, lc)
-        text = "矿井正常涌水量为 300 m3/h，采用集中排水方式，排水系统运行记录完整可查。"
+        # >500 字符：同一断言顺带钉住 text[:500] 截断分支（Task4 审查折入 M-1）
+        text = "矿井正常涌水量为 300 m3/h，采用集中排水方式，排水系统运行记录完整可查。" * 20
+        assert len(text) > 500
         resp, outcome = asyncio.run(svc._generalize_text_tracked(text, "1.1"))
         assert outcome["status"] == "success" and outcome["channel"] == "structured"
         assert resp["generalized"] == text[:500] + "..."
@@ -301,3 +303,53 @@ def test_narrative_path_symbols_extinct():
     for sym in ("_extract_narrative_summaries", "NARRATIVE_SUMMARY_PROMPT",
                 "_parse_narrative_json", "_generalize_text("):
         assert sym not in src, f"叙述死路径残留: {sym}"
+
+
+class TestValidatorProseGate:
+    """spec-W1 Task5 消费面：pre_commit_validator 散文门（bug-370 幽灵字段修正 + D7 legacy 豁免）"""
+
+    def _validate(self, paragraphs):
+        import asyncio
+
+        from yuxi.services.pre_commit_validator import PreCommitValidator
+
+        return asyncio.run(PreCommitValidator().validate({"source_paragraphs": paragraphs}))
+
+    def test_prose_generalized_required(self):
+        """prose 段 template 无 generalized → 失败且错误信息含该段 id"""
+        result = self._validate([
+            {"id": "a", "classify_type": "prose", "template": {}},
+            {"id": "b", "classify_type": "parameter", "template": {"generalized": "x"}},
+            {"id": "c", "classify_type": "heading"},
+        ])
+        assert not result.passed
+        assert any("a" in e for e in result.errors)
+        assert not any("b" in e for e in result.errors)
+        assert not any("c" in e for e in result.errors)
+
+    def test_legacy_parameter_generalized_passes(self):
+        """legacy parameter 段 template.generalized 有值 → 与 prose 同等对待，通过"""
+        result = self._validate([
+            {"id": "p1", "classify_type": "parameter",
+             "template": {"generalized": "规模 {{规模}}", "slots": [{"name": "规模"}]}},
+        ])
+        assert result.passed
+
+    def test_heading_skipped(self):
+        result = self._validate([{"id": "h1", "classify_type": "heading"}])
+        assert result.passed
+
+    def test_text_pattern_no_longer_required(self):
+        """text_pattern 幽灵字段不再被要求（段落侧无写入方，bug-370 恒假门）：有 generalized 即通过"""
+        result = self._validate([
+            {"id": "a", "classify_type": "prose",
+             "template": {"generalized": "x", "slots": [{"name": "n1"}]}},
+        ])
+        assert result.passed
+
+    def test_legacy_narrative_exempt(self):
+        """D7（2026-10-06）：narrative 仅存 legacy 值（旧摘要形态无 generalized），豁免 generalized 门"""
+        result = self._validate([
+            {"id": "n1", "classify_type": "narrative", "template": {"summary": "x"}},
+        ])
+        assert result.passed

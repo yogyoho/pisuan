@@ -1,4 +1,8 @@
-"""bug-354: pre_commit_validator 按 classify_type 识别 parameter 段落（原读不存在的 type 字段导致校验空转）。"""
+"""bug-354: pre_commit_validator 按 classify_type 识别段落（原读不存在的 type 字段导致校验空转）。
+
+spec-W1 (2026-10-06, bug-370/D7): 门收敛 prose+parameter 两类，模板必检字段由幽灵字段
+text_pattern（段落侧无写入方）改为真实产物字段 generalized；narrative legacy 豁免。
+"""
 
 import pytest
 from yuxi.services.pre_commit_validator import PreCommitValidator
@@ -6,7 +10,7 @@ from yuxi.services.pre_commit_validator import PreCommitValidator
 
 @pytest.mark.asyncio
 async def test_structure_valid_paragraphs_pass():
-    """有效段落(有模板+text_pattern非空) → 通过"""
+    """有效段落(有模板+generalized 非空) → 通过"""
     validator = PreCommitValidator()
     task_detail = {
         "source_paragraphs": [
@@ -23,8 +27,8 @@ async def test_structure_valid_paragraphs_pass():
 
 
 @pytest.mark.asyncio
-async def test_structure_empty_text_pattern_fails():
-    """text_pattern 为空 → 失败"""
+async def test_structure_empty_generalized_fails():
+    """generalized 为空 → 失败"""
     validator = PreCommitValidator()
     task_detail = {
         "source_paragraphs": [
@@ -37,7 +41,7 @@ async def test_structure_empty_text_pattern_fails():
     }
     result = await validator.validate(task_detail)
     assert result.passed is False
-    assert any("text_pattern" in e for e in result.errors)
+    assert any("generalized" in e for e in result.errors)
 
 
 @pytest.mark.asyncio
@@ -59,7 +63,7 @@ async def test_slot_quality_empty_name_fails():
                 "id": "p1",
                 "classify_type": "parameter",
                 "template": {
-                    "text_pattern": "{{}}",
+                    "generalized": "{{}}",
                     "slots": [{"name": "", "type": "string"}],
                 },
             }
@@ -80,7 +84,7 @@ async def test_slot_quality_too_many_slots_warns():
             {
                 "id": "p1",
                 "classify_type": "parameter",
-                "template": {"text_pattern": "x", "slots": slots},
+                "template": {"generalized": "x", "slots": slots},
             }
         ]
     }
@@ -99,7 +103,7 @@ async def test_slot_quality_pure_digit_name_fails():
                 "id": "p1",
                 "classify_type": "parameter",
                 "template": {
-                    "text_pattern": "{{123}}",
+                    "generalized": "{{123}}",
                     "slots": [{"name": "123", "type": "string"}],
                 },
             }
@@ -120,7 +124,7 @@ async def test_slot_quality_duplicate_signature_warns():
                 "id": "p1",
                 "classify_type": "parameter",
                 "template": {
-                    "text_pattern": "{{矿区}}{{矿区}}",
+                    "generalized": "{{矿区}}{{矿区}}",
                     "slots": [
                         {"name": "矿区", "type": "string"},
                         {"name": "矿区", "type": "string"},
@@ -145,12 +149,12 @@ async def test_none_task_detail_returns_failed():
 
 @pytest.mark.asyncio
 async def test_parameter_para_by_classify_type_is_validated():
-    """classify_type=parameter 且 text_pattern 为空 → 必须报错（bug-354 回归：修复前校验空转直接 passed）"""
+    """classify_type=parameter 且 generalized 为空 → 必须报错（bug-354 回归：修复前校验空转直接 passed）"""
     validator = PreCommitValidator()
     task_detail = {"source_paragraphs": [{"id": "p1", "classify_type": "parameter", "template": {}}]}
     result = await validator.validate(task_detail)
     assert result.passed is False
-    assert any("text_pattern" in e for e in result.errors)
+    assert any("generalized" in e for e in result.errors)
 
 
 @pytest.mark.asyncio

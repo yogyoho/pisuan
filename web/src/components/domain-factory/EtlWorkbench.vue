@@ -236,9 +236,14 @@ const CLASSIFY_TYPE_MAP = {
   figure: { label: '图片', color: 'cyan' },
   list: { label: '列表', color: 'orange' },
   legal_reference: { label: '标准引用', color: 'geekblue' },
+  prose: { label: '散文', color: 'gold' },
   parameter: { label: '参数', color: 'gold' },
   narrative: { label: '叙述', color: 'default' },
 }
+
+// spec-W1 散文三值：prose 现值；parameter/narrative 为 legacy 兼容读
+const PROSE_TYPES = ['prose', 'parameter', 'narrative']
+const isProseType = (ct) => PROSE_TYPES.includes(ct)
 
 const SLOT_TYPE_MAP = {
   parameter: { label: '参数型', color: 'blue' },
@@ -1105,13 +1110,13 @@ watch(() => props.task, async (newTask) => {
                     <a-tag v-for="tag in (para.classify_tags || [])" :key="tag" size="small" color="processing" class="para-subtype-tag">
                       {{ SUBTYPE_MAP[tag] || tag }}
                     </a-tag>
-                    <span v-if="para.classify_type && para.classify_type !== 'heading' && para.classify_type !== 'narrative' && para.template?.quality_score != null" class="para-confidence" :style="{ color: getConfidenceColor(para.template.quality_score) }">
+                    <span v-if="para.classify_type && para.classify_type !== 'heading' && para.template?.quality_score != null" class="para-confidence" :style="{ color: getConfidenceColor(para.template.quality_score) }">
                       {{ Math.round(para.template.quality_score * 100) }}%
                     </span>
                     <span v-if="reviewedParagraphIds.has(para.id)" class="para-reviewed-badge">✓</span>
                   </div>
                   <div class="para-content" :class="{ 'table-content-clamped': para.is_table || para.classify_type === 'table' }">{{ para.content || para.title }}</div>
-                  <div v-if="para.classify_type === 'narrative' && para.template?.summary" class="para-summary">
+                  <div v-if="isProseType(para.classify_type) && para.template?.summary" class="para-summary">
                     {{ para.template.summary }}
                   </div>
                 </div>
@@ -1315,8 +1320,8 @@ watch(() => props.task, async (newTask) => {
                 <a-empty v-else description="未提取到图片信息" :image="false" />
               </div>
 
-              <!-- parameter 类型 -->
-              <div v-else-if="selectedParagraph.classify_type === 'parameter'" class="detail-section parameter-detail-section">
+              <!-- 散文三值（prose 现值；parameter/narrative legacy 兼容读） -->
+              <div v-else-if="isProseType(selectedParagraph.classify_type)" class="detail-section parameter-detail-section">
                 <!-- 原文区域 -->
                 <div class="param-subsection">
                   <div class="detail-label" style="margin-bottom: 4px">原文</div>
@@ -1359,7 +1364,18 @@ watch(() => props.task, async (newTask) => {
                     <span class="detail-value" :style="{ color: getConfidenceColor(selectedParagraph.template.quality_score) }">{{ (selectedParagraph.template.quality_score * 100).toFixed(0) }}%</span>
                   </div>
                 </template>
-                <a-empty v-else description="该参数段落未生成泛化模板" :image="false" />
+                <a-empty v-else description="该段落未生成泛化模板" :image="false" />
+                <!-- 双产物（spec-W1 P1-0）：摘要 + 关键要点；置于泛化模板门外，legacy narrative 旧摘要仍可渲染 -->
+                <div v-if="selectedParagraph.template?.summary" class="detail-field">
+                  <span class="detail-label">摘要</span>
+                  <div class="detail-value" style="color: var(--gray-800); font-weight: 500">{{ selectedParagraph.template.summary }}</div>
+                </div>
+                <div v-if="selectedParagraph.template?.key_points?.length" class="detail-field" style="flex-direction: column; align-items: flex-start">
+                  <span class="detail-label" style="margin-bottom: 4px">关键要点</span>
+                  <ul style="margin: 0; padding-left: 16px; font-size: 12px; color: var(--gray-700)">
+                    <li v-for="point in selectedParagraph.template.key_points" :key="point">{{ point }}</li>
+                  </ul>
+                </div>
               </div>
 
               <!-- narrative / list / 其他 -->

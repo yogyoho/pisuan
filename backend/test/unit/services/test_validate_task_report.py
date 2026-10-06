@@ -12,7 +12,7 @@ def _fake_detail() -> dict:
             {
                 "id": "p1",
                 "classify_type": "parameter",
-                "template": {"text_pattern": "矿区规模 {{规模}} Mt/a", "slots": [{"name": "规模"}]},
+                "template": {"generalized": "矿区规模 {{规模}} Mt/a", "slots": [{"name": "规模"}]},
             },
             {"id": "p2", "classify_type": "narrative"},
         ],
@@ -20,21 +20,21 @@ def _fake_detail() -> dict:
 
 
 @pytest.mark.asyncio
-async def test_validate_task_counts_parameter_paragraphs():
-    """修复前 parameter_paragraphs 恒为 0（段落无 type 字段）→ 断言失败；修复后应为 1"""
+async def test_validate_task_counts_prose_paragraphs():
+    """spec-W1：键名 prose_paragraphs、计数口径=散文三值（parameter/narrative legacy 计入）→ fixture 应为 2"""
     svc = DomainFactoryService()
     svc.repo = MagicMock()
     svc.repo.update_task = AsyncMock()
     with patch.object(svc, "get_task_detail", new=AsyncMock(return_value=_fake_detail())):
         report = await svc.validate_task("t1")
-    assert report["summary"]["parameter_paragraphs"] == 1
+    assert report["summary"]["prose_paragraphs"] == 2
     assert report["passed"] is True
     svc.repo.update_task.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_validate_task_sends_parameter_slots_to_l2():
-    """L2 过滤钉住：只有 classify_type=parameter 的段落进入 SlotValidationService"""
+    """L2 过滤钉住：散文三值中只有带 dict 模板的段落进入 SlotValidationService（narrative 无模板被排除）"""
     svc = DomainFactoryService()
     svc.repo = MagicMock()
     svc.repo.update_task = AsyncMock()

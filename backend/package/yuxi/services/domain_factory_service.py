@@ -2368,11 +2368,11 @@ class DomainFactoryService:
             if not local_schema:
                 continue
 
-            # 只用该章节的 parameter 段落作为上下文
+            # 只用该章节的散文段落作为上下文（spec-W1 三值；list 类型已停机不再产出）
             context_parts = []
             for p in chapter_paras:
                 ct = p.get("classify_type", "")
-                if ct in ("parameter", "narrative", "list"):
+                if ct in DomainFactoryService._PROSE_TYPES:
                     text = p.get("content", "")
                     if text:
                         context_parts.append(text[:300])
@@ -4050,7 +4050,7 @@ class DomainFactoryService:
                     "slots": (p.get("template") or {}).get("slots", []),
                 }
                 for p in paragraphs
-                if p.get("classify_type") == "parameter" and isinstance(p.get("template"), dict)
+                if p.get("classify_type") in DomainFactoryService._PROSE_TYPES and isinstance(p.get("template"), dict)
             ]
             if paragraph_slots:
                 val_report = await svc.validate_slots(paragraph_slots, {})
@@ -4080,7 +4080,9 @@ class DomainFactoryService:
                 "total_errors": len(errors),
                 "total_warnings": len(warnings),
                 "total_paragraphs": len(paragraphs),
-                "parameter_paragraphs": sum(1 for p in paragraphs if p.get("classify_type") == "parameter"),
+                "prose_paragraphs": sum(
+                    1 for p in paragraphs if p.get("classify_type") in DomainFactoryService._PROSE_TYPES
+                ),
                 "checked_at": None,  # 前端填充
             },
             "errors": errors,
@@ -4535,7 +4537,8 @@ class DomainFactoryService:
                         "slots": (p.get("template") or {}).get("slots", []),
                     }
                     for p in task_detail.get("source_paragraphs", [])
-                    if p.get("classify_type") == "parameter" and isinstance(p.get("template"), dict)
+                    if p.get("classify_type") in DomainFactoryService._PROSE_TYPES
+                    and isinstance(p.get("template"), dict)
                 ]
                 if paragraph_slots:
                     val_report = await svc.validate_slots(paragraph_slots, {})
