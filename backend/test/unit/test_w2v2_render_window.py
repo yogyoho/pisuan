@@ -92,10 +92,11 @@ def test_no_anchor_appends_tail():
 
 
 def test_same_anchor_stable_order():
-    """同锚两章按处理序稳定落位（spec §4.1，不抛链不收敛）。"""
+    """同锚两章按 l1 声明序稳定落位（spec §4.1，不抛链不收敛）。"""
     rrs = _load_renderer()
     layers = _mini_layers({"附加甲": "乙章", "附加乙": "乙章"})
     layers["rules"] = [{"id": "RA", "when": {}, "add": ["附加甲", "附加乙"]}]
+    layers["rules"][0]["add"] = ["附加乙", "附加甲"]  # 逆序 add——稳定序须仍按 l1 声明序
     rendered = rrs.render({"report_family": "planning_eia"}, layers)
     ts = _titles(rendered)
     assert ts == ["甲章", "乙章", "附加甲", "附加乙", "丙章"]
