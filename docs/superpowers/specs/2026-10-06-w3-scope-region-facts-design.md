@@ -11,13 +11,13 @@
 **目标**：scope×region 维度落库——任务/模板/区域事实三处数据模型落定，L1 规则 / L2 泛化便车 / L3 人工确认三级归属判定打通，min-permissive 写时聚合生效；泄漏退役与 L3 改判以薄 API 交付（UI 归 W4）。
 
 **本窗 checklist（简要）**：
-- [ ] 数据模型：Task +4 列、LearnedTemplate +scope 列、新表 domain_factory_regional_facts（三轨幂等落地）
-- [ ] L1 确定性规则（词表命中）+ classify_paragraphs 并列信号键
-- [ ] L2 泛化便车（零新增 LLM 调用）+ 回写
-- [ ] min-permissive 写时聚合（含 extra_meta 归因集）
-- [ ] regional_facts 写入流（draft/confirmed/retired）+ B 类映射
-- [ ] 薄 API：confirm-region 级联 + facts 批量退役
-- [ ] 存量回填：8 任务 L1（模板不回填）
+- [x] 数据模型：Task +4 列、LearnedTemplate +scope 列、新表 domain_factory_regional_facts（三轨幂等落地）
+- [x] L1 确定性规则（词表命中）+ classify_paragraphs 并列信号键
+- [x] L2 泛化便车（零新增 LLM 调用）+ 回写
+- [x] min-permissive 写时聚合（含 extra_meta 归因集）
+- [x] regional_facts 写入流（draft/confirmed/retired）+ B 类映射
+- [x] 薄 API：confirm-region 级联 + facts 批量退役
+- [x] 存量回填：8 任务 L1（模板不回填）
 - [ ] changelog / 勾账 / 终审
 
 ## 2. 范围

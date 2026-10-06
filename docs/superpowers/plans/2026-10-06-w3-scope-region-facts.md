@@ -55,7 +55,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisu
 - Modify: `backend/package/yuxi/storage/postgres/manager.py`（:1724 report_types 种子后、:1725 `*TASK_DURABLE_SCHEMA_STATEMENTS` 前）
 - Modify: `backend/scripts/migrate_domain_factory.sql`（:196 COMMIT 前）
 
-- [ ] **Step 1.1: 模型——DomainFactoryTask +4 列**
+- [x] **Step 1.1: 模型——DomainFactoryTask +4 列**
 
 在 `committed_at = Column(DateTime, nullable=True)`（:79）之后插入：
 
@@ -67,7 +67,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisu
     scope = Column(String(32), nullable=True)  # universal|regional|project；NULL=未判
 ```
 
-- [ ] **Step 1.2: 模型——DomainFactoryLearnedTemplate +scope 列**
+- [x] **Step 1.2: 模型——DomainFactoryLearnedTemplate +scope 列**
 
 在 `extra_meta = Column(JSON, nullable=True, default=dict)`（:130）之后插入：
 
@@ -75,7 +75,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisu
     scope = Column(String(32), nullable=True)  # [pisuan-custom] W3：universal|regional|project；NULL=无证据不参与聚合（不进唯一约束）
 ```
 
-- [ ] **Step 1.3: 模型——新类 DomainFactoryRegionalFact**
+- [x] **Step 1.3: 模型——新类 DomainFactoryRegionalFact**
 
 文件末尾（`DomainFactoryToolUsage` 类之后）追加：
 
@@ -122,7 +122,7 @@ class DomainFactoryRegionalFact(Base):
 
 （`ForeignKey` 已在文件顶部 import 行 `from sqlalchemy import JSON, Column, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint` 中，无需补。）
 
-- [ ] **Step 1.4: manager.py ensure 追加**
+- [x] **Step 1.4: manager.py ensure 追加**
 
 在 report_types 三个种子 INSERT 之后、`*TASK_DURABLE_SCHEMA_STATEMENTS,` 之前插入：
 
@@ -152,7 +152,7 @@ class DomainFactoryRegionalFact(Base):
             "CREATE INDEX IF NOT EXISTS idx_dfrf_source_task ON domain_factory_regional_facts(source_task_id)",
 ```
 
-- [ ] **Step 1.5: migrate_domain_factory.sql 第 9 节**
+- [x] **Step 1.5: migrate_domain_factory.sql 第 9 节**
 
 在 `COMMIT;`（文件尾）之前插入：
 
@@ -184,7 +184,7 @@ CREATE INDEX IF NOT EXISTS idx_dfrf_region_type_status ON domain_factory_regiona
 CREATE INDEX IF NOT EXISTS idx_dfrf_source_task ON domain_factory_regional_facts(source_task_id);
 ```
 
-- [ ] **Step 1.6: 语法与幂等验证**
+- [x] **Step 1.6: 语法与幂等验证**
 
 ```bash
 python -c "import ast; ast.parse(open('backend/package/yuxi/storage/postgres/models_domain_factory.py', encoding='utf-8').read()); print('models OK')"
@@ -199,7 +199,7 @@ Expected: 两遍 psql 均 `COMMIT` 无报错；`\d` 显示 11 列 + 2 索引；`
 
 （注：manager ensure 路径的真执行在 T5 sync-dev 后 api 重启时发生；本步验证 SQL 语义与 migrate 轨，ensure 轨的 additive 语句与 migrate 同文故风险同源。）
 
-- [ ] **Step 1.7: Commit**
+- [x] **Step 1.7: Commit**
 
 ```bash
 git add backend/package/yuxi/storage/postgres/models_domain_factory.py backend/package/yuxi/storage/postgres/manager.py backend/scripts/migrate_domain_factory.sql
@@ -221,7 +221,7 @@ EOF
 - Create: `backend/scripts/backfill_task_scope.py`
 - Modify: `docs/superpowers/specs/2026-10-06-w3-scope-region-facts-design.md`（§4.2 一处措辞）
 
-- [ ] **Step 2.1: 写失败单测**
+- [x] **Step 2.1: 写失败单测**
 
 创建 `backend/test/unit/test_w3_region_rules.py`：
 
@@ -362,7 +362,7 @@ class TestYearAndFactSignal:
         assert extract_fact_signal("无关键词中性文本") is None
 ```
 
-- [ ] **Step 2.2: 运行确认失败**
+- [x] **Step 2.2: 运行确认失败**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisuan-api:0.7.3 pytest /app/test/unit/test_w3_region_rules.py --noconftest -q
@@ -370,7 +370,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisu
 
 Expected: FAIL（`ModuleNotFoundError: No module named 'yuxi.services.domain_factory_region'`）。
 
-- [ ] **Step 2.3: 实现模块**
+- [x] **Step 2.3: 实现模块**
 
 创建 `backend/package/yuxi/services/domain_factory_region.py`：
 
@@ -514,7 +514,7 @@ def apply_min_permissive(current: str | None, evidences: list[str | None]) -> st
     return target if _SCOPE_ORDER[target] < _SCOPE_ORDER[current] else current
 ```
 
-- [ ] **Step 2.4: 运行确认通过**
+- [x] **Step 2.4: 运行确认通过**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisuan-api:0.7.3 pytest /app/test/unit/test_w3_region_rules.py --noconftest -q
@@ -522,7 +522,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisu
 
 Expected: 全绿（18 passed 左右，0 failed）。
 
-- [ ] **Step 2.5: 回填脚本**
+- [x] **Step 2.5: 回填脚本**
 
 创建 `backend/scripts/backfill_task_scope.py`：
 
@@ -592,7 +592,7 @@ if __name__ == "__main__":
 
 （执行在 T5 sync-dev 后进行；本任务只交付脚本与单测。）
 
-- [ ] **Step 2.6: spec §4.2 措辞同步**
+- [x] **Step 2.6: spec §4.2 措辞同步**
 
 Edit `docs/superpowers/specs/2026-10-06-w3-scope-region-facts-design.md`，将「任务级：backfill 脚本对 8 存量任务聚合段落信号 → 写 task 三列 + scope（词表命中才写）」替换为：
 
@@ -600,7 +600,7 @@ Edit `docs/superpowers/specs/2026-10-06-w3-scope-region-facts-design.md`，将�
 任务级：**文档身份（file_name/document_type/report_type_code）词表命中** → 写 task 三列 + scope='regional'（不扫正文——正文引用矿区名的项目报告会误判 regional；计划 T2 落账修订）。backfill 脚本对 8 存量任务跑同规则。
 ```
 
-- [ ] **Step 2.7: Commit**
+- [x] **Step 2.7: Commit**
 
 ```bash
 git add backend/package/yuxi/services/domain_factory_region.py backend/test/unit/test_w3_region_rules.py backend/scripts/backfill_task_scope.py docs/superpowers/specs/2026-10-06-w3-scope-region-facts-design.md
@@ -620,7 +620,7 @@ EOF
 - Modify: `backend/package/yuxi/services/domain_factory_service.py`（:37-44 schema、:258/:290 prompt、:1633-1689 classify、:921 后 writeback、:3635 normalize、顶部 import）
 - Create: `backend/test/unit/test_w3_scope_pipeline.py`
 
-- [ ] **Step 3.1: 写失败单测**
+- [x] **Step 3.1: 写失败单测**
 
 创建 `backend/test/unit/test_w3_scope_pipeline.py`：
 
@@ -758,7 +758,7 @@ class TestAttributionPatch:
         assert svc._build_attribution_patch(row, {"a": {"generalized": "x"}}) == {}
 ```
 
-- [ ] **Step 3.2: 运行确认失败**
+- [x] **Step 3.2: 运行确认失败**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisuan-api:0.7.3 pytest /app/test/unit/test_w3_scope_pipeline.py --noconftest -q
@@ -766,7 +766,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisu
 
 Expected: FAIL（GeneralizedTemplate 无 scope 字段 / `_build_attribution_patch` 不存在 / classify 无 region_signals）。
 
-- [ ] **Step 3.3: GeneralizedTemplate +2 字段（:44 metadata 行后）**
+- [x] **Step 3.3: GeneralizedTemplate +2 字段（:44 metadata 行后）**
 
 ```python
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -776,7 +776,7 @@ Expected: FAIL（GeneralizedTemplate 无 scope 字段 / `_build_attribution_patc
     region: str | None = None
 ```
 
-- [ ] **Step 3.4: prompt 增补（"template" 键内，两处 Edit）**
+- [x] **Step 3.4: prompt 增补（"template" 键内，两处 Edit）**
 
 Edit A——规则清单，将（:258）：
 
@@ -807,7 +807,7 @@ Edit B——输出 JSON 结构，将（:289-290）：
             '  "condition": "IF (条件表达式) == True",\n'
 ```
 
-- [ ] **Step 3.5: normalize 收敛（:3650-3651 setdefault 两行之后、`if not slots:` 早退之前插入）**
+- [x] **Step 3.5: normalize 收敛（:3650-3651 setdefault 两行之后、`if not slots:` 早退之前插入）**
 
 ```python
         # [pisuan-custom] W3：L2 归属建议收敛——非法值置 None（无证据），空白 region 视为未产出
@@ -817,7 +817,7 @@ Edit B——输出 JSON 结构，将（:289-290）：
             response["region"] = None
 ```
 
-- [ ] **Step 3.6: classify 并列键（:1687 `para["classify_tags"] = tags` 循环体结束后、`return paragraphs` 之前插入）**
+- [x] **Step 3.6: classify 并列键（:1687 `para["classify_tags"] = tags` 循环体结束后、`return paragraphs` 之前插入）**
 
 ```python
         # [pisuan-custom] W3 L1：归属信号并列键（不进 classify_tags，W1 语义零变动）
@@ -831,7 +831,7 @@ Edit B——输出 JSON 结构，将（:289-290）：
         return paragraphs
 ```
 
-- [ ] **Step 3.7: 顶部 import（service 文件既有 yuxi import 区）**
+- [x] **Step 3.7: 顶部 import（service 文件既有 yuxi import 区）**
 
 ```python
 from yuxi.services.domain_factory_region import (
@@ -846,7 +846,7 @@ from yuxi.services.domain_factory_region import (
 )
 ```
 
-- [ ] **Step 3.8: 任务级归属 patch（两个 staticmethod + 管线挂钩）**
+- [x] **Step 3.8: 任务级归属 patch（两个 staticmethod + 管线挂钩）**
 
 staticmethod（加在 `:191 _extract_learned_match_ids` 附近的同类域）：
 
@@ -904,7 +904,7 @@ staticmethod（加在 `:191 _extract_learned_match_ids` 附近的同类域）：
                         logger.info(f"任务归属建议落列: {task_id} -> {attribution_patch}")
 ```
 
-- [ ] **Step 3.9: 运行通过 + W1 回归 + 零新增 LLM 调用核验**
+- [x] **Step 3.9: 运行通过 + W1 回归 + 零新增 LLM 调用核验**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisuan-api:0.7.3 pytest /app/test/unit/test_w3_scope_pipeline.py /app/test/unit/test_w1_prose_pipeline.py --noconftest -q
@@ -913,7 +913,7 @@ git diff -- backend/package/yuxi/services/domain_factory_service.py | grep -E "^
 
 Expected: 全绿；grep 计数为 **0**（本任务不得新增任何 LLM 调用点——便车语义硬约束）。
 
-- [ ] **Step 3.10: Commit**
+- [x] **Step 3.10: Commit**
 
 ```bash
 git add backend/package/yuxi/services/domain_factory_service.py backend/test/unit/test_w3_scope_pipeline.py
@@ -935,7 +935,7 @@ EOF
 - Modify: `backend/package/yuxi/services/domain_factory_service.py`（confirm 挂钩、聚合编排、兜底已在 T1 于 repo）
 - Create: `backend/test/unit/test_w3_facts_flow.py`
 
-- [ ] **Step 4.1: 写失败单测**
+- [x] **Step 4.1: 写失败单测**
 
 创建 `backend/test/unit/test_w3_facts_flow.py`：
 
@@ -1136,7 +1136,7 @@ class TestAggregationPure:
         assert repo.templates[22]["scope"] == "project"  # 证据空/弱都不升级
 ```
 
-- [ ] **Step 4.2: 运行确认失败**
+- [x] **Step 4.2: 运行确认失败**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisuan-api:0.7.3 pytest /app/test/unit/test_w3_facts_flow.py --noconftest -q
@@ -1144,7 +1144,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisu
 
 Expected: FAIL（`_insert_facts_for_entity` / `confirm_region` / `_aggregate_template_scopes` 不存在）。
 
-- [ ] **Step 4.3: repo——新方法族（domain_factory_repository.py）**
+- [x] **Step 4.3: repo——新方法族（domain_factory_repository.py）**
 
 import 区：`from yuxi.storage.postgres.models_domain_factory import (...)` 元组中加入 `DomainFactoryRegionalFact`。
 
@@ -1322,7 +1322,7 @@ import 区：`from yuxi.storage.postgres.models_domain_factory import (...)` 元
             return {r.id: r.scope for r in result}
 ```
 
-- [ ] **Step 4.4: service——facts 挂钩 + 聚合编排 + confirm_region/retire**
+- [x] **Step 4.4: service——facts 挂钩 + 聚合编排 + confirm_region/retire**
 
 `confirm_proposed_entities`（:6297-6299）——将：
 
@@ -1425,7 +1425,7 @@ service 文件新增方法（加在 `_remap_waiting_review_tasks` 之后、`:636
         return updated
 ```
 
-- [ ] **Step 4.5: 聚合挂钩 `_save_learned_templates_from_task`（:5357-5397）**
+- [x] **Step 4.5: 聚合挂钩 `_save_learned_templates_from_task`（:5357-5397）**
 
 先定位调用方与 task_id 形参：
 
@@ -1464,7 +1464,7 @@ Expected：def 行 :5357 + 恰一个调用方（commit 入库流内）。将方�
 
 调用方同步补第二实参（该作用域内有任务 id 变量，以其真实名为准传入）。
 
-- [ ] **Step 4.6: 运行通过 + 回归**
+- [x] **Step 4.6: 运行通过 + 回归**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisuan-api:0.7.3 pytest /app/test/unit/test_w3_facts_flow.py /app/test/unit/test_w3_scope_pipeline.py /app/test/unit/test_w1_prose_pipeline.py --noconftest -q
@@ -1473,7 +1473,7 @@ python -c "import ast; ast.parse(open('backend/package/yuxi/repositories/domain_
 
 Expected: 全绿 + syntax OK。
 
-- [ ] **Step 4.7: Commit**
+- [x] **Step 4.7: Commit**
 
 ```bash
 git add backend/package/yuxi/repositories/domain_factory_repository.py backend/package/yuxi/services/domain_factory_service.py backend/test/unit/test_w3_facts_flow.py
@@ -1493,7 +1493,7 @@ EOF
 - Modify: `backend/package/yuxi/services/domain_factory_service.py`（无新改动——方法在 T4）
 - Modify: `backend/server/routers/domain_factory_router.py`（:370 confirm-entities 路由后）
 
-- [ ] **Step 5.1: 薄路由 ×2**
+- [x] **Step 5.1: 薄路由 ×2**
 
 在 `confirm_entities` 路由结束（:371 空行）之后、`# File Upload` 分隔注释（:373）之前插入：
 
@@ -1543,7 +1543,7 @@ async def retire_regional_facts(
         raise HTTPException(status_code=500, detail=f"事实退役失败: {str(e)}")
 ```
 
-- [ ] **Step 5.2: 路由注册核验 + 语法**
+- [x] **Step 5.2: 路由注册核验 + 语法**
 
 ```bash
 python -c "import ast; ast.parse(open('backend/server/routers/domain_factory_router.py', encoding='utf-8').read()); print('router OK')"
@@ -1552,7 +1552,7 @@ grep -c "include_router.*domain_factory" backend/server/routers/__init__.py
 
 Expected: router OK；计数 ≥1（既有注册，不新增——前缀 `/domain-factory` 下自动挂新路由）。
 
-- [ ] **Step 5.3: sync-dev 同步运行栈**
+- [x] **Step 5.3: sync-dev 同步运行栈**
 
 ```powershell
 ./scripts/sync-dev.ps1
@@ -1560,7 +1560,7 @@ Expected: router OK；计数 ≥1（既有注册，不新增——前缀 `/domai
 
 （此步把 worktree 改动热同步到 pisuan-localized 运行栈；api 容器重启后 ensure_business_schema() 首次真执行 W3 DDL。若脚本询问/失败，如实上报控制器，勿自行改脚本。）
 
-- [ ] **Step 5.4: 容器集成验证（合成任务全链路，自清理）**
+- [x] **Step 5.4: 容器集成验证（合成任务全链路，自清理）**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 python - <<'PY'
@@ -1626,7 +1626,7 @@ PY
 
 Expected: 末行 `W3 T5 verify: ALL PASS`。若 api 容器内模块名非 `pisuan`（改名层未生效），如实上报，勿现场改导入。
 
-- [ ] **Step 5.5: 存量回填执行（8 任务，幂等）**
+- [x] **Step 5.5: 存量回填执行（8 任务，幂等）**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 python /app/scripts/backfill_task_scope.py
@@ -1638,7 +1638,7 @@ docker exec pisuan-localized-postgres-1 psql -U postgres -d yuxi_know -c "SELECT
 
 Expected: 首跑打印 8 行对照表（矿区总规类命中 regional，项目类无命中不回填）；复跑 `0/8`；模板 `scoped=0`。
 
-- [ ] **Step 5.6: 全量回归（worktree 容器道）**
+- [x] **Step 5.6: 全量回归（worktree 容器道）**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisuan-api:0.7.3 pytest /app/test/unit/test_w3_region_rules.py /app/test/unit/test_w3_scope_pipeline.py /app/test/unit/test_w3_facts_flow.py /app/test/unit/test_w1_prose_pipeline.py --noconftest -q
@@ -1646,7 +1646,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisu
 
 Expected: 全绿。
 
-- [ ] **Step 5.7: Commit**
+- [x] **Step 5.7: Commit**
 
 ```bash
 git add backend/server/routers/domain_factory_router.py
@@ -1666,7 +1666,7 @@ EOF
 - Modify: `docs/develop-guides/changelog.md`
 - Modify: `docs/superpowers/plans/2026-10-06-w3-scope-region-facts.md`（勾账）
 
-- [ ] **Step 6.1: changelog 条目**
+- [x] **Step 6.1: changelog 条目**
 
 在 `docs/develop-guides/changelog.md` 顶部适当位置（与既有 W2/W2v2 条目同风格）追加：
 
@@ -1682,13 +1682,13 @@ EOF
 - 存量回填：8 任务 L1 脚本（幂等只填 NULL）；learned_templates 零改动（211 行 scope 保持 NULL）
 ```
 
-- [ ] **Step 6.2: 勾账**
+- [x] **Step 6.2: 勾账**
 
 - 本计划所有 `- [ ]` 勾选为 `- [x]`；
 - spec §1 checklist 同步勾选；
 - `.wolf/memory.md`、`.wolf/anatomy.md`、`.wolf/buglog.json`（如有修复）按 OpenWolf 协议落账（python heredoc 追加中文）。
 
-- [ ] **Step 6.3: Commit（changelog + 勾账）**
+- [x] **Step 6.3: Commit（changelog + 勾账）**
 
 ```bash
 git add docs/develop-guides/changelog.md docs/superpowers/plans/2026-10-06-w3-scope-region-facts.md docs/superpowers/specs/2026-10-06-w3-scope-region-facts-design.md
@@ -1722,3 +1722,15 @@ EOF
 - **T5.3 sync-dev 会动运行栈**：这是常规开发同步（非 official sync-upstream 链）；执行前确认无他人在跑其它窗的任务。
 - **改名层坑**：运行栈容器内包名是 `pisuan.*`；worktree/容器道测试是 `yuxi.*`。脚本双轨 import 已处理，heredoc 按 T5.4 原文用 `pisuan.*`。
 - **不要**为「可能出现的」异常加防御分支——失败就 fail loud 上报（项目开发准则）。
+
+---
+
+## 执行记录（2026-10-06）
+
+- 全部 6 任务完成，提交序列：f244b78e（T1 三轨 DDL）→ a7c9fa86（T2 纯函数+脚本）→ 903d5319+69ce0e46（T3 L2 便车；审查修复：归属挂钩独立守卫防旁路熔断，bug-379）→ d2952e4c+bbff9d44（T4 facts 流+聚合；审查修复：归因集查询 ::jsonb 转型，bug-381）→ cbc65a2a（T5 薄 API+集成+回填）。全程双阶段评审（spec 合规 + 代码质量），三项质量发现（I-1 挂钩守卫、C1 json@> 列型、M1/M2 断言）均已修复复验。
+- 执行勘误（均为计划文本缺陷，按「测试+spec+docstring 三方一致」裁定修计划侧，实现零语义偏离）：
+  - bug-377：Step 2.3 `min_permissive_scope` 片段混合证据返回最宽，与自身测试及 spec §4.5「混合取最窄」矛盾——实现取窄序分支；
+  - bug-378：Step 3.1 `test_w1_baseline_regression` 期望漏 `reusable`（现场词表「水量」命中 measurable、「涌水量」在 reusable 模式；W1 自身 :46 系成员断言），实测基线 `["measurable", "reusable"]`；
+  - bug-380：Step 4.1 FakeRepo 两 getter 返回 dict 缺 `id` 键，与同计划生产代码 `t["id"]` 不自洽——修 fake 向真实 repo 契约对齐；
+  - Step 5.4 命令缺 `docker exec -i`（无 -i 则 heredoc stdin 不到 python）；且按 cerebrum DNR（heredoc 剥反斜杠/坏全角标点）实际以落盘文件+管道注入执行，内容逐字一致。
+- 回填实测：8/8 任务落列（横城矿区×5、伊宁矿区北区×3，8 任务全为矿区总规类故无「项目类不回填」面），复跑 0/8 幂等；learned_templates 211 行 scope 保持 NULL。
