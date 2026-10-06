@@ -110,6 +110,90 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 ---
 
+### Task 1b: bug-354 同族 — domain_factory_service 三处 type 字段错位（控制方追加）
+
+**背景**：Task 1 实现期间发现 `domain_factory_service.py` 存在 3 处与 bug-354 同族的 `"type"` 字段错位（段落实际字段为 `classify_type`），导致 validate_task 统计与 slot 校验静默空转。控制方已核实，追加本任务。
+
+**Files:**
+- Modify: `backend/package/yuxi/services/domain_factory_service.py`（3 处，**以下表代码锚点定位；行号会因 Task 2 的插入而漂移，以代码内容为准**）
+- Test: `backend/test/unit/services/test_validate_task_report.py`（新建）
+
+| 位置（当前行号） | 修改 |
+|---|---|
+| `validate_task` 内 L2 过滤（约 :4101）：`if p.get("type") == "parameter" and isinstance(p.get("template"), dict)` | `"type"` → `"classify_type"` |
+| `validate_task` 报告统计（约 :4131）：`"parameter_paragraphs": sum(1 for p in paragraphs if p.get("type") == "parameter"),` | 同上 |
+| `_commit_pipeline_async` 阶段 2.4b（约 :4586）：同款过滤行（文件中第二处） | 同上 |
+
+**注意**：约 :2818 的 `b.get("type") == "table"` 操作的是 block 对象，字段语义不同，**不要改动**。
+
+- [ ] **Step 1: 写失败测试** — 新建 `backend/test/unit/services/test_validate_task_report.py`：
+
+```python
+"""bug-354 同族：validate_task 报告统计/L2 过滤应读 classify_type（原读 type 全部落空）。"""
+
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from yuxi.services.domain_factory_service import DomainFactoryService
+
+
+def _fake_detail() -> dict:
+    return {
+        "source_paragraphs": [
+            {"id": "p1", "classify_type": "parameter",
+             "template": {"text_pattern": "矿区规模 {{规模}} Mt/a", "slots": [{"name": "规模"}]}},
+            {"id": "p2", "classify_type": "narrative"},
+        ],
+    }
+
+
+@pytest.mark.asyncio
+async def test_validate_task_counts_parameter_paragraphs():
+    """修复前 parameter_paragraphs 恒为 0（段落无 type 字段）→ 断言失败；修复后应为 1"""
+    svc = DomainFactoryService()
+    svc.repo = MagicMock()
+    svc.repo.update_task = AsyncMock()
+    with patch.object(svc, "get_task_detail", new=AsyncMock(return_value=_fake_detail())):
+        report = await svc.validate_task("t1")
+    assert report["summary"]["parameter_paragraphs"] == 1
+    assert report["passed"] is True
+    svc.repo.update_task.assert_awaited_once()
+```
+
+说明：`_commit_pipeline_async` 阶段 2.4b 一处不设专门单测（整条管线 mock 成本远超收益），以 grep 无残留 + services 回归套件覆盖。
+
+- [ ] **Step 2: 运行验证失败**
+
+```bash
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/sync-dev.ps1
+docker exec pisuan-localized-api-1 pytest /app/test/unit/services/test_validate_task_report.py -v
+```
+
+预期：`test_validate_task_counts_parameter_paragraphs` FAIL（parameter_paragraphs == 0）。
+
+- [ ] **Step 3: 修 3 处**（`grep -n 'get("type") == "parameter"' backend/package/yuxi/services/domain_factory_service.py` 定位，逐处改 `"type"` → `"classify_type"`）
+
+- [ ] **Step 4: 验证通过 + 无残留**
+
+```bash
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/sync-dev.ps1
+docker exec pisuan-localized-api-1 pytest /app/test/unit/services/test_validate_task_report.py -v
+docker exec pisuan-localized-api-1 grep -c 'get("type") == "parameter"' /app/package/pisuan/services/domain_factory_service.py || echo "0 residual"
+docker exec pisuan-localized-api-1 pytest /app/test/unit/services/ -q
+```
+
+预期：新测试 1 passed；残留计数 0（grep 无匹配退出码非 0 属正常）；services 全量回归全绿。
+
+- [ ] **Step 5: 提交**
+
+```bash
+git add backend/package/yuxi/services/domain_factory_service.py backend/test/unit/services/test_validate_task_report.py
+git commit -m "fix: bug-354 同族——domain_factory_service 三处 type 改读 classify_type，validate_task 统计与 slot 校验恢复生效
+
+Co-Authored-By: Claude Code <noreply@anthropic.com>"
+```
+
 ### Task 2: bug-353 — 实现 match_count 自增链
 
 **Files:**
@@ -648,6 +732,21 @@ make format
 
 预期：ruff 无报错；若有自动修复，重跑 Task 1-3 的测试确认仍绿。
 
+已知待清理（Task 1 质量审查发现）：
+- `backend/test/unit/services/test_pre_commit_validator.py` 两个新增测试的 dict 不满足 ruff format（ruff format 自动折叠即可）
+- 同文件第 4 行 `ValidationResult` 为 base 遗留的 F401 unused import（ruff check 会报；该文件本次已触碰，允许顺手移除该行以过提交门禁）
+- Task 3 发现：models/repo/tools 等文件存在**预存**整文件 ruff format 漂移（非本次引入）。处理规则：自有文件可整文件 format；**上游共享文件（tools.py、manager.py）禁止整文件重排**——`make format` 后检查 `git diff`，凡上游共享文件出现与本次新增块无关的重排 hunk，回退之（仅保留新增行的格式修正），否则会污染上游同步 diff。验收放宽为"新引入违规清零"，不强求全仓 ruff 干净
+
+- [ ] **Step 1b: 标注遗留失败测试（bug-357）**
+
+`backend/test/unit/services/test_formula_chunk.py` 中 3 个引用已删除方法 `_build_structured_document`（9b74874d 移除）的测试，在测试函数上加：
+
+```python
+@pytest.mark.skip(reason="bug-357: _build_structured_document 已于 9b74874d 移除，待按新架构重写")
+```
+
+目的：恢复 services 回归绿基线（标注债务，不掩盖——重写为独立跟进任务）。不重写、不删除测试本体。验证：`docker exec pisuan-localized-api-1 pytest /app/test/unit/services/ -q` → 0 failed（3 skipped）。
+
 - [ ] **Step 2: 更新 changelog**
 
 在 `docs/develop-guides/changelog.md` 顶部未发布区块（按文件既有格式，新增版本小节或并入当前未发布小节）追加：
@@ -655,6 +754,7 @@ make format
 ```markdown
 ### 修复
 - bug-354: pre_commit_validator 改读 classify_type（原读不存在的 type 字段，L1 模板校验一直空转）
+- bug-354 同族: domain_factory_service 三处 type 改读 classify_type（validate_task 参数段统计与 L2/2.4b slot 校验恢复生效）
 - bug-353: 实现 _increment_learned_template_match_counts，学习模板 match_count 恢复自增（ETL 标题命中留痕）
 
 ### 新增
@@ -664,8 +764,8 @@ make format
 - [ ] **Step 3: 提交 changelog**
 
 ```bash
-git add docs/develop-guides/changelog.md
-git commit -m "docs: changelog 记录 W0 修复与埋点
+git add backend/test/unit/services/test_pre_commit_validator.py backend/test/unit/services/test_formula_chunk.py docs/develop-guides/changelog.md
+git commit -m "chore: W0 收尾——lint 清理、test_formula_chunk 遗留失败标注（bug-357）与 changelog
 
 Co-Authored-By: Claude Code <noreply@anthropic.com>"
 ```
@@ -677,6 +777,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 | 项 | 判据 |
 |---|---|
 | bug-354 | parameter 段落缺 text_pattern 时 validate 返回 not passed（测试证明） |
+| bug-354 同族 | validate_task 报告 parameter_paragraphs 恢复计数（测试证明）；文件内 `get("type") == "parameter"` 零残留 |
 | bug-353 | learned_ 前缀命中触发 repo 自增；静态模板命中不写库（测试证明）；横城 ETL 冒烟日志出现自增行 |
 | 埋点 | 4 工具调用落台账行（含 0 结果与 miss）；埋点异常不影响工具返回 |
-| 无回归 | /app/test/unit/services/ 全绿；make format 干净 |
+| 无回归 | /app/test/unit/services/ 全绿（唯一已知基线失败 test_formula_chunk 3 例，由 Task 4 以 skip+bug-357 理由标注，重写为独立跟进任务）；make format：新引入违规清零，上游共享文件不整文件重排 |
