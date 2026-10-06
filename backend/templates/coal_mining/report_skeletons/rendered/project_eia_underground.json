@@ -1,6 +1,8 @@
 {
   "version": "2.0-rendered",
-  "stage_id": "project_eia",
+  "stage": "项目环评（井工）",
+  "stage_id": "project_eia_underground",
+  "std_ref": "HJ 2.1-2016《环境影响评价技术导则 总纲》（建设项目环评结构主纲）+ 要素导则 HJ 2.2-2018/HJ 2.3-2018/HJ 2.4-2021/HJ 610-2016/HJ 19-2022/HJ 964-2018/HJ 169-2018（标准号仅从 standards_index 枚举，禁 LLM 记忆补写——红线）",
   "generated_from": {
     "conditions": {
       "report_family": "project_eia",

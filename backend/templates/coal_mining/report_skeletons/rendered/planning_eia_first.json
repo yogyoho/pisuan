@@ -1,6 +1,8 @@
 {
   "version": "2.0-rendered",
+  "stage": "规划环评",
   "stage_id": "planning_eia",
+  "std_ref": "HJ 130-2019《规划环境影响评价技术导则 总纲》、HJ 463-2009《规划环境影响评价技术导则 煤炭工业矿区总体规划》（与 HJ 464 并录——现行有效性取舍人工核实，禁 LLM 记忆选择）",
   "generated_from": {
     "conditions": {
       "report_family": "planning_eia",

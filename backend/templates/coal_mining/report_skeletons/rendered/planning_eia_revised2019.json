@@ -1,6 +1,8 @@
 {
   "version": "2.0-rendered",
+  "stage": "规划环评",
   "stage_id": "planning_eia",
+  "std_ref": "HJ 130-2019《规划环境影响评价技术导则 总纲》、HJ 463-2009《规划环境影响评价技术导则 煤炭工业矿区总体规划》（与 HJ 464 并录——现行有效性取舍人工核实，禁 LLM 记忆选择）",
   "generated_from": {
     "conditions": {
       "report_family": "planning_eia",
@@ -1330,6 +1332,15 @@
         }
       ]
     },
+    "opt_1": {
+      "title": "三线一单及空间管控",
+      "slot_id": "OPT_1",
+      "key_elements": [],
+      "writing_patterns": [],
+      "depth": "normal",
+      "tables": [],
+      "sections": []
+    },
     "ch9": {
       "title": "规划实施环境影响减缓措施",
       "slot_id": "CH9",
@@ -1565,6 +1576,15 @@
           "role": "响应"
         }
       ]
+    },
+    "opt_2": {
+      "title": "不确定性分析",
+      "slot_id": "OPT_2",
+      "key_elements": [],
+      "writing_patterns": [],
+      "depth": "normal",
+      "tables": [],
+      "sections": []
     },
     "ch11": {
       "title": "矿区清洁生产与循环经济分析",
@@ -1942,24 +1962,6 @@
           "role": "收束"
         }
       ]
-    },
-    "opt_1": {
-      "title": "三线一单及空间管控",
-      "slot_id": "OPT_1",
-      "key_elements": [],
-      "writing_patterns": [],
-      "depth": "normal",
-      "tables": [],
-      "sections": []
-    },
-    "opt_2": {
-      "title": "不确定性分析",
-      "slot_id": "OPT_2",
-      "key_elements": [],
-      "writing_patterns": [],
-      "depth": "normal",
-      "tables": [],
-      "sections": []
     }
   }
 }
