@@ -961,7 +961,7 @@ class GraphBuilder:
         para_order = 0
         for para in source_paragraphs:
             ct = para.get("classify_type", "")
-            if ct not in ("parameter",):
+            if ct not in ("prose", "parameter", "narrative"):  # spec-W1 散文三值
                 continue
             sp = para.get("section_path", [])
             if not sp:
