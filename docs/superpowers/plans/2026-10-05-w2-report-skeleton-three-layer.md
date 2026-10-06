@@ -32,7 +32,7 @@
 - Create: `.wolf/corpus-census/conditions.json`（38 份 6 维条件 + 排除记录，本地证据链）
 - Create: `backend/test/data/corpus_census/{chapters,labels,conditions}.json`（测试 fixture 副本，入库）
 
-- [ ] **Step 1: 写派生脚本（ad-hoc，不提交）并存到 `.wolf/corpus-census/derive_conditions.py`**
+- [x] **Step 1: 写派生脚本（ad-hoc，不提交）并存到 `.wolf/corpus-census/derive_conditions.py`**
 
 ```python
 """从 labels/chapters 派生 38 份 6 维条件标注。运行: python derive_conditions.py"""
@@ -92,19 +92,19 @@ print(f'conditions: {len(out)} 份；excluded: {len(excluded)} 份')
 for e in excluded: print('  -', e['file'][:40], '→', e['reason'])
 ```
 
-- [ ] **Step 2: 运行并核对**
+- [x] **Step 2: 运行并核对**
 
 Run: `cd /c/workspace/pisuan && python .wolf/corpus-census/derive_conditions.py`
 Expected: `conditions: 35 份；excluded: 6 份`，排除清单 = 横城简本/塔然高勒坏档/淖毛湖报批版 + 3 份复垦方案（§3.7 非目标）。**非 35 即停手上报**（派生规则或 census 数据问题）。
 
-- [ ] **Step 3: 抽检 6 个代表性条件**
+- [x] **Step 3: 抽检 6 个代表性条件**
 
 Run: `python -c "import json; d=json.load(open('.wolf/corpus-census/conditions.json',encoding='utf-8'))['universe']
 for f,v in d.items():
     if '伊宁' in f or '横城' in f: print(f[:30], json.dumps(v, ensure_ascii=False))"`
 人工核对：规划修编 → `round=revision`；含三线一单章的报告 → `guideline_version=revised2019`（预期少量，五间房/淖毛湖系）；井工项目环评 → `mine_type=underground`。异常值记入提交说明。
 
-- [ ] **Step 4: fixtures 入库**
+- [x] **Step 4: fixtures 入库**
 
 ```bash
 mkdir -p backend/test/data/corpus_census
@@ -682,10 +682,10 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 ### Task 6: 收尾
 
-- [ ] **Step 1: 格式检查**（宿主有 ruff 则跑；无则 `python -m py_compile backend/scripts/render_report_skeletons.py backend/test/unit/test_report_skeleton_fit.py`）
-- [ ] **Step 2: changelog**——`docs/develop-guides/changelog.md` 的 `### pisuan 定制增量（2026-10-05）` 小节追加一行：`- feat(w2): 条件化报告模板三层形态落地（4 族骨架+R1-R9 规则+渲染器+38 份语料适配度 x/38、y/38，stage JSON 兼容产物经 seed_gen 冒烟）`
-- [ ] **Step 3: 计划勾账**——本文 checkbox 全勾 + 执行记录（含调参轮次轨迹、豁免清单汇总）
-- [ ] **Step 4: 提交**
+- [x] **Step 1: 格式检查**（宿主有 ruff 则跑；无则 `python -m py_compile backend/scripts/render_report_skeletons.py backend/test/unit/test_report_skeleton_fit.py`）
+- [x] **Step 2: changelog**——`docs/develop-guides/changelog.md` 的 `### pisuan 定制增量（2026-10-05）` 小节追加一行：`- feat(w2): 条件化报告模板三层形态落地（4 族骨架+R1-R9 规则+渲染器+38 份语料适配度 x/38、y/38，stage JSON 兼容产物经 seed_gen 冒烟）`
+- [x] **Step 3: 计划勾账**——本文 checkbox 全勾 + 执行记录（含调参轮次轨迹、豁免清单汇总）
+- [x] **Step 4: 提交**
 
 ```bash
 git add docs/develop-guides/changelog.md docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md
@@ -695,6 +695,8 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 ```
 
 ---
+
+> **W2 整体执行记录（2026-10-06）**：W2 全链完成，DoD 4 项全过（三层源文件 + 渲染器 + 适配度测试入库；slot 35/35、order 35/35 超 §3.6 勘误后门槛；6 份存档 4 完整冒烟 + 2 结构断言；`backend/package/`、`backend/server/` 零 diff，零 LLM 调用）。实现链：T1 986efbaf（conditions 推导）→ T2 1f92038a..8b1601e0（三层源文件 9 件 + 6 轮裁决）→ T3 0a1230e8→66654a9d（渲染器，sections list 化评审修正）→ T4 8abc8a11→46cbea73（fit 达标：alias +8、豁免 24 文件留痕）→ T5 8e070d84（存档 6 份 + 冒烟 4 PASS）→ 控制方勾账 docs 链。**修正计数口径**（勘误上方 Task 6 模板行「38 份」残留——实测 universe 35 份）：alias 8 条 / slot 豁免 7 处 7 文件 / order 豁免 21 份 / 豁免合计 24 文件。**v2 输入挂账三条**：① order 自然值 14/35（21 份院家风章序分歧）；② 渲染产物缺顶层 stage/std_ref 字段（模板名退化，seed_gen .get 兜底非报错级）；③ R2 爆破章插入位语义。Task 6 终验：fit 37 passed（宿主 --noconftest）+ 渲染 CLI 单份冒烟 exit 0 + 渲染器 ast.parse OK；changelog 追加行按实测终态落账（35 份、slot 35/35、order 35/35）。
 
 ## 完成定义（DoD）
 
