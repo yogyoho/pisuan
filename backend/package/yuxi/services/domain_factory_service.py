@@ -1593,11 +1593,10 @@ class DomainFactoryService:
         r"\d+(?:\.\d+)?\s*(?:mg/[mNL³3]|μg/[mNL³3]|g/[mNL³3]|kg|t|吨|m[²23]|km[²23]|hm2|亩|公顷|mg/L|μg/L|g/L|mg/Nm3|dB|dB\([A]\)|m3/[dha]|t/[da]|MW|kW|kV|kPa|MPa|Pa|mm|cm|km|%|‰|ppm|℃|°C|万元|亿元|元|hm2)"
     )
 
-    # 参数型判定：赋值/比较动词
-    _PARAM_VERBS: ClassVar[list[str]] = [
-        r"(?:为|达|约|超过|不低于|不大于|不超过|等于|约为|高达|低至|介于|范围[为是])\s*[\d.]+",
-        r"[\d.]+\s*(?:[～~—\-]\s*[\d.]+)",
-    ]
+    # [pisuan-custom] spec-W1 分类器收敛：散文三值（prose 现值；parameter/narrative 为 legacy 兼容读）
+    _PROSE_TYPES: ClassVar[tuple[str, ...]] = ("prose", "parameter", "narrative")
+    # [pisuan-custom] spec-W1 P1-1a 闭式槽位类型词表：prompt 文本 / GeneralizedTemplate / _normalize_template_response 三处同源
+    VALID_SLOT_TYPES: ClassVar[tuple[str, ...]] = ("parameter", "enum", "descriptive", "reference")
 
     # 参数型判定：slot 名称模式（可复用参数）
     _SLOT_PATTERNS: ClassVar[list[str]] = [
@@ -1605,24 +1604,6 @@ class DomainFactoryService:
         r"|人口|户数|投资|总投资|预算|费用|温度|湿度|风速|降水量|水位|标高|标段|占地"
         r"|面积|规模|容量|负荷|效率|利用率|达标率|合格率|回收率|去除率|处理率)",
     ]
-
-    # 叙述型子类型关键词
-    _NARRATIVE_SUBTYPE_KEYWORDS: ClassVar[dict[str, list[str]]] = {
-        "conclusion": ["结论", "综合结论", "总体结论", "评价结论", "综上所述", "总而言之", "结果表明", "分析表明"],
-        "methodology": [
-            "方法",
-            "采用.*方法",
-            "评价方法",
-            "预测方法",
-            "计算方法",
-            "分析方法",
-            "技术路线",
-            "工作方法",
-            "调查方法",
-        ],
-        "summary": ["概况", "综述", "简述", "概述", "基本情况", "总体情况", "项目概况", "区域概况", "现状概况"],
-        "background": ["背景", "由来", "历史", "沿革", "缘起", "目的和意义", "任务来源"],
-    }
 
     # 表格子类型关键词
     _TABLE_SUBTYPE_KEYWORDS: ClassVar[dict[str, list[str]]] = {
@@ -1632,7 +1613,7 @@ class DomainFactoryService:
     }
 
     def classify_paragraphs(self, paragraphs: list[dict]) -> list[dict]:
-        """段落分类（CLASSIFY 阶段）：将段落分为 heading/table/figure/formula/legal_reference/parameter/narrative，并附加子类型标签
+        """段落分类（CLASSIFY 阶段）：分为 heading/table/figure/formula/legal_reference + prose 散文回退（spec-W1 收敛，原 parameter/narrative 双轨合并；参数信号降级为 classify_tags），并附加子类型标签
 
         [pisuan-custom] P0-4 停机 list 分类：解析层逐行切段使多行列表规则永不触发，恒为 0 产出且无消费者；
         行内枚举（如"（1）（2）"）由泛化阶段正常吸收。"""
@@ -1680,29 +1661,18 @@ class DomainFactoryService:
                 para["classify_tags"] = [t for t in tags if t]
                 continue
 
-            # 6. 参数型（细化判定：必须含可量化的参数特征）
+            # 6. 散文回退（spec-W1 收敛：原 parameter/narrative 合并；参数信号降级为标签）
+            para["classify_type"] = "prose"
             has_numeric = bool(_re.search(r"\d+(?:\.\d+)?", content))
             if has_numeric and len(content) < 500:
                 has_unit = bool(_re.search(self._UNIT_RE, content, _re.IGNORECASE))
-                has_param_verb = any(_re.search(p, content) for p in self._PARAM_VERBS)
                 has_slot_name = any(_re.search(p, content) for p in self._SLOT_PATTERNS)
-
-                if has_unit or has_param_verb or has_slot_name:
-                    para["classify_type"] = "parameter"
-                    if has_unit:
-                        tags.append("measurable")
-                    if has_slot_name:
-                        tags.append("reusable")
-                    if not has_unit and not has_slot_name:
-                        tags.append("descriptive")
-                    para["classify_tags"] = tags
-                    continue
-
-            # 7. 叙述性正文
-            para["classify_type"] = "narrative"
-            subtype = self._match_narrative_subtype(content, title)
-            if subtype:
-                tags.append(subtype)
+                if has_unit:
+                    tags.append("measurable")
+                if has_slot_name:
+                    tags.append("reusable")
+                if not has_unit and not has_slot_name:
+                    tags.append("descriptive")
             para["classify_tags"] = tags
 
         return paragraphs
@@ -1727,16 +1697,6 @@ class DomainFactoryService:
         if "规定" in content or "办法" in content:
             return "ministry_rule"
         return "general"
-
-    def _match_narrative_subtype(self, content: str, title: str) -> str:
-        import re as _re
-
-        text = f"{title} {content}"
-        for subtype, keywords in self._NARRATIVE_SUBTYPE_KEYWORDS.items():
-            for kw in keywords:
-                if _re.search(kw, text):
-                    return subtype
-        return ""
 
     def _is_figure(self, content: str) -> bool:
         import re as _re
@@ -3775,8 +3735,8 @@ class DomainFactoryService:
             if "value" in slot:
                 normalized_slot["value"] = slot["value"]
 
-            # slot type 兜底校验
-            _valid_types = {"parameter", "enum", "descriptive", "reference"}
+            # slot type 兜底校验（词表与 prompt 文本 / GeneralizedTemplate 同源，spec-W1 P1-1a）
+            _valid_types = set(self.VALID_SLOT_TYPES)
             st = normalized_slot.get("type", "")
             if st not in _valid_types:
                 normalized_slot["type"] = "parameter"
