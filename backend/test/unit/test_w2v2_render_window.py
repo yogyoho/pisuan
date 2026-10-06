@@ -117,7 +117,7 @@ def test_stage_meta_derives_by_mine_type():
 
 def test_stage_meta_missing_stage_fails_loud():
     rrs = _load_renderer()
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(FileNotFoundError, match="真源不存在"):
         rrs._stage_meta({"mine_type": "nonexistent"}, "project_eia")
 
 
