@@ -82,10 +82,20 @@ def _apply_anchors(chapters: dict, l1: dict) -> None:
         changed = False
         for a in anchors:
             i = keys.index(a)
-            if i != keys.index(anchors[a]) + 1:
-                keys.pop(i)
-                keys.insert(keys.index(anchors[a]) + 1, a)
-                changed = True
+            j = keys.index(anchors[a])
+            # 就位判定：a 位于锚块 [j+1, block_end]（块 = 锚后连续的同锚锚定章）
+            block_end = j + 1
+            while block_end < len(keys) and anchors.get(keys[block_end]) == anchors[a]:
+                block_end += 1
+            if j < i <= block_end:
+                continue
+            keys.pop(i)
+            # 重插到锚块末尾——稳定：先处理者靠前，同锚不再互挤
+            block_end = j + 1
+            while block_end < len(keys) and anchors.get(keys[block_end]) == anchors[a]:
+                block_end += 1
+            keys.insert(block_end, a)
+            changed = True
         if not changed:
             return
         reordered = {k: chapters[k] for k in keys}
