@@ -85,7 +85,7 @@ CREATE INDEX IF NOT EXISTS idx_dfrf_source_task ON domain_factory_regional_facts
 
 **分层语义**：「建议」（规则/LLM 产出，NULL=无证据，不参与聚合）≠「判定」（task.scope 落定值）。写优先级 **L1 > L2 > COMMITTED 兜底 project**；L3 confirm-region 人工覆盖（三列+scope 可改）。不加 provenance JSON 列（YAGNI：溯源走回填报告 + L3 审计）。
 
-- **L1**（domain_factory_region.py 新模块）：`REGION_VOCAB` 词表常量（矿区/规划区名→slug，初值取自存量 8 任务与 4 domain 注册名的矿区词提取，slug 格式 `^[a-z0-9-]+$` 单测校验）+ 行政区闭集词表（仅作辅助信号词，不作 region_key，Q2）+ 年份正则。规则纯函数：输入段落文本 → region 信号（label+key）与 fact_type 信号。挂载：classify_paragraphs 内以**并列 JSON 键**（region_signals / fact_signals）写回段落记录，不碰 classify_tags 本体（跳过分支行为零改动）。任务级：backfill 脚本对 8 存量任务聚合段落信号 → 写 task 三列 + scope（词表命中才写）
+- **L1**（domain_factory_region.py 新模块）：`REGION_VOCAB` 词表常量（矿区/规划区名→slug，初值取自存量 8 任务与 4 domain 注册名的矿区词提取，slug 格式 `^[a-z0-9-]+$` 单测校验）+ 行政区闭集词表（仅作辅助信号词，不作 region_key，Q2）+ 年份正则。规则纯函数：输入段落文本 → region 信号（label+key）与 fact_type 信号。挂载：classify_paragraphs 内以**并列 JSON 键**（region_signals / fact_signals）写回段落记录，不碰 classify_tags 本体（跳过分支行为零改动）。任务级：**文档身份（file_name/document_type/report_type_code）词表命中** → 写 task 三列 + scope='regional'（不扫正文——正文引用矿区名的项目报告会误判 regional；计划 T2 落账修订）。backfill 脚本对 8 存量任务跑同规则。
 - **L2**（零新增 LLM 调用，便车泛化）：GeneralizedTemplate +`scope`/`region` 可选字段（**默认 None**——structured 通道不得物化默认值，防全量假性 project 证据污染 min 计算）；_PROMPT_DEFAULTS 说明可选输出；_normalize_template_response 兼容缺省；回写循环读到建议 → **仅当本任务对应列仍为 NULL 时写入**（L1 优先语义）；fallback 路径保持 None
 - **L3**：confirm-region API 人工改判（见 4.6）
 
