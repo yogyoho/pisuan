@@ -194,14 +194,57 @@ class TestStructuredChannel:
         _, outcome2 = asyncio.run(svc._generalize_text_tracked("再来一段超过二十个字符的内容啊", "1.2"))
         assert outcome2["channel"] == "prompt" and lc.bind_calls == 1  # 缓存生效，不再试探
 
+    def test_structured_validation_error_downgrades_then_caches(self, monkeypatch):
+        """provider 侧 output parser 因 Literal 词表拒绝非法 type，structured 调用在 ainvoke 内抛
+        ValidationError——与 RuntimeError 同 except 捕获：降级 prompt 通道 + 缓存 False + 不计 structured"""
+        import asyncio
+
+        from pydantic import ValidationError
+
+        from yuxi.services.domain_factory_service import GeneralizedTemplate
+
+        try:
+            GeneralizedTemplate(slots=[{"name": "a", "type": "数值"}])  # type 在 Literal 词表外 → 构造即抛
+        except ValidationError as e:
+            err = e
+        lc = FakeLCModel(err=err)
+        svc = self._make_svc(monkeypatch, lc)
+        resp, outcome = asyncio.run(svc._generalize_text_tracked("内容超过二十个字符了吧啊", "1.1"))
+        # ValidationError 落入同一 except → prompt 通道兜底成功，返回正常模板
+        assert outcome["status"] == "success" and outcome["channel"] == "prompt"
+        assert resp["generalized"] == "x {{A}}" and resp["slots"] == []
+        assert svc._structured_support.get("fake-model") is False
+        # 缓存生效：后续调用不再探测 structured（bind_calls 不再增加，channel 恒为 prompt）
+        _, outcome2 = asyncio.run(svc._generalize_text_tracked("再来一段超过二十个字符的内容啊", "1.2"))
+        assert outcome2["channel"] == "prompt" and lc.bind_calls == 1
+
+        # 全链路计数：真实 _record_outcome 只认 channel=="structured"，降级路径全程 prompt → structured 计数不增加
+        async def fake_templates():
+            return {"template": None}
+
+        monkeypatch.setattr(svc, "_load_prompt_templates", fake_templates)
+        paras = [{"id": "p0", "content": "这段内容足够长可以被处理到了吧，补充更多文字"}]
+        gen = asyncio.run(
+            svc.generalize_paragraphs(paragraphs=paras, schema_variables=[], domain_label="煤矿", max_concurrency=1)
+        )
+        assert gen["stats"]["structured"] == 0 and gen["stats"]["success"] == 1
+
     def test_record_outcome_counts_channel(self, monkeypatch):
         """集成验证 _record_outcome 的通道计数：fake tracked 返回带 channel 的 outcome"""
         import asyncio
         svc = make_svc()
-        outcomes = iter([
-            ({"generalized": "a", "slots": []}, {"status": "success", "error_type": None, "attempts": 1, "channel": "structured"}),
-            ({"generalized": "b", "slots": []}, {"status": "success", "error_type": None, "attempts": 1, "channel": "prompt"}),
-        ])
+        outcomes = iter(
+            [
+                (
+                    {"generalized": "a", "slots": []},
+                    {"status": "success", "error_type": None, "attempts": 1, "channel": "structured"},
+                ),
+                (
+                    {"generalized": "b", "slots": []},
+                    {"status": "success", "error_type": None, "attempts": 1, "channel": "prompt"},
+                ),
+            ]
+        )
         async def fake_tracked(text, chapter_hint, prompt=None):
             return next(outcomes)
         monkeypatch.setattr(svc, "_generalize_text_tracked", fake_tracked)
@@ -210,6 +253,8 @@ class TestStructuredChannel:
         monkeypatch.setattr(svc, "_load_prompt_templates", fake_templates)
         # 内容 >=20 字符：低于阈值会在 _run_for_paragraph 直接跳过（不进 tracked、不计数）
         paras = [{"id": f"p{i}", "content": f"第{i}段内容足够长可以被处理到了吧，补充更多文字"} for i in range(2)]
-        gen = asyncio.run(svc.generalize_paragraphs(paragraphs=paras, schema_variables=[], domain_label="煤矿", max_concurrency=1))
+        gen = asyncio.run(
+            svc.generalize_paragraphs(paragraphs=paras, schema_variables=[], domain_label="煤矿", max_concurrency=1)
+        )
         assert gen["stats"]["structured"] == 1
         assert gen["stats"]["success"] == 2

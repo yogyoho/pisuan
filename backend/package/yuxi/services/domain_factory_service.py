@@ -1622,7 +1622,7 @@ class DomainFactoryService:
 
     # [pisuan-custom] spec-W1 分类器收敛：散文三值（prose 现值；parameter/narrative 为 legacy 兼容读）
     _PROSE_TYPES: ClassVar[tuple[str, ...]] = ("prose", "parameter", "narrative")
-    # [pisuan-custom] spec-W1 P1-1a 闭式槽位类型词表（prompt 枚举与结构化 schema 随后任务对齐）
+    # [pisuan-custom] spec-W1 P1-1a 闭式槽位类型词表（prompt 枚举与 GeneralizedSlot 结构化 schema 已对齐）
     VALID_SLOT_TYPES: ClassVar[tuple[str, ...]] = ("parameter", "enum", "descriptive", "reference")
 
     # [pisuan-custom] spec-W1 P1-1a：结构化输出支持探测缓存（model_name -> bool；False=已降级 prompt 通道）
@@ -3652,13 +3652,13 @@ class DomainFactoryService:
 
     async def _try_structured_call(self, adapter, prompt: str) -> dict[str, Any] | None:
         """[pisuan-custom] spec-W1 P1-1a：langchain 结构化输出调用（一次尝试不重试；
-        失败返回 None 交 prompt 通道——provider 能力协商，非错误掩盖，降级必有 INFO 日志）"""
+        失败返回 None 交 prompt 通道——provider 能力协商，非错误掩盖，降级必有 WARNING 日志）"""
         try:
             async with asyncio.timeout(self.LLM_CALL_TIMEOUT_SECONDS):
                 data = await adapter.model.with_structured_output(GeneralizedTemplate).ainvoke(prompt)
             return data.model_dump() if hasattr(data, "model_dump") else dict(data)
         except Exception as exc:
-            logger.info(f"结构化输出通道不可用（model={adapter.model_name}），降级 prompt 通道: {exc}")
+            logger.warning(f"结构化输出通道不可用（model={adapter.model_name}），降级 prompt 通道: {exc}")
             return None
 
     async def _generalize_text_tracked(
@@ -3697,7 +3697,10 @@ class DomainFactoryService:
             structured = await self._try_structured_call(model, prompt)
             if structured is not None:
                 self._structured_support[model.model_name] = True
-                structured.setdefault("generalized", text[:500] + "...")
+                # model_dump() 会物化所有默认字段，但模型省略 generalized 时该 key 值为 ""，
+                # 兜底网须与 prompt 通道（result.setdefault）同语义：空值即回填原文截断
+                if not structured.get("generalized"):
+                    structured["generalized"] = text[:500] + "..."
                 result = self._normalize_template_response(structured)
                 return result, {"status": "success", "error_type": None, "attempts": 1, "channel": "structured"}
             self._structured_support[model.model_name] = False
@@ -3706,7 +3709,12 @@ class DomainFactoryService:
         response_text, call_meta = await self._call_llm_with_retry(model, prompt)
         total_attempts = call_meta["attempts"]
         if response_text is None:
-            return None, {"status": "error", "error_type": call_meta["error_type"], "attempts": total_attempts, "channel": channel}
+            return None, {
+                "status": "error",
+                "error_type": call_meta["error_type"],
+                "attempts": total_attempts,
+                "channel": channel,
+            }
 
         # provider 已响应；JSON 解析失败再试 1 次（解析层问题，不计熔断）
         for parse_attempt in range(1 + self.JSON_RETRY_MAX):
@@ -3731,7 +3739,12 @@ class DomainFactoryService:
                 response_text, retry_meta = await self._call_llm_with_retry(model, prompt)
                 total_attempts += retry_meta["attempts"]
                 if response_text is None:
-                    return None, {"status": "error", "error_type": retry_meta["error_type"], "attempts": total_attempts, "channel": channel}
+                    return None, {
+                        "status": "error",
+                        "error_type": retry_meta["error_type"],
+                        "attempts": total_attempts,
+                        "channel": channel,
+                    }
 
         return self._generalize_fallback(text, chapter_hint), {
             "status": "fallback",
