@@ -8,7 +8,6 @@
       "sensitive_targets": [],
       "policy_flags": [],
       "exemptions": {
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：地表水章位、固废/土壤互换、资源综合利用章位"
       }
     },
@@ -29,7 +28,6 @@
       "sensitive_targets": [],
       "policy_flags": [],
       "exemptions": {
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：识别与回顾互换、环管与跟踪评价章位"
       }
     },
@@ -68,7 +66,6 @@
       "sensitive_targets": [],
       "policy_flags": [],
       "exemptions": {
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：识别与回顾互换、环管与跟踪评价章位"
       }
     },
@@ -80,7 +77,6 @@
       "sensitive_targets": [],
       "policy_flags": [],
       "exemptions": {
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：识别与回顾互换、环管与跟踪评价章位"
       }
     },
@@ -96,7 +92,6 @@
           "前言"
         ],
         "note": "结构外章（四族骨架无此槽位）：院家前言",
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：资源综合利用章位（选址之前）"
       }
     },
@@ -112,7 +107,6 @@
           "-2013年气象资料统计"
         ],
         "note": "结构外章（四族骨架无此槽位）：年份区间资料汇编，norm 剥离前导数字 2011- 得 -2013年气象资料统计",
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：年份区间资料汇编，norm 剥离前导数字 2011- 得 -2013年气象资料统计"
       }
     },
@@ -128,7 +122,6 @@
           "附录"
         ],
         "note": "结构外章（四族骨架无此槽位）：附录",
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：附录"
       }
     },
@@ -140,7 +133,6 @@
       "sensitive_targets": [],
       "policy_flags": [],
       "exemptions": {
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：固废/土壤互换、爆破章位、选址/风险章位"
       }
     },
@@ -161,7 +153,6 @@
       "sensitive_targets": [],
       "policy_flags": [],
       "exemptions": {
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：固废/土壤互换、爆破章位、资源综合利用与选址互换"
       }
     },
@@ -173,7 +164,6 @@
       "sensitive_targets": [],
       "policy_flags": [],
       "exemptions": {
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：固废/土壤互换、资源综合利用与选址互换"
       }
     },
@@ -185,7 +175,6 @@
       "sensitive_targets": [],
       "policy_flags": [],
       "exemptions": {
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：地表水章位、固废/土壤互换"
       }
     },
@@ -238,7 +227,6 @@
       "sensitive_targets": [],
       "policy_flags": [],
       "exemptions": {
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：环管章位于清洁生产/公众参与之后"
       }
     },
@@ -250,7 +238,6 @@
       "sensitive_targets": [],
       "policy_flags": [],
       "exemptions": {
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：地表水章位、固废/土壤互换"
       }
     },
@@ -262,7 +249,6 @@
       "sensitive_targets": [],
       "policy_flags": [],
       "exemptions": {
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：环管章位于清洁生产/公众参与之后"
       }
     },
@@ -315,7 +301,6 @@
           "前言"
         ],
         "note": "结构外章（四族骨架无此槽位）：院家前言",
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：院家前言"
       }
     },
@@ -327,7 +312,6 @@
       "sensitive_targets": [],
       "policy_flags": [],
       "exemptions": {
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：地表水章位、固废/土壤互换、资源综合利用章位"
       }
     },
@@ -350,7 +334,6 @@
         "total_control"
       ],
       "exemptions": {
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：资源综合利用章位（选址之前）"
       }
     },
@@ -364,7 +347,6 @@
         "total_control"
       ],
       "exemptions": {
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：资源综合利用章位（选址之前）"
       }
     },
@@ -385,7 +367,6 @@
       "sensitive_targets": [],
       "policy_flags": [],
       "exemptions": {
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：地表水章位、土壤/固废互换、爆破章位、资源综合利用章位"
       }
     },
@@ -397,7 +378,6 @@
       "sensitive_targets": [],
       "policy_flags": [],
       "exemptions": {
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：环管章位于清洁生产/公众参与之后"
       }
     },
@@ -409,7 +389,6 @@
       "sensitive_targets": [],
       "policy_flags": [],
       "exemptions": {
-        "order": true,
         "order_note": "院家风章序偏差，与集团模板族 canonical 序不符，语料侧风格保留：地表水章位、土壤/固废互换、爆破章位、资源综合利用章位"
       }
     }
