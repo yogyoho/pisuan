@@ -131,3 +131,17 @@ class TestAttributionPatch:
         svc = make_svc()
         row = FakeTaskRow()
         assert svc._build_attribution_patch(row, {"a": {"generalized": "x"}}) == {}
+
+    def test_l2_unregistered_region_no_key_invented(self):
+        # L2 region 为词表外名 → 只落 region_label，不静默造 region_key
+        svc = make_svc()
+        row = FakeTaskRow()
+        patch = svc._build_attribution_patch(row, {"a": {"scope": "regional", "region": "某未知矿区"}})
+        assert patch == {"scope": "regional", "region_label": "某未知矿区"}
+
+    def test_l1_hit_existing_key_scope_only(self):
+        # L1 命中但 region_key 已有值且无 L2 证据 → 只补 scope
+        svc = make_svc()
+        row = FakeTaskRow(file_name="2横城矿区总体规划（修编）环评.docx", region_key="hengcheng")
+        patch = svc._build_attribution_patch(row, {"a": {"generalized": "x"}})
+        assert patch == {"scope": "regional"}
