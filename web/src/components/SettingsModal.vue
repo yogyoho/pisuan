@@ -386,6 +386,7 @@ watch(
       background: var(--gray-150);
       color: var(--main-700);
     }
+  }
 }
 
 /* Content Area */
