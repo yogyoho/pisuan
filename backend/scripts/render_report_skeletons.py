@@ -64,7 +64,7 @@ def _copy_ch(src: dict) -> dict:
 def _apply_anchors(chapters: dict, l1: dict) -> None:
     """W2v2 spec §4.1 后置重排：在场章若 l1 optional 词条声明 insert_after，摘出重插到锚章之后。
 
-    同锚多章按处理序稳定；锚章不在场 fail loud（禁静默）；无锚词条维持现位；
+    同锚多章按 l1 声明序稳定（与 rules add 遍历序解耦）；锚章不在场 fail loud（禁静默）；无锚词条维持现位；
     链式锚（锚章自身被锚定）有限轮收敛，不收敛即 ValueError。
     """
     anchors = {
