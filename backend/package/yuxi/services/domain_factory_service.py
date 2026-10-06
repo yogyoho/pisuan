@@ -598,7 +598,7 @@ class DomainFactoryService:
             logger.warning(f"解析产物疑似退化（Markdown 仅 {len(raw_markdown)} 字符）: {file_path}")
         logger.info(f"文档切分完成，共 {len(paragraphs)} 个段落")
 
-        # 段落分类 (CLASSIFY)：将段落分为 heading/table/figure/formula/list/legal_reference/parameter/narrative
+        # 段落分类 (CLASSIFY)：分为 heading/table/figure/formula/legal_reference + prose 散文回退（spec-W1 收敛）
         self.classify_paragraphs(paragraphs)
         classify_stats = {}
         for p in paragraphs:
@@ -1595,7 +1595,7 @@ class DomainFactoryService:
 
     # [pisuan-custom] spec-W1 分类器收敛：散文三值（prose 现值；parameter/narrative 为 legacy 兼容读）
     _PROSE_TYPES: ClassVar[tuple[str, ...]] = ("prose", "parameter", "narrative")
-    # [pisuan-custom] spec-W1 P1-1a 闭式槽位类型词表：prompt 文本 / GeneralizedTemplate / _normalize_template_response 三处同源
+    # [pisuan-custom] spec-W1 P1-1a 闭式槽位类型词表（prompt 枚举与结构化 schema 随后任务对齐）
     VALID_SLOT_TYPES: ClassVar[tuple[str, ...]] = ("parameter", "enum", "descriptive", "reference")
 
     # 参数型判定：slot 名称模式（可复用参数）
@@ -3735,7 +3735,7 @@ class DomainFactoryService:
             if "value" in slot:
                 normalized_slot["value"] = slot["value"]
 
-            # slot type 兜底校验（词表与 prompt 文本 / GeneralizedTemplate 同源，spec-W1 P1-1a）
+            # slot type 兜底校验（spec-W1 闭式词表）
             _valid_types = set(self.VALID_SLOT_TYPES)
             st = normalized_slot.get("type", "")
             if st not in _valid_types:

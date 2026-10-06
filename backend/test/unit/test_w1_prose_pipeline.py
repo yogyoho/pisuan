@@ -1,4 +1,4 @@
-# spec-W1 分类器收敛/双产物/词表单测；自包含，宿主 --noconftest 可跑
+# spec-W1 分类器收敛/双产物/词表单测；依赖 yuxi 服务模块，宿主缺依赖不可 import——验证走容器道：MSYS_NO_PATHCONV=1 docker run --rm -v "C:\workspace\pisuan\backend:/app:ro" pisuan-api:0.7.3 pytest /app/test/unit/test_w1_prose_pipeline.py --noconftest -q
 import sys
 from pathlib import Path
 
@@ -45,6 +45,15 @@ class TestClassifyConvergence:
         assert out[0]["classify_type"] == "prose"
         assert "measurable" in out[0]["classify_tags"]
 
+    def test_prose_fallback_descriptive_tag(self):
+        svc = make_svc()
+        # 已验证（容器内实测真实常量）：has_unit=False、不命中 _SLOT_PATTERNS
+        paras = [{"id": "p1", "content": "矿区范围内共有废弃井筒 12 处，均已完成封闭。"}]
+        out = svc.classify_paragraphs(paras)
+        assert out[0]["classify_type"] == "prose"
+        # spec-W1 放宽语义：descriptive = 有数值且无单位无槽名（旧 verb 路由信号随双轨废弃）
+        assert out[0]["classify_tags"] == ["descriptive"]
+
     def test_prose_fallback_plain_no_tags(self):
         svc = make_svc()
         paras = [{"id": "p1", "content": "该区域历史上曾发生多次洪水事件，对矿山生产构成威胁。"}]
@@ -55,9 +64,11 @@ class TestClassifyConvergence:
     def test_narrative_subtype_machinery_extinct(self):
         svc = make_svc()
         assert not hasattr(svc, "_match_narrative_subtype")
-        real = Path(__file__).resolve().parents[2] / "package" / "yuxi" / "services" / "domain_factory_service.py"
-        assert real.exists()
-        assert "_NARRATIVE_SUBTYPE_KEYWORDS" not in real.read_text(encoding="utf-8")
+        # 行为墓碑：旧叙述子类型（"综上所述"→conclusion 等）不再作为类型/标签产出
+        paras = [{"id": "p1", "content": "综上所述，矿区范围内共有 3 处废弃井筒需治理。"}]
+        out = svc.classify_paragraphs(paras)
+        assert out[0]["classify_type"] == "prose"
+        assert not ({"conclusion", "methodology", "summary", "background"} & set(out[0]["classify_tags"]))
 
     def test_preclassified_skip(self):
         svc = make_svc()
