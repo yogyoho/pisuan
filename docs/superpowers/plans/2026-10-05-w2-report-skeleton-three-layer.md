@@ -705,6 +705,8 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 3. 6 份渲染存档：4 份过 seed_gen 完整冒烟（SEED_READY + selfcheck 断言 >0），2 份（planning revision / project openpit）过结构断言。
 4. 零运行时后端改动（`backend/package/`、`backend/server/` 无 diff）；零 LLM 调用。
 
+> **W2 终审记录（2026-10-06，fresh eyes 只读独立复验）**：**VERDICT: ✅ READY**。独立复跑全过：DoD 四项（20 件产物全 tracked；测试阈值未放宽 + 宿主复跑 37 passed；6/6 存档字节级复现 + seed_gen 真跑 454 断言逐位吻合 + openpit/R3 结构断言；`backend/package|server` diff 为空）。集成抽查：R2/R4 三处一致（rules→渲染器→存档），合成 R3∧R4 条件实渲不炸。提交卫生：25 commits 全 Conventional 中文 + 禁碰 7 文件零卷入；amend 恰 2 次均为计划 doc 单文件精修；46cbea73 提交说明「slots 6 文件」系计数笔误（实为 7 文件，勾账已更正，提交信息不可变仅备案）。**遗留风险备案 5 条（不阻塞，v2 输入）**：① conditions 无入库生产路径（derive 脚本在 .wolf 未转正，新语料需手工造条件）；② planning revised2019 代表性 n=1，OPT 章未过 gen 级冒烟；③ openpit 管线调用知识（depth-targets 按矿型显式传、缺 ch18/ch19 设计性 FAIL）无面向使用者文档；④ 章序自然值 14/35 院家风系统性序差（直至 v2 白名单落地）；⑤ rendered/ 为随源提交的派生物，无强制重渲机制，存在静默漂移风险。
+
 ## Out of scope
 
 - 复垦方案族（O5 挂账）、全量表单清单（O2 → P2）、工厂侧登记（P2）、消费通道代码（P1-1b/W4）、运行时热替换（PR-1 三重闸另立）。
