@@ -27,7 +27,8 @@
       ],
       "sections": [],
       "key_elements": [],
-      "writing_patterns": []
+      "writing_patterns": [],
+      "insert_after": "规划方案综合论证及优化调整建议"
     },
     "不确定性分析": {
       "slot_id": "OPT_2",
@@ -38,7 +39,8 @@
       ],
       "sections": [],
       "key_elements": [],
-      "writing_patterns": []
+      "writing_patterns": [],
+      "insert_after": "环境管理、监测计划与跟踪评价"
     }
   },
   "chapters": {
