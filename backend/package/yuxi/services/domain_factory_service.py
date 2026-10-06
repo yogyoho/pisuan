@@ -263,7 +263,7 @@ class DomainFactoryService:
             "4. 严格只输出 JSON，不要输出任何自然语言解释或前后缀文本；\n"
             "5. 严格禁止输出代码块标记（例如 ```json 或 ```）；\n"
             "6. 插槽名称必须统一使用中文，格式为 {{中文名称}}。\n"
-            "7. 同时给出该段落的通用摘要与关键要点（双产物：模板+槽位 ‖ 摘要+要点）；\n\n"
+            "7. 同时给出该段落的通用摘要与关键要点（双产物：模板+槽位与摘要+要点）；\n\n"
             "文本：\n{content}\n\n"
             "Schema 变量提示：\n{schema_text}\n\n"
             "输出 JSON 结构：\n"
@@ -918,7 +918,7 @@ class DomainFactoryService:
                             para["matched_entities"] = matched_entities
                         generalized_count += 1
 
-                logger.info(f"段落级泛化完成: 成功 {generalized_count}/{len(todo_paragraphs)} 个参数型段落")
+                logger.info(f"段落级泛化完成: 成功 {generalized_count}/{len(todo_paragraphs)} 个散文段落")
 
                 # 熔断（P0-1 / bug-342）：必须在回写之后再持久化，否则已成功模板全部丢失，
                 # 断点续跑退化为整卷重跑
@@ -939,25 +939,6 @@ class DomainFactoryService:
                     return {"error": "provider circuit breaker tripped", "step_stats": step_ledger}
             except Exception as para_error:
                 logger.warning(f"段落级泛化失败: {para_error}")
-
-            # ========== 叙述型段落摘要提取 ==========
-            try:
-                narrative_paragraphs = [p for p in paragraphs if p.get("classify_type") == "narrative"]
-                if narrative_paragraphs:
-                    narrative_results = await self._extract_narrative_summaries(
-                        narrative_paragraphs,
-                        domain_label,
-                        max_concurrency=etl_max_concurrency,
-                    )
-                    summarized = 0
-                    for para in narrative_paragraphs:
-                        pid = para.get("id", "")
-                        if pid in narrative_results:
-                            para["template"] = narrative_results[pid]
-                            summarized += 1
-                    logger.info(f"叙述型摘要提取完成: {summarized}/{len(narrative_paragraphs)} 个段落")
-            except Exception as narr_err:
-                logger.warning(f"叙述型摘要提取失败: {narr_err}")
 
             # 从段落级 slot 值构建 base_info（slot-variable 统一）
             slot_values = {}
@@ -980,8 +961,8 @@ class DomainFactoryService:
             # ai_confidence 重定义为真实成功率 success/(success+fallback+error)，兜底与失败都计入分母；
             # 旧「结构化覆盖率」口径更名为 coverage_ratio，避免消费方静默变义
             # spec-W1：分母改为散文三值段落（prose/parameter/narrative），结构类不参与泛化
-            generalized_paras, total_paras = self.compute_prose_coverage(paragraphs)
-            coverage_ratio = int((generalized_paras / max(total_paras, 1)) * 100) if total_paras > 0 else 0
+            generalized_paras, total_prose = self.compute_prose_coverage(paragraphs)
+            coverage_ratio = int((generalized_paras / max(total_prose, 1)) * 100) if total_prose > 0 else 0
             llm_calls = step_ledger["success"] + step_ledger["fallback"] + sum(step_ledger["error"].values())
             ai_confidence = int(step_ledger["success"] / llm_calls * 100) if llm_calls > 0 else coverage_ratio
 
@@ -3254,108 +3235,6 @@ class DomainFactoryService:
 
         return chapters
 
-    # ========== 叙述型段落摘要提取 ==========
-
-    NARRATIVE_SUMMARY_PROMPT = """分析以下段落，提取通用性摘要信息。要求：
-
-1. 提取该段落的核心信息点（1-3个要点）
-2. 判断该段落属于哪种叙述类型：conclusion（结论）/ methodology（方法）/ summary（概况）/ background（背景）/ description（描述）
-3. 提取段落中提到的关键实体名称（如地名、机构名、项目名等）
-
-严格按 JSON 格式输出：
-{{"summary": "一句话摘要（不超过50字）", "key_points": ["要点1", "要点2"], "narrative_type": "类型", "entities": ["实体1", "实体2"]}}"""
-
-    async def _extract_narrative_summaries(
-        self,
-        paragraphs: list[dict],
-        domain_label: str = "",
-        max_concurrency: int = 2,
-    ) -> dict[str, dict]:
-        """对叙述型段落批量提取摘要"""
-        import asyncio
-
-        semaphore = asyncio.Semaphore(max_concurrency)
-
-        async def _summarize_one(para: dict) -> tuple[str, dict]:
-            async with semaphore:
-                pid = para.get("id", "")
-                content = para.get("content", "").strip()
-                title = para.get("title", "")
-                if not content or len(content) < 20:
-                    return pid, {
-                        "summary": content[:50],
-                        "key_points": [],
-                        "narrative_type": "description",
-                        "entities": [],
-                    }
-
-                text_input = f"标题：{title}\n内容：{content}" if title else content
-                try:
-                    result = await self._generalize_text(
-                        text_input,
-                        chapter_hint=domain_label,
-                        prompt=self.NARRATIVE_SUMMARY_PROMPT,
-                    )
-                    # _generalize_text 返回的是泛化结果，我们需要从中提取 JSON
-                    generalized = result.get("generalized", "")
-                    summary_data = self._parse_narrative_json(generalized)
-                    return pid, {
-                        "summary": summary_data.get("summary", content[:50]),
-                        "key_points": summary_data.get("key_points", []),
-                        "narrative_type": summary_data.get("narrative_type", "description"),
-                        "entities": summary_data.get("entities", []),
-                        "original": content,
-                    }
-                except Exception as e:
-                    logger.debug(f"叙述摘要提取失败 para={pid}: {e}")
-                    return pid, {
-                        "summary": content[:50],
-                        "key_points": [],
-                        "narrative_type": "description",
-                        "entities": [],
-                        "original": content,
-                    }
-
-        total = len(paragraphs)
-        progress = {"done": 0}
-
-        async def _tracked(para: dict) -> tuple[str, dict]:
-            result = await _summarize_one(para)
-            progress["done"] += 1
-            logger.info(f"叙述摘要进度 [{progress['done']}/{total}] 段落 {result[0]}")
-            return result
-
-        results = await asyncio.gather(*(_tracked(p) for p in paragraphs))
-        return dict(results)
-
-    @staticmethod
-    def _parse_narrative_json(text: str) -> dict:
-        """从 LLM 输出中解析叙述摘要 JSON"""
-        import json
-        import re as _re
-
-        # 尝试直接解析
-        text = text.strip()
-        if text.startswith("```"):
-            text = _re.sub(r"^```\w*\n?", "", text)
-            text = _re.sub(r"\n?```$", "", text)
-            text = text.strip()
-
-        try:
-            return json.loads(text)
-        except (json.JSONDecodeError, ValueError):
-            pass
-
-        # 尝试提取 JSON 块
-        m = _re.search(r'\{[^{}]*"summary"[^{}]*\}', text, _re.DOTALL)
-        if m:
-            try:
-                return json.loads(m.group())
-            except (json.JSONDecodeError, ValueError):
-                pass
-
-        return {"summary": text[:50], "key_points": [], "narrative_type": "description", "entities": []}
-
     async def generalize_paragraphs(
         self,
         paragraphs: list[dict[str, Any]],
@@ -3381,7 +3260,7 @@ class DomainFactoryService:
         Returns:
             dict: {
                 "results": {段落 id -> 模板结果},
-                "stats": {"success", "fallback", "error": {错误类型: 次数}, "skipped",
+                "stats": {"success", "fallback", "structured", "error": {错误类型: 次数}, "skipped",
                           "attempts", "breaker_tripped", "breaker_position"},
             }
         """
@@ -3393,7 +3272,7 @@ class DomainFactoryService:
             "structured": 0,
             "error": {},  # error_type -> 次数
             "skipped": 0,
-            "attempts": 0,  # LLM 实际调用次数（含重试）
+            "attempts": 0,  # LLM 实际调用次数（含重试；structured 探测每模型每进程至多 1 次，不计入）
             "breaker_tripped": False,
             "breaker_position": None,
         }
@@ -3668,7 +3547,7 @@ class DomainFactoryService:
 
         Returns:
             (模板结果, outcome)；outcome = {"status": "success"|"fallback"|"error",
-            "error_type": str | None, "attempts": int}
+            "error_type": str | None, "attempts": int, "channel": "prompt"|"structured"}
             status=success -> 规范化模板结果；fallback -> 兜底结果（metadata.fallback=True）；
             error -> 模板结果为 None（不产出兜底垃圾，交由熔断/断点续跑处理）
         """
@@ -3752,14 +3631,6 @@ class DomainFactoryService:
             "attempts": total_attempts,
             "channel": channel,
         }
-
-    async def _generalize_text(self, text: str, chapter_hint: str = "", prompt: str | None = None) -> dict[str, Any]:
-        """兼容包装：旧调用方（叙述摘要路径）只要模板结果不要台账。
-
-        P1-2 叙述路径废弃后，本包装可一并移除。
-        """
-        resp, _outcome = await self._generalize_text_tracked(text, chapter_hint, prompt=prompt)
-        return resp if resp is not None else self._generalize_fallback(text, chapter_hint)
 
     def _normalize_template_response(self, response: dict[str, Any]) -> dict[str, Any]:
         """规范化模板泛化响应，确保插槽名称符合命名规则（参考源系统 pipeline.py）

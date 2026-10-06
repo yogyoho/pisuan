@@ -106,6 +106,18 @@ class TestDualProductAndVocab:
         assert types == ["parameter", "parameter", "enum"]
         assert out["metadata"]["slot_type_coerced"] == 1
 
+    def test_normalize_merges_incoming_metadata(self):
+        """setdefault 合并语义：resp 自带 metadata 的键保留，仅叠加 slot_type_coerced（不被覆盖）"""
+        svc = make_svc()
+        resp = {
+            "generalized": "涌水量为 {{涌水量}}",
+            "metadata": {"chapter": "1"},
+            "slots": [{"name": "涌水量", "type": "数值", "value": "300"}],
+        }
+        out = svc._normalize_template_response(resp)
+        assert out["metadata"]["chapter"] == "1"
+        assert out["metadata"]["slot_type_coerced"] == 1
+
     def test_normalize_defaults_dual_product_fields(self):
         svc = make_svc()
         out = svc._normalize_template_response({"generalized": "x", "slots": []})
@@ -125,6 +137,15 @@ class TestDualProductAndVocab:
         # 任务书原文误写 (2, 3)：按其自身口径（分母=prose/parameter/narrative 三值段落，
         # 与 _PROSE_TYPES 及上方四行注释一致）应为 (2, 4)，实测亦为 (2, 4)
         assert (generalized, total) == (2, 4)
+
+    def test_prose_coverage_legacy_string_template(self):
+        """legacy 字符串模板（非 dict）被 isinstance dict 守护排除：计入分母、不计入分子"""
+        paras = [
+            {"classify_type": "prose", "template": "旧版字符串模板"},
+            {"classify_type": "prose", "template": {"generalized": "x"}},
+        ]
+        generalized, total = DomainFactoryService.compute_prose_coverage(paras)
+        assert (generalized, total) == (1, 2)
 
 
 class FakeStructuredRunnable:
@@ -184,6 +205,20 @@ class TestStructuredChannel:
         assert outcome["status"] == "success" and outcome["channel"] == "structured"
         assert outcome["attempts"] == 1 and lc.bind_calls == 1
         assert resp["summary"] == "s" and resp["generalized"] == "x {{A}}"
+
+    def test_structured_empty_generalized_backfill(self, monkeypatch):
+        """I-1 兜底网：structured 通道成功但模型省略 generalized（model_dump 物化为空串）
+        → 回填原文截断 text[:500] + \"...\"，outcome 仍为 structured 成功通道"""
+        import asyncio
+
+        from yuxi.services.domain_factory_service import GeneralizedTemplate
+
+        lc = FakeLCModel(data=GeneralizedTemplate(generalized="", slots=[]))
+        svc = self._make_svc(monkeypatch, lc)
+        text = "矿井正常涌水量为 300 m3/h，采用集中排水方式，排水系统运行记录完整可查。"
+        resp, outcome = asyncio.run(svc._generalize_text_tracked(text, "1.1"))
+        assert outcome["status"] == "success" and outcome["channel"] == "structured"
+        assert resp["generalized"] == text[:500] + "..."
 
     def test_structured_unsupported_downgrades_then_caches(self, monkeypatch):
         lc = FakeLCModel(err=RuntimeError("tools not supported"))
@@ -258,3 +293,11 @@ class TestStructuredChannel:
         )
         assert gen["stats"]["structured"] == 1
         assert gen["stats"]["success"] == 2
+
+
+def test_narrative_path_symbols_extinct():
+    real = Path(__file__).resolve().parents[2] / "package" / "yuxi" / "services" / "domain_factory_service.py"
+    src = real.read_text(encoding="utf-8")
+    for sym in ("_extract_narrative_summaries", "NARRATIVE_SUMMARY_PROMPT",
+                "_parse_narrative_json", "_generalize_text("):
+        assert sym not in src, f"叙述死路径残留: {sym}"
