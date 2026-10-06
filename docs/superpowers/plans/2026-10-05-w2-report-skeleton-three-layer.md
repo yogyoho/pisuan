@@ -643,7 +643,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 **Files:**
 - Create: `backend/templates/coal_mining/report_skeletons/rendered/`（4 份代表条件渲染存档）
 
-- [ ] **Step 1: 渲染 4 份代表条件存档**
+- [x] **Step 1: 渲染 4 份代表条件存档**
 
 ```bash
 python backend/scripts/render_report_skeletons.py --conditions backend/test/data/corpus_census/conditions.json --out backend/templates/coal_mining/report_skeletons/rendered --only "$(python -c "import json;d=json.load(open('backend/test/data/corpus_census/conditions.json',encoding='utf-8'))['universe'];print(next(f for f,v in d.items() if v['report_family']=='planning_eia' and v['round']=='first'))")"
@@ -653,7 +653,7 @@ python backend/scripts/render_report_skeletons.py --conditions backend/test/data
 git add backend/templates/coal_mining/report_skeletons/rendered/
 ```
 
-- [ ] **Step 2: seed_gen 冒烟（真实消费方，spec §3.6-3）**
+- [x] **Step 2: seed_gen 冒烟（真实消费方，spec §3.6-3）**
 
 ```bash
 cd backend/package/yuxi/agents/skills/buildin/coal-eia-writer
@@ -667,7 +667,7 @@ Expected: `SEED_READY: stage=...(planning_eia) chapters=13 sections=...` + `SEED
 - planning_eia / post_eia / tracking_eia / **project_eia(underground)** 产物：跑完整 gen（underground 产物章键 ch0..ch19 与 project_eia_underground.json 键集完全对齐）
 - **project_eia(openpit) 产物：只做结构断言**（章键集 = ch0..ch19 去沉陷 + 爆破 openpit 侧键，20 章、applied_rules 含 R2）——它喂 openpit depth_targets 必缺 2 章（underground 独有的沉陷/总控对应键不在 openpit 表），seed_gen 缺章即 FAIL 是设计行为（禁静默默认地板），v1 不为它造深度表
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```bash
 git add backend/templates/coal_mining/report_skeletons/rendered/ backend/scripts/render_report_skeletons.py
@@ -677,6 +677,8 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 ```
 
 ---
+
+> **Task 5 执行记录（2026-10-06）**：8e070d84（6 份存档 12437 行）。完整 gen 冒烟 4 份全 PASS（planning_first 13 章 454 断言 / project_underground 20 章 589 / post 17 章 469 / tracking 11 章 294，章键与 depth_targets 键集全等）；结构断言 2 份 PASS（planning_revised2019 15 章含 opt_1/opt_2+R3、project_openpit 20 章含 opt_1+R2）。渲染器与 seed_gen 本体零改动（sections list 化修复后无缺字段报错）。Controller 抽验：6/6 存档重跑渲染 BYTE-IDENTICAL。**观察级记录（v2 输入）**：渲染产物无顶层 stage/std_ref 字段，SEED_READY 显示名为空、模板名退化（seed_gen .get 兜底，非报错级）；SEED_PYDANTIC 在 pisuan 布局恒为 SKIP（KF_SCHEMAS 路径不存在，既有行为）；openpit depth_targets 实缺 ch18/ch19 两键（渲染 20 键）。
 
 ### Task 6: 收尾
 
