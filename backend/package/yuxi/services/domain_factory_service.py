@@ -17,6 +17,12 @@ from yuxi.config import get_user_data_dir
 from yuxi.config.options import domain_factory_llm_opts, system_options
 from yuxi.models.chat import select_model
 from yuxi.repositories.domain_factory_repository import DomainFactoryRepository
+from yuxi.services.domain_factory_region import (
+    extract_fact_signal,
+    extract_region_signal,
+    l1_task_attribution,
+    region_key_for_label,
+)
 from yuxi.services.entity_meta_service import EntityMetaAdapter, EntityMetaMatcher, SlotEntityMapper
 from yuxi.services.task_service import TaskContext, tasker
 from yuxi.utils import hashstr
@@ -42,6 +48,10 @@ class GeneralizedTemplate(BaseModel):
     summary: str = ""
     key_points: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
+    # [pisuan-custom] W3 L2 便车：归属建议（LLM 显式产出才有值；None=无证据，
+    # structured 通道 model_dump 物化 None 无副作用——不参与 min-permissive 证据集）
+    scope: str | None = None
+    region: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -209,6 +219,46 @@ class DomainFactoryService:
         await self.repo.increment_learned_template_match_counts(ids)
         logger.info(f"学习模板 match_count 自增: {len(ids)} 个模板")
 
+    @staticmethod
+    def _collect_l2_suggestions(paragraph_results: dict) -> dict[str, str]:
+        """[pisuan-custom] W3 L2 便车：泛化结果中首个显式 scope/region 建议（None=无证据不采集）。"""
+        for result in paragraph_results.values():
+            suggestion: dict[str, str] = {}
+            if result.get("scope"):
+                suggestion["scope"] = str(result["scope"])
+            if result.get("region"):
+                suggestion["region"] = str(result["region"])
+            if suggestion:
+                return suggestion
+        return {}
+
+    @staticmethod
+    def _build_attribution_patch(task_row, paragraph_results: dict) -> dict[str, Any]:
+        """[pisuan-custom] W3 任务级归属：L1 文档身份词表优先，L2 便车仅补 NULL 列。"""
+        patch: dict[str, Any] = {}
+        l1 = l1_task_attribution(
+            {
+                "file_name": task_row.file_name,
+                "document_type": task_row.document_type,
+                "report_type_code": task_row.report_type_code,
+            }
+        )
+        if l1:
+            if not task_row.region_key:
+                patch["region_label"] = l1["region_label"]
+                patch["region_key"] = l1["region_key"]
+            if not task_row.scope:
+                patch["scope"] = "regional"
+        l2 = DomainFactoryService._collect_l2_suggestions(paragraph_results)
+        if l2.get("scope") and not task_row.scope and "scope" not in patch:
+            patch["scope"] = l2["scope"]
+        if l2.get("region") and not task_row.region_label and "region_label" not in patch:
+            patch["region_label"] = str(l2["region"]).strip()
+            rk = region_key_for_label(str(l2["region"]))
+            if rk and not task_row.region_key:
+                patch["region_key"] = rk
+        return patch
+
     # ========== LLM 调用治理（[pisuan-custom] ETL P0-1：StepOutcome 台账 / 重试 / 熔断） ==========
 
     # provider 类错误：可退避重试并计入熔断；json_parse/schema_invalid 仅重试不计熔断；other 不重试
@@ -255,7 +305,10 @@ class DomainFactoryService:
             "5. 只提取具有跨项目复用价值的变量\n"
             '6. 相关数值合并：如"630～1200m"合并为{{海拔范围}}，不拆为最小值/最大值/单位\n'
             '7. 禁止使用"方位1""特征2""区域1"等无语义编号命名，每个 slot 必须有明确业务含义\n'
-            "8. 地理描述、环境特征等较长描述文字，如不适合拆为 slot，用 [叙述标记: 描述内容] 标记\n\n"
+            "8. 地理描述、环境特征等较长描述文字，如不适合拆为 slot，用 [叙述标记: 描述内容] 标记\n"
+            "9. 归属辅助（可选）：若该段内容明显全国普适或仅适用于特定矿区/规划区，"
+            "输出 scope（universal=全国普适/regional=特定矿区或规划区/project=仅本项目）与 region"
+            "（矿区或规划区名称）；不确定必须省略这两个字段，禁止猜测\n\n"
             "需要：\n"
             "1. 给出泛化后的文本（保持原文逻辑结构不变）；\n"
             "2. 列出每个插槽的含义及推荐数据来源，并附带被替换前的原文文字（value 字段，用于审核时恢复原文）；\n"
@@ -287,6 +340,8 @@ class DomainFactoryService:
             '       "sample": "原文中的参考文本"\n'
             "     }}\n"
             "  ],\n"
+            '  "scope": "universal|regional|project（可选，不确定则省略）",\n'
+            '  "region": "scope 为 regional 时的矿区/规划区名称，如：横城矿区（否则省略）",\n'
             '  "condition": "IF (条件表达式) == True",\n'
             '  "metadata": {{\n'
             '    "chapter": "{chapter_hint}",\n'
@@ -919,6 +974,14 @@ class DomainFactoryService:
                         generalized_count += 1
 
                 logger.info(f"段落级泛化完成: 成功 {generalized_count}/{len(todo_paragraphs)} 个散文段落")
+
+                # [pisuan-custom] W3：任务级归属——L1 文档身份词表优先，L2 便车建议仅填 NULL 列
+                task_row = await service.repo.get_task(task_id)
+                if task_row is not None:
+                    attribution_patch = self._build_attribution_patch(task_row, paragraph_results)
+                    if attribution_patch:
+                        await service.repo.update_task(task_id, attribution_patch)
+                        logger.info(f"任务归属建议落列: {task_id} -> {attribution_patch}")
 
                 # 熔断（P0-1 / bug-342）：必须在回写之后再持久化，否则已成功模板全部丢失，
                 # 断点续跑退化为整卷重跑
@@ -1685,6 +1748,14 @@ class DomainFactoryService:
                 if not has_unit and not has_slot_name:
                     tags.append("descriptive")
             para["classify_tags"] = tags
+
+        # [pisuan-custom] W3 L1：归属信号并列键（不进 classify_tags，W1 语义零变动）
+        for para in paragraphs:
+            text_all = f"{para.get('title', '')} {para.get('content', '')}"
+            region_sig = extract_region_signal(text_all)
+            para["region_signals"] = [region_sig] if region_sig else []
+            fact_sig = extract_fact_signal(text_all)
+            para["fact_signals"] = [fact_sig] if fact_sig else []
 
         return paragraphs
 
@@ -3649,6 +3720,12 @@ class DomainFactoryService:
 
         response.setdefault("summary", "")
         response.setdefault("key_points", [])
+
+        # [pisuan-custom] W3：L2 归属建议收敛——非法值置 None（无证据），空白 region 视为未产出
+        if response.get("scope") not in (None, "universal", "regional", "project"):
+            response["scope"] = None
+        if response.get("region") is not None and not str(response["region"]).strip():
+            response["region"] = None
 
         if not slots:
             return response
