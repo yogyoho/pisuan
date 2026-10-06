@@ -118,6 +118,9 @@
 - feat(w2v2): 6 份渲染存档重渲——爆破/R3 落锚位 + 顶层元数据刷新，双渲 byte-identical；seed_gen 冒烟复跑 4 完整（454/589/469/294 断言数对齐 W2 基准，显示名非空）+ 2 结构断言
 - feat(w2v2): fit order 位移白名单——判定升级为三档「multiset 门槛 → natural 全等 → best-first 重插可达（heapq 逐位差异启发式，visited 去重）」natural/whitelist/exempt；`order_whitelist.json` 17 词条全部带普查出处；order 豁免 21→0（modes natural=14/whitelist=21/exempt=0，35/35），阈值 28→33、新增豁免 ≤2 断言，slot 34 维持
 - 提交序列：eeabdd65/f7837d32/66aa040f（锚点机制 + 同锚稳定）/98fdfc5d/3de04075（stage 真源化）/cff2c279（重渲冒烟）/0d3600e8/143a7035（白名单 + 口径同步）；重插可达性判定实现为 best-first（早期提交信息中「DFS」系措辞沿革，可达性语义等价，文档统一 best-first）
+- feat(w3): scope×region 数据模型三轨 + 归属判定纯函数——DomainFactoryTask +project_name/region_label/region_key/scope、LearnedTemplate +scope（不进唯一约束，NULL=无证据）、新表 domain_factory_regional_facts（draft/confirmed/retired，不删行留审计），模型/manager ensure/migrate sql 三轨幂等；L1 矿区/规划区词表（17 词，slug）文档身份归因（不扫正文——正文引用矿区名的项目报告防误判 regional）；classify_paragraphs 并列信号键 `region_signals`/`fact_signals`（classify_tags 语义零变动）
+- feat(w3): L2 泛化便车 + facts 写入流 + min-permissive 写时聚合——GeneralizedTemplate +scope/region 可选字段（None=无证据，structured 通道 model_dump 物化无副作用），prompt 双通道可选产出、normalize 非法值收敛，零新增 LLM 调用；B 类确认实体→区域事实草稿（C 类拒绝，(source_task_id, entity_key) 去重）；聚合窄序 project<regional<universal 永不升级，归因集落 `extra_meta.contributing_task_ids`（JSONB `@>` 查询带 `::jsonb` 显式转型）；COMMITTED 兜底 scope NULL→project
+- feat(w3): L3 薄 API + 存量回填——`POST /domain-factory/tasks/{id}/confirm-region`（级联：任务四列→facts 确认→归因集模板重算）与 `POST /domain-factory/regional-facts/retire`；回填脚本 8/8 任务落列（横城矿区×5+伊宁矿区北区×3，幂等只填 NULL），learned_templates 零改动（211 行 scope 保持 NULL）。单测 `test_w3_region_rules.py`/`test_w3_scope_pipeline.py`/`test_w3_facts_flow.py` 共 50 例 + 容器集成验证（合成任务全链路自清理）；提交序列 f244b78e/a7c9fa86/903d5319+69ce0e46/d2952e4c+bbff9d44/cbc65a2a；执行期计划勘误三条（bug-377 min-permissive 片段宽窄写反、bug-378 W1 基线期望值漏 reusable、bug-380 测试 fake 缺 id 键），均按「测试+spec+docstring 一致」裁定修计划侧
 
 ## v0.7.2 (2026-09-02)
 
