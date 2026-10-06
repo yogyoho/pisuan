@@ -9,9 +9,10 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 
 import aiofiles
+from pydantic import BaseModel, Field
 from yuxi.config import get_user_data_dir
 from yuxi.config.options import domain_factory_llm_opts, system_options
 from yuxi.models.chat import select_model
@@ -21,6 +22,27 @@ from yuxi.services.task_service import TaskContext, tasker
 from yuxi.utils import hashstr
 from yuxi.utils.datetime_utils import utc_isoformat
 from yuxi.utils.logging_config import logger
+
+
+# [pisuan-custom] spec-W1 P1-1a：泛化结构化输出 schema（type 词表与 VALID_SLOT_TYPES 同步维护）
+class GeneralizedSlot(BaseModel):
+    name: str
+    type: Literal["parameter", "enum", "descriptive", "reference"] = "parameter"
+    value: str = ""
+    description: str = ""
+    suggested_source: str = ""
+    vocabulary: list[str] = Field(default_factory=list)
+
+
+class GeneralizedTemplate(BaseModel):
+    generalized: str = ""
+    slots: list[GeneralizedSlot] = Field(default_factory=list)
+    narrative_placeholders: list[dict[str, Any]] = Field(default_factory=list)
+    condition: str = ""
+    summary: str = ""
+    key_points: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
 
 # ---------------------------------------------------------------------------
 # 入库工具函数：去噪与上下文重组
@@ -1602,6 +1624,9 @@ class DomainFactoryService:
     _PROSE_TYPES: ClassVar[tuple[str, ...]] = ("prose", "parameter", "narrative")
     # [pisuan-custom] spec-W1 P1-1a 闭式槽位类型词表（prompt 枚举与结构化 schema 随后任务对齐）
     VALID_SLOT_TYPES: ClassVar[tuple[str, ...]] = ("parameter", "enum", "descriptive", "reference")
+
+    # [pisuan-custom] spec-W1 P1-1a：结构化输出支持探测缓存（model_name -> bool；False=已降级 prompt 通道）
+    _structured_support: ClassVar[dict[str, bool]] = {}
 
     # 参数型判定：slot 名称模式（可复用参数）
     _SLOT_PATTERNS: ClassVar[list[str]] = [
@@ -3365,6 +3390,7 @@ class DomainFactoryService:
         stats: dict[str, Any] = {
             "success": 0,
             "fallback": 0,
+            "structured": 0,
             "error": {},  # error_type -> 次数
             "skipped": 0,
             "attempts": 0,  # LLM 实际调用次数（含重试）
@@ -3389,6 +3415,8 @@ class DomainFactoryService:
         template_prompt = prompt_templates.get("template")
 
         def _record_outcome(outcome: dict[str, Any]) -> None:
+            if outcome.get("channel") == "structured":
+                stats["structured"] += 1
             status = outcome["status"]
             if status == "success":
                 stats["success"] += 1
@@ -3492,7 +3520,8 @@ class DomainFactoryService:
         await asyncio.gather(*(_run_for_paragraph(idx, p) for idx, p in enumerate(paragraphs)))
         logger.info(
             f"段落级泛化完成: success={stats['success']} fallback={stats['fallback']} "
-            f"error={stats['error']} skipped={stats['skipped']} attempts={stats['attempts']}"
+            f"error={stats['error']} skipped={stats['skipped']} attempts={stats['attempts']} "
+            f"structured={stats['structured']}"
             + (f" 熔断@{stats['breaker_position']}" if stats["breaker_tripped"] else "")
         )
         return {"results": results, "stats": stats}
@@ -3621,6 +3650,17 @@ class DomainFactoryService:
             await asyncio.sleep(backoff)
         return None, {"error_type": "other", "attempts": attempts}  # pragma: no cover
 
+    async def _try_structured_call(self, adapter, prompt: str) -> dict[str, Any] | None:
+        """[pisuan-custom] spec-W1 P1-1a：langchain 结构化输出调用（一次尝试不重试；
+        失败返回 None 交 prompt 通道——provider 能力协商，非错误掩盖，降级必有 INFO 日志）"""
+        try:
+            async with asyncio.timeout(self.LLM_CALL_TIMEOUT_SECONDS):
+                data = await adapter.model.with_structured_output(GeneralizedTemplate).ainvoke(prompt)
+            return data.model_dump() if hasattr(data, "model_dump") else dict(data)
+        except Exception as exc:
+            logger.info(f"结构化输出通道不可用（model={adapter.model_name}），降级 prompt 通道: {exc}")
+            return None
+
     async def _generalize_text_tracked(
         self, text: str, chapter_hint: str = "", prompt: str | None = None
     ) -> tuple[dict[str, Any] | None, dict[str, Any]]:
@@ -3651,11 +3691,22 @@ class DomainFactoryService:
             logger.warning(f"泛化模型初始化失败: {exc}")
             return None, {"status": "error", "error_type": self._classify_llm_error(exc), "attempts": 1}
 
+        # [pisuan-custom] spec-W1 P1-1a：结构化输出通道（词表由 GeneralizedSlot Literal 闭合）
+        channel = "prompt"
+        if self._structured_support.get(model.model_name, True):
+            structured = await self._try_structured_call(model, prompt)
+            if structured is not None:
+                self._structured_support[model.model_name] = True
+                structured.setdefault("generalized", text[:500] + "...")
+                result = self._normalize_template_response(structured)
+                return result, {"status": "success", "error_type": None, "attempts": 1, "channel": "structured"}
+            self._structured_support[model.model_name] = False
+
         logger.debug(f"泛化调用模型={model.model_name}, prompt长度={len(prompt)}字符")
         response_text, call_meta = await self._call_llm_with_retry(model, prompt)
         total_attempts = call_meta["attempts"]
         if response_text is None:
-            return None, {"status": "error", "error_type": call_meta["error_type"], "attempts": total_attempts}
+            return None, {"status": "error", "error_type": call_meta["error_type"], "attempts": total_attempts, "channel": channel}
 
         # provider 已响应；JSON 解析失败再试 1 次（解析层问题，不计熔断）
         for parse_attempt in range(1 + self.JSON_RETRY_MAX):
@@ -3671,6 +3722,7 @@ class DomainFactoryService:
                     "status": "success",
                     "error_type": None,
                     "attempts": total_attempts,
+                    "channel": channel,
                 }
             except Exception:
                 if parse_attempt >= self.JSON_RETRY_MAX:
@@ -3679,12 +3731,13 @@ class DomainFactoryService:
                 response_text, retry_meta = await self._call_llm_with_retry(model, prompt)
                 total_attempts += retry_meta["attempts"]
                 if response_text is None:
-                    return None, {"status": "error", "error_type": retry_meta["error_type"], "attempts": total_attempts}
+                    return None, {"status": "error", "error_type": retry_meta["error_type"], "attempts": total_attempts, "channel": channel}
 
         return self._generalize_fallback(text, chapter_hint), {
             "status": "fallback",
             "error_type": "json_parse",
             "attempts": total_attempts,
+            "channel": channel,
         }
 
     async def _generalize_text(self, text: str, chapter_hint: str = "", prompt: str | None = None) -> dict[str, Any]:

@@ -125,3 +125,91 @@ class TestDualProductAndVocab:
         # 任务书原文误写 (2, 3)：按其自身口径（分母=prose/parameter/narrative 三值段落，
         # 与 _PROSE_TYPES 及上方四行注释一致）应为 (2, 4)，实测亦为 (2, 4)
         assert (generalized, total) == (2, 4)
+
+
+class FakeStructuredRunnable:
+    def __init__(self, data, err=None):
+        self.data, self.err = data, err
+
+    async def ainvoke(self, prompt):
+        if self.err:
+            raise self.err
+        return self.data
+
+
+class FakeLCModel:
+    def __init__(self, data=None, err=None):
+        self.data, self.err = data, err
+        self.bind_calls = 0
+
+    def with_structured_output(self, schema):
+        self.bind_calls += 1
+        return FakeStructuredRunnable(self.data, self.err)
+
+
+class FakeAdapter:
+    def __init__(self, lc):
+        self.model, self.model_name = lc, "fake-model"
+
+
+class TestStructuredChannel:
+    def setup_method(self):
+        # _structured_support 是进程级 ClassVar 缓存，跨用例清零避免用例顺序耦合
+        DomainFactoryService._structured_support.clear()
+
+    def _make_svc(self, monkeypatch, lc):
+        import yuxi.models.chat as chat_mod
+        svc = make_svc()
+        monkeypatch.setattr(chat_mod, "select_model", lambda **kw: FakeAdapter(lc))
+        # 裸容器无 Redis/Postgres：system_options.get() 在模型初始化 try 块内即抛
+        # 'NoneType' object is not callable（pg_manager 未初始化），须一并 stub（仅测试侧）。
+        # Option 是 frozen+slots dataclass，实例/类属性不可 setattr——改为替换服务模块的绑定
+        import yuxi.services.domain_factory_service as svc_mod
+        class _FakeSystemOptions:
+            async def get(self):
+                return {"default_model": "fake-model"}
+        monkeypatch.setattr(svc_mod, "system_options", _FakeSystemOptions())
+        # 降级通道 stub：返回合法模板 JSON
+        async def fake_call(model, prompt):
+            return '{"generalized": "x {{A}}", "slots": []}', {"error_type": None, "attempts": 1}
+        monkeypatch.setattr(svc, "_call_llm_with_retry", fake_call)
+        return svc
+
+    def test_structured_success(self, monkeypatch):
+        from yuxi.services.domain_factory_service import GeneralizedTemplate
+        lc = FakeLCModel(data=GeneralizedTemplate(generalized="x {{A}}", slots=[], summary="s", key_points=["k"]))
+        svc = self._make_svc(monkeypatch, lc)
+        import asyncio
+        resp, outcome = asyncio.run(svc._generalize_text_tracked("内容超过二十个字符了吧啊", "1.1"))
+        assert outcome["status"] == "success" and outcome["channel"] == "structured"
+        assert outcome["attempts"] == 1 and lc.bind_calls == 1
+        assert resp["summary"] == "s" and resp["generalized"] == "x {{A}}"
+
+    def test_structured_unsupported_downgrades_then_caches(self, monkeypatch):
+        lc = FakeLCModel(err=RuntimeError("tools not supported"))
+        svc = self._make_svc(monkeypatch, lc)
+        import asyncio
+        _, outcome = asyncio.run(svc._generalize_text_tracked("内容超过二十个字符了吧啊", "1.1"))
+        assert outcome["channel"] == "prompt" and svc._structured_support.get("fake-model") is False
+        _, outcome2 = asyncio.run(svc._generalize_text_tracked("再来一段超过二十个字符的内容啊", "1.2"))
+        assert outcome2["channel"] == "prompt" and lc.bind_calls == 1  # 缓存生效，不再试探
+
+    def test_record_outcome_counts_channel(self, monkeypatch):
+        """集成验证 _record_outcome 的通道计数：fake tracked 返回带 channel 的 outcome"""
+        import asyncio
+        svc = make_svc()
+        outcomes = iter([
+            ({"generalized": "a", "slots": []}, {"status": "success", "error_type": None, "attempts": 1, "channel": "structured"}),
+            ({"generalized": "b", "slots": []}, {"status": "success", "error_type": None, "attempts": 1, "channel": "prompt"}),
+        ])
+        async def fake_tracked(text, chapter_hint, prompt=None):
+            return next(outcomes)
+        monkeypatch.setattr(svc, "_generalize_text_tracked", fake_tracked)
+        async def fake_templates():
+            return {"template": None}
+        monkeypatch.setattr(svc, "_load_prompt_templates", fake_templates)
+        # 内容 >=20 字符：低于阈值会在 _run_for_paragraph 直接跳过（不进 tracked、不计数）
+        paras = [{"id": f"p{i}", "content": f"第{i}段内容足够长可以被处理到了吧，补充更多文字"} for i in range(2)]
+        gen = asyncio.run(svc.generalize_paragraphs(paragraphs=paras, schema_variables=[], domain_label="煤矿", max_concurrency=1))
+        assert gen["stats"]["structured"] == 1
+        assert gen["stats"]["success"] == 2
