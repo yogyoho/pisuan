@@ -340,10 +340,11 @@ class TestValidatorProseGate:
         assert result.passed
 
     def test_text_pattern_no_longer_required(self):
-        """text_pattern 幽灵字段不再被要求（段落侧无写入方，bug-370 恒假门）：有 generalized 即通过"""
+        """text_pattern 幽灵字段不再被要求（段落侧无写入方，bug-370 恒假门）：有 generalized 即通过。
+        fixture 显式带空 text_pattern——钉住「存在且为空被忽略」，防回归成 OR 门仍有绿相的漏洞"""
         result = self._validate([
             {"id": "a", "classify_type": "prose",
-             "template": {"generalized": "x", "slots": [{"name": "n1"}]}},
+             "template": {"generalized": "x", "text_pattern": "", "slots": [{"name": "n1"}]}},
         ])
         assert result.passed
 
