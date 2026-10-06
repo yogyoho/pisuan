@@ -111,6 +111,8 @@
 ### pisuan 定制增量（2026-10-06）
 
 - fix(etl): bug-355 docx 入口防护——`yuxi/services/docx_guard.py` 四态诊断（ok/dangling_rels/unidocsa/corrupt）+ 悬空关系项 zip 手术自动修复重试恰一次；ETL 主解析与大纲提取两消费面接线；空产物 0 段落显式失败。原文件永不修改，unified.py/ocr_service 零改动
+- feat(etl): spec-W1 散文管线统一——分类器 7 路收敛为 5 结构类 + `prose` 散文回退（原 parameter/narrative 双轨退役，参数信号降级为 `classify_tags`，measurable/reusable/descriptive）；P1-0 散文段一次泛化产出双产物：提示词 v2 增 `summary`/`key_points` 字段、泛化回写透传双产物、覆盖率分母改为散文三值段落（prose + legacy parameter/narrative）；P1-1a 泛化 LLM 结构化输出通道（每模型一次能力探测缓存，不支持则显式降级 prompt 通道并分通道计数）+ 闭式槽位类型词表（提示词枚举四类 / pydantic Literal / 强转校验三处同源，非法 type 强转计数上浮 `slot_type_coerced`）；P1-2 废弃叙述独立摘要路径（`_extract_narrative_summaries` 等 5 符号删除，叙述摘要由统一泛化双产物承接）。单测 `backend/test/unit/test_w1_prose_pipeline.py` 26 例
+- fix(etl): spec-W1 消费面适配——pre_commit_validator 幽灵字段修正（原要求段落模板含 `text_pattern`，该字段段落侧无任何写入方，L1 门激活后凡含参数段任务必提交失败，bug-370）：改查真实产物字段 `generalized`，门收敛 prose+parameter（legacy narrative 豁免防旧任务新增性提交失败，裁决 D7）；L2 slot 校验两处与 graph_builder ParagraphRole 提取改散文三值；校验报告计数键 `parameter_paragraphs` → `prose_paragraphs`（口径同步三值）；`EtlWorkbench.vue` 散文详情区双产物并列展示（泛化模板+槽位 ‖ 摘要+关键要点，legacy 旧摘要仍可渲染）、列表摘要行/置信度显示条件同步三值
 
 ## v0.7.2 (2026-09-02)
 
