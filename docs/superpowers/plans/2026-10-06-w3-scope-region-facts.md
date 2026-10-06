@@ -1700,7 +1700,7 @@ EOF
 )"
 ```
 
-- [ ] **Step 6.4: 终审（fresh-eyes）**
+- [x] **Step 6.4: 终审（fresh-eyes）**
 
 派发终审子代理独立复验：DoD 1-7 逐条对照（spec §6），特别核验：三轨 DDL 一致性（models/ensure/migrate 列集对齐）、classify_tags 零变动、零新增 LLM 调用点、learned_templates scope 全 NULL、禁碰文件零卷入。终审发现项回 T1-T5 修复后复验。
 
@@ -1734,3 +1734,4 @@ EOF
   - bug-380：Step 4.1 FakeRepo 两 getter 返回 dict 缺 `id` 键，与同计划生产代码 `t["id"]` 不自洽——修 fake 向真实 repo 契约对齐；
   - Step 5.4 命令缺 `docker exec -i`（无 -i 则 heredoc stdin 不到 python）；且按 cerebrum DNR（heredoc 剥反斜杠/坏全角标点）实际以落盘文件+管道注入执行，内容逐字一致。
 - 回填实测：8/8 任务落列（横城矿区×5、伊宁矿区北区×3，8 任务全为矿区总规类故无「项目类不回填」面），复跑 0/8 幂等；learned_templates 211 行 scope 保持 NULL。
+- 终审（fresh-eyes，w3-final-review）：**FINAL VERDICT: READY**——DoD 1-7 全过（76 passed 复跑、LLM grep=0、禁碰五文件零卷入、库态三重证据吻合、提交纪律 8/8）。三条非阻塞备注已落账：行政区辅助词表未实现（spec §4.2 补记，随 W4 考虑）、spec §2 路由文件名笔误已修、本 checkbox 勾选。
