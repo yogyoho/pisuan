@@ -61,6 +61,39 @@ def _copy_ch(src: dict) -> dict:
     }
 
 
+def _apply_anchors(chapters: dict, l1: dict) -> None:
+    """W2v2 spec §4.1 后置重排：在场章若 l1 optional 词条声明 insert_after，摘出重插到锚章之后。
+
+    同锚多章按处理序稳定；锚章不在场 fail loud（禁静默）；无锚词条维持现位；
+    链式锚（锚章自身被锚定）有限轮收敛，不收敛即 ValueError。
+    """
+    anchors = {
+        t: spec_["insert_after"]
+        for t, spec_ in l1.get("optional_chapters", {}).items()
+        if t in chapters and spec_.get("insert_after")
+    }
+    if not anchors:
+        return
+    missing = sorted({a for a in anchors.values() if a not in chapters})
+    if missing:
+        raise KeyError(f"insert_after 锚章不在渲染集: {missing}")
+    for _ in range(len(anchors) + 1):
+        keys = list(chapters)
+        changed = False
+        for a in anchors:
+            i = keys.index(a)
+            if i != keys.index(anchors[a]) + 1:
+                keys.pop(i)
+                keys.insert(keys.index(anchors[a]) + 1, a)
+                changed = True
+        if not changed:
+            return
+        reordered = {k: chapters[k] for k in keys}
+        chapters.clear()
+        chapters.update(reordered)
+    raise ValueError(f"insert_after 链不收敛: {anchors}")
+
+
 def render(conds: dict, layers: dict) -> dict:
     """渲染单份骨架。conds=6 维条件；layers={family: {"l1":..., "l3":...}, "rules": [...]}."""
     family = conds["report_family"]
@@ -129,6 +162,9 @@ def render(conds: dict, layers: dict) -> dict:
     for t, cfg in l3.items():
         if t in chapters:
             chapters[t].update({k: v for k, v in cfg.items() if k in ("depth", "tables")})
+
+    # W2v2 spec §4.1：锚点后置重排（optional 章 insert_after）——add/require 落位与规则解耦
+    _apply_anchors(chapters, l1)
 
     # 输出章键 = slot_id 小写（CH3→ch3），与 depth_targets/{stage_id}.json 键同形——
     # 重编号 ch1..chN 会与 depth_targets 的 stage 原编号错位，seed_gen 按
