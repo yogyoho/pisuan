@@ -574,7 +574,13 @@ class DomainFactoryService:
         from yuxi.knowledge.parser.unified import _markdown_to_html
         from yuxi.services.ocr_service import parse_document
 
-        raw_markdown = await parse_document(file_path)
+        try:
+            raw_markdown = await parse_document(file_path)
+        except Exception as parse_error:  # noqa: BLE001
+            # [pisuan-custom] bug-355 守卫：docx 病态文件诊断 + 悬空关系项修复重试（恰一次）
+            from yuxi.services.docx_guard import guarded_reparse
+
+            raw_markdown = await guarded_reparse(file_path, parse_error, parse_document)
         raw_html = None  # HTML 格式，表格以 HTML 保存
         try:
             raw_html = _markdown_to_html(raw_markdown)
@@ -584,6 +590,12 @@ class DomainFactoryService:
 
         # 按章节和段落切分文档（传入 HTML 内容用于存储完整表格）
         paragraphs = self._parse_markdown_to_paragraphs(raw_markdown, html_content=raw_html)
+        if not paragraphs:
+            raise ValueError(
+                f"解析产物为空（0 段落）: {file_path}——文件可能为空壳或解析退化，请检查文件"
+            )
+        if len(raw_markdown) < 1000:
+            logger.warning(f"解析产物疑似退化（Markdown 仅 {len(raw_markdown)} 字符）: {file_path}")
         logger.info(f"文档切分完成，共 {len(paragraphs)} 个段落")
 
         # 段落分类 (CLASSIFY)：将段落分为 heading/table/figure/formula/list/legal_reference/parameter/narrative
