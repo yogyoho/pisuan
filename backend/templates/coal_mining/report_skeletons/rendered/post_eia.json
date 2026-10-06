@@ -1,6 +1,8 @@
 {
   "version": "2.0-rendered",
+  "stage": "环境影响后评价",
   "stage_id": "post_eia",
+  "std_ref": "《环境影响后评价技术导则》（名称与现行有效性人工核实，禁 LLM 记忆选择——websearch-unreliable 红线）、HJ 2.1-2016（总纲）、HJ 19（生态影响）、HJ 610-2016（地下水）、HJ 2.2、HJ 2.3、HJ 2.4、HJ 964-2018（土壤）、HJ 169-2018（环境风险）、GB 50821-2012《煤炭工业环境保护设计规范》（白音华姊妹样例引用实证）、GB 3838-2002、GB/T 14848-2017、GB 3095-2012、GB 3096-2008、GB 12348-2008、GB 15618-2018、GB 18599-2020——标准号一律从 standards_index 枚举，pending 条目禁补猜年份",
   "generated_from": {
     "conditions": {
       "report_family": "post_eia",

@@ -1,6 +1,8 @@
 {
   "version": "2.0-rendered",
+  "stage": "规划环境影响跟踪评价",
   "stage_id": "tracking_eia",
+  "std_ref": "HJ 130-2019《规划环境影响评价技术导则 总纲》（跟踪评价要求条款——现行有效性人工核实，禁 LLM 记忆选择）、HJ 463-2009《规划环境影响评价技术导则 煤炭工业矿区总体规划》（与 HJ 464 并录——矿区层次跟踪评价适用性人工核实）、HJ 2.2、HJ 2.3、HJ 2.4、HJ 19（生态影响）、HJ 610-2016、HJ 964-2018、HJ 169-2018、GB 3095-2012、GB 3838-2002、GB/T 14848-2017、GB 3096-2008、GB 15618-2018、GB 18599-2020、GB 20426-2006——标准号一律从 standards_index 枚举，pending 条目禁补猜年份",
   "generated_from": {
     "conditions": {
       "report_family": "tracking_eia",

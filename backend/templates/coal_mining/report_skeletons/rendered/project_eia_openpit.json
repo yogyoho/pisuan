@@ -1,6 +1,8 @@
 {
   "version": "2.0-rendered",
-  "stage_id": "project_eia",
+  "stage": "项目环评（露天）",
+  "stage_id": "project_eia_openpit",
+  "std_ref": "HJ 2.1-2016（建设项目环境影响评价技术导则 总纲）、HJ 2.2、HJ 2.3、HJ 2.4、HJ 19（生态影响）、HJ 610-2016（地下水）、HJ 619-2021（煤炭采选工程——露天采选适用范围人工核实）、HJ 964-2018（土壤）、HJ 169-2018（环境风险）、GB 50821-2012《煤炭工业环境保护设计规范》（露天矿环保工程设计依据——伊敏/白音华样例实证）、GB 6722《爆破安全规程》（爆破章限值依据——白音华三号样例引用，现行版本号人工核实禁 LLM 记忆）、GB 3095-2012、GB 3838-2002、GB/T 14848-2017、GB 3096-2008、GB 12348-2008、GB 15618-2018、GB 18599-2020、GB 20426-2006（煤炭工业污染物排放）——标准号一律从 standards_index 枚举（红线），pending 条目禁补猜年份",
   "generated_from": {
     "conditions": {
       "report_family": "project_eia",
@@ -1697,6 +1699,107 @@
         }
       ]
     },
+    "opt_1": {
+      "title": "爆破环境影响评价",
+      "slot_id": "OPT_1",
+      "key_elements": [
+        "章级总闸=mine_plan 钻爆工艺登记（blasting_flag）：true 在场/false 或未登记整章 ABSENT——progress 记 ABSENT，门/组装/目录同语义豁免",
+        "振动/冲击波安全距离判定=GB 6722 表值判据——限值需 tier1 人工核实后可断言，禁 LLM 记忆条款号",
+        "爆破噪声/大气（炮烟粉尘）分析结论与 ch9/ch7 口径一致（无专章样本时该内容并入相应要素章措施节——跨章呼应）"
+      ],
+      "writing_patterns": [
+        "爆破参数（孔网/单耗/一次药量）以采矿设计转录为准（门 1）",
+        "安全距离逐保护对象登记（{{TABLE:sensitive_targets}} aspect=爆破）",
+        "结论落「采取措施后可控/需优化」判定词"
+      ],
+      "depth": "deep",
+      "tables": [],
+      "sections": [
+        {
+          "id": "opt_1_S01",
+          "title": "爆破源分析",
+          "elements": [
+            "源段：爆破工艺/孔网参数/一次起爆药量/年爆破次数（{{SLOT:openpit_engineering.mining_system}} 钻爆项——采矿设计转录，门 1）。",
+            "收束句：源分析收束。"
+          ],
+          "uses": {
+            "slots": [
+              "{{SLOT:openpit_engineering.mining_system}}"
+            ],
+            "formulas": [],
+            "contracts": []
+          },
+          "slots": [
+            "{{SLOT:openpit_engineering.mining_system}}"
+          ],
+          "role": "驱动源"
+        },
+        {
+          "id": "opt_1_S02",
+          "title": "爆破振动与冲击波环境影响分析",
+          "elements": [
+            "振动段：质点振动速度与安全距离判定（安全允许距离=GB 6722 表值判据——tier1 人工核实后可断言；{{TABLE:sensitive_targets}} aspect=爆破 逐对象登记）。",
+            "冲击波段：个别飞散物与冲击波影响范围分析。",
+            "收束句：振动冲击波收束。"
+          ],
+          "uses": {
+            "slots": [
+              "{{TABLE:sensitive_targets}}"
+            ],
+            "formulas": [],
+            "contracts": []
+          },
+          "slots": [
+            "{{TABLE:sensitive_targets}}"
+          ],
+          "role": "响应"
+        },
+        {
+          "id": "opt_1_S03",
+          "title": "爆破噪声与大气环境影响分析",
+          "elements": [
+            "噪声段：爆破噪声衰减与达标分析（{{TABLE:noise.sources}} 爆破项——与 ch9 口径一致）。",
+            "大气段：炮烟与粉尘影响分析（{{TABLE:air.dust_source_strength}} 爆破项——与 ch7 口径一致）。",
+            "收束句：噪声大气收束。"
+          ],
+          "uses": {
+            "slots": [
+              "{{TABLE:noise.sources}}",
+              "{{TABLE:air.dust_source_strength}}"
+            ],
+            "formulas": [],
+            "contracts": []
+          },
+          "slots": [
+            "{{TABLE:noise.sources}}",
+            "{{TABLE:air.dust_source_strength}}"
+          ],
+          "role": "响应"
+        },
+        {
+          "id": "opt_1_S04",
+          "title": "爆破环境保护措施与结论",
+          "elements": [
+            "措施段：优化爆破参数/控制一次药量/时段约束/警戒（{{TABLE:measures.noise}} 爆破项+{{TABLE:measures.air}} 爆破项直渲）。",
+            "结论段：爆破环境影响结论与建议（判定词与要素章一致）。",
+            "收束句：本章收束，过渡到风险章。"
+          ],
+          "uses": {
+            "slots": [
+              "{{TABLE:measures.noise}}",
+              "{{TABLE:measures.air}}"
+            ],
+            "formulas": [],
+            "contracts": []
+          },
+          "slots": [
+            "{{TABLE:measures.noise}}",
+            "{{TABLE:measures.air}}"
+          ],
+          "role": "收束"
+        }
+      ]
+    },
     "ch13": {
       "title": "环境风险影响评价",
       "slot_id": "CH13",
@@ -2298,107 +2401,6 @@
               "XS10"
             ]
           },
-          "role": "收束"
-        }
-      ]
-    },
-    "opt_1": {
-      "title": "爆破环境影响评价",
-      "slot_id": "OPT_1",
-      "key_elements": [
-        "章级总闸=mine_plan 钻爆工艺登记（blasting_flag）：true 在场/false 或未登记整章 ABSENT——progress 记 ABSENT，门/组装/目录同语义豁免",
-        "振动/冲击波安全距离判定=GB 6722 表值判据——限值需 tier1 人工核实后可断言，禁 LLM 记忆条款号",
-        "爆破噪声/大气（炮烟粉尘）分析结论与 ch9/ch7 口径一致（无专章样本时该内容并入相应要素章措施节——跨章呼应）"
-      ],
-      "writing_patterns": [
-        "爆破参数（孔网/单耗/一次药量）以采矿设计转录为准（门 1）",
-        "安全距离逐保护对象登记（{{TABLE:sensitive_targets}} aspect=爆破）",
-        "结论落「采取措施后可控/需优化」判定词"
-      ],
-      "depth": "deep",
-      "tables": [],
-      "sections": [
-        {
-          "id": "opt_1_S01",
-          "title": "爆破源分析",
-          "elements": [
-            "源段：爆破工艺/孔网参数/一次起爆药量/年爆破次数（{{SLOT:openpit_engineering.mining_system}} 钻爆项——采矿设计转录，门 1）。",
-            "收束句：源分析收束。"
-          ],
-          "uses": {
-            "slots": [
-              "{{SLOT:openpit_engineering.mining_system}}"
-            ],
-            "formulas": [],
-            "contracts": []
-          },
-          "slots": [
-            "{{SLOT:openpit_engineering.mining_system}}"
-          ],
-          "role": "驱动源"
-        },
-        {
-          "id": "opt_1_S02",
-          "title": "爆破振动与冲击波环境影响分析",
-          "elements": [
-            "振动段：质点振动速度与安全距离判定（安全允许距离=GB 6722 表值判据——tier1 人工核实后可断言；{{TABLE:sensitive_targets}} aspect=爆破 逐对象登记）。",
-            "冲击波段：个别飞散物与冲击波影响范围分析。",
-            "收束句：振动冲击波收束。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:sensitive_targets}}"
-            ],
-            "formulas": [],
-            "contracts": []
-          },
-          "slots": [
-            "{{TABLE:sensitive_targets}}"
-          ],
-          "role": "响应"
-        },
-        {
-          "id": "opt_1_S03",
-          "title": "爆破噪声与大气环境影响分析",
-          "elements": [
-            "噪声段：爆破噪声衰减与达标分析（{{TABLE:noise.sources}} 爆破项——与 ch9 口径一致）。",
-            "大气段：炮烟与粉尘影响分析（{{TABLE:air.dust_source_strength}} 爆破项——与 ch7 口径一致）。",
-            "收束句：噪声大气收束。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:noise.sources}}",
-              "{{TABLE:air.dust_source_strength}}"
-            ],
-            "formulas": [],
-            "contracts": []
-          },
-          "slots": [
-            "{{TABLE:noise.sources}}",
-            "{{TABLE:air.dust_source_strength}}"
-          ],
-          "role": "响应"
-        },
-        {
-          "id": "opt_1_S04",
-          "title": "爆破环境保护措施与结论",
-          "elements": [
-            "措施段：优化爆破参数/控制一次药量/时段约束/警戒（{{TABLE:measures.noise}} 爆破项+{{TABLE:measures.air}} 爆破项直渲）。",
-            "结论段：爆破环境影响结论与建议（判定词与要素章一致）。",
-            "收束句：本章收束，过渡到风险章。"
-          ],
-          "uses": {
-            "slots": [
-              "{{TABLE:measures.noise}}",
-              "{{TABLE:measures.air}}"
-            ],
-            "formulas": [],
-            "contracts": []
-          },
-          "slots": [
-            "{{TABLE:measures.noise}}",
-            "{{TABLE:measures.air}}"
-          ],
           "role": "收束"
         }
       ]
