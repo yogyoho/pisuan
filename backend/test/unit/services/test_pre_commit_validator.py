@@ -159,7 +159,7 @@ async def test_parameter_para_by_classify_type_is_validated():
 
 @pytest.mark.asyncio
 async def test_narrative_para_skipped():
-    """非 parameter 段落不参与模板校验"""
+    """narrative legacy 段豁免 generalized 门（D7）：裸 narrative 通过，不参与模板校验"""
     validator = PreCommitValidator()
     task_detail = {"source_paragraphs": [{"id": "p1", "classify_type": "narrative"}]}
     result = await validator.validate(task_detail)

@@ -957,7 +957,7 @@ class GraphBuilder:
                     std_prefix=std_prefix,
                 )
 
-        # 3. ParagraphRole 节点（从 parameter 段落提取段落角色）
+        # 3. ParagraphRole 节点（从散文段落提取段落角色，spec-W1 三值）
         para_order = 0
         for para in source_paragraphs:
             ct = para.get("classify_type", "")
