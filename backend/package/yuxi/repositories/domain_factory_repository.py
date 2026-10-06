@@ -11,6 +11,7 @@ from yuxi.storage.postgres.models_domain_factory import (
     DomainFactoryLearnedTemplate,
     DomainFactoryOutline,
     DomainFactoryPromptConfig,
+    DomainFactoryRegionalFact,
     DomainFactoryReport,
     DomainFactoryReportChapter,
     DomainFactoryReportPps,
@@ -257,6 +258,9 @@ class DomainFactoryRepository:
                 return None
             task.status = "COMMITTED"
             task.committed_at = utc_now_naive()
+            # [pisuan-custom] W3 兜底：提交时仍无归属判定 → project（最保守；已有值不动）
+            if task.scope is None:
+                task.scope = "project"
             if reviewer:
                 task.reviewer = reviewer
             if ingest_task_id:
@@ -300,7 +304,7 @@ class DomainFactoryRepository:
         sample_original: str | None = None,
         extra_meta: dict | None = None,
         report_type_code: str | None = None,
-    ) -> DomainFactoryLearnedTemplate | None:
+    ) -> int | None:
         async with pg_manager.get_async_session_context() as session:
             conditions = [
                 DomainFactoryLearnedTemplate.domain_code == domain_code,
@@ -324,7 +328,10 @@ class DomainFactoryRepository:
                     extra_meta=extra_meta,
                 )
                 session.add(template)
+                await session.flush()  # W3：聚合需要自增 id（session 内取出，避免 expire 后取值）
+                template_id: int | None = template.id
             else:
+                template_id = existing.id
                 existing.source_count += 1
                 if len(generalized) > len(existing.generalized or ""):
                     existing.generalized = generalized
@@ -332,7 +339,7 @@ class DomainFactoryRepository:
                     existing.sample_original = sample_original
                 if extra_meta:
                     existing.extra_meta = extra_meta
-        return existing if existing else template
+        return existing.id if existing else template_id
 
     async def increment_learned_template_match_counts(self, template_ids: list[int]) -> int:
         """批量自增学习模板 match_count（ETL 标题命中留痕，bug-353）。"""
@@ -795,3 +802,110 @@ class DomainFactoryRepository:
             result = await session.execute(query)
             configs = result.scalars().all()
             return [c.to_dict() for c in configs]
+
+    # ========== Regional Facts & Template Scope (W3) ==========
+
+    async def insert_regional_fact(
+        self,
+        *,
+        fact_type: str,
+        content: str,
+        source_task_id: str,
+        entity_key: str,
+        region_key: str | None,
+        year: int | None,
+        source_ref: str,
+    ) -> str:
+        """B 类确认实体 → 事实草稿；(source_task_id, entity_key) 去重。返回 created|skipped。"""
+        async with pg_manager.get_async_session_context() as session:
+            existing = await session.execute(
+                select(DomainFactoryRegionalFact).where(
+                    DomainFactoryRegionalFact.source_task_id == source_task_id,
+                    DomainFactoryRegionalFact.entity_key == entity_key,
+                )
+            )
+            if existing.scalar_one_or_none() is not None:
+                return "skipped"
+            session.add(
+                DomainFactoryRegionalFact(
+                    fact_type=fact_type,
+                    content=content,
+                    source_task_id=source_task_id,
+                    entity_key=entity_key,
+                    region_key=region_key,
+                    year=year,
+                    source_ref=source_ref or None,
+                )
+            )
+        return "created"
+
+    async def confirm_facts_for_task(self, task_id: str, region_key: str | None) -> int:
+        """confirm-region 级联：同任务未退役事实覆盖式回填 region_key 并转 confirmed（纠偏含已确认行）。"""
+        async with pg_manager.get_async_session_context() as session:
+            result = await session.execute(
+                update(DomainFactoryRegionalFact)
+                .where(
+                    DomainFactoryRegionalFact.source_task_id == task_id,
+                    DomainFactoryRegionalFact.status.in_(["draft", "confirmed"]),
+                )
+                .values(region_key=region_key, status="confirmed", updated_at=utc_now_naive())
+            )
+        return result.rowcount or 0
+
+    async def retire_regional_facts(self, fact_ids: list[int]) -> int:
+        """泄漏处置：批量 status→retired（不删行，留审计）；幂等。"""
+        if not fact_ids:
+            return 0
+        async with pg_manager.get_async_session_context() as session:
+            result = await session.execute(
+                update(DomainFactoryRegionalFact)
+                .where(DomainFactoryRegionalFact.id.in_(fact_ids))
+                .values(status="retired", updated_at=utc_now_naive())
+            )
+        return result.rowcount or 0
+
+    async def get_learned_templates_by_ids(self, template_ids: list[int]) -> list[dict[str, Any]]:
+        if not template_ids:
+            return []
+        async with pg_manager.get_async_session_context() as session:
+            result = await session.execute(
+                select(
+                    DomainFactoryLearnedTemplate.id,
+                    DomainFactoryLearnedTemplate.scope,
+                    DomainFactoryLearnedTemplate.extra_meta,
+                ).where(DomainFactoryLearnedTemplate.id.in_(template_ids))
+            )
+            return [{"id": r.id, "scope": r.scope, "extra_meta": r.extra_meta or {}} for r in result]
+
+    async def get_learned_templates_by_contributing_task(self, task_id: str) -> list[dict[str, Any]]:
+        """归因集定位：extra_meta.contributing_task_ids 含 task_id 的模板（JSONB 包含查询）。"""
+        import json as _json
+
+        async with pg_manager.get_async_session_context() as session:
+            result = await session.execute(
+                text(
+                    "SELECT id, scope, extra_meta FROM domain_factory_learned_templates "
+                    "WHERE extra_meta->'contributing_task_ids' @> :needle"
+                ),
+                {"needle": _json.dumps([task_id])},
+            )
+            return [{"id": r.id, "scope": r.scope, "extra_meta": r.extra_meta or {}} for r in result]
+
+    async def update_learned_template_scope(
+        self, template_id: int, scope: str | None, extra_meta: dict[str, Any]
+    ) -> None:
+        async with pg_manager.get_async_session_context() as session:
+            await session.execute(
+                update(DomainFactoryLearnedTemplate)
+                .where(DomainFactoryLearnedTemplate.id == template_id)
+                .values(scope=scope, extra_meta=extra_meta, updated_at=utc_now_naive())
+            )
+
+    async def get_task_scopes(self, task_ids: list[str]) -> dict[str, str | None]:
+        if not task_ids:
+            return {}
+        async with pg_manager.get_async_session_context() as session:
+            result = await session.execute(
+                select(DomainFactoryTask.id, DomainFactoryTask.scope).where(DomainFactoryTask.id.in_(task_ids))
+            )
+            return {r.id: r.scope for r in result}
