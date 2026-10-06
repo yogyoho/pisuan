@@ -16,6 +16,8 @@ import logging
 import posixpath
 import tempfile
 import zipfile
+import zlib
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from xml.etree import ElementTree
@@ -61,7 +63,11 @@ def _dangling_rels_in(member: str, payload: bytes, namelist: set[str]) -> list[t
 
 
 def diagnose_docx(data: bytes) -> DocxDiagnosis:
-    """诊断 docx bytes 的病类。"""
+    """诊断 docx bytes 的病类。
+
+    边界说明：非规范带前缀属性（如 r:Target）的 .rels 会按悬空处理——
+    此类文件 python-docx 本就无法解析，方向安全。
+    """
     try:
         zf = zipfile.ZipFile(io.BytesIO(data))
     except zipfile.BadZipFile:
@@ -74,7 +80,12 @@ def diagnose_docx(data: bytes) -> DocxDiagnosis:
     for member in zf.namelist():
         if not member.endswith(".rels"):
             continue
-        for rel_id, target in _dangling_rels_in(member, zf.read(member), namelist):
+        try:
+            payload = zf.read(member)
+            member_dangling = _dangling_rels_in(member, payload, namelist)
+        except (zipfile.BadZipFile, zlib.error, ElementTree.ParseError):
+            return DocxDiagnosis("corrupt", [f".rels 成员读取/解析失败: {member}"])
+        for rel_id, target in member_dangling:
             dangling.append(f"{member}: {rel_id} -> {target}")
     if dangling:
         return DocxDiagnosis("dangling_rels", dangling)
@@ -89,6 +100,7 @@ def _strip_dangling(member: str, payload: bytes, namelist: set[str]) -> bytes:
     for rel in list(root):
         if (rel.get("Id") or "", rel.get("Target") or "") in dangling:
             root.remove(rel)
+    # 幂等全局态：仅影响序列化前缀风格（不注册则输出 ns0，同样合法），对其他线程无影响
     ElementTree.register_namespace("", RELS_NS)
     return ElementTree.tostring(root, xml_declaration=True, encoding="UTF-8")
 
@@ -144,7 +156,7 @@ async def _fetch_file_bytes(file_path: str) -> bytes:
         return await f.read()
 
 
-async def guarded_reparse(file_path: str, original_error: Exception, parse_fn) -> str:
+async def guarded_reparse(file_path: str, original_error: Exception, parse_fn: Callable[[str], Awaitable[str]]) -> str:
     """解析失败后的 docx 守卫：诊断病类，可救则 zip 手术后重试恰一次（bug-355）。
 
     仅 .docx 后缀生效（剥 MinIO query 后判定，ocr_service 同款）。
