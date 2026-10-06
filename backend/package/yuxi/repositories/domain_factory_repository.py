@@ -885,7 +885,7 @@ class DomainFactoryRepository:
             result = await session.execute(
                 text(
                     "SELECT id, scope, extra_meta FROM domain_factory_learned_templates "
-                    "WHERE extra_meta->'contributing_task_ids' @> :needle"
+                    "WHERE extra_meta::jsonb->'contributing_task_ids' @> CAST(:needle AS jsonb)"
                 ),
                 {"needle": _json.dumps([task_id])},
             )
