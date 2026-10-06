@@ -172,17 +172,9 @@ async def _startup(app: FastAPI) -> None:
 
     app.state.startup_complete = True
     logger.info(f"""
-
-░██     ░██                       ░██
- ░██   ░██
-  ░██ ░██   ░██    ░██ ░██    ░██ ░██
-   ░████    ░██    ░██  ░██  ░██  ░██
-    ░██     ░██    ░██   ░█████   ░██
-    ░██     ░██   ░███  ░██  ░██  ░██
-    ░██      ░█████░██ ░██    ░██ ░██  v{get_version()}
-
+        pisuan-know v{get_version()}
     """)
-    logger.info("Yuxi backend startup complete")
+    logger.info("pisuan backend startup complete")
 
 
 async def _shutdown_component(name: str, operation: Callable[[], object]) -> None:
