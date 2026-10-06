@@ -61,23 +61,27 @@ def test_revised2019_r3_chapters_anchored():
     assert "R3" in rendered["generated_from"]["applied_rules"]
 
 
-def _mini_layers(insert_after: str | None):
-    """合成三层：3 canonical 章 + 1 optional 章（可选锚）。"""
+def _mini_layers(anchors: dict[str, str] | None):
+    """合成三层：3 canonical 章 + N optional 章。None=单无锚附加章；dict=章名→insert_after。"""
     chapters = {
         t: {"slot_id": f"CH{i}", "aliases": [], "sections": [], "key_elements": [], "writing_patterns": []}
         for i, t in enumerate(["甲章", "乙章", "丙章"], 1)
     }
-    opt = {"slot_id": "OPT_9", "aliases": [], "sections": [], "key_elements": [], "writing_patterns": []}
-    if insert_after:
-        opt["insert_after"] = insert_after
-    l1 = {"canonical_order": ["甲章", "乙章", "丙章"], "chapters": chapters, "optional_chapters": {"附加章": opt}}
-    return {"planning_eia": {"l1": l1, "l3": {}}, "rules": [{"id": "RA", "when": {}, "add": ["附加章"]}]}
+    names = list(anchors) if anchors else ["附加章"]
+    optional_chapters = {}
+    for i, name in enumerate(names, 1):
+        opt = {"slot_id": f"OPT_{i}", "aliases": [], "sections": [], "key_elements": [], "writing_patterns": []}
+        if anchors:
+            opt["insert_after"] = anchors[name]
+        optional_chapters[name] = opt
+    l1 = {"canonical_order": ["甲章", "乙章", "丙章"], "chapters": chapters, "optional_chapters": optional_chapters}
+    return {"planning_eia": {"l1": l1, "l3": {}}, "rules": [{"id": "RA", "when": {}, "add": names}]}
 
 
 def test_anchor_missing_fails_loud():
     rrs = _load_renderer()
     with pytest.raises(KeyError, match="锚章不在渲染集"):
-        rrs.render({"report_family": "planning_eia"}, _mini_layers("不存在的章"))
+        rrs.render({"report_family": "planning_eia"}, _mini_layers({"附加章": "不存在的章"}))
 
 
 def test_no_anchor_appends_tail():
@@ -85,3 +89,13 @@ def test_no_anchor_appends_tail():
     rrs = _load_renderer()
     rendered = rrs.render({"report_family": "planning_eia"}, _mini_layers(None))
     assert _titles(rendered)[-1] == "附加章"
+
+
+def test_same_anchor_stable_order():
+    """同锚两章按处理序稳定落位（spec §4.1，不抛链不收敛）。"""
+    rrs = _load_renderer()
+    layers = _mini_layers({"附加甲": "乙章", "附加乙": "乙章"})
+    layers["rules"] = [{"id": "RA", "when": {}, "add": ["附加甲", "附加乙"]}]
+    rendered = rrs.render({"report_family": "planning_eia"}, layers)
+    ts = _titles(rendered)
+    assert ts == ["甲章", "乙章", "附加甲", "附加乙", "丙章"]
