@@ -60,31 +60,29 @@ def repair_dangling_rels(data: bytes) -> bytes: ...
 ```python
 try:
     raw_markdown = await parse_document(file_path)
-except Exception as e:
-    raw_markdown = await self._retry_parse_with_docx_guard(file_path, e)
+except Exception as parse_error:  # noqa: BLE001
+    # [pisuan-custom] bug-355 守卫：docx 病态文件诊断 + 悬空关系项修复重试（恰一次）
+    from yuxi.services.docx_guard import guarded_reparse
+
+    raw_markdown = await guarded_reparse(file_path, parse_error, parse_document)
 ```
 
-`_retry_parse_with_docx_guard`（service 方法）：
-1. 取文件 bytes：`is_minio_url(file_path)` → `parse_minio_url` + `get_minio_client().adownload_file`（unified.py:137-139 同款 API）；否则本地读
+守卫编排全收进 `docx_guard.guarded_reparse(file_path, original_error, parse_fn)`（`parse_fn` 注入以便单测；取字节经模块内 `_fetch_file_bytes`：`is_minio_url` → `parse_minio_url` + `get_minio_client().adownload_file`，本地走 `aiofiles`——unified.py:137-139 同款 API）：
+1. 后缀非 `.docx`（剥 MinIO query 后判定，ocr_service 同款）→ 原样 re-raise，不取字节
 2. `diagnose_docx`：
    - `ok` → **原样 re-raise 原异常**（文件本身无病，失败另有原因如网络/存储，守卫不得掩盖）
-   - `unidocsa` → raise `ValueError("文件为 WPS 私有格式（UniDocSa），非标准 docx 容器，无法解析；请用 Word/WPS 打开后另存为标准 .docx 再上传")`
-   - `corrupt` → raise `ValueError("文件损坏或非标准 docx 容器，无法解析")`（chain 原异常）
-   - `dangling_rels` → `repair_dangling_rels` → 写临时 `.docx` → 重调 `parse_document(temp_path)` 一次 → `finally` 删临时文件
-3. 重试成功 → `logger.warning(f"docx 悬空关系项已自动修复后解析成功: {file_path}, 悬空条目={details}")`，返回 markdown；重试仍败 → raise 链式错误（含病类诊断）
+   - `unidocsa` / `corrupt` → `ValueError(USER_MESSAGES[kind])` chain 原异常；`USER_MESSAGES` 文案字典随病类定义在 docx_guard（单一组装点，见 §3.5 修订）：unidocsa =「文件为 WPS 私有格式（UniDocSa），非标准 docx 容器，无法解析；请用 Word/WPS 打开后另存为标准 .docx 再上传」；corrupt =「文件损坏或非标准 docx 容器，无法解析」
+   - `dangling_rels` → `repair_dangling_rels` → 写临时 `.docx` → 重调 `parse_fn(temp_path)` 一次 → `finally` 删临时文件
+3. 重试成功 → `logger.warning` 记「已自动修复」+ 悬空条目清单，返回 markdown；重试仍败 → `ValueError`（含剔除条目数与文件路径）chain 重试异常
 
-非 docx 后缀的解析失败直接走原异常（守卫只对 `.docx` 生效）。
+### 3.3 大纲提取接线（`extract_outline_preview`，域 :5085）
 
-### 3.3 大纲提取接线（`_extract_headings_from_docx`，域 :5126）
-
-出自 pisuan-custom 提交 `02419f2f`，非上游共享，可改。`Document()` 前插三行：
+出自 pisuan-custom 提交 `02419f2f`，非上游共享，可改。守卫放在有 `filename` 上下文的调用点（`_extract_headings_from_docx` 本体零改动），`Document()` 之前一行：
 
 ```python
-diag = diagnose_docx(file_bytes)
-if diag.kind == "dangling_rels":
-    file_bytes = repair_dangling_rels(file_bytes)
-elif diag.kind != "ok":
-    raise ValueError(病类中文指引)   # 与 3.2 同款报错文案
+from yuxi.services.docx_guard import guard_docx_bytes
+
+file_bytes = guard_docx_bytes(file_bytes, label=filename)  # ok→原样返回；dangling_rels→修复（warning）；不可救→ValueError(USER_MESSAGES[kind])
 ```
 
 ### 3.4 空产物守卫（`_etl_parse_stage`，段落切分后）
@@ -99,9 +97,9 @@ if len(raw_markdown) < 1000:
 
 稀疏产物只告警不阻断（正常简本文件可能就是小）。
 
-### 3.5 错误文案归属
+### 3.5 错误文案归属（修订：随实现归并）
 
-`docx_guard` 只返回结构化 `kind + details`（机械判定层）；中文用户文案在 service 接线处组装（用户面归 service）。报错经既有驱动层 except（:1018）落 `error_message`，前端现状即显示。
+实现归并裁决：守卫编排与文案全部收进 `docx_guard` 模块——`USER_MESSAGES` 文案字典与病类定义同址（单一组装点，避免 service 两处接线重复拼文案）；service 只留 ≤7 行调用。`details` 悬空条目清单仍以结构化形态进日志，不进用户报错。报错经既有驱动层 except（:1018）落 `error_message`，前端现状即显示。
 
 ## 4. 数据流与不变量
 
