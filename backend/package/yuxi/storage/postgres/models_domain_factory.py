@@ -78,6 +78,12 @@ class DomainFactoryTask(Base):
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
     committed_at = Column(DateTime, nullable=True)
 
+    # [pisuan-custom] W3 scope×region 归属维度（L1/L2 建议 + L3 判定；NULL=未判）
+    project_name = Column(String(255), nullable=True)
+    region_label = Column(String(255), nullable=True)  # 区域展示名（如「伊宁矿区北区」）
+    region_key = Column(String(128), nullable=True, index=True)  # slug 分库键（如 hengcheng）
+    scope = Column(String(32), nullable=True)  # universal|regional|project；NULL=未判
+
     domain = relationship("DomainFactoryDomain", back_populates="tasks")
 
     def to_summary_dict(self) -> dict[str, Any]:
@@ -128,6 +134,7 @@ class DomainFactoryLearnedTemplate(Base):
     match_count = Column(Integer, nullable=False, default=0)
     sample_original = Column(Text, nullable=True)
     extra_meta = Column(JSON, nullable=True, default=dict)
+    scope = Column(String(32), nullable=True)  # [pisuan-custom] W3：universal|regional|project；NULL=无证据不参与聚合（不进唯一约束）
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
 
@@ -353,4 +360,44 @@ class DomainFactoryToolUsage(Base):
             "result_count": self.result_count,
             "source": self.source,
             "created_at": format_utc_datetime(self.created_at),
+        }
+
+
+class DomainFactoryRegionalFact(Base):
+    """领域知识工厂 - 区域事实（W3 scope×region 落库）
+
+    B 类确认实体 → draft；confirm-region 级联 → confirmed；泄漏处置 → retired（不删行留审计）。
+    """
+
+    __tablename__ = "domain_factory_regional_facts"
+    __table_args__ = (
+        Index("idx_dfrf_region_type_status", "region_key", "fact_type", "status"),
+        Index("idx_dfrf_source_task", "source_task_id"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    fact_type = Column(String(32), nullable=False)  # monitoring|sensitive_target|measure|constraint
+    region_key = Column(String(128), nullable=True)  # NULL=未归属（靠 source_task_id 追补）
+    content = Column(Text, nullable=False)  # 事实内容（实体名+描述）
+    source_task_id = Column(String(64), ForeignKey("domain_factory_tasks.id", ondelete="SET NULL"), nullable=True)
+    entity_key = Column(String(255), nullable=True)  # 去重与溯源键：(source_task_id, entity_key)
+    status = Column(String(32), nullable=False, default="draft")  # draft|confirmed|retired
+    year = Column(Integer, nullable=True)
+    source_ref = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "fact_type": self.fact_type,
+            "region_key": self.region_key,
+            "content": self.content,
+            "source_task_id": self.source_task_id,
+            "entity_key": self.entity_key,
+            "status": self.status,
+            "year": self.year,
+            "source_ref": self.source_ref,
+            "created_at": format_utc_datetime(self.created_at),
+            "updated_at": format_utc_datetime(self.updated_at),
         }
