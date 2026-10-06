@@ -149,6 +149,7 @@ class TestConfirmRegionCascade:
         svc = make_svc_with(repo)
         result = asyncio.run(svc.confirm_region("t1", "横城矿区", None, None))
         assert result["region_key"] == "hengcheng"
+        assert all("scope" not in p for p in repo.task_updates)  # scope=None 路径不写任务 scope
 
     def test_unregistered_region_requires_key(self):
         repo = FakeRepo()
@@ -192,5 +193,6 @@ class TestAggregationPure:
         repo = FakeRepo()
         svc = make_svc_with(repo)
         repo.templates[22] = {"scope": "project", "extra_meta": {"contributing_task_ids": ["t1"]}}
-        asyncio.run(svc._aggregate_template_scopes([22], "t1"))
+        updated = asyncio.run(svc._aggregate_template_scopes([22], "t1"))
+        assert updated == 0  # 无变化不写
         assert repo.templates[22]["scope"] == "project"  # 证据空/弱都不升级
