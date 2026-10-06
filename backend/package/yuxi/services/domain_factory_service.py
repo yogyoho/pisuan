@@ -5094,6 +5094,9 @@ class DomainFactoryService:
         if suffix != ".docx":
             raise ValueError(f"大纲提取暂仅支持 .docx，收到 {suffix or '未知'}")
 
+        from yuxi.services.docx_guard import guard_docx_bytes
+
+        file_bytes = guard_docx_bytes(file_bytes, label=filename)
         headings = self._extract_headings_from_docx(file_bytes)
         if not headings:
             logger.warning(f"未提取到 heading: file={filename}")
