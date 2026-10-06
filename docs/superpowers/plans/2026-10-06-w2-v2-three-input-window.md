@@ -636,3 +636,27 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 - **Spec 覆盖**：§4.1→T1、§4.2→T2、§4.4→T3、§4.3→T4、§1 checklist/§6 DoD→T5；无缺口。
 - **占位符**：无 TBD；T4 豁免终值/词条增量由普查循环实测填（机制明确，非占位）。
 - **类型一致**：`_apply_anchors(chapters: dict, l1: dict) -> None`、`_stage_meta(conds, family) -> dict{stage,stage_id,std_ref}`、`_order_pass(expected, hit_seq, moves_by_chapter) -> bool` 各任务引用与定义一致；白名单 fixture 键 `{chapter,family,after,evidence}` 与 `_order_pass` 消费一致。
+
+---
+
+## 执行记录（2026-10-06）
+
+**提交序列**（T1–T5 实现提交 8 笔）：
+
+- **T1 渲染器锚点机制**：eeabdd65（insert_after 后置重排 + 爆破/R3 三锚点词条）→ f7837d32（同锚多章稳定落位，锚块语义替换互挤重插，bug-372）→ 66aa040f（同锚稳定序与 rules add 序解耦属性固化）
+- **T2 渲染顶层 stage/std_ref 真源化**：98fdfc5d（stage_id 条件推导 + 字段逐字拷贝）→ 3de04075（缺真源用例补 match 断言，防异源 FileNotFoundError 冒充）
+- **T3 6 存档重渲 + seed_gen 冒烟**：cff2c279（爆破/R3 落锚位 + 顶层元数据；冒烟 4 完整 454/589/469/294 断言 + 2 结构断言，双渲 byte-identical）
+- **T4 fit order 位移白名单 + 豁免收敛**：0d3600e8（白名单 17 词条 + 三档判定，豁免 21→0，natural+whitelist 35/35）→ 143a7035（docstring 阈值与三档判定口径同步，质量评审 Important 项）
+- **T5 勾账**：本笔（changelog + spec checklist 勾账 + 执行记录）
+
+**收敛循环三选一决策**：21 份 order 差异全部走「补白名单词条」（词条全部带普查出处），不走豁免登记、不改规则——豁免终值 0，优于设计 ≤2；终态 modes natural=14 / whitelist=21 / exempt=0（35/35）。
+
+**必要偏差（2 项，均为执行期必要修正）**：
+
+1. **DFS → best-first（bug-374）**：任务书提供的递归 DFS 重插可达判定在多 mover 文件触发 RecursionError（移动序列长度无界、超递归上限）；改显式 best-first（heapq 逐位差异启发式 + visited 去重），可达性语义等价、判定结果不变，模块耗时 41s→0.16s。文档统一 best-first 表述（早期提交信息「DFS」系措辞沿革）。
+2. **渲染驱动 shell → 单 Python 进程（bug-373）**：T3 原 shell 管道（python 选键 → bash `$()` 捕获 → 第二个 python `--only`）在 Windows 下 GBK/UTF-8 双重损坏致 6 份渲染全失败；合并为单个 Python 驱动进程（subprocess 列表参数，CreateProcessW 全程 Unicode），渲染器本体零改动。
+
+**评审记录**：
+
+- T1 质量评审捕获同锚振荡（同锚两章互挤震荡不收敛，bug-372），f7837d32 锚块语义修复 + 66aa040f 属性测试固化。
+- T4 评审 spec/质量双 ✅；Important 项 docstring 口径（阈值 28→33、三档判定）以 143a7035 修正收口。
