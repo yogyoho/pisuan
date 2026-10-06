@@ -100,3 +100,31 @@ def test_same_anchor_stable_order():
     rendered = rrs.render({"report_family": "planning_eia"}, layers)
     ts = _titles(rendered)
     assert ts == ["甲章", "乙章", "附加甲", "附加乙", "丙章"]
+
+
+# ---- 顶层 stage/std_ref（Task 2）----
+
+
+def test_stage_meta_derives_by_mine_type():
+    """project 族按矿型拼 stage_id，其余族直用 family；字段从真源逐字可读。"""
+    rrs = _load_renderer()
+    assert rrs._stage_meta({"mine_type": "openpit"}, "project_eia")["stage_id"] == "project_eia_openpit"
+    assert rrs._stage_meta({"mine_type": "underground"}, "project_eia")["stage_id"] == "project_eia_underground"
+    meta = rrs._stage_meta({}, "planning_eia")
+    assert meta["stage_id"] == "planning_eia"
+    assert meta["stage"] and meta["std_ref"]  # 真源非空
+
+
+def test_stage_meta_missing_stage_fails_loud():
+    rrs = _load_renderer()
+    with pytest.raises(FileNotFoundError):
+        rrs._stage_meta({"mine_type": "nonexistent"}, "project_eia")
+
+
+def test_rendered_top_level_fields():
+    """渲染产物顶层三件套非空且 stage_id 为真值（不再用 family 冒充）。"""
+    rrs = _load_renderer()
+    rendered = rrs.render({"report_family": "project_eia", "mine_type": "openpit"}, rrs.load_layers())
+    assert rendered["stage_id"] == "project_eia_openpit"
+    assert rendered["stage"]
+    assert rendered["std_ref"]

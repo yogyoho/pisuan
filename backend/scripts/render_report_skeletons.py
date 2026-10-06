@@ -16,6 +16,10 @@ import sys
 from pathlib import Path
 
 LAYER_DIR = Path(__file__).resolve().parent.parent / "templates/coal_mining/report_skeletons"
+STAGES_DIR = (
+    Path(__file__).resolve().parent.parent
+    / "package/yuxi/agents/skills/buildin/coal-eia-writer/references/stages"
+)
 FAMILIES = ("planning_eia", "project_eia", "post_eia", "tracking_eia")
 
 
@@ -104,9 +108,24 @@ def _apply_anchors(chapters: dict, l1: dict) -> None:
     raise ValueError(f"insert_after 链不收敛: {anchors}")
 
 
+def _stage_meta(conds: dict, family: str) -> dict:
+    """W2v2 spec §4.2 stage 元数据：project 族按矿型拼 stage_id，其余族直用 family。
+
+    真源 = references/stages/{stage_id}.json（D12 单一真源），字段逐字拷贝；
+    stage 文件不存在或 project 缺 mine_type → fail loud。
+    """
+    stage_id = f"{family}_{conds['mine_type']}" if family == "project_eia" else family
+    path = STAGES_DIR / f"{stage_id}.json"
+    if not path.exists():
+        raise FileNotFoundError(f"stage_id 推导失败，真源不存在: {path}")
+    src = json.loads(path.read_text(encoding="utf-8"))
+    return {"stage": src["stage"], "stage_id": stage_id, "std_ref": src["std_ref"]}
+
+
 def render(conds: dict, layers: dict) -> dict:
     """渲染单份骨架。conds=6 维条件；layers={family: {"l1":..., "l3":...}, "rules": [...]}."""
     family = conds["report_family"]
+    meta = _stage_meta(conds, family)  # fail fast：条件→真源映射先于任何渲染工作
     l1, l3 = layers[family]["l1"], layers[family]["l3"]
     applied: list[str] = []
 
@@ -200,7 +219,9 @@ def render(conds: dict, layers: dict) -> dict:
         }
     return {
         "version": "2.0-rendered",
-        "stage_id": family,
+        "stage": meta["stage"],
+        "stage_id": meta["stage_id"],
+        "std_ref": meta["std_ref"],
         "generated_from": {"conditions": conds, "applied_rules": applied},
         "chapters": out_chapters,
     }
