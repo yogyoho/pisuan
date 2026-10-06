@@ -116,8 +116,8 @@ pisuan `ask_user_question` 为问题制（1–5 questions/次，answer=`{questio
 | V1 | 脚本静态冒烟 | `scripts/tests/` 容器内 pytest 全过；全部脚本 `ast.parse` 通过 |
 | V2 | 技能装载 | 新对话 `read_file /home/gem/skills/coal-eia-writer/SKILL.md` 激活；grep 无 `/mnt/`、无 `ask_clarification`/`present_files`/`batch_task`/`kf_resolve_template` 残留 |
 | V3 | 开题三件套 | `list_report_types` 真实调用留痕 + 兜底声明 + 按章数据预告可见 + `ingest.py forms` 空白表单落盘 |
-| V4 | 门 1 | 缺项 `GATE1_MISSING` 中文清单；补齐后 `GATE1_COMPLETE`（标准号体检/类比来源强制生效） |
-| V5 | 门 2 | 自洽数据 `freeze` rc=0；缺参场景 rc=3 → anomaly 卡呈现 |
+| V4 | 门 1 | 缺项 `GATE1_MISSING` 中文清单；补齐后 `GATE1_COMPLETE`（标准号体检生效。**执行勘误 2026-09-30**：类比来源脚本不强制——实际检查点在冻结 water XS12 与一致性口径层；空白表单 31 族而非 33，派生视图族不产空白不进门） |
+| V5 | 门 2 | 自洽数据 `freeze` **rc=3 且仅能力边界 1 条 anomaly**（**执行勘误 2026-09-30**：`software_results` 在 planning_eia schema 无声明字段可转录，干净 rc=0 结构性不可达；槽位 49 有值非全 0）；缺参场景 rc=3 → anomaly 卡呈现 |
 | V6 | 节级派发 | 覆盖 ≥2 章、每章 ≥1 节的真实 subagent 派发；契约含节切片/槽位词汇表/实体黑名单；节稿落 `state/sections/`；批量 gate PASS → VERIFIED |
 | V7 | 全书交付 | finalize → BUILD_READY；outputs/ 单文件 + manifest；`present_artifacts` 交付成功 |
 | V8 | 断点续跑 | 门 1 后停车 → 新 run `progress.py next` 恢复现场 |

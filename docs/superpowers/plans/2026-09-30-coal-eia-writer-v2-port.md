@@ -34,12 +34,12 @@
 
 注意：本任务**不提交**——与 Task 2 合并为一个提交（spec §7.3 回滚单元）。
 
-- [ ] **Step 1.1: 确认 git 工作区无本目录的未提交改动**
+- [ ] **Step 1.1: 确认 git 工作区状态符合预期**
 
 ```bash
 cd /c/workspace/pisuan && git status --short backend/package/yuxi/agents/skills/buildin/coal-eia-writer/
 ```
-Expected: 空输出。若非空，先与用户确认如何处置（历史遗留改动会被覆盖）。
+Expected: 全部为 ` D`（未暂存删除）——用户已于 2026-09-30 会话中手动删除旧 `coal-eia-writer/` 目录（31 文件，未暂存，`git checkout -- <dir>` 可恢复；另有 `coal-eia-writer.rar` 备份）。若出现 ` M`/`??` 等其他状态行，先与用户确认再继续。
 
 - [ ] **Step 1.2: 整目录替换为下载包内容**
 
@@ -556,3 +556,19 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 3. **worker 重启语义**：BUILTIN_SKILLS 内容变更后必须 `docker restart pisuan-localized-worker-1` 且**新开对话**才拿到新技能副本（`_dirs_equal` 只比文件清单不比内容）。
 4. **唯一写者纪律在验收中同样生效**：合成数据只能经 `ingest.py` 落盘，绝不起草手写 data/ JSON 的捷径——那会让门 1 的行为验证失真。
 5. 若执行中发现与 spec/计划冲突的事实（如容器路径、表结构不符），停下取证并回写 spec/计划，不现场即兴变更设计。
+
+---
+
+## 执行修正记录（Unit A，2026-09-30）
+
+1. **Step 1.1**：用户会话中已手动删除旧 `coal-eia-writer/` 目录（31 文件，未暂存）——本步骤 Expected 由「空输出」改为「31 行未暂存 D」。
+2. **Step 1.2**：原拷贝命令清单漏了 `README.md`（源包剔除缓存后净 68 文件 = SKILL.md + README.md + scripts + references）；已补 `cp "$SRC/README.md"`，对账 oracle（Step 1.3 diff 为空）裁定含 README.md 搬运。
+3. **Step 2.3**：old_string 前缀笔误——实际文件为有序列表项 `1. **开题首动作三件套…`，非三空格前缀；按「以实际文本为准」执行。
+4. **计划 8 处改编存在缺口**：停车点表格行（`每波 batch_task 投递后`）、步数预算段（`batch_task` 合并派发）、派发契约禁令行（`不派 task`）三处残留未覆盖；经控制器裁决补齐（subagent_start 语义对齐），SKILL.md 最终为 **8+3 处改编**。
+5. **Step 2.11**：原 Expected「无差异」在 2.1+2.2 成功后字面不可成立（frontmatter 收缩 -2 行位移 + 计划内 sed 差异）；改为对齐窗口比对 + 未触碰区段抽查（红线 P1–P8 逐字保留、命令速查表 diff_rc=0 均已验证）。
+6. **质量审查发现并修复（73692847 → 0f02f659 → 783ab1f4）**：SKILL.md:72/:262 沿用源包过期叙述「stage 文件在编/文件未立」，与同提交落库的 5 个 stage 文件及 frontmatter 自相矛盾——改为政策性表述「stage 文件已随包就绪，一期未验收、暂不启用」（spec Q4 的门槛是验收政策而非文件缺失）；:102 「一回合内批量发起，单回合 ≤3 并发」字面张力改为「分批发起、在飞 ≤3，有完成即补位，直至波内全部发出」；复审非阻塞 FYI :193「`subagent_start` 一回合批量发起」同类张力，控制器直接修正为「按派发协议分批补位发起」。
+7. **质量审查不修项（记录在案）**：SKILL.md:28 红线段无条件假设 web_search 可用，实际该工具仅在部署配置了搜索 provider 时注册——加兜底表述超出 spec §4.4「映射表之外逐字保留」的改编边界，不改动；已知运维约束：未配 provider 的部署上 web_search 调用即失败。
+8. **Task 3 执行发现（运行栈实际行为）**：① pisuan-localized 改名层内路径为 `/app/package/pisuan/...`（非 `/app/package/yuxi/...`），Step 3.2 pytest 路径按此执行（7/7 PASS，含 7 用例而非 1）；② worker 重启只跑 init_builtin_skills（同步 buildin→/app/skill-sources/shared + upsert skills 行），**不刷新**用户投影——投影 DB 驱动且惰性（composite.py sync_agent_context_skills → refresh_user_skill_projection_async，Agent-Run init 时重建）；③ 历史 skills 行 `coal-eia-writer` enabled=False（2026-05-11 v1 时代遗留），list_enabled_readable 只收 enabled=True → 投影不含它；控制器裁决经生产服务层启用 + 刷新投影（等效 UI 启用，可逆）；④ 核心判据先行验证：repo/buildin/skill-sources 三份 SKILL.md md5 一致（d61ddfeb244ffdc490451877211e8d85），/mnt/=0、旧工具名零残留；⑤ DB 访问用一次性 asyncpg 连接（容器内连接池有 'error connecting in pool-1' 挂起前科）。
+9. **Task 5 策略碰撞**：`docs/vibe` 在 .gitignore:78 显式忽略，Step 5.4 的 `git add` 被拒——实现者按计划提交意图 `git add -f` 精确加 2 个存档文件（提交 33507661，仅含这 2 个文件）。回滚凭据进 git 与仓库「docs/vibe 不跟踪」策略相碰撞，已向用户显式标记；后续 Task 8 的 vibe 文档提交沿用 -f 或用户另行裁决。另：agents.config_json 为 json 列（bug-322），读回断言需显式 `::jsonb` cast；`eia-section-writer` prompt 长度 697 字符（计划「约 900+」为误估，中文按字符计实质等量，判定通过）。
+10. **Task 6 预检实证（脚本行为先验，全部容器内实证）**：① 空白表单 31 族而非 33（`planning_indicators` 为 derived_view 共享 01_mine_plan.json、`projection` file=None 不产空白，bug-3208 既有行为）；② 门 1 链路 rc：空白 rc=2 GATE1_MISSING（81 缺项）→ 填满 rc=0 GATE1_COMPLETE；③ **门 1 不强制类比来源**（实测 param_source=类比矿实测+无 analog_source 仍 rc=0；脚本强制点仅在冻结 water XS12 与一致性口径层）——spec V4 括注勘误；④ **freeze rc=0 结构性不可达**（software_results 在 planning_eia schema 无声明字段，能力边界 anomaly 必现）——V5 验收签名改为「rc=3 + 仅此 1 条 anomaly + 49 槽位有值」；⑤ **`--stage` 只认路径**（progress.py init/chapter_planner/formula_runner 均裸 FileNotFoundError，仅 ingest.py 兼容名称）——SKILL.md :56 补 S 定义（da4991a0）；⑥ **progress.py next 输出残留源运行时词汇** batch_task/task()，与 SKILL.md subagent_start 映射正面冲突——SKILL.md :102 加卫兵句 + 编排者 system_prompt 注入映射句（da4991a0 + DB UPDATE，同步链重走，三方 md5=7d68f4d1）；⑦ water schema↔runner 漂移：balance 字段不可达 → reuse_rate 恒 0%（canon 称 40.3%）——Task 7 预期卡，禁用数据掩盖；⑧ capacity 单位口径怪癖（air μg/m3 入 A 值公式、water /1000）——E2E 卡候选，禁改数据；⑨ Task 7 scratch 证据留存 /tmp/eia-accept（冻结 49 槽）、/tmp/eia-accept2（负例 35 槽）、/tmp/eia-values、/tmp/fill_*.log。
+11. **真实语料 fixture 集（用户追加任务，独立于 E2E）**：源=《新疆伊宁矿区北区总体规划（修编）环评报告书 报批版 2024.1.30》（52MB docx→83.7 万字符全文抽取，即 sample_entities 注册表源语料）；产物 `docs/vibe/assets/2026-09-30-coal-eia-v2-port/eia-sample-fixtures/`（31 族真值 JSON+35 CSV+values-gaps ~30 条+family-sources+README；gitignore 内保持本地）。容器实测标定：31 族装载 rc=0 零修正；数组族契约=wrapper 键 --values（裸 --rows rc=1，F-L-02）；ingest.py file 通道对本 stage 不可用（无 CSV 族注册，F-L-01）——三步协议第③步本就走 forms --values，协议不受影响；门 1 rc=2（air.boilers=[] 零值事实×缺失判据碰撞，bug-326）；冻结 rc=3 slots=117 anomalies=46（重复采动×20 数据缺口、厚煤层两带×18 方法学边界、water/air 容量输入×3、noise 区间字符串×3、能力边界×1、boilers×1）；七号井田 W_max 公式冻结 59.56m vs 报告软件值 76.58m（-22%，由能力边界 anomaly 承载）。用途：上线前真实项目试跑预演；已知兜底 F-carbon-ef/F-investment/F-soil-total 见 gaps。
