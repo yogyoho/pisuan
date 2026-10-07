@@ -23,7 +23,7 @@ W3 已落库归属判定全链（Task+4 列、regional_facts 表、confirm-regio
 
 **Out**：批量改判（逐行打底，批量入口真用上再加，§8-3）；批量退役已有 API 但 UI 仅单批操作；roadmap §11 消费通道 W4（get_slot_registry/导出端点，另一条线不混窗）；词表管理 UI（常量人工维护）；learned_templates 历史回填。
 
-**不变量**：**现有知识工厂功能零行为改动**（用户硬约束）——EtlWorkbench/DataSourceDashboard/confirm-entities 流不动；`DomainFactoryView.vue` 仅新增 1 个 a-tab-pane + 1 行 import；classify_tags 与 W3 归属主词表（REGION_VOCAB 17 条）语义零变动；本窗**零 DDL**（读接口无 schema 变更）；禁碰文件（HomeView/LoginView/base.css/base.dark.css/info.template.yaml）零卷入。
+**不变量**：**现有知识工厂功能零行为改动**（用户硬约束）——EtlWorkbench/DataSourceDashboard/confirm-entities 流不动；`DomainFactoryView.vue` 仅新增 1 个 a-tab-pane + 1 行 import + 1 行 tab-dot 配色（实况：既有 tab 图标为 CSS 圆点非 lucide 图标）；classify_tags 与 W3 归属主词表（REGION_VOCAB 17 条）语义零变动；本窗**零 DDL**（读接口无 schema 变更）；禁碰文件（HomeView/LoginView/base.css/base.dark.css/info.template.yaml）零卷入。
 
 ## 3. 设计输入（探索结论，行号为 2026-10-07 快照）
 
@@ -51,7 +51,7 @@ web/src/apis/domain_factory_api.js   +5 方法：fetchAttributionTasks/confirmRe
                                      fetchRegionalFacts/retireRegionalFacts/fetchRegionBoard
 ```
 
-- 样式用 `base.css` 颜色变量，图标 lucide-vue-next（tab 图标选 MapPinned 类，尺寸对齐既有两 tab）
+- 样式用 `base.css` 颜色变量，tab 图标沿用既有 tab-dot CSS 圆点惯例（.tab-dot.region 配色 #0891b2），组件内表格图标按文件现状用 @lucide/vue
 - region_key 下拉候选 = `REGION_VOCAB` 全部键 + 任务表已用键去重并集，允许输入新 slug
 - 空态文案：聚合明细（「新任务回写后出现」——211 存量模板 scope=NULL 为 W3 Q3 预期行为）
 
@@ -67,12 +67,12 @@ web/src/apis/domain_factory_api.js   +5 方法：fetchAttributionTasks/confirmRe
 |---|---|---|
 | `GET /domain-factory/tasks` | `scope`（universal/regional/project/unassigned）、`region_key`、`keyword`（file_name 模糊）、`page`/`page_size`（默认 1/20，上限 100） | `{items:[{id,file_name,domain,domain_label,status,project_name,region_label,region_key,scope,created_at}], total}`；`scope=unassigned` → `scope IS NULL` |
 | `GET /domain-factory/regional-facts` | `region_key`、`fact_type`、`status`、`page`/`page_size` | `{items:[{id,fact_type,region_key,content,status,year,source_task_id,source_task_file_name,source_ref,created_at,updated_at}], total}`（service 层拼来源任务 file_name） |
-| `GET /domain-factory/region-board` | 无 | `{stats:{templates_by_scope:{universal,regional,project,unassigned}, tasks_by_region:[{region_key,region_label,count}], facts_by_status:{draft,confirmed,retired}}, region_tree:[{region_key(null=未归属伪节点),region_label,task_count,fact_count,fact_counts_by_type:{monitoring,sensitive_target,measure,constraint},template_count}]}` |
+| `GET /domain-factory/region-board` | 无 | `{stats:{templates_by_scope:{universal,regional,project,unassigned}, tasks_by_region:[{region_key,region_label,count}], facts_by_status:{draft,confirmed,retired}}, templates:[{id,chapter,scope,region,contributing_count,updated_at}]（明细表数据随看板单响应返回）, region_tree:[{region_key(null=未归属伪节点),region_label,task_count,fact_count,fact_counts_by_type:{monitoring,sensitive_target,measure,constraint},template_count（只计派生 region 恰等于该 region 的模板，mixed 只进明细）}]}` |
 
 - **模板 region 派生规则**（LearnedTemplate 无 region 列，W3 只加 scope）：明细表/树中模板的 region 由归因集派生——`extra_meta.contributing_task_ids` 对应任务的 `region_key` 去重后恰一个 → 该值；多个 → `"mixed"`；空集 → `null`（显示「未归属」）
 
 - 三个 GET 均为 get_required_user；router 仿 W3 confirm-region 同款 try/except 骨架（400 参数/500 兜底，原文 detail）
-- service：`list_tasks_with_attribution` / `list_regional_facts` / `build_region_board`（放 domain_factory_service.py，读路径不碰写状态）；repository：对应分页查询与 GROUP BY 聚合（数据量小：8 任务/211 模板，board 单响应一次返回，不做缓存）
+- service：`list_tasks_with_attribution` / `list_regional_facts` / `build_region_board`（放 domain_factory_service.py，读路径不碰写状态）；repository：对应分页查询与 GROUP BY 聚合（数据量小：7 任务/211 模板；W3 锚 8 任务，执行期重复上传行被移除，board 单响应一次返回，不做缓存）
 
 ### 4.4 权限模型（与 W3 API 严格对齐）
 
@@ -115,7 +115,7 @@ T1→(T2∥T3)→T4→T5→T6；T2 纯后端常量与 T3 前端可并行。
 ## 6. 验收标准（DoD）
 
 1. 三 GET 容器集成全绿：筛选/分页/unassigned 语义/board 计数与运行栈 DB 实况一致
-2. 词表：9 命中+4 排除+主命中优先单测全绿；backfill 幂等复跑结果不变（8/8 regional）
+2. 词表：9 命中+4 排除+主命中优先单测全绿；backfill 幂等复跑结果不变（7 regional，4+3；窗间漂移：W3 锚 8/5 → 执行期实况 7/4，重复上传行被移除所致）
 3. 前端：`pnpm run lint` + `pnpm run format` 零错误；现有两 tab（数据源/ETL 工作台）回归冒烟无任何行为变化
 4. 改判级联：改判一条任务 → toast 计数与 DB 一致（facts_confirmed/templates_recalculated 抽查）；slug 校验拒绝非法输入
 5. 权限：admin 可见退役操作、非 admin 不可见；retire 调用仅 admin 触发
