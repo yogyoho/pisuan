@@ -128,6 +128,7 @@ progress.py run-stage freeze --state-dir T   # 冻结二连一次 bash：chapter
   本章该节切片（直接贴：节 id/title/elements 要素链——逐要素成段的依据）+ 该节 uses 引用的 {{TABLE}}/{{SLOT}} 清单
   references/depth_targets/<stage>.json（节级深度目标随契约注入；实际目标以门报错行内嵌数值为准）
   references/sample_entities/_index.json（范文实体禁入清单）
+  references/paradigms/<paradigm_role>.md（行文范式——<paradigm_role> 由 references/paradigms/_roles.json 按节 id 查得，查不到=拒派报错，禁静默跳过；范文仅示范句法与信息组织，其中实体与数值一律替换为本项目实体与冻结值）
 输出契约：直写 /home/gem/user-data/workspace/eia-report/state/sections/chNN_SNN.md（绝对沙箱路径），
   首行 ### <节号> <节标题>（与 stage 节题语义相符），一节一稿，新增小节用 ####，禁写 #/## 章级标题；
   缺数标 [待确认]/[数据未提供]，软件成果值走 {{TABLE:族}} 转录禁硬算
@@ -136,13 +137,14 @@ progress.py run-stage freeze --state-dir T   # 冻结二连一次 bash：chapter
   ① 节设计说明（「上游依据/下游用途/任务性质/组织顺序/分工边界/衔接义务/本节回答的是」——契约字段只供你定位素材）；
   ② 数据纪律复述（「不作任何改写/补猜/逐字呈现/唯一口径/行文不再」——数据出处写一句「本节资料来源为…」即可）；
   ③ 管线内部术语（直渲/登记值/登记表单/登记口径/冻结槽位/表单直出——正文表述为「由表 X-X 给出」「以…为准」）。
+  行文范式是正样本示范：节稿的结构骨架与句式向所注入范式文件对齐；范式文件「反模式」表为硬禁令（违反=残留门 FAIL）。
 返回：≤8 行摘要（结构 / [待确认] 清单 / 数据缺口 / 本节要点 2-4 条——供要点包蒸馏）
 禁令：不改 data/、不碰 references/、不跑 build、不派发子任务
 ```
 
 - 总派发额度 `DISPATCH_BUDGET=120`（`progress.py status` 显示余量；700 页 ≈ 100+ 节）；额度拒 ≠ 亲写许可——剩余节 `mark --sections … BLOCKED --detail "派发额度耗尽"` 转协商。
 - **批量记账（bug-3048）**：节粒度下纯记账一律批量——`progress.py mark --sections ch6_S01,ch6_S02 DRAFTED`（原子，任一未知全批拒），绝不逐节单发。
-- 范文与检索红线（随契约注入）：samples_bank 二期才入库，一期仅 `references/chapter_examples/` 旧样例可作叙述范式参考——范文任何数值/矿名/地名禁入正文；`query_kb` 检索同章叙述参考同纪律；规范引用仍只从 standards_index 实有编号。
+- 范文与检索红线（随契约注入）：行文范式以 `references/paradigms/<role>.md` 为正样本（优先对齐）；`references/chapter_examples/` 旧方法论模板仅作补充参考——范文任何数值/矿名/地名禁入正文；`query_kb` 检索同章叙述参考同纪律；规范引用仍只从 standards_index 实有编号。
 
 **4.2 收章跑门（只信产物，不信摘要）**：波内节稿齐 → `progress.py mark chN DRAFTED` → **批量跑门** `progress.py gate --state-dir T`（一次 bash 跑完全部 DRAFTED 章；PASS 章及其全部节自动转 VERIFIED——节 VERIFIED 唯一通道=所属章门 rc=0，**手动 mark VERIFIED 禁用（bug-3049 同构）**；`build_output.py --chapter chN` 仅单章调试用，不记账）。rc=1 → failed 章按 stderr **节级归因清单**重派（原 prompt+stderr，**每章 ≤1 次**）→ 仍 FAIL → `mark chN BLOCKED --gate FAIL --detail "<一句话差距>"`。单章失败不中断全书，继续 next。
 
