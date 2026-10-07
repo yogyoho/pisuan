@@ -5,6 +5,7 @@ import { message } from 'ant-design-vue'
 import { Bot, ChevronDown, ChevronUp, ClipboardCheck, CloudUpload, Database, FlaskConical, Layers, Zap } from '@lucide/vue'
 import DataSourceDashboard from '@/components/domain-factory/DataSourceDashboard.vue'
 import EtlWorkbench from '@/components/domain-factory/EtlWorkbench.vue'
+import RegionAttributionPanel from '@/components/domain-factory/RegionAttributionPanel.vue'
 import RegulationEnrichPanel from '@/extensions/regulation-library/RegulationEnrichPanel.vue'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { useTaskerStore } from '@/stores/tasker'
@@ -269,6 +270,15 @@ watch(
               @task-updated="handleTaskUpdated"
               @navigate-to-data-sources="activeTab = 'data'"
             />
+          </a-tab-pane>
+          <a-tab-pane key="region" tab="归属管理">
+            <template #tab>
+              <span class="tab-label">
+                <span class="tab-dot region"></span>归属管理
+                <span class="tab-hint">改判 · 退役 · 聚合</span>
+              </span>
+            </template>
+            <RegionAttributionPanel />
           </a-tab-pane>
         </a-tabs>
       </div>
@@ -561,6 +571,9 @@ watch(
         }
         &.workbench {
           background: #722ed1; /* [pisuan-custom] 青云素雅：一次性装饰色（领域工厂状态点缀），不随主题 */
+        }
+        &.region {
+          background: #0891b2; /* [pisuan-custom] W4 归属管理点缀（科技青系），不随主题 */
         }
       }
 
