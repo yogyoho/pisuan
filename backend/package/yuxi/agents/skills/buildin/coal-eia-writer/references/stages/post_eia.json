@@ -654,7 +654,7 @@
           "id": "ch1_S03",
           "title": "环境功能区划及评价标准",
           "elements": [
-            "功能区划段：逐要素功能区类别（{{TABLE:standards_confirm}} function_zone 字段）。",
+            "功能区划段：逐要素功能区类别（{{TABLE:standards_confirm}} 环境功能区类别 字段）。",
             "三元组表：要素-功能区/质量类别-标准号直渲（{{TABLE:standards_confirm}}——门 1 标准号非空+格式体检，needs_verification 档输出「需人工对照」XS3）。",
             "版本纪律：同一要素标准号字符串全书唯一；功能区内执行标准如遇版本更替按人工确认口径登记。",
             "收束句：标准体系统领验证判定。"
@@ -680,7 +680,7 @@
           "id": "ch1_S04",
           "title": "评价范围及评价因子",
           "elements": [
-            "范围段：逐要素评价范围（{{TABLE:standards_confirm}} evaluation_scope 字段）。",
+            "范围段：逐要素评价范围（{{TABLE:standards_confirm}} 评价范围 字段）。",
             "因子段：验证与评价因子筛选（以原环评预测指标为 canon——与 {{TABLE:post_verification.items}} indicator 域一致，禁另立指标集）。",
             "收束句：过渡到保护目标。"
           ],
@@ -1176,7 +1176,7 @@
           "id": "ch5_S01",
           "title": "生态环境后评价概述",
           "elements": [
-            "概述段：评价等级/范围/敏感目标复核（{{TABLE:standards_confirm}} evaluation_scope、{{TABLE:sensitive_targets}} aspect=挖损/压占/疏干——XS2）。",
+            "概述段：评价等级/范围/敏感目标复核（{{TABLE:standards_confirm}} 评价范围、{{TABLE:sensitive_targets}} 评价方面=挖损/压占/疏干——XS2）。",
             "收束句：总则收束。"
           ],
           "uses": {
@@ -1249,7 +1249,7 @@
           "id": "ch5_S04",
           "title": "生态环境影响预测验证与评价",
           "elements": [
-            "验证段：原环评定量预测指标验证对比（{{TABLE:post_verification.items}} element=生态——XS19；{{SLOT:project.original_eia_doc_no}} 出处锚点）。",
+            "验证段：原环评定量预测指标验证对比（{{TABLE:post_verification.items}} 要素=生态——XS19；{{SLOT:project.original_eia_doc_no}} 出处锚点）。",
             "不具验证条件声明段：原环评未定量预测指标逐项声明（{{TABLE:post_verification.unverified_indicators}}——禁硬凑对比）。",
             "后评价分析段：现状外推+类比的影响分析（定性——禁冒充导则级预测）。",
             "收束句：验证收束，过渡到有效性评价。"
@@ -1279,7 +1279,7 @@
           "id": "ch5_S05",
           "title": "生态环境整治措施有效性评价与优化调整",
           "elements": [
-            "有效性段：已实施整治措施逐项判定（{{TABLE:measure_effectiveness.items}} element=生态——XS20 判定词四档 canon；排土场复垦/边坡治理工程实况证据域）。",
+            "有效性段：已实施整治措施逐项判定（{{TABLE:measure_effectiveness.items}} 要素=生态——XS20 判定词四档 canon；排土场复垦/边坡治理工程实况证据域）。",
             "整改段：非「有效」判定逐项挂调整措施（{{TABLE:measure_effectiveness.problems}}——禁只判不改）。",
             "后续段：后续整治规划（{{TABLE:eco_restoration.zoning}}、{{TABLE:eco_restoration.reclamation}}——工程量设计转录）。",
             "收束句：有效性收束，过渡到小结。"
@@ -1373,7 +1373,7 @@
           "id": "ch6_S01",
           "title": "地下水环境影响后评价概述",
           "elements": [
-            "概述段：等级/范围/保护目标复核（{{TABLE:sensitive_targets}} aspect=疏干——XS2；{{TABLE:standards_confirm}} evaluation_scope）。",
+            "概述段：等级/范围/保护目标复核（{{TABLE:sensitive_targets}} 评价方面=疏干——XS2；{{TABLE:standards_confirm}} 评价范围）。",
             "收束句：总则收束。"
           ],
           "uses": {
@@ -1466,7 +1466,7 @@
           "id": "ch6_S05",
           "title": "地下水环境影响预测验证",
           "elements": [
-            "验证段：原环评预测值 vs 实测逐指标对比（{{TABLE:post_verification.items}} element=地下水——XS19；predicted_source=原环评预测章节逐项登记）。",
+            "验证段：原环评预测值 vs 实测逐指标对比（{{TABLE:post_verification.items}} 要素=地下水——XS19；预测来源=原环评预测章节逐项登记）。",
             "偏差判定段：偏差三档判定与原因分析（水文地质条件变化/模型边界/开采强度——人工判定）。",
             "收束句：验证收束，过渡到措施对策。"
           ],
@@ -1491,7 +1491,7 @@
           "id": "ch6_S06",
           "title": "地下水环境保护措施与对策",
           "elements": [
-            "有效性段：已采取措施有效性判定（{{TABLE:measure_effectiveness.items}} element=地下水——XS20）。",
+            "有效性段：已采取措施有效性判定（{{TABLE:measure_effectiveness.items}} 要素=地下水——XS20）。",
             "对策段：源头控制/分区防控/跟踪监测/应急预案优化（{{TABLE:measures.water}}+{{TABLE:monitoring_plan.plans}} 地下水域——长观孔优化布设）。",
             "收束句：本章收束，过渡到大气后评价。"
           ],
@@ -1567,7 +1567,7 @@
           "id": "ch7_S01",
           "title": "大气环境影响后评价概述",
           "elements": [
-            "概述段：等级/范围/保护目标复核（{{TABLE:sensitive_targets}} aspect=扬尘——{{TABLE:standards_confirm}} evaluation_scope）。",
+            "概述段：等级/范围/保护目标复核（{{TABLE:sensitive_targets}} 评价方面=扬尘——{{TABLE:standards_confirm}} 评价范围）。",
             "收束句：总则收束。"
           ],
           "uses": {
@@ -1634,7 +1634,7 @@
           "id": "ch7_S04",
           "title": "环评大气环境影响预测验证",
           "elements": [
-            "验证段：原环评预测浓度 vs 实测对比（{{TABLE:post_verification.items}} element=大气——XS19；predicted_source 逐项登记原环评预测章节与模式名）。",
+            "验证段：原环评预测浓度 vs 实测对比（{{TABLE:post_verification.items}} 要素=大气——XS19；预测来源 逐项登记原环评预测章节与模式名）。",
             "偏差判定段：偏差三档判定与原因（源强变化/除尘效率/气象年差——人工判定）。",
             "收束句：验证收束。"
           ],
@@ -1659,8 +1659,8 @@
           "id": "ch7_S05",
           "title": "已采取的大气污染防治设施有效性评价及改进措施",
           "elements": [
-            "有效性段：逐设施判定（{{TABLE:measure_effectiveness.items}} element=大气——XS20 四档 canon；无组织排放监控点浓度证据域）。",
-            "改进段：非「有效」判定整改（{{TABLE:measure_effectiveness.problems}} element=大气——二号 7.5「有效性评价及改进措施」节域）。",
+            "有效性段：逐设施判定（{{TABLE:measure_effectiveness.items}} 要素=大气——XS20 四档 canon；无组织排放监控点浓度证据域）。",
+            "改进段：非「有效」判定整改（{{TABLE:measure_effectiveness.problems}} 要素=大气——二号 7.5「有效性评价及改进措施」节域）。",
             "收束句：有效性收束，过渡到后评价分析（如适用）。"
           ],
           "uses": {
@@ -1782,7 +1782,7 @@
           "id": "ch8_S01",
           "title": "地表水环境影响后评价概述",
           "elements": [
-            "概述段：受纳水体/排放去向/保护目标复核（{{TABLE:standards_confirm}} evaluation_scope——HJ 2.3）。",
+            "概述段：受纳水体/排放去向/保护目标复核（{{TABLE:standards_confirm}} 评价范围——HJ 2.3）。",
             "收束句：总则收束。"
           ],
           "uses": {
@@ -1851,7 +1851,7 @@
           "id": "ch8_S04",
           "title": "原环评地表水环境影响预测验证",
           "elements": [
-            "验证段：预测 vs 实测对比（{{TABLE:post_verification.items}} element=地表水——XS19）。",
+            "验证段：预测 vs 实测对比（{{TABLE:post_verification.items}} 要素=地表水——XS19）。",
             "偏差判定段：三档判定与原因（回用率提升/处理工艺变更等）。",
             "收束句：验证收束。"
           ],
@@ -1876,8 +1876,8 @@
           "id": "ch8_S05",
           "title": "已采取的水污染防治设施有效性评价及改进措施",
           "elements": [
-            "有效性段：逐设施判定（{{TABLE:measure_effectiveness.items}} element=地表水——XS20）。",
-            "改进段：问题整改（{{TABLE:measure_effectiveness.problems}} element=地表水——三号 7.5「存在的问题及改进措施」节域）。",
+            "有效性段：逐设施判定（{{TABLE:measure_effectiveness.items}} 要素=地表水——XS20）。",
+            "改进段：问题整改（{{TABLE:measure_effectiveness.problems}} 要素=地表水——三号 7.5「存在的问题及改进措施」节域）。",
             "收束句：有效性收束。"
           ],
           "uses": {
@@ -1961,7 +1961,7 @@
           "id": "ch9_S01",
           "title": "声环境影响后评价概述",
           "elements": [
-            "概述段：评价范围/保护目标复核（{{TABLE:sensitive_targets}} aspect=噪声——{{TABLE:standards_confirm}} evaluation_scope）。",
+            "概述段：评价范围/保护目标复核（{{TABLE:sensitive_targets}} 评价方面=噪声——{{TABLE:standards_confirm}} 评价范围）。",
             "收束句：总则收束。"
           ],
           "uses": {
@@ -2009,8 +2009,8 @@
           "id": "ch9_S03",
           "title": "已采取的声环境污染防治设施有效性评价及改进措施",
           "elements": [
-            "有效性段：降噪设施逐项判定（{{TABLE:measure_effectiveness.items}} element=声——XS20；二号 9.3 节域）。",
-            "改进段：问题整改（{{TABLE:measure_effectiveness.problems}} element=声）。",
+            "有效性段：降噪设施逐项判定（{{TABLE:measure_effectiveness.items}} 要素=声——XS20；二号 9.3 节域）。",
+            "改进段：问题整改（{{TABLE:measure_effectiveness.problems}} 要素=声）。",
             "收束句：有效性收束。"
           ],
           "uses": {
@@ -2036,7 +2036,7 @@
           "id": "ch9_S04",
           "title": "原环评声环境影响预测验证",
           "elements": [
-            "验证段：厂界预测 vs 实测对比（{{TABLE:post_verification.items}} element=声——XS19；二号 9.4 节域）。",
+            "验证段：厂界预测 vs 实测对比（{{TABLE:post_verification.items}} 要素=声——XS19；二号 9.4 节域）。",
             "偏差判定段：三档判定与原因。",
             "收束句：验证收束。"
           ],
@@ -2151,8 +2151,8 @@
           "id": "ch10_S03",
           "title": "固体废物环境影响预测验证",
           "elements": [
-            "验证段：原环评结论 vs 实况对比（{{TABLE:post_verification.items}} element=固废——XS19；含核增后影响简析并入——三号 9.4 型）。",
-            "有效性段：处置措施有效性判定（{{TABLE:measure_effectiveness.items}} element=固废——XS20）。",
+            "验证段：原环评结论 vs 实况对比（{{TABLE:post_verification.items}} 要素=固废——XS19；含核增后影响简析并入——三号 9.4 型）。",
+            "有效性段：处置措施有效性判定（{{TABLE:measure_effectiveness.items}} 要素=固废——XS20）。",
             "收束句：验证收束。"
           ],
           "uses": {
@@ -2234,7 +2234,7 @@
           "id": "ch11_S01",
           "title": "土壤环境影响后评价概述",
           "elements": [
-            "概述段：等级/范围/敏感目标复核（{{TABLE:sensitive_targets}} aspect=土壤——{{TABLE:standards_confirm}} evaluation_scope）。",
+            "概述段：等级/范围/敏感目标复核（{{TABLE:sensitive_targets}} 评价方面=土壤——{{TABLE:standards_confirm}} 评价范围）。",
             "收束句：总则收束。"
           ],
           "uses": {
@@ -2392,7 +2392,7 @@
           "id": "ch12_S02",
           "title": "爆破振动与冲击波环境影响分析",
           "elements": [
-            "振动段：保护对象安全距离复核与实测/投诉核对（{{TABLE:sensitive_targets}} aspect=爆破——GB 6722 表值判据 tier1 人工核实）。",
+            "振动段：保护对象安全距离复核与实测/投诉核对（{{TABLE:sensitive_targets}} 评价方面=爆破——GB 6722 表值判据 tier1 人工核实）。",
             "收束句：振动收束。"
           ],
           "uses": {
@@ -2431,7 +2431,7 @@
           "id": "ch12_S04",
           "title": "爆破环境影响结论及建议",
           "elements": [
-            "结论段：已采取防控实效判定（{{TABLE:measure_effectiveness.items}} element=爆破——XS20）与优化建议。",
+            "结论段：已采取防控实效判定（{{TABLE:measure_effectiveness.items}} 要素=爆破——XS20）与优化建议。",
             "收束句：本章收束，过渡到风险后评价。"
           ],
           "uses": {
@@ -2490,8 +2490,8 @@
           "id": "ch13_S01",
           "title": "评价依据与环境敏感目标调查",
           "elements": [
-            "依据段：评价等级/范围复核（{{TABLE:standards_confirm}} evaluation_scope 风险域——HJ 169）。",
-            "目标段：风险敏感目标现状（{{TABLE:sensitive_targets}} aspect=风险——XS2）。",
+            "依据段：评价等级/范围复核（{{TABLE:standards_confirm}} 评价范围 风险域——HJ 169）。",
+            "目标段：风险敏感目标现状（{{TABLE:sensitive_targets}} 评价方面=风险——XS2）。",
             "收束句：总则收束。"
           ],
           "uses": {

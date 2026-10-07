@@ -760,7 +760,7 @@
           "id": "ch1_S03",
           "title": "环境功能区划与评价标准",
           "elements": [
-            "功能区划段：逐要素写明环境功能区类别（{{TABLE:standards_confirm}} function_zone 字段——戈壁/荒漠区声与生态功能区划按地方区划登记）。",
+            "功能区划段：逐要素写明环境功能区类别（{{TABLE:standards_confirm}} 环境功能区类别 字段——戈壁/荒漠区声与生态功能区划按地方区划登记）。",
             "标准三元组表：前置引入段+表（要素-功能区/质量类别-标准号，{{TABLE:standards_confirm}} 直渲）+后置解读段。",
             "门 1 义务：标准号非空（禁「（）」空括号占位——横城 9 处实证沿用纪律）+格式体检（standards_index.gate1_code_checks.allowed_patterns）+年份与登记一致。",
             "限值纪律：限值档位引用须查 standards_index.limit_tables，needs_verification=true 未录入档输出「需人工对照」禁自动断言（XS3）；同一要素标准号字符串全书唯一。",
@@ -788,7 +788,7 @@
           "title": "评价工作等级、范围及评价因子",
           "elements": [
             "等级判定段：逐要素交代评价等级判定依据与结果（生态 HJ 19、地下水 HJ 610、大气 HJ 2.2、地表水 HJ 2.3、声 HJ 2.4、土壤 HJ 964、风险 HJ 169——等级由 methodology 规则判定，禁行文自造）。",
-            "范围表：逐要素评价范围（{{TABLE:standards_confirm}} evaluation_scope 字段直渲），写明范围确定依据（导则要求+采掘场/排土场/疏干影响边界）。",
+            "范围表：逐要素评价范围（{{TABLE:standards_confirm}} 评价范围 字段直渲），写明范围确定依据（导则要求+采掘场/排土场/疏干影响边界）。",
             "收束句：范围与评价分区衔接下节保护目标。"
           ],
           "uses": {
@@ -1382,8 +1382,8 @@
           "id": "ch5_S01",
           "title": "生态环境评价总则",
           "elements": [
-            "区划段：生态功能区划与评价等级/范围（{{TABLE:standards_confirm}} evaluation_scope——HJ 19 等级判定，禁行文自造）。",
-            "敏感目标识别段：生态受体清单投影（{{TABLE:sensitive_targets}} aspect=挖损/压占/疏干——XS2 同源禁两套目标名）。",
+            "区划段：生态功能区划与评价等级/范围（{{TABLE:standards_confirm}} 评价范围——HJ 19 等级判定，禁行文自造）。",
+            "敏感目标识别段：生态受体清单投影（{{TABLE:sensitive_targets}} 评价方面=挖损/压占/疏干——XS2 同源禁两套目标名）。",
             "收束句：总则收束，过渡到影响识别。"
           ],
           "uses": {
@@ -1531,7 +1531,7 @@
             "原则目标段：整治原则与恢复目标（{{TABLE:eco_restoration.zoning}} 分区直渲）。",
             "工程段：排土场复垦/采掘场终期治理/表土回覆/植被重建工程量（{{TABLE:eco_restoration.reclamation}}——设计成果转录禁自造；{{TABLE:openpit_engineering.dump_sites}} 容量与面积同源）。",
             "措施响应段：对应 ch5_S02 识别清单逐因子措施在场断言（EO1 目标侧；{{TABLE:measures.eco}} 直渲）。",
-            "投资段：整治工程量对应投资分项（{{TABLE:eco_restoration}} compensation 字段——细节归 ch17）。",
+            "投资段：整治工程量对应投资分项（{{TABLE:eco_restoration}} 补偿措施 字段——细节归 ch17）。",
             "收束句：整治规划收束，过渡到管理监控。"
           ],
           "uses": {
@@ -1629,8 +1629,8 @@
           "id": "ch6_S01",
           "title": "地下水环境影响评价总则",
           "elements": [
-            "等级范围段：评价等级与调查评价范围（{{TABLE:standards_confirm}} evaluation_scope——HJ 610 判定，禁行文自造）。",
-            "保护目标段：地下水保护目标（{{TABLE:sensitive_targets}} aspect=疏干——井泉/水源地登记名 canon，XS2）。",
+            "等级范围段：评价等级与调查评价范围（{{TABLE:standards_confirm}} 评价范围——HJ 610 判定，禁行文自造）。",
+            "保护目标段：地下水保护目标（{{TABLE:sensitive_targets}} 评价方面=疏干——井泉/水源地登记名 canon，XS2）。",
             "收束句：总则收束。"
           ],
           "uses": {
@@ -1828,7 +1828,7 @@
           "id": "ch7_S01",
           "title": "大气环境影响评价总则",
           "elements": [
-            "等级范围段：评价等级/范围/保护目标（{{TABLE:standards_confirm}} evaluation_scope、{{TABLE:sensitive_targets}} aspect=扬尘——HJ 2.2 判定）。",
+            "等级范围段：评价等级/范围/保护目标（{{TABLE:standards_confirm}} 评价范围、{{TABLE:sensitive_targets}} 评价方面=扬尘——HJ 2.2 判定）。",
             "周边污染源段：区域现有污染源调查（{{TABLE:air.boilers}} 周边项——调查资料转录）。",
             "收束句：总则收束。"
           ],
@@ -2053,7 +2053,7 @@
           "id": "ch8_S01",
           "title": "地表水环境影响评价总则",
           "elements": [
-            "等级范围段：评价等级/范围/受纳水体（{{TABLE:standards_confirm}} evaluation_scope——HJ 2.3 水污染影响型判定）。",
+            "等级范围段：评价等级/范围/受纳水体（{{TABLE:standards_confirm}} 评价范围——HJ 2.3 水污染影响型判定）。",
             "收束句：总则收束。"
           ],
           "uses": {
@@ -2219,7 +2219,7 @@
           "id": "ch9_S01",
           "title": "声环境评价概述",
           "elements": [
-            "等级范围段：评价等级/范围/保护目标（{{TABLE:standards_confirm}} evaluation_scope、{{TABLE:sensitive_targets}} aspect=噪声——HJ 2.4 判定）。",
+            "等级范围段：评价等级/范围/保护目标（{{TABLE:standards_confirm}} 评价范围、{{TABLE:sensitive_targets}} 评价方面=噪声——HJ 2.4 判定）。",
             "收束句：总则收束。"
           ],
           "uses": {
@@ -2493,8 +2493,8 @@
           "id": "ch11_S01",
           "title": "土壤环境影响评价概述（等级、范围与敏感目标）",
           "elements": [
-            "类型判定段：生态影响型判定与评价等级/范围（{{TABLE:standards_confirm}} evaluation_scope——HJ 964 判定）。",
-            "敏感目标段：土壤敏感目标（{{TABLE:sensitive_targets}} aspect=土壤——XS2）。",
+            "类型判定段：生态影响型判定与评价等级/范围（{{TABLE:standards_confirm}} 评价范围——HJ 964 判定）。",
+            "敏感目标段：土壤敏感目标（{{TABLE:sensitive_targets}} 评价方面=土壤——XS2）。",
             "收束句：总则收束。"
           ],
           "uses": {
@@ -2668,7 +2668,7 @@
           "id": "ch12_S02",
           "title": "爆破振动与冲击波环境影响分析",
           "elements": [
-            "振动段：质点振动速度与安全距离判定（安全允许距离=GB 6722 表值判据——tier1 人工核实后可断言；{{TABLE:sensitive_targets}} aspect=爆破 逐对象登记）。",
+            "振动段：质点振动速度与安全距离判定（安全允许距离=GB 6722 表值判据——tier1 人工核实后可断言；{{TABLE:sensitive_targets}} 评价方面=爆破 逐对象登记）。",
             "冲击波段：个别飞散物与冲击波影响范围分析。",
             "收束句：振动冲击波收束。"
           ],
@@ -2771,8 +2771,8 @@
           "id": "ch13_S01",
           "title": "评价依据与环境敏感目标调查",
           "elements": [
-            "依据段：评价等级与评价范围（HJ 169 判定——{{TABLE:standards_confirm}} evaluation_scope 风险项）。",
-            "目标段：风险敏感目标调查（{{TABLE:sensitive_targets}} aspect=风险——XS2 同源）。",
+            "依据段：评价等级与评价范围（HJ 169 判定——{{TABLE:standards_confirm}} 评价范围 风险项）。",
+            "目标段：风险敏感目标调查（{{TABLE:sensitive_targets}} 评价方面=风险——XS2 同源）。",
             "收束句：总则收束。"
           ],
           "uses": {
@@ -3137,7 +3137,7 @@
           "id": "ch16_S02",
           "title": "污染物排放管理要求",
           "elements": [
-            "管理段：排污口规范化设置/排放申报与许可执行/信息公开（{{TABLE:measures}} mgmt 排放项——XS8 总量口径衔接）。",
+            "管理段：排污口规范化设置/排放申报与许可执行/信息公开（{{TABLE:measures}} 管理要求 排放项——XS8 总量口径衔接）。",
             "收束句：排放管理收束。"
           ],
           "uses": {
@@ -3192,7 +3192,7 @@
           "id": "ch16_S04",
           "title": "环保设施验收清单",
           "elements": [
-            "清单段：环保设施验收清单（逐设施/验收指标/时限——伊泰 15.4 型直渲；{{TABLE:monitoring_plan}} plans 验收项）。",
+            "清单段：环保设施验收清单（逐设施/验收指标/时限——伊泰 15.4 型直渲；{{TABLE:monitoring_plan}} 规划文件 验收项）。",
             "收束句：本章收束，过渡到环境经济损益分析章。"
           ],
           "uses": {
@@ -3274,7 +3274,7 @@
           "id": "ch17_S02",
           "title": "环境经济损益评价",
           "elements": [
-            "费用段：环保费用与年环境损失费用估算（{{TABLE:investment}} items 运行费项——测算表转录）。",
+            "费用段：环保费用与年环境损失费用估算（{{TABLE:investment}} 条目 运行费项——测算表转录）。",
             "分析段：环境成本与环境系数分析及损益结论（定性+测算表口径）。",
             "收束句：本章收束，过渡到评价结论与建议章。"
           ],

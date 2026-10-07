@@ -140,7 +140,7 @@
           "elements": [
             "六分类依据段：按任务依据、法律法规、规章、技术规范、相关规划、主要技术资料六类分列（{{TABLE:legal_basis}} 直渲）。",
             "法规纪律：所列法律法规/规章/导则仅从 standards_index 枚举（《环境保护法》《环评法》《规划环境影响评价条例》《煤炭矿区总体规划管理规定》等），pending 条目年份留待核实禁补猜（红线 websearch-unreliable）。",
-            "资质句：写明编制单位与资质证书号（legal_basis.compiler_qualification——人工比对）。",
+            "资质句：写明编制单位与资质证书号（legal_basis.编制单位资质证书号——人工比对）。",
             "收束句：技术规范类依据引出评价标准的三元组体系。"
           ],
           "uses": {
@@ -175,7 +175,7 @@
           "title": "评价范围",
           "elements": [
             "等级判定段：逐要素交代评价等级判定依据与结果（大气 HJ 2.2、地表水 HJ 2.3、声 HJ 2.4、地下水 HJ 610、生态 HJ 19、土壤 HJ 964——标准号从 standards_index 枚举，等级由 methodology 规则判定，禁行文自造）。",
-            "范围表：逐要素评价范围（{{TABLE:standards_confirm}} evaluation_scope 字段直渲），写明范围确定依据（导则要求+规划影响边界）。",
+            "范围表：逐要素评价范围（{{TABLE:standards_confirm}} 评价范围 字段直渲），写明范围确定依据（导则要求+规划影响边界）。",
             "收束句：与评价分区（下节）的空间分工说明。"
           ],
           "uses": {
@@ -228,7 +228,7 @@
           "id": "ch1_S07",
           "title": "环境功能区划及评价标准",
           "elements": [
-            "功能区划段：逐要素写明环境功能区类别（大气/地表水/地下水/声功能区或质量类别，{{TABLE:standards_confirm}} function_zone 字段）。",
+            "功能区划段：逐要素写明环境功能区类别（大气/地表水/地下水/声功能区或质量类别，{{TABLE:standards_confirm}} 环境功能区类别 字段）。",
             "标准三元组表：前置引入段+表（要素-功能区/质量类别-标准号，{{TABLE:standards_confirm}} 直渲）+后置解读段。",
             "门 1 义务：标准号非空（禁「（）」空括号占位——横城 9 处实证）+格式体检（standards_index.gate1_code_checks.allowed_patterns）+年份与登记一致（pending 条目禁补猜年份）。",
             "限值纪律：限值档位引用须查 standards_index.limit_tables，needs_verification=true 未录入档输出「需人工对照」禁自动断言（XS3）。",
@@ -361,7 +361,7 @@
           "title": "矿区交通与地理位置",
           "elements": [
             "地理定位段：行政区划与经纬度范围（{{SLOT:geography.location_text}}——坐标范围 user_docs 录入，禁手算极值）。",
-            "交通段：对外运输通道（铁路专用线/国省道）与运距（{{TABLE:geography}} transport 字段）。",
+            "交通段：对外运输通道（铁路专用线/国省道）与运距（{{TABLE:geography}} 运输 字段）。",
             "收束句：区位与外运条件对规划实施的支撑，过渡到修编变化。"
           ],
           "uses": {
@@ -384,7 +384,7 @@
           "elements": [
             "实施回顾段：原规划批复口径与实施现状——各矿现状产能相对原规划的变化（{{SLOT:mine_plan.total_scale_mt_a_before}} 与 {{TABLE:mine_plan.mines}} 逐矿 scale_before 槽位；沿革事实 user_docs 转述）。",
             "修编变化段：本次修编主要变化逐项对照（总规模/矿区面积/选煤厂规模/井田调整——{{SLOT:mine_plan.total_scale_mt_a_after}} 等 after 字段），双口径成对表述带标签（XS1）。",
-            "环境保护目标变化段：本次修编引起的保护目标变化（新增/撤除/保护要求调整——{{TABLE:sensitive_targets}} changes 字段驱动，目标名与登记名一致，XS2）。",
+            "环境保护目标变化段：本次修编引起的保护目标变化（新增/撤除/保护要求调整——{{TABLE:sensitive_targets}} 变化 字段驱动，目标名与登记名一致，XS2）。",
             "收束句：变化清单即本次评价的针对性声明，过渡到本次规划方案概况。"
           ],
           "uses": {
@@ -455,8 +455,8 @@
           "id": "ch2_S04",
           "title": "规划方案协调性分析",
           "elements": [
-            "内部协调性段：规划目标/规模/布局与环境保护要求的内部一致性分析（methodology 条款化，{{TABLE:compliance_plans}} internal_coordination 字段）。",
-            "外部协调性段：上位/同层规划逐项对照（主体功能区/生态红线/基地规划——{{TABLE:compliance_plans}} plans 逐条：规划名/层级/协调性结论/冲突要点）。",
+            "内部协调性段：规划目标/规模/布局与环境保护要求的内部一致性分析（methodology 条款化，{{TABLE:compliance_plans}} 内部协调性 字段）。",
+            "外部协调性段：上位/同层规划逐项对照（主体功能区/生态红线/基地规划——{{TABLE:compliance_plans}} 规划文件 逐条：规划名/层级/协调性结论/冲突要点）。",
             "问题与不足段：协调性分析导出的规划问题清单（逐条对应冲突要点——本清单是 ch8_S07 优化调整建议的投影源）。",
             "收束句：协调性结论收束本章，向区域概况章过渡。"
           ],
@@ -586,9 +586,9 @@
           "id": "ch3_S04",
           "title": "矿区生态环境现状调查与评价",
           "elements": [
-            "土地利用段：土地利用/覆盖构成（{{TABLE:eco}} land_use——遥感解译成果录入，禁生成；解译影像来源与时相注明）。",
+            "土地利用段：土地利用/覆盖构成（{{TABLE:eco}} 土地利用构成——遥感解译成果录入，禁生成；解译影像来源与时相注明）。",
             "植被与动物段：植被类型/覆盖度/生物量/NPP 与动物资源概述（{{TABLE:eco}}；HJ 710/HJ 192 年份 pending 纪律）。",
-            "侵蚀段：土壤侵蚀模数与强度分级（{{TABLE:eco}} erosion_modulus——成果转录，禁新算）。",
+            "侵蚀段：土壤侵蚀模数与强度分级（{{TABLE:eco}} 土壤侵蚀模数——成果转录，禁新算）。",
             "收束句：生态环境本底小结，为 ch4 生态回顾与 ch6_S02 生态影响预测提供基线（口径同源）。"
           ],
           "uses": {
@@ -654,9 +654,9 @@
           "id": "ch4_S01",
           "title": "矿区开发概况回顾",
           "elements": [
-            "开发历史段：矿区开发时间线与各矿建设投产沿革（{{TABLE:retrospective}} development_history + {{TABLE:mine_plan.mines}} status 字段——批复/验收文号逐字转述）。",
-            "三同时段：三同时执行情况逐项交代（{{TABLE:retrospective}} three_simultaneous）。",
-            "批复落实段：环评批复要求及环保备案要求落实清单逐条在场核对（{{TABLE:retrospective}} approvals_fulfilled——落实/未落实状态显式，禁笼统结论）。",
+            "开发历史段：矿区开发时间线与各矿建设投产沿革（{{TABLE:retrospective}} 开发沿革 + {{TABLE:mine_plan.mines}} 状态 字段——批复/验收文号逐字转述）。",
+            "三同时段：三同时执行情况逐项交代（{{TABLE:retrospective}} 三同时执行情况）。",
+            "批复落实段：环评批复要求及环保备案要求落实清单逐条在场核对（{{TABLE:retrospective}} 批复要求落实情况——落实/未落实状态显式，禁笼统结论）。",
             "收束句：开发概况回顾小结，过渡到污染类影响回顾。"
           ],
           "uses": {
@@ -677,7 +677,7 @@
           "title": "矿区污染类环境影响回顾性评价",
           "elements": [
             "四要素段组：大气/水/固废/噪声污染源、污染物及环保设施逐项回顾（{{TABLE:retrospective}} + {{TABLE:monitoring}} 历史污染源数据）。",
-            "设施效果段：环保设施建设与运行效果（处理规模/运行率/达标情况——{{TABLE:retrospective}} facilities_effect）。",
+            "设施效果段：环保设施建设与运行效果（处理规模/运行率/达标情况——{{TABLE:retrospective}} 设施运行效果）。",
             "口径纪律：排放达标判定引 GB 20426-2006 排放口径（标准号枚举）；历史监测数据带时点标注。",
             "收束句：污染控制现状小结，过渡到环境质量回顾。"
           ],
@@ -712,7 +712,7 @@
           "id": "ch4_S04",
           "title": "矿区开采沉陷影响回顾性评价",
           "elements": [
-            "调查总述段：已采区范围与调查组织（{{TABLE:retrospective}} subsidence_survey——调查实测口径，非预测计算，禁引用 formula 冻结值冒充已发生影响）。",
+            "调查总述段：已采区范围与调查组织（{{TABLE:retrospective}} 采沉调查——调查实测口径，非预测计算，禁引用 formula 冻结值冒充已发生影响）。",
             "逐目标调查段组：地面建构筑物/公路铁路/输电线路/输水管线/文物古迹/河流水库等逐目标影响调查（目标名与 {{TABLE:sensitive_targets}} 登记名一致——清单投影，不锁三级节号）。",
             "自然保护区调查段：已采区对保护目标（如保护区）影响的调查结论（{{TABLE:retrospective}}；目标实体与登记名 canon 一致）。",
             "收束句：已发生沉陷影响小结，为 ch6_S01 预测提供对照基线。"
@@ -748,7 +748,7 @@
           "id": "ch4_S06",
           "title": "矿区生态恢复措施、效果、存在问题及经验",
           "elements": [
-            "措施段：已实施生态恢复措施盘点（{{TABLE:retrospective}} eco_restoration_review）。",
+            "措施段：已实施生态恢复措施盘点（{{TABLE:retrospective}} 生态恢复措施回顾）。",
             "效果与问题段：恢复效果评价与存在问题（逐条显式，禁笼统）。",
             "经验段：可复用经验提炼（供 ch9_S01 整治措施设计引用，语义呼应）。",
             "收束句：恢复工作小结，过渡到回顾总结。"
@@ -781,7 +781,7 @@
           "id": "ch4_S08",
           "title": "矿区开发过程中存在的环境问题及整改措施",
           "elements": [
-            "问题清单段：现存环境问题逐条列出（{{TABLE:retrospective}} existing_problems——与前文各节论证一一对应，禁新造问题）。",
+            "问题清单段：现存环境问题逐条列出（{{TABLE:retrospective}} 现存问题清单——与前文各节论证一一对应，禁新造问题）。",
             "整改段：后续对策建议逐条与问题呼应（建议条目供减缓措施章语义呼应，禁无来源新措施）。",
             "收束句：回顾章收束——回顾性评价结论要点纳入波间要点包。"
           ],
@@ -1000,7 +1000,7 @@
           "title": "矿区开采地表沉陷预测",
           "elements": [
             "预测方法段：概率积分法模型叙述与适用条件（methodology 承载；公式体在 formula_runner，禁行文复写）。",
-            "参数段：q/b/tanβ/s_offset 逐参数取值与来源（{{TABLE:subsidence_params}}——param_source 三值枚举必填：规范推荐值/实测岩移回归/类比矿实测；外推他矿必须标注类比依据——横城型=马莲台实测回归外推；重复采动 flag 驱动派生值禁手填双值）。",
+            "参数段：q/b/tanβ/水平移动偏距 逐参数取值与来源（{{TABLE:subsidence_params}}——param_source 三值枚举必填：规范推荐值/实测岩移回归/类比矿实测；外推他矿必须标注类比依据——横城型=马莲台实测回归外推；重复采动 flag 驱动派生值禁手填双值）。",
             "典型矿井逐算段：逐矿 m/H/alpha 代入与预测结果叙述（{{SLOT:subsidence.W_max}} 等冻结槽位——禁手填；逐矿 W_max 最大/最小两口径分别带标签）。",
             "保护煤柱段：保护煤柱留设情况（{{TABLE:pillar_design}} 直渲——留设主体/依据；与敏感目标禁采/保护要求口径一致）。",
             "预测结果表：前置引入段+表（逐矿 W_max/r/变形极值/沉陷面积——冻结输出直渲）+后置解读段。",
@@ -1040,8 +1040,8 @@
             "土地利用影响段：规划实施对土地利用格局的影响（{{TABLE:eco}} 预测输入——占压/沉陷影响面积与现状构成对比；方法学叙述，能力边界不入 freeze）。",
             "植物与动物段：对植物资源/动物资源的影响分析（{{TABLE:eco}} 植被/动物字段；HJ 19 方法语境）。",
             "土壤侵蚀段：开挖与沉陷对土壤侵蚀的影响（侵蚀模数分级对比——成果转录禁新算）。",
-            "公益林段：对国家级公益林的影响（{{TABLE:sensitive_targets}} 公益林行距离 canon；影响面积与 {{TABLE:eco}} public_forest_area 同源）。",
-            "沙化与完整性段：土壤沙化趋势与生态系统完整性影响（景观生态学叙述——{{TABLE:eco}} landscape_indices）。",
+            "公益林段：对国家级公益林的影响（{{TABLE:sensitive_targets}} 公益林行距离 canon；影响面积与 {{TABLE:eco}} 国家级公益林面积 同源）。",
+            "沙化与完整性段：土壤沙化趋势与生态系统完整性影响（景观生态学叙述——{{TABLE:eco}} 景观格局指数）。",
             "收束句：生态影响总体结论条目（纳入 EO3 投影清单），过渡到水环境。"
           ],
           "uses": {
@@ -1061,7 +1061,7 @@
             "地表水段：规划实施污废水排放对受纳水体的影响（{{TABLE:water}} 受纳水体水文参数；涌水量非实测带类比来源标注——XS12）；水环境容量结论（{{SLOT:capacity:water.capacity}} 冻结——与承载力章同源）。",
             "地下水段：导水裂隙带/垮落带高度预计（{{SLOT:fracture_zone.collapse_height}}、{{SLOT:fracture_zone.fracture_height}}——formula:fracture_zone 冻结；经验公式与岩性系数取值来源标注 reference_values 待核实纪律，XS5）。",
             "含水层影响段：沉陷疏排水对含水层/民井泉的影响（{{TABLE:water}}；与 6.1 沉陷预测口径衔接）。",
-            "水源地影响段：对水源保护区/水源地的影响（{{TABLE:water}} sources 字段——可采量/库容/禁采距离 canon；目标名与清单登记名一致）。",
+            "水源地影响段：对水源保护区/水源地的影响（{{TABLE:water}} 来源 字段——可采量/库容/禁采距离 canon；目标名与清单登记名一致）。",
             "收束句：水环境影响结论条目（纳入 EO3 投影清单；保水采煤指向衔接减缓措施章）。"
           ],
           "uses": {
@@ -1093,8 +1093,8 @@
           "id": "ch6_S04",
           "title": "环境空气影响分析",
           "elements": [
-            "气象段：区域气象特征（{{TABLE:air}} meteorology——风速/稳定度；与 ch3 自然环境口径同源）。",
-            "污染源段：规划项目大气污染源（锅炉台数/吨位/烟囱四参数 H/D/v/T/污染物浓度/耗煤量——{{TABLE:air}} boilers）。",
+            "气象段：区域气象特征（{{TABLE:air}} 气象特征——风速/稳定度；与 ch3 自然环境口径同源）。",
+            "污染源段：规划项目大气污染源（锅炉台数/吨位/烟囱四参数 H/D/v/T/污染物浓度/耗煤量——{{TABLE:air}} 锅炉）。",
             "锅炉烟气段：点源最大落地浓度与距离（{{SLOT:air_screen.max_ground_conc}}、{{SLOT:air_screen.max_conc_distance}}——air_screen 冻结输出；判定词所在处必须带计算模式与适用范围声明（仅点源适用）——XS7）。",
             "扬尘段：煤炭转储运和筛分扬尘影响（{{SLOT:air.dust_source_strength}}——reference_values 源强取值待核实；面源，禁硬套点源模型判定——能力边界）。",
             "容量衔接段：区域大气环境容量结论（{{SLOT:capacity:air.capacity}} 冻结——与承载力章同源；A 值 GB/T 13201-91 待核实纪律）。",
@@ -1165,7 +1165,7 @@
           "elements": [
             "产生量段：矸石/生活垃圾/水处理污泥产生量估算（{{SLOT:solid_waste.gangue_generation}}——派生值=产率×总规模，禁手填；规模引用 {{SLOT:mine_plan.total_scale_mt_a_after}}）。",
             "性质段：矸石等固废性质（浸出/组分——{{TABLE:solid_waste}}；GB 18599 贮存填埋控制口径）。",
-            "处置段：处理处置方式与渣场依托（{{TABLE:solid_waste}} disposal_sites——库容/位置；综合利用去向与循环经济章口径一致）。",
+            "处置段：处理处置方式与渣场依托（{{TABLE:solid_waste}} 处置场地——库容/位置；综合利用去向与循环经济章口径一致）。",
             "影响分析段：处置环节环境影响分析（扬尘/淋滤/生态占压——定性+源强取值）。",
             "收束句：固废影响结论条目（纳入 EO3 投影清单），过渡到土壤。"
           ],
@@ -1222,11 +1222,11 @@
             "subsection_slots": "节下设 10 组小节槽位（横城型）：保护区概况/功能区划/边界关系/重叠井田/影响方式与面积/沉陷重叠分析/植被动物影响/保护现状/规划协调性/保护对策——全部由 {{TABLE:protected_area_detail}} 驱动，不锁三级节号"
           },
           "elements": [
-            "专节定位段：本节为敏感目标专节（D8 数据驱动小节槽）——目标概况与保护区级别/功能区划（{{TABLE:protected_area_detail}} function_zone；目标名与 {{TABLE:sensitive_targets}} 登记全称 canon 一致——XS2）。",
-            "边界与重叠段：矿区边界关系与重叠井田（{{TABLE:protected_area_detail}} boundary_relation/overlap_minefields/overlap_area——重叠面积 canon 禁复算）。",
+            "专节定位段：本节为敏感目标专节（D8 数据驱动小节槽）——目标概况与保护区级别/功能区划（{{TABLE:protected_area_detail}} 环境功能区类别；目标名与 {{TABLE:sensitive_targets}} 登记全称 canon 一致——XS2）。",
+            "边界与重叠段：矿区边界关系与重叠井田（{{TABLE:protected_area_detail}} 边界关系/重叠井田/重叠面积——重叠面积 canon 禁复算）。",
             "沉陷重叠分析段：沉陷预测与保护区范围重叠分析（{{SLOT:subsidence.W_max}}、{{SLOT:subsidence.subsidence_area_km2}}——XS4 冻结值多口径带标签）。",
-            "影响方式段：影响方式与程度（边界相接/实验区重叠等——{{TABLE:protected_area_detail}} impact_mode；距离数值 canon——XS6）。",
-            "保护对策段：保护对策与规划协调性（{{TABLE:protected_area_detail}} protection_measures——与清单保护要求字段一致禁升降级表述；对策要点衔接减缓措施章）。",
+            "影响方式段：影响方式与程度（边界相接/实验区重叠等——{{TABLE:protected_area_detail}} 影响方式；距离数值 canon——XS6）。",
+            "保护对策段：保护对策与规划协调性（{{TABLE:protected_area_detail}} 保护对策——与清单保护要求字段一致禁升降级表述；对策要点衔接减缓措施章）。",
             "收束句：专节结论条目（纳入 EO3 投影清单；结论向 ch9/ch13 投影）。"
           ],
           "uses": {
@@ -1272,8 +1272,8 @@
           "id": "ch6_S10",
           "title": "环境风险影响分析",
           "elements": [
-            "风险识别段：环境风险因素识别（{{TABLE:risk}} substances/facilities——油库/炸药库/矸石山/危废暂存等；HJ 169 方法语境，标准号枚举）。",
-            "生态风险段：规划实施生态风险及防治措施要点（{{TABLE:risk}} eco_risk_sources；防治要点须与减缓措施章呼应禁在此展开完整措施）。",
+            "风险识别段：环境风险因素识别（{{TABLE:risk}} 特征污染物/facilities——油库/炸药库/矸石山/危废暂存等；HJ 169 方法语境，标准号枚举）。",
+            "生态风险段：规划实施生态风险及防治措施要点（{{TABLE:risk}} 生态风险源；防治要点须与减缓措施章呼应禁在此展开完整措施）。",
             "污染风险段：环境污染风险及防治措施要点（{{TABLE:risk}}；防治要点逐项对应风险源）。",
             "EO2 源清单义务：本节风险物质/设施清单即 EO2 呼应义务源——逐项须在减缓措施章风险防范与应急内容在场（应急监测安排另见环境管理监测章），漏项=FAIL。",
             "收束句：风险结论条目（纳入 EO3 投影清单），本章收束。"
@@ -1341,9 +1341,9 @@
           "id": "ch7_S01",
           "title": "矿区水资源承载力分析",
           "elements": [
-            "区域水资源条件段：区域水资源总量与可利用量（{{TABLE:water}} regional_water——user_docs）。",
-            "水源方案段：矿区水源选择及可供水量（{{TABLE:water}} sources——水源地可采量/库容 canon，XS12；与 ch6_S03 同源）。",
-            "需水量段：矿区用水量预测（生产/生活/生态分项——{{TABLE:water}} demand）。",
+            "区域水资源条件段：区域水资源总量与可利用量（{{TABLE:water}} 区域水资源——user_docs）。",
+            "水源方案段：矿区水源选择及可供水量（{{TABLE:water}} 来源——水源地可采量/库容 canon，XS12；与 ch6_S03 同源）。",
+            "需水量段：矿区用水量预测（生产/生活/生态分项——{{TABLE:water}} 需水量）。",
             "供需平衡段：供需平衡分析（{{SLOT:water_balance.supply}}、{{SLOT:water_balance.demand}}、{{SLOT:water_balance.deficit}}——差额为 formula:water_balance 冻结值禁手填；水量平衡表内部自洽）。",
             "承载力结论段：水资源承载力判定（满足/不满足+依据；结论纳入要点包供综合论证章投影）。"
           ],
@@ -1372,7 +1372,7 @@
           "id": "ch7_S02",
           "title": "矿区生态承载力分析",
           "elements": [
-            "弹性度段：生态弹性度评价（{{TABLE:eco}} eco_carrying——景观生态学方法成果录入，禁新算）。",
+            "弹性度段：生态弹性度评价（{{TABLE:eco}} 生态弹性度——景观生态学方法成果录入，禁新算）。",
             "承载能力段：资源承载能力评价（{{TABLE:eco}}）。",
             "压力度段：承载压力度评价与结论（{{TABLE:eco}}；结论纳入要点包）。"
           ],
@@ -1539,7 +1539,7 @@
           "id": "ch8_S05",
           "title": "矿区规划项目建设时序合理性分析",
           "elements": [
-            "论证段：逐井田建设时序与资源/市场/禁采约束的匹配（{{TABLE:mine_plan.mines}} construction_sequence；禁采约束表述与清单保护要求字段一致禁升降级）。",
+            "论证段：逐井田建设时序与资源/市场/禁采约束的匹配（{{TABLE:mine_plan.mines}} 建设时序；禁采约束表述与清单保护要求字段一致禁升降级）。",
             "收束句：时序合理性判定词与结论条目。"
           ],
           "uses": {
@@ -1702,10 +1702,10 @@
           "id": "ch9_S01",
           "title": "矿区生态环境综合整治措施",
           "elements": [
-            "区划段：综合整治区划原则/方法/目标及限制要求（{{TABLE:measures}} eco + {{TABLE:eco_restoration}} zoning；区划面积口径引用 {{SLOT:subsidence.subsidence_area_km2}}——XS4 冻结值）。",
+            "区划段：综合整治区划原则/方法/目标及限制要求（{{TABLE:measures}} eco + {{TABLE:eco_restoration}} 整治分区；区划面积口径引用 {{SLOT:subsidence.subsidence_area_km2}}——XS4 冻结值）。",
             "措施段：矿区生态环境综合整治措施逐条（对象要素+内容+主体+时段——{{TABLE:measures}}；覆盖识别清单生态类负面要素——EO1 在场）。",
             "保护目标措施段：敏感目标保护措施逐项（{{TABLE:sensitive_targets}} 保护要求字段逐项在场——处置判定词（禁采/限采/留设保护煤柱/搬迁）与清单一致禁升降级——XS2/XS6；{{TABLE:eco_restoration}} 复垦与植被重建安排）。",
-            "补偿与监控段：生态恢复补偿机制和保障措施、生态环境管理和监控计划（{{TABLE:eco_restoration}} compensation；监控与监测计划章衔接）。",
+            "补偿与监控段：生态恢复补偿机制和保障措施、生态环境管理和监控计划（{{TABLE:eco_restoration}} 补偿措施；监控与监测计划章衔接）。",
             "投资段：本章环保投资分项与汇总（{{SLOT:investment.env_investment_ratio}} 占比=派生值禁手填——XS9；总投资未列记 skip 非 fail）。"
           ],
           "uses": {
@@ -1865,7 +1865,7 @@
           "id": "ch10_S01",
           "title": "环境管理计划",
           "elements": [
-            "管理段组：环境管理基本原则/目标/机构及职责/时段/内容逐项（{{TABLE:measures}} mgmt——条款化直出；管理时段与评价时段一致）。",
+            "管理段组：环境管理基本原则/目标/机构及职责/时段/内容逐项（{{TABLE:measures}} 管理要求——条款化直出；管理时段与评价时段一致）。",
             "收束句：管理计划为监测与跟踪的组织前提，过渡到监测计划。"
           ],
           "uses": {
@@ -1882,7 +1882,7 @@
           "title": "环境监测计划",
           "elements": [
             "监测计划表：监测目的/机构/内容（{{TABLE:monitoring_plan}} 直渲——施工期/运营期/闭矿期×各要素×点位/因子/频次；执行标准列与 {{TABLE:standards_confirm}} 三元组一致——XS3）。",
-            "应急监测段：污染事故应急监测安排（{{TABLE:monitoring_plan}} emergency_monitoring——覆盖 EO2 风险源清单全部风险类型，与减缓措施章风险防范口径一致——EO2 目标断言）。",
+            "应急监测段：污染事故应急监测安排（{{TABLE:monitoring_plan}} 应急监测安排——覆盖 EO2 风险源清单全部风险类型，与减缓措施章风险防范口径一致——EO2 目标断言）。",
             "收束句：监测计划过渡到跟踪评价。"
           ],
           "uses": {
@@ -1926,7 +1926,7 @@
           "title": "下阶段项目环评工作重点及简化建议",
           "elements": [
             "重点段：下阶段项目环评重点（{{TABLE:mine_plan.mines}} 逐井田投影——已评价内容可简化的依据=本次评价结论，禁超出本次结论承诺简化）。",
-            "简化建议段：简化建议逐条（{{TABLE:tracking_plan}} next_eia_focus——与本次评价深度对应）。",
+            "简化建议段：简化建议逐条（{{TABLE:tracking_plan}} 下轮环评重点——与本次评价深度对应）。",
             "收束句：本章收束（结论要点纳入要点包）。"
           ],
           "uses": {
@@ -1999,7 +1999,7 @@
           "title": "矿区循环经济分析",
           "elements": [
             "综合利用段：矸石/矿井水/瓦斯综合利用途径与规模（{{TABLE:circular_economy}}——矸石规模与 {{SLOT:solid_waste.gangue_generation}} 派生值同源，禁两套数字；矿井水回用与供需平衡口径一致）。",
-            "产业链段：循环经济产业链构成与发展分析（{{TABLE:circular_economy}} industry_chain——定性）。",
+            "产业链段：循环经济产业链构成与发展分析（{{TABLE:circular_economy}} 产业链构成——定性）。",
             "收束句：本章收束（结论条目纳入要点包）。"
           ],
           "uses": {
@@ -2069,8 +2069,8 @@
           "id": "ch12_S02",
           "title": "第一次公众参与",
           "elements": [
-            "形式与时间段：第一次公示形式/时间/对象（{{TABLE:public_participation}} rounds[0]——公示次数与时间 canon，XS11）。",
-            "意见处理段：公示意见与处理（{{TABLE:public_participation}} opinions——条目数与处理结论一致）。",
+            "形式与时间段：第一次公示形式/时间/对象（{{TABLE:public_participation}} 轮次[0]——公示次数与时间 canon，XS11）。",
+            "意见处理段：公示意见与处理（{{TABLE:public_participation}} 意见——条目数与处理结论一致）。",
             "收束句：过渡到第二轮公参。"
           ],
           "uses": {
@@ -2091,7 +2091,7 @@
           "id": "ch12_S03",
           "title": "第二次公众参与",
           "elements": [
-            "公告段：网站/报纸及张贴公告调查结果与处理意见（{{TABLE:public_participation}} rounds[1]——数字 canon）。",
+            "公告段：网站/报纸及张贴公告调查结果与处理意见（{{TABLE:public_participation}} 轮次[1]——数字 canon）。",
             "问卷段：问卷调查结果（发放/回收/有效数——{{TABLE:public_participation}} questionnaires；链自洽 回收≤发放、有效≤回收——XS11）。",
             "收束句：过渡到调查结论。"
           ],
@@ -2110,7 +2110,7 @@
           "id": "ch12_S04",
           "title": "调查结论",
           "elements": [
-            "结论段：公众意见采纳情况汇总与调查结论（{{TABLE:public_participation}} opinions 采纳分类汇总——条数与前后文一致，XS11；结论条目纳入要点包供结论章投影）。",
+            "结论段：公众意见采纳情况汇总与调查结论（{{TABLE:public_participation}} 意见 采纳分类汇总——条数与前后文一致，XS11；结论条目纳入要点包供结论章投影）。",
             "脱敏自检：全章被调查人个人信息禁入正文（D7——姓名/电话/身份证零出现）。"
           ],
           "uses": {
