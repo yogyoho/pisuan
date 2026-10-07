@@ -576,7 +576,7 @@
           "id": "ch1_S04",
           "title": "环境功能区划与评价标准",
           "elements": [
-            "功能区划段：逐要素功能区类别（{{TABLE:standards_confirm}} function_zone 字段——戈壁荒漠区划按地方区划登记）。",
+            "功能区划段：逐要素功能区类别（{{TABLE:standards_confirm}} 环境功能区类别 字段——戈壁荒漠区划按地方区划登记）。",
             "三元组表：要素-功能区/质量类别-标准号直渲（{{TABLE:standards_confirm}}——门 1 标准号非空+格式体检 XS3）。",
             "收束句：标准体系统领趋势评价与后续预测判定。"
           ],
@@ -1017,7 +1017,7 @@
           "title": "大气环境影响对比评估及环保措施有效性分析",
           "elements": [
             "对比段：原规划环评大气预测/要求 vs 实际质量变化（{{TABLE:monitoring.trends}} 大气域对照——XS3 限值绑定）。",
-            "有效性段：大气防治措施逐项判定（{{TABLE:measure_effectiveness.items}} element=大气——XS20 四档；排土场风蚀/砾幕层恢复措施实证域）。",
+            "有效性段：大气防治措施逐项判定（{{TABLE:measure_effectiveness.items}} 要素=大气——XS20 四档；排土场风蚀/砾幕层恢复措施实证域）。",
             "收束句：大气收束，过渡到地表水。"
           ],
           "uses": {
@@ -1046,7 +1046,7 @@
           "title": "地表水环境影响对比评估及环保措施有效性分析",
           "elements": [
             "对比段：原环评地表水要求 vs 水质/水量实况（{{TABLE:monitoring.trends}} 地表水域、{{TABLE:water.balance}} 台账——XS12）。",
-            "有效性段：水污染防治措施逐项判定（{{TABLE:measure_effectiveness.items}} element=地表水——XS20）。",
+            "有效性段：水污染防治措施逐项判定（{{TABLE:measure_effectiveness.items}} 要素=地表水——XS20）。",
             "收束句：地表水收束。"
           ],
           "uses": {
@@ -1077,7 +1077,7 @@
           "title": "地下水防治措施有效性分析",
           "elements": [
             "对比段：含水层/水位/水质实况 vs 原环评结论（{{TABLE:monitoring.trends}} 地下水域——XS12）。",
-            "有效性段：地下水防治措施逐项判定（{{TABLE:measure_effectiveness.items}} element=地下水——XS20；本样本以疏干防控与跟踪监测实效为主域）。",
+            "有效性段：地下水防治措施逐项判定（{{TABLE:measure_effectiveness.items}} 要素=地下水——XS20；本样本以疏干防控与跟踪监测实效为主域）。",
             "收束句：地下水收束。"
           ],
           "uses": {
@@ -1106,7 +1106,7 @@
           "title": "声环境影响对比评估及环保措施有效性分析",
           "elements": [
             "对比段：声环境实况 vs 原环评结论（{{TABLE:monitoring.trends}} 声域——XS3）。",
-            "有效性段：噪声防治措施逐项判定（{{TABLE:measure_effectiveness.items}} element=声——XS20）。",
+            "有效性段：噪声防治措施逐项判定（{{TABLE:measure_effectiveness.items}} 要素=声——XS20）。",
             "收束句：声收束。"
           ],
           "uses": {
@@ -1135,7 +1135,7 @@
           "title": "固体废物影响调查及环保措施有效性分析",
           "elements": [
             "调查段：矿区固废产生-利用-处置实况（{{TABLE:solid_waste.disposal_sites}}、{{TABLE:solid_waste.hazardous}} 台账域）。",
-            "有效性段：固废措施逐项判定（{{TABLE:measure_effectiveness.items}} element=固废——XS20）。",
+            "有效性段：固废措施逐项判定（{{TABLE:measure_effectiveness.items}} 要素=固废——XS20）。",
             "收束句：固废收束。"
           ],
           "uses": {
@@ -1164,7 +1164,7 @@
           "title": "生态环境影响对比评估及环保措施有效性分析",
           "elements": [
             "对比段：生态现状演变 vs 原环评预测/要求（{{TABLE:eco.land_use}} 多期对照、{{TABLE:eco_restoration.zoning}} 治理实况——{{TABLE:monitoring.trends}} 生态域监测）。",
-            "有效性段：生态整治措施逐项判定（{{TABLE:measure_effectiveness.items}} element=生态——XS20；砾幕层恢复/风蚀治理实效为本样本特色证据域）。",
+            "有效性段：生态整治措施逐项判定（{{TABLE:measure_effectiveness.items}} 要素=生态——XS20；砾幕层恢复/风蚀治理实效为本样本特色证据域）。",
             "收束句：生态收束。"
           ],
           "uses": {
@@ -1506,7 +1506,7 @@
           "id": "ch6_S08",
           "title": "规划后续开发对重点敏感目标的影响分析",
           "elements": [
-            "专节段：登记目标逐项专项分析（{{TABLE:sensitive_targets}} aspect=后续开发 逐目标成节——本样本伊吾胡杨林沙漠公园/淖毛湖镇/线性工程三专节型；无此类登记时节 ABSENT）。",
+            "专节段：登记目标逐项专项分析（{{TABLE:sensitive_targets}} 评价方面=后续开发 逐目标成节——本样本伊吾胡杨林沙漠公园/淖毛湖镇/线性工程三专节型；无此类登记时节 ABSENT）。",
             "收束句：敏感目标收束，过渡到风险与承载力。"
           ],
           "uses": {
