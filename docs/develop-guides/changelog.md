@@ -122,6 +122,12 @@
 - feat(w3): L2 泛化便车 + facts 写入流 + min-permissive 写时聚合——GeneralizedTemplate +scope/region 可选字段（None=无证据，structured 通道 model_dump 物化无副作用），prompt 双通道可选产出、normalize 非法值收敛，零新增 LLM 调用；B 类确认实体→区域事实草稿（C 类拒绝，(source_task_id, entity_key) 去重）；聚合窄序 project<regional<universal 永不升级，归因集落 `extra_meta.contributing_task_ids`（JSONB `@>` 查询带 `::jsonb` 显式转型）；COMMITTED 兜底 scope NULL→project
 - feat(w3): L3 薄 API + 存量回填——`POST /domain-factory/tasks/{id}/confirm-region`（级联：任务四列→facts 确认→归因集模板重算）与 `POST /domain-factory/regional-facts/retire`；回填脚本 8/8 任务落列（横城矿区×5+伊宁矿区北区×3，幂等只填 NULL），learned_templates 零改动（211 行 scope 保持 NULL）。单测 `test_w3_region_rules.py`/`test_w3_scope_pipeline.py`/`test_w3_facts_flow.py` 共 50 例 + 容器集成验证（合成任务全链路自清理）；提交序列 f244b78e/a7c9fa86/903d5319+69ce0e46/d2952e4c+bbff9d44/cbc65a2a；执行期计划勘误三条（bug-377 min-permissive 片段宽窄写反、bug-378 W1 基线期望值漏 reusable、bug-380 测试 fake 缺 id 键），均按「测试+spec+docstring 一致」裁定修计划侧
 
+### pisuan 定制增量（2026-10-07）
+
+- feat(w4): 归属读接口三件套——`GET /domain-factory/tasks`（scope/region_key/keyword 筛选 + 分页，scope=unassigned → IS NULL）、`GET /domain-factory/regional-facts`（三重筛选，service 拼 source_task_file_name）、`GET /domain-factory/region-board`（stats + 模板明细 + region_tree；模板 region 由归因集派生：恰一→该值/多→mixed/空→未归属）。零 DDL
+- feat(w4): 行政区辅助词表 3+6（ADMIN_REGION_VOCAB，横城 3/伊宁北区 6，文档驱动提取）——任务级 L1 二级查找，矿区名主命中优先，二级命中 region_label 反查主词表展示名；段落级 extract_region_signal 零改动（classify region_signals 行为不变）；backfill 幂等复跑 0/7
+- feat(w4): 知识工厂第三 tab「归属管理」——任务归属子页（scope chips/关键词/region 下钻过滤/逐行改判弹窗：label 必填+slug 校验+scope 三选+级联警示，toast 计数=级联实况）、区域事实子页（三重筛选+admin 勾选批量退役，retired 置灰，非 admin 纯浏览）、模板聚合看板（统计卡×3/明细表/T1 横排 region 卡下钻，任务/事实计数跨子页带过滤跳转）。DomainFactoryView 纯增量挂载
+
 ## v0.7.2 (2026-09-02)
 
 ::: warning Beta 升级说明

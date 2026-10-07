@@ -63,7 +63,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisu
 - Modify: `backend/server/routers/domain_factory_router.py`（:415 `retire_regional_facts` 函数结束之后、:418 File Upload 分节注释之前）
 - Test: `backend/test/unit/test_w4_attribution_reads.py`（新建）
 
-- [ ] **Step 1.1: 基线快照（改动前）**
+- [x] **Step 1.1: 基线快照（改动前）**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisuan-api:0.7.3 pytest /app/test/unit/test_w3_region_rules.py /app/test/unit/test_w3_scope_pipeline.py /app/test/unit/test_w3_facts_flow.py /app/test/unit/test_w1_prose_pipeline.py --noconftest -q
@@ -72,7 +72,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisu
 
 Expected: pytest 全绿（约 76 passed）；ruff 输出记录四文件告警计数（若镜像无 ruff，改用 `docker exec pisuan-localized-api-1 ruff check ...`，仍无则如实上报控制器，T6 以 ast 解析替代）。**记下这两个数字**，T6 对比。
 
-- [ ] **Step 1.2: 写失败单测**
+- [x] **Step 1.2: 写失败单测**
 
 新建 `backend/test/unit/test_w4_attribution_reads.py`，全文：
 
@@ -243,7 +243,7 @@ class TestBuildRegionBoard:
         assert board["templates"][0]["id"] == 2
 ```
 
-- [ ] **Step 1.3: 跑单测验证失败**
+- [x] **Step 1.3: 跑单测验证失败**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisuan-api:0.7.3 pytest /app/test/unit/test_w4_attribution_reads.py --noconftest -q
@@ -251,7 +251,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisu
 
 Expected: FAIL/ERROR — `ImportError: cannot import name 'derive_template_region'`。
 
-- [ ] **Step 1.4: region 模块 +2 纯函数**
+- [x] **Step 1.4: region 模块 +2 纯函数**
 
 `backend/package/yuxi/services/domain_factory_region.py`——在 `region_key_for_label`（:66-68）之后插入：
 
@@ -282,9 +282,7 @@ def region_label_for_key(key: str) -> str | None:
 在文件末尾 `apply_min_permissive`（:130-136）之后追加：
 
 ```python
-def derive_template_region(
-    contributing_task_ids: list[str] | None, task_regions: dict[str, str | None]
-) -> str | None:
+def derive_template_region(contributing_task_ids: list[str] | None, task_regions: dict[str, str | None]) -> str | None:
     """[pisuan-custom] W4：模板 region 派生（LearnedTemplate 无 region 列，由归因集推出）。
 
     归因集任务的 region_key 去重非空——恰一个 → 该值；多个 → "mixed"；空集/全 NULL → None
@@ -299,7 +297,7 @@ def derive_template_region(
     return "mixed"
 ```
 
-- [ ] **Step 1.5: repository +3 读方法**
+- [x] **Step 1.5: repository +3 读方法**
 
 `backend/package/yuxi/repositories/domain_factory_repository.py`——在类末方法 `get_task_scopes`（:904 起）之后、类体末尾追加：
 
@@ -499,7 +497,7 @@ def derive_template_region(
         }
 ```
 
-- [ ] **Step 1.6: service import +3 读函数**
+- [x] **Step 1.6: service import +3 读函数**
 
 `backend/package/yuxi/services/domain_factory_service.py`——import 块（:20-29）改为：
 
@@ -641,7 +639,7 @@ from yuxi.services.domain_factory_region import (
         }
 ```
 
-- [ ] **Step 1.7: router +3 薄 GET**
+- [x] **Step 1.7: router +3 薄 GET**
 
 `backend/server/routers/domain_factory_router.py`——在 `retire_regional_facts` 函数结束（:415）之后、File Upload 分节注释（:418）之前插入（仿 confirm-region 同款 try/except 骨架；路由段数与既有 `GET /tasks/{task_id}` 不同无遮蔽风险）：
 
@@ -709,7 +707,7 @@ async def fetch_region_board(
 
 （路由段数与既有 `GET /tasks/{task_id}` 不同，注册顺序无遮蔽风险；插入位置保留前后各一空行与既有端点分隔。）
 
-- [ ] **Step 1.8: 语法与 lint**
+- [x] **Step 1.8: 语法与 lint**
 
 ```bash
 python -c "import ast; ast.parse(open('backend/server/routers/domain_factory_router.py', encoding='utf-8').read()); ast.parse(open('backend/package/yuxi/services/domain_factory_service.py', encoding='utf-8').read()); ast.parse(open('backend/package/yuxi/repositories/domain_factory_repository.py', encoding='utf-8').read()); ast.parse(open('backend/package/yuxi/services/domain_factory_region.py', encoding='utf-8').read()); print('ast OK')"
@@ -718,7 +716,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisu
 
 Expected: `ast OK`；ruff 计数 ≤ Step 1.1 基线（新代码零新增告警）。
 
-- [ ] **Step 1.9: 单测全绿（W4 新增 + W3/W1 回归）**
+- [x] **Step 1.9: 单测全绿（W4 新增 + W3/W1 回归）**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisuan-api:0.7.3 pytest /app/test/unit/test_w4_attribution_reads.py /app/test/unit/test_w3_region_rules.py /app/test/unit/test_w3_scope_pipeline.py /app/test/unit/test_w3_facts_flow.py /app/test/unit/test_w1_prose_pipeline.py --noconftest -q
@@ -726,7 +724,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisu
 
 Expected: 全绿（基线 76 + W4 新增 13 = 89 passed 上下；以实际计数为准，关键是零 fail）。
 
-- [ ] **Step 1.10: Commit**
+- [x] **Step 1.10: Commit**
 
 ```bash
 git add backend/package/yuxi/services/domain_factory_region.py backend/package/yuxi/repositories/domain_factory_repository.py backend/package/yuxi/services/domain_factory_service.py backend/server/routers/domain_factory_router.py backend/test/unit/test_w4_attribution_reads.py
@@ -749,7 +747,7 @@ EOF
 - Modify: `backend/package/yuxi/services/domain_factory_region.py`（:35 REGION_VOCAB 后 +ADMIN_REGION_VOCAB；:66 `region_label_for_key` 补二级反查段；:71-77 `extract_region_signal` 重构委托；:105-115 `l1_task_attribution` 二级查找）
 - Test: `backend/test/unit/test_w4_admin_vocab.py`（新建）
 
-- [ ] **Step 2.1: 写失败单测**
+- [x] **Step 2.1: 写失败单测**
 
 新建 `backend/test/unit/test_w4_admin_vocab.py`，全文：
 
@@ -817,7 +815,7 @@ class TestAdminVocab:
         }
 ```
 
-- [ ] **Step 2.2: 跑单测验证失败**
+- [x] **Step 2.2: 跑单测验证失败**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisuan-api:0.7.3 pytest /app/test/unit/test_w4_admin_vocab.py --noconftest -q
@@ -825,7 +823,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisu
 
 Expected: FAIL/ERROR — `ImportError: cannot import name 'ADMIN_REGION_VOCAB'`。
 
-- [ ] **Step 2.3: 实现——词表常量 + 同语义重构 + 二级查找**
+- [x] **Step 2.3: 实现——词表常量 + 同语义重构 + 二级查找**
 
 `backend/package/yuxi/services/domain_factory_region.py` 三处：
 
@@ -837,15 +835,15 @@ Expected: FAIL/ERROR — `ImportError: cannot import name 'ADMIN_REGION_VOCAB'`�
 # 与 REGION_VOCAB 的关系：矿区名主命中优先；无主命中才查本表，命中同通道判 regional。
 # 陷阱备忘：「横城村」属银川市兴庆区不收；「灵武市」与灵武矿区同域（歧义交 L3 改判纠正）。
 ADMIN_REGION_VOCAB: dict[str, str] = {
-    "灵武市": "hengcheng",       # 强：归属链核心县级市（歧义：灵武矿区同域，L3 纠）
-    "临河镇": "hengcheng",       # 强：「属灵武市临河镇管辖」
-    "宁东镇": "hengcheng",       # 强：「矿区位于灵武市宁东镇」多语境
-    "伊宁县": "yining-beiqu",        # 强：矿区主体所在县
-    "伊宁市": "yining-beiqu",        # 中：紧邻北郊，部分设施在伊宁市界内
-    "霍城县": "yining-beiqu",        # 中：保护区/水源地紧邻
+    "灵武市": "hengcheng",  # 强：归属链核心县级市（歧义：灵武矿区同域，L3 纠）
+    "临河镇": "hengcheng",  # 强：「属灵武市临河镇管辖」
+    "宁东镇": "hengcheng",  # 强：「矿区位于灵武市宁东镇」多语境
+    "伊宁县": "yining-beiqu",  # 强：矿区主体所在县
+    "伊宁市": "yining-beiqu",  # 中：紧邻北郊，部分设施在伊宁市界内
+    "霍城县": "yining-beiqu",  # 中：保护区/水源地紧邻
     "喀拉亚尕奇乡": "yining-beiqu",  # 强：伊宁县辖
-    "英也尔乡": "yining-beiqu",      # 中：伊宁市辖，井田相关
-    "曲鲁海乡": "yining-beiqu",      # 中：伊宁县辖，水源地
+    "英也尔乡": "yining-beiqu",  # 中：伊宁市辖，井田相关
+    "曲鲁海乡": "yining-beiqu",  # 中：伊宁县辖，水源地
 }
 ```
 
@@ -910,7 +908,7 @@ def l1_task_attribution(doc: dict) -> dict | None:
     return {**signal, "scope": "regional"}
 ```
 
-- [ ] **Step 2.4: 单测全绿（W4 两文件 + W3/W1 回归）**
+- [x] **Step 2.4: 单测全绿（W4 两文件 + W3/W1 回归）**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisuan-api:0.7.3 pytest /app/test/unit/test_w4_admin_vocab.py /app/test/unit/test_w4_attribution_reads.py /app/test/unit/test_w3_region_rules.py /app/test/unit/test_w3_scope_pipeline.py /app/test/unit/test_w3_facts_flow.py /app/test/unit/test_w1_prose_pipeline.py --noconftest -q
@@ -918,7 +916,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisu
 
 Expected: 全绿。**关键**：`test_w3_region_rules.py` 旧用例零改动全绿 = `extract_region_signal` 重构同语义的证明；`TestTaskAttribution.test_plan_report_regional` 等主命中用例不变 = 主命中优先的证明。
 
-- [ ] **Step 2.5: 语法 + ruff**
+- [x] **Step 2.5: 语法 + ruff**
 
 ```bash
 python -c "import ast; ast.parse(open('backend/package/yuxi/services/domain_factory_region.py', encoding='utf-8').read()); print('ast OK')"
@@ -927,7 +925,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisu
 
 Expected: `ast OK`；ruff 计数 ≤ 基线。
 
-- [ ] **Step 2.6: sync-dev + live 集成验证（覆盖 T1+T2 后端改动）**
+- [x] **Step 2.6: sync-dev + live 集成验证（覆盖 T1+T2 后端改动）**
 
 ```powershell
 ./scripts/sync-dev.ps1
@@ -1038,7 +1036,7 @@ MSYS_NO_PATHCONV=1 docker exec pisuan-localized-postgres-1 psql -U postgres -d y
 
 Expected: 两跑均 `回填完成: 0/8 …`（幂等）；模板 `scoped=0`（learned_templates 零改动不变量）。
 
-- [ ] **Step 2.7: Commit**
+- [x] **Step 2.7: Commit**
 
 ```bash
 git add backend/package/yuxi/services/domain_factory_region.py backend/test/unit/test_w4_admin_vocab.py
@@ -1065,7 +1063,7 @@ EOF
 - Create: `web/src/components/domain-factory/AttributionEditModal.vue`
 - Modify: `web/src/views/DomainFactoryView.vue`（:7 import、:272 workbench pane 之后、:564 `&.workbench` 之后）
 
-- [ ] **Step 3.1: API 封装 +5 方法**
+- [x] **Step 3.1: API 封装 +5 方法**
 
 `web/src/apis/domain_factory_api.js`——在 `confirmProposedEntities`（:250-254）之后插入（沿用文件内 `withDemoFallback` + `buildUrl` 惯例）：
 
@@ -1102,7 +1100,7 @@ EOF
     ),
 ```
 
-- [ ] **Step 3.2: 创建 RegionAttributionPanel.vue**
+- [x] **Step 3.2: 创建 RegionAttributionPanel.vue**
 
 ```vue
 <script setup>
@@ -1151,7 +1149,7 @@ const jumpToFacts = ({ regionKey }) => {
 </style>
 ```
 
-- [ ] **Step 3.3: 创建 AttributionTaskTable.vue**
+- [x] **Step 3.3: 创建 AttributionTaskTable.vue**
 
 ```vue
 <script setup>
@@ -1163,7 +1161,7 @@ import AttributionEditModal from './AttributionEditModal.vue'
 // [pisuan-custom] W4 子页1：任务归属列表（scope chips + 关键词 + 逐行改判入口）
 const loading = ref(false)
 const items = ref([])
-const total = ref(0)
+const total = ref(0) // （执行时删除：eslint no-unused-vars）
 const scopeFilter = ref('all')
 const keyword = ref('')
 const regionKeyFilter = ref('')
@@ -1300,7 +1298,7 @@ defineExpose({ applyRegionFilter, refresh: fetchList })
 </style>
 ```
 
-- [ ] **Step 3.4: 创建 AttributionEditModal.vue**
+- [x] **Step 3.4: 创建 AttributionEditModal.vue**
 
 ```vue
 <script setup>
@@ -1429,7 +1427,7 @@ const handleOk = async () => {
 </style>
 ```
 
-- [ ] **Step 3.5: 挂载第三 tab（DomainFactoryView 仅 3 触点）**
+- [x] **Step 3.5: 挂载第三 tab（DomainFactoryView 仅 3 触点）**
 
 `web/src/views/DomainFactoryView.vue` 三处：
 
@@ -1461,7 +1459,7 @@ import RegionAttributionPanel from '@/components/domain-factory/RegionAttributio
         }
 ```
 
-- [ ] **Step 3.6: 前端 lint + format**
+- [x] **Step 3.6: 前端 lint + format**
 
 ```bash
 cd web && pnpm run format && pnpm run lint
@@ -1469,7 +1467,7 @@ cd web && pnpm run format && pnpm run lint
 
 Expected: 零 error（format 自动修复格式属正常；lint 报既有 warning 与本次无关）。
 
-- [ ] **Step 3.7: sync-dev + 运行栈冒烟**
+- [x] **Step 3.7: sync-dev + 运行栈冒烟**
 
 ```powershell
 ./scripts/sync-dev.ps1
@@ -1486,7 +1484,7 @@ docker ps --format "{{.Names}} {{.Ports}}" | Select-String web
 
 若遇登录墙：凭据红线（约束 8）——改请用户人工冒烟并回报结果，不要自行取凭据。
 
-- [ ] **Step 3.8: Commit**
+- [x] **Step 3.8: Commit**
 
 ```bash
 git add web/src/apis/domain_factory_api.js web/src/components/domain-factory/RegionAttributionPanel.vue web/src/components/domain-factory/AttributionTaskTable.vue web/src/components/domain-factory/AttributionEditModal.vue web/src/views/DomainFactoryView.vue
@@ -1509,7 +1507,7 @@ EOF
 **Files:**
 - Create: `web/src/components/domain-factory/RegionalFactsTable.vue`
 
-- [ ] **Step 4.1: 创建 RegionalFactsTable.vue**
+- [x] **Step 4.1: 创建 RegionalFactsTable.vue**
 
 ```vue
 <script setup>
@@ -1696,7 +1694,7 @@ defineExpose({
   gap: 10px;
   margin-top: 10px;
   padding: 6px 12px;
-  background: var(--warning-bg, #fff7e6);
+  background: var(--color-warning-50, #fff7e6);
   border-radius: 6px;
   width: fit-content;
 }
@@ -1706,7 +1704,7 @@ defineExpose({
 </style>
 ```
 
-- [ ] **Step 4.2: 前端 lint + format**
+- [x] **Step 4.2: 前端 lint + format**
 
 ```bash
 cd web && pnpm run format && pnpm run lint
@@ -1714,7 +1712,7 @@ cd web && pnpm run format && pnpm run lint
 
 Expected: 零 error。
 
-- [ ] **Step 4.3: sync-dev + 冒烟（只看不退，真实行不退役）**
+- [x] **Step 4.3: sync-dev + 冒烟（只看不退，真实行不退役）**
 
 ```powershell
 ./scripts/sync-dev.ps1
@@ -1728,7 +1726,7 @@ Expected: 零 error。
 4. 非 admin 不可见性：以普通用户登录（种子账号，向用户索取或由用户自验）确认无勾选列、无操作条；
 5. 看板下钻联动（T5 后补验）：暂跳过。
 
-- [ ] **Step 4.4: Commit**
+- [x] **Step 4.4: Commit**
 
 ```bash
 git add web/src/components/domain-factory/RegionalFactsTable.vue
@@ -1750,7 +1748,7 @@ EOF
 **Files:**
 - Create: `web/src/components/domain-factory/RegionBoard.vue`
 
-- [ ] **Step 5.1: 创建 RegionBoard.vue**
+- [x] **Step 5.1: 创建 RegionBoard.vue**
 
 ```vue
 <script setup>
@@ -1963,7 +1961,7 @@ defineExpose({ refresh: fetchBoard })
 </style>
 ```
 
-- [ ] **Step 5.2: 前端 lint + format**
+- [x] **Step 5.2: 前端 lint + format**
 
 ```bash
 cd web && pnpm run format && pnpm run lint
@@ -1971,7 +1969,7 @@ cd web && pnpm run format && pnpm run lint
 
 Expected: 零 error。
 
-- [ ] **Step 5.3: sync-dev + 冒烟（空态/计数/下钻跳转）**
+- [x] **Step 5.3: sync-dev + 冒烟（空态/计数/下钻跳转）**
 
 ```powershell
 ./scripts/sync-dev.ps1
@@ -1985,7 +1983,7 @@ Expected: 零 error。
 4. 点「任务 5 →」→ 自动切「任务归属」子页且出现 `region: hengcheng` 过滤 tag、列表 5 行；点「事实 N →」→ 切「区域事实」子页已过滤；
 5. 未归属伪节点无跳转链接，显示提示文案。
 
-- [ ] **Step 5.4: Commit**
+- [x] **Step 5.4: Commit**
 
 ```bash
 git add web/src/components/domain-factory/RegionBoard.vue
@@ -2009,7 +2007,7 @@ EOF
 - Modify: `docs/superpowers/specs/2026-10-07-w4-attribution-ui-design.md`（三处勘误）
 - Modify: `docs/superpowers/plans/2026-10-07-w4-attribution-ui.md`（勾掉 checkbox，追加执行记录）
 
-- [ ] **Step 6.1: 后端收尾 lint（对比基线）**
+- [x] **Step 6.1: 后端收尾 lint（对比基线）**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisuan-api:0.7.3 ruff check /app/package/yuxi/services/domain_factory_region.py /app/package/yuxi/services/domain_factory_service.py /app/package/yuxi/repositories/domain_factory_repository.py /app/server/routers/domain_factory_router.py
@@ -2018,7 +2016,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisu
 
 Expected: check 计数 ≤ T1 Step 1.1 基线；format --check 若列出文件，按 `ruff format --diff` 输出在 worktree 手工等价修正后复跑至 clean。
 
-- [ ] **Step 6.2: 全量单测回归**
+- [x] **Step 6.2: 全量单测回归**
 
 ```bash
 MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisuan-api:0.7.3 pytest /app/test/unit/test_w4_attribution_reads.py /app/test/unit/test_w4_admin_vocab.py /app/test/unit/test_w3_region_rules.py /app/test/unit/test_w3_scope_pipeline.py /app/test/unit/test_w3_facts_flow.py /app/test/unit/test_w1_prose_pipeline.py --noconftest -q
@@ -2026,7 +2024,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/workspace/pisuan/backend:/app:ro" pisu
 
 Expected: 全绿（基线 76 + W4 新增，零 fail）。
 
-- [ ] **Step 6.3: changelog 条目**
+- [x] **Step 6.3: changelog 条目**
 
 `docs/develop-guides/changelog.md`——在「pisuan 定制增量（2026-10-06）」节最后一条（W3 收口条）之后、「## v0.7.2」之前插入新节与三条目：
 
@@ -2038,7 +2036,7 @@ Expected: 全绿（基线 76 + W4 新增，零 fail）。
 - feat(w4): 知识工厂第三 tab「归属管理」——任务归属子页（scope chips/关键词/region 下钻过滤/逐行改判弹窗：label 必填+slug 校验+scope 三选+级联警示，toast 计数=级联实况）、区域事实子页（三重筛选+admin 勾选批量退役，retired 置灰，非 admin 纯浏览）、模板聚合看板（统计卡×3/明细表/T1 横排 region 卡下钻，任务/事实计数跨子页带过滤跳转）。DomainFactoryView 纯增量挂载
 ```
 
-- [ ] **Step 6.4: spec 三处勘误（保持 spec 与实现一致）**
+- [x] **Step 6.4: spec 三处勘误（保持 spec 与实现一致）**
 
 `docs/superpowers/specs/2026-10-07-w4-attribution-ui-design.md`：
 
@@ -2046,11 +2044,11 @@ Expected: 全绿（基线 76 + W4 新增，零 fail）。
 （b）§4.1 末条「图标 lucide-vue-next（tab 图标选 MapPinned 类…）」→ 改为「tab 图标沿用既有 tab-dot CSS 圆点惯例（.tab-dot.region 配色 #0891b2），组件内表格图标按文件现状用 @lucide/vue」；
 （c）§4.3 board 响应行补 `templates:[{id,chapter,scope,region,contributing_count,updated_at}]`（明细表数据随看板单响应返回），并在树字段说明处补一句「template_count 只计派生 region 恰等于该 region 的模板（mixed 只进明细）」。
 
-- [ ] **Step 6.5: 勾账 + 执行记录**
+- [x] **Step 6.5: 勾账 + 执行记录**
 
 本计划文件：勾掉全部 checkbox；文末追加「## 执行记录」小节（日期、各任务 commit SHA、live 验证结果一行、偏离计划事项如「计划勘误 N 条」）。`.wolf/memory.md` 追加一行（python 脚本方式，遵守约束 7）；`.wolf/anatomy.md` 补 5 个新前端组件与 2 个新测试文件的条目。
 
-- [ ] **Step 6.6: 终审 commit**
+- [x] **Step 6.6: 终审 commit**
 
 ```bash
 git add docs/develop-guides/changelog.md docs/superpowers/specs/2026-10-07-w4-attribution-ui-design.md docs/superpowers/plans/2026-10-07-w4-attribution-ui.md
@@ -2062,7 +2060,7 @@ EOF
 )"
 ```
 
-- [ ] **Step 6.7: fresh-eyes 终审（DoD 对照）**
+- [x] **Step 6.7: fresh-eyes 终审（DoD 对照）**
 
 逐条核对并如实记录（不达标即回修，不许「视为通过」）：
 
@@ -2100,3 +2098,13 @@ Expected: `13`（1 行 import + 9 行 pane 块 + 3 行 tab-dot 配色；若 form
 - **region_key 候选硬编码漂移**：前端 `REGION_KEY_OPTIONS`（17 slug）与后端 REGION_VOCAB 人工同步——词表变更（L3 落定新矿区）时两处都要动；如嫌漂移风险大，后续可加 vocab 只读端点（挂账，不属本窗）。
 - **sync-dev 动运行栈**：常规开发同步（非官方 sync-upstream 链）；执行前确认无他人在跑其它窗的任务。
 - **灵武市歧义**：词表单层设计接受误判（灵武矿区文档与横城文档同词），改判 UI 即兜底通道——冒烟不需要验证误判纠正，那是 L3 人工流程。
+
+## 执行记录（2026-10-07）
+
+- 提交链：bcf91825（计划）→ 2461dddc（T1 后端读接口）→ 6deb6fa2+0d3e2a65（T2 词表+format）→ aaeef94c+63c4b42e+476f8b21（T3 面板+交互修正）→ b9528364+662f47ff（T4 事实子页+评审修复）→ e36ba1b4+b1d4fb6d（T5 看板+归并修复）→ 52f55bef（T6 style format 归一）+ 本提交（T6 文档收口）
+- 计划内代码 bug 修复 5 处（TDD/评审拦截）：service dict 列表位置解包→键访问；模板树 continue 哨兵语义（只跳 mixed）；live 验证 tree[None] KeyError 防护；AttributionTaskTable 未用 total ref；附录 A --warning-bg→实存 --color-warning-50
+- 评审驱动修正 7 处：子页切换刷新（watch activeSub）/搜索清空即查/死分支清理/ok-text 分叉/筛选清选区/退役页码回缩/看板卡归并
+- 偏离：浏览器冒烟整体延后用户人工验证（凭据红线，全程容器道+API 道验证）；sync-dev 共 5 次（T3×3 含 2 次授权容器挂载道 lint、T4/T5 修复道各 1）；T3 中间提交不自包含（Panel 先于 T4/T5 引用未跟踪文件），已随 T5 闭合并加干净检出核查（见下）；后端 lint 道改宿主 uvx ruff（镜像/容器/宿主均无 ruff 二进制，Step 6.1 docker run ruff 写法不可用）；backfill 幂等复跑实况 0/7（计划写 0/8 系 W3 窗间漂移，非本窗所致）
+- DoD 对照：1✅（T2 live ALL PASS）2✅（词表 15 用例+幂等 0/7）3✅ lint（eslint exit 0/ruff 16 持平/format W4 新增区 clean，存量区 service:680、router:385/690/802/904/935 历史违规按外科原则不动）｜4/5/6 延后用户人工验证｜7 见下核对输出
+- 零 DDL；禁碰文件 grep 无命中（exit=1）；DomainFactoryView 增量 13 行=3 触点；干净检出核查：5 组件（web/src/components/domain-factory/ 下）+domain_factory_api.js 及其相对 import 目标 base.js、4 个组件间相对 import 目标（AttributionTaskTable/RegionalFactsTable/RegionBoard/AttributionEditModal.vue）逐一 git ls-files --error-unmatch 全 OK；容器道 npx vite build 成功（仅 chunk>500kB 体积警告，零 error）
+- 全量回归：容器道 6 文件单测 95 passed（76 基线+13 T1+6 T2），零 fail；终端审 DoD 核对三命令：禁碰 grep exit=1 无命中 / DomainFactoryView +13 / 提交链 12 commit（含本文档收口提交）
