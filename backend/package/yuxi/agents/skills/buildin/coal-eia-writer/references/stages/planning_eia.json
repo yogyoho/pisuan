@@ -2403,6 +2403,7 @@
   },
   "forms": {
     "project": {
+            "label": "项目基本情况",
       "file": "00_project.json",
       "required": true,
       "chapters": [
@@ -2478,6 +2479,7 @@
       ]
     },
     "mine_plan": {
+            "label": "规划方案与井田构成",
       "file": "01_mine_plan.json",
       "required": true,
       "chapters": [
@@ -2626,6 +2628,7 @@
       ]
     },
     "planning_indicators": {
+            "label": "规划主要技术经济指标",
       "file": "01_mine_plan.json",
       "required": false,
       "chapters": [
@@ -2637,6 +2640,7 @@
       "fields": []
     },
     "pillar_design": {
+            "label": "保护煤柱设计",
       "file": "30_pillar_design.json",
       "required": false,
       "chapters": [
@@ -2662,6 +2666,7 @@
       ]
     },
     "sensitive_targets": {
+            "label": "敏感目标登记",
       "file": "02_sensitive_targets.json",
       "required": true,
       "chapters": [
@@ -2700,6 +2705,7 @@
       ]
     },
     "standards_confirm": {
+            "label": "评价标准确认",
       "file": "03_standards_confirm.json",
       "required": true,
       "chapters": [
@@ -2743,6 +2749,7 @@
       ]
     },
     "legal_basis": {
+            "label": "编制依据",
       "file": "04_legal_basis.json",
       "required": true,
       "chapters": [
@@ -2778,6 +2785,7 @@
       ]
     },
     "compliance_plans": {
+            "label": "合规性分析",
       "file": "05_compliance_plans.json",
       "required": true,
       "chapters": [
@@ -2814,6 +2822,7 @@
       ]
     },
     "geography": {
+            "label": "区域自然环境概况",
       "file": "06_geography.json",
       "required": true,
       "chapters": [
@@ -2894,6 +2903,7 @@
       ]
     },
     "monitoring": {
+            "label": "环境质量监测",
       "file": "07_monitoring.json",
       "required": true,
       "chapters": [
@@ -2937,6 +2947,7 @@
       ]
     },
     "eco": {
+            "label": "生态环境",
       "file": "08_eco.json",
       "required": true,
       "chapters": [
@@ -3018,6 +3029,7 @@
       ]
     },
     "economy": {
+            "label": "社会经济概况",
       "file": "09_economy.json",
       "required": false,
       "chapters": [
@@ -3056,6 +3068,7 @@
       ]
     },
     "retrospective": {
+            "label": "既有环评回顾",
       "file": "10_retrospective.json",
       "required": true,
       "chapters": [
@@ -3120,6 +3133,7 @@
       ]
     },
     "indicators": {
+            "label": "评价指标体系",
       "file": "11_indicators.json",
       "required": true,
       "chapters": [
@@ -3157,6 +3171,7 @@
       ]
     },
     "impact_identification": {
+            "label": "环境影响识别",
       "file": "12_impact_identification.json",
       "required": true,
       "chapters": [
@@ -3196,6 +3211,7 @@
       ]
     },
     "subsidence_params": {
+            "label": "沉陷预测参数",
       "file": "13_subsidence_params.json",
       "required": true,
       "chapters": [
@@ -3282,6 +3298,7 @@
       "outputs_note": "W_max/r/U_max/i_max/K_max/eps_max/沉陷面积=formula:subsidence 冻结输出（槽位禁手抄手填）；逐矿最大/最小 W_max 多口径分别带标签（XS4 min_max_pair）；倾斜/曲率/逐点值/等值线=软件成果走表单转录（能力边界）"
     },
     "water": {
+            "label": "水环境",
       "file": "14_water.json",
       "required": true,
       "chapters": [
@@ -3346,6 +3363,7 @@
       ]
     },
     "air": {
+            "label": "环境空气",
       "file": "15_air.json",
       "required": true,
       "chapters": [
@@ -3403,6 +3421,7 @@
       ]
     },
     "noise": {
+            "label": "声环境",
       "file": "16_noise.json",
       "required": true,
       "chapters": [
@@ -3443,6 +3462,7 @@
       ]
     },
     "solid_waste": {
+            "label": "固体废物",
       "file": "17_solid_waste.json",
       "required": true,
       "chapters": [
@@ -3497,6 +3517,7 @@
       ]
     },
     "soil_score": {
+            "label": "土壤环境",
       "file": "18_soil_score.json",
       "required": true,
       "chapters": [
@@ -3525,6 +3546,7 @@
       ]
     },
     "protected_area_detail": {
+            "label": "保护目标详情",
       "file": "19_protected_area_detail.json",
       "required": false,
       "chapters": [
@@ -3556,6 +3578,7 @@
       ]
     },
     "risk": {
+            "label": "环境风险",
       "file": "20_risk.json",
       "required": true,
       "chapters": [
@@ -3590,6 +3613,7 @@
       ]
     },
     "carbon": {
+            "label": "碳排放",
       "file": "21_carbon.json",
       "required": false,
       "chapters": [
@@ -3619,6 +3643,7 @@
       ]
     },
     "measures": {
+            "label": "环境保护措施",
       "file": "22_measures.json",
       "required": true,
       "chapters": [
@@ -3710,6 +3735,7 @@
       ]
     },
     "investment": {
+            "label": "环境保护投资",
       "file": "23_investment.json",
       "required": false,
       "chapters": [
@@ -3753,6 +3779,7 @@
       ]
     },
     "eco_restoration": {
+            "label": "生态恢复与修复",
       "file": "24_eco_restoration.json",
       "required": false,
       "chapters": [
@@ -3790,6 +3817,7 @@
       ]
     },
     "monitoring_plan": {
+            "label": "环境监测计划",
       "file": "25_monitoring_plan.json",
       "required": true,
       "chapters": [
@@ -3828,6 +3856,7 @@
       ]
     },
     "tracking_plan": {
+            "label": "跟踪评价计划",
       "file": "26_tracking_plan.json",
       "required": true,
       "chapters": [
@@ -3862,6 +3891,7 @@
       ]
     },
     "cleaner_production": {
+            "label": "清洁生产",
       "file": "27_cleaner_production.json",
       "required": false,
       "chapters": [
@@ -3886,6 +3916,7 @@
       ]
     },
     "circular_economy": {
+            "label": "循环经济",
       "file": "28_circular_economy.json",
       "required": false,
       "chapters": [
@@ -3921,6 +3952,7 @@
       ]
     },
     "public_participation": {
+            "label": "公众参与",
       "file": "29_public_participation.json",
       "required": true,
       "chapters": [
@@ -3973,6 +4005,7 @@
       ]
     },
     "projection": {
+            "label": "前章投影",
       "file": null,
       "required": false,
       "chapters": [

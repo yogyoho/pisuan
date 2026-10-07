@@ -42,6 +42,7 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import itertools
 import json
 import os
 import re
@@ -51,6 +52,8 @@ from pathlib import Path
 EXIT_OK, EXIT_ERROR = 0, 1
 SLOT_RE = re.compile(r"\{\{SLOT:([^}]+)\}\}")
 TABLE_RE = re.compile(r"\{\{TABLE:([^}]+)\}\}")
+TBLNO = "⟦TBLNO⟧"  # 机位表题占位：render_family 发射，inject _assign_table_numbers 落号（bug-394）
+WRITER_CAP_RE = re.compile(r"^表\s*\d+(?:[-.]\d+)?\s+([^，。；！？]+)$")  # 写手表题行「表 X-N 名称」（bug-394）
 # N19 畸形 SLOT 修复（geo T4 页面实测 93 处穿透全门进终稿）：降级写手系统性产出
 # 「{{SLOT:key}单位}」错配收形与「{SLOT:key}」单开括号形——SLOT_RE 不匹配 → 不注入
 # 也不报 FAIL，静默进交付稿。注入前先归一化为 {{SLOT:key}}（单位等尾缀移到槽外），
@@ -297,6 +300,9 @@ def render_family(fam: str, stage: dict, data_dir: Path) -> str:
             f"TABLE 引用未知表单族 {fam!r}（stage 在册: {sorted(stage.get('forms', {}))}）"
             "——修章节骨架的 {{TABLE:…}} 引用，或先在 stage forms 登记该族（bug-3036）"
         )
+    label = spec.get("label")
+    if not label:
+        raise ValueError(f"TABLE {fam!r} forms 缺族级 label（bug-394：表题行需要族名）——补 stage forms label")
     p = data_dir / spec["file"]
     if not p.exists():
         return f"（{fam}: 数据未提供——[待确认] 槽位，缺参不编造）"
@@ -307,7 +313,7 @@ def render_family(fam: str, stage: dict, data_dir: Path) -> str:
             rows = [r for r in csv.reader(f)]
         if not rows:
             return "（空表）"
-        return _md_table(rows[0], rows[1:])
+        return f"**{TBLNO} {label}**\n\n" + _md_table(rows[0], rows[1:])
     doc = json.loads(p.read_text(encoding="utf-8"))
     if "." in fam:
         doc = _dig(doc, fam.split(".", 1)[1].split("."))
@@ -318,9 +324,9 @@ def render_family(fam: str, stage: dict, data_dir: Path) -> str:
     if isinstance(doc, list):
         if not doc:
             return "（空表）"
-        cols = list(doc[0].keys()) if isinstance(doc[0], dict) else [spec.get("label", fam)]
+        cols = list(doc[0].keys()) if isinstance(doc[0], dict) else [label]
         rows = [[_scalar_cell(x.get(c, "")) for c in cols] if isinstance(x, dict) else [_scalar_cell(x)] for x in doc]
-        return _md_table(_family_header(cols, stage, spec, fam), rows)
+        return f"**{TBLNO} {label}**\n\n" + _md_table(_family_header(cols, stage, spec, fam), rows)
     if isinstance(doc, dict):
         scalars = {k: v for k, v in doc.items() if not isinstance(v, (list, dict)) and not k.startswith("_")}
         parts = []
@@ -334,14 +340,17 @@ def render_family(fam: str, stage: dict, data_dir: Path) -> str:
                     "——补 stage forms fields 定义（bug-366：键值表禁裸出英文键名）"
                 )
             parts.append(
-                _md_table(["指标", "数值"], [[scalar_labels.get(k, k), _scalar_cell(v)] for k, v in scalars.items()])
+                f"**{TBLNO} {label}**\n\n"
+                + _md_table(["指标", "数值"], [[scalar_labels.get(k, k), _scalar_cell(v)] for k, v in scalars.items()])
             )
         for k, v in doc.items():
             if isinstance(v, list) and v and not k.startswith("_"):
                 k_label = _family_labels(stage).get(spec.get("file"), ({}, {}))[0].get(k, k)
                 cols = list(v[0].keys()) if isinstance(v[0], dict) else [k_label]
-                rows = [[_scalar_cell(x.get(c, "")) for c in cols] if isinstance(x, dict) else [_scalar_cell(x)] for x in v]
-                parts.append(f"\n**{k_label}**（{len(v)} 行）\n\n" + _md_table(_family_header(cols, stage, spec, fam), rows))
+                rows = [
+                    [_scalar_cell(x.get(c, "")) for c in cols] if isinstance(x, dict) else [_scalar_cell(x)] for x in v
+                ]
+                parts.append(f"\n**{TBLNO} {k_label}**\n\n" + _md_table(_family_header(cols, stage, spec, fam), rows))
         return "\n\n".join(parts) or "（表单无内容）"
     return str(doc)  # 点号路径命中标量 → 单值直出
 
@@ -416,6 +425,38 @@ def validate_section(sid: str, text: str) -> None:
         raise ValueError(
             f"多个 ### 标题 {[h[4:16] for h in heads[:3]]}——一节一稿一 ###：新增小节用 ####，或拆为独立节稿（禁自创节——节由 stage sections 清单约束）"
         )
+    _validate_table_placement(sid, text)
+
+
+def _validate_table_placement(sid: str, text: str) -> None:
+    """{{TABLE:}} 摆位门（bug-394：句中嵌标记→注入切句「…输入条件以」「如下表所列：{{TABLE:…}}」裂行文）。
+
+    标记必须独立成行，且前一非空行要么为空（节首）、以句末标点收束（。：；！？」））、
+    本身是标记行（连排多表）或表行（表后紧跟表）——引用语须是完整句子，
+    表号表题由组装注入（写手禁自编表号）。
+    """
+    FINAL_PUNCT = "。：；！？」）"
+    lines = text.split("\n")
+    for i, ln in enumerate(lines):
+        m = TABLE_RE.search(ln)
+        if not m:
+            continue
+        if ln.strip() != m.group(0):
+            raise ValueError(
+                f"节 {sid} 第 {i + 1} 行：{{{{TABLE:…}}}} 须独立成行且一行一个（句中嵌入会在注入时切断行文，bug-394）"
+            )
+        prev = next((lines[j].strip() for j in range(i - 1, -1, -1) if lines[j].strip()), "")
+        if (
+            prev
+            and not prev.endswith(tuple(FINAL_PUNCT))
+            and not prev.endswith("}}")
+            and not prev.startswith("|")
+            and not WRITER_CAP_RE.match(prev)  # 写手表题行紧邻标记：合法，组装并入机表表题
+        ):
+            raise ValueError(
+                f"节 {sid} 第 {i + 1} 行：表格标记的前一行「…{prev[-18:]}」未以句末标点收束——"
+                "标记须另起一行置于完整引用句之后（如「主要参数如下表所列。」），禁在句中嵌 {{{{TABLE:…}}}}（bug-394）"
+            )
 
 
 def validate_section_title(sid: str, text: str, want: str) -> None:
@@ -656,12 +697,22 @@ def load_state_and_check(state_dir: Path) -> tuple[dict, dict | None]:
     return state, consistency
 
 
-def make_inject(stage: dict, data_dir: Path, state: dict, unknown_keys: set[str], slot_errors: set[str] | None = None):
+def make_inject(
+    stage: dict,
+    data_dir: Path,
+    state: dict,
+    unknown_keys: set[str],
+    slot_errors: set[str] | None = None,
+    ctx: dict | None = None,
+):
     """{{SLOT:key}}/{{TABLE:fam}} 注入闭包工厂（assemble 与单章门共用；unknown_keys/slot_errors 就地累积）。
 
     bug-3036 P0：空/缺失 display 静默渲染出「数值空位」——空/非标量 display 记入 slot_errors 硬 FAIL。
+    bug-394：ctx = {"ch_no": str, "seq": itertools.count} 由调用方持有——组装路径逐章重置 seq
+    实现章内「表 {ch}-{seq}」连续编号（写手不自编表号）；ctx=None 时无编号（工具调用）。
     """
     errs = slot_errors if slot_errors is not None else set()
+    ctx = ctx if ctx is not None else {"ch_no": "", "seq": itertools.count(1)}
 
     def inject(text: str) -> str:
         def slot_sub(m: re.Match) -> str:
@@ -688,9 +739,64 @@ def make_inject(stage: dict, data_dir: Path, state: dict, unknown_keys: set[str]
 
         text = SLOT_DEFORM_CLOSE_RE.sub(r"{{SLOT:\1}}\2", text)  # {{SLOT:k}m} → {{SLOT:k}}m
         text = SLOT_DEFORM_OPEN_RE.sub(r"{{SLOT:\1}}", text)  # {SLOT:k} → {{SLOT:k}}
-        return re.sub(r"\n{3,}", "\n\n", TABLE_RE.sub(table_sub, SLOT_RE.sub(slot_sub, text)))
+        return _assign_table_numbers(
+            re.sub(r"\n{3,}", "\n\n", TABLE_RE.sub(table_sub, SLOT_RE.sub(slot_sub, text))), ctx
+        )
 
     return inject
+
+
+TBLNO_CAP_RE = re.compile(r"^\*\*⟦TBLNO⟧\s*(.+?)\*\*$")
+
+
+def _assign_table_numbers(text: str, ctx: dict) -> str:
+    """表题落号（bug-394）：render_family 的 ⟦TBLNO⟧ 占位与写手自带表题行统一为
+    「**表 {ch}-{seq} 名称**」，序号章内连续（ctx 由调用方逐章重置）。
+
+    - 机表占位 `**⟦TBLNO⟧ 名称**`：占位换章内机发序号
+    - 写手表题行 `表 X-N 名称`：紧邻字面表行 → 表号改机发、名称保留；紧邻机表占位
+      → 并入机表表题（写手名优先，自编号行删除）——写手自编号与全书序号体系冲突
+      （第一章自发的「表 1-1」与后文无号并存，bug-394）
+    - ctx 无 ch_no（工具调用路径）→ 不落号，仅剥占位为「**名称**」
+    """
+    lines = text.split("\n")
+    out: list[str] = []
+    ch = ctx.get("ch_no", "")
+    i = 0
+    while i < len(lines):
+        ln = lines[i]
+        m_no = TBLNO_CAP_RE.match(ln)
+        if m_no:
+            j = i + 1
+            while j < len(lines) and not lines[j].strip():
+                j += 1
+            name = m_no.group(1).strip()
+            k = len(out) - 1  # 回吃紧邻写手表题行（名优先，占位族名让位）
+            while k >= 0 and not out[k].strip():
+                k -= 1
+            if k >= 0:
+                m_prev = WRITER_CAP_RE.match(out[k].strip())
+                if m_prev:
+                    name = m_prev.group(1).strip()
+                    del out[k:]
+            if ch and j < len(lines) and lines[j].startswith("|"):
+                out.append(f"**表 {ch}-{next(ctx['seq'])} {name}**")
+            else:
+                out.append(f"**{name}**")
+            i += 1
+            continue
+        m_w = WRITER_CAP_RE.match(ln)
+        if m_w and ch:
+            j = i + 1
+            while j < len(lines) and not lines[j].strip():
+                j += 1
+            if j < len(lines) and lines[j].startswith("|"):
+                out.append(f"**表 {ch}-{next(ctx['seq'])} {m_w.group(1).strip()}**")
+                i += 1
+                continue
+        out.append(ln)
+        i += 1
+    return "\n".join(out)
 
 
 # ── 两层拼装（节稿 → 章稿）与章门 ────────────────────────────────────────────
@@ -820,7 +926,9 @@ def run_chapter_gate(stage: dict, data_dir: Path, state_dir: Path, ch_id: str, t
     state, _consistency = load_state_and_check(state_dir)
     unknown_keys: set[str] = set()
     slot_errors: set[str] = set()
-    inject = make_inject(stage, data_dir, state, unknown_keys, slot_errors)
+    ch_no = ch_id[2:] if ch_id[2:].isdigit() else ""
+    ctx = {"ch_no": ch_no, "seq": itertools.count(1)}  # bug-394：单章门同编号体系，交付稿编号门上可复现
+    inject = make_inject(stage, data_dir, state, unknown_keys, slot_errors, ctx)
     _raw, injected, rows, errors = build_chapter(stage, data_dir, state_dir, ch_id, inject, absent_sections)
     stage_secs = [s for s in stage["chapters"][ch_id].get("sections", []) if s.get("id")]
     if injected:
@@ -901,7 +1009,8 @@ def assemble(
     state, consistency = load_state_and_check(state_dir)
     unknown_keys: set[str] = set()
     slot_errors: set[str] = set()
-    inject = make_inject(stage, data_dir, state, unknown_keys, slot_errors)
+    tbl_ctx = {"ch_no": "", "seq": itertools.count(1)}  # bug-394：inject 全书一个闭包，编号 ctx 逐章重置
+    inject = make_inject(stage, data_dir, state, unknown_keys, slot_errors, tbl_ctx)
     absent_ch, absent_sections = _absent_sets(state_dir)
     toc_stats: dict[str, dict] = {}
     actual: list[tuple[str, str]] = []
@@ -912,6 +1021,8 @@ def assemble(
     for ch_id in chapter_order(stage.get("chapters", {})):
         if ch_id in absent_ch:
             continue  # ABSENT 章豁免（门/组装/目录覆盖同语义跳过）
+        tbl_ctx["ch_no"] = ch_id[2:] if ch_id[2:].isdigit() else ""
+        tbl_ctx["seq"] = itertools.count(1)
         raw, injected, rows, errs = build_chapter(stage, data_dir, state_dir, ch_id, inject, absent_sections)
         errors.extend(errs)
         if errs or not injected:

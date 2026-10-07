@@ -51,6 +51,7 @@
   },
   "forms": {
     "project": {
+            "label": "项目基本情况",
       "file": "00_project.json",
       "required": true,
       "chapters": [
@@ -117,6 +118,7 @@
       ]
     },
     "mine_plan": {
+            "label": "井田概况",
       "file": "01_mine_plan.json",
       "reuse": "planning_eia",
       "required": true,
@@ -132,6 +134,7 @@
       "fields": []
     },
     "openpit_engineering": {
+            "label": "露天开采工程",
       "file": "01b_openpit_engineering.json",
       "required": true,
       "chapters": [
@@ -218,6 +221,7 @@
       ]
     },
     "sensitive_targets": {
+            "label": "敏感目标登记",
       "file": "02_sensitive_targets.json",
       "reuse": "planning_eia",
       "required": true,
@@ -233,6 +237,7 @@
       "fields": []
     },
     "standards_confirm": {
+            "label": "评价标准确认",
       "file": "03_standards_confirm.json",
       "reuse": "planning_eia",
       "required": true,
@@ -250,6 +255,7 @@
       "fields": []
     },
     "legal_basis": {
+            "label": "编制依据",
       "file": "04_legal_basis.json",
       "reuse": "planning_eia",
       "required": true,
@@ -262,6 +268,7 @@
       "fields": []
     },
     "compliance_plans": {
+            "label": "合规性分析",
       "file": "05_compliance_plans.json",
       "reuse": "planning_eia",
       "required": true,
@@ -274,6 +281,7 @@
       "fields": []
     },
     "geography": {
+            "label": "区域自然环境概况",
       "file": "06_geography.json",
       "reuse": "planning_eia",
       "required": true,
@@ -286,6 +294,7 @@
       "fields": []
     },
     "monitoring": {
+            "label": "环境质量监测",
       "file": "07_monitoring.json",
       "reuse": "planning_eia",
       "required": true,
@@ -301,6 +310,7 @@
       "fields": []
     },
     "eco": {
+            "label": "生态环境",
       "file": "08_eco.json",
       "reuse": "planning_eia",
       "required": true,
@@ -313,6 +323,7 @@
       "fields": []
     },
     "economy": {
+            "label": "社会经济概况",
       "file": "09_economy.json",
       "reuse": "planning_eia",
       "required": false,
@@ -326,6 +337,7 @@
       "fields": []
     },
     "retrospective": {
+            "label": "既有环评回顾",
       "file": "10_retrospective.json",
       "reuse": "planning_eia",
       "required": false,
@@ -343,6 +355,7 @@
       "conditional": "仅改扩建轨激活（project_kind=expansion——回顾双轨数据族：ch2_S08 与各要素章回顾节）；新建轨整族 skip"
     },
     "impact_identification": {
+            "label": "环境影响识别",
       "file": "11_impact_identification.json",
       "reuse": "planning_eia",
       "required": true,
@@ -353,6 +366,7 @@
       "fields": []
     },
     "water": {
+            "label": "水环境",
       "file": "21_water.json",
       "reuse": "planning_eia",
       "required": true,
@@ -365,6 +379,7 @@
       "fields": []
     },
     "air": {
+            "label": "环境空气",
       "file": "22_air.json",
       "reuse": "planning_eia",
       "required": true,
@@ -377,6 +392,7 @@
       "fields": []
     },
     "noise": {
+            "label": "声环境",
       "file": "23_noise.json",
       "reuse": "planning_eia",
       "required": true,
@@ -389,6 +405,7 @@
       "fields": []
     },
     "solid_waste": {
+            "label": "固体废物",
       "file": "24_solid_waste.json",
       "reuse": "planning_eia",
       "required": true,
@@ -402,6 +419,7 @@
       "fields": []
     },
     "soil_score": {
+            "label": "土壤环境",
       "file": "25_soil_score.json",
       "reuse": "planning_eia",
       "required": true,
@@ -412,6 +430,7 @@
       "fields": []
     },
     "risk": {
+            "label": "环境风险",
       "file": "26_risk.json",
       "reuse": "planning_eia",
       "required": true,
@@ -423,6 +442,7 @@
       "fields": []
     },
     "carbon": {
+            "label": "碳排放",
       "file": "27_carbon.json",
       "reuse": "planning_eia",
       "required": false,
@@ -433,6 +453,7 @@
       "fields": []
     },
     "measures": {
+            "label": "环境保护措施",
       "file": "28_measures.json",
       "reuse": "planning_eia",
       "required": true,
@@ -451,6 +472,7 @@
       "fields": []
     },
     "investment": {
+            "label": "环境保护投资",
       "file": "29_investment.json",
       "reuse": "planning_eia",
       "required": false,
@@ -462,6 +484,7 @@
       "fields": []
     },
     "eco_restoration": {
+            "label": "生态恢复与修复",
       "file": "30_eco_restoration.json",
       "reuse": "planning_eia",
       "required": false,
@@ -473,6 +496,7 @@
       "fields": []
     },
     "monitoring_plan": {
+            "label": "环境监测计划",
       "file": "31_monitoring_plan.json",
       "reuse": "planning_eia",
       "required": true,
@@ -485,6 +509,7 @@
       "fields": []
     },
     "cleaner_production": {
+            "label": "清洁生产",
       "file": "32_cleaner_production.json",
       "reuse": "planning_eia",
       "required": false,
@@ -495,6 +520,7 @@
       "fields": []
     },
     "circular_economy": {
+            "label": "循环经济",
       "file": "33_circular_economy.json",
       "reuse": "planning_eia",
       "required": false,
@@ -505,6 +531,7 @@
       "fields": []
     },
     "public_participation": {
+            "label": "公众参与",
       "file": "34_public_participation.json",
       "reuse": "planning_eia",
       "required": false,
@@ -516,6 +543,7 @@
       "conditional": "数据驱动：公参登记在场才激活 ch18_S03（缺席记 ABSENT 非 fail）"
     },
     "projection": {
+            "label": "前章投影",
       "file": "99_projection.json",
       "reuse": "planning_eia",
       "required": false,
