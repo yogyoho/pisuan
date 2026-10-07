@@ -39,15 +39,15 @@ REGION_VOCAB: dict[str, str] = {
 # 与 REGION_VOCAB 的关系：矿区名主命中优先；无主命中才查本表，命中同通道判 regional。
 # 陷阱备忘：「横城村」属银川市兴庆区不收；「灵武市」与灵武矿区同域（歧义交 L3 改判纠正）。
 ADMIN_REGION_VOCAB: dict[str, str] = {
-    "灵武市": "hengcheng",       # 强：归属链核心县级市（歧义：灵武矿区同域，L3 纠）
-    "临河镇": "hengcheng",       # 强：「属灵武市临河镇管辖」
-    "宁东镇": "hengcheng",       # 强：「矿区位于灵武市宁东镇」多语境
-    "伊宁县": "yining-beiqu",        # 强：矿区主体所在县
-    "伊宁市": "yining-beiqu",        # 中：紧邻北郊，部分设施在伊宁市界内
-    "霍城县": "yining-beiqu",        # 中：保护区/水源地紧邻
+    "灵武市": "hengcheng",  # 强：归属链核心县级市（歧义：灵武矿区同域，L3 纠）
+    "临河镇": "hengcheng",  # 强：「属灵武市临河镇管辖」
+    "宁东镇": "hengcheng",  # 强：「矿区位于灵武市宁东镇」多语境
+    "伊宁县": "yining-beiqu",  # 强：矿区主体所在县
+    "伊宁市": "yining-beiqu",  # 中：紧邻北郊，部分设施在伊宁市界内
+    "霍城县": "yining-beiqu",  # 中：保护区/水源地紧邻
     "喀拉亚尕奇乡": "yining-beiqu",  # 强：伊宁县辖
-    "英也尔乡": "yining-beiqu",      # 中：伊宁市辖，井田相关
-    "曲鲁海乡": "yining-beiqu",      # 中：伊宁县辖，水源地
+    "英也尔乡": "yining-beiqu",  # 中：伊宁市辖，井田相关
+    "曲鲁海乡": "yining-beiqu",  # 中：伊宁县辖，水源地
 }
 
 VALID_SCOPES: tuple[str, ...] = ("universal", "regional", "project")
@@ -183,9 +183,7 @@ def apply_min_permissive(current: str | None, evidences: list[str | None]) -> st
     return target if _SCOPE_ORDER[target] < _SCOPE_ORDER[current] else current
 
 
-def derive_template_region(
-    contributing_task_ids: list[str] | None, task_regions: dict[str, str | None]
-) -> str | None:
+def derive_template_region(contributing_task_ids: list[str] | None, task_regions: dict[str, str | None]) -> str | None:
     """[pisuan-custom] W4：模板 region 派生（LearnedTemplate 无 region 列，由归因集推出）。
 
     归因集任务的 region_key 去重非空——恰一个 → 该值；多个 → "mixed"；空集/全 NULL → None
