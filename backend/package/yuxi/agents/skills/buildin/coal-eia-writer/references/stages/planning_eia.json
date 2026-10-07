@@ -2411,6 +2411,12 @@
       "note": "项目身份族（geo 管线接口兼容：expected_deliverable_name/render_front_matter 直读）——矿区级单一事实源",
       "fields": [
         {
+          "name": "project_name",
+          "label": "项目名称",
+          "type": "string",
+          "required": true
+        },
+        {
           "name": "mine_area_name",
           "label": "矿区名称",
           "type": "string",
@@ -2612,9 +2618,9 @@
           "type": "array<object>",
           "required": false,
           "fields": [
-            "type(工业场地|铁路专用线|供水电|渣场)",
-            "name",
-            "location"
+            "type 场地类型(工业场地|铁路专用线|供水电|渣场)",
+            "name 场地名称",
+            "location 位置"
           ]
         }
       ]
@@ -2724,7 +2730,7 @@
             "element 环境要素(大气|地表水|地下水|声|土壤|生态)",
             "function_zone 功能区或质量类别",
             "standard_code 执行标准号",
-            "limit_note 限值档位注记(如 3 类 昼65/夜55)",
+            "limit_note 限值档位注记（昼间/夜间分别列档）",
             "evaluation_scope 评价范围与等级"
           ]
         },
@@ -2910,8 +2916,8 @@
             "value 结果",
             "unit 单位",
             "standard_code 执行标准",
-            "source 来源(user_monitoring|analog_mine)",
-            "analog_source 类比矿名+年份(source=analog_mine 时必填)"
+            "source 数据来源（用户监测或类比矿）",
+            "analog_source 类比矿名与数据年份（取类比矿数据时必填）"
           ]
         },
         {
@@ -2920,11 +2926,11 @@
           "type": "array<object>",
           "required": false,
           "fields": [
-            "element",
-            "year",
-            "value",
-            "unit",
-            "standard_code"
+            "element 监测要素",
+            "year 年度",
+            "value 监测值",
+            "unit 单位",
+            "standard_code 标准依据"
           ],
           "note": "ch4 回顾用；只描述已测时段禁外推"
         }
@@ -3462,13 +3468,24 @@
           "name": "disposal_sites",
           "label": "渣场库容与位置",
           "type": "array<object>",
-          "required": true
+          "required": true,
+          "fields": [
+            "name 渣场名称",
+            "capacity 库容",
+            "location 位置"
+          ]
         },
         {
           "name": "hazardous",
           "label": "危废种类与量",
           "type": "array<object>",
-          "required": true
+          "required": true,
+          "fields": [
+            "name 危废名称",
+            "quantity 数量",
+            "storage 贮存场所",
+            "disposal 处置方式"
+          ]
         },
         {
           "name": "disposal_method",
@@ -3626,26 +3643,50 @@
           "name": "air",
           "label": "大气治理措施",
           "type": "array<object>",
-          "required": true
+          "required": true,
+          "fields": [
+            "object 措施对象",
+            "content 措施内容",
+            "body 实施主体",
+            "phase 时段"
+          ]
         },
         {
           "name": "water",
           "label": "水治理措施",
           "type": "array<object>",
           "required": true,
+          "fields": [
+            "object 措施对象",
+            "content 措施内容",
+            "body 实施主体",
+            "phase 时段"
+          ],
           "note": "含保水采煤与含水层保护（依据 fracture_zone 冻结值——XS5）"
         },
         {
           "name": "noise",
           "label": "噪声防治措施",
           "type": "array<object>",
-          "required": true
+          "required": true,
+          "fields": [
+            "object 措施对象",
+            "content 措施内容",
+            "body 实施主体",
+            "phase 时段"
+          ]
         },
         {
           "name": "solid_waste",
           "label": "固废处置与综合利用措施",
           "type": "array<object>",
-          "required": true
+          "required": true,
+          "fields": [
+            "object 措施对象",
+            "content 措施内容",
+            "body 实施主体",
+            "phase 时段"
+          ]
         },
         {
           "name": "risk_response",
@@ -3722,13 +3763,23 @@
           "name": "zoning",
           "label": "整治区划目标与限制要求",
           "type": "array<object>",
-          "required": true
+          "required": true,
+          "fields": [
+            "zoning 整治分区",
+            "content 目标与限制要求",
+            "body 实施主体与时序"
+          ]
         },
         {
           "name": "reclamation",
           "label": "复垦与植被重建安排",
           "type": "array<object>",
-          "required": true
+          "required": true,
+          "fields": [
+            "area 复垦对象",
+            "arrangement 复垦安排",
+            "phase 实施时段与主体"
+          ]
         },
         {
           "name": "compensation",
