@@ -108,8 +108,16 @@ def render_front_matter(stage: dict, data_dir: Path) -> str:
         lines.append("")
         return "\n".join(lines)
     fm = stage.get("front_matter", {})
-    proj = json.loads((data_dir / stage["forms"]["project"]["file"]).read_text(encoding="utf-8")) if (data_dir / stage["forms"]["project"]["file"]).exists() else {}
-    ten = json.loads((data_dir / stage["forms"].get("tenement", {}).get("file", "_")).read_text(encoding="utf-8")) if stage.get("forms", {}).get("tenement") and (data_dir / stage["forms"]["tenement"]["file"]).exists() else {}
+    proj = (
+        json.loads((data_dir / stage["forms"]["project"]["file"]).read_text(encoding="utf-8"))
+        if (data_dir / stage["forms"]["project"]["file"]).exists()
+        else {}
+    )
+    ten = (
+        json.loads((data_dir / stage["forms"].get("tenement", {}).get("file", "_")).read_text(encoding="utf-8"))
+        if stage.get("forms", {}).get("tenement") and (data_dir / stage["forms"]["tenement"]["file"]).exists()
+        else {}
+    )
     sig_src = {**proj, **ten}
     lines: list[str] = []
     lines.append("# 前置部分")
@@ -118,7 +126,11 @@ def render_front_matter(stage: dict, data_dir: Path) -> str:
     lines.append("")
     cover_map = {
         "矿区名": proj.get("project_name", ""),
-        "报告题名（矿种组合+阶段+报告）": (f"{proj.get('commodity', '')}{proj.get('stage', '') or stage.get('stage', '')}报告" if proj.get("commodity") else ""),
+        "报告题名（矿种组合+阶段+报告）": (
+            f"{proj.get('commodity', '')}{proj.get('stage', '') or stage.get('stage', '')}报告"
+            if proj.get("commodity")
+            else ""
+        ),
         "编制单位": proj.get("undertaking_unit", ""),
         "年月": "",
     }
@@ -157,7 +169,9 @@ def render_front_matter(stage: dict, data_dir: Path) -> str:
                 lines.append("|---|---|---|---|")
                 for i, it in enumerate(items, 1):
                     if isinstance(it, dict):
-                        lines.append(f"| {i} | {it.get('no', '')} | {it.get('title', '')} | {it.get('scale', it.get('note', ''))} |")
+                        lines.append(
+                            f"| {i} | {it.get('no', '')} | {it.get('title', '')} | {it.get('scale', it.get('note', ''))} |"
+                        )
                     else:
                         lines.append(f"| {i} |  | {it} |  |")
             lines.append("")
@@ -239,7 +253,9 @@ def render_family(fam: str, stage: dict, data_dir: Path) -> str:
 
 def render_compliance_appendix(consistency: dict | None, state: dict, state_path: Path) -> str:
     lines = ["## 合规性附录（脚本自动生成）", ""]
-    lines.append(f"- 数值冻结层：formula_state.json（SHA-256 `{sha256_file(state_path)}`，槽位 {len(state.get('values', {}))} 个）")
+    lines.append(
+        f"- 数值冻结层：formula_state.json（SHA-256 `{sha256_file(state_path)}`，槽位 {len(state.get('values', {}))} 个）"
+    )
     for a in state.get("anomalies", []):
         lines.append(f"- ⚠ 计算异常必读：{a}")
     lines.append("")
@@ -252,7 +268,9 @@ def render_compliance_appendix(consistency: dict | None, state: dict, state_path
         lines.append("")
         non_pass = [i for i in consistency.get("items", []) if i.get("severity") not in ("pass", "skip")]
         if non_pass:
-            lines.append(_md_table(["级别", "合约", "详情"], [[i["severity"], i["contract"], i["detail"]] for i in non_pass]))
+            lines.append(
+                _md_table(["级别", "合约", "详情"], [[i["severity"], i["contract"], i["detail"]] for i in non_pass])
+            )
         elif s.get("skip", 0):
             lines.append(f"全部激活合约通过（{s.get('skip', 0)} 条条件激活未命中记 skip）。")
         else:
@@ -275,30 +293,40 @@ def validate_chapter(ch_id: str, text: str) -> None:
     for ln in text.splitlines():
         s = ln.strip()
         if s.startswith(RESERVED_HEADINGS):
-            raise ValueError(f"{ch_id} 含脚本保留标题 {s[:24]!r}——前置部分与合规性附录由 build_output 统一渲染，章节文件禁写（bug-2220 同构）")
+            raise ValueError(
+                f"{ch_id} 含脚本保留标题 {s[:24]!r}——前置部分与合规性附录由 build_output 统一渲染，章节文件禁写（bug-2220 同构）"
+            )
 
 
 def validate_section(sid: str, text: str) -> None:
     """节稿形状门（两层模型改造点①：派发单元=节，形状是拼装与归因的前提）。"""
     first = next((ln for ln in text.splitlines() if ln.strip()), "")
     if not first.startswith("### "):
-        raise ValueError(f"节稿首行必须是 `### <编号> 节标题`（当前: {first[:40]!r}）——章标题由拼装注入，节稿禁写 #/## 级标题")
+        raise ValueError(
+            f"节稿首行必须是 `### <编号> 节标题`（当前: {first[:40]!r}）——章标题由拼装注入，节稿禁写 #/## 级标题"
+        )
     for ln in text.splitlines():
         s = ln.strip()
         if s.startswith("#") and not s.startswith("###"):
             raise ValueError(f"含章级标题 {s[:24]!r}——节稿只允许 ###/#### 级（章标题由拼装按 stage 注入）")
         if s.startswith(RESERVED_HEADINGS):
-            raise ValueError(f"含脚本保留标题 {s[:24]!r}——前置部分与合规性附录由 build_output 统一渲染（bug-2220 同构）")
+            raise ValueError(
+                f"含脚本保留标题 {s[:24]!r}——前置部分与合规性附录由 build_output 统一渲染（bug-2220 同构）"
+            )
     heads = [ln.strip() for ln in text.splitlines() if ln.strip().startswith("### ")]
     if len(heads) > 1:
-        raise ValueError(f"多个 ### 标题 {[h[4:16] for h in heads[:3]]}——一节一稿一 ###：新增小节用 ####，或拆为独立节稿（禁自创节——节由 stage sections 清单约束）")
+        raise ValueError(
+            f"多个 ### 标题 {[h[4:16] for h in heads[:3]]}——一节一稿一 ###：新增小节用 ####，或拆为独立节稿（禁自创节——节由 stage sections 清单约束）"
+        )
 
 
 def validate_section_title(sid: str, text: str, want: str) -> None:
     """节题相符门（目录语义的节级形态——序/编号不校验，语义相符即可）。"""
     head = next((ln.strip()[4:] for ln in text.splitlines() if ln.strip().startswith("### ")), "")
     if not _sem_match(head, want):
-        raise ValueError(f"首个 ### 标题「{head[:24]}」≠ stage 节题「{want}」——派发契约：节稿以 stage 节题开头（编号自由，语义须相符）")
+        raise ValueError(
+            f"首个 ### 标题「{head[:24]}」≠ stage 节题「{want}」——派发契约：节稿以 stage 节题开头（编号自由，语义须相符）"
+        )
 
 
 # ── 深度门（geo bug-2223 语义节级化）────────────────────────────────────────
@@ -307,7 +335,11 @@ SENT_RE = re.compile(r"[。；？！]")
 
 def effective_chars(text: str) -> int:
     """有效字符数：排除空行/标题行/表格行，行内剔除空白与 |\\-*#:{} 装饰符（geo 原样）。"""
-    return sum(len(re.sub(r"[\s\|\-*#:{}]", "", line)) for line in text.splitlines() if line.strip() and not line.strip().startswith("|") and not line.strip().startswith("#"))
+    return sum(
+        len(re.sub(r"[\s\|\-*#:{}]", "", line))
+        for line in text.splitlines()
+        if line.strip() and not line.strip().startswith("|") and not line.strip().startswith("#")
+    )
 
 
 def validate_depth_blocks(owner: str, text: str) -> None:
@@ -335,21 +367,26 @@ def validate_depth_blocks(owner: str, text: str) -> None:
         if sents < 3:
             thin.append(f"{title or '(块首)'}={sents}句")
     if thin:
-        raise ValueError(f"深度门 FAIL（每节 ≥3 句——句子写进该节自己的正文、下一级子标题之前；表格行不计句；有子块的父块豁免）瘦块: {'; '.join(thin)}；参照 references/chapter_examples/ 范文补写")
+        raise ValueError(
+            f"深度门 FAIL（每节 ≥3 句——句子写进该节自己的正文、下一级子标题之前；表格行不计句；有子块的父块豁免）瘦块: {'; '.join(thin)}；参照 references/chapter_examples/ 范文补写"
+        )
 
 
 # ── 注入后残留扫描门（geo bug-3036 语义原样）──────────────────────────────────
 RESIDUE_RE = re.compile(
-    r"\{\{(?:SLOT|TABLE|FORM):[^{}]*\}\}"           # 未注入槽位标记（FORM 族 bug-3027）
-    r"|\{+S(?:LOT|FORM):[^{}]*\}+"                  # 畸形槽位（N19 单开括号/错配收形）
-    r"|（未知表单族"                                 # 旧软兜底字符串残留
-    r"|exact_match|type_verdicts|ROUND_HALF_EVEN"   # 公式/校验层内部词汇
-    r"|要点包|台账数据句|质量结论模板句|规范引用句"        # 提示词脚手架词
+    r"\{\{(?:SLOT|TABLE|FORM):[^{}]*\}\}"  # 未注入槽位标记（FORM 族 bug-3027）
+    r"|\{+S(?:LOT|FORM):[^{}]*\}+"  # 畸形槽位（N19 单开括号/错配收形）
+    r"|（未知表单族"  # 旧软兜底字符串残留
+    r"|exact_match|type_verdicts|ROUND_HALF_EVEN"  # 公式/校验层内部词汇
+    r"|要点包|台账数据句|质量结论模板句|规范引用句"  # 提示词脚手架词
     r"|LLM自算|禁止LLM"
-    r"|[（(](?:XS|FC|CC|NR|SL)\d"                   # 合约 ID 内联引用
-    r"|\[\d+(?:\s*[,，]\s*\d+)+\]"                  # 裸数字数组（表格粘贴痕迹）
+    r"|其上游依据|其下游用途|本节回答的是|就任务性质而言"  # bug-367 派发契约导航词泄漏（节设计说明书段）
+    r"|不作任何改写|补猜|逐字呈现|唯一口径|行文不再|行文不作"  # bug-367 数据纪律自述（规则不是内容）
+    r"|直渲|登记口径|登记值|登记表单|冻结槽位|表单直出|衔接义务|分工边界"  # bug-367 管线内部术语
+    r"|[（(](?:XS|FC|CC|NR|SL)\d"  # 合约 ID 内联引用
+    r"|\[\d+(?:\s*[,，]\s*\d+)+\]"  # 裸数字数组（表格粘贴痕迹）
     r"|%%"
-    r"|(?<![A-Za-z0-9])XX(?![A-Za-z0-9])"           # XX 占位（规范形是 [待确认]）
+    r"|(?<![A-Za-z0-9])XX(?![A-Za-z0-9])"  # XX 占位（规范形是 [待确认]）
 )
 
 
@@ -398,7 +435,9 @@ def validate_toc_chapters(stage: dict, actual: list[tuple[str, str]], absent_ch:
     for ch_id, title in actual:
         hits = [cid for cid, t, _o in stage_chs if _sem_match(title, t)]
         if not hits:
-            errors.append(f"章 {ch_id}: 契约外自创章「{title[:24]}」（不得超集——stage 章集是唯一目录契约，禁自创/并章）")
+            errors.append(
+                f"章 {ch_id}: 契约外自创章「{title[:24]}」（不得超集——stage 章集是唯一目录契约，禁自创/并章）"
+            )
             continue
         dup = [h for h in hits if h in matched]
         if dup:
@@ -407,7 +446,8 @@ def validate_toc_chapters(stage: dict, actual: list[tuple[str, str]], absent_ch:
     missing = [f"{cid}「{t}」" for cid, t, opt in stage_chs if not opt and cid not in matched and cid not in absent]
     if missing:
         errors.append(
-            "目录覆盖门 FAIL：必备章缺席 " + ", ".join(missing)
+            "目录覆盖门 FAIL：必备章缺席 "
+            + ", ".join(missing)
             + "（必备集须全覆盖、序无关；可选章/条件开关章缺席 = ABSENT 豁免合法）"
         )
     return errors
@@ -430,7 +470,9 @@ def load_depth(path: Path) -> dict | None:
         return None
 
 
-def resolve_targets(args_targets: str | None, stage_path: Path, data_dir: Path | str | None = None) -> tuple[dict | None, Path]:
+def resolve_targets(
+    args_targets: str | None, stage_path: Path, data_dir: Path | str | None = None
+) -> tuple[dict | None, Path]:
     """深度基线装载（章级 floor_chars 形状 {"chapters":{"ch6":{"floor_chars":N,…}}}）：
     显式 --targets 优先（非技能基准高声警告并记入 delivery_manifest——geo 反绕语义保留）；
     缺省 references/depth_targets/<stage_stem>.json；缺失 → (None, 规范路径)——门走默认地板 30000。
@@ -440,11 +482,17 @@ def resolve_targets(args_targets: str | None, stage_path: Path, data_dir: Path |
     if args_targets:
         src = Path(args_targets)
         if src.exists() and src.resolve() != canonical.resolve():
-            print(f"[build] 警告: 深度基线 {src}（sha256 {sha256_file(src)[:12]}…）≠ 技能基线 {canonical}——调试基准仅限调试通道，正式交付绝不换基准绕深度门；本次基准来源已记入 delivery_manifest.json", file=sys.stderr)
+            print(
+                f"[build] 警告: 深度基线 {src}（sha256 {sha256_file(src)[:12]}…）≠ 技能基线 {canonical}——调试基准仅限调试通道，正式交付绝不换基准绕深度门；本次基准来源已记入 delivery_manifest.json",
+                file=sys.stderr,
+            )
         return load_depth(src), src
     if canonical.exists():
         return load_depth(canonical), canonical
-    print(f"[build] 深度基线不在册（{canonical}）——全章走默认字符地板 {DEFAULT_CHAPTER_FLOOR_CHARS}（一期绝对地板；calibrate 校准后入库）", file=sys.stderr)
+    print(
+        f"[build] 深度基线不在册（{canonical}）——全章走默认字符地板 {DEFAULT_CHAPTER_FLOOR_CHARS}（一期绝对地板；calibrate 校准后入库）",
+        file=sys.stderr,
+    )
     return None, canonical
 
 
@@ -459,7 +507,9 @@ def validate_chapter_depth(ch_id: str, injected: str, targets: dict | None) -> t
     eff = effective_chars(injected)
     floor = chapter_floor(targets, ch_id)
     if eff < floor:
-        raise ValueError(f"L2 深度门 FAIL：章有效字符 {eff} < 章地板 {floor}（一期绝对地板，缺数写 [待确认] 不砍段；逐要素成段扩写）")
+        raise ValueError(
+            f"L2 深度门 FAIL：章有效字符 {eff} < 章地板 {floor}（一期绝对地板，缺数写 [待确认] 不砍段；逐要素成段扩写）"
+        )
     return eff, floor
 
 
@@ -473,9 +523,17 @@ def load_state_and_check(state_dir: Path) -> tuple[dict, dict | None]:
     manual_numeric: list[str] = []
     for key, slot in state.get("values", {}).items():
         if not isinstance(slot, dict):
-            raise ValueError(f"formula_state 槽位 {key} 不是对象（数值裸写=手改特征，formula_runner 是唯一写者，bug-2223）")
-        if isinstance(slot.get("value"), (int, float)) and not isinstance(slot.get("value"), bool) and "source" not in slot:
-            raise ValueError(f"formula_state 槽位 {key} 缺 source 键——疑似手改（formula_runner 是唯一写者，数字永不经过 LLM，bug-2223）。改数请走 ingest.py forms → formula_runner execute，勿直接编辑 formula_state.json")
+            raise ValueError(
+                f"formula_state 槽位 {key} 不是对象（数值裸写=手改特征，formula_runner 是唯一写者，bug-2223）"
+            )
+        if (
+            isinstance(slot.get("value"), (int, float))
+            and not isinstance(slot.get("value"), bool)
+            and "source" not in slot
+        ):
+            raise ValueError(
+                f"formula_state 槽位 {key} 缺 source 键——疑似手改（formula_runner 是唯一写者，数字永不经过 LLM，bug-2223）。改数请走 ingest.py forms → formula_runner execute，勿直接编辑 formula_state.json"
+            )
         _val = slot.get("value")
         _num_like = isinstance(_val, (int, float)) and not isinstance(_val, bool)
         if isinstance(_val, str):
@@ -530,7 +588,7 @@ def make_inject(stage: dict, data_dir: Path, state: dict, unknown_keys: set[str]
             return render_family(m.group(1).strip(), stage, data_dir)
 
         text = SLOT_DEFORM_CLOSE_RE.sub(r"{{SLOT:\1}}\2", text)  # {{SLOT:k}m} → {{SLOT:k}}m
-        text = SLOT_DEFORM_OPEN_RE.sub(r"{{SLOT:\1}}", text)     # {SLOT:k} → {{SLOT:k}}
+        text = SLOT_DEFORM_OPEN_RE.sub(r"{{SLOT:\1}}", text)  # {SLOT:k} → {{SLOT:k}}
         return TABLE_RE.sub(table_sub, SLOT_RE.sub(slot_sub, text))
 
     return inject
@@ -553,8 +611,10 @@ def _absent_sets(state_dir: Path) -> tuple[set[str], set[str]]:
     absent_ch = {c for c, e in chs.items() if isinstance(e, dict) and e.get("status") == "ABSENT"}
     absent_sec = {
         s.get("id")
-        for e in chs.values() if isinstance(e, dict)
-        for s in e.get("sections", []) if isinstance(s, dict) and s.get("status") == "ABSENT"
+        for e in chs.values()
+        if isinstance(e, dict)
+        for s in e.get("sections", [])
+        if isinstance(s, dict) and s.get("status") == "ABSENT"
     }
     return absent_ch, absent_sec
 
@@ -565,7 +625,9 @@ def _chapter_heading(ch_id: str, ch: dict) -> str:
     return f"## {n} {title}".rstrip() if n else f"## {title}"
 
 
-def build_chapter(stage: dict, data_dir: Path, state_dir: Path, ch_id: str, inject, absent_sections: set[str]) -> tuple[str, str, list[dict], list[str]]:
+def build_chapter(
+    stage: dict, data_dir: Path, state_dir: Path, ch_id: str, inject, absent_sections: set[str]
+) -> tuple[str, str, list[dict], list[str]]:
     """装载 state/sections/chNN_SNN.md 按 stage sections 顺序拼章稿（两层模型改造点①）：
     节级门逐节跑（错误归因到节，一行一节——OV#7），章稿原子写 state/chapters/chNN.md 供门与组装。
 
@@ -683,9 +745,13 @@ def run_chapter_gate(stage: dict, data_dir: Path, state_dir: Path, ch_id: str, t
     if slot_errors:
         errors.append("槽位 display 非法（空/非标量，bug-3036）:\n  " + "\n  ".join(sorted(slot_errors)))
     if errors:
-        raise ValueError(f"{ch_id} 单章门 FAIL（{len(errors)} 项，一次报齐——按节归因修复后重跑）:\n" + "\n".join(errors))
+        raise ValueError(
+            f"{ch_id} 单章门 FAIL（{len(errors)} 项，一次报齐——按节归因修复后重跑）:\n" + "\n".join(errors)
+        )
     n_absent = sum(1 for s in stage_secs if s["id"] in absent_sections)
-    src_desc = f"基线 {chapter_floor(targets, ch_id)} 字符" if targets else f"默认地板 {DEFAULT_CHAPTER_FLOOR_CHARS} 字符"
+    src_desc = (
+        f"基线 {chapter_floor(targets, ch_id)} 字符" if targets else f"默认地板 {DEFAULT_CHAPTER_FLOOR_CHARS} 字符"
+    )
     print(
         f"CHAPTER_GATE_PASS: {ch_id} sections {len(rows)}/{len(stage_secs)}"
         f"（ABSENT 豁免 {n_absent}）eff {eff} ≥ 章地板 {floor}（{src_desc}）"
@@ -720,7 +786,15 @@ def _depth_row(ch_id: str, injected: str, targets: dict | None, downgraded: bool
     }
 
 
-def assemble(stage: dict, data_dir: Path, state_dir: Path, targets: dict | None = None, skip_l2: set[str] | None = None, partial: dict | None = None, depth_rows: list | None = None) -> tuple[str, dict[str, dict]]:
+def assemble(
+    stage: dict,
+    data_dir: Path,
+    state_dir: Path,
+    targets: dict | None = None,
+    skip_l2: set[str] | None = None,
+    partial: dict | None = None,
+    depth_rows: list | None = None,
+) -> tuple[str, dict[str, dict]]:
     """全书组装：前置部分 → 各章（build_chapter 拼装 + 节级/章级门，一次报齐）→ 序无关目录
     覆盖门 → 合规性附录。ABSENT 章/节同语义跳过（stage 条件开关驱动）。
     targets=None = 默认地板通道（基线装载与防绕在 main()/resolve_targets 收口）。"""
@@ -752,18 +826,26 @@ def assemble(stage: dict, data_dir: Path, state_dir: Path, targets: dict | None 
             errors.append(f"章 {ch_id}: {e}" + (f"\n{breakdown}" if breakdown and "L2" in str(e) else ""))
             continue
         if effective_chars(injected) < 1000:
-            errors.append(f"章 {ch_id}: 章最小有效字符门 FAIL：{effective_chars(injected)} <1000（geo bug-2223 章级保留）")
+            errors.append(
+                f"章 {ch_id}: 章最小有效字符门 FAIL：{effective_chars(injected)} <1000（geo bug-2223 章级保留）"
+            )
             continue
         parts.append(injected)
         actual.append((ch_id, stage["chapters"][ch_id].get("title", ch_id)))
-        toc_stats[ch_id] = {"title": stage["chapters"][ch_id].get("title", ch_id), "sections": len(rows), "effective_chars": eff}
+        toc_stats[ch_id] = {
+            "title": stage["chapters"][ch_id].get("title", ch_id),
+            "sections": len(rows),
+            "effective_chars": eff,
+        }
         depth_rows.append(_depth_row(ch_id, injected, targets, bool(skip_l2 and ch_id in skip_l2)))
     errors.extend(validate_toc_chapters(stage, actual, absent_ch))
     parts.append(render_compliance_appendix(consistency, state, state_path))
     if unknown_keys:
         errors.append(f"未知槽位 key（不在 formula_state.values，FAIL 阻断）: {sorted(unknown_keys)}")
     if slot_errors:
-        errors.append(f"槽位 display 非法（空/非标量，bug-3036 空槽静默渲染根治）:\n  " + "\n  ".join(sorted(slot_errors)))
+        errors.append(
+            f"槽位 display 非法（空/非标量，bug-3036 空槽静默渲染根治）:\n  " + "\n  ".join(sorted(slot_errors))
+        )
     if errors:
         raise ValueError(f"{len(errors)} 项未过门（一次报齐，逐项修完再重跑——勿修一章跑一轮）:\n" + "\n".join(errors))
     return "\n\n".join(parts) + "\n", toc_stats
@@ -787,7 +869,11 @@ def approved_chapters(progress: dict) -> set[str]:
     if not isinstance(appr, list):
         raise ValueError(f"downgrade_approvals 结构损坏（手改特征）——progress.py 是唯一写者: {appr!r}")
     for a in appr:
-        if not isinstance(a, dict) or not isinstance(a.get("chapters", []), list) or not all(isinstance(c, str) for c in a["chapters"]):
+        if (
+            not isinstance(a, dict)
+            or not isinstance(a.get("chapters", []), list)
+            or not all(isinstance(c, str) for c in a["chapters"])
+        ):
             raise ValueError(f"downgrade_approvals 结构损坏（手改特征）——progress.py 是唯一写者: {a!r}")
         out.update(a["chapters"])
     return out
@@ -797,10 +883,19 @@ def main() -> int:
     p = argparse.ArgumentParser(description="coal-eia-report v2 — 单次原子组装 + 章门（两层模型：节稿拼章稿）")
     p.add_argument("--stage", required=True)
     p.add_argument("--data-dir", required=True)
-    p.add_argument("--state-dir", required=True, help="state/（sections/ + chapters/ + formula_state.json + progress.json）")
-    p.add_argument("--targets", help="章级深度基线 depth_targets/<stage>.json 路径（chapters[].floor_chars）；缺省探测技能基准，缺失走默认地板 30000——仅调试换基准")
+    p.add_argument(
+        "--state-dir", required=True, help="state/（sections/ + chapters/ + formula_state.json + progress.json）"
+    )
+    p.add_argument(
+        "--targets",
+        help="章级深度基线 depth_targets/<stage>.json 路径（chapters[].floor_chars）；缺省探测技能基准，缺失走默认地板 30000——仅调试换基准",
+    )
     p.add_argument("--chapter", help="单章门模式：拼装该章节稿过全门（ch_id 如 ch6），不产交付物/不写 progress.json")
-    p.add_argument("--allow-partial", action="store_true", help="分级交付：progress.json 已批准的 BLOCKED 章跳过 L2 章地板门（节级/目录/槽位门仍在场），manifest 留痕")
+    p.add_argument(
+        "--allow-partial",
+        action="store_true",
+        help="分级交付：progress.json 已批准的 BLOCKED 章跳过 L2 章地板门（节级/目录/槽位门仍在场），manifest 留痕",
+    )
     p.add_argument("--output", help="交付物输出路径（--chapter 模式不需要）")
     args = p.parse_args()
     if args.chapter and (args.output or args.allow_partial):
@@ -819,11 +914,17 @@ def main() -> int:
         out_path = Path(args.output)
         expected = expected_deliverable_name(stage, Path(args.data_dir))
         if out_path.name != expected:
-            print(f"[build] 交付名门 FAIL: 输出 {out_path.name!r} ≠ 规范名 {expected!r}（{{项目名}}-{{阶段}}-环境影响报告.md，bug-2220/2223 同构）", file=sys.stderr)
+            print(
+                f"[build] 交付名门 FAIL: 输出 {out_path.name!r} ≠ 规范名 {expected!r}（{{项目名}}-{{阶段}}-环境影响报告.md，bug-2220/2223 同构）",
+                file=sys.stderr,
+            )
             return EXIT_ERROR
         stray = sorted(pp.name for pp in out_path.parent.glob("*.md") if pp.name != out_path.name)
         if stray:
-            print(f"[build] 交付名门 FAIL: outputs/ 存在管线外散文件 {stray}——唯一交付单文件 {expected!r}，散文件移出或删除（bug-2220 交付回路铁律）", file=sys.stderr)
+            print(
+                f"[build] 交付名门 FAIL: outputs/ 存在管线外散文件 {stray}——唯一交付单文件 {expected!r}，散文件移出或删除（bug-2220 交付回路铁律）",
+                file=sys.stderr,
+            )
             return EXIT_ERROR
         partial: dict | None = None
         skip_l2: set[str] = set()
@@ -836,16 +937,31 @@ def main() -> int:
                 print(msg, file=sys.stderr)
                 return EXIT_ERROR
             skip_l2 = blocked  # 只放行 L2；节级/目录/槽位门在场；节稿缺失章仍由 assemble 硬 FAIL
-            partial = {"downgrade_approvals": progress.get("downgrade_approvals", []), "chapter_depth": [], "downgraded": sorted(blocked)}
+            partial = {
+                "downgrade_approvals": progress.get("downgrade_approvals", []),
+                "chapter_depth": [],
+                "downgraded": sorted(blocked),
+            }
         depth_rows: list[dict] = partial["chapter_depth"] if partial is not None else []
-        content, toc_stats = assemble(stage, Path(args.data_dir), Path(args.state_dir), targets=targets, skip_l2=skip_l2 or None, partial=partial, depth_rows=depth_rows)
+        content, toc_stats = assemble(
+            stage,
+            Path(args.data_dir),
+            Path(args.state_dir),
+            targets=targets,
+            skip_l2=skip_l2 or None,
+            partial=partial,
+            depth_rows=depth_rows,
+        )
         # ── bug-3036：consistency 合约门接入（geo 25 条 + 环评注册表在册自动启用）。
         # fail>0 则报告留盘但 manifest 不写——无清单 = 不可交付（bug-2225 凭据模型）。
         atomic_write(out_path, content)
         m_stale = out_path.parent / "delivery_manifest.json"
         if m_stale.exists():
             m_stale.unlink()
-            print("[build] 已作废既有 delivery_manifest.json（报告重写中——旧凭据不得为未过门的新报告放行，bug-3059 同构）", file=sys.stderr)
+            print(
+                "[build] 已作废既有 delivery_manifest.json（报告重写中——旧凭据不得为未过门的新报告放行，bug-3059 同构）",
+                file=sys.stderr,
+            )
         import consistency
 
         # 一致性检查输入 = 去附录正文（附录是脚本生成的结论页，不作为合约检查对象）——
@@ -868,17 +984,31 @@ def main() -> int:
             print(f"[build] 一致性合约门 FAIL（{len(c_fails)} 项，bug-3036 接入 consistency.py）:", file=sys.stderr)
             for i in c_fails:
                 print(f"  [FAIL] {i['contract']}: {i['detail']}", file=sys.stderr)
-            print(f"[build] 报告已落盘 {out_path} 但 delivery_manifest.json 不写——无清单=不可交付（bug-2225）；逐项修复后重跑", file=sys.stderr)
+            print(
+                f"[build] 报告已落盘 {out_path} 但 delivery_manifest.json 不写——无清单=不可交付（bug-2225）；逐项修复后重跑",
+                file=sys.stderr,
+            )
             return EXIT_ERROR
         c_manuals = [i for i in c_result["items"] if i["severity"] == "manual"]
         if c_manuals:
-            print(f"[build] MANUAL_PENDING（{len(c_manuals)} 项需人工——交付前逐条核实；run-stage finalize 会以 rc=2 拦停）:", file=sys.stderr)
+            print(
+                f"[build] MANUAL_PENDING（{len(c_manuals)} 项需人工——交付前逐条核实；run-stage finalize 会以 rc=2 拦停）:",
+                file=sys.stderr,
+            )
             for i in c_manuals[:10]:
                 print(f"  [MANUAL] {i['contract']}: {i['detail']}", file=sys.stderr)
         # 附录此刻引用的 consistency_check.json 已是本次结果 → 重组装一次使附录与检查同源
-        #（geo bug-3058：depth_rows 由引用传入且 assemble 逐章 append——不清空则两套）。
+        # （geo bug-3058：depth_rows 由引用传入且 assemble 逐章 append——不清空则两套）。
         depth_rows.clear()
-        content, toc_stats = assemble(stage, Path(args.data_dir), Path(args.state_dir), targets=targets, skip_l2=skip_l2 or None, partial=partial, depth_rows=depth_rows)
+        content, toc_stats = assemble(
+            stage,
+            Path(args.data_dir),
+            Path(args.state_dir),
+            targets=targets,
+            skip_l2=skip_l2 or None,
+            partial=partial,
+            depth_rows=depth_rows,
+        )
     except (FileNotFoundError, KeyError, ValueError, AttributeError, OSError, json.JSONDecodeError) as e:
         print(f"[build] 错误: {e}", file=sys.stderr)
         return EXIT_ERROR
@@ -895,18 +1025,27 @@ def main() -> int:
         # 基准溯源：正式交付只认技能 depth_targets 基线；他处基准=调试/绕门，事后可查（geo 线程 03e18e4a 伪造基准教训）
         "targets": {"path": str(targets_src), "sha256": sha256_file(targets_src) if targets_src.exists() else None},
         "chapter_depth": depth_rows,
-        "consistency": {"summary": c_result["summary"], "detail_path": str(Path(args.state_dir) / "consistency_check.json")},
+        "consistency": {
+            "summary": c_result["summary"],
+            "detail_path": str(Path(args.state_dir) / "consistency_check.json"),
+        },
     }
     if partial is not None:
         manifest["partial"] = partial  # 仅 --allow-partial 模式加 → 全量 build manifest 字节不变
     m_path = out_path.parent / "delivery_manifest.json"
     m_wrote = atomic_write(m_path, json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
-    print(f"BUILD_READY: {args.output} bytes={len(content.encode('utf-8'))} {'written' if wrote else 'unchanged(skip, idempotent)'}")
+    print(
+        f"BUILD_READY: {args.output} bytes={len(content.encode('utf-8'))} {'written' if wrote else 'unchanged(skip, idempotent)'}"
+    )
     print(f"MANIFEST_READY: {m_path} {'written' if m_wrote else 'unchanged(skip, idempotent)'}")
     s = c_result["summary"]
-    print(f"CONSISTENCY: pass {s.get('pass', 0)} / warn {s.get('warn', 0)} / manual {s.get('manual', 0)} / skip {s.get('skip', 0)} / fail 0（fail>0 已在上一步阻断）")
+    print(
+        f"CONSISTENCY: pass {s.get('pass', 0)} / warn {s.get('warn', 0)} / manual {s.get('manual', 0)} / skip {s.get('skip', 0)} / fail 0（fail>0 已在上一步阻断）"
+    )
     if partial is not None:
-        print(f"PARTIAL_DELIVERY: 分级交付 {len(partial['downgraded'])} 章降档 {partial['downgraded']}（深度未达标明细见 delivery_manifest.json → partial.chapter_depth，交付时向用户如实汇报）")
+        print(
+            f"PARTIAL_DELIVERY: 分级交付 {len(partial['downgraded'])} 章降档 {partial['downgraded']}（深度未达标明细见 delivery_manifest.json → partial.chapter_depth，交付时向用户如实汇报）"
+        )
     return EXIT_OK
 
 
