@@ -92,7 +92,7 @@ const handleOk = async () => {
     :open="open"
     :title="task && task.region_key ? `改判归属 · ${task.file_name}` : `归属确认 · ${task?.file_name || ''}`"
     :confirm-loading="submitting"
-    ok-text="确认改判"
+    :ok-text="task && task.region_key ? '确认改判' : '确认归属'"
     @ok="handleOk"
     @cancel="emit('close')"
   >
