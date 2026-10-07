@@ -415,6 +415,69 @@ async def retire_regional_facts(
         raise HTTPException(status_code=500, detail=f"事实退役失败: {str(e)}")
 
 
+@domain_factory.get("/tasks")
+async def fetch_attribution_tasks(
+    scope: str | None = Query(None),
+    region_key: str | None = Query(None),
+    keyword: str | None = Query(None),
+    page: int = Query(1),
+    page_size: int = Query(20),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """[pisuan-custom] W4：任务归属列表（scope=unassigned → scope IS NULL）。"""
+    try:
+        service = get_domain_factory_service()
+        result = await service.list_tasks_with_attribution(
+            scope=scope, region_key=region_key, keyword=keyword, page=page, page_size=page_size
+        )
+        if result.get("error"):
+            raise HTTPException(status_code=400, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to list attribution tasks: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取任务归属列表失败: {str(e)}")
+
+
+@domain_factory.get("/regional-facts")
+async def fetch_regional_facts(
+    region_key: str | None = Query(None),
+    fact_type: str | None = Query(None),
+    status: str | None = Query(None),
+    page: int = Query(1),
+    page_size: int = Query(20),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """[pisuan-custom] W4：区域事实列表（region×fact_type×status 过滤）。"""
+    try:
+        service = get_domain_factory_service()
+        result = await service.list_regional_facts(
+            region_key=region_key, fact_type=fact_type, status=status, page=page, page_size=page_size
+        )
+        if result.get("error"):
+            raise HTTPException(status_code=400, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to list regional facts: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取区域事实列表失败: {str(e)}")
+
+
+@domain_factory.get("/region-board")
+async def fetch_region_board(
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """[pisuan-custom] W4：聚合看板（统计卡 + 模板明细 + 区域树）。"""
+    try:
+        service = get_domain_factory_service()
+        return await service.build_region_board()
+    except Exception as e:
+        logger.error(f"Failed to build region board: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取聚合看板失败: {str(e)}")
+
+
 # =============================================================================
 # File Upload
 # =============================================================================

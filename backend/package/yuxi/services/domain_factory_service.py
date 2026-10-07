@@ -20,12 +20,14 @@ from yuxi.repositories.domain_factory_repository import DomainFactoryRepository
 from yuxi.services.domain_factory_region import (
     VALID_SCOPES,
     apply_min_permissive,
+    derive_template_region,
     extract_fact_signal,
     extract_region_signal,
     extract_year,
     fact_type_for_category,
     l1_task_attribution,
     region_key_for_label,
+    region_label_for_key,
 )
 from yuxi.services.entity_meta_service import EntityMetaAdapter, EntityMetaMatcher, SlotEntityMapper
 from yuxi.services.task_service import TaskContext, tasker
@@ -6731,6 +6733,126 @@ class DomainFactoryService:
             return await repo.list_all(domain_code=domain_code)
         except Exception:
             return []
+
+    # [pisuan-custom] W4 归属管理读接口三件套（只读，读路径不碰写状态）
+
+    async def list_tasks_with_attribution(
+        self,
+        scope: str | None = None,
+        region_key: str | None = None,
+        keyword: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> dict[str, Any]:
+        """任务归属列表。scope 合法值 universal/regional/project/unassigned。"""
+        if scope is not None and scope not in (*VALID_SCOPES, "unassigned"):
+            return {"error": f"scope 非法: {scope}"}
+        page = max(1, page)
+        page_size = min(max(1, page_size), 100)
+        items, total = await self.repo.list_tasks_with_attribution(
+            scope=scope, region_key=region_key, keyword=keyword, page=page, page_size=page_size
+        )
+        return {"items": items, "total": total, "page": page, "page_size": page_size}
+
+    async def list_regional_facts(
+        self,
+        region_key: str | None = None,
+        fact_type: str | None = None,
+        status: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> dict[str, Any]:
+        """区域事实列表。fact_type 四类、status 三态，非法即 400。"""
+        valid_types = ("monitoring", "sensitive_target", "measure", "constraint")
+        if fact_type is not None and fact_type not in valid_types:
+            return {"error": f"fact_type 非法: {fact_type}"}
+        if status is not None and status not in ("draft", "confirmed", "retired"):
+            return {"error": f"status 非法: {status}"}
+        page = max(1, page)
+        page_size = min(max(1, page_size), 100)
+        items, total = await self.repo.list_regional_facts(
+            region_key=region_key, fact_type=fact_type, status=status, page=page, page_size=page_size
+        )
+        return {"items": items, "total": total, "page": page, "page_size": page_size}
+
+    async def build_region_board(self) -> dict[str, Any]:
+        """聚合看板（只读）：统计卡 + 模板明细（region 由归因集派生）+ 区域树。
+
+        树节点 template_count 只计派生 region 恰等于该 region 的模板；mixed 模板只进明细；
+        派生 None 进未归属伪节点（region_key=None）。region>6 个时前端 T1 布局换 T2 形态，接口不变。
+        """
+        raw = await self.repo.get_region_board_raw()
+
+        templates_by_scope = {"universal": 0, "regional": 0, "project": 0, "unassigned": 0}
+        for key, cnt in raw["templates_by_scope"].items():
+            templates_by_scope[key if key in templates_by_scope else "unassigned"] += cnt
+
+        facts_by_status = {"draft": 0, "confirmed": 0, "retired": 0}
+        for row in raw["facts_by_region_type_status"]:
+            if row["status"] in facts_by_status:
+                facts_by_status[row["status"]] += row["count"]
+
+        tasks_by_region = [
+            {"region_key": r["region_key"], "region_label": r["region_label"], "count": r["count"]}
+            for r in raw["tasks_by_region"]
+        ]
+
+        templates = []
+        for t in raw["templates"]:
+            region = derive_template_region(t["contributing_task_ids"], raw["task_regions"])
+            templates.append(
+                {
+                    "id": t["id"],
+                    "chapter": t["chapter"],
+                    "scope": t["scope"],
+                    "region": region,
+                    "contributing_count": len(t["contributing_task_ids"]),
+                    "updated_at": t["updated_at"],
+                }
+            )
+        templates.sort(key=lambda x: x["updated_at"] or "", reverse=True)
+
+        def _node(rk: str | None, rl: str | None = None) -> dict[str, Any]:
+            return {
+                "region_key": rk,
+                "region_label": rl,
+                "task_count": 0,
+                "fact_count": 0,
+                "fact_counts_by_type": {"monitoring": 0, "sensitive_target": 0, "measure": 0, "constraint": 0},
+                "template_count": 0,
+            }
+
+        tree: dict[str | None, dict[str, Any]] = {}
+        for row in tasks_by_region:
+            node = tree.setdefault(row["region_key"], _node(row["region_key"], row["region_label"]))
+            node["task_count"] += row["count"]
+            if row["region_label"] and not node["region_label"]:
+                node["region_label"] = row["region_label"]
+        for row in raw["facts_by_region_type_status"]:
+            node = tree.setdefault(row["region_key"], _node(row["region_key"]))
+            node["fact_count"] += row["count"]
+            if row["fact_type"] in node["fact_counts_by_type"]:
+                node["fact_counts_by_type"][row["fact_type"]] += row["count"]
+        for t in templates:
+            if t["region"] == "mixed":
+                continue
+            node = tree.setdefault(
+                t["region"], _node(t["region"], region_label_for_key(t["region"]) or t["region"])
+            )
+            node["template_count"] += 1
+
+        # 未归属伪节点固定殿后，其余按任务数降序
+        nodes = sorted(tree.values(), key=lambda n: (n["region_key"] is None, -n["task_count"], -n["fact_count"]))
+
+        return {
+            "stats": {
+                "templates_by_scope": templates_by_scope,
+                "tasks_by_region": tasks_by_region,
+                "facts_by_status": facts_by_status,
+            },
+            "templates": templates,
+            "region_tree": nodes,
+        }
 
 
 def get_domain_factory_service() -> DomainFactoryService:
