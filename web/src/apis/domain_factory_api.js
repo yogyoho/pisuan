@@ -253,6 +253,37 @@ export const domainFactoryApi = {
       () => ({ success: true, saved: 0, skipped: 0 })
     ),
 
+  // [pisuan-custom] W4 归属管理：任务归属列表（scope/region_key/keyword/page/page_size）
+  fetchAttributionTasks: (params = {}) =>
+    withDemoFallback(
+      () => apiGet(buildUrl('/api/domain-factory/tasks', params)).then((res) => res),
+      () => ({ items: [], total: 0, page: 1, page_size: 20 })
+    ),
+  // 归属确认/改判（级联：facts 确认 + 归因集模板重算）
+  confirmRegion: (taskId, payload) =>
+    withDemoFallback(
+      () => apiPost(`/api/domain-factory/tasks/${taskId}/confirm-region`, payload),
+      () => ({ success: true, region_key: '', facts_confirmed: 0, templates_recalculated: 0 })
+    ),
+  // 区域事实列表（region_key/fact_type/status/page/page_size）
+  fetchRegionalFacts: (params = {}) =>
+    withDemoFallback(
+      () => apiGet(buildUrl('/api/domain-factory/regional-facts', params)).then((res) => res),
+      () => ({ items: [], total: 0, page: 1, page_size: 20 })
+    ),
+  // 批量退役区域事实（admin，不可逆）
+  retireRegionalFacts: (factIds) =>
+    withDemoFallback(
+      () => apiPost('/api/domain-factory/regional-facts/retire', { fact_ids: factIds }),
+      () => ({ success: true, retired: 0 })
+    ),
+  // 聚合看板（stats + templates + region_tree）
+  fetchRegionBoard: () =>
+    withDemoFallback(
+      () => apiGet('/api/domain-factory/region-board').then((res) => res),
+      () => ({ stats: {}, templates: [], region_tree: [] })
+    ),
+
   // ========== File Upload ==========
 
   uploadSources: (formData) =>
