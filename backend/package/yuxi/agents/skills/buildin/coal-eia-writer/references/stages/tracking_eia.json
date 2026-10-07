@@ -270,7 +270,7 @@
           "fields": [
             "element 环境要素",
             "measure 措施名（规划环评措施清单 canon）",
-            "implemented 落实状态（已建成|在建|未实施）",
+            "implemented 落实状态（已建成/在建/未实施）",
             "effectiveness 有效性判定（四档枚举）",
             "evidence 判定依据（监测序列/台账/现场调查——来源必录）",
             "adjustment 优化调整措施（非「有效」判定必填——在场断言）",

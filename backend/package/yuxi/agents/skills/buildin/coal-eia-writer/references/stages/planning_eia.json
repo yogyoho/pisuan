@@ -2607,7 +2607,7 @@
             "dip_deg 倾角",
             "development_method 开拓方式",
             "coal_seams 可采煤层",
-            "status 建设状态(生产|在建|停建|规划)",
+            "status 建设状态(生产/在建/停建/规划)",
             "construction_sequence 建设时序"
           ],
           "note": "ch2 井田特征表/ch6 沉陷逐算/ch8 时序/ch10 项目环评重点同源"
@@ -2618,7 +2618,7 @@
           "type": "array<object>",
           "required": false,
           "fields": [
-            "type 场地类型(工业场地|铁路专用线|供水电|渣场)",
+            "type 场地类型(工业场地/铁路专用线/供水电/渣场)",
             "name 场地名称",
             "location 位置"
           ]
@@ -2654,7 +2654,7 @@
             "minefield 井田",
             "coal_seam 煤层",
             "pillar_width_m 煤柱宽度(区间合法)",
-            "setting_body 留设主体(设计提出|评价提出)",
+            "setting_body 留设主体(设计提出/评价提出)",
             "basis 留设依据"
           ],
           "note": "处置判定词与 sensitive_targets 保护要求字段一致（XS6）"
@@ -2686,14 +2686,14 @@
           "required": true,
           "fields": [
             "name 登记全称(canon)",
-            "category 类别(自然保护区|水源保护区|文物保护单位|基本农田|公益林|居民点|交通设施|水体|其他)",
+            "category 类别(自然保护区/水源保护区/文物保护单位/基本农田/公益林/居民点/交通设施/水体/其他)",
             "protection_level 保护等级",
             "location_relation 与矿区位置关系",
             "distance 距离(数值+单位)",
             "overlap_area 重叠或影响面积",
-            "protection_requirement 保护要求(处置判定词 canon：禁采|限采|留设保护煤柱|搬迁|其他)",
-            "aspect 投影维(区域|沉陷|风险)",
-            "changes 修编变化注记(新增|撤除|要求调整|无)"
+            "protection_requirement 保护要求(处置判定词 canon：禁采/限采/留设保护煤柱/搬迁/其他)",
+            "aspect 投影维(区域/沉陷/风险)",
+            "changes 修编变化注记(新增/撤除/要求调整/无)"
           ],
           "note": "距离数值跨章 exact_match（XS6）；专节数据另见 protected_area_detail"
         }
@@ -2727,7 +2727,7 @@
           "type": "array<object>",
           "required": true,
           "fields": [
-            "element 环境要素(大气|地表水|地下水|声|土壤|生态)",
+            "element 环境要素(大气/地表水/地下水/声/土壤/生态)",
             "function_zone 功能区或质量类别",
             "standard_code 执行标准号",
             "limit_note 限值档位注记（昼间/夜间分别列档）",
@@ -2793,7 +2793,7 @@
           "required": true,
           "fields": [
             "name 规划名",
-            "level 层级(上位|同层|专项)",
+            "level 层级(上位/同层/专项)",
             "coordination_result 协调性结论要点",
             "conflict_points 冲突要点"
           ]
@@ -2909,7 +2909,7 @@
           "type": "array<object>",
           "required": true,
           "fields": [
-            "element 要素(大气|地表水|地下水|声|土壤)",
+            "element 要素(大气/地表水/地下水/声/土壤)",
             "point 点位",
             "factor 因子",
             "period 时段",
@@ -2958,7 +2958,7 @@
             "type 地类",
             "area_hm2 面积",
             "ratio 占比",
-            "phase 时相(现状|三期对比各期)"
+            "phase 时相(现状/三期对比各期)"
           ]
         },
         {
@@ -3083,7 +3083,7 @@
           "fields": [
             "requirement 批复要求",
             "doc_no 批复文号",
-            "fulfilled 落实状态(已落实|部分落实|未落实)",
+            "fulfilled 落实状态(已落实/部分落实/未落实)",
             "evidence 佐证"
           ]
         },
@@ -3147,11 +3147,11 @@
           "required": true,
           "fields": [
             "name 指标名",
-            "category 类别(资源|环境质量|生态|社会经济)",
+            "category 类别(资源/环境质量/生态/社会经济)",
             "value 指标值",
             "unit 单位",
             "standard_code 依据标准",
-            "source 来源(投影|user_planning)"
+            "source 来源(投影/user_planning)"
           ]
         }
       ]
@@ -3171,7 +3171,7 @@
           "required": true,
           "fields": [
             "factor 因子",
-            "group 分组(自然|生态|环境|社会|经济)"
+            "group 分组(自然/生态/环境/社会/经济)"
           ]
         },
         {
@@ -3188,8 +3188,8 @@
           "fields": [
             "element 环境要素",
             "activity 规划活动",
-            "nature 影响性质(正|负)",
-            "degree 程度(强|中|弱)"
+            "nature 影响性质(正/负)",
+            "degree 程度(强/中/弱)"
           ],
           "note": "解读段归纳的主要环境影响要素清单=EO1 源清单"
         }
@@ -3417,7 +3417,7 @@
           "fields": [
             "source 源",
             "level 源强",
-            "type 类型(点源|线源)"
+            "type 类型(点源/线源)"
           ]
         },
         {
@@ -3803,7 +3803,7 @@
           "type": "array<object>",
           "required": true,
           "fields": [
-            "phase 期(施工|运营|闭矿)",
+            "phase 期(施工/运营/闭矿)",
             "element 要素",
             "point 点位",
             "factor 因子",
@@ -3935,7 +3935,7 @@
           "required": true,
           "fields": [
             "round 次序",
-            "form 形式(网站|报纸|张贴)",
+            "form 形式(网站/报纸/张贴)",
             "time 时间",
             "objects 对象",
             "opinion_count 意见条数"
@@ -3960,7 +3960,7 @@
           "required": true,
           "fields": [
             "summary 意见摘要(脱敏)",
-            "handling 处理(采纳|部分采纳|未采纳)",
+            "handling 处理(采纳/部分采纳/未采纳)",
             "reason 理由"
           ]
         },

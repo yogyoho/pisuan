@@ -193,7 +193,7 @@
           "required": true,
           "fields": [
             "name 排土场名",
-            "type 类型（内排|外排）",
+            "type 类型（内排/外排）",
             "capacity_wm3 容量 万m³",
             "area_km2 占地面积",
             "service_a 服务年限",

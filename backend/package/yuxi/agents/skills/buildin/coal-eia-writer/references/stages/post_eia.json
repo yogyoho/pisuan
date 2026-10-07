@@ -179,7 +179,7 @@
             "predicted_value 原环评预测值",
             "predicted_source 原环评出处（报告+章节/批复文号——门 1）",
             "measured_value 实测值",
-            "measured_source 实测来源（验收监测|例行监测|后评价现状监测 三源类枚举+报告编号）",
+            "measured_source 实测来源（验收监测/例行监测/后评价现状监测 三源类枚举+报告编号）",
             "deviation_judgment 偏差判定",
             "caliber 口径标签"
           ],
@@ -192,7 +192,7 @@
           "required": false,
           "fields": [
             "indicator 指标",
-            "reason 原因（原环评未定量预测|实测缺失|口径不可比）"
+            "reason 原因（原环评未定量预测/实测缺失/口径不可比）"
           ],
           "note": "原环评未定量预测或实测缺失的指标——逐项声明「不具验证条件」及原因（禁行文硬凑对比）"
         }
