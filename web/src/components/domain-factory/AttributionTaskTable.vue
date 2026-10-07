@@ -7,7 +7,6 @@ import AttributionEditModal from './AttributionEditModal.vue'
 // [pisuan-custom] W4 子页1：任务归属列表（scope chips + 关键词 + 逐行改判入口）
 const loading = ref(false)
 const items = ref([])
-const total = ref(0)
 const scopeFilter = ref('all')
 const keyword = ref('')
 const regionKeyFilter = ref('')
