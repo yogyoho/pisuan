@@ -20,7 +20,16 @@ const SCOPE_CARDS = [
 // stats 子对象兜底为空对象（demo fallback 返回 {stats:{}} 时不渲染崩）
 const tbs = computed(() => board.value?.stats?.templates_by_scope || {})
 const fbs = computed(() => board.value?.stats?.facts_by_status || {})
-const tbr = computed(() => board.value?.stats?.tasks_by_region || [])
+// 同一 region_key 历史标签可能漂移（用户自由文本），按 key 归并（先到 label 优先，与树侧一致）防卡片拆行
+const tbr = computed(() => {
+  const merged = new Map()
+  for (const r of board.value?.stats?.tasks_by_region || []) {
+    const k = r.region_key ?? '__none__'
+    if (merged.has(k)) merged.get(k).count += r.count || 0
+    else merged.set(k, { ...r, count: r.count || 0 })
+  }
+  return [...merged.values()]
+})
 
 const templateColumns = [
   { title: '模板（章族）', dataIndex: 'chapter', ellipsis: true },
