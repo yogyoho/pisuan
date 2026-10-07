@@ -182,8 +182,18 @@ def render_front_matter(stage: dict, data_dir: Path) -> str:
 
 
 def _md_table(header: list[str], rows: list[list[str]]) -> str:
+    """markdown 表渲染。表头 cell 禁 '|'——分隔符入表头即列数膨胀，GFM 判列数不齐拒渲染
+    整表（bug-393，test2 实测 349 张裂表），硬 FAIL 修源头：stage forms 列定义枚举分隔
+    用 '/'，CSV 表头清理竖线；数据 cell 的 '|' 转义 '\\|' 保真渲染（一致性槽位寻址
+    [井田|煤层] 等正当内容）。"""
+    bad = [h for h in header if "|" in h]
+    if bad:
+        raise ValueError(
+            f"表头含 '|'（markdown 表分隔符，整表必裂）: {bad}"
+            "——stage forms 列定义枚举分隔改用 '/'，CSV 表头清理竖线（bug-393）"
+        )
     out = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
-    out += ["| " + " | ".join(r) + " |" for r in rows]
+    out += ["| " + " | ".join(c.replace("|", "\\|") for c in r) + " |" for r in rows]
     return "\n".join(out)
 
 
@@ -207,7 +217,8 @@ def _family_labels(stage: dict) -> dict:
     """file → (标量 label 映射, 行表列 label 映射)。按 file 聚合同文件全部族
     fields——planning_indicators 等「同文件视图族」与主族共享一份数据文档，
     标量分属不同族视角（bug-366）。列定义形态：'key 中文label(枚举)' 拆键与
-    label；纯中文列名（'气温'）即键即 label。结果缓存在 stage 对象上。"""
+    label（枚举分隔用 '/' 禁 '|'——裸竖线入表头裂表，bug-393）；纯中文列名
+    （'气温'）即键即 label。结果缓存在 stage 对象上。"""
     cache = stage.setdefault("_label_cache", {})
     if cache:
         return cache
