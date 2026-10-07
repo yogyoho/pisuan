@@ -81,6 +81,7 @@ const fetchRegionOptions = async () => {
 }
 
 const onFilterChange = () => {
+  selectedIds.value = []
   pagination.current = 1
   fetchList()
 }
@@ -113,6 +114,8 @@ const confirmRetire = () => {
         const res = await domainFactoryApi.retireRegionalFacts(selectedIds.value)
         message.success(`已退役 ${res.retired} 条`)
         selectedIds.value = []
+        // 退役可能清空当前页：按剩余总数回缩页码，避免停在越界空页
+        pagination.current = Math.min(pagination.current, Math.max(1, Math.ceil((pagination.total - res.retired) / pagination.pageSize)))
         fetchList()
       } catch (e) {
         message.error('退役失败: ' + (e.message || '未知错误'))
@@ -129,6 +132,7 @@ defineExpose({
   applyRegionFilter: (rk) => {
     regionKey.value = rk || ''
     pagination.current = 1
+    selectedIds.value = []
     fetchList()
   },
   refresh: fetchList
@@ -190,7 +194,7 @@ defineExpose({
   gap: 10px;
   margin-top: 10px;
   padding: 6px 12px;
-  background: var(--warning-bg, #fff7e6);
+  background: var(--color-warning-50, #fff7e6);
   border-radius: 6px;
   width: fit-content;
 }
