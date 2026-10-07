@@ -50,7 +50,6 @@ class ModelMessageAuditRepository:
         existing = await self._get(run_id, normalized_operation_id)
         if existing is not None:
             self._require_same_owner(existing, conversation_id=run.conversation_id, request_id=request_id)
-            self._require_same_start(existing, sequence=sequence)
             return existing, False
 
         message = Message(
@@ -161,9 +160,3 @@ class ModelMessageAuditRepository:
             or message.message_type != MODEL_AUDIT_MESSAGE_TYPE
         ):
             raise ValueError("Model 审计消息必须属于同一 Run、request 和 conversation")
-
-    @staticmethod
-    def _require_same_start(message: Message, *, sequence: int) -> None:
-        """确保重放的 Model start 没有改写已持久化顺序。"""
-        if message.sequence != sequence:
-            raise ValueError("重复 Model start 与已持久化 sequence 不一致")

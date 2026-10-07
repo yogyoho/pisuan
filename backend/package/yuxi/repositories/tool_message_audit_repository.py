@@ -62,7 +62,6 @@ class ToolMessageAuditRepository:
                 existing,
                 tool_name=normalized_name,
                 tool_input=tool_input,
-                sequence=sequence,
             )
             return existing, False
 
@@ -405,14 +404,10 @@ class ToolMessageAuditRepository:
         *,
         tool_name: str,
         tool_input: dict[str, Any],
-        sequence: int,
     ) -> None:
+        # sequence 是事件流内序号，checkpoint 重放会重新编号，不构成持久化事实，不参与一致性比对。
         metadata = message.extra_metadata if isinstance(message.extra_metadata, dict) else {}
-        if (
-            metadata.get("tool_name") != tool_name
-            or metadata.get("input") != tool_input
-            or message.sequence != sequence
-        ):
+        if metadata.get("tool_name") != tool_name or metadata.get("input") != tool_input:
             raise ValueError("重复 Tool start 与已持久化事实不一致")
 
 
