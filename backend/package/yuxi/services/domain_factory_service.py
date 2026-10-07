@@ -6836,9 +6836,7 @@ class DomainFactoryService:
         for t in templates:
             if t["region"] == "mixed":
                 continue
-            node = tree.setdefault(
-                t["region"], _node(t["region"], region_label_for_key(t["region"]) or t["region"])
-            )
+            node = tree.setdefault(t["region"], _node(t["region"], region_label_for_key(t["region"]) or t["region"]))
             node["template_count"] += 1
 
         # 未归属伪节点固定殿后，其余按任务数降序

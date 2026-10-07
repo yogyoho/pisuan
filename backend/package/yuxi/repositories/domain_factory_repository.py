@@ -935,9 +935,7 @@ class DomainFactoryRepository:
             if keyword:
                 conditions.append(DomainFactoryTask.file_name.ilike(f"%{keyword}%"))
 
-            total = (
-                await session.execute(select(func.count(DomainFactoryTask.id)).where(*conditions))
-            ).scalar() or 0
+            total = (await session.execute(select(func.count(DomainFactoryTask.id)).where(*conditions))).scalar() or 0
 
             result = await session.execute(
                 select(DomainFactoryTask)
@@ -1000,9 +998,7 @@ class DomainFactoryRepository:
             file_map: dict[str, str] = {}
             if task_ids:
                 rows = await session.execute(
-                    select(DomainFactoryTask.id, DomainFactoryTask.file_name).where(
-                        DomainFactoryTask.id.in_(task_ids)
-                    )
+                    select(DomainFactoryTask.id, DomainFactoryTask.file_name).where(DomainFactoryTask.id.in_(task_ids))
                 )
                 file_map = dict(rows.all())
 
@@ -1080,12 +1076,9 @@ class DomainFactoryRepository:
             ).all()
 
         return {
-            "tasks_by_region": [
-                {"region_key": rk, "region_label": rl, "count": cnt} for rk, rl, cnt in task_rows
-            ],
+            "tasks_by_region": [{"region_key": rk, "region_label": rl, "count": cnt} for rk, rl, cnt in task_rows],
             "facts_by_region_type_status": [
-                {"region_key": rk, "fact_type": ft, "status": st, "count": cnt}
-                for rk, ft, st, cnt in fact_rows
+                {"region_key": rk, "fact_type": ft, "status": st, "count": cnt} for rk, ft, st, cnt in fact_rows
             ],
             # scope 可能是 NULL → 键用 ""（service 层映射为 unassigned）
             "templates_by_scope": {(scope or ""): cnt for scope, cnt in scope_rows},
