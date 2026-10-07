@@ -507,16 +507,18 @@ async def test_model_audit_lifecycle_is_idempotent_and_lease_fenced(lease_databa
             assert created is True
             assert duplicate_created is False
 
-            with pytest.raises(ValueError, match="sequence"):
-                await repo.start(
-                    run_id=run_id,
-                    request_id=run.request_id,
-                    thread_id=thread_id,
-                    worker_id=owner,
-                    operation_id="model-operation-1",
-                    sequence=8,
-                    started_at=now,
-                )
+            # bug-363 回归：checkpoint 重放以新事件流 seq 重发同一请求，同 operation_id 应幂等放行
+            replayed_start, replayed_start_created = await repo.start(
+                run_id=run_id,
+                request_id=run.request_id,
+                thread_id=thread_id,
+                worker_id=owner,
+                operation_id="model-operation-1",
+                sequence=8,
+                started_at=now,
+            )
+            assert replayed_start_created is False
+            assert replayed_start.id == message.id
 
             completed = await repo.finish(
                 run_id=run_id,
@@ -776,6 +778,21 @@ async def test_tool_audit_lifecycle_owns_compatibility_projection_and_is_lease_f
                     sequence=5,
                     started_at=now,
                 )
+
+            # bug-363 回归：checkpoint 重放以新事件流 seq 重发同一调用，name/input 一致应幂等放行
+            replayed_start, replayed_start_created = await repository.start(
+                run_id=run_id,
+                request_id=run.request_id,
+                thread_id=thread_id,
+                worker_id=owner,
+                tool_call_id="call-tool-1",
+                tool_name="search",
+                tool_input={"q": "effective Yuxi"},
+                sequence=2,
+                started_at=now,
+            )
+            assert replayed_start_created is False
+            assert replayed_start.id == tool_message.id
             await db.commit()
 
         async with session_factory() as db:
