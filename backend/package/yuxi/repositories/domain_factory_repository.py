@@ -909,3 +909,197 @@ class DomainFactoryRepository:
                 select(DomainFactoryTask.id, DomainFactoryTask.scope).where(DomainFactoryTask.id.in_(task_ids))
             )
             return {r.id: r.scope for r in result}
+
+    # [pisuan-custom] W4 归属管理读接口（只读，零 DDL）
+
+    async def list_tasks_with_attribution(
+        self,
+        scope: str | None = None,
+        region_key: str | None = None,
+        keyword: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """任务归属列表。scope='unassigned' 解释为 scope IS NULL，其余等值过滤；
+        keyword 对 file_name 大小写不敏感模糊；created_at 倒序分页。"""
+        async with pg_manager.get_async_session_context() as session:
+            from sqlalchemy.orm import joinedload
+
+            conditions = []
+            if scope == "unassigned":
+                conditions.append(DomainFactoryTask.scope.is_(None))
+            elif scope:
+                conditions.append(DomainFactoryTask.scope == scope)
+            if region_key:
+                conditions.append(DomainFactoryTask.region_key == region_key)
+            if keyword:
+                conditions.append(DomainFactoryTask.file_name.ilike(f"%{keyword}%"))
+
+            total = (
+                await session.execute(select(func.count(DomainFactoryTask.id)).where(*conditions))
+            ).scalar() or 0
+
+            result = await session.execute(
+                select(DomainFactoryTask)
+                .options(joinedload(DomainFactoryTask.domain))
+                .where(*conditions)
+                .order_by(DomainFactoryTask.created_at.desc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+            )
+            tasks = result.unique().scalars().all()
+            items = [
+                {
+                    "id": t.id,
+                    "file_name": t.file_name,
+                    "domain": t.domain.code if t.domain else None,
+                    "domain_label": t.domain.name if t.domain else None,
+                    "status": t.status,
+                    "project_name": t.project_name,
+                    "region_label": t.region_label,
+                    "region_key": t.region_key,
+                    "scope": t.scope,
+                    "created_at": t.created_at.isoformat() if t.created_at else None,
+                }
+                for t in tasks
+            ]
+            return items, total
+
+    async def list_regional_facts(
+        self,
+        region_key: str | None = None,
+        fact_type: str | None = None,
+        status: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """区域事实分页列表（created_at 倒序）；来源任务 file_name 就地批量拼接。"""
+        async with pg_manager.get_async_session_context() as session:
+            conditions = []
+            if region_key:
+                conditions.append(DomainFactoryRegionalFact.region_key == region_key)
+            if fact_type:
+                conditions.append(DomainFactoryRegionalFact.fact_type == fact_type)
+            if status:
+                conditions.append(DomainFactoryRegionalFact.status == status)
+
+            total = (
+                await session.execute(select(func.count(DomainFactoryRegionalFact.id)).where(*conditions))
+            ).scalar() or 0
+
+            result = await session.execute(
+                select(DomainFactoryRegionalFact)
+                .where(*conditions)
+                .order_by(DomainFactoryRegionalFact.created_at.desc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+            )
+            facts = result.scalars().all()
+
+            task_ids = {f.source_task_id for f in facts if f.source_task_id}
+            file_map: dict[str, str] = {}
+            if task_ids:
+                rows = await session.execute(
+                    select(DomainFactoryTask.id, DomainFactoryTask.file_name).where(
+                        DomainFactoryTask.id.in_(task_ids)
+                    )
+                )
+                file_map = dict(rows.all())
+
+            items = [
+                {
+                    "id": f.id,
+                    "fact_type": f.fact_type,
+                    "region_key": f.region_key,
+                    "content": f.content,
+                    "status": f.status,
+                    "year": f.year,
+                    "source_task_id": f.source_task_id,
+                    "source_task_file_name": file_map.get(f.source_task_id),
+                    "source_ref": f.source_ref,
+                    "created_at": f.created_at.isoformat() if f.created_at else None,
+                    "updated_at": f.updated_at.isoformat() if f.updated_at else None,
+                }
+                for f in facts
+            ]
+            return items, total
+
+    async def get_region_board_raw(self) -> dict[str, Any]:
+        """看板聚合原始数据（数据量小：任务 8 / 模板 211，单响应一次取全，不做缓存）。"""
+        async with pg_manager.get_async_session_context() as session:
+            task_rows = (
+                await session.execute(
+                    select(
+                        DomainFactoryTask.region_key,
+                        DomainFactoryTask.region_label,
+                        func.count(DomainFactoryTask.id),
+                    ).group_by(DomainFactoryTask.region_key, DomainFactoryTask.region_label)
+                )
+            ).all()
+            fact_rows = (
+                await session.execute(
+                    select(
+                        DomainFactoryRegionalFact.region_key,
+                        DomainFactoryRegionalFact.fact_type,
+                        DomainFactoryRegionalFact.status,
+                        func.count(DomainFactoryRegionalFact.id),
+                    ).group_by(
+                        DomainFactoryRegionalFact.region_key,
+                        DomainFactoryRegionalFact.fact_type,
+                        DomainFactoryRegionalFact.status,
+                    )
+                )
+            ).all()
+            scope_rows = (
+                await session.execute(
+                    select(
+                        DomainFactoryLearnedTemplate.scope,
+                        func.count(DomainFactoryLearnedTemplate.id),
+                    ).group_by(DomainFactoryLearnedTemplate.scope)
+                )
+            ).all()
+            task_region_rows = (
+                await session.execute(
+                    select(DomainFactoryTask.id, DomainFactoryTask.region_key).where(
+                        DomainFactoryTask.region_key.is_not(None)
+                    )
+                )
+            ).all()
+            template_rows = (
+                await session.execute(
+                    select(
+                        DomainFactoryLearnedTemplate.id,
+                        DomainFactoryLearnedTemplate.chapter,
+                        DomainFactoryLearnedTemplate.domain_code,
+                        DomainFactoryLearnedTemplate.report_type_code,
+                        DomainFactoryLearnedTemplate.scope,
+                        DomainFactoryLearnedTemplate.extra_meta,
+                        DomainFactoryLearnedTemplate.updated_at,
+                    )
+                )
+            ).all()
+
+        return {
+            "tasks_by_region": [
+                {"region_key": rk, "region_label": rl, "count": cnt} for rk, rl, cnt in task_rows
+            ],
+            "facts_by_region_type_status": [
+                {"region_key": rk, "fact_type": ft, "status": st, "count": cnt}
+                for rk, ft, st, cnt in fact_rows
+            ],
+            # scope 可能是 NULL → 键用 ""（service 层映射为 unassigned）
+            "templates_by_scope": {(scope or ""): cnt for scope, cnt in scope_rows},
+            "task_regions": dict(task_region_rows),
+            "templates": [
+                {
+                    "id": tid,
+                    "chapter": ch,
+                    "domain_code": dc,
+                    "report_type_code": rtc,
+                    "scope": sc,
+                    "contributing_task_ids": (em or {}).get("contributing_task_ids") or [],
+                    "updated_at": ua.isoformat() if ua else None,
+                }
+                for tid, ch, dc, rtc, sc, em, ua in template_rows
+            ],
+        }

@@ -68,6 +68,14 @@ def region_key_for_label(label: str) -> str | None:
     return REGION_VOCAB.get(label.strip())
 
 
+def region_label_for_key(key: str) -> str | None:
+    """slug → 展示名（主词表反查；查不到返回 None）。"""
+    for name, k in REGION_VOCAB.items():
+        if k == key:
+            return name
+    return None
+
+
 def extract_region_signal(text: str) -> dict[str, str] | None:
     """文本 → region 信号；词表多命中取最长名（防前缀遮蔽，如伊宁矿区北区）。"""
     hit: tuple[str, str] | None = None
@@ -135,3 +143,20 @@ def apply_min_permissive(current: str | None, evidences: list[str | None]) -> st
     if current not in _SCOPE_ORDER:
         return target
     return target if _SCOPE_ORDER[target] < _SCOPE_ORDER[current] else current
+
+
+def derive_template_region(
+    contributing_task_ids: list[str] | None, task_regions: dict[str, str | None]
+) -> str | None:
+    """[pisuan-custom] W4：模板 region 派生（LearnedTemplate 无 region 列，由归因集推出）。
+
+    归因集任务的 region_key 去重非空——恰一个 → 该值；多个 → "mixed"；空集/全 NULL → None
+    （显示「未归属」）。NULL 证据不参与，与 min-permissive 同语义。
+    """
+    keys = {task_regions.get(str(tid)) for tid in (contributing_task_ids or [])}
+    keys.discard(None)
+    if not keys:
+        return None
+    if len(keys) == 1:
+        return next(iter(keys))
+    return "mixed"
