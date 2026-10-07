@@ -200,6 +200,82 @@ def _dig(doc, segs: list[str]):
     return None
 
 
+_EN_KEY = re.compile(r"^[a-z_][a-z_0-9]*$")
+
+
+def _family_labels(stage: dict) -> dict:
+    """file → (标量 label 映射, 行表列 label 映射)。按 file 聚合同文件全部族
+    fields——planning_indicators 等「同文件视图族」与主族共享一份数据文档，
+    标量分属不同族视角（bug-366）。列定义形态：'key 中文label(枚举)' 拆键与
+    label；纯中文列名（'气温'）即键即 label。结果缓存在 stage 对象上。"""
+    cache = stage.setdefault("_label_cache", {})
+    if cache:
+        return cache
+    for spec in stage.get("forms", {}).values():
+        fp = spec.get("file")
+        if not fp:
+            continue  # projection 等非文件族（要点包管线，不走 TABLE 渲染）
+        scalars, rows = cache.setdefault(fp, ({}, {}))
+        for f in spec.get("fields", []):
+            name, label = f.get("name"), f.get("label")
+            if name and label:
+                scalars.setdefault(name, label)
+            colmap = rows.setdefault(name, {})
+            for col in f.get("fields", []):
+                col = col.strip()
+                parts = col.split(" ", 1)
+                if len(parts) == 2 and _EN_KEY.match(parts[0]):
+                    colmap.setdefault(parts[0], parts[1].strip())
+                else:
+                    colmap.setdefault(col, col)  # 中文列名自映射
+    return cache
+
+
+def _family_colmap(stage: dict, spec: dict) -> dict:
+    """族数据文件全部行表列的 {列名: 中文label} 合并视图。"""
+    fp = spec.get("file")
+    merged: dict[str, str] = {}
+    _, rows_by_field = _family_labels(stage).get(fp, ({}, {}))
+    for rows in rows_by_field.values():
+        for c, lb in rows.items():
+            merged.setdefault(c, lb)
+    return merged
+
+
+def _family_header(cols: list[str], stage: dict, spec: dict, fam: str) -> list[str]:
+    """行表表头中文化；英文键缺 label 是结构错误，硬 FAIL 不静默裸奔（bug-366）。"""
+    colmap = _family_colmap(stage, spec)
+    missing = [c for c in cols if _EN_KEY.match(c) and c not in colmap]
+    if missing:
+        raise ValueError(
+            f"TABLE {fam!r} 行表列缺中文 label: {missing}"
+            "——补 stage forms fields 列定义（bug-366：渲染不得裸出英文键名）"
+        )
+    return [colmap.get(c, c) for c in cols]
+
+
+# 数据来源等登记枚举的单元格显示名（值域官方释义见 data_expectations.source_hint_vocabulary）
+_CELL_ENUM_ZH = {
+    "user_monitoring": "用户监测",
+    "user_planning": "规划文本",
+    "standards_index": "标准限值库",
+    "calc_output": "计算输出",
+    "derived": "派生",
+    "projection": "前章投影",
+    "methodology": "方法学",
+    "analog_mine": "类比矿",
+    "user_docs": "用户文档",
+}
+
+
+def _scalar_cell(v) -> str:
+    if isinstance(v, bool) or (isinstance(v, str) and v.strip().lower() in ("true", "false")):
+        b = v is True or (isinstance(v, str) and v.strip().lower() == "true")
+        return "是" if b else "否"
+    s = str(v)
+    return _CELL_ENUM_ZH.get(s.strip(), s)
+
+
 def render_family(fam: str, stage: dict, data_dir: Path) -> str:
     base = fam.split(".", 1)[0]
     spec = stage["forms"].get(base)
@@ -231,19 +307,30 @@ def render_family(fam: str, stage: dict, data_dir: Path) -> str:
     if isinstance(doc, list):
         if not doc:
             return "（空表）"
-        cols = list(doc[0].keys()) if isinstance(doc[0], dict) else [fam]
-        rows = [[str(x.get(c, "")) for c in cols] if isinstance(x, dict) else [str(x)] for x in doc]
-        return _md_table(cols, rows)
+        cols = list(doc[0].keys()) if isinstance(doc[0], dict) else [spec.get("label", fam)]
+        rows = [[_scalar_cell(x.get(c, "")) for c in cols] if isinstance(x, dict) else [_scalar_cell(x)] for x in doc]
+        return _md_table(_family_header(cols, stage, spec, fam), rows)
     if isinstance(doc, dict):
         scalars = {k: v for k, v in doc.items() if not isinstance(v, (list, dict)) and not k.startswith("_")}
         parts = []
         if scalars:
-            parts.append(_md_table(["字段", "值"], [[k, str(v)] for k, v in scalars.items()]))
+            fp = spec.get("file")
+            scalar_labels = _family_labels(stage).get(fp, ({}, {}))[0] if fp else {}
+            missing = [k for k in scalars if _EN_KEY.match(k) and k not in scalar_labels]
+            if missing:
+                raise ValueError(
+                    f"TABLE {fam!r} 标量字段缺中文 label: {missing}"
+                    "——补 stage forms fields 定义（bug-366：键值表禁裸出英文键名）"
+                )
+            parts.append(
+                _md_table(["指标", "数值"], [[scalar_labels.get(k, k), _scalar_cell(v)] for k, v in scalars.items()])
+            )
         for k, v in doc.items():
             if isinstance(v, list) and v and not k.startswith("_"):
-                cols = list(v[0].keys()) if isinstance(v[0], dict) else [k]
-                rows = [[str(x.get(c, "")) for c in cols] if isinstance(x, dict) else [str(x)] for x in v]
-                parts.append(f"\n**{k}**（{len(v)} 行）\n\n" + _md_table(cols, rows))
+                k_label = _family_labels(stage).get(spec.get("file"), ({}, {}))[0].get(k, k)
+                cols = list(v[0].keys()) if isinstance(v[0], dict) else [k_label]
+                rows = [[_scalar_cell(x.get(c, "")) for c in cols] if isinstance(x, dict) else [_scalar_cell(x)] for x in v]
+                parts.append(f"\n**{k_label}**（{len(v)} 行）\n\n" + _md_table(_family_header(cols, stage, spec, fam), rows))
         return "\n\n".join(parts) or "（表单无内容）"
     return str(doc)  # 点号路径命中标量 → 单值直出
 
@@ -585,11 +672,12 @@ def make_inject(stage: dict, data_dir: Path, state: dict, unknown_keys: set[str]
             return s
 
         def table_sub(m: re.Match) -> str:
-            return render_family(m.group(1).strip(), stage, data_dir)
+            # bug-366：表块强制独立成段——写手把 {{TABLE:族}} 嵌在句中时，渲染表不得粘进句子
+            return "\n\n" + render_family(m.group(1).strip(), stage, data_dir) + "\n\n"
 
         text = SLOT_DEFORM_CLOSE_RE.sub(r"{{SLOT:\1}}\2", text)  # {{SLOT:k}m} → {{SLOT:k}}m
         text = SLOT_DEFORM_OPEN_RE.sub(r"{{SLOT:\1}}", text)  # {SLOT:k} → {{SLOT:k}}
-        return TABLE_RE.sub(table_sub, SLOT_RE.sub(slot_sub, text))
+        return re.sub(r"\n{3,}", "\n\n", TABLE_RE.sub(table_sub, SLOT_RE.sub(slot_sub, text)))
 
     return inject
 
