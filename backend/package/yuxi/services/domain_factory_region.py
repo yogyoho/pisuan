@@ -34,6 +34,22 @@ REGION_VOCAB: dict[str, str] = {
     "东胜煤田": "dongsheng",
 }
 
+# [pisuan-custom] W4：行政区辅助词表（县/乡镇级，3+6 条，仅任务级 L1 二级查找用）
+# 来源：4 份矿区总规环评全文提取（2026-10-07），证据与排除清单见 W4 spec §3/§8-6。
+# 与 REGION_VOCAB 的关系：矿区名主命中优先；无主命中才查本表，命中同通道判 regional。
+# 陷阱备忘：「横城村」属银川市兴庆区不收；「灵武市」与灵武矿区同域（歧义交 L3 改判纠正）。
+ADMIN_REGION_VOCAB: dict[str, str] = {
+    "灵武市": "hengcheng",       # 强：归属链核心县级市（歧义：灵武矿区同域，L3 纠）
+    "临河镇": "hengcheng",       # 强：「属灵武市临河镇管辖」
+    "宁东镇": "hengcheng",       # 强：「矿区位于灵武市宁东镇」多语境
+    "伊宁县": "yining-beiqu",        # 强：矿区主体所在县
+    "伊宁市": "yining-beiqu",        # 中：紧邻北郊，部分设施在伊宁市界内
+    "霍城县": "yining-beiqu",        # 中：保护区/水源地紧邻
+    "喀拉亚尕奇乡": "yining-beiqu",  # 强：伊宁县辖
+    "英也尔乡": "yining-beiqu",      # 中：伊宁市辖，井田相关
+    "曲鲁海乡": "yining-beiqu",      # 中：伊宁县辖，水源地
+}
+
 VALID_SCOPES: tuple[str, ...] = ("universal", "regional", "project")
 _SCOPE_ORDER: dict[str, int] = {"project": 0, "regional": 1, "universal": 2}
 
@@ -69,20 +85,34 @@ def region_key_for_label(label: str) -> str | None:
 
 
 def region_label_for_key(key: str) -> str | None:
-    """slug → 展示名（主词表反查；查不到返回 None）。"""
+    """slug → 展示名（主词表反查优先，再查行政区辅助词表；查不到返回 None）。"""
     for name, k in REGION_VOCAB.items():
+        if k == key:
+            return name
+    for name, k in ADMIN_REGION_VOCAB.items():
         if k == key:
             return name
     return None
 
 
-def extract_region_signal(text: str) -> dict[str, str] | None:
-    """文本 → region 信号；词表多命中取最长名（防前缀遮蔽，如伊宁矿区北区）。"""
+def _longest_vocab_hit(text: str, vocab: dict[str, str]) -> dict[str, str] | None:
+    """词表扫描：多命中取最长名（防前缀遮蔽，如伊宁矿区北区）。"""
     hit: tuple[str, str] | None = None
-    for name, key in REGION_VOCAB.items():
+    for name, key in vocab.items():
         if name in text and (hit is None or len(name) > len(hit[0])):
             hit = (name, key)
     return {"region_label": hit[0], "region_key": hit[1]} if hit else None
+
+
+def extract_region_signal(text: str) -> dict[str, str] | None:
+    """文本 → region 信号；词表多命中取最长名（防前缀遮蔽，如伊宁矿区北区）。"""
+    return _longest_vocab_hit(text, REGION_VOCAB)
+
+
+def extract_admin_region_signal(text: str) -> dict[str, str] | None:
+    """[pisuan-custom] W4：行政区辅助信号（县/乡镇级）。只在任务级 L1 主命中缺席时使用，
+    不进段落级 classify（region_signals 行为零变动）。"""
+    return _longest_vocab_hit(text, ADMIN_REGION_VOCAB)
 
 
 def extract_fact_signal(text: str) -> str | None:
@@ -114,10 +144,18 @@ def l1_task_attribution(doc: dict) -> dict | None:
     """任务级 L1 归属：文档身份（文件名/文档类型/报告类型）词表命中 → regional。
 
     只认文档身份、不扫正文——正文引用矿区名的项目报告（如伊敏项目提「伊敏矿区」）
-    不得误判。未命中返回 None（scope 留 NULL 交 L2/兜底）。
+    不得误判。主词表（REGION_VOCAB 矿区名）优先；无主命中时查行政区辅助词表
+    （ADMIN_REGION_VOCAB，W4），命中同通道判 regional，region_label 取 slug 反查的
+    主词表展示名（保持同 region 展示一致）。未命中返回 None（scope 留 NULL 交 L2/兜底）。
     """
     identity = " ".join(str(doc.get(k) or "") for k in ("file_name", "document_type", "report_type_code"))
     signal = extract_region_signal(identity)
+    if signal is None:
+        signal = extract_admin_region_signal(identity)
+        if signal is not None:
+            canonical = region_label_for_key(signal["region_key"])
+            if canonical:
+                signal["region_label"] = canonical
     if signal is None:
         return None
     return {**signal, "scope": "regional"}
