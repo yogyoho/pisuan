@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import AttributionTaskTable from './AttributionTaskTable.vue'
 import RegionalFactsTable from './RegionalFactsTable.vue'
 import RegionBoard from './RegionBoard.vue'
@@ -9,6 +9,7 @@ import RegionBoard from './RegionBoard.vue'
 const activeSub = ref('tasks')
 const taskTableRef = ref(null)
 const factsTableRef = ref(null)
+const boardRef = ref(null)
 
 const jumpToTasks = ({ regionKey }) => {
   activeSub.value = 'tasks'
@@ -18,6 +19,12 @@ const jumpToFacts = ({ regionKey }) => {
   activeSub.value = 'facts'
   factsTableRef.value?.applyRegionFilter(regionKey)
 }
+
+// 子页切换时刷新目标子页（改判级联后防止 facts/board 显示陈旧数据）
+watch(activeSub, (sub) => {
+  if (sub === 'facts') factsTableRef.value?.refresh()
+  else if (sub === 'board') boardRef.value?.refresh()
+})
 </script>
 
 <template>
@@ -31,6 +38,7 @@ const jumpToFacts = ({ regionKey }) => {
     <RegionalFactsTable v-show="activeSub === 'facts'" ref="factsTableRef" />
     <RegionBoard
       v-show="activeSub === 'board'"
+      ref="boardRef"
       @jump-to-tasks="jumpToTasks"
       @jump-to-facts="jumpToFacts"
     />

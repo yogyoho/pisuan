@@ -58,16 +58,21 @@ const onFilterChange = () => {
   fetchList()
 }
 
+// allow-clear 清空（或手动删空）时立即解除关键词过滤；输入中不触发
+const onKeywordChange = (e) => {
+  if (!e.target.value) onFilterChange()
+}
+
 const handleTableChange = (pag) => {
   pagination.current = pag.current
   pagination.pageSize = pag.pageSize
   fetchList()
 }
 
-// 看板下钻跳转入口：regionKey=null → 未归属（scope=unassigned）；'' → 清过滤；其余按 region 过滤
+// 看板下钻跳转入口：真实 region key → region 过滤；'' → 清过滤
 const applyRegionFilter = (regionKey) => {
   regionKeyFilter.value = regionKey || ''
-  scopeFilter.value = regionKey == null ? 'unassigned' : 'all'
+  scopeFilter.value = 'all'
   pagination.current = 1
   fetchList()
 }
@@ -103,6 +108,7 @@ defineExpose({ applyRegionFilter, refresh: fetchList })
         size="small"
         allow-clear
         @search="onFilterChange"
+        @change="onKeywordChange"
       />
       <a-tag v-if="regionKeyFilter" closable color="blue" @close="clearRegionFilter">
         region: {{ regionKeyFilter }}
