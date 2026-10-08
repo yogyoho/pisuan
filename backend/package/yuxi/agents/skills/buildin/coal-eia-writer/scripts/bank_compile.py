@@ -134,31 +134,35 @@ def _run_calibrate(python: str, samples_dir: Path, output: Path) -> tuple[int, s
     return proc.returncode, (proc.stderr or "").strip()
 
 
-def _aggregate_depth_targets(refs: Path, stage: str, generated: str) -> None:
+def _aggregate_depth_targets(refs: Path, stage: str) -> int | None:
     """per 矿种基线 → depth_targets/<stage>.json（门形状 chapters.{ch}.floor_chars）。
 
     floor_chars = 组间 median(median_eff × coefficient)——「基线」取组间中位，
-    单章缺失矿种不参与该章统计；产物形状与手维版兼容（门零改动）。"""
+    单章缺失矿种不参与该章统计；产物形状与手维版兼容（门零改动）。
+    返回章数；无有效矿种基线（目录缺失/空/全损坏）→ stderr 告警并返回 None，
+    不落盘——调用方据此不打印 AGGREGATED（不虚报）。"""
     mineral_dir = refs / "depth_targets" / stage
-    docs = []
+    docs, names = [], []
     for p in sorted(mineral_dir.glob("*.json")):
         try:
             docs.append(json.loads(p.read_text(encoding="utf-8")))
+            names.append(p.name)
         except (json.JSONDecodeError, OSError) as exc:
             print(f"[bank_compile] 聚合跳过损坏文件 {p.name}: {exc}", file=sys.stderr)
     if not docs:
-        return
+        print(f"[bank_compile] {stage} 聚合跳过：无有效矿种基线", file=sys.stderr)
+        return None
     chapters: dict[str, dict] = {}
     all_chs = sorted({ch for d in docs for ch in d.get("per_chapter", {})})
     for ch in all_chs:
-        floors = [d["per_chapter"][ch]["median_eff"] * d.get("coefficient", 0.6)
+        floors = [d["per_chapter"][ch]["median_eff"] * d["coefficient"]
                   for d in docs if ch in d.get("per_chapter", {})]
-        if floors:
-            chapters[ch] = {"floor_chars": int(statistics.median(floors))}
-    doc = {"stage": stage, "generated": generated, "confidence": "calibrated",
-           "source": f"bank_compile aggregate: {', '.join(p.name for p in sorted(mineral_dir.glob('*.json')))}",
+        chapters[ch] = {"floor_chars": int(statistics.median(floors))}
+    doc = {"stage": stage, "confidence": "calibrated",
+           "source": f"bank_compile aggregate: {', '.join(names)}",
            "chapters": chapters}
     _json_write(refs / "depth_targets" / f"{stage}.json", doc)
+    return len(chapters)
 
 
 def _prune_stale_slices(refs: Path, keep_rids: set[str]) -> int:
@@ -297,8 +301,9 @@ def main_with_args(argv: list[str]) -> int:
 
     # 5) stage 级聚合：per 矿种基线 → depth_targets/<stage>.json（写章深度门消费形状）
     for stage in sorted({s for (s, _m) in groups}):
-        _aggregate_depth_targets(refs, stage, generated=__import__("time").strftime("%Y-%m-%d"))
-        print(f"  AGGREGATED depth_targets/{stage}.json")
+        n = _aggregate_depth_targets(refs, stage)
+        if n is not None:
+            print(f"  AGGREGATED depth_targets/{stage}.json ({n} chapters)")
     return 0
 
 
