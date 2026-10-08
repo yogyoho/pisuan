@@ -16,6 +16,10 @@ EAI-CUSTOM (geo-sample-bank Phase 2 T5)：维护者离线动作脚本，把模�
   6. forms_catalog <refs>/paradigms/forms_catalog.json——切片文本「表引导句」三形态
      统计（complete_sentence/standalone_caption/dangling，dangling 即 bug-394
      句中嵌表残句）+ 数值引用统计与例句池（spec §4.1），写手正样本。
+  7. section_expectations <refs>/section_expectations/<stage>.json——节级数值-口径
+     清单（spec §4.2）：两段号节内抽「量词+数值+单位」→ forms label 归并 field 路径，
+     corpus_freq=报告覆盖率定 tier；未命中进 unmapped 池；per stage 文件（sections
+     键 chN_Snn 跨 stage 碰撞，不能单文件合并）。
 
 约束与语义：
   - 纯 stdlib + 子进程调 sibling calibrate.py；无网络；不 import build_output/ingest/consistency。
@@ -63,6 +67,15 @@ RID_RE = re.compile(r"[a-z0-9][a-z0-9\-_]*")  # rid slug 守卫（小写字母/�
 # 表锚=GFM 表块首行（8584 块）
 CAPTION_LINE_RE = re.compile(r"^\*{0,2}[表图]\s*\d+(?:\.\d+)*[-–—]\d+(?:\.\d+)*")
 NUM_UNIT_SENT_RE = re.compile(r"([一-鿿A-Za-z]{2,12})为\s*(\d+(?:\.\d+)?)\s*([一-鿿A-Za-zμ/%°·()（）A-Z]{1,8})")
+# section_expectations（spec §4.2）：「量词+为/达/是+数值+单位」句式，单位白名单限数值型
+# 环评常用量纲（区别于 forms_catalog 的 NUM_UNIT_SENT_RE 宽口径）；含 NFKC 归一形
+# （prepare_corpus 全文 NFKC，²→3→2 数字化：语料实为 km2/m2，不带 km² 会被 km 短路）
+QUANTITY_RE = re.compile(
+    r"([一-鿿]{2,8}?)(?:为|达|是)\s*(\d+(?:\.\d+)?)\s*"
+    r"(dB\(A\)|mg/L|μg/m3|μg/m³|km2|km²|km|hm2|hm²|万m3|万m³|万t|万kW|%|m2|m²|t|d|m)"
+)
+SECTION_EXPECTATION_STAGES = ("planning_eia", "post_eia", "project_eia_openpit",
+                              "project_eia_underground", "tracking_eia")  # label_map 先到先得序
 
 
 def _json_write(path: Path, doc) -> None:
@@ -195,6 +208,75 @@ def build_forms_catalog(seg_samples) -> dict:
     }
 
 
+def extract_sec_texts(seg: str) -> dict[str, str]:
+    """切片内按 SEC_RE 切真节文本：只取两段号（章.节），span 至下一个两段号或片尾。
+
+    三段号+（子节）内容随 span 折叠进父节（子节文本语义上属于所在节正文）；
+    单段号（章标题行）跳过——章引言量极少，深度门管章级，此处只做节级。"""
+    spans = [(m.group(2), m.start()) for m in SEC_RE.finditer(seg) if m.group(2).count(".") == 1]
+    return {sec: seg[start : (spans[i + 1][1] if i + 1 < len(spans) else len(seg))]
+            for i, (sec, start) in enumerate(spans)}
+
+
+def _map_caliber(label: str, forms_label_map: dict) -> tuple[str, str] | None:
+    """语境名词 → forms field 归并：后缀滚动匹配（「主要声源源强」→「源强」）。
+
+    惰性量词从左锚定会捕获带修饰语的全短语，forms label 是短词——依次试后缀
+    （含全串，≥2 字），首个命中即归并；全未命中返回 None（进 unmapped 池）。"""
+    for i in range(len(label) - 1):
+        tail = label[i:]
+        if tail in forms_label_map:
+            return tail, forms_label_map[tail]
+    return None
+
+
+def build_section_expectations(seg_infos, forms_label_map: dict, stage: str) -> dict:
+    """节级数值-口径清单（spec §4.2）。seg_infos: [{rid, chapter, sec, title, text}]。
+
+    corpus_freq=报告覆盖率（提及该 caliber 的报告数/该节报告总数，distinct-rid——
+    单报告多次提及不抬高频率）；tier：required ≥0.6 / optional 0.2-0.6 / contextual
+    <0.2。field 归并走 forms_label_map 精确匹配，未命中进 unmapped 池（cap 200，
+    spec：不静默丢弃）。幂等：产物无时间戳（Task 6 裁决），sections 键数值序排列。"""
+    from collections import defaultdict
+
+    sec_reports: dict[tuple, set] = defaultdict(set)  # (chapter, sec) -> rids
+    sec_titles: dict[tuple, str] = {}
+    sec_label_rids: dict[tuple, dict[str, set]] = defaultdict(lambda: defaultdict(set))
+    sec_label_unit: dict[tuple, dict[str, str]] = defaultdict(dict)  # 首见单位
+    unmapped: list[dict] = []
+    for si in seg_infos:
+        key = (si["chapter"], si["sec"])
+        sec_reports[key].add(si["rid"])
+        sec_titles.setdefault(key, si["title"])
+        for m in QUANTITY_RE.finditer(si["text"]):
+            label, unit = m.group(1), m.group(3)
+            mapped = _map_caliber(label, forms_label_map)
+            if mapped:
+                caliber, field = mapped
+                sec_label_rids[key][caliber].add(si["rid"])
+                sec_label_unit[key].setdefault(caliber, unit)
+            elif len(unmapped) < 200:
+                unmapped.append({"section": f"ch{si['chapter']}", "caliber": label,
+                                 "value": m.group(2), "unit": unit, "sample": si["rid"]})
+    sections: dict[str, dict] = {}
+    for key in sorted(sec_reports, key=lambda k: (int(k[0]), tuple(int(p) for p in k[1].split(".")))):
+        ch, sec = key
+        n = len(sec_reports[key])
+        quants = []
+        for caliber, rids in sec_label_rids[key].items():
+            freq = len(rids) / n
+            quants.append({
+                "field": forms_label_map[caliber],
+                "caliber": caliber,
+                "unit": sec_label_unit[key][caliber],
+                "tier": "required" if freq >= 0.6 else ("optional" if freq >= 0.2 else "contextual"),
+                "corpus_freq": round(freq, 2),
+            })
+        quants.sort(key=lambda q: -q["corpus_freq"])
+        sections[f"ch{ch}_S{sec.split('.')[-1]:0>2}"] = {"title": sec_titles[key], "expected_quantities": quants}
+    return {"version": "1.0", "stage_scope": stage, "sections": sections, "unmapped": unmapped}
+
+
 def _run_calibrate(python: str, samples_dir: Path, output: Path) -> tuple[int, str]:
     """子进程调 sibling calibrate.py（脚本目录自动进 sys.path[0]，cwd 无关）。
 
@@ -300,6 +382,7 @@ def main_with_args(argv: list[str]) -> int:
     index: dict = {}  # stage -> chN -> [节条目]
     groups: dict[tuple[str, str], list] = {}  # (stage, mineral) -> [(chapter, rid, seg)]
     text_map: dict[str, str] = {}  # rid -> 全文（切片成功路径记录，forms_catalog 统计输入）
+    infos_by_stage: dict[str, list] = {}  # stage -> [{rid, chapter, sec, title, text}]（section_expectations 输入）
     total_slices = 0
 
     for e in reports:
@@ -351,6 +434,13 @@ def main_with_args(argv: list[str]) -> int:
                     }
                 )
             groups.setdefault((stage, mineral), []).append((chapter, rid, seg))
+            # 5) section_expectations 输入：两段号节文本（子节折叠进父节，spec §4.2）
+            sec_title = {item["sec"]: item["title"] for item in secs}
+            for sec, sec_text in extract_sec_texts(seg).items():
+                infos_by_stage.setdefault(stage, []).append(
+                    {"rid": rid, "chapter": chapter, "sec": sec,
+                     "title": sec_title.get(sec, ""), "text": sec_text}
+                )
 
     if total_slices == 0:
         print("[bank_compile] 全部报告零切片或被跳过——拒绝生成空 bank_index", file=sys.stderr)
@@ -361,11 +451,27 @@ def main_with_args(argv: list[str]) -> int:
         pruned = _prune_stale_slices(refs, manifest_rids)
         print(f"PRUNED: {pruned} stale slice(s)")
     # 6) forms_catalog：切片文本三形态统计（表引导句 + 数值引用），给写手正样本
-    catalog = build_forms_catalog([(e["report_id"], text_map[e["report_id"]]) for e in reports if e["report_id"] in text_map])
+    catalog = build_forms_catalog(
+        [(e["report_id"], text_map[e["report_id"]]) for e in reports if e["report_id"] in text_map]
+    )
     _json_write(refs / "paradigms" / "forms_catalog.json", catalog)
     tl = catalog["forms"]["table_lead"]["stats"]
     print(f"FORMS_CATALOG: {len(catalog['forms']['table_lead']['examples'])} lead example(s), "
           f"table_lead={tl.get('complete_sentence', 0)}/{tl.get('dangling', 0)}(complete/dangling)")
+    # 7) section_expectations：节级数值-口径清单（spec §4.2，per stage 文件——
+    #    sections 键 chN_Snn 跨 stage 碰撞，不能单文件合并）
+    label_map: dict[str, str] = {}
+    for st in SECTION_EXPECTATION_STAGES:
+        stage_doc = json.loads((refs / "stages" / f"{st}.json").read_text(encoding="utf-8"))
+        for fam, fam_spec in stage_doc["forms"].items():
+            for f in fam_spec.get("fields", []):
+                label_map.setdefault(f["label"], f"{fam}.{f['name']}")  # 跨 stage 重名先到先得
+    for st, infos in sorted(infos_by_stage.items()):
+        exp_doc = build_section_expectations(infos, label_map, stage=st)
+        _json_write(refs / "section_expectations" / f"{st}.json", exp_doc)
+        n_q = sum(len(s["expected_quantities"]) for s in exp_doc["sections"].values())
+        print(f"SECTION_EXPECTATIONS {st}: {len(exp_doc['sections'])} section(s), "
+              f"{n_q} mapped quantity(ies), {len(exp_doc['unmapped'])} unmapped")
     print(f"BANK_COMPILED: {len(reports)} report(s), {total_slices} slice(s), {len(groups)} group(s)")
 
     # 4) per (stage, mineral) 标定：组内切片临时命名 chN_<rid>.md（满足 calibrate FNAME_RE
