@@ -65,16 +65,21 @@ def _heading_title(line: str) -> str:
     return re.sub(r"^\d+(?:\.\d+)*\s+", "", no_hash).strip()
 
 
-def slice_report(text: str) -> list[dict]:
+def slice_report(text: str) -> tuple[list[dict], list[str]]:
     """把报告全文切成片：连续同片号的节归并进同一片（子节归父片）。
 
-    返回按文档顺序的 [{chapter, seg, secs}]；chapter=节号首段，seg=裸切片文本
-    （起点=片首标题行 start，终点=下一不同片标题 start 或文末），secs=片内节条目
-    [{sec, title}]（sec 为完整节号，如 2.1）。无节号标题 → 返回 []。
+    返回 ([{chapter, seg, secs}], dup_chapters)：chapter=节号首段，seg=裸切片文本
+    （起点=片首标题行 start，终点=下一保留片标题 start 或文末），secs=片内节条目
+    [{sec, title}]（sec 为完整节号，如 2.1）；dup_chapters=发生同章多块的章号
+    （已按「保留最长块」消解，见下）。无节号标题 → ([], [])。
+
+    重复章号消解（2026-10-08 裁决）：同章多块保留 seg 最长的块——coal 语料的局部
+    编号序列（附录计算步骤、保护煤柱清单）是几行碎片，真章是宏观段；被弃块的正文
+    经「下一保留块起点」重算并入前块 seg，不丢内容；调用方对 dup 章号告警，绝不静默。
     """
     matches = list(SEC_RE.finditer(text))
     if not matches:
-        return []
+        return [], []
     slices: list[dict] = []
     cur: dict | None = None
     for m in matches:
@@ -91,12 +96,20 @@ def slice_report(text: str) -> list[dict]:
         cur["secs"].append({"sec": sec, "title": _heading_title(line)})
     if cur is not None:
         slices.append(cur)
-    # 片终点 = 下一片起点 / 文末（末片）
     for i, s in enumerate(slices):
-        end = slices[i + 1]["start"] if i + 1 < len(slices) else len(text)
+        s["end"] = slices[i + 1]["start"] if i + 1 < len(slices) else len(text)
+    by_ch: dict[str, list[dict]] = {}
+    for s in slices:
+        by_ch.setdefault(s["chapter"], []).append(s)
+    dup = sorted(ch for ch, blocks in by_ch.items() if len(blocks) > 1)
+    kept = [blocks[0] if len(blocks) == 1 else max(blocks, key=lambda s: s["end"] - s["start"]) for blocks in by_ch.values()]
+    kept.sort(key=lambda s: s["start"])
+    for i, s in enumerate(kept):
+        end = kept[i + 1]["start"] if i + 1 < len(kept) else len(text)
         s["seg"] = text[s["start"] : end]
         del s["start"]
-    return slices
+        del s["end"]
+    return kept, dup
 
 
 def _run_calibrate(python: str, samples_dir: Path, output: Path) -> tuple[int, str]:
@@ -189,15 +202,14 @@ def main_with_args(argv: list[str]) -> int:
         except UnicodeDecodeError as exc:
             print(f"[bank_compile] {rid} source.md 非 UTF-8（{exc}）——跳过", file=sys.stderr)
             continue
-        slices = slice_report(text)
+        slices, dup = slice_report(text)
         if not slices:
             print(f"[bank_compile] {rid} 零切片（source.md 无节号标题）——跳过", file=sys.stderr)
             continue
-        chapters = [s["chapter"] for s in slices]
-        dup = sorted({c for c in chapters if chapters.count(c) > 1})
         if dup:
-            print(f"[bank_compile] {rid} 重复章号 {'/'.join(dup)}——报告跳过（绝不静默覆盖切片）", file=sys.stderr)
-            continue
+            # 2026-10-08 裁决：整份跳过会使 31/31 coal 报告不可编译（局部编号序列
+            # 是体裁内在结构），改为 slice_report 内保留最长块；此处告警留痕，绝不静默
+            print(f"[bank_compile] {rid} 重复章号 {'/'.join(dup)}——保留最长块消解，弃置碎片并入前块 seg", file=sys.stderr)
         for s in slices:
             chapter, seg, secs = s["chapter"], s["seg"], s["secs"]
             total_slices += 1
