@@ -13,6 +13,9 @@ EAI-CUSTOM (geo-sample-bank Phase 2 T5)：维护者离线动作脚本，把模�
   5. stage 级深度门 <refs>/depth_targets/<stage>.json——组间聚合（各矿种
      median_eff × coefficient 取中位，见 _aggregate_depth_targets），
      覆盖手维 stage 级文件（calibrate 复算替换手维值为既定语义）。
+  6. forms_catalog <refs>/paradigms/forms_catalog.json——切片文本「表引导句」三形态
+     统计（complete_sentence/standalone_caption/dangling，dangling 即 bug-394
+     句中嵌表残句）+ 数值引用统计与例句池（spec §4.1），写手正样本。
 
 约束与语义：
   - 纯 stdlib + 子进程调 sibling calibrate.py；无网络；不 import build_output/ingest/consistency。
@@ -55,6 +58,11 @@ SEC_RE = re.compile(r"^(#{2,4})\s+(\d+(?:\.\d+)*)\s", re.MULTILINE)
 SLICE_NAME_RE = re.compile(r"^(?P<rid>.+)__(?P<ch>\d+)\.md$")  # samples_bank: <rid>__<N>.md
 SL3_NAME_RE = re.compile(r"^ch(?P<ch>\d+)__(?P<rid>.+)\.md$")  # samples: chN__<rid>.md
 RID_RE = re.compile(r"[a-z0-9][a-z0-9\-_]*")  # rid slug 守卫（小写字母/数字/-/_）
+# forms_catalog 形态统计：表题行（本管线 docx→md 不保留粗体；编号实测两形态——
+# 全局号「表 N-M」271 行、章内号「表 N.M-M」7698 行为主流）与「X为 数值 单位」引用句；
+# 表锚=GFM 表块首行（8584 块）
+CAPTION_LINE_RE = re.compile(r"^\*{0,2}[表图]\s*\d+(?:\.\d+)*[-–—]\d+(?:\.\d+)*")
+NUM_UNIT_SENT_RE = re.compile(r"([一-鿿A-Za-z]{2,12})为\s*(\d+(?:\.\d+)?)\s*([一-鿿A-Za-zμ/%°·()（）A-Z]{1,8})")
 
 
 def _json_write(path: Path, doc) -> None:
@@ -114,6 +122,77 @@ def slice_report(text: str) -> tuple[list[dict], list[str]]:
         del s["start"]
         del s["end"]
     return kept, dup
+
+
+def classify_table_lead(prev_line: str) -> str:
+    """表题行前一非空行形态：complete_sentence（句末收束）/ standalone_caption（表题行相邻）/
+    dangling（残句——bug-394 形态）。"""
+    s = prev_line.strip()
+    if CAPTION_LINE_RE.match(s) or s.startswith("|"):
+        return "standalone_caption"
+    if not s:
+        return "empty"
+    if s.endswith(("。", "：", "；", "！", "？", "」", "）")):
+        return "complete_sentence"
+    return "dangling"
+
+
+def build_forms_catalog(seg_samples) -> dict:
+    """三形态统计+例句池（spec §4.1）。seg_samples: [(rid, seg_text)]。
+
+    锚点=GFM 表块首行（语料 8584 表/31 报告实测；题注正则仅作 prev 归类用）。
+
+    幂等：产物无时间戳（对齐 calibrate.py 先例与模块 docstring 幂等声明），同输入必同字节。"""
+    from collections import Counter
+    lead_counter: Counter = Counter()
+    lead_examples: list[dict] = []
+    num_counter: Counter = Counter()
+    num_examples: list[dict] = []
+    for rid, seg in seg_samples:
+        lines = seg.splitlines()
+        for i, ln in enumerate(lines):
+            # 锚点=GFM 表块首行（每表恰测一次）：前一非空行即「表引导」候选
+            # （题注行作 prev 交给 classify 判 standalone_caption，粗体/裸两形态通吃）
+            if ln.startswith("|") and (i == 0 or not lines[i - 1].startswith("|")):
+                prev = next((lines[j].strip() for j in range(i - 1, -1, -1) if lines[j].strip()), "")
+                if prev:
+                    form = classify_table_lead(prev)
+                    lead_counter[form] += 1
+                    # 例句池按形态配额（各 20）：文档序前 40 填充会被主导形态灌满，
+                    # 池子必须同时给写手两种引导句的正样本
+                    if form in ("complete_sentence", "dangling") and lead_counter[form] <= 20:
+                        lead_examples.append({"report_id": rid, "form": form, "text": prev[:80]})
+        for m in NUM_UNIT_SENT_RE.finditer(seg):
+            num_counter["exact_with_unit"] += 1
+            if len(num_examples) < 40:
+                num_examples.append({"report_id": rid, "text": m.group(0)[:60]})
+    total_lead = sum(lead_counter.values()) or 1
+    total_num = sum(num_counter.values()) or 1
+    return {
+        "version": "1.0",
+        "source": f"corpus slices statistics ({len(seg_samples)} report(s))",
+        "forms": {
+            "table_lead": {
+                "desc": "表题行前一非空行形态（31 份实测：独立题注行为主形态，引导句 complete/dangling 各为正样本）",
+                "stats": {k: round(lead_counter.get(k, 0) / total_lead, 3)
+                          for k in ("complete_sentence", "colon_lead", "standalone_caption", "dangling")},
+                "templates": ["……{主题}如下表所列。", "……{主题}详见表 {ch}-{seq}。", "……{主题}："],
+                "examples": lead_examples,
+            },
+            "numeric_citation": {
+                "desc": "数值引用形态（exact_with_unit 为主形态；dangling 残句零容忍）",
+                "stats": {k: round(num_counter.get(k, 0) / total_num, 3) for k in ("exact_with_unit",)},
+                "templates": ["{量}为 {value} {unit}。", "……介于 {v1}～{v2} {unit} 之间。"],
+                "examples": num_examples,
+            },
+            "caliber_disambiguation": {
+                "desc": "同标签多值消歧写法（v1 从「按…计/按…口径」句式抽取；templates 固化推荐写法）",
+                "stats": {},
+                "templates": ["按{口径A}为 {v1}，按{口径B}为 {v2}。", "…（{口径}）…"],
+                "examples": [],
+            },
+        },
+    }
 
 
 def _run_calibrate(python: str, samples_dir: Path, output: Path) -> tuple[int, str]:
@@ -220,6 +299,7 @@ def main_with_args(argv: list[str]) -> int:
 
     index: dict = {}  # stage -> chN -> [节条目]
     groups: dict[tuple[str, str], list] = {}  # (stage, mineral) -> [(chapter, rid, seg)]
+    text_map: dict[str, str] = {}  # rid -> 全文（切片成功路径记录，forms_catalog 统计输入）
     total_slices = 0
 
     for e in reports:
@@ -241,6 +321,7 @@ def main_with_args(argv: list[str]) -> int:
         if not slices:
             print(f"[bank_compile] {rid} 零切片（source.md 无节号标题）——跳过", file=sys.stderr)
             continue
+        text_map[rid] = text
         if dup:
             # 2026-10-08 裁决：整份跳过会使 31/31 coal 报告不可编译（局部编号序列
             # 是体裁内在结构），改为 slice_report 内保留最长块；此处告警留痕，绝不静默
@@ -279,6 +360,12 @@ def main_with_args(argv: list[str]) -> int:
     if args.prune:
         pruned = _prune_stale_slices(refs, manifest_rids)
         print(f"PRUNED: {pruned} stale slice(s)")
+    # 6) forms_catalog：切片文本三形态统计（表引导句 + 数值引用），给写手正样本
+    catalog = build_forms_catalog([(e["report_id"], text_map[e["report_id"]]) for e in reports if e["report_id"] in text_map])
+    _json_write(refs / "paradigms" / "forms_catalog.json", catalog)
+    tl = catalog["forms"]["table_lead"]["stats"]
+    print(f"FORMS_CATALOG: {len(catalog['forms']['table_lead']['examples'])} lead example(s), "
+          f"table_lead={tl.get('complete_sentence', 0)}/{tl.get('dangling', 0)}(complete/dangling)")
     print(f"BANK_COMPILED: {len(reports)} report(s), {total_slices} slice(s), {len(groups)} group(s)")
 
     # 4) per (stage, mineral) 标定：组内切片临时命名 chN_<rid>.md（满足 calibrate FNAME_RE
