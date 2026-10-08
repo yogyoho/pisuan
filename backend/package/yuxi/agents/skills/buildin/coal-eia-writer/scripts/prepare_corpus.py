@@ -24,6 +24,7 @@ from pathlib import Path
 
 SEC_LINE_RE = re.compile(r"^(\d+(?:\.\d+)*)\s+(\S.*\S|\S)\s*$")
 TOC_TAIL_RE = re.compile(r"\s\t?\d{1,3}\s*$")
+SENT_PUNCT_RE = re.compile(r"[。；，]")  # 句读标点（顿号「、」除外——真标题可含，见 promote_headings）
 GFM_SEP = "|"
 
 
@@ -64,11 +65,15 @@ def strip_toc(text: str) -> str:
 
 
 def promote_headings(body: str) -> str:
-    """节号行加 markdown 标题前缀：单段号→##，两段→###，三段+→####（bank SEC_RE 认 ##~####）。"""
+    """节号行加 markdown 标题前缀：单段号→##，两段→###，三段+→####（bank SEC_RE 认 ##~####）。
+
+    保守启发式（正文编号列表段识别，bug-398 第三层）：题名 >30 字或含句读标点（。；，）
+    判为列表段不升级、保留原行；顿号不计——真标题如「13.4.9 对太中银铁路、高速公路等…」。
+    漏网的短清单项（如「3 断层保护煤柱」）Task 4 实跑统计后人工处置。"""
     out = []
     for ln in body.splitlines():
         m = SEC_LINE_RE.match(ln.strip())
-        if m and len(m.group(1)) <= 12:
+        if m and len(m.group(1)) <= 12 and len(m.group(2)) <= 30 and not SENT_PUNCT_RE.search(m.group(2)):
             depth = m.group(1).count(".")
             prefix = "##" if depth == 0 else ("###" if depth == 1 else "####")
             out.append(f"{prefix} {m.group(1)} {m.group(2)}")
