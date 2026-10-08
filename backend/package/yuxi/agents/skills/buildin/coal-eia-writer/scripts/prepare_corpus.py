@@ -67,9 +67,10 @@ def strip_toc(text: str) -> str:
 def promote_headings(body: str) -> str:
     """节号行加 markdown 标题前缀：单段号→##，两段→###，三段+→####（bank SEC_RE 认 ##~####）。
 
-    保守启发式（正文编号列表段识别，bug-398 第三层）：题名 >30 字或含句读标点（。；，）
-    判为列表段不升级、保留原行；顿号不计——真标题如「13.4.9 对太中银铁路、高速公路等…」。
-    漏网的短清单项（如「3 断层保护煤柱」）Task 4 实跑统计后人工处置。"""
+    保守启发式（正文编号列表段识别，bug-398 第三层）：题名 >30 字、节号 >12 字符
+    或含句读标点（。；，）判为列表段不升级、保留原行；顿号不计——真标题如
+    「13.4.9 对太中银铁路、高速公路等…」。漏网的短清单项（如「3 断层保护煤柱」）
+    Task 4 实跑统计后人工处置。"""
     out = []
     for ln in body.splitlines():
         m = SEC_LINE_RE.match(ln.strip())
@@ -151,8 +152,13 @@ def main_with_args(argv: list[str]) -> int:
     corpus, workdir = Path(args.corpus_dir), Path(args.workdir)
     workdir.mkdir(parents=True, exist_ok=True)
     census = {}
-    if args.census and Path(args.census).is_file():
-        census = {Path(e["file"]).stem: e for e in json.loads(Path(args.census).read_text(encoding="utf-8"))}
+    if args.census:
+        census_path = Path(args.census)
+        if census_path.is_file():
+            census = {Path(e["file"]).stem: e for e in json.loads(census_path.read_text(encoding="utf-8"))}
+        else:
+            # 路径打错不应静默丢 chars 元数据（与逐份警告惯例一致）
+            print(f"[prepare_corpus] census 文件不存在——manifest chars 退回实测值：{args.census}", file=sys.stderr)
     manifest, ok = [], 0
     for seq, docx in enumerate(sorted(corpus.glob("*.docx")), start=1):
         rid = make_rid(seq, docx.stem)

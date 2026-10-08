@@ -43,6 +43,14 @@ def test_strip_toc_two_run_kept():
     assert "正文段落。" in out
 
 
+def test_strip_toc_eof_run_boundary():
+    """EOF 收尾分支：目录 run 直到文件结尾——≥3 剔除、<3 冲刷保留（无尾随正文行的路径）。"""
+    tail3 = "1 总 论\t5\n2 项目概况\t28\n3 评价标准\t33"
+    assert "总 论" not in strip_toc(tail3)
+    out2 = strip_toc("1 总 论\t5\n2 项目概况\t28")
+    assert "总 论\t5" in out2 and "项目概况\t28" in out2
+
+
 def test_table_to_gfm_pad():
     """docx 表行（list[list[str]]）→ GFM：列数取 max 补空（bug-393 反向杜绝）。"""
     rows = [["要素", "数值"], ["声级", "60", "多余列"]]
