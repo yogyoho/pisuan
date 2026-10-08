@@ -25,6 +25,7 @@ from pathlib import Path
 SEC_LINE_RE = re.compile(r"^(\d+(?:\.\d+)*)\s+(\S.*\S|\S)\s*$")
 TOC_TAIL_RE = re.compile(r"\s\t?\d{1,3}\s*$")
 SENT_PUNCT_RE = re.compile(r"[。；，]")  # 句读标点（顿号「、」除外——真标题可含，见 promote_headings）
+BOOK_MARK_RE = re.compile(r"[《》]")
 GFM_SEP = "|"
 
 
@@ -64,22 +65,37 @@ def strip_toc(text: str) -> str:
     return "\n".join(out)
 
 
+def is_policy_conform_title(number: str, title: str) -> bool:
+    """书名号豁免：与《规划/法规》符合性分析节是真标题（Task 4 实跑 80 条/16 份，
+    如「3.2.1 与《宁夏…十四五规划…》的符合性分析」34-45 字超常规长度上限）。
+
+    双守卫防反向漏网：节号须含点（法规清单列表段是单号）、题名 ≤60 字。"""
+    return "." in number and len(title) <= 60 and BOOK_MARK_RE.search(title) is not None
+
+
 def promote_headings(body: str) -> str:
     """节号行加 markdown 标题前缀：单段号→##，两段→###，三段+→####（bank SEC_RE 认 ##~####）。
 
     保守启发式（正文编号列表段识别，bug-398 第三层）：题名 >30 字、节号 >12 字符
     或含句读标点（。；，）判为列表段不升级、保留原行；顿号不计——真标题如
-    「13.4.9 对太中银铁路、高速公路等…」。漏网的短清单项（如「3 断层保护煤柱」）
-    Task 4 实跑统计后人工处置。"""
+    「13.4.9 对太中银铁路、高速公路等…」。豁免：多级号书名号符合性分析节
+    （is_policy_conform_title）。漏网的短清单项（如「3 断层保护煤柱」）Task 4
+    实跑统计后人工处置。"""
     out = []
     for ln in body.splitlines():
         m = SEC_LINE_RE.match(ln.strip())
-        if m and len(m.group(1)) <= 12 and len(m.group(2)) <= 30 and not SENT_PUNCT_RE.search(m.group(2)):
-            depth = m.group(1).count(".")
-            prefix = "##" if depth == 0 else ("###" if depth == 1 else "####")
-            out.append(f"{prefix} {m.group(1)} {m.group(2)}")
-        else:
+        if not m:
             out.append(ln)
+            continue
+        num, title = m.group(1), m.group(2)
+        if len(num) > 12 or SENT_PUNCT_RE.search(title):
+            out.append(ln)  # 列表段：节号超长或含句读
+        elif len(title) <= 30 or is_policy_conform_title(num, title):
+            depth = num.count(".")
+            prefix = "##" if depth == 0 else ("###" if depth == 1 else "####")
+            out.append(f"{prefix} {num} {title}")
+        else:
+            out.append(ln)  # 超长无书名号：保守保留
     return "\n".join(out)
 
 
