@@ -123,7 +123,13 @@ def main_with_args(argv: list[str]) -> int:
     ap.add_argument("--stage", default=None, help="只查单个 stage（缺省全量 stages/*.json）")
     args = ap.parse_args(argv)
     stages_dir = Path(args.references) / "stages"
+    if not stages_dir.is_dir():
+        print(f"[schema_linter] stages 目录不存在：{stages_dir}", file=sys.stderr)
+        return 2
     paths = sorted(stages_dir.glob("*.json")) if not args.stage else [stages_dir / f"{args.stage}.json"]
+    if not paths:
+        print(f"[schema_linter] 无可扫 stage 文件：{stages_dir}", file=sys.stderr)
+        return 2
     summary = {}
     total = 0
     for p in paths:
