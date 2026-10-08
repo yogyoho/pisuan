@@ -116,6 +116,15 @@ def docx_to_md(path: Path) -> str:
     return ""  # 零节号标题 → 空串（main 侧按「零节号标题跳过」处理）
 
 
+def make_rid(seq: int, stem: str) -> str:
+    """report_id 生成：`{序号:03d}-{ASCII slug}`。
+
+    bank_compile RID_RE = [a-z0-9][a-z0-9-_]*（ASCII 守卫，fullmatch 失败整份跳过）——
+    slug 必须 ASCII 小写；纯中文名折叠后为空，`r` 保底；序号前缀天然唯一，截断安全。"""
+    ascii_slug = re.sub(r"[^a-z0-9\-_]+", "-", unicodedata.normalize("NFKC", stem).lower()).strip("-")
+    return f"{seq:03d}-{ascii_slug or 'r'}"[:60]
+
+
 def main_with_args(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="语料 docx → bank_compile 输入（source.md + manifest 草稿）")
     ap.add_argument("--corpus-dir", required=True)
@@ -128,9 +137,8 @@ def main_with_args(argv: list[str]) -> int:
     if args.census and Path(args.census).is_file():
         census = {Path(e["file"]).stem: e for e in json.loads(Path(args.census).read_text(encoding="utf-8"))}
     manifest, ok = [], 0
-    for docx in sorted(corpus.glob("*.docx")):
-        # slug 化：保留 CJK——41 份语料 10 份纯中文名，纯 ASCII 白名单会得空 rid（目录互相覆盖）
-        rid = re.sub(r"[^a-z0-9\-\_一-鿿]+", "-", unicodedata.normalize("NFKC", docx.stem).lower()).strip("-")[:60]
+    for seq, docx in enumerate(sorted(corpus.glob("*.docx")), start=1):
+        rid = make_rid(seq, docx.stem)
         # 逐份解析失败：警告+跳过（bank_compile 既有惯例）
         try:
             md = docx_to_md(docx)
