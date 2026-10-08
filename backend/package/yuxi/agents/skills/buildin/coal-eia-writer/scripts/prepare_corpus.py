@@ -8,9 +8,10 @@
   python -X utf8 prepare_corpus.py --corpus-dir <语料目录> --workdir <输出目录> [--census <census.json>]
 边界：
   - 节号标题：正文行「数字(.数字)* + 空白 + 题名」（census 实测 679 标题仅 81 个有 style 标记，正文行匹配为主）
-  - 目录页剔除：「节号+题+尾随页码」行连续 ≥3 判为目录区段整段剔除
+  - 目录页剔除：「节号+题+尾随页码」行连续 ≥3（行间空行不打断累计）判为目录区段整段剔除；
+    须在 promote_headings 之前执行（升标题后行首为 #，目录形态失效）
   - 表格：docx table → GFM，列数取 max 补空（杜绝裂表）
-  - 范围裁剪：首个节号标题之前的内容（封面/编制单位页/目录已剔）整体丢弃
+  - 范围裁剪：首个节号标题之前的内容（封面/编制单位页）整体丢弃（目录区段已先行剔除）
   - 解析失败：逐份 stderr 警告 + 跳过（bank_compile 既有惯例）
 """
 
@@ -35,19 +36,29 @@ def is_toc_line(line: str) -> bool:
 
 
 def strip_toc(text: str) -> str:
-    """连续 ≥3 行目录行 → 整段剔除（正文标题无页码不受影响）。"""
-    out, run = [], []
+    """目录区段剔除：≥3 行目录行（行间空行不打断累计）→ 整段剔除（含夹缝空行）。
+
+    正文标题无页码不受影响；正文空行是合法段落分隔，除紧邻被剔除区段外均保留。"""
+    out: list[str] = []
+    run: list[str] = []  # 目录区段缓冲（目录行 + 夹缝空行，裁决时同生共死）
+    toc_count = 0
     for ln in text.splitlines():
         if is_toc_line(ln):
             run.append(ln)
-            continue
-        if len(run) >= 3:
-            pass  # 丢弃目录区段
+            toc_count += 1
+        elif ln.strip():
+            if toc_count >= 3:
+                pass  # 丢弃目录区段（夹缝空行随段剔）
+            else:
+                out.extend(run)
+            run.clear()
+            toc_count = 0
+            out.append(ln)
+        elif toc_count:
+            run.append(ln)  # 区段进行中的空行 → 夹缝缓冲
         else:
-            out.extend(run)
-        run.clear()
-        out.append(ln)
-    if len(run) < 3:
+            out.append(ln)  # 区段外空行 → 合法段落分隔，保留
+    if toc_count < 3:
         out.extend(run)
     return "\n".join(out)
 
@@ -107,7 +118,8 @@ def docx_to_md(path: Path) -> str:
             gfm = table_to_gfm(rows)
             if gfm:
                 parts.append(gfm)
-    text = strip_toc(promote_headings("\n\n".join(parts)))
+    # 先剔目录后升标题：目录行行首为数字，升标题加 # 前缀后 is_toc_line 不再匹配（bug-398 A1）
+    text = promote_headings(strip_toc("\n\n".join(parts)))
     # 范围裁剪：首个节号标题行之前的内容（封面/编制单位页）丢弃
     lines = text.splitlines()
     for i, ln in enumerate(lines):

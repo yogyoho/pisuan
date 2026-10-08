@@ -23,6 +23,26 @@ def test_toc_line_and_strip():
     assert "6.5 声环境影响评价" in strip_toc(body)
 
 
+def test_strip_toc_blank_line_gap():
+    """目录行被空行间隔仍成段剔除（docx blocks 以空行 join 的真实形态，bug-398 A2）。"""
+    body = "1 总 论\t5\n\n2 项目概况\t28\n\n3 评价标准\t33\n\n6.5 声环境影响评价\n正文段落。\n"
+    out = strip_toc(body)
+    assert "总 论\t5" not in out
+    assert "项目概况\t28" not in out
+    assert "评价标准\t33" not in out
+    assert "6.5 声环境影响评价" in out  # 正文标题无页码不受影响
+    assert "正文段落。" in out
+
+
+def test_strip_toc_two_run_kept():
+    """恰 2 行目录行 run 不应剔除（≥3 阈值反向锁定，bug-398 Issue B）。"""
+    body = "1 总 论\t5\n2 项目概况\t28\n正文段落。\n"
+    out = strip_toc(body)
+    assert "总 论\t5" in out
+    assert "项目概况\t28" in out
+    assert "正文段落。" in out
+
+
 def test_table_to_gfm_pad():
     """docx 表行（list[list[str]]）→ GFM：列数取 max 补空（bug-393 反向杜绝）。"""
     rows = [["要素", "数值"], ["声级", "60", "多余列"]]
