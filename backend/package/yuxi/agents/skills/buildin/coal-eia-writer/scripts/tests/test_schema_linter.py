@@ -186,3 +186,12 @@ def test_lint_stage_missing_file_raises(tmp_path):
     """库层不吞读文件异常（Task 1 审查定下的分层）。"""
     with pytest.raises(FileNotFoundError):
         lint_stage(tmp_path / "no_such_stage.json")
+
+
+def test_cli_empty_scan_guard(tmp_path, capsys):
+    """空扫描守卫（Task 2 审查 I1）：references 路径无效 → exit 2——「没查」≠「干净」。"""
+    from schema_linter import main_with_args
+
+    rc = main_with_args(["--references", str(tmp_path / "nonexistent")])
+    assert rc == 2
+    assert capsys.readouterr().err
