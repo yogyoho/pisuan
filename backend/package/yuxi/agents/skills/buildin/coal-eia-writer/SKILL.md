@@ -129,7 +129,7 @@ progress.py run-stage freeze --state-dir T   # 冻结二连一次 bash：chapter
   references/depth_targets/<stage>.json（节级深度目标随契约注入；实际目标以门报错行内嵌数值为准）
   references/sample_entities/_index.json（范文实体禁入清单）
   references/paradigms/<paradigm_role>.md（行文范式——<paradigm_role> 由 references/paradigms/_roles.json 按节 id 查得，查不到=拒派报错，禁静默跳过；范文仅示范句法与信息组织，其中实体与数值一律替换为本项目实体与冻结值）
-  references/section_expectations/<stage>.json（写前对账：本节 expected_quantities 逐项与 data/ 现值核对，tier=required 缺项在节稿对应位置标 [待确认]（缺项：<字段>），禁臆造或四舍五入改写既有值）
+  references/section_expectations/<stage>.json（写前对账：本节 expected_quantities 逐项与 data/ 现值核对，tier=required 缺项在节稿对应位置标 [待确认]（缺项：<字段>），禁臆造或四舍五入改写既有值；条目带 range（语料 P5–P95）时，data/ 现值出界在对应位置标 [待复核：<字段> 偏离语料区间 P5–P95]——warn 级不阻断、禁据此改值，供人工复核）
 输出契约：直写 /home/gem/user-data/workspace/eia-report/state/sections/chNN_SNN.md（绝对沙箱路径），
   首行 ### <节号> <节标题>（与 stage 节题语义相符），一节一稿，新增小节用 ####，禁写 #/## 章级标题；
   缺数标 [待确认]/[数据未提供]，软件成果值走 {{TABLE:族}} 转录禁硬算；
@@ -278,7 +278,7 @@ run 级预算硬顶（按 run 计）：recursion_limit 1000 步、LoopDetection 
 - `references/standards_index.json` — 标准注册表（tier 五档分级 + limit_tables 限值表 + 门 1 标准号体检 gate1_code_checks）。
 - `references/consistency_contracts.json` — 合约注册表（XS1–XS12 + EO1–EO3 + caliber_labels 口径标签 + 条件激活语义）。
 - `references/data_expectations.json` — 按章数据预告（开题三件套③，per_chapter 13 章）。
-- `references/section_expectations/<stage>.json` — 节级应引数值清单（31 份语料统计的 per 节 expected_quantities，corpus_freq 报告覆盖率定 tier；写手开节前对账，unmapped 池为 label 扩充素材）。
+- `references/section_expectations/<stage>.json` — 节级应引数值清单（31 份语料统计的 per 节 expected_quantities，corpus_freq 报告覆盖率定 tier；写手开节前对账，unmapped 池为 label 扩充素材。v1.1 条目可带 range={p5,p50,p95,n_values,n_reports}，仅 dB(A)/mg/L/μg/m3/% 强度类且 distinct-rid≥5 才发布——extensive 量随产能走不做原始分布）。
 - `references/depth_targets/<stage>.json` — 深度基线（章地板 floor_chars；一期绝对地板，二期 calibrate 样例校准）。
 - `references/paradigms/forms_catalog.json` — 行文形态正样本库（表引导句三形态 + 数值引用统计与 templates，31 份语料统计；写手行文形态以此为准，例句只学句法）。
 - `references/sample_entities/` — per-sample 实体注册表（_index.json + 25 样例；实体泄漏检测清单，替代旧单文件 md）。

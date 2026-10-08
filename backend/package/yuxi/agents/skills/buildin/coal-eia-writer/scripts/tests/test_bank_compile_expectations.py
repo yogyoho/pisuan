@@ -21,10 +21,14 @@ def test_build_section_expectations():
     """两报告同节各提「源强为 95 dB(A)」→ 覆盖率 1.0 → required；S 号零填充两位（6.5→S05）；
     产物无 generated 键（幂等裁决）。"""
     segs = [
-        {"rid": "r1", "chapter": "6", "sec": "6.5", "title": "声环境影响评价",
-         "text": "源强为 95 dB(A)。运输噪声源强为 75 dB(A)。"},
-        {"rid": "r2", "chapter": "6", "sec": "6.5", "title": "声环境影响评价",
-         "text": "主要声源源强为 92 dB(A)。"},
+        {
+            "rid": "r1",
+            "chapter": "6",
+            "sec": "6.5",
+            "title": "声环境影响评价",
+            "text": "源强为 95 dB(A)。运输噪声源强为 75 dB(A)。",
+        },
+        {"rid": "r2", "chapter": "6", "sec": "6.5", "title": "声环境影响评价", "text": "主要声源源强为 92 dB(A)。"},
     ]
     label_map = {"源强": "noise.source_level"}
     doc = build_section_expectations(segs, label_map, stage="planning_eia")
@@ -40,10 +44,14 @@ def test_corpus_freq_is_report_coverage():
     """corpus_freq=报告覆盖率（spec §4.2）：2 报告仅 1 份提及 → 0.5 → optional；
     单报告多次提及不抬高频率（distinct-rid 计数，非出现次数）。"""
     segs = [
-        {"rid": "r1", "chapter": "6", "sec": "6.5", "title": "声环境",
-         "text": "源强为 95 dB(A)。另一源强为 70 dB(A)。"},
-        {"rid": "r2", "chapter": "6", "sec": "6.5", "title": "声环境",
-         "text": "本节无匹配量词。"},
+        {
+            "rid": "r1",
+            "chapter": "6",
+            "sec": "6.5",
+            "title": "声环境",
+            "text": "源强为 95 dB(A)。另一源强为 70 dB(A)。",
+        },
+        {"rid": "r2", "chapter": "6", "sec": "6.5", "title": "声环境", "text": "本节无匹配量词。"},
     ]
     doc = build_section_expectations(segs, {"源强": "noise.source_level"}, stage="planning_eia")
     q = doc["sections"]["ch6_S05"]["expected_quantities"][0]
@@ -60,8 +68,10 @@ def test_unmapped_pool():
 def test_extract_sec_texts_subsection_folds_into_parent():
     """节文本切分：两段号 sec 的 span 到下一个两段号为止，三段号内容折叠进父节；
     单段号（章标题行）跳过。"""
-    seg = ("## 6 声环境\n章引言\n### 6.5 声环境影响评价\n源强为 95 dB(A)。\n"
-           "#### 6.5.1 点源\n子节正文。\n### 6.6 固废\n六六正文。\n")
+    seg = (
+        "## 6 声环境\n章引言\n### 6.5 声环境影响评价\n源强为 95 dB(A)。\n"
+        "#### 6.5.1 点源\n子节正文。\n### 6.6 固废\n六六正文。\n"
+    )
     texts = extract_sec_texts(seg)
     assert set(texts) == {"6.5", "6.6"}
     assert "点源" in texts["6.5"] and "源强为 95" in texts["6.5"]
@@ -77,3 +87,53 @@ def test_sections_sorted_deterministic():
     ]
     doc = build_section_expectations(segs, {}, stage="planning_eia")
     assert list(doc["sections"]) == ["ch6_S02", "ch6_S10", "ch13_S01"]
+
+
+# ── 数值区间护栏（P5-P95，v1.1） ────────────────────────────────────────────
+
+
+def _mk_db_segs(n: int) -> list[dict]:
+    return [
+        {"rid": f"r{i}", "chapter": "6", "sec": "6.5", "title": "声环境", "text": f"源强为 {90 + i} dB(A)。"}
+        for i in range(n)
+    ]
+
+
+def test_range_intensive_unit_published():
+    """5 报告同节同口径 dB(A) → range 发布；线性插值分位手算校验（90..94）。"""
+    doc = build_section_expectations(_mk_db_segs(5), {"源强": "noise.source_level"}, stage="planning_eia")
+    q = doc["sections"]["ch6_S05"]["expected_quantities"][0]
+    assert q["range"]["n_values"] == 5 and q["range"]["n_reports"] == 5
+    assert q["range"]["p50"] == 92.0
+    assert q["range"]["p5"] == 90.2  # pos=4*0.05=0.2 → 90+(91-90)*0.2
+    assert q["range"]["p95"] == 93.8  # pos=4*0.95=3.8 → 93+(94-93)*0.8
+
+
+def test_range_extensive_unit_skipped():
+    """extensive 量（万t，随产能走）不发布原始区间——scale 归一前置未熟。"""
+    segs = [
+        {"rid": f"r{i}", "chapter": "3", "sec": "3.2", "title": "固废", "text": "矸石产生量为 12 万t。"}
+        for i in range(5)
+    ]
+    doc = build_section_expectations(segs, {"矸石产生量": "solidwaste.gangue"}, stage="planning_eia")
+    q = doc["sections"]["ch3_S02"]["expected_quantities"][0]
+    assert "range" not in q
+
+
+def test_range_min_reports_gate():
+    """distinct-rid < 5 → 不发布（小样本 P5/P95≈min/max 无意义）。"""
+    doc = build_section_expectations(_mk_db_segs(4), {"源强": "noise.source_level"}, stage="planning_eia")
+    q = doc["sections"]["ch6_S05"]["expected_quantities"][0]
+    assert "range" not in q
+
+
+def test_range_first_seen_unit_only():
+    """同口径跨单位：range 只统计首见单位（%）的值，后见单位（mg/L）不混入同一分布。"""
+    segs = [
+        {"rid": f"r{i}", "chapter": "6", "sec": "6.5", "title": "声环境", "text": f"除尘效率为 {95 + i} %。"}
+        for i in range(5)
+    ]
+    segs.append({"rid": "rZ", "chapter": "6", "sec": "6.5", "title": "声环境", "text": "除尘效率为 30 mg/L。"})
+    doc = build_section_expectations(segs, {"除尘效率": "air.removal"}, stage="planning_eia")
+    q = doc["sections"]["ch6_S05"]["expected_quantities"][0]
+    assert q["unit"] == "%" and q["range"]["n_values"] == 5 and q["range"]["n_reports"] == 6
