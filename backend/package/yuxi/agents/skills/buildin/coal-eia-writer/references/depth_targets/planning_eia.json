@@ -1,27 +1,118 @@
 {
-  "stage": "planning_eia",
-  "generated": "2026-09-06",
-  "confidence": "absolute_floor_phase1",
-  "source": "横城矿区总体规划（修编）环评报告书（报批版 2021.1，docx 直读）逐章字符实测：章界=13 章标题段，正文段落+表格内文本全量归属（合计 309,581 字符）。floor_chars=实测×0.6 保守折减（对齐深度门 effective_chars 剔除标题/表格行的口径——生成稿表格行不计 eff）。一期绝对地板，二期 calibrate 样例校准（designs/coal-eia-report-v2.md 一期/二期范围 3）。",
-  "measured_note": "ch6 实测最高（78,920）=数字密度最高章实证（2026-09-06-coal-eia-v2-ch6-walkthrough.md）；ch4 次高（54,856）=回顾性评价 8 节+逐目标调查膨胀；ch11 最低（2,549）=对标+定性章。节级目标（sections 键）随派发契约注入，本文件只承载章级地板。",
-  "measured_source_chars": {
-    "ch1": 16325, "ch2": 42571, "ch3": 45189, "ch4": 54856, "ch5": 6382,
-    "ch6": 78920, "ch7": 11075, "ch8": 9653, "ch9": 13353, "ch10": 6137,
-    "ch11": 2549, "ch12": 6147, "ch13": 15024
-  },
   "chapters": {
-    "ch1": {"floor_chars": 9700},
-    "ch2": {"floor_chars": 25500},
-    "ch3": {"floor_chars": 27100},
-    "ch4": {"floor_chars": 32900},
-    "ch5": {"floor_chars": 3800},
-    "ch6": {"floor_chars": 47300},
-    "ch7": {"floor_chars": 6600},
-    "ch8": {"floor_chars": 5700},
-    "ch9": {"floor_chars": 8000},
-    "ch10": {"floor_chars": 3600},
-    "ch11": {"floor_chars": 1500},
-    "ch12": {"floor_chars": 3600},
-    "ch13": {"floor_chars": 9000}
-  }
+    "ch0": {
+      "floor_chars": 1585
+    },
+    "ch0101": {
+      "floor_chars": 5577
+    },
+    "ch1": {
+      "floor_chars": 7052
+    },
+    "ch10": {
+      "floor_chars": 2468
+    },
+    "ch11": {
+      "floor_chars": 1134
+    },
+    "ch12": {
+      "floor_chars": 2148
+    },
+    "ch1200": {
+      "floor_chars": 6813
+    },
+    "ch13": {
+      "floor_chars": 10255
+    },
+    "ch14": {
+      "floor_chars": 8976
+    },
+    "ch140": {
+      "floor_chars": 7065
+    },
+    "ch1600": {
+      "floor_chars": 2784
+    },
+    "ch16531": {
+      "floor_chars": 3204
+    },
+    "ch2": {
+      "floor_chars": 14599
+    },
+    "ch20": {
+      "floor_chars": 631
+    },
+    "ch200": {
+      "floor_chars": 3057
+    },
+    "ch201": {
+      "floor_chars": 316
+    },
+    "ch2015": {
+      "floor_chars": 696
+    },
+    "ch2017": {
+      "floor_chars": 115
+    },
+    "ch2018": {
+      "floor_chars": 2374
+    },
+    "ch2019": {
+      "floor_chars": 218
+    },
+    "ch2020": {
+      "floor_chars": 16285
+    },
+    "ch2500": {
+      "floor_chars": 2992
+    },
+    "ch3": {
+      "floor_chars": 11044
+    },
+    "ch4": {
+      "floor_chars": 14008
+    },
+    "ch40": {
+      "floor_chars": 3043
+    },
+    "ch41": {
+      "floor_chars": 7465
+    },
+    "ch42": {
+      "floor_chars": 68
+    },
+    "ch43": {
+      "floor_chars": 256
+    },
+    "ch45": {
+      "floor_chars": 62
+    },
+    "ch5": {
+      "floor_chars": 3362
+    },
+    "ch565": {
+      "floor_chars": 3533
+    },
+    "ch6": {
+      "floor_chars": 34806
+    },
+    "ch7": {
+      "floor_chars": 4315
+    },
+    "ch8": {
+      "floor_chars": 5992
+    },
+    "ch8760": {
+      "floor_chars": 2434
+    },
+    "ch9": {
+      "floor_chars": 9089
+    },
+    "ch96": {
+      "floor_chars": 1757
+    }
+  },
+  "confidence": "calibrated",
+  "source": "bank_compile aggregate: coal.json",
+  "stage": "planning_eia"
 }
