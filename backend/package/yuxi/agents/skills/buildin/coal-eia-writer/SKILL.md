@@ -283,5 +283,7 @@ run 级预算硬顶（按 run 计）：recursion_limit 1000 步、LoopDetection 
 - `references/paradigms/forms_catalog.json` — 行文形态正样本库（表引导句三形态 + 数值引用统计与 templates，31 份语料统计；写手行文形态以此为准，例句只学句法）。
 - `references/sample_entities/` — per-sample 实体注册表（_index.json + 25 样例；实体泄漏检测清单，替代旧单文件 md）。
 - `references/formulas.json` — 计算参数/舍入策略注册表（计算体在 formula_runner Decimal 函数内；trace 的 --formulas 入参）。
+- `references/samples_bank/corpus_meta.json` — 语料第1层元数据（31 报告的 stage/province/year_hint/standards_cited/scale；province 由 corpus_meta.py 整文频次判定，year/scale 人工注记在 corpus_meta_annotations.json；硬过滤与 recency 过滤的数据基座，消费逻辑属二期）。
+- `references/samples_bank/attachment_checklist.json` — 分 stage 附件必备/常见清单（31 份语料频次统计；**统计必备≠法规依据**，法规必备性以 standards_index/条款库为准；post/tracking base<5 仅列 observed）。
 
 v1 旧参考（`terminology.md`/`content_guidelines.md`/`compliance_checklist.md`/`sample_entities.md`/`calc_params_guide.md`/`chapter_examples/`）暂留待二期 samples_bank 替代，**不再作为管线输入**；chapter_examples/ 仅可作叙述范式参考（实体/数值禁入正文）。
