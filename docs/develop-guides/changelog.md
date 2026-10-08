@@ -136,6 +136,12 @@
 - feat(w4): 行政区辅助词表 3+6（ADMIN_REGION_VOCAB，横城 3/伊宁北区 6，文档驱动提取）——任务级 L1 二级查找，矿区名主命中优先，二级命中 region_label 反查主词表展示名；段落级 extract_region_signal 零改动（classify region_signals 行为不变）；backfill 幂等复跑 0/7
 - feat(w4): 知识工厂第三 tab「归属管理」——任务归属子页（scope chips/关键词/region 下钻过滤/逐行改判弹窗：label 必填+slug 校验+scope 三选+级联警示，toast 计数=级联实况）、区域事实子页（三重筛选+admin 勾选批量退役，retired 置灰，非 admin 纯浏览）、模板聚合看板（统计卡×3/明细表/T1 横排 region 卡下钻，任务/事实计数跨子页带过滤跳转）。DomainFactoryView 纯增量挂载
 
+DomainFactoryView 纯增量挂载
+
+### pisuan 定制增量（2026-10-08）
+
+- feat(skill): coal-eia-writer 语料驱动硬化一批（41 份真实环评 docx → 技能衍生物全链，`docs/superpowers/specs/2026-10-08-coal-eia-writer-hardening-design.md`）：①`schema_linter.py` 新增 L1/L2 静态检查与 L3 报告口径扫描（CLI 全量，N5 门前置）；②`prepare_corpus.py` docx→md 转换器（节号标题识别/目录区段剔除 ≥3 行且空行不断段/表格 GFM 列取 max 补空/标题层级提升三守卫——节号 ≤12 字符+题名 ≤30 字+句读标点禁令，书名号符合性分析节豁免：多级号+《》+≤60 字，实跑 80 条误杀→1）；③41 份实跑 37 转换、31 份 manifest 定稿（4 份具名跳过：2 损坏/1 扫描工具私有格式/1 零节号标题）；④bank_compile 31/31 编译 477 片+SL3 指纹池 5 stage 入库（切片随 git 入库，glob 硬依赖不进 Milvus）；⑤重复章号消解反转整份跳过语义（coal 语料局部编号序列——附录计算步骤/保护煤柱清单——是环评体裁内在结构，31/31 触发；保留 seg 最长块，弃块正文并入前块，调用方逐报告告警绝不静默）；⑥depth_targets stage 级聚合（per 矿种 calibrate → 组间 median×coefficient，手维 13 章→标定 37 章，门形状不变）；⑦`forms_catalog.json` 表引导句三形态+数值引用统计与例句池（GFM 表块首行锚定每表恰测一次；题注正则补章内号「表N.M-M」——语料主流 96.6%，首版仅认「表N-M」致 96% 题注误归 dangling，e2e 实测纠正；例句池按形态配额各 20 防主导形态灌满；实测分布 standalone 0.925/complete 0.055/dangling 0.019）；⑧`section_expectations/<stage>.json` 节级数值-口径清单（两段号节真文本切分，「量词+为/达/是+数值+单位」白名单抽取含 NFKC 归一形 km2/m2——prepare_corpus 全文 NFKC 后语料实为 km2，后缀滚动归并 forms label，corpus_freq=报告覆盖率 distinct-rid 定 tier，unmapped 池 cap 200 不静默丢弃，per stage 文件——sections 键跨 stage 碰撞不能单文件合并；节号排序 int 元组防 6.10<6.2 错序）；⑨SKILL.md 接入消费契约（写前对账：expected_quantities 逐项对 data/ 现值，tier=required 缺项标 [待确认]（缺项：<字段>）禁臆造；行文形态以 forms_catalog templates 为主形态，dangling 残句零容忍；顺带去重「正文人格」段意外重复）；⑩门逻辑系统性测试 6 类正反用例 + 幂等裁决落地（bank_compile 全产物无墙钟时间戳，对齐 calibrate.py 先例，溯源走 git）。幂等验证：双跑 sha256 一致、tracked 衍生物零字节漂移。运行栈验收：SL3「样例库缺失」warn 消除（477 片指纹池就位，抽检真实运行）、XS2 数值告警 10→10 无新增误报、fail=0 保持；ch6 单章门一次过（eff 118604 ≥ 标定地板 34806）；已知噪声记录：SL3 抽检新告警为分词误报（「一组/人群/无组」非专名）、语料节号与 stage 节号有偏移（写前对账按节题语义对照不盲信 S 键）、028-r 垃圾章号切片为各衍生物一致噪声。回归测试 68 例（prepare_corpus 10/bank_compile 13/build_output+consistency 10/门系统 6/linter+ingest 等既有回归）。
+
 ## v0.7.2 (2026-09-02)
 
 ::: warning Beta 升级说明
