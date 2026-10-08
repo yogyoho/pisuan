@@ -38,3 +38,21 @@ def test_promote_headings():
     assert "### 6.5 声环境影响评价" in out  # 两段号 → ###
     assert "#### 6.5.1 点源预测" in out  # 三段号 → ####
     assert not any(ln.startswith("## 6.5 ") for ln in out.splitlines())  # 行首锚定（"## " 为 "### " 子串不可用 in）
+
+
+def test_make_rid_ascii_slug_contract():
+    """rid 契约（bug-398）：ASCII slug 兼容 bank_compile RID_RE；序号保唯一。"""
+    import re
+
+    from prepare_corpus import make_rid
+
+    RID_CONTRACT = re.compile(r"[a-z0-9][a-z0-9\-_]*")  # bank_compile.py:53 原样
+    # 纯中文名 → 非空合法 slug（保底 r）
+    r1 = make_rid(3, "九龙川矿井及选煤厂环评")
+    assert RID_CONTRACT.fullmatch(r1) and r1.startswith("003-")
+    # 混合名 → ASCII 折叠保留
+    r2 = make_rid(1, "(WPS)宁夏通达矿井环评-排版")
+    assert RID_CONTRACT.fullmatch(r2) and "wps" in r2
+    # 不同序号永不冲突；同函数确定性
+    assert make_rid(2, "九龙川矿井及选煤厂环评") != r1
+    assert make_rid(3, "九龙川矿井及选煤厂环评") == r1
