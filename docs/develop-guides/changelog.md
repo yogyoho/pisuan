@@ -146,6 +146,10 @@ DomainFactoryView 纯增量挂载
 
 - feat(skill): coal-eia-writer 数值区间护栏机制（section_expectations v1.1，`docs/vibe/2026-10-08-value-range-guardrails.md`）：build_section_expectations 保留此前被聚合丢弃的数值（QUANTITY_RE group(2)），条目按双门槛发布 range={p5,p50,p95,n_values,n_reports}（线性插值分位）——①单位白名单限强度/浓度类 {dB(A),mg/L,μg/m3,μg/m³,%}，extensive 量随产能走而 scale 归一前置未熟（31 份中已知 4 份）不做原始分布；②distinct-rid≥5（小样本 P5/P95≈min/max 无意义）。消费契约 warn 级：写前对账 data/ 现值出界标 [待复核：<字段> 偏离语料区间 P5–P95]，不阻断、禁据此改值（管线脚本不动约束下不做门级执法）。**实测零发布如实入库**：全语料强度类 644 组中 580 组仅 1 份报告提及，n≥5 的 3 组中 2 组为量词截断垃圾（「所占比例分别」），真口径仅「抑尘效率」（n=8）——31 份语料在「节×强度类口径」粒度覆盖不足是硬天花板；激活路径二选一待裁决（B. stage 级 curated 词表跨节聚合 / C. 等部分二 LLM 槽位抽取自然进 mapped 域），机制已测（4 例：发布+插值手算/extensive 屏蔽/门槛/跨单位不混布）、幂等（5 个 stage json 重生成仅 version 1.0→1.1 差异）、随 ruff format 顺带归位 3 处基线 E501。回归 80 例。
 
+### pisuan 定制增量（2026-10-09）
+
+- feat(domain-factory): 环评域数据工厂统计总览页（数据加工与管理一期首件，设计稿 `docs/design/eia-data-factory.md`）。后端新增 `GET /api/domain-factory/eia/stats`（`yuxi/services/eia_data_service.py`）：只读聚合 coal-eia-writer 技能语料文件、无 DB 依赖，源文件 mtime 指纹缓存（首算约 1s、命中 20ms）；词表候选口径 = QUANTITY_RE 自 bank_compile 动态加载（零复制漂移）+ 比率/浓度型单位白名单 + n≥2 报告门槛 + 强清洗尾剥（修复 STOP_TAIL 含双字「分别」致 `s[-1] in` 永不匹配的隐性 bug）；实证 A 类 30 项与语料普查逐 stage 一致、range_ready 6 项与人工裁决一致、候选 89 项 = 普查 96 去整词垃圾；质量体检含标准待核实 41 / unmapped 池 995（planning 200 cap 如实提示）/ 空标题 65 / 疑似乱码 8（启发式已标注）/ 附件不足 / 元数据标注覆盖 18/31。前端 `/domain-factory/eia-data` 新页（环评域磁贴进入）：指标带 6 位 + 语料规模分布 + 省份分布 + 数据分层构成（五层价值模型 21 数据集块，UI 显示名对照 eia-skill2rag 概念、预留位虚框）+ 词表候选三分类堆叠 + 事实槽位档位堆叠 + 质量体检面板；Data-Dense 立场、base.css 变量、tabular-nums、echarts 单色系复用 dashboardCharts 注册入口。单测 `backend/test/unit/test_eia_data_service.py`（聚合结构 + 候选清洗/三分类规则，宿主无技能目录自动跳过）。
+
 ## v0.7.2 (2026-09-02)
 
 ::: warning Beta 升级说明
