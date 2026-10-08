@@ -84,6 +84,23 @@ def test_promote_headings_skip_list_like():
     assert "### 6.5 声环境影响评价" in out
 
 
+def test_promote_headings_booktitle_conform():
+    """书名号豁免（Task 4 实跑 80 条/16 份）：多级号+《》+无句读 ≤60 字真标题升级；
+    单号法规清单段、含句读、超 60 字仍保留原行。"""
+    body = (
+        "3.2.1 与《宁夏回族自治区国民经济和社会发展第十四个五年规划和2035年远景目标纲要》的符合性分析\n"  # 多级号含《 → 升级
+        "12 《中华人民共和国环境保护法》（2015年1月1日施行）中华人民共和国主席令第二十三号\n"  # 单号法规清单段 → 不升级
+        "3.3.1 项目与《某矿区规划》逐项对比，结论如下。\n"  # 含句读 → 不升级
+        "3.4.1 与《" + "某规划实施细则补充说明" * 5 + "》的符合性分析\n"  # >60 字 → 不升级
+    )
+    out = promote_headings(body)
+    lines = out.splitlines()
+    assert lines[0].startswith("#### 3.2.1 与《宁夏回族自治区国民经济")
+    assert lines[1] == "12 《中华人民共和国环境保护法》（2015年1月1日施行）中华人民共和国主席令第二十三号"
+    assert lines[2] == "3.3.1 项目与《某矿区规划》逐项对比，结论如下。"
+    assert lines[3].startswith("3.4.1 与《")
+
+
 def test_make_rid_ascii_slug_contract():
     """rid 契约（bug-398）：ASCII slug 兼容 bank_compile RID_RE；序号保唯一。"""
     import re
