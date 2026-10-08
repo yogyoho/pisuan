@@ -1,0 +1,77 @@
+{
+  "absolute_floor": 0.4,
+  "coefficient": 0.6,
+  "missing_table_weight": 8,
+  "per_chapter": {
+    "ch1": {
+      "median_eff": 10578,
+      "median_paragraphs": 197,
+      "median_table_rows": 36
+    },
+    "ch10": {
+      "median_eff": 1473,
+      "median_paragraphs": 16,
+      "median_table_rows": 0
+    },
+    "ch11": {
+      "median_eff": 10245,
+      "median_paragraphs": 90,
+      "median_table_rows": 0
+    },
+    "ch2": {
+      "median_eff": 7963,
+      "median_paragraphs": 91,
+      "median_table_rows": 38
+    },
+    "ch3": {
+      "median_eff": 22851,
+      "median_paragraphs": 299,
+      "median_table_rows": 507
+    },
+    "ch4": {
+      "median_eff": 36552,
+      "median_paragraphs": 612,
+      "median_table_rows": 2447
+    },
+    "ch5": {
+      "median_eff": 19935,
+      "median_paragraphs": 271,
+      "median_table_rows": 295
+    },
+    "ch6": {
+      "median_eff": 70343,
+      "median_paragraphs": 863,
+      "median_table_rows": 844
+    },
+    "ch7": {
+      "median_eff": 19665,
+      "median_paragraphs": 222,
+      "median_table_rows": 36
+    },
+    "ch8": {
+      "median_eff": 1560,
+      "median_paragraphs": 29,
+      "median_table_rows": 56
+    },
+    "ch9": {
+      "median_eff": 2087,
+      "median_paragraphs": 30,
+      "median_table_rows": 29
+    }
+  },
+  "per_signal_penalty": 0.05,
+  "samples": [
+    "ch10_029-r.md",
+    "ch11_029-r.md",
+    "ch1_029-r.md",
+    "ch2_029-r.md",
+    "ch3_029-r.md",
+    "ch4_029-r.md",
+    "ch5_029-r.md",
+    "ch6_029-r.md",
+    "ch7_029-r.md",
+    "ch8_029-r.md",
+    "ch9_029-r.md"
+  ],
+  "scale_floor": 0.25
+}
