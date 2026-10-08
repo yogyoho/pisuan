@@ -129,18 +129,16 @@ progress.py run-stage freeze --state-dir T   # 冻结二连一次 bash：chapter
   references/depth_targets/<stage>.json（节级深度目标随契约注入；实际目标以门报错行内嵌数值为准）
   references/sample_entities/_index.json（范文实体禁入清单）
   references/paradigms/<paradigm_role>.md（行文范式——<paradigm_role> 由 references/paradigms/_roles.json 按节 id 查得，查不到=拒派报错，禁静默跳过；范文仅示范句法与信息组织，其中实体与数值一律替换为本项目实体与冻结值）
+  references/section_expectations/<stage>.json（写前对账：本节 expected_quantities 逐项与 data/ 现值核对，tier=required 缺项在节稿对应位置标 [待确认]（缺项：<字段>），禁臆造或四舍五入改写既有值）
 输出契约：直写 /home/gem/user-data/workspace/eia-report/state/sections/chNN_SNN.md（绝对沙箱路径），
   首行 ### <节号> <节标题>（与 stage 节题语义相符），一节一稿，新增小节用 ####，禁写 #/## 章级标题；
   缺数标 [待确认]/[数据未提供]，软件成果值走 {{TABLE:族}} 转录禁硬算；
   表格引用纪律（bug-394，违反=节门 FAIL）：{{TABLE:族}} 标记独立成行、一行一个，置于完整引用句之后
   （如「主要参数如下表所列。」），禁在句中嵌标记（「…输入条件以{{TABLE:…}}」会切断行文）；
   禁自编表号与表题行（「表 6-2 xx」）——表号与表题由组装统一注入，写手只写引用句与标记。
-正文人格（bug-367，违反=残留门 FAIL）：报告以**编制单位口吻向审批机关陈述**——节首段直接进入对象+法定/技术依据+
-  范围界定，不自我介绍本节的写法。以下三类内容是给你的规则与导航，**不得出现在正文**：
-  ① 节设计说明（「上游依据/下游用途/任务性质/组织顺序/分工边界/衔接义务/本节回答的是」——契约字段只供你定位素材）；
-  ② 数据纪律复述（「不作任何改写/补猜/逐字呈现/唯一口径/行文不再」——数据出处写一句「本节资料来源为…」即可）；
-  ③ 管线内部术语（直渲/登记值/登记表单/登记口径/冻结槽位/表单直出——正文表述为「由下表给出」「以…为准」）；
-  ④ 英文裸键与系统词（字段键/表族名/standards_index/user_docs/analog_mine 等契约素材标记——正文一律用中文列名或「由下表给出」，如「国家级公益林面积由下表给出」，禁出现 public_forest_area 式裸键）。
+  行文形态（语料正样本）：数值引用句用「{量}为 {value} {unit}。」句式、表格引导句用完整句收束
+  （「……如下表所列。」）——主形态以 references/paradigms/forms_catalog.json 的 templates 为准；
+  dangling 残句（bug-394 同款句中嵌表前奏）零容忍。
 正文人格（bug-367，违反=残留门 FAIL）：报告以**编制单位口吻向审批机关陈述**——节首段直接进入对象+法定/技术依据+
   范围界定，不自我介绍本节的写法。以下三类内容是给你的规则与导航，**不得出现在正文**：
   ① 节设计说明（「上游依据/下游用途/任务性质/组织顺序/分工边界/衔接义务/本节回答的是」——契约字段只供你定位素材）；
@@ -280,7 +278,9 @@ run 级预算硬顶（按 run 计）：recursion_limit 1000 步、LoopDetection 
 - `references/standards_index.json` — 标准注册表（tier 五档分级 + limit_tables 限值表 + 门 1 标准号体检 gate1_code_checks）。
 - `references/consistency_contracts.json` — 合约注册表（XS1–XS12 + EO1–EO3 + caliber_labels 口径标签 + 条件激活语义）。
 - `references/data_expectations.json` — 按章数据预告（开题三件套③，per_chapter 13 章）。
+- `references/section_expectations/<stage>.json` — 节级应引数值清单（31 份语料统计的 per 节 expected_quantities，corpus_freq 报告覆盖率定 tier；写手开节前对账，unmapped 池为 label 扩充素材）。
 - `references/depth_targets/<stage>.json` — 深度基线（章地板 floor_chars；一期绝对地板，二期 calibrate 样例校准）。
+- `references/paradigms/forms_catalog.json` — 行文形态正样本库（表引导句三形态 + 数值引用统计与 templates，31 份语料统计；写手行文形态以此为准，例句只学句法）。
 - `references/sample_entities/` — per-sample 实体注册表（_index.json + 25 样例；实体泄漏检测清单，替代旧单文件 md）。
 - `references/formulas.json` — 计算参数/舍入策略注册表（计算体在 formula_runner Decimal 函数内；trace 的 --formulas 入参）。
 
