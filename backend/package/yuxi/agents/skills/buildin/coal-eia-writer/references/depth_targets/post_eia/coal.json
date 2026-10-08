@@ -1,0 +1,129 @@
+{
+  "absolute_floor": 0.4,
+  "coefficient": 0.6,
+  "missing_table_weight": 8,
+  "per_chapter": {
+    "ch1": {
+      "median_eff": 9430,
+      "median_paragraphs": 191,
+      "median_table_rows": 235
+    },
+    "ch10": {
+      "median_eff": 3990,
+      "median_paragraphs": 72,
+      "median_table_rows": 142
+    },
+    "ch11": {
+      "median_eff": 4664,
+      "median_paragraphs": 101,
+      "median_table_rows": 192
+    },
+    "ch12": {
+      "median_eff": 4010,
+      "median_paragraphs": 81,
+      "median_table_rows": 22
+    },
+    "ch13": {
+      "median_eff": 5102,
+      "median_paragraphs": 96,
+      "median_table_rows": 39
+    },
+    "ch14": {
+      "median_eff": 791,
+      "median_paragraphs": 13,
+      "median_table_rows": 33
+    },
+    "ch15": {
+      "median_eff": 3820,
+      "median_paragraphs": 45,
+      "median_table_rows": 4
+    },
+    "ch16": {
+      "median_eff": 4660,
+      "median_paragraphs": 53,
+      "median_table_rows": 0
+    },
+    "ch17": {
+      "median_eff": 3096,
+      "median_paragraphs": 23,
+      "median_table_rows": 0
+    },
+    "ch2": {
+      "median_eff": 27681,
+      "median_paragraphs": 403,
+      "median_table_rows": 501
+    },
+    "ch3": {
+      "median_eff": 4764,
+      "median_paragraphs": 44,
+      "median_table_rows": 26
+    },
+    "ch4": {
+      "median_eff": 12773,
+      "median_paragraphs": 173,
+      "median_table_rows": 130
+    },
+    "ch5": {
+      "median_eff": 23050,
+      "median_paragraphs": 355,
+      "median_table_rows": 447
+    },
+    "ch6": {
+      "median_eff": 16188,
+      "median_paragraphs": 249,
+      "median_table_rows": 448
+    },
+    "ch7": {
+      "median_eff": 10415,
+      "median_paragraphs": 207,
+      "median_table_rows": 320
+    },
+    "ch8": {
+      "median_eff": 4446,
+      "median_paragraphs": 74,
+      "median_table_rows": 145
+    },
+    "ch9": {
+      "median_eff": 2423,
+      "median_paragraphs": 42,
+      "median_table_rows": 57
+    }
+  },
+  "per_signal_penalty": 0.05,
+  "samples": [
+    "ch10_031-2026-3.md",
+    "ch10_032-2021-10.md",
+    "ch11_031-2026-3.md",
+    "ch11_032-2021-10.md",
+    "ch12_031-2026-3.md",
+    "ch12_032-2021-10.md",
+    "ch13_031-2026-3.md",
+    "ch13_032-2021-10.md",
+    "ch14_031-2026-3.md",
+    "ch14_032-2021-10.md",
+    "ch15_031-2026-3.md",
+    "ch15_032-2021-10.md",
+    "ch16_031-2026-3.md",
+    "ch16_032-2021-10.md",
+    "ch17_031-2026-3.md",
+    "ch1_031-2026-3.md",
+    "ch1_032-2021-10.md",
+    "ch2_031-2026-3.md",
+    "ch2_032-2021-10.md",
+    "ch3_031-2026-3.md",
+    "ch3_032-2021-10.md",
+    "ch4_031-2026-3.md",
+    "ch4_032-2021-10.md",
+    "ch5_031-2026-3.md",
+    "ch5_032-2021-10.md",
+    "ch6_031-2026-3.md",
+    "ch6_032-2021-10.md",
+    "ch7_031-2026-3.md",
+    "ch7_032-2021-10.md",
+    "ch8_031-2026-3.md",
+    "ch8_032-2021-10.md",
+    "ch9_031-2026-3.md",
+    "ch9_032-2021-10.md"
+  ],
+  "scale_floor": 0.25
+}

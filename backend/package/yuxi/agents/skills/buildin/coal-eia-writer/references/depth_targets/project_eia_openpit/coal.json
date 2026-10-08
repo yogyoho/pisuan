@@ -1,0 +1,211 @@
+{
+  "absolute_floor": 0.4,
+  "coefficient": 0.6,
+  "missing_table_weight": 8,
+  "per_chapter": {
+    "ch1": {
+      "median_eff": 11406,
+      "median_paragraphs": 236,
+      "median_table_rows": 115
+    },
+    "ch10": {
+      "median_eff": 4223,
+      "median_paragraphs": 73,
+      "median_table_rows": 135
+    },
+    "ch11": {
+      "median_eff": 4808,
+      "median_paragraphs": 89,
+      "median_table_rows": 185
+    },
+    "ch12": {
+      "median_eff": 1712,
+      "median_paragraphs": 28,
+      "median_table_rows": 10
+    },
+    "ch13": {
+      "median_eff": 4487,
+      "median_paragraphs": 94,
+      "median_table_rows": 58
+    },
+    "ch14": {
+      "median_eff": 1557,
+      "median_paragraphs": 16,
+      "median_table_rows": 51
+    },
+    "ch15": {
+      "median_eff": 2564,
+      "median_paragraphs": 54,
+      "median_table_rows": 58
+    },
+    "ch16": {
+      "median_eff": 1322,
+      "median_paragraphs": 36,
+      "median_table_rows": 35
+    },
+    "ch17": {
+      "median_eff": 10926,
+      "median_paragraphs": 107,
+      "median_table_rows": 0
+    },
+    "ch18": {
+      "median_eff": 12133,
+      "median_paragraphs": 135,
+      "median_table_rows": 0
+    },
+    "ch19": {
+      "median_eff": 1149,
+      "median_paragraphs": 28,
+      "median_table_rows": 0
+    },
+    "ch2": {
+      "median_eff": 36435,
+      "median_paragraphs": 534,
+      "median_table_rows": 536
+    },
+    "ch3": {
+      "median_eff": 9234,
+      "median_paragraphs": 79,
+      "median_table_rows": 60
+    },
+    "ch4": {
+      "median_eff": 2424,
+      "median_paragraphs": 21,
+      "median_table_rows": 5
+    },
+    "ch5": {
+      "median_eff": 34161,
+      "median_paragraphs": 461,
+      "median_table_rows": 407
+    },
+    "ch6": {
+      "median_eff": 13524,
+      "median_paragraphs": 228,
+      "median_table_rows": 183
+    },
+    "ch7": {
+      "median_eff": 15284,
+      "median_paragraphs": 257,
+      "median_table_rows": 403
+    },
+    "ch8": {
+      "median_eff": 10167,
+      "median_paragraphs": 196,
+      "median_table_rows": 263
+    },
+    "ch9": {
+      "median_eff": 5278,
+      "median_paragraphs": 95,
+      "median_table_rows": 127
+    }
+  },
+  "per_signal_penalty": 0.05,
+  "samples": [
+    "ch10_013-3500-----2024-4-11.md",
+    "ch10_016-2021-12.md",
+    "ch10_018-_5-900-2023-8.md",
+    "ch10_019-2023-7.md",
+    "ch10_039-1000.md",
+    "ch10_041-2000.md",
+    "ch11_013-3500-----2024-4-11.md",
+    "ch11_016-2021-12.md",
+    "ch11_018-_5-900-2023-8.md",
+    "ch11_019-2023-7.md",
+    "ch11_039-1000.md",
+    "ch11_041-2000.md",
+    "ch12_013-3500-----2024-4-11.md",
+    "ch12_016-2021-12.md",
+    "ch12_018-_5-900-2023-8.md",
+    "ch12_019-2023-7.md",
+    "ch12_039-1000.md",
+    "ch12_041-2000.md",
+    "ch13_013-3500-----2024-4-11.md",
+    "ch13_016-2021-12.md",
+    "ch13_018-_5-900-2023-8.md",
+    "ch13_019-2023-7.md",
+    "ch13_039-1000.md",
+    "ch13_041-2000.md",
+    "ch14_013-3500-----2024-4-11.md",
+    "ch14_016-2021-12.md",
+    "ch14_018-_5-900-2023-8.md",
+    "ch14_019-2023-7.md",
+    "ch14_039-1000.md",
+    "ch14_041-2000.md",
+    "ch15_013-3500-----2024-4-11.md",
+    "ch15_016-2021-12.md",
+    "ch15_018-_5-900-2023-8.md",
+    "ch15_019-2023-7.md",
+    "ch15_039-1000.md",
+    "ch15_041-2000.md",
+    "ch16_013-3500-----2024-4-11.md",
+    "ch16_016-2021-12.md",
+    "ch16_018-_5-900-2023-8.md",
+    "ch16_019-2023-7.md",
+    "ch16_039-1000.md",
+    "ch16_041-2000.md",
+    "ch17_013-3500-----2024-4-11.md",
+    "ch17_016-2021-12.md",
+    "ch17_018-_5-900-2023-8.md",
+    "ch17_019-2023-7.md",
+    "ch17_039-1000.md",
+    "ch17_041-2000.md",
+    "ch18_018-_5-900-2023-8.md",
+    "ch18_039-1000.md",
+    "ch19_013-3500-----2024-4-11.md",
+    "ch1_013-3500-----2024-4-11.md",
+    "ch1_016-2021-12.md",
+    "ch1_018-_5-900-2023-8.md",
+    "ch1_019-2023-7.md",
+    "ch1_039-1000.md",
+    "ch1_041-2000.md",
+    "ch2_013-3500-----2024-4-11.md",
+    "ch2_016-2021-12.md",
+    "ch2_018-_5-900-2023-8.md",
+    "ch2_019-2023-7.md",
+    "ch2_039-1000.md",
+    "ch2_041-2000.md",
+    "ch3_013-3500-----2024-4-11.md",
+    "ch3_016-2021-12.md",
+    "ch3_018-_5-900-2023-8.md",
+    "ch3_019-2023-7.md",
+    "ch3_039-1000.md",
+    "ch3_041-2000.md",
+    "ch4_013-3500-----2024-4-11.md",
+    "ch4_016-2021-12.md",
+    "ch4_018-_5-900-2023-8.md",
+    "ch4_019-2023-7.md",
+    "ch4_039-1000.md",
+    "ch4_041-2000.md",
+    "ch5_013-3500-----2024-4-11.md",
+    "ch5_016-2021-12.md",
+    "ch5_018-_5-900-2023-8.md",
+    "ch5_019-2023-7.md",
+    "ch5_039-1000.md",
+    "ch5_041-2000.md",
+    "ch6_013-3500-----2024-4-11.md",
+    "ch6_016-2021-12.md",
+    "ch6_018-_5-900-2023-8.md",
+    "ch6_019-2023-7.md",
+    "ch6_039-1000.md",
+    "ch6_041-2000.md",
+    "ch7_013-3500-----2024-4-11.md",
+    "ch7_016-2021-12.md",
+    "ch7_018-_5-900-2023-8.md",
+    "ch7_019-2023-7.md",
+    "ch7_039-1000.md",
+    "ch7_041-2000.md",
+    "ch8_013-3500-----2024-4-11.md",
+    "ch8_016-2021-12.md",
+    "ch8_018-_5-900-2023-8.md",
+    "ch8_019-2023-7.md",
+    "ch8_039-1000.md",
+    "ch8_041-2000.md",
+    "ch9_013-3500-----2024-4-11.md",
+    "ch9_016-2021-12.md",
+    "ch9_018-_5-900-2023-8.md",
+    "ch9_019-2023-7.md",
+    "ch9_039-1000.md",
+    "ch9_041-2000.md"
+  ],
+  "scale_floor": 0.25
+}
