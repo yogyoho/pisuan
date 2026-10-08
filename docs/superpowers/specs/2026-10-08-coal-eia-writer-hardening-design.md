@@ -130,9 +130,9 @@ references/ 衍生物：
 | # | 检查 | 对应历史 bug |
 |---|---|---|
 | L1 | forms 族标量字段缺中文 label | bug-366（135 字段） |
-| L2 | label/description/enum 值含 `\|` 字符（裂表） | bug-393（28 组） |
+| L2 | label/note/type（含 enum 描述）值含 `\|` 字符（裂表） | bug-393（28 组） |
 | L3 | 数值型字段缺 unit | bug-394 关联 |
-| L4 | 表格族列键英文裸奔（无中文 label） | bug-368 |
+| L4 | 复合字段嵌套列名清单（字符串列表）英文裸奔（无中文 label） | bug-368 |
 | L5 | 枚举值含英文/重复/超长 | 弱检查（canon 清单可后续挂） |
 
 输出：逐 stage 违规报告（stage × L1–L5 × 明细），有违规 exit 1。**只报告不修复**。
