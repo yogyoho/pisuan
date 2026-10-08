@@ -60,6 +60,22 @@ def test_promote_headings():
     assert not any(ln.startswith("## 6.5 ") for ln in out.splitlines())  # 行首锚定（"## " 为 "### " 子串不可用 in）
 
 
+def test_promote_headings_skip_list_like():
+    """正文编号列表段保守启发式：题名 >30 字或含句读标点（。；，）不升级；顿号短题名仍升级（防误杀锚）。"""
+    body = (
+        "1 XF1逆断层:即野麦子塘西侧断层,位于调查区的东北部,向南延伸构造线走向北北西\n"  # 超长（无全角标点，纯长度条件）
+        "2 对于需要搬迁的村庄,须就近安置。\n"  # 短但含句号（纯标点条件）
+        "13.4.9 对太中银铁路、高速公路等地面保护目标的影响\n"  # 含顿号短题名 → 真标题仍升级
+        "6.5 声环境影响评价\n"  # 常规标题
+    )
+    out = promote_headings(body)
+    lines = out.splitlines()
+    assert lines[0] == "1 XF1逆断层:即野麦子塘西侧断层,位于调查区的东北部,向南延伸构造线走向北北西"  # 原行保留
+    assert lines[1] == "2 对于需要搬迁的村庄,须就近安置。"
+    assert "#### 13.4.9 对太中银铁路、高速公路等地面保护目标的影响" in out
+    assert "### 6.5 声环境影响评价" in out
+
+
 def test_make_rid_ascii_slug_contract():
     """rid 契约（bug-398）：ASCII slug 兼容 bank_compile RID_RE；序号保唯一。"""
     import re
