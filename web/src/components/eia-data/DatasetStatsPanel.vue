@@ -305,6 +305,8 @@ const fetchStats = async () => {
   disposeCharts()
   try {
     stats.value = await eiaDataApi.getSkillStats()
+    // 先撤 loading 让 v-else 图表容器挂载（ref 就绪），再初始化 echarts
+    loading.value = false
     await nextTick()
     renderCorpusChart()
     renderProvinceChart()
@@ -313,7 +315,6 @@ const fetchStats = async () => {
     charts.forEach((c) => resizeObserver?.observe(c.getDom()))
   } catch (e) {
     error.value = e?.message || '统计接口不可用'
-  } finally {
     loading.value = false
   }
 }
