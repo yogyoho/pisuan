@@ -74,14 +74,26 @@ QUANTITY_RE = re.compile(
     r"([一-鿿]{2,8}?)(?:为|达|是)\s*(\d+(?:\.\d+)?)\s*"
     r"(dB\(A\)|mg/L|μg/m3|μg/m³|km2|km²|km|hm2|hm²|万m3|万m³|万t|万kW|%|m2|m²|t|d|m)"
 )
-SECTION_EXPECTATION_STAGES = ("planning_eia", "post_eia", "project_eia_openpit",
-                              "project_eia_underground", "tracking_eia")  # label_map 先到先得序
+SECTION_EXPECTATION_STAGES = (
+    "planning_eia",
+    "post_eia",
+    "project_eia_openpit",
+    "project_eia_underground",
+    "tracking_eia",
+)  # label_map 先到先得序
+# 数值区间护栏（P5-P95，写前对账 warn 级）：只对强度/浓度类单位发布——extensive 量
+# （km2/万t/万m3…）随产能走，scale 归一前置未熟（31 份中 scale 已知 4 份），
+# 原始跨项目分布是噪声；发布门槛 distinct-rid≥5（小样本 P5/P95≈min/max 无意义）。
+RANGE_UNITS = frozenset({"dB(A)", "mg/L", "μg/m3", "μg/m³", "%"})
+RANGE_MIN_REPORTS = 5
 
 
 def _json_write(path: Path, doc) -> None:
     """确定性 JSON 落盘：sort_keys + 末尾换行 + 强制 \\n（Windows 字节级幂等）。"""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(doc, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+    path.write_text(
+        json.dumps(doc, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
+    )
 
 
 def _heading_title(line: str) -> str:
@@ -127,7 +139,9 @@ def slice_report(text: str) -> tuple[list[dict], list[str]]:
     for s in slices:
         by_ch.setdefault(s["chapter"], []).append(s)
     dup = sorted(ch for ch, blocks in by_ch.items() if len(blocks) > 1)
-    kept = [blocks[0] if len(blocks) == 1 else max(blocks, key=lambda s: s["end"] - s["start"]) for blocks in by_ch.values()]
+    kept = [
+        blocks[0] if len(blocks) == 1 else max(blocks, key=lambda s: s["end"] - s["start"]) for blocks in by_ch.values()
+    ]
     kept.sort(key=lambda s: s["start"])
     for i, s in enumerate(kept):
         end = kept[i + 1]["start"] if i + 1 < len(kept) else len(text)
@@ -157,6 +171,7 @@ def build_forms_catalog(seg_samples) -> dict:
 
     幂等：产物无时间戳（对齐 calibrate.py 先例与模块 docstring 幂等声明），同输入必同字节。"""
     from collections import Counter
+
     lead_counter: Counter = Counter()
     lead_examples: list[dict] = []
     num_counter: Counter = Counter()
@@ -187,8 +202,10 @@ def build_forms_catalog(seg_samples) -> dict:
         "forms": {
             "table_lead": {
                 "desc": "表题行前一非空行形态（31 份实测：独立题注行为主形态，引导句 complete/dangling 各为正样本）",
-                "stats": {k: round(lead_counter.get(k, 0) / total_lead, 3)
-                          for k in ("complete_sentence", "colon_lead", "standalone_caption", "dangling")},
+                "stats": {
+                    k: round(lead_counter.get(k, 0) / total_lead, 3)
+                    for k in ("complete_sentence", "colon_lead", "standalone_caption", "dangling")
+                },
                 "templates": ["……{主题}如下表所列。", "……{主题}详见表 {ch}-{seq}。", "……{主题}："],
                 "examples": lead_examples,
             },
@@ -214,8 +231,9 @@ def extract_sec_texts(seg: str) -> dict[str, str]:
     三段号+（子节）内容随 span 折叠进父节（子节文本语义上属于所在节正文）；
     单段号（章标题行）跳过——章引言量极少，深度门管章级，此处只做节级。"""
     spans = [(m.group(2), m.start()) for m in SEC_RE.finditer(seg) if m.group(2).count(".") == 1]
-    return {sec: seg[start : (spans[i + 1][1] if i + 1 < len(spans) else len(seg))]
-            for i, (sec, start) in enumerate(spans)}
+    return {
+        sec: seg[start : (spans[i + 1][1] if i + 1 < len(spans) else len(seg))] for i, (sec, start) in enumerate(spans)
+    }
 
 
 def _map_caliber(label: str, forms_label_map: dict) -> tuple[str, str] | None:
@@ -228,6 +246,15 @@ def _map_caliber(label: str, forms_label_map: dict) -> tuple[str, str] | None:
         if tail in forms_label_map:
             return tail, forms_label_map[tail]
     return None
+
+
+def _pctl(vals: list[float], q: float) -> float:
+    """线性插值分位数（numpy 默认法）：pos=(n-1)q，相邻秩插值；输入无序、返回 4 位舍入。"""
+    s = sorted(vals)
+    pos = (len(s) - 1) * q
+    lo = int(pos)
+    hi = min(lo + 1, len(s) - 1)
+    return round(s[lo] + (s[hi] - s[lo]) * (pos - lo), 4)
 
 
 def build_section_expectations(seg_infos, forms_label_map: dict, stage: str) -> dict:
@@ -243,6 +270,7 @@ def build_section_expectations(seg_infos, forms_label_map: dict, stage: str) -> 
     sec_titles: dict[tuple, str] = {}
     sec_label_rids: dict[tuple, dict[str, set]] = defaultdict(lambda: defaultdict(set))
     sec_label_unit: dict[tuple, dict[str, str]] = defaultdict(dict)  # 首见单位
+    sec_label_values: dict[tuple, dict[str, dict[str, list[float]]]] = {}  # (key,caliber,unit)->数值
     unmapped: list[dict] = []
     for si in seg_infos:
         key = (si["chapter"], si["sec"])
@@ -255,9 +283,19 @@ def build_section_expectations(seg_infos, forms_label_map: dict, stage: str) -> 
                 caliber, field = mapped
                 sec_label_rids[key][caliber].add(si["rid"])
                 sec_label_unit[key].setdefault(caliber, unit)
+                sec_label_values.setdefault(key, {}).setdefault(caliber, {}).setdefault(unit, []).append(
+                    float(m.group(2))
+                )
             elif len(unmapped) < 200:
-                unmapped.append({"section": f"ch{si['chapter']}", "caliber": label,
-                                 "value": m.group(2), "unit": unit, "sample": si["rid"]})
+                unmapped.append(
+                    {
+                        "section": f"ch{si['chapter']}",
+                        "caliber": label,
+                        "value": m.group(2),
+                        "unit": unit,
+                        "sample": si["rid"],
+                    }
+                )
     sections: dict[str, dict] = {}
     for key in sorted(sec_reports, key=lambda k: (int(k[0]), tuple(int(p) for p in k[1].split(".")))):
         ch, sec = key
@@ -265,16 +303,29 @@ def build_section_expectations(seg_infos, forms_label_map: dict, stage: str) -> 
         quants = []
         for caliber, rids in sec_label_rids[key].items():
             freq = len(rids) / n
-            quants.append({
+            unit = sec_label_unit[key][caliber]
+            q = {
                 "field": forms_label_map[caliber],
                 "caliber": caliber,
-                "unit": sec_label_unit[key][caliber],
+                "unit": unit,
                 "tier": "required" if freq >= 0.6 else ("optional" if freq >= 0.2 else "contextual"),
                 "corpus_freq": round(freq, 2),
-            })
+            }
+            # 区间只发布给强度/浓度类单位且 distinct-rid 达门槛；n_reports=提及报告数、
+            # n_values=首见单位的值数（跨单位混入不计入同一分布）
+            vals = sec_label_values.get(key, {}).get(caliber, {}).get(unit, [])
+            if unit in RANGE_UNITS and len(rids) >= RANGE_MIN_REPORTS and vals:
+                q["range"] = {
+                    "p5": _pctl(vals, 0.05),
+                    "p50": _pctl(vals, 0.5),
+                    "p95": _pctl(vals, 0.95),
+                    "n_values": len(vals),
+                    "n_reports": len(rids),
+                }
+            quants.append(q)
         quants.sort(key=lambda q: -q["corpus_freq"])
         sections[f"ch{ch}_S{sec.split('.')[-1]:0>2}"] = {"title": sec_titles[key], "expected_quantities": quants}
-    return {"version": "1.0", "stage_scope": stage, "sections": sections, "unmapped": unmapped}
+    return {"version": "1.1", "stage_scope": stage, "sections": sections, "unmapped": unmapped}
 
 
 def _run_calibrate(python: str, samples_dir: Path, output: Path) -> tuple[int, str]:
@@ -316,12 +367,14 @@ def _aggregate_depth_targets(refs: Path, stage: str) -> int | None:
     chapters: dict[str, dict] = {}
     all_chs = sorted({ch for d in docs for ch in d.get("per_chapter", {})})
     for ch in all_chs:
-        floors = [d["per_chapter"][ch]["median_eff"] * d["coefficient"]
-                  for d in docs if ch in d.get("per_chapter", {})]
+        floors = [d["per_chapter"][ch]["median_eff"] * d["coefficient"] for d in docs if ch in d.get("per_chapter", {})]
         chapters[ch] = {"floor_chars": int(statistics.median(floors))}
-    doc = {"stage": stage, "confidence": "calibrated",
-           "source": f"bank_compile aggregate: {', '.join(names)}",
-           "chapters": chapters}
+    doc = {
+        "stage": stage,
+        "confidence": "calibrated",
+        "source": f"bank_compile aggregate: {', '.join(names)}",
+        "chapters": chapters,
+    }
     _json_write(refs / "depth_targets" / f"{stage}.json", doc)
     return len(chapters)
 
@@ -408,7 +461,9 @@ def main_with_args(argv: list[str]) -> int:
         if dup:
             # 2026-10-08 裁决：整份跳过会使 31/31 coal 报告不可编译（局部编号序列
             # 是体裁内在结构），改为 slice_report 内保留最长块；此处告警留痕，绝不静默
-            print(f"[bank_compile] {rid} 重复章号 {'/'.join(dup)}——保留最长块消解，弃置碎片并入前块 seg", file=sys.stderr)
+            print(
+                f"[bank_compile] {rid} 重复章号 {'/'.join(dup)}——保留最长块消解，弃置碎片并入前块 seg", file=sys.stderr
+            )
         for s in slices:
             chapter, seg, secs = s["chapter"], s["seg"], s["secs"]
             total_slices += 1
@@ -438,8 +493,7 @@ def main_with_args(argv: list[str]) -> int:
             sec_title = {item["sec"]: item["title"] for item in secs}
             for sec, sec_text in extract_sec_texts(seg).items():
                 infos_by_stage.setdefault(stage, []).append(
-                    {"rid": rid, "chapter": chapter, "sec": sec,
-                     "title": sec_title.get(sec, ""), "text": sec_text}
+                    {"rid": rid, "chapter": chapter, "sec": sec, "title": sec_title.get(sec, ""), "text": sec_text}
                 )
 
     if total_slices == 0:
@@ -456,8 +510,10 @@ def main_with_args(argv: list[str]) -> int:
     )
     _json_write(refs / "paradigms" / "forms_catalog.json", catalog)
     tl = catalog["forms"]["table_lead"]["stats"]
-    print(f"FORMS_CATALOG: {len(catalog['forms']['table_lead']['examples'])} lead example(s), "
-          f"table_lead={tl.get('complete_sentence', 0)}/{tl.get('dangling', 0)}(complete/dangling)")
+    print(
+        f"FORMS_CATALOG: {len(catalog['forms']['table_lead']['examples'])} lead example(s), "
+        f"table_lead={tl.get('complete_sentence', 0)}/{tl.get('dangling', 0)}(complete/dangling)"
+    )
     # 7) section_expectations：节级数值-口径清单（spec §4.2，per stage 文件——
     #    sections 键 chN_Snn 跨 stage 碰撞，不能单文件合并）
     label_map: dict[str, str] = {}
@@ -470,8 +526,11 @@ def main_with_args(argv: list[str]) -> int:
         exp_doc = build_section_expectations(infos, label_map, stage=st)
         _json_write(refs / "section_expectations" / f"{st}.json", exp_doc)
         n_q = sum(len(s["expected_quantities"]) for s in exp_doc["sections"].values())
-        print(f"SECTION_EXPECTATIONS {st}: {len(exp_doc['sections'])} section(s), "
-              f"{n_q} mapped quantity(ies), {len(exp_doc['unmapped'])} unmapped")
+        n_r = sum(1 for s in exp_doc["sections"].values() for q in s["expected_quantities"] if "range" in q)
+        print(
+            f"SECTION_EXPECTATIONS {st}: {len(exp_doc['sections'])} section(s), "
+            f"{n_q} mapped quantity(ies), {n_r} range(s), {len(exp_doc['unmapped'])} unmapped"
+        )
     print(f"BANK_COMPILED: {len(reports)} report(s), {total_slices} slice(s), {len(groups)} group(s)")
 
     # 4) per (stage, mineral) 标定：组内切片临时命名 chN_<rid>.md（满足 calibrate FNAME_RE
