@@ -6,9 +6,11 @@ import traceback
 from typing import Any
 
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi.concurrency import run_in_threadpool
 
 from server.utils.auth_middleware import get_admin_user, get_required_user
 from yuxi.services.domain_factory_service import get_domain_factory_service
+from yuxi.services.eia_data_service import get_skill_stats
 from yuxi.storage.postgres.models_business import User
 from yuxi.utils import logger
 
@@ -984,3 +986,22 @@ async def generate_extraction_regex(
     except Exception as e:
         logger.error(f"Failed to generate extraction_regex: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"提取规则生成失败: {str(e)}")
+
+
+# =============================================================================
+# EIA Data Factory (coal-eia-writer 环评域数据工厂)
+# =============================================================================
+
+
+@domain_factory.get("/eia/stats")
+async def get_eia_skill_stats(
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """环评域数据工厂 · 技能数据集统计总览（只读聚合技能语料文件，无 DB 依赖）"""
+    try:
+        return await run_in_threadpool(get_skill_stats)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=f"coal-eia-writer 技能数据缺失: {e}")
+    except Exception as e:
+        logger.error(f"Failed to get eia skill stats: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取环评数据统计失败: {str(e)}")
