@@ -137,3 +137,62 @@ def test_range_first_seen_unit_only():
     doc = build_section_expectations(segs, {"除尘效率": "air.removal"}, stage="planning_eia")
     q = doc["sections"]["ch6_S05"]["expected_quantities"][0]
     assert q["unit"] == "%" and q["range"]["n_values"] == 5 and q["range"]["n_reports"] == 6
+
+
+# ── 词表覆盖层（v1.2 curated 跨节发布）──────────────────────────────────────
+
+_CURATED_RANGE = {"p5": 90.0, "p50": 95.0, "p95": 99.0, "n_values": 12, "n_reports": 10}
+
+
+def _mk_curated_segs() -> list[dict]:
+    """同节仅 3 报告（v1.1 门槛不足），同口径跨两节共 6 报告——curated 跨节发布的靶形。"""
+    segs = [
+        {"rid": f"r{i}", "chapter": "6", "sec": "6.5", "title": "声环境", "text": f"除尘效率为 {95 + i} %。"}
+        for i in range(3)
+    ]
+    segs += [
+        {"rid": f"r{i}", "chapter": "7", "sec": "7.1", "title": "措施", "text": f"除尘效率为 {96 + i} %。"}
+        for i in range(3, 6)
+    ]
+    return segs
+
+
+def test_curated_range_attached_cross_section():
+    """curated range 挂到口径出现的每个节（v1.1 同节 distinct-rid<5 不发布，v1.2 覆盖发布）；
+    curated 键走 _map_caliber 后缀归并（「主要除尘效率」→「除尘效率」）。"""
+    curated = {"主要除尘效率": {"stage": "planning_eia", "caliber": "除尘效率", "unit": "%", "range": _CURATED_RANGE}}
+    doc = build_section_expectations(
+        _mk_curated_segs(), {"除尘效率": "air.removal"}, stage="planning_eia", curated=curated
+    )
+    assert doc["version"] == "1.2"
+    for key in ("ch6_S05", "ch7_S01"):
+        q = doc["sections"][key]["expected_quantities"][0]
+        assert q["range"] == _CURATED_RANGE
+
+
+def test_curated_unit_mismatch_falls_back_to_v11():
+    """curated unit 与节首见单位不一致 → 不挂（跨单位不混布），回落 v1.1 同节口径。"""
+    curated = {"除尘效率": {"stage": "planning_eia", "caliber": "除尘效率", "unit": "mg/L", "range": _CURATED_RANGE}}
+    segs = [
+        {"rid": f"r{i}", "chapter": "6", "sec": "6.5", "title": "声环境", "text": f"除尘效率为 {95 + i} %。"}
+        for i in range(5)
+    ]
+    doc = build_section_expectations(segs, {"除尘效率": "air.removal"}, stage="planning_eia", curated=curated)
+    q = doc["sections"]["ch6_S05"]["expected_quantities"][0]
+    assert q["range"]["n_values"] == 5 and q["range"]["n_values"] != _CURATED_RANGE["n_values"]
+
+
+def test_curated_unmapped_caliber_skipped():
+    """curated 口径未映射 forms 字段 → 跳过（stderr 告警），无 curated 命中时 version 回落 1.1。"""
+    curated = {"不存在口径": {"stage": "planning_eia", "caliber": "不存在口径", "unit": "%", "range": _CURATED_RANGE}}
+    doc = build_section_expectations(
+        _mk_db_segs(5), {"源强": "noise.source_level"}, stage="planning_eia", curated=curated
+    )
+    q = doc["sections"]["ch6_S05"]["expected_quantities"][0]
+    assert doc["version"] == "1.1" and q["caliber"] == "源强"
+
+
+def test_curated_absent_keeps_v11_version():
+    """无 curated（文件缺失/无本 stage 条目）→ version 恒 1.1（删文件即字节级回滚的语义锚）。"""
+    doc = build_section_expectations(_mk_db_segs(5), {"源强": "noise.source_level"}, stage="planning_eia")
+    assert doc["version"] == "1.1"

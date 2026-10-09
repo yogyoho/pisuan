@@ -11,7 +11,17 @@
     <template v-else>
       <!-- 指标带：6 位核心计数 -->
       <div class="metric-strip">
-        <div v-for="m in metricStrip" :key="m.label" class="metric-cell" :class="{ warn: m.warn }">
+        <div
+          v-for="m in metricStrip"
+          :key="m.label"
+          class="metric-cell"
+          :class="{ warn: m.warn, link: m.link }"
+          :role="m.link ? 'button' : undefined"
+          :tabindex="m.link ? 0 : undefined"
+          :aria-label="m.link ? `${m.label} ${m.value}，进入词表管理` : undefined"
+          @click="m.link && goLexicon()"
+          @keyup.enter="m.link && goLexicon()"
+        >
           <span class="metric-label">{{ m.label }}</span>
           <span class="metric-value">{{ m.value.toLocaleString() }}<small>{{ m.unit }}</small></span>
         </div>
@@ -70,6 +80,7 @@
             <span class="legend-swatch swatch-mid"></span>B 站点背景 {{ stats.candidates.site }}
             <span class="legend-swatch swatch-gray"></span>C 待清理 {{ stats.candidates.junk }}
             · 可发布区间 <b class="hl">{{ stats.candidates.range_ready }}</b> 项
+            <a class="panel-link" @click.prevent="goLexicon">进入词表管理 →</a>
           </p>
           <div ref="candidatesChartRef" class="chart chart-md"></div>
         </section>
@@ -109,8 +120,11 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import * as echarts from '@/utils/dashboardCharts'
 import { eiaDataApi } from '@/apis/eia_data_api'
+
+const router = useRouter()
 
 const STAGE_LABELS = {
   planning_eia: '规划环评',
@@ -143,13 +157,15 @@ const metricStrip = computed(() => {
     { label: '案例语料切片', value: s.corpus.slices_total, unit: '片' },
     { label: '语料报告', value: s.corpus.reports_total, unit: '份' },
     { label: '章节事实槽位', value: sections, unit: '节' },
-    { label: '护栏词表候选', value: s.candidates.total, unit: '项' },
+    { label: '护栏词表候选', value: s.candidates.total, unit: '项', link: true },
     { label: '标准与限值', value: stdTotal?.count ?? 0, unit: '条' },
     { label: '标准待人工核实', value: warnCount('standards_verify'), unit: '条', warn: true }
   ]
 })
 
 const warnCount = (key) => stats.value.quality.find((q) => q.key === key)?.count ?? 0
+
+const goLexicon = () => router.push('/domain-factory/eia-data/lexicon')
 
 const totalLayerItems = computed(() => stats.value.layers.reduce((acc, l) => acc + l.items.length, 0))
 
@@ -384,6 +400,24 @@ onBeforeUnmount(cleanup)
   &.warn .metric-value {
     color: var(--second-600);
   }
+
+  &.link {
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+      background: var(--gray-50);
+
+      .metric-value {
+        color: var(--main-600);
+      }
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--main-600);
+      outline-offset: -2px;
+    }
+  }
 }
 
 /* ── 网格与卡片 ─────────────────────────────────────── */
@@ -428,6 +462,16 @@ onBeforeUnmount(cleanup)
   .hl {
     color: var(--main-600);
     font-variant-numeric: tabular-nums;
+  }
+
+  .panel-link {
+    margin-left: 10px;
+    color: var(--main-600);
+    white-space: nowrap;
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 }
 

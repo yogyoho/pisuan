@@ -106,17 +106,17 @@ def _classify_caliber(caliber: str) -> str:
     return "junk"
 
 
-def _scan_candidates() -> dict[str, Any]:
-    """扫描案例切片，按 (stage, 清洗后口径, 单位) 聚合数值提及。"""
+def _iter_mentions():
+    """全语料数值提及迭代器 (stage, rid, caliber, unit, value)——清洗过滤后的口径。
+
+    统计扫描、词表导入、拆分素材、导出值收集四处共用同一迭代（口径单一真源，
+    避免各处过滤条件漂移）；切片按路径排序保证确定性。"""
     qty_re = _load_quantity_re()
-    agg: dict[tuple[str, str, str], dict[str, Any]] = {}
-    slices_total = 0
     for stage in STAGES:
         sdir = _BANK / stage / "slices"
         if not sdir.exists():
             continue
-        for p in sdir.rglob("*.md"):
-            slices_total += 1
+        for p in sorted(sdir.rglob("*.md")):
             rid = p.name.split("__", 1)[0]
             for m in qty_re.finditer(p.read_text(encoding="utf-8", errors="replace")):
                 if m.group(3) not in _CANDIDATE_UNITS:
@@ -124,24 +124,23 @@ def _scan_candidates() -> dict[str, Any]:
                 caliber = _clean_caliber(m.group(1))
                 if len(caliber) < 2 or caliber in _GENERIC_JUNK:
                     continue
-                ent = agg.setdefault((stage, caliber, m.group(3)), {"rids": set(), "n_values": 0})
-                ent["rids"].add(rid)
-                ent["n_values"] += 1
+                yield stage, rid, caliber, m.group(3), float(m.group(2))
 
-    per_stage: dict[str, dict[str, int]] = {s: {"measure": 0, "site": 0, "junk": 0} for s in STAGES}
-    cat_total = Counter()
-    total = range_ready = 0
+
+def _scan_all() -> list[dict[str, Any]]:
+    """全量词表候选条目（不截断）：统计摘要与词表导入共用同一扫描（n≥2 报告门槛）。"""
+    agg: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for stage, rid, caliber, unit, _value in _iter_mentions():
+        ent = agg.setdefault((stage, caliber, unit), {"rids": set(), "n_values": 0})
+        ent["rids"].add(rid)
+        ent["n_values"] += 1
+
     top: list[dict[str, Any]] = []
     for (stage, caliber, unit), ent in agg.items():
         n_reports = len(ent["rids"])
         if n_reports < 2:
             continue  # 单报告孤例不构词表候选（护栏需跨报告支撑）
-        total += 1
         cat = _classify_caliber(caliber)
-        per_stage[stage][cat] += 1
-        cat_total[cat] += 1
-        ready = cat != "junk" and n_reports >= _MIN_RANGE_REPORTS
-        range_ready += ready
         top.append(
             {
                 "stage": stage,
@@ -150,16 +149,26 @@ def _scan_candidates() -> dict[str, Any]:
                 "category": cat,
                 "n_reports": n_reports,
                 "n_values": ent["n_values"],
-                "range_ready": ready,
+                "range_ready": cat != "junk" and n_reports >= _MIN_RANGE_REPORTS,
             }
         )
     top.sort(key=lambda x: (-x["n_values"], x["stage"], x["caliber"]))
+    return top
+
+
+def _scan_candidates() -> dict[str, Any]:
+    """统计摘要：全量扫描的三分类计数（含 per_stage 分布与 top15 明细）。"""
+    top = _scan_all()
+    per_stage: dict[str, dict[str, int]] = {s: {"measure": 0, "site": 0, "junk": 0} for s in STAGES}
+    for e in top:
+        per_stage[e["stage"]][e["category"]] += 1
+    cat_total = Counter(e["category"] for e in top)
     return {
-        "total": total,
+        "total": len(top),
         "measure": cat_total["measure"],
         "site": cat_total["site"],
         "junk": cat_total["junk"],
-        "range_ready": range_ready,
+        "range_ready": sum(1 for e in top if e["range_ready"]),
         "per_stage": per_stage,
         "top": top[:15],
     }
