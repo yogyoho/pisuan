@@ -47,6 +47,7 @@
     </div>
 
     <a-table
+      v-if="items.length"
       :data-source="items"
       :columns="columns"
       :loading="loading"
@@ -105,6 +106,19 @@
         </template>
       </template>
     </a-table>
+
+    <!-- 空态：区分「库空未导入」与「筛选无匹配」，前者给一键导入 CTA -->
+    <div v-else-if="!loading" class="empty-state">
+      <a-empty :description="emptyDesc">
+        <a-button v-if="!isFiltered" type="primary" :loading="importing" @click="onImport">
+          <RefreshCw :size="14" style="margin-right: 4px" />重扫语料导入
+        </a-button>
+        <a-button v-else @click="clearFilters">清除筛选</a-button>
+      </a-empty>
+      <p v-if="!isFiltered" class="empty-hint">
+        词表数据存于平台库，首次使用需从 coal-eia-writer 技能语料扫描导入候选口径；导入幂等，重复执行只补新增、绝不覆盖人工决策。
+      </p>
+    </div>
 
     <!-- 拆分对话框：子口径定义 + 提及值逐条指派 -->
     <a-modal
@@ -240,6 +254,17 @@ const switchHint = computed(() => {
   if (!switchState.enabled) return '关闭：管线用内置词表'
   return switchState.file ? '开启：管线消费覆盖层' : '开启但文件缺失：待导出物化'
 })
+
+const isFiltered = computed(() => Boolean(filters.status || filters.category || filters.stage || filters.q))
+const emptyDesc = computed(() => (isFiltered.value ? '当前筛选无匹配条目' : '词表为空：尚未从语料扫描导入候选口径'))
+
+const clearFilters = () => {
+  filters.status = ''
+  filters.category = ''
+  filters.stage = ''
+  filters.q = ''
+  fetchList()
+}
 
 const fetchList = async () => {
   loading.value = true
@@ -428,6 +453,22 @@ onMounted(() => {
   gap: 16px;
   flex-wrap: wrap;
   margin-bottom: 12px;
+}
+
+.empty-state {
+  padding: 48px 0;
+  background: var(--main-0);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.empty-hint {
+  max-width: 460px;
+  margin: 12px auto 0;
+  font-size: 12px;
+  color: var(--gray-400);
+  line-height: 1.6;
 }
 
 .filter-row {
