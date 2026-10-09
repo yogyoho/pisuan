@@ -11,6 +11,7 @@ from fastapi.concurrency import run_in_threadpool
 from server.utils.auth_middleware import get_admin_user, get_required_user
 from yuxi.services.domain_factory_service import get_domain_factory_service
 from yuxi.services.eia_data_service import get_skill_stats
+from yuxi.services.eia_lexicon_service import get_eia_lexicon_service
 from yuxi.storage.postgres.models_business import User
 from yuxi.utils import logger
 
@@ -1005,3 +1006,142 @@ async def get_eia_skill_stats(
     except Exception as e:
         logger.error(f"Failed to get eia skill stats: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"获取环评数据统计失败: {str(e)}")
+
+
+# =============================================================================
+# EIA Lexicon (环评数值护栏词表运营层：DB 覆盖层 + overrides 物化)
+# =============================================================================
+
+
+@domain_factory.get("/eia/lexicon/entries")
+async def list_eia_lexicon_entries(
+    stage: str | None = Query(None),
+    category: str | None = Query(None),
+    status: str | None = Query(None),
+    q: str | None = Query(None),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """词表条目列表（DB 决策态 + 语料实时计数合并；counts 为全量状态分布）"""
+    try:
+        return await get_eia_lexicon_service().list_entries(stage=stage, category=category, status=status, q=q)
+    except Exception as e:
+        logger.error(f"Failed to list eia lexicon entries: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取词表条目失败: {str(e)}")
+
+
+@domain_factory.patch("/eia/lexicon/entries/{entry_id}")
+async def update_eia_lexicon_entry(
+    entry_id: int,
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """条目确认/驳回/改名/备注（业务人员即可；splitting 仅可经拆分动作入选）"""
+    try:
+        entry = await get_eia_lexicon_service().update_entry(entry_id, payload, current_user.username)
+        return {"success": True, "entry": entry}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to update eia lexicon entry {entry_id}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"更新词表条目失败: {str(e)}")
+
+
+@domain_factory.post("/eia/lexicon/entries/{entry_id}/split")
+async def split_eia_lexicon_entry(
+    entry_id: int,
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """拆分值簇语义混叠的口径（如控制效率）：N 条 approved 子条目 + 原条目 rejected"""
+    try:
+        items = payload.get("items")
+        if not isinstance(items, list):
+            raise HTTPException(status_code=400, detail="payload.items 必须是数组")
+        result = await get_eia_lexicon_service().split_entry(entry_id, items, current_user.username)
+        return {"success": True, **result}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to split eia lexicon entry {entry_id}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"拆分词表条目失败: {str(e)}")
+
+
+@domain_factory.get("/eia/lexicon/entries/{entry_id}/mentions")
+async def list_eia_lexicon_mentions(
+    entry_id: int,
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """条目口径在切片中的原始提及清单（拆分对话框素材）"""
+    try:
+        return await get_eia_lexicon_service().get_mentions(entry_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to list eia lexicon mentions: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取口径提及失败: {str(e)}")
+
+
+@domain_factory.post("/eia/lexicon/import")
+async def import_eia_lexicon(
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """重扫语料幂等导入词表候选（existing 一律跳过，绝不覆盖人工决策）"""
+    try:
+        result = await get_eia_lexicon_service().import_entries()
+        return {"success": True, **result}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=f"coal-eia-writer 技能数据缺失: {e}")
+    except Exception as e:
+        logger.error(f"Failed to import eia lexicon: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"导入词表候选失败: {str(e)}")
+
+
+@domain_factory.get("/eia/datasets/switches")
+async def list_eia_dataset_switches(
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """数据集启停开关列表（含 overrides 物化文件存在态）"""
+    try:
+        return {"items": await get_eia_lexicon_service().get_switches()}
+    except Exception as e:
+        logger.error(f"Failed to list eia dataset switches: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取数据集开关失败: {str(e)}")
+
+
+@domain_factory.put("/eia/datasets/switches/{dataset_key}")
+async def set_eia_dataset_switch(
+    dataset_key: str,
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """切换数据集开关（admin；关闭即删 overrides 物化文件 → 管线回 builtin）"""
+    try:
+        enabled = payload.get("enabled")
+        if not isinstance(enabled, bool):
+            raise HTTPException(status_code=400, detail="payload.enabled 必须是布尔值")
+        switch = await get_eia_lexicon_service().set_switch(dataset_key, enabled, current_user.username)
+        return {"success": True, "switch": switch}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to set eia dataset switch {dataset_key}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"切换数据集开关失败: {str(e)}")
+
+
+@domain_factory.post("/eia/lexicon/export")
+async def export_eia_lexicon(
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """物化 approved 条目 → references/overrides/curated_lexicon.json（range 现算）+ 开关置位"""
+    try:
+        result = await get_eia_lexicon_service().export_overrides(current_user.username)
+        return {"success": True, **result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to export eia lexicon: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"导出物化失败: {str(e)}")

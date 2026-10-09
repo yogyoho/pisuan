@@ -257,15 +257,51 @@ def _pctl(vals: list[float], q: float) -> float:
     return round(s[lo] + (s[hi] - s[lo]) * (pos - lo), 4)
 
 
-def build_section_expectations(seg_infos, forms_label_map: dict, stage: str) -> dict:
+def _load_curated(refs: Path) -> dict[str, dict[str, dict]]:
+    """读词表覆盖层 overrides/curated_lexicon.json → {stage: {raw 口径: entry}}。
+
+    文件缺失 → {}（v1.1 字节级行为）；损坏 → stderr 告警后同样降级，绝不阻断编译。
+    文件由运营侧「导出物化」动作生成（DB 为运营唯一真相），语义是「这些口径已确认
+    可发布跨节聚合区间」；range 数值以文件为准（导出时现算），本脚本只负责挂载。"""
+    p = refs / "overrides" / "curated_lexicon.json"
+    if not p.is_file():
+        return {}
+    try:
+        doc = json.loads(p.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        print(f"[bank_compile] curated 词表不可读，忽略（回退 builtin）: {exc}", file=sys.stderr)
+        return {}
+    out: dict[str, dict[str, dict]] = {}
+    for e in doc.get("entries", []) if isinstance(doc, dict) else []:
+        if isinstance(e, dict) and e.get("stage") and e.get("caliber"):
+            out.setdefault(e["stage"], {})[e["caliber"]] = e
+    return out
+
+
+def build_section_expectations(
+    seg_infos, forms_label_map: dict, stage: str, curated: dict[str, dict] | None = None
+) -> dict:
     """节级数值-口径清单（spec §4.2）。seg_infos: [{rid, chapter, sec, title, text}]。
 
     corpus_freq=报告覆盖率（提及该 caliber 的报告数/该节报告总数，distinct-rid——
     单报告多次提及不抬高频率）；tier：required ≥0.6 / optional 0.2-0.6 / contextual
     <0.2。field 归并走 forms_label_map 精确匹配，未命中进 unmapped 池（cap 200，
-    spec：不静默丢弃）。幂等：产物无时间戳（Task 6 裁决），sections 键数值序排列。"""
+    spec：不静默丢弃）。幂等：产物无时间戳（Task 6 裁决），sections 键数值序排列。
+
+    curated（v1.2 词表覆盖层）：{raw 口径: entry}——经 _map_caliber 归并到 mapped 口径后，
+    其 range 覆盖挂到该口径出现的**每个节**（跨节聚合区间由导出侧对全 stage 现算，
+    修复 v1.1 只聚同节值致发布数为零的根因）；unit 不一致不挂（跨单位不混布）；
+    无 curated 或映射为空时输出与 v1.1 字节一致（version 回落 1.1）。"""
     from collections import defaultdict
 
+    curated_ranges: dict[str, dict] = {}
+    if curated:
+        for raw_cal, ent in curated.items():
+            mapped = _map_caliber(raw_cal, forms_label_map)
+            if mapped and ent.get("range"):
+                curated_ranges[mapped[0]] = ent
+            else:
+                print(f"[bank_compile] curated 口径「{raw_cal}」未映射 forms 字段或缺 range，跳过", file=sys.stderr)
     sec_reports: dict[tuple, set] = defaultdict(set)  # (chapter, sec) -> rids
     sec_titles: dict[tuple, str] = {}
     sec_label_rids: dict[tuple, dict[str, set]] = defaultdict(lambda: defaultdict(set))
@@ -311,21 +347,31 @@ def build_section_expectations(seg_infos, forms_label_map: dict, stage: str) -> 
                 "tier": "required" if freq >= 0.6 else ("optional" if freq >= 0.2 else "contextual"),
                 "corpus_freq": round(freq, 2),
             }
-            # 区间只发布给强度/浓度类单位且 distinct-rid 达门槛；n_reports=提及报告数、
-            # n_values=首见单位的值数（跨单位混入不计入同一分布）
-            vals = sec_label_values.get(key, {}).get(caliber, {}).get(unit, [])
-            if unit in RANGE_UNITS and len(rids) >= RANGE_MIN_REPORTS and vals:
-                q["range"] = {
-                    "p5": _pctl(vals, 0.05),
-                    "p50": _pctl(vals, 0.5),
-                    "p95": _pctl(vals, 0.95),
-                    "n_values": len(vals),
-                    "n_reports": len(rids),
-                }
+            # 区间发布：v1.2 curated 覆盖优先（unit 一致才挂，跨单位不混布）；
+            # 否则 v1.1 同节口径——只发布给强度/浓度类单位且 distinct-rid 达门槛；
+            # n_reports=提及报告数、n_values=首见单位的值数（跨单位混入不计入同一分布）
+            cur = curated_ranges.get(caliber)
+            if cur is not None and cur.get("unit") == unit:
+                q["range"] = cur["range"]
+            else:
+                vals = sec_label_values.get(key, {}).get(caliber, {}).get(unit, [])
+                if unit in RANGE_UNITS and len(rids) >= RANGE_MIN_REPORTS and vals:
+                    q["range"] = {
+                        "p5": _pctl(vals, 0.05),
+                        "p50": _pctl(vals, 0.5),
+                        "p95": _pctl(vals, 0.95),
+                        "n_values": len(vals),
+                        "n_reports": len(rids),
+                    }
             quants.append(q)
         quants.sort(key=lambda q: -q["corpus_freq"])
         sections[f"ch{ch}_S{sec.split('.')[-1]:0>2}"] = {"title": sec_titles[key], "expected_quantities": quants}
-    return {"version": "1.1", "stage_scope": stage, "sections": sections, "unmapped": unmapped}
+    return {
+        "version": "1.2" if curated_ranges else "1.1",
+        "stage_scope": stage,
+        "sections": sections,
+        "unmapped": unmapped,
+    }
 
 
 def _run_calibrate(python: str, samples_dir: Path, output: Path) -> tuple[int, str]:
@@ -522,8 +568,15 @@ def main_with_args(argv: list[str]) -> int:
         for fam, fam_spec in stage_doc["forms"].items():
             for f in fam_spec.get("fields", []):
                 label_map.setdefault(f["label"], f"{fam}.{f['name']}")  # 跨 stage 重名先到先得
+    # v1.2 词表覆盖层：文件存在即消费（缺失 → 纯 builtin，v1.1 字节级一致）
+    curated_by_stage = _load_curated(refs)
+    if curated_by_stage:
+        print(
+            f"[bank_compile] curated 词表覆盖层：{sum(len(v) for v in curated_by_stage.values())} entry(ies) "
+            f"in {len(curated_by_stage)} stage(s)"
+        )
     for st, infos in sorted(infos_by_stage.items()):
-        exp_doc = build_section_expectations(infos, label_map, stage=st)
+        exp_doc = build_section_expectations(infos, label_map, stage=st, curated=curated_by_stage.get(st))
         _json_write(refs / "section_expectations" / f"{st}.json", exp_doc)
         n_q = sum(len(s["expected_quantities"]) for s in exp_doc["sections"].values())
         n_r = sum(1 for s in exp_doc["sections"].values() for q in s["expected_quantities"] if "range" in q)

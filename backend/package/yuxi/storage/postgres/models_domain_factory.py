@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from sqlalchemy import JSON, Column, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
@@ -399,5 +399,62 @@ class DomainFactoryRegionalFact(Base):
             "year": self.year,
             "source_ref": self.source_ref,
             "created_at": format_utc_datetime(self.created_at),
+            "updated_at": format_utc_datetime(self.updated_at),
+        }
+
+
+class EiaLexiconEntry(Base):
+    """Domain Factory - 环评数值护栏词表条目（运营唯一真相，显式导出物化至技能 overrides/）"""
+
+    __tablename__ = "eia_lexicon_entries"
+    __table_args__ = (UniqueConstraint("stage", "caliber", "unit", name="uq_eia_lexicon_key"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    stage = Column(String(50), nullable=False, index=True)
+    caliber = Column(String(255), nullable=False)  # 清洗后口径名（业务可读）
+    unit = Column(String(32), nullable=False, default="")
+    category = Column(String(20), nullable=False)  # measure|site|junk（扫描三分类）
+    status = Column(
+        String(20), nullable=False, default="candidate", index=True
+    )  # candidate|approved|rejected|splitting（splitting 仅可经拆分动作离开）
+    values_json = Column(JSON, nullable=True)  # 拆分子条目的裁决值集 [{rid, value}]；常规条目为空（导出时重扫语料）
+    note = Column(Text, nullable=True)
+    decided_by = Column(String(64), nullable=True)
+    decided_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "stage": self.stage,
+            "caliber": self.caliber,
+            "unit": self.unit,
+            "category": self.category,
+            "status": self.status,
+            "values": self.values_json,
+            "note": self.note,
+            "decided_by": self.decided_by,
+            "decided_at": format_utc_datetime(self.decided_at),
+            "created_at": format_utc_datetime(self.created_at),
+            "updated_at": format_utc_datetime(self.updated_at),
+        }
+
+
+class EiaDatasetSwitch(Base):
+    """Domain Factory - 环评数据集启停开关（DB 记录意图；关闭态同步删除对应 overrides 物化文件）"""
+
+    __tablename__ = "eia_dataset_switches"
+
+    dataset_key = Column(String(100), primary_key=True)  # 如 curated_lexicon；二三期数据集复用本表
+    enabled = Column(Boolean, nullable=False, default=False)
+    updated_by = Column(String(64), nullable=True)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "dataset_key": self.dataset_key,
+            "enabled": self.enabled,
+            "updated_by": self.updated_by,
             "updated_at": format_utc_datetime(self.updated_at),
         }

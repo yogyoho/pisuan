@@ -184,6 +184,12 @@ const router = createRouter({
           meta: { keepAlive: false, requiresAuth: true }
         },
         {
+          path: 'eia-data/lexicon',
+          name: 'EiaDataLexicon',
+          component: () => import('../views/EiaLexiconView.vue'),
+          meta: { keepAlive: false, requiresAuth: true }
+        },
+        {
           path: 'prompt-config',
           name: 'DomainFactoryPromptConfig',
           component: () => import('../views/PromptConfigView.vue'),
