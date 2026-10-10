@@ -24,20 +24,24 @@ from yuxi.storage.postgres.models_domain_factory import (
     Base as DomainFactoryBase,
     EiaDatasetSwitch,
     EiaLexiconEntry,
+    EiaLexiconSuppression,
     EiaMetaAnnotation,
     EiaStandardReview,
+    _LEXICON_BLOCKLIST_SEED,
 )
 from yuxi.storage.postgres.models_domain_entity import (
     Base as DomainEntityBase,
 )
 from yuxi.utils import logger
+from yuxi.utils.datetime_utils import utc_now_naive
 from yuxi.utils.singleton import SingletonMeta
 
 AGENT_RUN_TERMINAL_STATUS_SQL = ", ".join(f"'{status}'" for status in AGENT_RUN_TERMINAL_STATUSES)
 # [pisuan-custom] v10：环评数值护栏词表两表（eia_lexicon_entries / eia_dataset_switches）；
 # v11：语料元数据人工标注（eia_meta_annotations）；
-# v12：标准条目人工核实裁决（eia_standard_reviews）
-BUSINESS_SCHEMA_VERSION = 12
+# v12：标准条目人工核实裁决（eia_standard_reviews）；
+# v13：词表改名抑制（eia_lexicon_suppressions，建表 + 播种 7 条裁决指纹）
+BUSINESS_SCHEMA_VERSION = 13
 KNOWLEDGE_SCHEMA_VERSION = 2
 SCHEMA_VERSION_TABLE = "yuxi_schema_migrations"
 AGENT_RUN_LEASE_SCHEMA_STATEMENTS = (
@@ -593,9 +597,7 @@ class PostgresManager(metaclass=SingletonMeta):
             if version not in (None, 2, 7, 8, 9, 10):
                 raise RuntimeError(f"Unsupported business schema version: {version}")
             await conn.run_sync(
-                lambda sync_conn: DomainFactoryBase.metadata.create_all(
-                    sync_conn, tables=[EiaMetaAnnotation.__table__]
-                )
+                lambda sync_conn: DomainFactoryBase.metadata.create_all(sync_conn, tables=[EiaMetaAnnotation.__table__])
             )
             await conn.execute(
                 text(f"""
@@ -620,15 +622,53 @@ class PostgresManager(metaclass=SingletonMeta):
             if version not in (None, 2, 7, 8, 9, 10, 11):
                 raise RuntimeError(f"Unsupported business schema version: {version}")
             await conn.run_sync(
-                lambda sync_conn: DomainFactoryBase.metadata.create_all(
-                    sync_conn, tables=[EiaStandardReview.__table__]
-                )
+                lambda sync_conn: DomainFactoryBase.metadata.create_all(sync_conn, tables=[EiaStandardReview.__table__])
             )
             await conn.execute(
                 text(f"""
                     INSERT INTO {SCHEMA_VERSION_TABLE} (domain, version, applied_at)
                     VALUES ('business', 12, CURRENT_TIMESTAMP)
                     ON CONFLICT (domain) DO UPDATE SET version = 12, applied_at = EXCLUDED.applied_at
+                """)
+            )
+
+    async def upgrade_business_v12_to_v13(self) -> None:
+        """[pisuan-custom] v13：词表改名抑制表（存量库 create_all 不补表，显式建 + 播种 + 记版本）。
+
+        幂等：version=13 直接返回；表用 create_all(tables=[...]) 仅补新表；种子按
+        _LEXICON_BLOCKLIST_SEED 播种（ON CONFLICT DO NOTHING，不覆盖运行态改名登记行）。
+        """
+        self._check_initialized()
+        async with self.async_engine.begin() as conn:
+            version = await conn.scalar(
+                text(f"SELECT version FROM {SCHEMA_VERSION_TABLE} WHERE domain = 'business' FOR UPDATE")
+            )
+            if version == 13:
+                return
+            if version not in (None, 2, 7, 8, 9, 10, 11, 12):
+                raise RuntimeError(f"Unsupported business schema version: {version}")
+            await conn.run_sync(
+                lambda sync_conn: DomainFactoryBase.metadata.create_all(
+                    sync_conn, tables=[EiaLexiconSuppression.__table__]
+                )
+            )
+            for seed in _LEXICON_BLOCKLIST_SEED:
+                await conn.execute(
+                    text(
+                        f"""
+                        INSERT INTO {EiaLexiconSuppression.__tablename__}
+                            (stage, caliber, unit, new_caliber, reason, created_by, created_at)
+                        VALUES (:stage, :caliber, :unit, :new_caliber, :reason, 'import', :created_at)
+                        ON CONFLICT (stage, caliber, unit) DO NOTHING
+                        """
+                    ),
+                    {**seed, "reason": "方案B 改名裁决种子（v13 迁移播种）", "created_at": utc_now_naive()},
+                )
+            await conn.execute(
+                text(f"""
+                    INSERT INTO {SCHEMA_VERSION_TABLE} (domain, version, applied_at)
+                    VALUES ('business', 13, CURRENT_TIMESTAMP)
+                    ON CONFLICT (domain) DO UPDATE SET version = 13, applied_at = EXCLUDED.applied_at
                 """)
             )
 

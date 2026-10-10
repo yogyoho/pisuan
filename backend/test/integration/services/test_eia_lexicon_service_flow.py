@@ -45,15 +45,15 @@ async def test_lexicon_service_full_flow():
         pytest.skip("coal-eia-writer 技能目录不存在")
     svc = get_eia_lexicon_service()
 
-    # 1) 导入幂等：二次导入零新增
+    # 1) 导入幂等：二次导入零新增；抑制表（种子 7 + 运行态）中的旧指纹计 skipped
     r1 = await svc.import_entries()
-    assert r1["added"] == len(_scan_all())
+    assert r1["added"] == len(_scan_all()) - r1["blocklist_skipped"]
     r2 = await svc.import_entries()
     assert r2["added"] == 0
 
-    # 2) 状态分布完整，实时计数已合并
+    # 2) 状态分布完整，实时计数已合并（total = 扫描 − 抑制跳过）
     data = await svc.list_entries()
-    assert data["total"] == r1["scanned"]
+    assert data["total"] == r1["added"]
     assert sum(data["counts"].values()) == data["total"]
     by_status: dict[str, list[dict]] = {}
     for it in data["items"]:
@@ -104,3 +104,53 @@ async def test_lexicon_service_full_flow():
     # 6) 开关关闭 → 物化文件删除（管线回 builtin 的前提）
     await svc.set_switch("curated_lexicon", False, "tester")
     assert not OVERRIDES_PATH.exists()
+
+
+async def test_rename_suppress_and_fallback_flow():
+    """P4 改名闭环：改名 → 旧指纹自动入抑制 → 重扫不复活 → 新名零命中时回落旧语境。
+
+    自清理：本用例登记的抑制行（created_by='tester'）用后即删，种子行不动。"""
+    if not _skill_root_exists():
+        pytest.skip("coal-eia-writer 技能目录不存在")
+    svc = get_eia_lexicon_service()
+    await svc.import_entries()
+    items = (await svc.list_entries())["items"]
+    target = next(it for it in items if it["status"] == "rejected")
+    old_name = target["caliber"]
+    new_name = f"{old_name}·改名核验"  # 非语料逐字出现 → 主名必然零命中
+
+    # 1) 改名落地 + 决策人 stamp
+    updated = await svc.update_entry(target["id"], {"caliber": new_name}, "tester")
+    assert updated["caliber"] == new_name and updated["decided_by"] == "tester"
+
+    # 2) 守卫：普通行禁用拆分专用名；splitting 行禁改名
+    with pytest.raises(ValueError):
+        await svc.update_entry(target["id"], {"caliber": "控制效率"}, "tester")
+    splitters = [it for it in (await svc.list_entries())["items"] if it["status"] == "splitting"]
+    if splitters:
+        with pytest.raises(ValueError):
+            await svc.update_entry(splitters[0]["id"], {"caliber": f"{splitters[0]['caliber']}改"}, "tester")
+
+    # 3) 旧指纹已入抑制表，重扫不复活
+    from yuxi.repositories.eia_lexicon_repository import EiaLexiconRepository
+
+    repo = EiaLexiconRepository()
+    assert (target["stage"], old_name, target["unit"]) in await repo.suppressed_keys()
+    r = await svc.import_entries()
+    assert r["added"] == 0
+    assert not any(it["caliber"] == old_name for it in (await svc.list_entries())["items"])
+
+    # 4) 新名零命中 → 语境回落旧指纹（三段文本 + 判别字段）
+    md = await svc.get_mentions(target["id"])
+    assert md["source"] == "old_fingerprint"
+    assert md["mentions"]
+    assert all(set(m) >= {"rid", "before", "hit", "after", "value", "unit"} for m in md["mentions"])
+
+    # 自清理：只删本用例登记的抑制行
+    from sqlalchemy import delete
+
+    from yuxi.storage.postgres.manager import pg_manager
+    from yuxi.storage.postgres.models_domain_factory import EiaLexiconSuppression
+
+    async with pg_manager.get_async_session_context() as session:
+        await session.execute(delete(EiaLexiconSuppression).where(EiaLexiconSuppression.created_by == "tester"))

@@ -23,8 +23,13 @@ from typing import Any
 from fastapi.concurrency import run_in_threadpool
 
 from yuxi.repositories.eia_lexicon_repository import EiaLexiconRepository
-from yuxi.services.eia_data_service import _SKILL_ROOT, _iter_mentions, _scan_all
-from yuxi.storage.postgres.models_domain_factory import EiaLexiconEntry
+from yuxi.services.eia_data_service import (
+    _SKILL_ROOT,
+    _iter_mentions,
+    _scan_all,
+    collect_mention_details,
+)
+from yuxi.storage.postgres.models_domain_factory import EiaLexiconEntry, _LEXICON_BLOCKLIST_SEED
 from yuxi.utils import logger
 from yuxi.utils.datetime_utils import format_utc_datetime, utc_now_naive
 
@@ -36,19 +41,13 @@ CURATED_LEXICON_KEY = "curated_lexicon"
 _IMPORT_STATUS = {"measure": "approved", "site": "candidate", "junk": "rejected"}
 _SPLIT_CALIBERS = {"控制效率"}
 
-# 导入抑制清单（2026-10-10 方案B 裁决）：已改名条目的旧断章指纹。口径已改为规范名，
-# 旧名不再是合法口径；若不抑制，重扫会按旧指纹把断章名当新条目重新导入（measure 类
-# 还会复活成 approved）。指纹级屏蔽把「重扫复活」变成可断言行为（import 返回
-# blocklist_skipped）；未来语料若出现同名新句式需复评，删除对应行即可。
-_IMPORT_BLOCKLIST: set[tuple[str, str, str]] = {
-    ("planning_eia", "价区植被覆盖度值", "%"),
-    ("project_eia_openpit", "处置率", "%"),
-    ("planning_eia", "水平达标率", "%"),
-    ("planning_eia", "危险废物处置率", "%"),
-    ("planning_eia", "节水率", "%"),
-    ("planning_eia", "降尘效率", "%"),
-    ("project_eia_openpit", "环境质量达标率", "%"),
-}
+# 导入抑制（2026-10-10 方案B 裁决 + P4 对话框延续）：已改名条目的旧断章指纹，重扫不再
+# 复活（measure 类会按预置直接回 approved）。种子 7 条由 v13 迁移播种进抑制表，UI 改名
+# 继续自动登记运行态行——导入判跳过一律查 DB（suppressed_keys），本常量仅为种子的同名
+# 再导出（钉单测全集，防新装库漏种复活；常量放 models 层因 manager 迁移播种要读，留在
+# service 会成 import 环）。指纹级屏蔽把「重扫复活」变成可断言行为；语料若出现同名新
+# 句式需复评，删除对应抑制行即可。
+_IMPORT_BLOCKLIST: set[tuple[str, str, str]] = {(s["stage"], s["caliber"], s["unit"]) for s in _LEXICON_BLOCKLIST_SEED}
 _IMPORT_NOTE = {
     "approved": "A类自动入选（导入预置）",
     "candidate": "B类候选待业务确认",
@@ -123,16 +122,17 @@ class EiaLexiconService:
     async def import_entries(self) -> dict[str, Any]:
         """重扫语料幂等导入：existing 指纹一律跳过（绝不覆盖人工决策），只补新增。
 
-        改名条目的旧断章指纹在 _IMPORT_BLOCKLIST 中一并跳过（复活抑制，可断言）。"""
+        改名条目的旧断章指纹查 DB 抑制表一并跳过（复活抑制，可断言）。"""
         cands = await run_in_threadpool(_scan_all)
         existing = await self.repo.existing_keys()
+        suppressed = await self.repo.suppressed_keys()
         fresh: list[EiaLexiconEntry] = []
         blocked = 0
         for c in cands:
             key = (c["stage"], c["caliber"], c["unit"])
             if key in existing:
                 continue
-            if key in _IMPORT_BLOCKLIST:
+            if key in suppressed:
                 blocked += 1
                 continue
             status = _preset_status(c["category"], c["caliber"])
@@ -189,11 +189,21 @@ class EiaLexiconService:
         }
 
     async def get_mentions(self, entry_id: int) -> dict[str, Any]:
+        """条目语境素材（拆分/改名对话框）：mentions 行为 [before, hit, after] 三段文本。
+
+        改名行新名非语料逐字出现（机制必然零命中）时回落旧指纹语境（source=
+        old_fingerprint），按 (stage, unit, new_caliber=本行名) 反查抑制表。"""
         entry = await self.repo.get_entry(entry_id)
         if entry is None:
             raise KeyError(f"条目不存在: {entry_id}")
-        mentions = await run_in_threadpool(collect_mentions, entry.stage, entry.caliber, entry.unit)
-        return {"entry": entry.to_dict(), "mentions": mentions}
+        details = await run_in_threadpool(collect_mention_details, entry.stage, entry.caliber, entry.unit)
+        source = "current"
+        if not details:
+            old = await self.repo.find_fingerprint_suppression(entry.stage, entry.unit, entry.caliber)
+            if old is not None:
+                details = await run_in_threadpool(collect_mention_details, old.stage, old.caliber, entry.unit)
+                source = "old_fingerprint"
+        return {"entry": entry.to_dict(), "source": source, "mentions": details}
 
     # ── 确认流 ──
 
@@ -216,11 +226,27 @@ class EiaLexiconService:
             new = str(patch["caliber"]).strip()
             if len(new) < 2:
                 raise ValueError("口径名过短")
+            if entry.status == "splitting":
+                raise ValueError("splitting 条目不可改名（须先完成拆分；放弃拆分请驳回）")
             if new != entry.caliber:
+                if new in _SPLIT_CALIBERS:
+                    raise ValueError(f"「{new}」为拆分专用口径名，禁止用作普通口径名")
                 clash = await self.repo.find_key(entry.stage, new, entry.unit)
                 if clash is not None and clash.id != entry.id:
                     raise ValueError(f"口径已存在: {entry.stage}/{new}/{entry.unit}")
+                # 先插抑制、后落库改名（session-per-call 两事务）：抑制失败时改名不落地。
+                # 旧指纹自动入抑制清单，重扫导入不再复活断章名（方案B 机制教训）
+                await self.repo.add_suppression(
+                    stage=entry.stage,
+                    caliber=entry.caliber,
+                    unit=entry.unit,
+                    new_caliber=new,
+                    reason=f"改名抑制：{entry.caliber} → {new}",
+                    created_by=username,
+                )
                 entry.caliber = new
+                entry.decided_by = username
+                entry.decided_at = utc_now_naive()
         await self.repo.save_entry(entry)
         return entry.to_dict()
 
