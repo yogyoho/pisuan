@@ -160,6 +160,8 @@ DomainFactoryView 纯增量挂载
 
 - docs(skill): coal-eia-writer 技能架构图与流程图（`docs/vibe/2026-10-10-coal-eia-writer-skill-diagrams.html`，自包含 HTML+内联 SVG、浅深主题自适应）。依据 SKILL.md v2026.09.30 与 scripts/ 实现整理：图 1 分层架构（LLM 层只产散文与 `{{SLOT}}/{{TABLE}}` 占位符 / 确定性脚本层为数字唯一通道 / 磁盘工作区唯一续跑事实源 / references 资产层），琥珀色标注数值通路（ingest 校验写入 → formula_state 冻结 → build_output 组装注入）；图 2 管线步骤 0–7（快照恢复 → 开题三件套 → 门 1 → 冻结 → 门 2 anomalies 确认 → 节级派发/章级门禁循环 → 要点包 → 投影章 → finalize 终验三连 → 交付），琥珀色标注用户回路与发卡即停停车点；附脚本清单速览与运行时挂载说明（init_builtin_skills 同步、eia-section-writer DB-only、excluded_tools 断捷径）。纯文档，无代码改动。
 
+- fix(domain-factory): 数值护栏词表口径名质量修复一批（方案B，用户报告 19 例断章/缺定语口径回源评审、12 agent 对抗收敛后裁决执行）。数据侧（容器内服务层执行，幂等脚本）：13 条混簇/断章行驳回留档（真义写入 note：地类优势度/风向频率/预测因子浓度等值簇混叠 8 条 + 灌溉渠道防渗率等背景值 5 条）；9 条 rejected 断章行补真义注记（如「上煤矿产能占比到」=「120万吨/年及以上煤矿产能占比到达92%」产能结构目标、「伤的最大允许声强」=80dB(A) 听力损伤阈值属固定阈值型留二期）；7 条改名（价区植被覆盖度值→评价区植被覆盖度、处置率(openpit)→剥离物处置率、水平达标率→三率水平达标率、危险废物处置率→煤矸石及危险废物处置率、节水率→抑尘剂节水率、降尘效率→抑尘剂降尘效率、环境质量达标率→土壤环境质量达标率）；「控制效率」splitting 按 TSP/PM10/PM2.5 三分拆分（各 14 值 6 报告，42 值零剩余）；导出物化 8 条（3 子口径 + 抑尘效率 planning 15 报告 + openpit 生活污水回用率/矿坑水回用率/设备完好率/除尘效率），开关随导出置位。代码侧：`eia_lexicon_service` 新增 `_IMPORT_BLOCKLIST` 导入抑制清单——7 条已改名条目的旧断章指纹，防重扫复活（measure 类旧指纹按预置会直接复活成 approved），import 返回 `blocklist_skipped` 使抑制可断言，单测钉死全集（词表单测 4→5 例）。验收：重扫 import added=0 / blocklist_skipped=7、counts candidate 27/approved 27/rejected 38/splitting 0、7 改名行在库且计数为 0（改名仅为页面可读性：口径名不在语料逐字出现，导出按提取名现算，改名 approved 行恒 skip 属机制必然）。已知边界：改名 PATCH 不改状态，原 candidate 行（评价区植被覆盖度）仍为 candidate 待业务确认（2 报告不足物化门槛）；消费端 bank_compile 按后缀归并口径键，同一节三前缀子口径收敛同名键时按字典序 TSP 最后写入者胜。
+
 ## v0.7.2 (2026-09-02)
 
 ::: warning Beta 升级说明
