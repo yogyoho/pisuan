@@ -44,6 +44,8 @@ async def test_storage_migration_reads_legacy_schema_before_cutover(monkeypatch)
         ),
         record_schema_version=lambda domain, version: _record(calls, f"version:{domain}:{version}"),
         create_business_tables=lambda: _record(calls, "create_business_tables"),
+        upgrade_business_v9_to_v10=lambda: _async_value(None),  # [pisuan-custom] v10/v11 增量迁移在单测 fake 中空操作
+        upgrade_business_v10_to_v11=lambda: _async_value(None),
         create_knowledge_tables=lambda: _record(calls, "create_knowledge_tables"),
         ensure_business_schema=lambda: _record(calls, "ensure_business_schema"),
         ensure_knowledge_schema=lambda: _record(calls, "ensure_knowledge_schema"),
@@ -117,6 +119,8 @@ async def test_storage_migration_rejects_v071_schema_without_quiescence_proof(mo
         ),
         record_schema_version=lambda domain, version: _record(calls, f"version:{domain}:{version}"),
         create_business_tables=lambda: _record(calls, "create"),
+        upgrade_business_v9_to_v10=lambda: _async_value(None),  # [pisuan-custom] v10/v11 增量迁移在单测 fake 中空操作
+        upgrade_business_v10_to_v11=lambda: _async_value(None),
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),
@@ -166,6 +170,8 @@ async def test_current_schema_skips_schema_ddl(monkeypatch):
         ),
         record_schema_version=lambda domain, version: _record(calls, f"version:{domain}:{version}"),
         create_business_tables=lambda: _record(calls, "create_business"),
+        upgrade_business_v9_to_v10=lambda: _async_value(None),  # [pisuan-custom] v10/v11 增量迁移在单测 fake 中空操作
+        upgrade_business_v10_to_v11=lambda: _async_value(None),
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "business_schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),
@@ -262,6 +268,8 @@ async def test_supported_legacy_business_schema_is_converged_and_versioned_as_cu
         ),
         record_schema_version=lambda domain, version: _record(calls, f"version:{domain}:{version}"),
         create_business_tables=lambda: _record(calls, "create_business"),
+        upgrade_business_v9_to_v10=lambda: _async_value(None),  # [pisuan-custom] v10/v11 增量迁移在单测 fake 中空操作
+        upgrade_business_v10_to_v11=lambda: _async_value(None),
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "business_schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),
@@ -316,6 +324,8 @@ async def test_failed_business_migration_does_not_record_version(monkeypatch):
         ),
         record_schema_version=lambda domain, version: _record(calls, f"version:{domain}:{version}"),
         create_business_tables=lambda: _record(calls, "create_business"),
+        upgrade_business_v9_to_v10=lambda: _async_value(None),  # [pisuan-custom] v10/v11 增量迁移在单测 fake 中空操作
+        upgrade_business_v10_to_v11=lambda: _async_value(None),
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "business_schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),
@@ -361,6 +371,8 @@ async def test_current_schema_does_not_rewrite_workdir_data(monkeypatch):
         ),
         record_schema_version=lambda domain, version: _record(calls, f"version:{domain}:{version}"),
         create_business_tables=lambda: _record(calls, "create"),
+        upgrade_business_v9_to_v10=lambda: _async_value(None),  # [pisuan-custom] v10/v11 增量迁移在单测 fake 中空操作
+        upgrade_business_v10_to_v11=lambda: _async_value(None),
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),

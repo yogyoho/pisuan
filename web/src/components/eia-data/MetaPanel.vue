@@ -127,11 +127,17 @@
         </div>
       </div>
       <a-form layout="vertical" class="dlg-form">
-        <a-form-item label="年份 year_hint（2000–2100，留空清除）">
-          <a-input-number v-model:value="dlg.form.year_hint" :min="2000" :max="2100" style="width: 160px" />
+        <a-form-item label="年份 year_hint（2000–2100 整数，留空清除）">
+          <a-input-number
+            v-model:value="dlg.form.year_hint"
+            :min="2000"
+            :max="2100"
+            :precision="0"
+            style="width: 160px"
+          />
         </a-form-item>
-        <a-form-item label="规模 scale_mt_a（万吨/年，0–10000，留空清除）">
-          <a-input-number v-model:value="dlg.form.scale_mt_a" :min="0" :max="10000" :step="0.1" style="width: 160px" />
+        <a-form-item label="规模 scale_mt_a（万吨/年，(0, 10000]，留空清除）">
+          <a-input-number v-model:value="dlg.form.scale_mt_a" :min="0.1" :max="10000" :step="0.1" style="width: 160px" />
         </a-form-item>
         <a-form-item label="备注（仅平台库留档，不进物化文件）">
           <a-textarea v-model:value="dlg.form.note" :rows="2" placeholder="裁决依据，如「来自第 3 章建设规模」" />
@@ -220,7 +226,11 @@ const onImport = async () => {
   importing.value = true
   try {
     const r = await eiaMetaApi.importAnnotations()
-    message.success(`导入完成：文件 ${r.scanned} 条，新增 ${r.added} 条`)
+    if (r.skipped_unknown > 0) {
+      message.warning(`导入完成：新增 ${r.added} 条；${r.skipped_unknown} 条 rid 不在语料清单，已跳过（请核对人工层文件）`)
+    } else {
+      message.success(`导入完成：文件 ${r.scanned} 条，新增 ${r.added} 条`)
+    }
     await fetchList()
   } catch (e) {
     message.error(e?.message || '导入失败')
