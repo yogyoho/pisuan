@@ -13,6 +13,7 @@ from yuxi.services.domain_factory_service import get_domain_factory_service
 from yuxi.services.eia_data_service import get_skill_stats
 from yuxi.services.eia_lexicon_service import get_eia_lexicon_service
 from yuxi.services.eia_meta_service import get_eia_meta_service
+from yuxi.services.eia_standard_service import get_eia_standard_service
 from yuxi.storage.postgres.models_business import User
 from yuxi.utils import logger
 
@@ -1214,3 +1215,75 @@ async def export_eia_meta_annotations(
     except Exception as e:
         logger.error(f"Failed to export eia meta annotations: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"导出元数据标注失败: {str(e)}")
+
+
+# =============================================================================
+# EIA Standard Reviews (环评标准条目人工核实：无 import 初始态即文件态 + 导出翻转)
+# =============================================================================
+
+
+@domain_factory.get("/eia/standards")
+async def list_eia_standards(
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """62 条标准总览（文件态只读 + DB 裁决合并 + 语料引用数 + counts 汇总）"""
+    try:
+        return await get_eia_standard_service().list_standards()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=f"coal-eia-writer 技能数据缺失: {e}")
+    except Exception as e:
+        logger.error(f"Failed to list eia standards: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取标准总览失败: {str(e)}")
+
+
+@domain_factory.get("/eia/standards/limits")
+async def list_eia_standard_limits(
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """limit_tables 只读原样（rows 一期为空，仅展示表骨架与核实态）"""
+    try:
+        return await get_eia_standard_service().list_limit_tables()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=f"coal-eia-writer 技能数据缺失: {e}")
+    except Exception as e:
+        logger.error(f"Failed to list eia standard limits: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取限值表失败: {str(e)}")
+
+
+@domain_factory.put("/eia/standards/review")
+async def set_eia_standard_review(
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """核实裁决落库（upsert）：{code, action: 'confirm', note?}；code 走 body——
+    注册表 10/62 条编号含 `/`（GB/T、HJ/T 等），uvicorn 路由匹配前解码 %2F，
+    路径参数 {code} 段无法跨越内部斜杠，恒 404（对抗评审实证）。code 不在注册表 404，载荷越界 400"""
+    code = payload.get("code")
+    if not isinstance(code, str) or not code:
+        raise HTTPException(status_code=400, detail="code 须为非空字符串")
+    body = {k: v for k, v in payload.items() if k != "code"}
+    try:
+        row = await get_eia_standard_service().set_review(code, body, current_user.username)
+        return {"success": True, "review": row}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to set eia standard review {code}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"保存标准核实裁决失败: {str(e)}")
+
+
+@domain_factory.post("/eia/standards/export")
+async def export_eia_standard_reviews(
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """DB → standards_index.json（仅翻转被裁决条目两标志，round-trip 字节纪律；admin）"""
+    try:
+        result = await get_eia_standard_service().export_reviews(current_user.username)
+        return {"success": True, **result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to export eia standard reviews: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"导出标准核实裁决失败: {str(e)}")

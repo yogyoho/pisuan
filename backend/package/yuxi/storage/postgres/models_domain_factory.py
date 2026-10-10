@@ -483,3 +483,28 @@ class EiaMetaAnnotation(Base):
             "created_at": format_utc_datetime(self.created_at),
             "updated_at": format_utc_datetime(self.updated_at),
         }
+
+
+class EiaStandardReview(Base):
+    """Domain Factory - 环评标准条目人工核实裁决（P3；运营唯一真相，显式导出物化至 standards_index.json）"""
+
+    __tablename__ = "eia_standard_reviews"
+
+    code = Column(String(50), primary_key=True)  # = standards_index.standards[].code
+    action = Column(String(20), nullable=False)  # 一期唯一合法值 'confirm'（编号/年份/名称核实无误）
+    note = Column(Text, nullable=True)  # 核实范围/依据（仅 DB 留档，不进物化文件）
+    decided_by = Column(String(64), nullable=True)
+    decided_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "code": self.code,
+            "action": self.action,
+            "note": self.note,
+            "decided_by": self.decided_by,
+            "decided_at": format_utc_datetime(self.decided_at),
+            "created_at": format_utc_datetime(self.created_at),
+            "updated_at": format_utc_datetime(self.updated_at),
+        }

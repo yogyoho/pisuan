@@ -125,7 +125,7 @@ async def main() -> None:
                 "business",
                 business_version,
                 BUSINESS_SCHEMA_VERSION,
-                upgrade_from=(2, 7, 8, 9, 10),  # [pisuan-custom] v11：允许从 v9/v10 升级
+                upgrade_from=(2, 7, 8, 9, 10, 11),  # [pisuan-custom] v12：允许从 v9/v10/v11 升级
             )
             knowledge_version = versions.get("knowledge")
             _require_supported_version(
@@ -157,6 +157,9 @@ async def main() -> None:
             # [pisuan-custom] v11：语料元数据人工标注表（存量库显式补表，幂等）
             if business_version in {None, 2, 7, 8, 9, 10}:
                 await pg_manager.upgrade_business_v10_to_v11()
+            # [pisuan-custom] v12：标准条目人工核实裁决表（存量库显式补表，幂等）
+            if business_version in {None, 2, 7, 8, 9, 10, 11}:
+                await pg_manager.upgrade_business_v11_to_v12()
 
             if knowledge_version is None:
                 await pg_manager.create_knowledge_tables()
