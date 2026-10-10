@@ -149,6 +149,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { eiaMetaApi } from '@/apis/eia_meta_api'
 import { useUserStore } from '@/stores/user'
@@ -163,12 +164,18 @@ const STAGES = [
 const STAGE_LABELS = Object.fromEntries(STAGES.map((s) => [s.key, s.label]))
 
 const userStore = useUserStore()
+const route = useRoute()
 const loading = ref(false)
 const importing = ref(false)
 const exporting = ref(false)
 const items = ref([])
 const counts = reactive({ total: 0, annotated: 0, year_missing: 0, scale_missing: 0, scale_needs_review: 0 })
 const filters = reactive({ state: '', stage: '', q: '' })
+// 深链入口：/eia-data/meta?state=todo|annotated 直落对应筛选（总览页 chip 分流）
+const deepState = String(route.query.state ?? '')
+if (deepState === 'todo' || deepState === 'annotated') {
+  filters.state = deepState
+}
 
 const columns = [
   { title: '报告 ID', key: 'report_id', width: 200, ellipsis: true },

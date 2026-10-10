@@ -172,10 +172,10 @@ const warnCount = (key) => stats.value.quality.find((q) => q.key === key)?.count
 
 const goLexicon = () => router.push('/domain-factory/eia-data/lexicon')
 
-// 可管理数据层的 chip 点击直达对应管理页
+// 可管理数据层的 chip 点击直达对应管理页（人工标注带待办深链，两 chip 落点各有语义）
 const LAYER_LINKS = {
   corpus_meta: '/domain-factory/eia-data/meta',
-  meta_annotations: '/domain-factory/eia-data/meta',
+  meta_annotations: '/domain-factory/eia-data/meta?state=todo',
   curated_lexicon: '/domain-factory/eia-data/lexicon'
 }
 const layerLink = (item) => LAYER_LINKS[item.key]
