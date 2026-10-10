@@ -7,7 +7,13 @@ DB 流转（导入幂等 / PATCH 状态机 / 拆分 / 导出物化）在集成�
 import pytest
 
 from yuxi.services.eia_data_service import _scan_all, _skill_root_exists
-from yuxi.services.eia_lexicon_service import _build_range, _load_bank_compile, _preset_status, collect_mentions
+from yuxi.services.eia_lexicon_service import (
+    _IMPORT_BLOCKLIST,
+    _build_range,
+    _load_bank_compile,
+    _preset_status,
+    collect_mentions,
+)
 
 
 def test_preset_status_import_mapping():
@@ -16,6 +22,23 @@ def test_preset_status_import_mapping():
     assert _preset_status("site", "超标率") == "candidate"
     assert _preset_status("junk", "占地面积") == "rejected"
     assert _preset_status("measure", "控制效率") == "splitting"
+
+
+def test_import_blocklist_matches_adjudicated_renames():
+    """导入抑制清单（2026-10-10 方案B 裁决）：恰为 7 条改名条目的旧断章指纹，防漂移。
+
+    名单语义：这 7 条已 PATCH 改规范名，旧指纹不在 DB（改名即失配），重扫必以断章名
+    复活（measure 类按预置直接回 approved）——blocklist 是唯一持久抑制。多一条会误杀
+    同名合法新句式，少一条会复活，故钉死全集。"""
+    assert _IMPORT_BLOCKLIST == {
+        ("planning_eia", "价区植被覆盖度值", "%"),  # → 评价区植被覆盖度
+        ("project_eia_openpit", "处置率", "%"),  # → 剥离物处置率
+        ("planning_eia", "水平达标率", "%"),  # → 三率水平达标率
+        ("planning_eia", "危险废物处置率", "%"),  # → 煤矸石及危险废物处置率
+        ("planning_eia", "节水率", "%"),  # → 抑尘剂节水率
+        ("planning_eia", "降尘效率", "%"),  # → 抑尘剂降尘效率
+        ("project_eia_openpit", "环境质量达标率", "%"),  # → 土壤环境质量达标率
+    }
 
 
 def test_build_range_gate_and_percentiles():

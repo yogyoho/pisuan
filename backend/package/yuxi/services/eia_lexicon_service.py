@@ -35,6 +35,20 @@ CURATED_LEXICON_KEY = "curated_lexicon"
 # 「控制效率」值簇语义混叠（不同设备的效率混在同一口径），直接发布会产生混杂区间，须先拆分
 _IMPORT_STATUS = {"measure": "approved", "site": "candidate", "junk": "rejected"}
 _SPLIT_CALIBERS = {"控制效率"}
+
+# 导入抑制清单（2026-10-10 方案B 裁决）：已改名条目的旧断章指纹。口径已改为规范名，
+# 旧名不再是合法口径；若不抑制，重扫会按旧指纹把断章名当新条目重新导入（measure 类
+# 还会复活成 approved）。指纹级屏蔽把「重扫复活」变成可断言行为（import 返回
+# blocklist_skipped）；未来语料若出现同名新句式需复评，删除对应行即可。
+_IMPORT_BLOCKLIST: set[tuple[str, str, str]] = {
+    ("planning_eia", "价区植被覆盖度值", "%"),
+    ("project_eia_openpit", "处置率", "%"),
+    ("planning_eia", "水平达标率", "%"),
+    ("planning_eia", "危险废物处置率", "%"),
+    ("planning_eia", "节水率", "%"),
+    ("planning_eia", "降尘效率", "%"),
+    ("project_eia_openpit", "环境质量达标率", "%"),
+}
 _IMPORT_NOTE = {
     "approved": "A类自动入选（导入预置）",
     "candidate": "B类候选待业务确认",
@@ -107,12 +121,19 @@ class EiaLexiconService:
     # ── 导入 ──
 
     async def import_entries(self) -> dict[str, Any]:
-        """重扫语料幂等导入：existing 指纹一律跳过（绝不覆盖人工决策），只补新增。"""
+        """重扫语料幂等导入：existing 指纹一律跳过（绝不覆盖人工决策），只补新增。
+
+        改名条目的旧断章指纹在 _IMPORT_BLOCKLIST 中一并跳过（复活抑制，可断言）。"""
         cands = await run_in_threadpool(_scan_all)
         existing = await self.repo.existing_keys()
         fresh: list[EiaLexiconEntry] = []
+        blocked = 0
         for c in cands:
-            if (c["stage"], c["caliber"], c["unit"]) in existing:
+            key = (c["stage"], c["caliber"], c["unit"])
+            if key in existing:
+                continue
+            if key in _IMPORT_BLOCKLIST:
+                blocked += 1
                 continue
             status = _preset_status(c["category"], c["caliber"])
             fresh.append(
@@ -129,8 +150,8 @@ class EiaLexiconService:
             )
         if fresh:
             await self.repo.add_entries(fresh)
-        logger.info(f"[eia-lexicon] 导入完成：扫描 {len(cands)} 候选，新增 {len(fresh)} 条")
-        return {"scanned": len(cands), "added": len(fresh)}
+        logger.info(f"[eia-lexicon] 导入完成：扫描 {len(cands)} 候选，新增 {len(fresh)} 条，抑制 {blocked} 条")
+        return {"scanned": len(cands), "added": len(fresh), "blocklist_skipped": blocked}
 
     # ── 查询 ──
 
