@@ -26,9 +26,9 @@ export const eiaLexiconApi = {
     }),
   /** 拆分值簇语义混叠口径：{ items: [{ caliber, values: [{rid, value}], note? }] } */
   splitEntry: (entryId, items) => apiPost(`/api/domain-factory/eia/lexicon/entries/${entryId}/split`, { items }),
-  /** 条目口径在切片中的原始提及清单 → { entry, mentions } */
+  /** 条目语境素材（拆分/改名对话框）→ { entry, source: 'current'|'old_fingerprint', mentions: [{rid, before, hit, after, value, unit}] } */
   getMentions: (entryId) => apiGet(`/api/domain-factory/eia/lexicon/entries/${entryId}/mentions`),
-  /** 重扫语料幂等导入词表候选 → { scanned, added } */
+  /** 重扫语料幂等导入词表候选 → { scanned, added, blocklist_skipped } */
   importEntries: () => apiPost('/api/domain-factory/eia/lexicon/import'),
   /** 数据集启停开关列表（含 overrides 物化文件存在态） */
   getSwitches: () => apiGet('/api/domain-factory/eia/datasets/switches'),

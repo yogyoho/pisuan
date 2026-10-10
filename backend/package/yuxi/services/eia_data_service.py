@@ -69,6 +69,9 @@ _MIN_RANGE_REPORTS = 5
 # 疑似乱码标题启发式（bank_index 既有脏数据形态，如「旷/t (年入选」「.22) :」）
 _MOJI_HINT = re.compile(r"[一-鿿]/[a-z]{1,2}\s*\(|^\s*[.0-9a-zA-Z)\s:：,，\-]+$")
 
+# 改名语境三段文本的 hit 前后截断宽度（切片「段落」多为单行，截断仅大表格行触发）
+_MENTION_CONTEXT_CHARS = 200
+
 _cache: dict[str, tuple[float, dict[str, Any]]] = {}
 
 
@@ -106,11 +109,40 @@ def _classify_caliber(caliber: str) -> str:
     return "junk"
 
 
-def _iter_mentions():
-    """全语料数值提及迭代器 (stage, rid, caliber, unit, value)——清洗过滤后的口径。
+def _block_span(text: str, start: int, end: int) -> tuple[int, int]:
+    """match 所在非空行块的 [bs, be)：上下吸收相邻非空行，行块向后延伸覆盖 match.end()。
 
-    统计扫描、词表导入、拆分素材、导出值收集四处共用同一迭代（口径单一真源，
-    避免各处过滤条件漂移）；切片按路径排序保证确定性。"""
+    QUANTITY_RE 的 \\s* 可吞空行致 group(0) 跨行块（实测 3/1245），行块若止于命中前
+    会切掉 hit 尾部，故「覆盖命中终点」的延伸条件独立于空行判断。"""
+
+    def line_bounds(i: int) -> tuple[int, int]:
+        ls = text.rfind("\n", 0, i) + 1
+        le = text.find("\n", i)
+        return ls, (len(text) if le == -1 else le)
+
+    bs, be = line_bounds(start)
+    while bs > 0:  # 向上吸收非空行
+        pls, ple = line_bounds(bs - 1)
+        if text[pls:ple].strip():
+            bs = pls
+        else:
+            break
+    while be < len(text):  # 向下吸收非空行，且须延伸至覆盖 match.end()
+        nls, nle = line_bounds(be + 1)
+        if be < end or text[nls:nle].strip():
+            be = nle
+        else:
+            break
+    return bs, be
+
+
+def _iter_raw_matches():
+    """全语料原始命中迭代器 (stage, rid, caliber, unit, value, para, hit_off, hit_end)。
+
+    过滤谓词（unit 白名单、尾剥、短名、junk 黑名单）全部在产出侧收口——统计扫描、
+    词表导入、拆分素材、改名语境四处共用同一真源，避免各处过滤条件漂移；para 为
+    命中所在非空行块文本，hit_off/hit_end 为命中在 para 内的码点偏移。切片按路径
+    排序保证确定性。"""
     qty_re = _load_quantity_re()
     for stage in STAGES:
         sdir = _BANK / stage / "slices"
@@ -118,13 +150,52 @@ def _iter_mentions():
             continue
         for p in sorted(sdir.rglob("*.md")):
             rid = p.name.split("__", 1)[0]
-            for m in qty_re.finditer(p.read_text(encoding="utf-8", errors="replace")):
+            text = p.read_text(encoding="utf-8", errors="replace")
+            for m in qty_re.finditer(text):
                 if m.group(3) not in _CANDIDATE_UNITS:
                     continue
                 caliber = _clean_caliber(m.group(1))
                 if len(caliber) < 2 or caliber in _GENERIC_JUNK:
                     continue
-                yield stage, rid, caliber, m.group(3), float(m.group(2))
+                bs, be = _block_span(text, m.start(), m.end())
+                yield stage, rid, caliber, m.group(3), float(m.group(2)), text[bs:be], m.start() - bs, m.end() - bs
+
+
+def _iter_mentions():
+    """全语料数值提及迭代器 (stage, rid, caliber, unit, value)——清洗过滤后的口径。
+
+    统计扫描、词表导入、拆分素材、导出值收集四处共用同一迭代（口径单一真源）。"""
+    for stage, rid, caliber, unit, value, *_ in _iter_raw_matches():
+        yield stage, rid, caliber, unit, value
+
+
+def collect_mention_details(stage: str, caliber: str, unit: str) -> list[dict[str, Any]]:
+    """(stage, caliber, unit) 的语境素材（改名对话框）：三段文本 [before, hit, after]。
+
+    纯函数无 DB 依赖；后端直发三段而非 offset（Python 码点偏移 vs JS UTF-16 码元在
+    mojibake 语料下会静默错位，前端零 offset 运算）；同段重复命中（同 rid 同段同
+    命中文本）去重合并；hit 前后各截 ≤200 字符。"""
+    seen: set[tuple[str, str, str]] = set()
+    details: list[dict[str, Any]] = []
+    for s, rid, cal, u, value, para, hs, he in _iter_raw_matches():
+        if s != stage or cal != caliber or u != unit:
+            continue
+        hit = para[hs:he]
+        key = (rid, para, hit)
+        if key in seen:
+            continue
+        seen.add(key)
+        details.append(
+            {
+                "rid": rid,
+                "before": para[max(0, hs - _MENTION_CONTEXT_CHARS) : hs],
+                "hit": hit,
+                "after": para[he : he + _MENTION_CONTEXT_CHARS],
+                "value": value,
+                "unit": u,
+            }
+        )
+    return details
 
 
 def _scan_all() -> list[dict[str, Any]]:

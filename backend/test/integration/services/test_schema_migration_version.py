@@ -282,7 +282,7 @@ async def test_v072_business_converges_current_schema_idempotently() -> None:
             "ix_scheduled_agent_runs_job_created",
             "ix_scheduled_agent_runs_dispatching",
         }.issubset(scheduled_indexes)
-        assert BUSINESS_SCHEMA_VERSION == 12  # [pisuan-custom] 随 BUSINESS_SCHEMA_VERSION 同步递增
+        assert BUSINESS_SCHEMA_VERSION == 13  # [pisuan-custom] 随 BUSINESS_SCHEMA_VERSION 同步递增
     finally:
         await _drop_isolated_schema(schema, admin_engine, scoped_engine)
 
@@ -618,5 +618,36 @@ async def test_v12_creates_standard_review_table_and_records_version_idempotentl
         assert await manager.get_schema_versions() == {"business": 12}
         await manager.upgrade_business_v11_to_v12()  # 幂等重跑
         assert await manager.get_schema_versions() == {"business": 12}
+    finally:
+        await _drop_isolated_schema(schema, admin_engine, engine)
+
+
+async def test_v13_creates_suppression_table_seeds_and_records_version_idempotently() -> None:
+    """[pisuan-custom] 真实 PostgreSQL：v12→v13 建改名抑制表 + 播种 7 条裁决指纹并翻版本。
+
+    幂等重跑不双播种子（只记版本不建表/漏播种的变异在此红）。"""
+    schema, admin_engine, engine, manager = await _create_isolated_manager("lexicon_suppression_v13")
+    try:
+        await manager.create_schema_version_table()
+        await manager.record_schema_version("business", 12)
+        await manager.upgrade_business_v12_to_v13()
+        async with engine.connect() as conn:
+            exists = (
+                await conn.execute(
+                    text(
+                        "SELECT COUNT(*) FROM information_schema.tables "
+                        "WHERE table_schema = :s AND table_name = 'eia_lexicon_suppressions'"
+                    ),
+                    {"s": schema},
+                )
+            ).scalar()
+            seeded = (await conn.execute(text("SELECT COUNT(*) FROM eia_lexicon_suppressions"))).scalar()
+        assert exists == 1
+        assert seeded == 7  # 方案B 裁决的 7 条改名旧指纹（_LEXICON_BLOCKLIST_SEED）
+        assert await manager.get_schema_versions() == {"business": 13}
+        await manager.upgrade_business_v12_to_v13()  # 幂等重跑
+        async with engine.connect() as conn:
+            assert (await conn.execute(text("SELECT COUNT(*) FROM eia_lexicon_suppressions"))).scalar() == 7
+        assert await manager.get_schema_versions() == {"business": 13}
     finally:
         await _drop_isolated_schema(schema, admin_engine, engine)

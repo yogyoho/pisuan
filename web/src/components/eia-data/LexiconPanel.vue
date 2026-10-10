@@ -101,6 +101,7 @@
               <a class="primary" @click="openSplit(record)">拆分…</a>
               <a class="danger" @click="onPatch(record, 'rejected')">放弃拆分</a>
             </template>
+            <a v-if="record.status !== 'splitting'" @click="openRename(record)">改名</a>
             <a @click="openMentions(record)">提及</a>
           </div>
         </template>
@@ -160,6 +161,56 @@
       </div>
     </a-modal>
 
+    <!-- 改名对话框：语料语境三段高亮 + 人工修正口径名（旧指纹自动入抑制清单） -->
+    <a-modal
+      v-model:open="renameModal.open"
+      :title="`改名 · ${renameModal.entry?.caliber ?? ''}`"
+      :confirm-loading="renameModal.submitting"
+      width="680px"
+      @ok="onRenameSubmit"
+    >
+      <div class="rename-summary">
+        <span class="caliber-name">{{ renameModal.entry?.caliber }}</span>
+        <span class="cat-tag" :class="`cat-${renameModal.entry?.category}`">
+          {{ categoryLabel(renameModal.entry?.category) }}
+        </span>
+        <span class="status-tag" :class="`st-${renameModal.entry?.status}`">
+          {{ statusLabel(renameModal.entry?.status) }}
+        </span>
+        <span class="count-cell">
+          {{ renameModal.entry?.n_values }} 值 / {{ renameModal.entry?.n_reports }} 报告 · {{ renameModal.entry?.unit }}
+        </span>
+      </div>
+      <p class="rename-ctx-title">
+        语料语境（高亮为扫描命中）
+        <a-tag v-if="renameModal.source === 'old_fingerprint'" color="orange">旧口径语境：新名在语料中零命中</a-tag>
+        <span v-if="renameModal.ctxError" class="ctx-error">{{ renameModal.ctxError }}</span>
+      </p>
+      <div class="assign-list rename-ctx">
+        <a-spin v-if="renameModal.loadingCtx" size="small" class="ctx-spin" />
+        <template v-else>
+          <div v-for="(m, i) in renameModal.mentions" :key="i" class="ctx-row">
+            <span class="ctx-text">{{ m.before }}<mark>{{ m.hit }}</mark>{{ m.after }}</span>
+            <span class="ctx-value">{{ m.value }} {{ m.unit }}</span>
+            <span class="ctx-rid" :title="m.rid">{{ m.rid }}</span>
+          </div>
+          <p v-if="!renameModal.mentions.length && !renameModal.ctxError" class="assign-empty">
+            该口径在语料中无提及
+          </p>
+        </template>
+      </div>
+      <div class="rename-form">
+        <a-input v-model:value="renameModal.caliber" placeholder="新口径名（至少 2 个字）" />
+        <a-input v-model:value="renameModal.note" placeholder="备注（可选）" />
+      </div>
+      <div class="rename-warn">
+        <Pencil :size="14" style="flex: none; margin-top: 3px" />
+        <span>
+          新名若非语料逐字出现，语料计数将归 0、导出物化永久跳过（机制必然）；旧口径名自动进入抑制清单，重扫语料不会复活。
+        </span>
+      </div>
+    </a-modal>
+
     <!-- 提及明细抽屉 -->
     <a-drawer v-model:open="mentionDrawer.open" :title="`提及明细 · ${mentionDrawer.entry?.caliber ?? ''}`" width="420">
       <p class="drawer-sub">
@@ -194,7 +245,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { RefreshCw } from '@lucide/vue'
+import { Pencil, RefreshCw } from '@lucide/vue'
 import { eiaLexiconApi } from '@/apis/eia_lexicon_api'
 import { useUserStore } from '@/stores/user'
 
@@ -302,7 +353,8 @@ const onImport = async () => {
   importing.value = true
   try {
     const r = await eiaLexiconApi.importEntries()
-    message.success(`重扫完成：扫描 ${r.scanned} 条，新增 ${r.added} 条`)
+    const suppressed = r.blocklist_skipped ? `，抑制 ${r.blocklist_skipped} 条` : ''
+    message.success(`重扫完成：扫描 ${r.scanned} 条，新增 ${r.added} 条${suppressed}`)
     await fetchList()
   } catch (e) {
     message.error(e?.message || '导入失败')
@@ -384,6 +436,74 @@ const onSplitSubmit = async () => {
     message.error(e?.message || '拆分失败')
   } finally {
     splitModal.submitting = false
+  }
+}
+
+// ── 改名 ────────────────────────────────────────────────
+
+const renameModal = reactive({
+  open: false,
+  submitting: false,
+  loadingCtx: false,
+  entry: null,
+  caliber: '',
+  note: '',
+  mentions: [],
+  source: 'current',
+  ctxError: ''
+})
+
+const openRename = (record) => {
+  renameModal.entry = record
+  renameModal.caliber = record.caliber
+  renameModal.note = record.note || ''
+  renameModal.mentions = []
+  renameModal.source = 'current'
+  renameModal.ctxError = ''
+  renameModal.open = true
+  renameModal.loadingCtx = true
+  eiaLexiconApi
+    .getMentions(record.id)
+    .then((data) => {
+      renameModal.mentions = data.mentions
+      renameModal.source = data.source || 'current'
+    })
+    .catch(() => {
+      // 语境加载失败仅内联提示，不阻断改名提交主链路
+      renameModal.ctxError = '语境加载失败（不影响提交）'
+    })
+    .finally(() => {
+      renameModal.loadingCtx = false
+    })
+}
+
+const onRenameSubmit = async () => {
+  const entry = renameModal.entry
+  const newName = renameModal.caliber.trim()
+  if (newName.length < 2) {
+    message.warning('口径名至少 2 个字')
+    return
+  }
+  if (newName !== entry.caliber) {
+    // 客户端重名预检（列表可能被筛选，后端 ValueError 仍兜底）
+    const clash = items.value.find(
+      (it) => it.id !== entry.id && it.stage === entry.stage && it.unit === entry.unit && it.caliber === newName
+    )
+    if (clash) {
+      message.warning(`口径已存在：${stageLabel(entry.stage)} / ${newName} / ${entry.unit}`)
+      return
+    }
+  }
+  renameModal.submitting = true
+  try {
+    await eiaLexiconApi.updateEntry(entry.id, { caliber: newName, note: renameModal.note.trim() })
+    message.success(`已改名：${entry.caliber} → ${newName}`)
+    renameModal.open = false
+    await fetchList()
+  } catch (e) {
+    message.error(e?.message || '改名失败')
+  } finally {
+    renameModal.submitting = false
   }
 }
 
@@ -703,6 +823,105 @@ onMounted(() => {
   text-align: center;
   font-size: 12px;
   color: var(--gray-400);
+}
+
+/* ── 改名对话框 ─────────────────────────────────────── */
+.rename-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.rename-ctx-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+.ctx-error {
+  font-weight: 400;
+  color: var(--second-600);
+}
+
+.rename-ctx {
+  margin-bottom: 12px;
+
+  .ctx-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 6px 10px;
+
+    & + .ctx-row {
+      border-top: 1px solid var(--gray-100);
+    }
+  }
+
+  .ctx-text {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--gray-700);
+    word-break: break-all;
+
+    mark {
+      padding: 0 2px;
+      border-radius: 2px;
+      background: var(--second-100);
+      color: var(--second-900);
+    }
+  }
+
+  .ctx-value {
+    flex: none;
+    min-width: 80px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--gray-800);
+  }
+
+  .ctx-rid {
+    flex: none;
+    max-width: 140px;
+    font-size: 11px;
+    color: var(--gray-400);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ctx-spin {
+    display: block;
+    padding: 16px;
+    text-align: center;
+  }
+}
+
+.rename-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.rename-warn {
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--second-50);
+  color: var(--second-900);
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 /* ── 提及抽屉与导出结果 ─────────────────────────────── */

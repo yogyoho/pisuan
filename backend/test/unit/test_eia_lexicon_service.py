@@ -6,12 +6,18 @@ DB 流转（导入幂等 / PATCH 状态机 / 拆分 / 导出物化）在集成�
 
 import pytest
 
-from yuxi.services.eia_data_service import _scan_all, _skill_root_exists
+from yuxi.services.eia_data_service import (
+    _block_span,
+    _load_quantity_re,
+    _scan_all,
+    _skill_root_exists,
+)
 from yuxi.services.eia_lexicon_service import (
     _IMPORT_BLOCKLIST,
     _build_range,
     _load_bank_compile,
     _preset_status,
+    collect_mention_details,
     collect_mentions,
 )
 
@@ -25,11 +31,13 @@ def test_preset_status_import_mapping():
 
 
 def test_import_blocklist_matches_adjudicated_renames():
-    """导入抑制清单（2026-10-10 方案B 裁决）：恰为 7 条改名条目的旧断章指纹，防漂移。
+    """导入抑制种子（2026-10-10 方案B 裁决）：恰为 7 条改名条目的旧断章指纹，防漂移。
 
-    名单语义：这 7 条已 PATCH 改规范名，旧指纹不在 DB（改名即失配），重扫必以断章名
-    复活（measure 类按预置直接回 approved）——blocklist 是唯一持久抑制。多一条会误杀
-    同名合法新句式，少一条会复活，故钉死全集。"""
+    P4 后运行态判跳过查 DB 抑制表（eia_lexicon_suppressions，v13 迁移播种本名单）；
+    本测试钉的是 _LEXICON_BLOCKLIST_SEED 的再导出视图——名单漂移即迁移种子漂移。
+    语义：这 7 条已 PATCH 改规范名，旧指纹不在 DB（改名即失配），无抑制则重扫必以
+    断章名复活（measure 类按预置直接回 approved）。多一条会误杀同名合法新句式，
+    少一条会复活，故钉死全集。"""
     assert _IMPORT_BLOCKLIST == {
         ("planning_eia", "价区植被覆盖度值", "%"),  # → 评价区植被覆盖度
         ("project_eia_openpit", "处置率", "%"),  # → 剥离物处置率
@@ -54,6 +62,24 @@ def test_build_range_gate_and_percentiles():
     assert _build_range([], mod.RANGE_MIN_REPORTS) is None
 
 
+def test_block_span_extends_to_cover_match_end():
+    """行块定位（P4 语境契约）：上下吸收非空行；QUANTITY_RE 的 \\s* 吞空行致 match 跨块
+    时（实测 3/1245），行块须延伸覆盖 match.end()，否则三段文本切掉 hit 尾部。"""
+    text = "甲段\n\n乙段首行\n乙段续行\n\n丙段"
+    s = text.index("乙段首行")  # 命中起点在乙段首行
+    e = text.index("乙段续行") + 2  # 终点落在下一行（跨换行）
+    bs, be = _block_span(text, s, e)
+    assert text[bs:be] == "乙段首行\n乙段续行"
+
+    e2 = text.index("丙段") + 2  # 终点跨过空行落到丙段（吞空行实况）
+    bs2, be2 = _block_span(text, s, e2)
+    assert text[bs2:be2] == "乙段首行\n乙段续行\n\n丙段"
+
+    s3 = text.index("丙段")  # 前面隔空行：不向上吸收甲乙段
+    bs3, be3 = _block_span(text, s3, s3 + 2)
+    assert text[bs3:be3] == "丙段"
+
+
 @pytest.mark.skipif(not _skill_root_exists(), reason="coal-eia-writer 技能目录不存在（宿主环境）")
 def test_scan_all_matches_census():
     """全量扫描与语料普查口径一致：89 候选 / A30 / B34 / range_ready 6。"""
@@ -73,3 +99,34 @@ def test_collect_mentions_consistent_with_scan():
     assert len(ms) == e["n_values"]
     assert len({m["rid"] for m in ms}) == e["n_reports"]
     assert all(m["unit"] == e["unit"] for m in ms)
+
+
+@pytest.mark.skipif(not _skill_root_exists(), reason="coal-eia-writer 技能目录不存在（宿主环境）")
+def test_mention_details_hit_is_exact_regex_match():
+    """三段契约（P4 改名对话框）：hit 恰为 QUANTITY_RE 的一个完整匹配（含连接词与数值
+    单位，即 group(0)），前后截断 ≤200 字，值/单位与扫描同源。"""
+    qty_re = _load_quantity_re()
+    checked = 0
+    for e in _scan_all():
+        for d in collect_mention_details(e["stage"], e["caliber"], e["unit"]):
+            assert qty_re.fullmatch(d["hit"])
+            assert len(d["before"]) <= 200 and len(d["after"]) <= 200
+            assert d["unit"] == e["unit"] and d["rid"]
+            assert d["hit"] and isinstance(d["value"], float)
+            checked += 1
+            if checked >= 50:
+                return
+    assert checked >= 50  # 全语料 1245 处提及，取满 50 即证契约普遍成立
+
+
+@pytest.mark.skipif(not _skill_root_exists(), reason="coal-eia-writer 技能目录不存在（宿主环境）")
+def test_mention_details_dedup_and_determinism():
+    """同段重复命中去重合并：distinct rid 数与扫描一致；两次调用结果确定。"""
+    entries = _scan_all()
+    e = max(entries, key=lambda x: x["n_values"])
+    d1 = collect_mention_details(e["stage"], e["caliber"], e["unit"])
+    d2 = collect_mention_details(e["stage"], e["caliber"], e["unit"])
+    assert d1 == d2
+    assert {d["rid"] for d in d1} == {m["rid"] for m in collect_mentions(e["stage"], e["caliber"], e["unit"])}
+    keys = [(d["rid"], d["before"], d["hit"], d["after"]) for d in d1]
+    assert len(keys) == len(set(keys))  # 展示行无重复

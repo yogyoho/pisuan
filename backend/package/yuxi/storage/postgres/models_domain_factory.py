@@ -134,7 +134,9 @@ class DomainFactoryLearnedTemplate(Base):
     match_count = Column(Integer, nullable=False, default=0)
     sample_original = Column(Text, nullable=True)
     extra_meta = Column(JSON, nullable=True, default=dict)
-    scope = Column(String(32), nullable=True)  # [pisuan-custom] W3：universal|regional|project；NULL=无证据不参与聚合（不进唯一约束）
+    scope = Column(
+        String(32), nullable=True
+    )  # [pisuan-custom] W3：universal|regional|project；NULL=无证据不参与聚合（不进唯一约束）
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
 
@@ -438,6 +440,48 @@ class EiaLexiconEntry(Base):
             "decided_at": format_utc_datetime(self.decided_at),
             "created_at": format_utc_datetime(self.created_at),
             "updated_at": format_utc_datetime(self.updated_at),
+        }
+
+
+# 词表导入抑制种子（2026-10-10 方案B 裁决的 7 条改名旧指纹）：迁移 v13 建表时播种，
+# UI 改名继续追加运行态行。常量须放 models 层——manager（storage 层）迁移播种要读它，
+# 留在 service 会成 import 环（service→repo→manager）；service 同名再导出保单测路径。
+_LEXICON_BLOCKLIST_SEED: list[dict[str, str]] = [
+    {"stage": "planning_eia", "caliber": "价区植被覆盖度值", "unit": "%", "new_caliber": "评价区植被覆盖度"},
+    {"stage": "project_eia_openpit", "caliber": "处置率", "unit": "%", "new_caliber": "剥离物处置率"},
+    {"stage": "planning_eia", "caliber": "水平达标率", "unit": "%", "new_caliber": "三率水平达标率"},
+    {"stage": "planning_eia", "caliber": "危险废物处置率", "unit": "%", "new_caliber": "煤矸石及危险废物处置率"},
+    {"stage": "planning_eia", "caliber": "节水率", "unit": "%", "new_caliber": "抑尘剂节水率"},
+    {"stage": "planning_eia", "caliber": "降尘效率", "unit": "%", "new_caliber": "抑尘剂降尘效率"},
+    {"stage": "project_eia_openpit", "caliber": "环境质量达标率", "unit": "%", "new_caliber": "土壤环境质量达标率"},
+]
+
+
+class EiaLexiconSuppression(Base):
+    """Domain Factory - 环评词表改名抑制（旧指纹防复活：迁移种子 + UI 改名自动登记）"""
+
+    __tablename__ = "eia_lexicon_suppressions"
+    __table_args__ = (UniqueConstraint("stage", "caliber", "unit", name="uq_eia_lexicon_suppression_key"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    stage = Column(String(50), nullable=False, index=True)
+    caliber = Column(String(255), nullable=False)  # 旧断章指纹名（导入按此跳过）
+    unit = Column(String(32), nullable=False, default="")
+    new_caliber = Column(String(255), nullable=False)  # 改名目标（改名行语境回落反查键）
+    reason = Column(Text, nullable=True)
+    created_by = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)  # 幂等重登记时刷新（最近一次登记时间）
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "stage": self.stage,
+            "caliber": self.caliber,
+            "unit": self.unit,
+            "new_caliber": self.new_caliber,
+            "reason": self.reason,
+            "created_by": self.created_by,
+            "created_at": format_utc_datetime(self.created_at),
         }
 
 
