@@ -46,6 +46,7 @@ async def test_storage_migration_reads_legacy_schema_before_cutover(monkeypatch)
         create_business_tables=lambda: _record(calls, "create_business_tables"),
         upgrade_business_v9_to_v10=lambda: _async_value(None),  # [pisuan-custom] v10/v11 增量迁移在单测 fake 中空操作
         upgrade_business_v10_to_v11=lambda: _async_value(None),
+        upgrade_business_v11_to_v12=lambda: _record(calls, "upgrade_v12"),  # [pisuan-custom] v12 判别力：删调用点必红
         create_knowledge_tables=lambda: _record(calls, "create_knowledge_tables"),
         ensure_business_schema=lambda: _record(calls, "ensure_business_schema"),
         ensure_knowledge_schema=lambda: _record(calls, "ensure_knowledge_schema"),
@@ -121,6 +122,7 @@ async def test_storage_migration_rejects_v071_schema_without_quiescence_proof(mo
         create_business_tables=lambda: _record(calls, "create"),
         upgrade_business_v9_to_v10=lambda: _async_value(None),  # [pisuan-custom] v10/v11 增量迁移在单测 fake 中空操作
         upgrade_business_v10_to_v11=lambda: _async_value(None),
+        upgrade_business_v11_to_v12=lambda: _record(calls, "upgrade_v12"),  # [pisuan-custom] v12 判别力：删调用点必红
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),
@@ -172,6 +174,7 @@ async def test_current_schema_skips_schema_ddl(monkeypatch):
         create_business_tables=lambda: _record(calls, "create_business"),
         upgrade_business_v9_to_v10=lambda: _async_value(None),  # [pisuan-custom] v10/v11 增量迁移在单测 fake 中空操作
         upgrade_business_v10_to_v11=lambda: _async_value(None),
+        upgrade_business_v11_to_v12=lambda: _record(calls, "upgrade_v12"),  # [pisuan-custom] v12 判别力：删调用点必红
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "business_schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),
@@ -247,7 +250,7 @@ async def test_main_rejects_unsupported_business_schema_before_ddl(monkeypatch, 
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("business_version", [2, 7, 8])
+@pytest.mark.parametrize("business_version", [2, 7, 8, 9, 10, 11])
 async def test_supported_legacy_business_schema_is_converged_and_versioned_as_current(monkeypatch, business_version):
     calls: list[str] = []
     sessions = [_Session(), _Session(), _Session()]
@@ -270,6 +273,7 @@ async def test_supported_legacy_business_schema_is_converged_and_versioned_as_cu
         create_business_tables=lambda: _record(calls, "create_business"),
         upgrade_business_v9_to_v10=lambda: _async_value(None),  # [pisuan-custom] v10/v11 增量迁移在单测 fake 中空操作
         upgrade_business_v10_to_v11=lambda: _async_value(None),
+        upgrade_business_v11_to_v12=lambda: _record(calls, "upgrade_v12"),  # [pisuan-custom] v12 判别力：删调用点必红
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "business_schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),
@@ -298,7 +302,12 @@ async def test_supported_legacy_business_schema_is_converged_and_versioned_as_cu
     await storage_migration.main()
 
     assert ("business_schema" in calls) is (business_version in {2, 7})
-    assert f"version:business:{storage_migration.BUSINESS_SCHEMA_VERSION}" in calls
+    # [pisuan-custom] v12：任一存量档位都必须穿过 v12 增量迁移（删 main 调用点即红）
+    assert "upgrade_v12" in calls
+    # v9/v10/v11 来源库已在各自增量迁移中写过版本，只有 ≤8 档经 resource_selection 重写为当前版本
+    assert (f"version:business:{storage_migration.BUSINESS_SCHEMA_VERSION}" in calls) is (
+        business_version in {2, 7, 8}
+    )
     assert {"create_business", "checkpoint", "knowledge_schema"}.isdisjoint(calls)
 
 
@@ -326,6 +335,7 @@ async def test_failed_business_migration_does_not_record_version(monkeypatch):
         create_business_tables=lambda: _record(calls, "create_business"),
         upgrade_business_v9_to_v10=lambda: _async_value(None),  # [pisuan-custom] v10/v11 增量迁移在单测 fake 中空操作
         upgrade_business_v10_to_v11=lambda: _async_value(None),
+        upgrade_business_v11_to_v12=lambda: _record(calls, "upgrade_v12"),  # [pisuan-custom] v12 判别力：删调用点必红
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "business_schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),
@@ -373,6 +383,7 @@ async def test_current_schema_does_not_rewrite_workdir_data(monkeypatch):
         create_business_tables=lambda: _record(calls, "create"),
         upgrade_business_v9_to_v10=lambda: _async_value(None),  # [pisuan-custom] v10/v11 增量迁移在单测 fake 中空操作
         upgrade_business_v10_to_v11=lambda: _async_value(None),
+        upgrade_business_v11_to_v12=lambda: _record(calls, "upgrade_v12"),  # [pisuan-custom] v12 判别力：删调用点必红
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),

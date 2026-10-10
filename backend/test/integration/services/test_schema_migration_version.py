@@ -282,7 +282,7 @@ async def test_v072_business_converges_current_schema_idempotently() -> None:
             "ix_scheduled_agent_runs_job_created",
             "ix_scheduled_agent_runs_dispatching",
         }.issubset(scheduled_indexes)
-        assert BUSINESS_SCHEMA_VERSION == 11  # [pisuan-custom] 随 BUSINESS_SCHEMA_VERSION 同步递增
+        assert BUSINESS_SCHEMA_VERSION == 12  # [pisuan-custom] 随 BUSINESS_SCHEMA_VERSION 同步递增
     finally:
         await _drop_isolated_schema(schema, admin_engine, scoped_engine)
 
@@ -593,5 +593,30 @@ async def test_resource_selection_migration_is_atomic_and_does_not_repeat(fail_v
                 "context": {"subagents": []}
             }
         assert await manager.get_schema_versions() == {"business": 9}
+    finally:
+        await _drop_isolated_schema(schema, admin_engine, engine)
+
+
+async def test_v12_creates_standard_review_table_and_records_version_idempotently() -> None:
+    """[pisuan-custom] 真实 PostgreSQL：v11→v12 建标准核实表并翻版本，重跑幂等（只记版本不建表的变异在此红）。"""
+    schema, admin_engine, engine, manager = await _create_isolated_manager("standard_review_v12")
+    try:
+        await manager.create_schema_version_table()
+        await manager.record_schema_version("business", 11)
+        await manager.upgrade_business_v11_to_v12()
+        async with engine.connect() as conn:
+            exists = (
+                await conn.execute(
+                    text(
+                        "SELECT COUNT(*) FROM information_schema.tables "
+                        "WHERE table_schema = :s AND table_name = 'eia_standard_reviews'"
+                    ),
+                    {"s": schema},
+                )
+            ).scalar()
+        assert exists == 1
+        assert await manager.get_schema_versions() == {"business": 12}
+        await manager.upgrade_business_v11_to_v12()  # 幂等重跑
+        assert await manager.get_schema_versions() == {"business": 12}
     finally:
         await _drop_isolated_schema(schema, admin_engine, engine)
