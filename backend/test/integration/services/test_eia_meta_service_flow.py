@@ -1,6 +1,8 @@
 """eia_meta 服务层全链路集成测试（不经 HTTP，无凭据依赖）。
 
-覆盖：存量导入幂等 → 总览合并与 counts → 标注校验（404/400）→ 导出物化（重写人工层文件）。
+覆盖：存量导入幂等与越界 rid 拒收 → 总览合并与 counts → 标注校验（404/400）→
+导出物化（重写人工层文件）→ 导入绝不覆盖 DB 裁决（DB≠文件判别场景）→
+note 不进物化文件、全清空条目剔除。
 关键隔离：测试前后恢复 corpus_meta_annotations.json 原字节（导出会重写技能内真实文件），
 DB 行前后自清理；绝不污染运行库与技能目录。
 """
@@ -76,12 +78,32 @@ async def test_meta_full_flow():
     assert row["annotations"] == {"year_hint": 2024, "scale_mt_a": 1.8}
     assert row["decided_by"] == "tester"
 
-    # 4) 导出物化：DB 全量（导入 18 + 新标 1）重写人工层文件；rid 序确定；再导入零新增
+    # 4) 导出物化：DB 全量（导入 18 + 新标 1）重写人工层文件；rid 序确定
     result = await svc.export_annotations("tester")
     assert result["materialized"] == r1["added"] + 1
     doc = json.loads(META_ANNOTATIONS_PATH.read_text(encoding="utf-8"))
     assert list(doc) == sorted(doc) and "001-wps" in doc
     assert doc["001-wps"] == {"year_hint": 2024, "scale_mt_a": 1.8}
+
+    # 5) 导入绝不覆盖 DB 裁决（判别场景：DB 值 ≠ 文件值，回归为文件覆盖即在此失败）
+    target = next(rid for rid, a in sorted(doc.items()) if "year_hint" in a and rid != "001-wps")
+    await svc.set_annotation(target, {"annotations": {"year_hint": 2099}, "note": "页面裁决依据"}, "tester")
+    r_imp = await svc.import_annotations()
+    assert r_imp["added"] == 0 and r_imp["skipped_unknown"] == 0
+    data2 = await svc.list_reports()
+    it2 = next(i for i in data2["items"] if i["report_id"] == target)
+    assert it2["annotation"]["year_hint"] == 2099
+    assert it2["annotation"]["decided_by"] == "tester"
+    assert it2["annotation"]["note"] == "页面裁决依据"
+
+    # 6) note 仅 DB 留档不进物化文件；全清空条目从文件剔除
+    await svc.set_annotation("001-wps", {"annotations": {}}, "tester")
+    result2 = await svc.export_annotations("tester")
+    assert result2["materialized"] == r1["added"]
+    doc2 = json.loads(META_ANNOTATIONS_PATH.read_text(encoding="utf-8"))
+    assert "001-wps" not in doc2
+    assert doc2[target] == {"year_hint": 2099}
+
     r3 = await svc.import_annotations()
     assert r3["added"] == 0
 

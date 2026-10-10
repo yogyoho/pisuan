@@ -66,10 +66,18 @@ class EiaMetaService:
                 json.loads(META_ANNOTATIONS_PATH.read_text(encoding="utf-8")) if META_ANNOTATIONS_PATH.is_file() else {}
             )
         )
+        # rid 全集 = corpus_meta.reports 键（与 set/list/export 同一不变量）；
+        # 语料普查漂移或手编笔误产生的越界 rid 拒收并计数上浮，绝不落库成幽灵行
+        known_ids = set((await run_in_threadpool(_load_corpus_meta)).get("reports", {}))
         existing_ids = await self.repo.existing_ids()
         now = utc_now_naive()
         added = 0
+        skipped_unknown = 0
         for rid, ann in sorted(existing_file.items()):
+            if rid not in known_ids:
+                skipped_unknown += 1
+                logger.warning(f"[eia-meta] 导入跳过未知 rid（不在 corpus_meta）：{rid}")
+                continue
             if rid in existing_ids:
                 continue
             await self.repo.save_annotation(
@@ -82,8 +90,10 @@ class EiaMetaService:
                 )
             )
             added += 1
-        logger.info(f"[eia-meta] 导入完成：文件 {len(existing_file)} 条，新增 {added} 条")
-        return {"scanned": len(existing_file), "added": added}
+        logger.info(
+            f"[eia-meta] 导入完成：文件 {len(existing_file)} 条，新增 {added} 条，未知 rid 跳过 {skipped_unknown} 条"
+        )
+        return {"scanned": len(existing_file), "added": added, "skipped_unknown": skipped_unknown}
 
     async def list_reports(self) -> dict[str, Any]:
         """31 份报告总览：自动层只读 + DB 标注合并；counts 汇总待办。"""

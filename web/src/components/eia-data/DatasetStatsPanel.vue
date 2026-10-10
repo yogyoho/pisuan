@@ -62,6 +62,7 @@
                   :class="{ planned: item.status === 'planned', link: layerLink(item) }"
                   :title="item.file || (item.status === 'planned' ? '本期预留位' : '')"
                   :role="layerLink(item) ? 'button' : undefined"
+                  :tabindex="layerLink(item) ? 0 : undefined"
                   :aria-label="layerLink(item) ? `${item.name}，进入管理页` : undefined"
                   @click="layerLink(item) && goLayer(item)"
                   @keyup.enter="layerLink(item) && goLayer(item)"
