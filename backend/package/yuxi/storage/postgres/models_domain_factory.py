@@ -458,3 +458,28 @@ class EiaDatasetSwitch(Base):
             "updated_by": self.updated_by,
             "updated_at": format_utc_datetime(self.updated_at),
         }
+
+
+class EiaMetaAnnotation(Base):
+    """Domain Factory - 环评语料元数据人工标注（P2；运营唯一真相，显式导出物化至 corpus_meta_annotations.json）"""
+
+    __tablename__ = "eia_meta_annotations"
+
+    report_id = Column(String(100), primary_key=True)  # = corpus_meta.reports 键
+    annotations = Column(JSON, nullable=False, default=dict)  # {year_hint?: int, scale_mt_a?: number}
+    note = Column(Text, nullable=True)
+    decided_by = Column(String(64), nullable=True)
+    decided_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "report_id": self.report_id,
+            "annotations": self.annotations or {},
+            "note": self.note,
+            "decided_by": self.decided_by,
+            "decided_at": format_utc_datetime(self.decided_at),
+            "created_at": format_utc_datetime(self.created_at),
+            "updated_at": format_utc_datetime(self.updated_at),
+        }

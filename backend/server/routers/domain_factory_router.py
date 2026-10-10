@@ -12,6 +12,7 @@ from server.utils.auth_middleware import get_admin_user, get_required_user
 from yuxi.services.domain_factory_service import get_domain_factory_service
 from yuxi.services.eia_data_service import get_skill_stats
 from yuxi.services.eia_lexicon_service import get_eia_lexicon_service
+from yuxi.services.eia_meta_service import get_eia_meta_service
 from yuxi.storage.postgres.models_business import User
 from yuxi.utils import logger
 
@@ -1145,3 +1146,71 @@ async def export_eia_lexicon(
     except Exception as e:
         logger.error(f"Failed to export eia lexicon: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"导出物化失败: {str(e)}")
+
+
+# =============================================================================
+# EIA Meta Annotations (环评语料元数据人工标注：DB 覆盖层 + 人工层文件物化)
+# =============================================================================
+
+
+@domain_factory.get("/eia/meta/reports")
+async def list_eia_meta_reports(
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """31 份报告元数据总览（自动层只读 + DB 标注合并 + counts 待办汇总）"""
+    try:
+        return await get_eia_meta_service().list_reports()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=f"coal-eia-writer 技能数据缺失: {e}")
+    except Exception as e:
+        logger.error(f"Failed to list eia meta reports: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取元数据总览失败: {str(e)}")
+
+
+@domain_factory.put("/eia/meta/reports/{report_id}/annotation")
+async def set_eia_meta_annotation(
+    report_id: str,
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """标注落库（upsert）：{annotations: {year_hint?, scale_mt_a?}, note?}；rid 不在 corpus_meta 404，越界 400"""
+    try:
+        row = await get_eia_meta_service().set_annotation(report_id, payload, current_user.username)
+        return {"success": True, "annotation": row}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to set eia meta annotation {report_id}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"保存元数据标注失败: {str(e)}")
+
+
+@domain_factory.post("/eia/meta/import")
+async def import_eia_meta_annotations(
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """存量人工层文件 → DB（幂等，existing rid 一律跳过，绝不覆盖页面裁决）"""
+    try:
+        result = await get_eia_meta_service().import_annotations()
+        return {"success": True, **result}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=f"coal-eia-writer 技能数据缺失: {e}")
+    except Exception as e:
+        logger.error(f"Failed to import eia meta annotations: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"导入元数据标注失败: {str(e)}")
+
+
+@domain_factory.post("/eia/meta/export")
+async def export_eia_meta_annotations(
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """DB → corpus_meta_annotations.json 全量重写（rid 序确定性；admin）"""
+    try:
+        result = await get_eia_meta_service().export_annotations(current_user.username)
+        return {"success": True, **result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to export eia meta annotations: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"导出元数据标注失败: {str(e)}")

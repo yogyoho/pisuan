@@ -190,6 +190,12 @@ const router = createRouter({
           meta: { keepAlive: false, requiresAuth: true }
         },
         {
+          path: 'eia-data/meta',
+          name: 'EiaDataMeta',
+          component: () => import('../views/EiaMetaView.vue'),
+          meta: { keepAlive: false, requiresAuth: true }
+        },
+        {
           path: 'prompt-config',
           name: 'DomainFactoryPromptConfig',
           component: () => import('../views/PromptConfigView.vue'),

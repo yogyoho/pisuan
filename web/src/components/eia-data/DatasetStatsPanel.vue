@@ -59,8 +59,12 @@
                   v-for="item in layer.items"
                   :key="item.key"
                   class="layer-chip"
-                  :class="{ planned: item.status === 'planned' }"
+                  :class="{ planned: item.status === 'planned', link: layerLink(item) }"
                   :title="item.file || (item.status === 'planned' ? '本期预留位' : '')"
+                  :role="layerLink(item) ? 'button' : undefined"
+                  :aria-label="layerLink(item) ? `${item.name}，进入管理页` : undefined"
+                  @click="layerLink(item) && goLayer(item)"
+                  @keyup.enter="layerLink(item) && goLayer(item)"
                 >
                   <em>{{ item.name }}</em>
                   <b v-if="item.count !== undefined && item.count !== null">{{ formatCount(item.count) }}<i>{{ item.unit }}</i></b>
@@ -166,6 +170,15 @@ const metricStrip = computed(() => {
 const warnCount = (key) => stats.value.quality.find((q) => q.key === key)?.count ?? 0
 
 const goLexicon = () => router.push('/domain-factory/eia-data/lexicon')
+
+// 可管理数据层的 chip 点击直达对应管理页
+const LAYER_LINKS = {
+  corpus_meta: '/domain-factory/eia-data/meta',
+  meta_annotations: '/domain-factory/eia-data/meta',
+  curated_lexicon: '/domain-factory/eia-data/lexicon'
+}
+const layerLink = (item) => LAYER_LINKS[item.key]
+const goLayer = (item) => router.push(LAYER_LINKS[item.key])
 
 const totalLayerItems = computed(() => stats.value.layers.reduce((acc, l) => acc + l.items.length, 0))
 
@@ -556,6 +569,21 @@ onBeforeUnmount(cleanup)
   border-radius: 4px;
   background: var(--gray-50);
   cursor: default;
+
+  &.link {
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--main-600);
+      background: var(--main-0);
+
+      em {
+        color: var(--main-600);
+      }
+    }
+  }
 
   em {
     font-style: normal;
