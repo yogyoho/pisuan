@@ -58,7 +58,8 @@
           {{ tierLabel(record.tier) }}
         </template>
         <template v-else-if="column.key === 'chapters'">
-          <span v-if="record.chapters?.length" class="muted">{{ record.chapters.join('、') }}</span>
+          <!-- chapters 实况为分号分隔字符串（62/62），非数组 -->
+          <span v-if="record.chapters" class="muted">{{ record.chapters }}</span>
           <span v-else class="muted">—</span>
         </template>
         <template v-else-if="column.key === 'cited_count'">
@@ -123,7 +124,7 @@
         <p class="dlg-title">{{ dlg.record.title }}</p>
         <p class="dlg-line">
           {{ tierLabel(dlg.record.tier) }}
-          <template v-if="dlg.record.chapters?.length"> · 章节 {{ dlg.record.chapters.join('、') }}</template>
+          <template v-if="dlg.record.chapters"> · 章节 {{ dlg.record.chapters }}</template>
           · 语料引用 {{ dlg.record.cited_count }} 份
         </p>
         <div class="redline-box">
