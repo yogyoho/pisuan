@@ -77,14 +77,6 @@
           </span>
           <span v-if="record.range_ready" class="ready-badge">可发布</span>
         </template>
-        <template v-else-if="column.key === 'decided'">
-          <span v-if="record.decided_by" class="decided-cell">
-            {{ record.decided_by }}
-            <br />
-            <small>{{ shortTime(record.decided_at) }}</small>
-          </span>
-          <span v-else class="count-cell">—</span>
-        </template>
         <template v-else-if="column.key === 'actions'">
           <div class="row-actions">
             <template v-if="record.status === 'candidate'">
@@ -286,20 +278,18 @@ const filters = reactive({ status: '', category: '', stage: '', q: '' })
 const switchState = reactive({ enabled: false, file: false })
 
 const columns = [
-  { title: '口径', key: 'caliber', ellipsis: true },
+  { title: '口径', key: 'caliber', width: 300, ellipsis: true },
   { title: '阶段', key: 'stage', width: 110 },
   { title: '单位', dataIndex: 'unit', key: 'unit', width: 70 },
   { title: '分类', key: 'category', width: 100 },
   { title: '状态', key: 'status', width: 90 },
   { title: '语料计数', key: 'counts', width: 150 },
-  { title: '决策', key: 'decided', width: 110 },
-  { title: '操作', key: 'actions', width: 170 }
+  { title: '操作', key: 'actions' }
 ]
 
 const stageLabel = (k) => STAGE_LABELS[k] || k
 const categoryLabel = (k) => CATEGORY_LABELS[k] || k
 const statusLabel = (k) => STATUS_LABELS[k] || k
-const shortTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '—')
 
 const switchHint = computed(() => {
   if (!switchState.enabled) return '关闭：管线用内置词表'
@@ -649,9 +639,11 @@ onMounted(() => {
   .caliber-note {
     font-size: 12px;
     color: var(--gray-400);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    word-break: break-all;
   }
 }
 
@@ -724,15 +716,6 @@ onMounted(() => {
   line-height: 18px;
   color: var(--main-600);
   border: 1px solid var(--main-600);
-}
-
-.decided-cell {
-  font-size: 12px;
-  color: var(--gray-600);
-
-  small {
-    color: var(--gray-400);
-  }
 }
 
 .row-actions {
