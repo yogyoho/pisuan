@@ -265,9 +265,9 @@ const STATUS_DEFS = [
 ]
 
 const CATEGORY_DEFS = [
-  { key: 'measure', label: 'A 工程措施' },
-  { key: 'site', label: 'B 站点背景' },
-  { key: 'junk', label: 'C 待清理' }
+  { key: 'measure', label: 'A 措施效率' },
+  { key: 'site', label: 'B 现状监测' },
+  { key: 'junk', label: 'C 非护栏杂项' }
 ]
 
 const STAGE_LABELS = Object.fromEntries(STAGES.map((s) => [s.key, s.label]))

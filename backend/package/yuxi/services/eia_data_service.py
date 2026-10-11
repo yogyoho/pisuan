@@ -101,7 +101,7 @@ def _clean_caliber(raw: str) -> str:
 
 
 def _classify_caliber(caliber: str) -> str:
-    """三分类：measure=工程措施类（可入选）/ site=站点背景类（候选待业务确认）/ junk=其余。"""
+    """三分类：measure=措施效率类（可入选）/ site=现状监测类（候选待业务确认）/ junk=非护栏杂项。"""
     if _MEASURE_RE.search(caliber):
         return "measure"
     if _SITE_RE.search(caliber):

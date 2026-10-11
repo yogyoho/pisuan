@@ -49,9 +49,9 @@ _SPLIT_CALIBERS = {"控制效率"}
 # 句式需复评，删除对应抑制行即可。
 _IMPORT_BLOCKLIST: set[tuple[str, str, str]] = {(s["stage"], s["caliber"], s["unit"]) for s in _LEXICON_BLOCKLIST_SEED}
 _IMPORT_NOTE = {
-    "approved": "A类自动入选（导入预置）",
-    "candidate": "B类候选待业务确认",
-    "rejected": "C类留档（默认视图隐藏）",
+    "approved": "措施效率类自动入选（导入预置）",
+    "candidate": "现状监测类候选待业务确认",
+    "rejected": "非护栏杂项留档（默认视图隐藏）",
     "splitting": "控制效率须先拆分（值簇语义混叠）",
 }
 
