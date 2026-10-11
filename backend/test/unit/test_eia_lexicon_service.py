@@ -82,13 +82,16 @@ def test_block_span_extends_to_cover_match_end():
 
 @pytest.mark.skipif(not _skill_root_exists(), reason="coal-eia-writer 技能目录不存在（宿主环境）")
 def test_scan_all_matches_census():
-    """全量扫描与语料普查口径一致：90 候选 / A31 / B34 / range_ready 6
-    （P1 连接词扩展 能达/可达 后 +1：planning 煤矸石综合利用率 2/2 独立成键）。"""
+    """全量扫描与语料普查口径一致：92 候选 / A34 / B34 / range_ready 9
+    （P1 连接词扩展 +1：planning 煤矸石综合利用率 2/2 独立成键；
+    P2 拉丁前缀窗 +2：裸「控制效率」三分成三子口径（splitting 不计数故 -1 不显）、
+    「产生量」精化为「TSP产生量」切片源未达 n≥2 门槛 -1，净 +2；控制效率入 measure
+    枚举后 range_ready 6→9）。"""
     entries = _scan_all()
-    assert len(entries) == 90
-    assert sum(1 for e in entries if e["category"] == "measure") == 31
+    assert len(entries) == 92
+    assert sum(1 for e in entries if e["category"] == "measure") == 34
     assert sum(1 for e in entries if e["category"] == "site") == 34
-    assert sum(1 for e in entries if e["range_ready"]) == 6
+    assert sum(1 for e in entries if e["range_ready"]) == 9
 
 
 @pytest.mark.skipif(not _skill_root_exists(), reason="coal-eia-writer 技能目录不存在（宿主环境）")

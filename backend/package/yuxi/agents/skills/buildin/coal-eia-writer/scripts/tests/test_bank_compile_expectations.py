@@ -236,9 +236,28 @@ def test_five_calibration_calibers_mapped_from_real_stages():
         assert _map_caliber(cal, label_map) == (cal, field), f"口径「{cal}」未映射到 {field}"
 
 
-def test_control_efficiency_subcalibers_stay_unmapped():
-    """控制效率三子口径（拉丁前缀）raw 捕获为「控制效率」，字段表无此 label → 保持跳过
-    （挂载归 QUANTITY_RE 连接词扩展事项，钉死现状防误挂同键互覆）。"""
+def test_control_efficiency_subcalibers_mapped_after_latin_prefix():
+    """控制效率三子口径（P2 QUANTITY_RE 拉丁前缀窗 TSP|PM2.5|PM10|PM25）→ openpit air
+    三字段全串精确命中（旧窗 raw 捕获同为「控制效率」会同键互覆，已证伪弃用）。"""
     label_map = _real_label_map()
+    for cal, field in (
+        ("TSP控制效率", "air.tsp_control_efficiency"),
+        ("PM10控制效率", "air.pm10_control_efficiency"),
+        ("PM2.5控制效率", "air.pm2_5_control_efficiency"),
+    ):
+        assert _map_caliber(cal, label_map) == (cal, field), f"口径「{cal}」未映射到 {field}"
+
+
+def test_quantity_re_captures_latin_prefix():
+    """量词窗受控拉丁前缀钉死：三子口径 raw 捕获全串；无前缀口径与能达句式不受影响。"""
     for cal in ("TSP控制效率", "PM10控制效率", "PM2.5控制效率"):
-        assert _map_caliber(cal, label_map) is None, f"「{cal}」意外映射"
+        m = QUANTITY_RE.search(f"{cal}为61%")
+        assert m and m.group(1) == cal, f"「{cal}」未按全串捕获: {m and m.group(1)!r}"
+    m = QUANTITY_RE.search("抑尘效率能达90%")
+    assert m and m.group(1) == "抑尘效率"
+
+
+def test_unlisted_latin_prefix_stays_unmapped():
+    """受控集合外的拉丁前缀（SO2 等）不入量词窗、字段表亦无此 label → 保持跳过（防误扩）。"""
+    label_map = _real_label_map()
+    assert _map_caliber("SO2控制效率", label_map) is None
