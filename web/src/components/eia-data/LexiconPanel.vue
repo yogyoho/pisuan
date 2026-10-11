@@ -278,13 +278,13 @@ const filters = reactive({ status: '', category: '', stage: '', q: '' })
 const switchState = reactive({ enabled: false, file: false })
 
 const columns = [
-  { title: '口径', key: 'caliber', width: 300, ellipsis: true },
+  { title: '口径', key: 'caliber' },
   { title: '阶段', key: 'stage', width: 110 },
   { title: '单位', dataIndex: 'unit', key: 'unit', width: 70 },
-  { title: '分类', key: 'category', width: 100 },
+  { title: '分类', key: 'category', width: 120 },
   { title: '状态', key: 'status', width: 90 },
   { title: '语料计数', key: 'counts', width: 150 },
-  { title: '操作', key: 'actions' }
+  { title: '操作', key: 'actions', width: 170 }
 ]
 
 const stageLabel = (k) => STAGE_LABELS[k] || k
@@ -643,6 +643,7 @@ onMounted(() => {
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     overflow: hidden;
+    white-space: normal;
     word-break: break-all;
   }
 }
@@ -654,6 +655,10 @@ onMounted(() => {
   border-radius: 4px;
   font-size: 12px;
   line-height: 20px;
+}
+
+.cat-tag {
+  white-space: nowrap;
 }
 
 .cat-measure {
