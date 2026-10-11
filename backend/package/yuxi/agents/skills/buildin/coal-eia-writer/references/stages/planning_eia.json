@@ -3732,7 +3732,15 @@
           "required": false,
           "note": "ch10 环境管理计划承载"
         }
-      ]
+      ,
+        {
+          "name": "dust_suppression_efficiency",
+          "label": "抑尘效率",
+          "type": "number",
+          "required": false,
+          "unit": "%",
+          "note": "洒水抑尘措施效率（道路/堆场/排土场洒水降尘）"
+        }]
     },
     "investment": {
             "label": "环境保护投资",

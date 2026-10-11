@@ -153,7 +153,15 @@
       "title": "规划后续开发地表水环境影响预测与评价"
     },
     "ch6_S06": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "抑尘效率",
+          "corpus_freq": 1.0,
+          "field": "measures.dust_suppression_efficiency",
+          "tier": "required",
+          "unit": "%"
+        }
+      ],
       "title": "规划后续开发大气环境影响预测与评价"
     },
     "ch6_S07": {
@@ -341,7 +349,7 @@
       "value": "6.0"
     },
     {
-      "caliber": "瞬时风速最大可",
+      "caliber": "瞬时风速最大",
       "sample": "029-r",
       "section": "ch2",
       "unit": "m",
@@ -887,7 +895,7 @@
       "value": "1"
     },
     {
-      "caliber": "最高可",
+      "caliber": "最高",
       "sample": "029-r",
       "section": "ch4",
       "unit": "m",
@@ -957,7 +965,7 @@
       "value": "33.5"
     },
     {
-      "caliber": "捕尘效率可",
+      "caliber": "捕尘效率",
       "sample": "029-r",
       "section": "ch4",
       "unit": "%",
@@ -1174,7 +1182,7 @@
       "value": "204.71"
     },
     {
-      "caliber": "孔最大揭露厚度可",
+      "caliber": "田孔最大揭露厚度",
       "sample": "029-r",
       "section": "ch6",
       "unit": "m",
@@ -1391,25 +1399,18 @@
       "value": "0.06"
     },
     {
-      "caliber": "尘时的瞬时源强可",
+      "caliber": "起尘时的瞬时源强",
       "sample": "029-r",
       "section": "ch6",
       "unit": "m",
       "value": "4000"
     },
     {
-      "caliber": "下风向影响距离可",
+      "caliber": "下风向影响距离",
       "sample": "029-r",
       "section": "ch6",
       "unit": "m",
       "value": "100"
-    },
-    {
-      "caliber": "抑尘效率能",
-      "sample": "029-r",
-      "section": "ch6",
-      "unit": "%",
-      "value": "90"
     },
     {
       "caliber": "矸石堆的起尘风速",

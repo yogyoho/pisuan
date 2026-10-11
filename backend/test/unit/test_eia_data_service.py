@@ -45,12 +45,12 @@ def test_get_skill_stats_structure():
     assert sum(corpus["by_province"].values()) == 31
 
     # 词表候选：口径与语料普查对齐（单位白名单 + n≥2 报告门槛 + 强清洗，
-    # 比普查 96 少的 7 项为平均值/分别等整词垃圾）
+    # 比普查 97 少的 7 项为平均值/分别等整词垃圾）
     cand = stats["candidates"]
-    assert cand["total"] == 89
+    assert cand["total"] == 90
     assert cand["measure"] + cand["site"] + cand["junk"] == cand["total"]
-    assert cand["measure"] == 30
-    assert cand["per_stage"]["planning_eia"]["measure"] == 12
+    assert cand["measure"] == 31
+    assert cand["per_stage"]["planning_eia"]["measure"] == 13
     assert cand["range_ready"] == 6
 
     # 事实槽位：5 阶段齐全，planning unmapped 池触顶 200 cap
