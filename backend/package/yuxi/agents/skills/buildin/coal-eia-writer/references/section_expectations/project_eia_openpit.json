@@ -137,7 +137,22 @@
       "title": "环境管理回顾与现状分析"
     },
     "ch14_S02": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "设备完好率",
+          "corpus_freq": 0.75,
+          "field": "cleaner_production.equipment_integrity_rate",
+          "range": {
+            "n_reports": 6,
+            "n_values": 6,
+            "p5": 100.0,
+            "p50": 100.0,
+            "p95": 100.0
+          },
+          "tier": "required",
+          "unit": "%"
+        }
+      ],
       "title": "清洁生产评价"
     },
     "ch14_S03": {
@@ -145,11 +160,55 @@
       "title": "项目选址环境可行性综合分析"
     },
     "ch14_S04": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "矿坑水回用率",
+          "corpus_freq": 1.0,
+          "field": "water.mine_water_reuse_rate",
+          "range": {
+            "n_reports": 6,
+            "n_values": 6,
+            "p5": 100.0,
+            "p50": 100.0,
+            "p95": 100.0
+          },
+          "tier": "required",
+          "unit": "%"
+        }
+      ],
       "title": "环保设施验收清单"
     },
     "ch14_S05": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "生活污水回用率",
+          "corpus_freq": 1.0,
+          "field": "water.domestic_water_reuse_rate",
+          "range": {
+            "n_reports": 5,
+            "n_values": 11,
+            "p5": 100.0,
+            "p50": 100.0,
+            "p95": 100.0
+          },
+          "tier": "required",
+          "unit": "%"
+        },
+        {
+          "caliber": "矿坑水回用率",
+          "corpus_freq": 1.0,
+          "field": "water.mine_water_reuse_rate",
+          "range": {
+            "n_reports": 6,
+            "n_values": 6,
+            "p5": 100.0,
+            "p50": 100.0,
+            "p95": 100.0
+          },
+          "tier": "required",
+          "unit": "%"
+        }
+      ],
       "title": "环保设施验收清单"
     },
     "ch15_S01": {
@@ -157,7 +216,22 @@
       "title": "资源综合利用"
     },
     "ch15_S02": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "设备完好率",
+          "corpus_freq": 0.5,
+          "field": "cleaner_production.equipment_integrity_rate",
+          "range": {
+            "n_reports": 6,
+            "n_values": 6,
+            "p5": 100.0,
+            "p50": 100.0,
+            "p95": 100.0
+          },
+          "tier": "optional",
+          "unit": "%"
+        }
+      ],
       "title": "清洁生产分析"
     },
     "ch15_S03": {
@@ -165,7 +239,36 @@
       "title": "环境监测计划"
     },
     "ch15_S04": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "生活污水回用率",
+          "corpus_freq": 1.0,
+          "field": "water.domestic_water_reuse_rate",
+          "range": {
+            "n_reports": 5,
+            "n_values": 11,
+            "p5": 100.0,
+            "p50": 100.0,
+            "p95": 100.0
+          },
+          "tier": "required",
+          "unit": "%"
+        },
+        {
+          "caliber": "矿坑水回用率",
+          "corpus_freq": 1.0,
+          "field": "water.mine_water_reuse_rate",
+          "range": {
+            "n_reports": 6,
+            "n_values": 6,
+            "p5": 100.0,
+            "p50": 100.0,
+            "p95": 100.0
+          },
+          "tier": "required",
+          "unit": "%"
+        }
+      ],
       "title": "环保设施验收清单"
     },
     "ch15_S05": {
@@ -185,7 +288,36 @@
       "title": "环境监测计划"
     },
     "ch16_S04": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "生活污水回用率",
+          "corpus_freq": 1.0,
+          "field": "water.domestic_water_reuse_rate",
+          "range": {
+            "n_reports": 5,
+            "n_values": 11,
+            "p5": 100.0,
+            "p50": 100.0,
+            "p95": 100.0
+          },
+          "tier": "required",
+          "unit": "%"
+        },
+        {
+          "caliber": "矿坑水回用率",
+          "corpus_freq": 1.0,
+          "field": "water.mine_water_reuse_rate",
+          "range": {
+            "n_reports": 6,
+            "n_values": 6,
+            "p5": 100.0,
+            "p50": 100.0,
+            "p95": 100.0
+          },
+          "tier": "required",
+          "unit": "%"
+        }
+      ],
       "title": "环保设施验收清单"
     },
     "ch17_S01": {
@@ -342,6 +474,20 @@
           "unit": "万t"
         },
         {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.17,
+          "field": "air.dust_removal_efficiency",
+          "range": {
+            "n_reports": 5,
+            "n_values": 7,
+            "p5": 85.0,
+            "p50": 85.0,
+            "p95": 95.15
+          },
+          "tier": "contextual",
+          "unit": "%"
+        },
+        {
           "caliber": "年剥离量",
           "corpus_freq": 0.17,
           "field": "openpit_engineering.stripping_volume",
@@ -368,7 +514,22 @@
       "title": "项目与规划及规划环评的符合性分析"
     },
     "ch2_S08": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "生活污水回用率",
+          "corpus_freq": 0.5,
+          "field": "water.domestic_water_reuse_rate",
+          "range": {
+            "n_reports": 5,
+            "n_values": 11,
+            "p5": 100.0,
+            "p50": 100.0,
+            "p95": 100.0
+          },
+          "tier": "optional",
+          "unit": "%"
+        }
+      ],
       "title": "环境保护措施落实回顾"
     },
     "ch2_S09": {
@@ -384,7 +545,22 @@
       "title": ""
     },
     "ch3_S02": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "生活污水回用率",
+          "corpus_freq": 0.33,
+          "field": "water.domestic_water_reuse_rate",
+          "range": {
+            "n_reports": 5,
+            "n_values": 11,
+            "p5": 100.0,
+            "p50": 100.0,
+            "p95": 100.0
+          },
+          "tier": "optional",
+          "unit": "%"
+        }
+      ],
       "title": "项目与“三线一单”、 “三区三线”的符合性分析"
     },
     "ch3_S03": {
@@ -530,6 +706,20 @@
     "ch7_S04": {
       "expected_quantities": [
         {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.25,
+          "field": "air.dust_removal_efficiency",
+          "range": {
+            "n_reports": 5,
+            "n_values": 7,
+            "p5": 85.0,
+            "p50": 85.0,
+            "p95": 95.15
+          },
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
           "caliber": "年剥离量",
           "corpus_freq": 0.25,
           "field": "openpit_engineering.stripping_volume",
@@ -542,6 +732,20 @@
     "ch7_S05": {
       "expected_quantities": [
         {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.17,
+          "field": "air.dust_removal_efficiency",
+          "range": {
+            "n_reports": 5,
+            "n_values": 7,
+            "p5": 85.0,
+            "p50": 85.0,
+            "p95": 95.15
+          },
+          "tier": "contextual",
+          "unit": "%"
+        },
+        {
           "caliber": "年剥离量",
           "corpus_freq": 0.17,
           "field": "openpit_engineering.stripping_volume",
@@ -553,6 +757,27 @@
     },
     "ch7_S06": {
       "expected_quantities": [
+        {
+          "caliber": "抑尘效率",
+          "corpus_freq": 0.33,
+          "field": "measures.dust_suppression_efficiency",
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.33,
+          "field": "air.dust_removal_efficiency",
+          "range": {
+            "n_reports": 5,
+            "n_values": 7,
+            "p5": 85.0,
+            "p50": 85.0,
+            "p95": 95.15
+          },
+          "tier": "optional",
+          "unit": "%"
+        },
         {
           "caliber": "年剥离量",
           "corpus_freq": 0.33,
@@ -598,6 +823,20 @@
     "ch8_S05": {
       "expected_quantities": [
         {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.5,
+          "field": "air.dust_removal_efficiency",
+          "range": {
+            "n_reports": 5,
+            "n_values": 7,
+            "p5": 85.0,
+            "p50": 85.0,
+            "p95": 95.15
+          },
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
           "caliber": "年剥离量",
           "corpus_freq": 0.5,
           "field": "openpit_engineering.stripping_volume",
@@ -610,11 +849,32 @@
     "ch8_S06": {
       "expected_quantities": [
         {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.33,
+          "field": "air.dust_removal_efficiency",
+          "range": {
+            "n_reports": 5,
+            "n_values": 7,
+            "p5": 85.0,
+            "p50": 85.0,
+            "p95": 95.15
+          },
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
           "caliber": "年剥离量",
           "corpus_freq": 0.33,
           "field": "openpit_engineering.stripping_volume",
           "tier": "optional",
           "unit": "万t"
+        },
+        {
+          "caliber": "抑尘效率",
+          "corpus_freq": 0.33,
+          "field": "measures.dust_suppression_efficiency",
+          "tier": "optional",
+          "unit": "%"
         }
       ],
       "title": "污染物排放量核算"
@@ -1149,7 +1409,7 @@
       "value": "158.80"
     },
     {
-      "caliber": "台上植被覆盖度可",
+      "caliber": "平台上植被覆盖度",
       "sample": "013-3500-----2024-4-11",
       "section": "ch2",
       "unit": "%",
@@ -1415,7 +1675,7 @@
       "value": "0.4"
     },
     {
-      "caliber": "台上植被覆盖度可",
+      "caliber": "平台上植被覆盖度",
       "sample": "013-3500-----2024-4-11",
       "section": "ch5",
       "unit": "%",
@@ -1604,7 +1864,7 @@
       "value": "84810.9"
     },
     {
-      "caliber": "锰的去除效率可",
+      "caliber": "锰的去除效率",
       "sample": "013-3500-----2024-4-11",
       "section": "ch7",
       "unit": "%",
@@ -1723,13 +1983,6 @@
       "value": "31.59"
     },
     {
-      "caliber": "除尘效率可",
-      "sample": "013-3500-----2024-4-11",
-      "section": "ch8",
-      "unit": "%",
-      "value": "85"
-    },
-    {
       "caliber": "粉尘无组织排放量",
       "sample": "013-3500-----2024-4-11",
       "section": "ch8",
@@ -1737,7 +1990,7 @@
       "value": "12.54"
     },
     {
-      "caliber": "预湿的捕尘效率可",
+      "caliber": "预湿的捕尘效率",
       "sample": "013-3500-----2024-4-11",
       "section": "ch8",
       "unit": "%",
@@ -1919,13 +2172,6 @@
       "value": "200"
     },
     {
-      "caliber": "矿坑水回用率",
-      "sample": "013-3500-----2024-4-11",
-      "section": "ch14",
-      "unit": "%",
-      "value": "100"
-    },
-    {
       "caliber": "选用单体处理能力",
       "sample": "013-3500-----2024-4-11",
       "section": "ch14",
@@ -1938,13 +2184,6 @@
       "section": "ch15",
       "unit": "m",
       "value": "219.2"
-    },
-    {
-      "caliber": "设备完好率",
-      "sample": "013-3500-----2024-4-11",
-      "section": "ch15",
-      "unit": "%",
-      "value": "100"
     },
     {
       "caliber": "沉淀池结构尺寸",
@@ -2057,7 +2296,28 @@
       "section": "ch2",
       "unit": "m",
       "value": "7.97"
+    },
+    {
+      "caliber": "储量",
+      "sample": "016-2021-12",
+      "section": "ch2",
+      "unit": "万t",
+      "value": "85745"
+    },
+    {
+      "caliber": "断距",
+      "sample": "016-2021-12",
+      "section": "ch2",
+      "unit": "m",
+      "value": "300"
+    },
+    {
+      "caliber": "号煤的间距",
+      "sample": "016-2021-12",
+      "section": "ch2",
+      "unit": "m",
+      "value": "5.15"
     }
   ],
-  "version": "1.1"
+  "version": "1.2"
 }

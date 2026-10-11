@@ -376,7 +376,24 @@
         "ch8"
       ],
       "note": "复用 planning_eia.json#forms.water 字段清单——mine_inflow=疏干水量/矿坑水量（openpit_engineering.dewatering 同源；非实测必带 analog_source——XS12）；balance=矿坑水/生活污水供/需/回用/排水平衡表（water_balance 输入）",
-      "fields": []
+      "fields": [
+        {
+          "name": "domestic_water_reuse_rate",
+          "label": "生活污水回用率",
+          "type": "number",
+          "required": false,
+          "unit": "%",
+          "note": "生活污水处理后回用比例（回用于绿化/道路洒水/洗车等）"
+        },
+        {
+          "name": "mine_water_reuse_rate",
+          "label": "矿坑水回用率",
+          "type": "number",
+          "required": false,
+          "unit": "%",
+          "note": "矿坑水处理站处理后回用比例（回用于采掘场/道路洒水、生产用水等）"
+        }
+      ]
     },
     "air": {
             "label": "环境空气",
@@ -389,7 +406,16 @@
         "ch12"
       ],
       "note": "复用 planning_eia.json#forms.air 字段清单（boilers[]/dust_source_strength/meteorology/capacity_inputs）——dust_source_strength=采掘/排土/转载扬尘面源源强（类比来源标注强制）",
-      "fields": []
+      "fields": [
+        {
+          "name": "dust_removal_efficiency",
+          "label": "除尘效率",
+          "type": "number",
+          "required": false,
+          "unit": "%",
+          "note": "除尘设施与喷雾洒水对凿岩/穿孔工序的除尘效率"
+        }
+      ]
     },
     "noise": {
             "label": "声环境",
@@ -517,7 +543,16 @@
         "ch15"
       ],
       "note": "复用 planning_eia.json#forms.cleaner_production 字段清单（benchmarks[]）",
-      "fields": []
+      "fields": [
+        {
+          "name": "equipment_integrity_rate",
+          "label": "设备完好率",
+          "type": "number",
+          "required": false,
+          "unit": "%",
+          "note": "环保设备与设施运行无故障、完好程度（质控指标）"
+        }
+      ]
     },
     "circular_economy": {
             "label": "循环经济",

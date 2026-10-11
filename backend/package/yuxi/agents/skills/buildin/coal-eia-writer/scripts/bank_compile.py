@@ -69,9 +69,12 @@ CAPTION_LINE_RE = re.compile(r"^\*{0,2}[表图]\s*\d+(?:\.\d+)*[-–—]\d+(?:\.
 NUM_UNIT_SENT_RE = re.compile(r"([一-鿿A-Za-z]{2,12})为\s*(\d+(?:\.\d+)?)\s*([一-鿿A-Za-zμ/%°·()（）A-Z]{1,8})")
 # section_expectations（spec §4.2）：「量词+为/达/是+数值+单位」句式，单位白名单限数值型
 # 环评常用量纲（区别于 forms_catalog 的 NUM_UNIT_SENT_RE 宽口径）；含 NFKC 归一形
-# （prepare_corpus 全文 NFKC，²→3→2 数字化：语料实为 km2/m2，不带 km² 会被 km 短路）
+# （prepare_corpus 全文 NFKC，²→3→2 数字化：语料实为 km2/m2，不带 km² 会被 km 短路）。
+# 连接词含 能达/可达（P1 五校准口径裁决，2026-10-11）：惰性窗口会把「能/可」吞进口径尾
+# （抑尘效率能/除尘效率可），后缀滚动只去头不去尾无法桥接词表口径；
+# 全语料 diff 实证总抽取数不变（9275→9275）、纯口径净化，与词表侧 _STOP_TAIL 剥尾收敛一致
 QUANTITY_RE = re.compile(
-    r"([一-鿿]{2,8}?)(?:为|达|是)\s*(\d+(?:\.\d+)?)\s*"
+    r"([一-鿿]{2,8}?)(?:为|达|是|能达|可达)\s*(\d+(?:\.\d+)?)\s*"
     r"(dB\(A\)|mg/L|μg/m3|μg/m³|km2|km²|km|hm2|hm²|万m3|万m³|万t|万kW|%|m2|m²|t|d|m)"
 )
 SECTION_EXPECTATION_STAGES = (

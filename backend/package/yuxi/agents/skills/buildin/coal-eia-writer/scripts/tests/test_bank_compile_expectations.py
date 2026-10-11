@@ -1,11 +1,18 @@
 """section_expectations 测试：数值抽取 / field 归并 / 报告覆盖率 / tier 划档 / unmapped 池 / 节文本切分。"""
 
+import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from bank_compile import QUANTITY_RE, build_section_expectations, extract_sec_texts
+from bank_compile import (
+    QUANTITY_RE,
+    SECTION_EXPECTATION_STAGES,
+    _map_caliber,
+    build_section_expectations,
+    extract_sec_texts,
+)
 
 
 def test_quantity_re_nfkc_unit_forms():
@@ -196,3 +203,42 @@ def test_curated_absent_keeps_v11_version():
     """无 curated（文件缺失/无本 stage 条目）→ version 恒 1.1（删文件即字节级回滚的语义锚）。"""
     doc = build_section_expectations(_mk_db_segs(5), {"源强": "noise.source_level"}, stage="planning_eia")
     assert doc["version"] == "1.1"
+
+
+# ── P1 五校准口径裁决（2026-10-11）：真实 stages forms 字段表映射钉死 ──
+# 防字段表回退致 curated 覆盖层重新归零（v1.2→1.1，真实挂载为零的 P0-E2E 实证边界）。
+
+_FIVE_CALIBER_FIELDS = [
+    ("抑尘效率", "measures.dust_suppression_efficiency", "planning_eia"),
+    ("除尘效率", "air.dust_removal_efficiency", "project_eia_openpit"),
+    ("生活污水回用率", "water.domestic_water_reuse_rate", "project_eia_openpit"),
+    ("矿坑水回用率", "water.mine_water_reuse_rate", "project_eia_openpit"),
+    ("设备完好率", "cleaner_production.equipment_integrity_rate", "project_eia_openpit"),
+]
+
+
+def _real_label_map() -> dict:
+    """按 bank_compile 主循环同法构建真实跨 stage label_map（先到先得合并）。"""
+    refs = Path(__file__).resolve().parents[2] / "references"
+    label_map: dict = {}
+    for st in SECTION_EXPECTATION_STAGES:
+        stage_doc = json.loads((refs / "stages" / f"{st}.json").read_text(encoding="utf-8"))
+        for fam, fam_spec in stage_doc["forms"].items():
+            for f in fam_spec.get("fields", []):
+                label_map.setdefault(f["label"], f"{fam}.{f['name']}")
+    return label_map
+
+
+def test_five_calibration_calibers_mapped_from_real_stages():
+    """五校准口径必须经 _map_caliber 后缀归并命中 P1 补录字段（真实 stages 文件）。"""
+    label_map = _real_label_map()
+    for cal, field, _stage in _FIVE_CALIBER_FIELDS:
+        assert _map_caliber(cal, label_map) == (cal, field), f"口径「{cal}」未映射到 {field}"
+
+
+def test_control_efficiency_subcalibers_stay_unmapped():
+    """控制效率三子口径（拉丁前缀）raw 捕获为「控制效率」，字段表无此 label → 保持跳过
+    （挂载归 QUANTITY_RE 连接词扩展事项，钉死现状防误挂同键互覆）。"""
+    label_map = _real_label_map()
+    for cal in ("TSP控制效率", "PM10控制效率", "PM2.5控制效率"):
+        assert _map_caliber(cal, label_map) is None, f"「{cal}」意外映射"

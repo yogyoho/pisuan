@@ -97,7 +97,15 @@
       "title": "评价依据"
     },
     "ch13_S02": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "设备完好率",
+          "corpus_freq": 0.25,
+          "field": "cleaner_production.equipment_integrity_rate",
+          "tier": "optional",
+          "unit": "%"
+        }
+      ],
       "title": "环境敏感目标调查"
     },
     "ch13_S03": {
@@ -125,7 +133,15 @@
       "title": "环境风险评价自查表"
     },
     "ch14_S01": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.25,
+          "field": "air.dust_removal_efficiency",
+          "tier": "optional",
+          "unit": "%"
+        }
+      ],
       "title": "矿井工业场地选址的环境可行性"
     },
     "ch14_S02": {
@@ -161,7 +177,15 @@
       "title": "环境管理"
     },
     "ch15_S02": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "设备完好率",
+          "corpus_freq": 0.2,
+          "field": "cleaner_production.equipment_integrity_rate",
+          "tier": "optional",
+          "unit": "%"
+        }
+      ],
       "title": "项目污染物排放管理要求"
     },
     "ch15_S03": {
@@ -173,7 +197,15 @@
       "title": "排污口及沉陷区规范化管理"
     },
     "ch15_S05": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "生活污水回用率",
+          "corpus_freq": 1.0,
+          "field": "water.domestic_water_reuse_rate",
+          "tier": "required",
+          "unit": "%"
+        }
+      ],
       "title": "环保设施验收清单"
     },
     "ch16_S01": {
@@ -181,7 +213,15 @@
       "title": ""
     },
     "ch16_S02": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.2,
+          "field": "air.dust_removal_efficiency",
+          "tier": "optional",
+          "unit": "%"
+        }
+      ],
       "title": "环境经济损益评价"
     },
     "ch16_S03": {
@@ -189,7 +229,22 @@
       "title": "环境监测计划"
     },
     "ch16_S04": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "生活污水回用率",
+          "corpus_freq": 1.0,
+          "field": "water.domestic_water_reuse_rate",
+          "tier": "required",
+          "unit": "%"
+        },
+        {
+          "caliber": "除尘效率",
+          "corpus_freq": 1.0,
+          "field": "air.dust_removal_efficiency",
+          "tier": "required",
+          "unit": "%"
+        }
+      ],
       "title": "环保设施验收清单"
     },
     "ch17_S01": {
@@ -198,6 +253,20 @@
     },
     "ch17_S02": {
       "expected_quantities": [
+        {
+          "caliber": "设备完好率",
+          "corpus_freq": 0.2,
+          "field": "cleaner_production.equipment_integrity_rate",
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.2,
+          "field": "air.dust_removal_efficiency",
+          "tier": "optional",
+          "unit": "%"
+        },
         {
           "caliber": "国家级公益林面积",
           "corpus_freq": 0.2,
@@ -213,7 +282,22 @@
       "title": "公众参与"
     },
     "ch17_S04": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "生活污水回用率",
+          "corpus_freq": 0.33,
+          "field": "water.domestic_water_reuse_rate",
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.33,
+          "field": "air.dust_removal_efficiency",
+          "tier": "optional",
+          "unit": "%"
+        }
+      ],
       "title": "结论与建议"
     },
     "ch17_S05": {
@@ -229,7 +313,15 @@
       "title": "项目政策符合性分析"
     },
     "ch18_S03": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.5,
+          "field": "air.dust_removal_efficiency",
+          "tier": "optional",
+          "unit": "%"
+        }
+      ],
       "title": "项目环境影响及保护措施"
     },
     "ch18_S04": {
@@ -241,7 +333,15 @@
       "title": "项目概况及主要建设内容"
     },
     "ch19_S02": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "除尘效率",
+          "corpus_freq": 1.0,
+          "field": "air.dust_removal_efficiency",
+          "tier": "required",
+          "unit": "%"
+        }
+      ],
       "title": "项目环境影响"
     },
     "ch19_S03": {
@@ -338,6 +438,13 @@
           "field": "backfill.fill_rate",
           "tier": "optional",
           "unit": "%"
+        },
+        {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.2,
+          "field": "air.dust_removal_efficiency",
+          "tier": "optional",
+          "unit": "%"
         }
       ],
       "title": "项目工程组成"
@@ -351,7 +458,15 @@
       "title": "依托工程"
     },
     "ch2_S07": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.75,
+          "field": "air.dust_removal_efficiency",
+          "tier": "required",
+          "unit": "%"
+        }
+      ],
       "title": "工程环境影响分析"
     },
     "ch2_S08": {
@@ -499,11 +614,34 @@
       "title": "气象资料"
     },
     "ch8_S04": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.33,
+          "field": "air.dust_removal_efficiency",
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
+          "caliber": "抑尘效率",
+          "corpus_freq": 0.33,
+          "field": "measures.dust_suppression_efficiency",
+          "tier": "optional",
+          "unit": "%"
+        }
+      ],
       "title": "建设期环境空气影响与防治措施"
     },
     "ch8_S05": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "抑尘效率",
+          "corpus_freq": 1.0,
+          "field": "measures.dust_suppression_efficiency",
+          "tier": "required",
+          "unit": "%"
+        }
+      ],
       "title": "运行期环境空气影响预测与评价"
     },
     "ch8_S06": {
@@ -519,11 +657,27 @@
       "title": ""
     },
     "ch9_S01": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.2,
+          "field": "air.dust_removal_efficiency",
+          "tier": "optional",
+          "unit": "%"
+        }
+      ],
       "title": "概述"
     },
     "ch9_S02": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.25,
+          "field": "air.dust_removal_efficiency",
+          "tier": "optional",
+          "unit": "%"
+        }
+      ],
       "title": "声环境质量现状监测与评价"
     },
     "ch9_S03": {
@@ -535,11 +689,34 @@
       "title": "运行期噪声环境影响分析与防治措施"
     },
     "ch9_S05": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.33,
+          "field": "air.dust_removal_efficiency",
+          "tier": "optional",
+          "unit": "%"
+        }
+      ],
       "title": "小结"
     },
     "ch9_S06": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.5,
+          "field": "air.dust_removal_efficiency",
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
+          "caliber": "抑尘效率",
+          "corpus_freq": 0.5,
+          "field": "measures.dust_suppression_efficiency",
+          "tier": "optional",
+          "unit": "%"
+        }
+      ],
       "title": "声环境影响评价自查表"
     },
     "ch9_S07": {
@@ -1863,7 +2040,7 @@
       "value": "36"
     },
     {
-      "caliber": "盖度可",
+      "caliber": "盖度",
       "sample": "001-wps",
       "section": "ch6",
       "unit": "%",
