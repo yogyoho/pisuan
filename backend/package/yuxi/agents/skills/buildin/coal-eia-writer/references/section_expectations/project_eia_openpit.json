@@ -493,6 +493,48 @@
           "field": "openpit_engineering.stripping_volume",
           "tier": "contextual",
           "unit": "万t"
+        },
+        {
+          "caliber": "TSP控制效率",
+          "corpus_freq": 0.17,
+          "field": "air.tsp_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 61.0,
+            "p50": 61.0,
+            "p95": 90.0
+          },
+          "tier": "contextual",
+          "unit": "%"
+        },
+        {
+          "caliber": "PM10控制效率",
+          "corpus_freq": 0.17,
+          "field": "air.pm10_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 55.0,
+            "p50": 59.0,
+            "p95": 84.0
+          },
+          "tier": "contextual",
+          "unit": "%"
+        },
+        {
+          "caliber": "PM2.5控制效率",
+          "corpus_freq": 0.17,
+          "field": "air.pm2_5_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 46.0,
+            "p50": 49.0,
+            "p95": 70.0
+          },
+          "tier": "contextual",
+          "unit": "%"
         }
       ],
       "title": "环保措施及运行情况"
@@ -725,6 +767,48 @@
           "field": "openpit_engineering.stripping_volume",
           "tier": "optional",
           "unit": "万t"
+        },
+        {
+          "caliber": "TSP控制效率",
+          "corpus_freq": 0.25,
+          "field": "air.tsp_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 61.0,
+            "p50": 61.0,
+            "p95": 90.0
+          },
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
+          "caliber": "PM10控制效率",
+          "corpus_freq": 0.25,
+          "field": "air.pm10_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 55.0,
+            "p50": 59.0,
+            "p95": 84.0
+          },
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
+          "caliber": "PM2.5控制效率",
+          "corpus_freq": 0.25,
+          "field": "air.pm2_5_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 46.0,
+            "p50": 49.0,
+            "p95": 70.0
+          },
+          "tier": "optional",
+          "unit": "%"
         }
       ],
       "title": "建设期环境空气影响及防治措施"
@@ -751,6 +835,48 @@
           "field": "openpit_engineering.stripping_volume",
           "tier": "contextual",
           "unit": "万t"
+        },
+        {
+          "caliber": "TSP控制效率",
+          "corpus_freq": 0.17,
+          "field": "air.tsp_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 61.0,
+            "p50": 61.0,
+            "p95": 90.0
+          },
+          "tier": "contextual",
+          "unit": "%"
+        },
+        {
+          "caliber": "PM10控制效率",
+          "corpus_freq": 0.17,
+          "field": "air.pm10_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 55.0,
+            "p50": 59.0,
+            "p95": 84.0
+          },
+          "tier": "contextual",
+          "unit": "%"
+        },
+        {
+          "caliber": "PM2.5控制效率",
+          "corpus_freq": 0.17,
+          "field": "air.pm2_5_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 46.0,
+            "p50": 49.0,
+            "p95": 70.0
+          },
+          "tier": "contextual",
+          "unit": "%"
         }
       ],
       "title": "存在问题及整改建议"
@@ -784,6 +910,48 @@
           "field": "openpit_engineering.stripping_volume",
           "tier": "optional",
           "unit": "万t"
+        },
+        {
+          "caliber": "TSP控制效率",
+          "corpus_freq": 0.33,
+          "field": "air.tsp_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 61.0,
+            "p50": 61.0,
+            "p95": 90.0
+          },
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
+          "caliber": "PM10控制效率",
+          "corpus_freq": 0.33,
+          "field": "air.pm10_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 55.0,
+            "p50": 59.0,
+            "p95": 84.0
+          },
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
+          "caliber": "PM2.5控制效率",
+          "corpus_freq": 0.33,
+          "field": "air.pm2_5_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 46.0,
+            "p50": 49.0,
+            "p95": 70.0
+          },
+          "tier": "optional",
+          "unit": "%"
         }
       ],
       "title": "环境空气污染防治措施"
@@ -816,6 +984,48 @@
           "field": "openpit_engineering.stripping_volume",
           "tier": "optional",
           "unit": "万t"
+        },
+        {
+          "caliber": "TSP控制效率",
+          "corpus_freq": 0.2,
+          "field": "air.tsp_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 61.0,
+            "p50": 61.0,
+            "p95": 90.0
+          },
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
+          "caliber": "PM10控制效率",
+          "corpus_freq": 0.2,
+          "field": "air.pm10_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 55.0,
+            "p50": 59.0,
+            "p95": 84.0
+          },
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
+          "caliber": "PM2.5控制效率",
+          "corpus_freq": 0.2,
+          "field": "air.pm2_5_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 46.0,
+            "p50": 49.0,
+            "p95": 70.0
+          },
+          "tier": "optional",
+          "unit": "%"
         }
       ],
       "title": "噪声控制效果分析"
@@ -842,6 +1052,48 @@
           "field": "openpit_engineering.stripping_volume",
           "tier": "optional",
           "unit": "万t"
+        },
+        {
+          "caliber": "TSP控制效率",
+          "corpus_freq": 0.5,
+          "field": "air.tsp_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 61.0,
+            "p50": 61.0,
+            "p95": 90.0
+          },
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
+          "caliber": "PM10控制效率",
+          "corpus_freq": 0.5,
+          "field": "air.pm10_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 55.0,
+            "p50": 59.0,
+            "p95": 84.0
+          },
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
+          "caliber": "PM2.5控制效率",
+          "corpus_freq": 0.5,
+          "field": "air.pm2_5_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 46.0,
+            "p50": 49.0,
+            "p95": 70.0
+          },
+          "tier": "optional",
+          "unit": "%"
         }
       ],
       "title": "生产期环境空气影响预测与评价"
@@ -868,6 +1120,48 @@
           "field": "openpit_engineering.stripping_volume",
           "tier": "optional",
           "unit": "万t"
+        },
+        {
+          "caliber": "TSP控制效率",
+          "corpus_freq": 0.33,
+          "field": "air.tsp_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 61.0,
+            "p50": 61.0,
+            "p95": 90.0
+          },
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
+          "caliber": "PM10控制效率",
+          "corpus_freq": 0.33,
+          "field": "air.pm10_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 55.0,
+            "p50": 59.0,
+            "p95": 84.0
+          },
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
+          "caliber": "PM2.5控制效率",
+          "corpus_freq": 0.33,
+          "field": "air.pm2_5_control_efficiency",
+          "range": {
+            "n_reports": 6,
+            "n_values": 14,
+            "p5": 46.0,
+            "p50": 49.0,
+            "p95": 70.0
+          },
+          "tier": "optional",
+          "unit": "%"
         },
         {
           "caliber": "抑尘效率",
@@ -2004,35 +2298,14 @@
       "value": "7.52"
     },
     {
-      "caliber": "控制效率",
-      "sample": "013-3500-----2024-4-11",
-      "section": "ch8",
-      "unit": "%",
-      "value": "61"
-    },
-    {
-      "caliber": "控制效率",
-      "sample": "013-3500-----2024-4-11",
-      "section": "ch8",
-      "unit": "%",
-      "value": "59"
-    },
-    {
-      "caliber": "控制效率",
-      "sample": "013-3500-----2024-4-11",
-      "section": "ch8",
-      "unit": "%",
-      "value": "49"
-    },
-    {
-      "caliber": "产生量",
+      "caliber": "TSP产生量",
       "sample": "013-3500-----2024-4-11",
       "section": "ch8",
       "unit": "t",
       "value": "1548.73"
     },
     {
-      "caliber": "产生量",
+      "caliber": "TSP产生量",
       "sample": "013-3500-----2024-4-11",
       "section": "ch8",
       "unit": "t",
@@ -2046,56 +2319,14 @@
       "value": "27.26"
     },
     {
-      "caliber": "控制效率",
-      "sample": "013-3500-----2024-4-11",
-      "section": "ch8",
-      "unit": "%",
-      "value": "66"
-    },
-    {
-      "caliber": "控制效率",
-      "sample": "013-3500-----2024-4-11",
-      "section": "ch8",
-      "unit": "%",
-      "value": "55"
-    },
-    {
-      "caliber": "控制效率",
-      "sample": "013-3500-----2024-4-11",
-      "section": "ch8",
-      "unit": "%",
-      "value": "46"
-    },
-    {
-      "caliber": "产生量",
+      "caliber": "TSP产生量",
       "sample": "013-3500-----2024-4-11",
       "section": "ch8",
       "unit": "t",
       "value": "941.58"
     },
     {
-      "caliber": "控制效率",
-      "sample": "013-3500-----2024-4-11",
-      "section": "ch8",
-      "unit": "%",
-      "value": "90"
-    },
-    {
-      "caliber": "控制效率",
-      "sample": "013-3500-----2024-4-11",
-      "section": "ch8",
-      "unit": "%",
-      "value": "84"
-    },
-    {
-      "caliber": "控制效率",
-      "sample": "013-3500-----2024-4-11",
-      "section": "ch8",
-      "unit": "%",
-      "value": "70"
-    },
-    {
-      "caliber": "产生量",
+      "caliber": "TSP产生量",
       "sample": "013-3500-----2024-4-11",
       "section": "ch8",
       "unit": "t",
@@ -2317,6 +2548,69 @@
       "section": "ch2",
       "unit": "m",
       "value": "5.15"
+    },
+    {
+      "caliber": "号煤的间距",
+      "sample": "016-2021-12",
+      "section": "ch2",
+      "unit": "m",
+      "value": "0.90"
+    },
+    {
+      "caliber": "号煤的间距",
+      "sample": "016-2021-12",
+      "section": "ch2",
+      "unit": "m",
+      "value": "3.80"
+    },
+    {
+      "caliber": "号煤的间距",
+      "sample": "016-2021-12",
+      "section": "ch2",
+      "unit": "m",
+      "value": "7.95"
+    },
+    {
+      "caliber": "煤层的间距",
+      "sample": "016-2021-12",
+      "section": "ch2",
+      "unit": "m",
+      "value": "39.05"
+    },
+    {
+      "caliber": "时采掘场占地面积",
+      "sample": "016-2021-12",
+      "section": "ch2",
+      "unit": "hm2",
+      "value": "102.00"
+    },
+    {
+      "caliber": "时排土场占地面积",
+      "sample": "016-2021-12",
+      "section": "ch2",
+      "unit": "hm2",
+      "value": "126.0"
+    },
+    {
+      "caliber": "排土场总占地面积",
+      "sample": "016-2021-12",
+      "section": "ch2",
+      "unit": "hm2",
+      "value": "305"
+    },
+    {
+      "caliber": "场平均排弃总高度",
+      "sample": "016-2021-12",
+      "section": "ch2",
+      "unit": "m",
+      "value": "90.00"
+    },
+    {
+      "caliber": "破碎站占地面积",
+      "sample": "016-2021-12",
+      "section": "ch2",
+      "unit": "hm2",
+      "value": "0.8000"
     }
   ],
   "version": "1.2"

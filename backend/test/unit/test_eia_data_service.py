@@ -45,13 +45,15 @@ def test_get_skill_stats_structure():
     assert sum(corpus["by_province"].values()) == 31
 
     # 词表候选：口径与语料普查对齐（单位白名单 + n≥2 报告门槛 + 强清洗，
-    # 比普查 97 少的 7 项为平均值/分别等整词垃圾）
+    # 比普查 99 少的 7 项为平均值/分别等整词垃圾）
+    # P2 拉丁前缀窗后：裸「控制效率」（splitting 不计数）三分成三子口径 +3、「产生量」精化
+    # 为「TSP产生量」（切片源未达 n≥2 门槛未成键）-1，total 90→92；控制效率入 measure 枚举
     cand = stats["candidates"]
-    assert cand["total"] == 90
+    assert cand["total"] == 92
     assert cand["measure"] + cand["site"] + cand["junk"] == cand["total"]
-    assert cand["measure"] == 31
+    assert cand["measure"] == 34
     assert cand["per_stage"]["planning_eia"]["measure"] == 13
-    assert cand["range_ready"] == 6
+    assert cand["range_ready"] == 9
 
     # 事实槽位：5 阶段齐全，planning unmapped 池触顶 200 cap
     assert set(stats["expectations"]) == set(STAGES)

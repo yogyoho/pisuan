@@ -415,7 +415,31 @@
           "unit": "%",
           "note": "除尘设施与喷雾洒水对凿岩/穿孔工序的除尘效率"
         }
-      ]
+      ,
+        {
+          "name": "tsp_control_efficiency",
+          "label": "TSP控制效率",
+          "type": "number",
+          "required": false,
+          "unit": "%",
+          "note": "洒水抑尘措施对 TSP 的控制效率（排土场/采掘场扬尘削减）"
+        },
+        {
+          "name": "pm10_control_efficiency",
+          "label": "PM10控制效率",
+          "type": "number",
+          "required": false,
+          "unit": "%",
+          "note": "洒水抑尘措施对 PM10 的控制效率"
+        },
+        {
+          "name": "pm2_5_control_efficiency",
+          "label": "PM2.5控制效率",
+          "type": "number",
+          "required": false,
+          "unit": "%",
+          "note": "洒水抑尘措施对 PM2.5 的控制效率"
+        }]
     },
     "noise": {
             "label": "声环境",
