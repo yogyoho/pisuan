@@ -23,7 +23,7 @@ def test_clean_caliber_stops_tail():
 
 
 def test_classify_caliber_three_way():
-    """三分类：A 工程措施 / B 站点背景 / C 其余（截断与非目标口径）。"""
+    """三分类：A 措施效率 / B 现状监测 / C 非护栏杂项（截断与非目标口径）。"""
     assert _classify_caliber("抑尘效率") == "measure"
     assert _classify_caliber("废水回用率") == "measure"
     assert _classify_caliber("超标率") == "site"

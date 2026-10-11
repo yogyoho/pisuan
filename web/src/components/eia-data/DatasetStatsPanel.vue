@@ -81,9 +81,9 @@
           <h3 class="card-title">数值护栏词表候选</h3>
           <p class="card-sub">
             比率/浓度型口径三分类 ·
-            <span class="legend-swatch swatch-main"></span>A 工程措施 {{ stats.candidates.measure }}
-            <span class="legend-swatch swatch-mid"></span>B 站点背景 {{ stats.candidates.site }}
-            <span class="legend-swatch swatch-gray"></span>C 待清理 {{ stats.candidates.junk }}
+            <span class="legend-swatch swatch-main"></span>A 措施效率 {{ stats.candidates.measure }}
+            <span class="legend-swatch swatch-mid"></span>B 现状监测 {{ stats.candidates.site }}
+            <span class="legend-swatch swatch-gray"></span>C 非护栏杂项 {{ stats.candidates.junk }}
             · 可发布区间 <b class="hl">{{ stats.candidates.range_ready }}</b> 项
             <a class="panel-link" @click.prevent="goLexicon">进入词表管理 →</a>
           </p>
@@ -282,9 +282,9 @@ const renderProvinceChart = () => {
 const renderCandidatesChart = () => {
   const stages = stats.value.stages
   const SERIES = [
-    { key: 'measure', label: 'A 工程措施', color: '--main-600' },
-    { key: 'site', label: 'B 站点背景', color: '--main-300' },
-    { key: 'junk', label: 'C 待清理', color: '--gray-200' }
+    { key: 'measure', label: 'A 措施效率', color: '--main-600' },
+    { key: 'site', label: 'B 现状监测', color: '--main-300' },
+    { key: 'junk', label: 'C 非护栏杂项', color: '--gray-200' }
   ]
   renderChart(candidatesChartRef.value, {
     grid: { top: 28, left: 8, right: 8, bottom: 0, containLabel: true },
