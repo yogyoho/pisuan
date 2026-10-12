@@ -3235,3 +3235,1726 @@
 | 20:22 | 审计 roadmap v2 spec 实现度：仅 W0 落地（bug-353/354/埋点），W1-W4 与 §9 八项拍板除埋点外全部未动；spec-W1 与会话-W1 窗口错位（实际 W1 做了 bug-359/363/365） | specs/2026-10-05-kf-product-roadmap-v2-design.md | 已报用户 | ~3k |
 | 22:11 | Created docs/vibe/2026-10-05-kf-roadmap-v2-gap-audit.md | — | ~1262 |
 | 20:26 | 差距清单落档 docs/vibe/2026-10-05-kf-roadmap-v2-gap-audit.md（排期输入，含依赖图与建议序） | docs/vibe | 已提交待推 | ~2k |
+| 22:13 | Session end: 1 writes across 1 files (2026-10-05-kf-roadmap-v2-gap-audit.md) | 4 reads | ~1352 tok |
+| 20:31 | 差距清单迁入 specs 与原 spec 并排（a73b959a 已推），内链/互引/anatomy 同步 | docs/superpowers/specs | OK | ~0 |
+| 22:22 | Session end: 1 writes across 1 files (2026-10-05-kf-roadmap-v2-gap-audit.md) | 4 reads | ~1352 tok |
+| 22:32 | Created docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | — | ~7584 |
+| 22:33 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | 3→2 lines | ~65 |
+| 22:33 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | inline fix | ~51 |
+| 22:34 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | 2→2 lines | ~64 |
+| 22:34 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | inline fix | ~43 |
+| 22:34 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | modified items() | ~59 |
+| 20:38 | W2 计划成稿并提交，启动 subagent 执行（Task 1 派生标注） | docs/superpowers/plans | 进行中 | ~8k |
+| 22:37 | Session end: 7 writes across 2 files (2026-10-05-kf-roadmap-v2-gap-audit.md, 2026-10-05-w2-report-skeleton-three-layer.md) | 4 reads | ~9780 tok |
+| 22:41 | W2-T1 语料条件标注: derive_conditions.py 断言 38 失败实得 35——census 含 3 份复垦方案族(四季屯/红庆梁/郭家台)致排除 6 非 3, 待控制方裁决 universe 口径 | .wolf/corpus-census/derive_conditions.py | BLOCKED | ~4k |
+| 22:43 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | inline fix | ~82 |
+| 22:43 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | 5→5 lines | ~76 |
+| 22:43 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | "conditions: 38 份；excluded" → "conditions: 35 份；excluded" | ~33 |
+| 22:43 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | 3→3 lines | ~37 |
+| 22:43 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | test_universe_is_38() → test_universe_is_35() | ~16 |
+| 22:43 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | 3→3 lines | ~51 |
+| 22:43 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | inline fix | ~19 |
+| 22:43 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | modified test() | ~37 |
+| 22:44 | Session end: 15 writes across 2 files (2026-10-05-kf-roadmap-v2-gap-audit.md, 2026-10-05-w2-report-skeleton-three-layer.md) | 4 reads | ~10156 tok |
+| 22:46 | W2-T1 完成按裁决 universe=35: derive_conditions.py 断言改正重跑通过(35+6), 抽检/统计/交叉核对完成, fixtures 3 件提交 986efbaf | .wolf/corpus-census/derive_conditions.py, backend/test/data/corpus_census/*.json | DONE | ~6k |
+| 22:48 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | inline fix | ~139 |
+| 22:50 | Session end: 16 writes across 2 files (2026-10-05-kf-roadmap-v2-gap-audit.md, 2026-10-05-w2-report-skeleton-three-layer.md) | 5 reads | ~10305 tok |
+| 22:51 | Session end: 16 writes across 2 files (2026-10-05-kf-roadmap-v2-gap-audit.md, 2026-10-05-w2-report-skeleton-three-layer.md) | 5 reads | ~10305 tok |
+| 22:55 | Session end: 16 writes across 2 files (2026-10-05-kf-roadmap-v2-gap-audit.md, 2026-10-05-w2-report-skeleton-three-layer.md) | 5 reads | ~10305 tok |
+| 21:12 | W2 Task1 双评审过（986efbaf：35 universe+6 排除；R6 可测性二次勘正 4ea0f2e0）；Task2 三层源文件实现者已派 | docs/superpowers/plans | 进行中 | ~6k |
+| 23:00 | W2-T1 评审 Minor 3 条就地修复(M3 docstring/M1 mine_type 守卫/M2 删通用'沙漠公园'), 重跑 35+6 且 conditions.json 与 fixture 零 diff | .wolf/corpus-census/derive_conditions.py | DONE | ~1k |
+| 23:00 | Session end: 16 writes across 2 files (2026-10-05-kf-roadmap-v2-gap-audit.md, 2026-10-05-w2-report-skeleton-three-layer.md) | 6 reads | ~10305 tok |
+| 23:01 | Session end: 16 writes across 2 files (2026-10-05-kf-roadmap-v2-gap-audit.md, 2026-10-05-w2-report-skeleton-three-layer.md) | 6 reads | ~10305 tok |
+| 23:20 | W2-T2 三层源文件 9 件入库：4 layer-1（stage 派生+44 corpus aliases）+rules.json（R1-R9）+4 layer-3；R4 回顾评价补 optional 槽位；commit 1f92038a，9 files 8170+ | backend/templates/coal_mining/report_skeletons/* | layer files OK | ~35k |
+| 23:22 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | 2→4 lines | ~85 |
+| 23:22 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | modified get() | ~40 |
+| 23:22 | Session end: 18 writes across 2 files (2026-10-05-kf-roadmap-v2-gap-audit.md, 2026-10-05-w2-report-skeleton-three-layer.md) | 6 reads | ~10439 tok |
+| 23:25 | W2-T2 R4 裁决落地：require 改绑 canonical 全称+删裸名 optional 槽位；commit c9b0e391 2 files | rules.json, planning_eia.json | layer files OK | ~8k |
+| 21:47 | Task2 三层源文件 9 件入库（1f92038a）+ R4 裁决修复（c9b0e391），计划同步 7e9506bf；spec 评审已派 | docs/superpowers/plans | 评审中 | ~5k |
+| 23:27 | Session end: 18 writes across 2 files (2026-10-05-kf-roadmap-v2-gap-audit.md, 2026-10-05-w2-report-skeleton-three-layer.md) | 6 reads | ~10439 tok |
+| 23:34 | Session end: 18 writes across 2 files (2026-10-05-kf-roadmap-v2-gap-audit.md, 2026-10-05-w2-report-skeleton-three-layer.md) | 8 reads | ~10439 tok |
+
+## Session: 2026-10-05 23:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:55 | W2-T2 评审落地：project_eia 井工基准重构（openpit 19 章=5 variant+1 exclusive+13 exact）+R1/R2/R5/R6 修正+层三 4 键对齐；commit 0d3abee8 5 files | report_skeletons/* | 断言 A-F 全绿 | ~30k |
+| 00:00 | W2-T2 R6 retarget：require 绑 canonical 总控章+删裸题死槽位；commit 73233749 2 files；郭家台模拟 20 章无注入 | rules.json, project_eia.json | 断言全绿 | ~10k |
+| 00:06 | W2-T2 收尾件：4 份 layer-1 章级随迁 key_elements/writing_patterns（61 canonical 逐字断言+optional 缺省 []）；commit f7ba64e0 4 files | report_skeletons/*.json | layer files OK | ~15k |
+| 23:58 | Task2 质量裁决计划同步（井工基准/R1R2R5R6/死配置清理）9 编辑 | docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | b0ab40df | ~6k |
+| 00:05 | R6 命中路径实测校正（郭家台=污染物总量控制分析 经既有 alias 命中） | 同上 | addee026 | ~2k |
+| 00:15 | R6 retarget 派工+实现者落地（add→require 绑 canonical 总控章） | rules.json/project_eia.json | 73233749 | ~8k |
+| 00:25 | Task3 渲染器实测形态修正 7 编辑（富对象/OPT键/l3收窄/depth_targets对齐） | 同上计划 | ccdeff78 | ~5k |
+| 00:30 | layer-1 补章级 key_elements/writing_patterns（seed_gen 消费面）61 章逐字 | 4 family JSON | f7ba64e0 | ~12k |
+| 00:38 | optional 章 OPT_N 键命名空间裁决 + Task5 冒烟名单收窄 | 同上计划 | ec774886 | ~3k |
+| 00:08 | W2-T2 末件：optional 章 slot_id=OPT_N 独立命名空间（渲染器输出键契约）；commit b9cd1fd9 2 files | planning_eia.json, project_eia.json | layer files OK | ~5k |
+| 00:18 | Created ../../Users/Lenovo/AppData/Local/Temp/w2_task2_audit.py | — | ~3272 |
+| 00:19 | Created ../../Users/Lenovo/AppData/Local/Temp/w2_task2_audit2.py | — | ~1622 |
+| 00:20 | Created ../../Users/Lenovo/AppData/Local/Temp/w2_task2_audit3.py | — | ~827 |
+| 00:24 | Session end: 3 writes across 3 files (w2_task2_audit.py, w2_task2_audit2.py, w2_task2_audit3.py) | 0 reads | ~5721 tok |
+| 00:40 | Session end: 3 writes across 3 files (w2_task2_audit.py, w2_task2_audit2.py, w2_task2_audit3.py) | 0 reads | ~5721 tok |
+| 00:12 | W2-T2 终件：R5 note 失实更正（host 实测仅命中 planning，tracking 断子串不命中）；commit 见 git log 顶 | rules.json | layer files OK | ~4k |
+| 00:42 | Session end: 3 writes across 3 files (w2_task2_audit.py, w2_task2_audit2.py, w2_task2_audit3.py) | 0 reads | ~5721 tok |
+| 00:46 | Created backend/scripts/render_report_skeletons.py | — | ~2215 |
+| 00:48 | Created ../../Users/Lenovo/AppData/Local/Temp/w2_assert.py | — | ~1521 |
+| 00:48 | Edited ../../Users/Lenovo/AppData/Local/Temp/w2_assert.py | added 1 import(s) | ~13 |
+| 00:49 | Edited backend/scripts/render_report_skeletons.py | 3→3 lines | ~47 |
+| 00:50 | Created ../../Users/Lenovo/AppData/Local/Temp/w2_t3_commit_msg.txt | — | ~111 |
+| 00:53 | Session end: 8 writes across 6 files (w2_task2_audit.py, w2_task2_audit2.py, w2_task2_audit3.py, render_report_skeletons.py, w2_assert.py) | 3 reads | ~11909 tok |
+| 01:04 | Edited backend/scripts/render_report_skeletons.py | modified enumerate() | ~57 |
+| 01:04 | Edited backend/scripts/render_report_skeletons.py | modified _copy_ch() | ~52 |
+| 01:04 | Edited backend/scripts/render_report_skeletons.py | 2→2 lines | ~22 |
+| 01:04 | Edited backend/scripts/render_report_skeletons.py | inline fix | ~22 |
+| 01:04 | Edited backend/scripts/render_report_skeletons.py | 2→2 lines | ~31 |
+| 01:04 | Edited ../../Users/Lenovo/AppData/Local/Temp/w2_assert.py | 1→2 lines | ~48 |
+| 01:05 | Session end: 14 writes across 6 files (w2_task2_audit.py, w2_task2_audit2.py, w2_task2_audit3.py, render_report_skeletons.py, w2_assert.py) | 3 reads | ~12141 tok |
+| 01:05 | Created ../../Users/Lenovo/AppData/Local/Temp/w2_t3_fix_commit_msg.txt | — | ~108 |
+| 01:08 | Session end: 15 writes across 7 files (w2_task2_audit.py, w2_task2_audit2.py, w2_task2_audit3.py, render_report_skeletons.py, w2_assert.py) | 3 reads | ~12257 tok |
+| 01:50 | W2 Task4 语料适配度测试落地+调优达标：8abc8a11(测试 RED 基线 slot18/35) → 46cbea73(7 alias + 24 文件豁免 → slot 35/35 order 35/35)，宿主/Docker 双绿 | backend/test/unit/test_report_skeleton_fit.py, templates/coal_mining/report_skeletons/{planning,project,post}_eia.json, test/data/corpus_census/conditions.json | 达标 | ~9K |
+| 01:40 | Session end: 15 writes across 7 files (w2_task2_audit.py, w2_task2_audit2.py, w2_task2_audit3.py, render_report_skeletons.py, w2_assert.py) | 5 reads | ~12252 tok |
+| 01:50 | Session end: 15 writes across 7 files (w2_task2_audit.py, w2_task2_audit2.py, w2_task2_audit3.py, render_report_skeletons.py, w2_assert.py) | 5 reads | ~12252 tok |
+| 08:38 | Session end: 15 writes across 7 files (w2_task2_audit.py, w2_task2_audit2.py, w2_task2_audit3.py, render_report_skeletons.py, w2_assert.py) | 6 reads | ~12252 tok |
+| 08:44 | W2 Task5: 渲染 6 份代表条件存档（伊敏/五间房/月儿湾/吐鲁东/白音华二/淖毛湖）+ seed_gen gen 冒烟 4/4 PASS（454/589/469/294 asserts）+ 结构断言 2 份 PASS，提交 8e070d84 | backend/templates/coal_mining/report_skeletons/rendered/ | DONE | ~18000 tok |
+| 08:47 | Session end: 15 writes across 7 files (w2_task2_audit.py, w2_task2_audit2.py, w2_task2_audit3.py, render_report_skeletons.py, w2_assert.py) | 6 reads | ~12252 tok |
+| 08:50 | Edited docs/develop-guides/changelog.md | modified fix() | ~59 |
+| 08:50 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | modified feat() | ~116 |
+| 08:50 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | 3→5 lines | ~206 |
+| 08:51 | W2 Task6 收尾：fit 37 passed 终验 + 渲染 CLI 冒烟 exit 0 + changelog 追加行（35 份 slot 35/35 order 35/35）+ 计划勾账与 W2 整体执行记录 | changelog.md, plans/2026-10-05-w2-report-skeleton-three-layer.md | fe2f9563 提交完成 | ~3k |
+| 01:15 | Task4 fit 调优达标+双评审 APPROVED（slot 35/35 order 35/35，alias+8 豁免24文件） | test_report_skeleton_fit.py 等 | 8abc8a11,46cbea73 | ~40k |
+| 02:00 | Task5 渲染存档+seed_gen冒烟全PASS（agent 卡死勘正R3/R4后恢复）；6/6字节级抽验 | rendered/ 6份 | 8e070d84 | ~35k |
+| 02:40 | Task6 收尾+Task1补勾——W2 全量勾账完成 | changelog+计划 | 1ff4f6ac | ~15k |
+| 02:45 | W2 最终全量终审派出（DoD/集成/提交卫生/风险） | - | 进行中 | ~10k |
+| 08:53 | Session end: 18 writes across 9 files (w2_task2_audit.py, w2_task2_audit2.py, w2_task2_audit3.py, render_report_skeletons.py, w2_assert.py) | 7 reads | ~12661 tok |
+
+## Session: 2026-10-06 09:02
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:04 | Edited docs/superpowers/plans/2026-10-05-w2-report-skeleton-three-layer.md | 3→5 lines | ~198 |
+| 09:04 | W2 终审 VERDICT READY（独立复验 DoD 四项+集成抽查+提交卫生，25 commits 禁碰零卷入）；终审记录+5 风险备案落账 3352d139；推送 21 commits 至 origin pisuan-custom（后台哨兵 b80ji7s6l） | plans/2026-10-05-w2-report-skeleton-three-layer.md | DONE | ~3k |
+| 09:05 | Session end: 1 writes across 1 files (2026-10-05-w2-report-skeleton-three-layer.md) | 2 reads | ~9061 tok |
+| 09:13 | 用户指令清除 docs/architecture.html（13.9KB 未跟踪外来文件，删除前已查验） | docs/architecture.html | 已删除 | ~0.1k |
+| 09:13 | Session end: 1 writes across 1 files (2026-10-05-w2-report-skeleton-three-layer.md) | 2 reads | ~9061 tok |
+| 09:21 | Session end: 1 writes across 1 files (2026-10-05-w2-report-skeleton-three-layer.md) | 7 reads | ~9061 tok |
+| 09:35 | Session end: 1 writes across 1 files (2026-10-05-w2-report-skeleton-three-layer.md) | 7 reads | ~9061 tok |
+| 09:39 | Created docs/superpowers/specs/2026-10-06-bug355-etl-docx-guard-design.md | — | ~1422 |
+| 09:39 | Edited docs/superpowers/specs/2026-10-06-bug355-etl-docx-guard-design.md | 4→5 lines | ~101 |
+| 09:40 | bug-355 brainstorm：探明 ETL 两消费面（_etl_parse_stage/大纲提取）+三病类+出处判定（484e5bf7/02419f2f 均 pisuan-custom）；方案 B 批准；spec 26f0d49b（含 ok→re-raise 自审修正） | docs/superpowers/specs/2026-10-06-bug355-etl-docx-guard-design.md | DONE | ~25k |
+| 09:40 | Session end: 3 writes across 2 files (2026-10-05-w2-report-skeleton-three-layer.md, 2026-10-06-bug355-etl-docx-guard-design.md) | 7 reads | ~10692 tok |
+| 09:49 | Edited docs/superpowers/specs/2026-10-06-bug355-etl-docx-guard-design.md | added 2 import(s) | ~408 |
+| 09:49 | Edited docs/superpowers/specs/2026-10-06-bug355-etl-docx-guard-design.md | 3→3 lines | ~59 |
+| 09:51 | Created docs/superpowers/plans/2026-10-06-bug355-etl-docx-guard.md | — | ~6021 |
+| 09:51 | Edited docs/superpowers/plans/2026-10-06-bug355-etl-docx-guard.md | inline fix | ~50 |
+| 09:52 | bug-355 计划落库 b560a64b（4 任务 TDD 全码内联）+ spec 归并同步；进入 subagent-driven 执行 | plans/2026-10-06-bug355-etl-docx-guard.md | DONE | ~20k |
+| 09:53 | Session end: 7 writes across 3 files (2026-10-05-w2-report-skeleton-three-layer.md, 2026-10-06-bug355-etl-docx-guard-design.md, 2026-10-06-bug355-etl-docx-guard.md) | 8 reads | ~19045 tok |
+| 09:54 | Created backend/test/unit/test_docx_guard.py | — | ~2093 |
+| 09:55 | Created backend/package/yuxi/services/docx_guard.py | — | ~1815 |
+| 09:59 | Edited backend/test/unit/test_docx_guard.py | 1→6 lines | ~68 |
+| 09:59 | Edited backend/test/unit/test_docx_guard.py | inline fix | ~28 |
+| 09:59 | Edited backend/test/unit/test_docx_guard.py | inline fix | ~21 |
+| 09:59 | Edited backend/test/unit/test_docx_guard.py | inline fix | ~22 |
+| 09:59 | Edited backend/test/unit/test_docx_guard.py | inline fix | ~13 |
+| 10:02 | bug-355 T1 实现完成 de71785da（docx_guard 182 行+13 用例，宿主+容器双绿）；控制器验证过（提交范围/复跑/偏差裁决）；fixture 两缺陷补录 buglog；spec 评审已派出 | backend/package/yuxi/services/docx_guard.py | DONE_WITH_CONCERNS(裁决接受) | ~15k |
+| 10:02 | Session end: 14 writes across 5 files (2026-10-05-w2-report-skeleton-three-layer.md, 2026-10-06-bug355-etl-docx-guard-design.md, 2026-10-06-bug355-etl-docx-guard.md, test_docx_guard.py, docx_guard.py) | 8 reads | ~23105 tok |
+| 10:07 | Session end: 14 writes across 5 files (2026-10-05-w2-report-skeleton-three-layer.md, 2026-10-06-bug355-etl-docx-guard-design.md, 2026-10-06-bug355-etl-docx-guard.md, test_docx_guard.py, docx_guard.py) | 8 reads | ~23105 tok |
+| 10:16 | Session end: 14 writes across 5 files (2026-10-05-w2-report-skeleton-three-layer.md, 2026-10-06-bug355-etl-docx-guard-design.md, 2026-10-06-bug355-etl-docx-guard.md, test_docx_guard.py, docx_guard.py) | 10 reads | ~27051 tok |
+| 10:17 | Edited backend/test/unit/test_docx_guard.py | modified test_absolute_null_target_variant() | ~182 |
+| 10:17 | Edited backend/test/unit/test_docx_guard.py | modified test_guard_docx_bytes_repairs_dangling() | ~130 |
+| 10:17 | Edited backend/test/unit/test_docx_guard.py | modified test_corrupt_bytes() | ~183 |
+| 10:17 | Edited backend/package/yuxi/services/docx_guard.py | added 2 import(s) | ~67 |
+| 10:18 | Edited backend/package/yuxi/services/docx_guard.py | modified namelist() | ~155 |
+| 10:18 | Edited backend/package/yuxi/services/docx_guard.py | modified diagnose_docx() | ~47 |
+| 10:18 | Edited backend/package/yuxi/services/docx_guard.py | 1→2 lines | ~28 |
+| 10:18 | Edited backend/package/yuxi/services/docx_guard.py | inline fix | ~34 |
+| 10:19 | bug-355 T1 spec 评审 PASS（偏差①②独立实证站得住）；质量评审 1 Important（损坏 .rels 裸抛泄四态契约）+5 Minor → 修复 2d547e24（corrupt 态防护+3 补测+3 Minor，16 passed 双环境）→ 质量复审已派 | docx_guard.py | 修复闭环中 | ~12k |
+| 10:19 | Session end: 22 writes across 5 files (2026-10-05-w2-report-skeleton-three-layer.md, 2026-10-06-bug355-etl-docx-guard-design.md, 2026-10-06-bug355-etl-docx-guard.md, test_docx_guard.py, docx_guard.py) | 10 reads | ~27877 tok |
+| 10:21 | Session end: 22 writes across 5 files (2026-10-05-w2-report-skeleton-three-layer.md, 2026-10-06-bug355-etl-docx-guard-design.md, 2026-10-06-bug355-etl-docx-guard.md, test_docx_guard.py, docx_guard.py) | 10 reads | ~27877 tok |
+| 10:21 | Edited backend/package/yuxi/services/domain_factory_service.py | expanded (+6 lines) | ~152 |
+| 10:22 | Edited backend/package/yuxi/services/domain_factory_service.py | expanded (+6 lines) | ~117 |
+| 10:23 | bug-355 Task2: ETL 主解析接 docx 守卫 + 空产物显式失败，恰两处编辑 | backend/package/yuxi/services/domain_factory_service.py | d0ac3525 提交，53 passed (16+37)，+13/-1 恰一文件 | ~3k |
+| 10:23 | Session end: 24 writes across 6 files (2026-10-05-w2-report-skeleton-three-layer.md, 2026-10-06-bug355-etl-docx-guard-design.md, 2026-10-06-bug355-etl-docx-guard.md, test_docx_guard.py, docx_guard.py) | 10 reads | ~28146 tok |
+| 10:33 | bug-355 T2 d0ac3525（ETL 接守卫+空守卫 +13/-1）+ T3 99a215b4（大纲接线 +3，字节级加严验证无 BOM/LF 一致）双双 DONE；T2+3 合并双焦点评审已派 | domain_factory_service.py | 评审中 | ~10k |
+| 10:33 | Session end: 24 writes across 6 files (2026-10-05-w2-report-skeleton-three-layer.md, 2026-10-06-bug355-etl-docx-guard-design.md, 2026-10-06-bug355-etl-docx-guard.md, test_docx_guard.py, docx_guard.py) | 10 reads | ~28146 tok |
+| 10:38 | Session end: 24 writes across 6 files (2026-10-05-w2-report-skeleton-three-layer.md, 2026-10-06-bug355-etl-docx-guard-design.md, 2026-10-06-bug355-etl-docx-guard.md, test_docx_guard.py, docx_guard.py) | 11 reads | ~109454 tok |
+| 10:43 | Edited docs/develop-guides/changelog.md | modified feat() | ~98 |
+| 10:43 | Edited docs/superpowers/plans/2026-10-06-bug355-etl-docx-guard.md | 3→5 lines | ~43 |
+| 10:43 | Edited docs/superpowers/plans/2026-10-06-bug355-etl-docx-guard.md | 1→3 lines | ~184 |
+| 10:45 | bug-355 T4 3bb994ab（冒烟：patched 直通 diag=ok 证不误伤 + 内存注入 2/2 走通修复路径 4416/4808 paras；53 passed；changelog+勾账）；buglog bug-355 已补 ETL 落地；cerebrum+2 条；终审即将派出 | plans/2026-10-06-bug355-etl-docx-guard.md | DONE | ~12k |
+| 10:46 | Session end: 27 writes across 7 files (2026-10-05-w2-report-skeleton-three-layer.md, 2026-10-06-bug355-etl-docx-guard-design.md, 2026-10-06-bug355-etl-docx-guard.md, test_docx_guard.py, docx_guard.py) | 12 reads | ~130567 tok |
+| 10:51 | Edited docs/superpowers/plans/2026-10-06-bug355-etl-docx-guard.md | 1→3 lines | ~323 |
+
+## Session: 2026-10-06 10:53
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:54 | bug-355 窗口收口：终审记录落账 3751f471，推送哨兵后台启动（26f0d49b..3751f471，8 提交） | docs/superpowers/plans/2026-10-06-bug355-etl-docx-guard.md | 窗口完成，推送中 | ~2k |
+| 11:10 | Created docs/superpowers/specs/2026-10-06-spec-w1-p10-p12-p11a-design.md | — | ~1688 |
+| 11:17 | Created docs/superpowers/plans/2026-10-06-spec-w1-p10-p12-p11a.md | — | ~6453 |
+| 11:18 | spec-W1 spec+计划落账（a41d479c + 本次），准备 subagent 执行 5 任务 | docs/superpowers/{specs,plans}/2026-10-06-spec-w1-* | 计划就绪 | ~45k |
+| 11:20 | Edited docs/superpowers/plans/2026-10-06-spec-w1-p10-p12-p11a.md | "python -m pytest backend/" → "docker run --rm -v " | ~63 |
+| 11:20 | Edited docs/superpowers/plans/2026-10-06-spec-w1-p10-p12-p11a.md | inline fix | ~12 |
+| 11:21 | Edited docs/superpowers/plans/2026-10-06-spec-w1-p10-p12-p11a.md | "Literal" → "from typing import Any, C" | ~68 |
+| 11:21 | Edited docs/superpowers/plans/2026-10-06-spec-w1-p10-p12-p11a.md | 3→4 lines | ~96 |
+| 11:21 | Edited docs/superpowers/plans/2026-10-06-spec-w1-p10-p12-p11a.md | inline fix | ~34 |
+| 11:21 | Session end: 7 writes across 2 files (2026-10-06-spec-w1-p10-p12-p11a-design.md, 2026-10-06-spec-w1-p10-p12-p11a.md) | 2 reads | ~84579 tok |
+| 11:22 | Created backend/test/unit/test_w1_prose_pipeline.py | — | ~872 |
+| 11:22 | Edited backend/package/yuxi/services/domain_factory_service.py | 7→6 lines | ~117 |
+| 11:22 | Edited backend/package/yuxi/services/domain_factory_service.py | removed 19 lines | ~4 |
+| 11:22 | Edited backend/package/yuxi/services/domain_factory_service.py | inline fix | ~46 |
+| 11:22 | Edited backend/package/yuxi/services/domain_factory_service.py | reduced (-11 lines) | ~201 |
+| 11:22 | Edited backend/package/yuxi/services/domain_factory_service.py | removed 11 lines | ~14 |
+| 11:22 | Edited backend/package/yuxi/services/domain_factory_service.py | 2→2 lines | ~39 |
+| 11:25 | Session end: 14 writes across 4 files (2026-10-06-spec-w1-p10-p12-p11a-design.md, 2026-10-06-spec-w1-p10-p12-p11a.md, test_w1_prose_pipeline.py, domain_factory_service.py) | 2 reads | ~85872 tok |
+| 11:31 | Session end: 14 writes across 4 files (2026-10-06-spec-w1-p10-p12-p11a-design.md, 2026-10-06-spec-w1-p10-p12-p11a.md, test_w1_prose_pipeline.py, domain_factory_service.py) | 2 reads | ~85872 tok |
+| 11:40 | Edited docs/superpowers/plans/2026-10-06-spec-w1-p10-p12-p11a.md | 4→6 lines | ~156 |
+| 11:41 | Edited docs/superpowers/plans/2026-10-06-spec-w1-p10-p12-p11a.md | 2→3 lines | ~86 |
+| 11:41 | Edited docs/superpowers/specs/2026-10-06-spec-w1-p10-p12-p11a-design.md | 1→2 lines | ~59 |
+| 11:41 | Session end: 17 writes across 4 files (2026-10-06-spec-w1-p10-p12-p11a-design.md, 2026-10-06-spec-w1-p10-p12-p11a.md, test_w1_prose_pipeline.py, domain_factory_service.py) | 2 reads | ~86195 tok |
+| 11:42 | Edited backend/test/unit/test_w1_prose_pipeline.py | inline fix | ~62 |
+| 11:42 | Edited backend/test/unit/test_w1_prose_pipeline.py | modified test_prose_fallback_descriptive_tag() | ~136 |
+| 11:42 | Edited backend/test/unit/test_w1_prose_pipeline.py | modified test_narrative_subtype_machinery_extinct() | ~134 |
+| 11:42 | Edited backend/package/yuxi/services/domain_factory_service.py | inline fix | ~28 |
+| 11:42 | Edited backend/package/yuxi/services/domain_factory_service.py | inline fix | ~21 |
+| 11:42 | Edited backend/package/yuxi/services/domain_factory_service.py | inline fix | ~12 |
+| 11:43 | Session end: 23 writes across 4 files (2026-10-06-spec-w1-p10-p12-p11a-design.md, 2026-10-06-spec-w1-p10-p12-p11a.md, test_w1_prose_pipeline.py, domain_factory_service.py) | 2 reads | ~86588 tok |
+| 11:45 | spec-W1 Task1 闭环：30bb3b9c+921655de，spec✅+质量✅（3I+2M 修复后），9/9 容器绿 | domain_factory_service.py, test_w1_prose_pipeline.py | 完成 | ~120k |
+| 11:46 | Session end: 23 writes across 4 files (2026-10-06-spec-w1-p10-p12-p11a-design.md, 2026-10-06-spec-w1-p10-p12-p11a.md, test_w1_prose_pipeline.py, domain_factory_service.py) | 2 reads | ~86588 tok |
+| 11:47 | Edited backend/package/yuxi/services/domain_factory_service.py | 2→3 lines | ~40 |
+| 11:48 | Edited backend/package/yuxi/services/domain_factory_service.py | 3→3 lines | ~40 |
+| 11:48 | Edited backend/package/yuxi/services/domain_factory_service.py | 2→4 lines | ~52 |
+| 11:48 | Edited backend/package/yuxi/services/domain_factory_service.py | inline fix | ~25 |
+| 11:48 | Edited backend/package/yuxi/services/domain_factory_service.py | modified compute_prose_coverage() | ~354 |
+| 11:48 | Edited backend/package/yuxi/services/domain_factory_service.py | inline fix | ~23 |
+| 11:48 | Edited backend/package/yuxi/services/domain_factory_service.py | 8→8 lines | ~138 |
+| 11:49 | Edited backend/package/yuxi/services/domain_factory_service.py | 7→9 lines | ~163 |
+| 11:50 | Edited backend/package/yuxi/services/domain_factory_service.py | 5→8 lines | ~68 |
+| 11:50 | Edited backend/package/yuxi/services/domain_factory_service.py | 2→5 lines | ~52 |
+| 11:50 | Edited backend/package/yuxi/services/domain_factory_service.py | set() → setdefault() | ~272 |
+| 11:50 | Edited backend/package/yuxi/services/domain_factory_service.py | 4→4 lines | ~90 |
+| 11:52 | Edited backend/test/unit/test_w1_prose_pipeline.py | modified test_prose_coverage_denominator() | ~224 |
+| 11:55 | Edited docs/superpowers/plans/2026-10-06-spec-w1-p10-p12-p11a.md | 2→2 lines | ~55 |
+| 11:55 | Session end: 37 writes across 4 files (2026-10-06-spec-w1-p10-p12-p11a-design.md, 2026-10-06-spec-w1-p10-p12-p11a.md, test_w1_prose_pipeline.py, domain_factory_service.py) | 2 reads | ~87904 tok |
+| 12:02 | Session end: 37 writes across 4 files (2026-10-06-spec-w1-p10-p12-p11a-design.md, 2026-10-06-spec-w1-p10-p12-p11a.md, test_w1_prose_pipeline.py, domain_factory_service.py) | 2 reads | ~87904 tok |
+| 12:08 | Edited docs/superpowers/plans/2026-10-06-spec-w1-p10-p12-p11a.md | expanded (+9 lines) | ~177 |
+| 12:09 | spec-W1 Task2 闭环：b03a51f2，spec✅+质量✅（I-1 过渡态约束折入 Task4 计划；5 Minor 折入 Task4） | domain_factory_service.py, test_w1_prose_pipeline.py | 完成 | ~110k |
+| 12:10 | Session end: 38 writes across 4 files (2026-10-06-spec-w1-p10-p12-p11a-design.md, 2026-10-06-spec-w1-p10-p12-p11a.md, test_w1_prose_pipeline.py, domain_factory_service.py) | 2 reads | ~88094 tok |
+| 12:23 | Session end: 38 writes across 4 files (2026-10-06-spec-w1-p10-p12-p11a-design.md, 2026-10-06-spec-w1-p10-p12-p11a.md, test_w1_prose_pipeline.py, domain_factory_service.py) | 2 reads | ~88094 tok |
+| 12:28 | Session end: 38 writes across 4 files (2026-10-06-spec-w1-p10-p12-p11a-design.md, 2026-10-06-spec-w1-p10-p12-p11a.md, test_w1_prose_pipeline.py, domain_factory_service.py) | 2 reads | ~88094 tok |
+
+## Session: 2026-10-06 12:39
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:42 | Task3 质量审查 ❌NEEDS_FIXES：I-1 structured generalized 兜底网死代码(model_dump 恒物化)/M-2 四处超120列/M-3 ValidationError 降级路径未钉/M-1 降级日志 INFO→WARNING；原实现者 agent 不可达，派新修复代理 impl-t3-fix | domain_factory_service.py, test_w1_prose_pipeline.py | 修复中 | ~1500 |
+| 12:48 | Edited backend/package/yuxi/services/domain_factory_service.py | 2→2 lines | ~54 |
+| 12:48 | Edited backend/package/yuxi/services/domain_factory_service.py | info() → warning() | ~140 |
+| 12:48 | Edited backend/package/yuxi/services/domain_factory_service.py | modified get() | ~93 |
+| 12:48 | Edited backend/package/yuxi/services/domain_factory_service.py | 2→7 lines | ~70 |
+| 12:48 | Edited backend/package/yuxi/services/domain_factory_service.py | 2→7 lines | ~86 |
+| 12:48 | Edited backend/test/unit/test_w1_prose_pipeline.py | expanded (+8 lines) | ~128 |
+| 12:48 | Edited backend/test/unit/test_w1_prose_pipeline.py | 1→3 lines | ~44 |
+| 12:49 | Edited backend/test/unit/test_w1_prose_pipeline.py | modified test_structured_validation_error_downgrades_then_caches() | ~582 |
+| 12:50 | Edited backend/test/unit/test_w1_prose_pipeline.py | modified fake_templates() | ~90 |
+| 12:52 | spec-W1 Task3 质量修复：I-1 structured generalized 兜底网激活/M-1 降级日志 warning/M-2 四处 E501 收行/M-3 ValidationError 降级测试/M-4 注释刷新 | domain_factory_service.py, test_w1_prose_pipeline.py | 17 passed 容器全绿, 提交 377440fc | ~35k |
+| 12:54 | Task3 质量修复落地 377440fc（I-1 兜底网激活/M-1 warning/M-2 E501 清零/M-3 ValidationError 降级补测/M-4 注释刷新）；控制器复核 diff+容器重跑 17 passed；质量复审派出 | domain_factory_service.py, test_w1_prose_pipeline.py, buglog.json(bug-369) | 复审中 | ~1200 |
+| 12:55 | Session end: 9 writes across 2 files (domain_factory_service.py, test_w1_prose_pipeline.py) | 2 reads | ~78546 tok |
+| 12:55 | Session end: 9 writes across 2 files (domain_factory_service.py, test_w1_prose_pipeline.py) | 2 reads | ~78546 tok |
+| 13:09 | Task3 复审 ✅APPROVED（qualrev-t3-fix：ruff 三 revision 对账 17/22/17 成立，零 Critical/Important）；Task3 关闭；派 impl-t4-narrative（P1-2 删 5 符号+调用块 + Task2 折入5项 + Task3 复审带入 I-1 空串用例/M-5 docstring） | test_w1_prose_pipeline.py, domain_factory_service.py | Task4 进行中 | ~1300 |
+| 13:10 | Session end: 9 writes across 2 files (domain_factory_service.py, test_w1_prose_pipeline.py) | 3 reads | ~84958 tok |
+| 13:10 | Session end: 9 writes across 2 files (domain_factory_service.py, test_w1_prose_pipeline.py) | 3 reads | ~84958 tok |
+| 13:15 | Edited backend/test/unit/test_w1_prose_pipeline.py | modified test_normalize_merges_incoming_metadata() | ~206 |
+| 13:15 | Edited backend/test/unit/test_w1_prose_pipeline.py | modified test_prose_coverage_legacy_string_template() | ~191 |
+| 13:15 | Edited backend/test/unit/test_w1_prose_pipeline.py | modified test_structured_empty_generalized_backfill() | ~244 |
+| 13:20 | spec-W1 Task4 P1-2 叙述独立路径删除：5 符号+调用块删除+折入 A5/B2，TDD 红(1F/20P)→绿(21P)，ruff 零新增 | domain_factory_service.py, test_w1_prose_pipeline.py | ce940f48 | ~9k |
+| 13:21 | Task4 实现落地 ce940f48（+50/-136 仅两文件）：叙述路径 5 符号+调用块删除、折入 A×5（‖直述化/日志残留/metadata合并测/legacy字符串测/total_prose）、折入 B×2（I-1 空串测/docstring）；控制器复核 21 passed+六符号零命中；spec 审查派出 | domain_factory_service.py, test_w1_prose_pipeline.py | spec 审查中 | ~1200 |
+| 13:21 | Session end: 12 writes across 2 files (domain_factory_service.py, test_w1_prose_pipeline.py) | 3 reads | ~87335 tok |
+| 13:21 | Session end: 12 writes across 2 files (domain_factory_service.py, test_w1_prose_pipeline.py) | 3 reads | ~87335 tok |
+| 13:24 | Task4 spec 审查 ✅COMPLIANT（specrev-t4：9 hunk 全对表零超纲，接缝/extract 路径/禁碰全实证）；质量审查 qualrev-t4 派出 | domain_factory_service.py | 质量审查中 | ~800 |
+| 13:24 | Session end: 12 writes across 2 files (domain_factory_service.py, test_w1_prose_pipeline.py) | 3 reads | ~87335 tok |
+| 13:25 | Session end: 12 writes across 2 files (domain_factory_service.py, test_w1_prose_pipeline.py) | 3 reads | ~87335 tok |
+| 13:35 | Task4 关闭（质量 ✅APPROVED，Minor×3 不阻塞，ruff 17→15 对账吻合）；控制器裁决 D7：validator generalized 门收敛 prose+parameter（narrative legacy 豁免，否则违反 DoD#4）；派 impl-t5-consumers（validator TDD+后端触点+EtlWorkbench 9 项+rider+回归+记账 bug-370） | pre_commit_validator.py, EtlWorkbench.vue 等 | Task5 进行中 | ~1400 |
+| 13:35 | Session end: 12 writes across 2 files (domain_factory_service.py, test_w1_prose_pipeline.py) | 4 reads | ~87335 tok |
+| 13:35 | Session end: 12 writes across 2 files (domain_factory_service.py, test_w1_prose_pipeline.py) | 4 reads | ~87335 tok |
+| 13:42 | Edited backend/test/unit/test_w1_prose_pipeline.py | 6→8 lines | ~142 |
+| 13:42 | Edited backend/test/unit/test_w1_prose_pipeline.py | modified test_narrative_path_symbols_extinct() | ~685 |
+| 13:43 | Edited backend/package/yuxi/services/pre_commit_validator.py | modified W1() | ~224 |
+| 13:44 | Edited backend/test/unit/services/test_pre_commit_validator.py | modified W1() | ~61 |
+| 13:44 | Edited backend/test/unit/services/test_pre_commit_validator.py | "有效段落(有模板+text_pattern非空) " → "有效段落(有模板+generalized 非空) " | ~12 |
+| 13:44 | Edited backend/test/unit/services/test_pre_commit_validator.py | test_structure_empty_text_pattern_fails() → test_structure_empty_generalized_fails() | ~24 |
+| 13:44 | Edited backend/test/unit/services/test_pre_commit_validator.py | modified test_structure_no_paragraphs_fails() | ~37 |
+| 13:44 | Edited backend/test/unit/services/test_pre_commit_validator.py | 4→4 lines | ~44 |
+| 13:44 | Edited backend/test/unit/services/test_pre_commit_validator.py | inline fix | ~19 |
+| 13:44 | Edited backend/test/unit/services/test_pre_commit_validator.py | 4→4 lines | ~46 |
+| 13:44 | Edited backend/test/unit/services/test_pre_commit_validator.py | 2→2 lines | ~23 |
+| 13:44 | Edited backend/test/unit/services/test_pre_commit_validator.py | "classify_type=parameter 且" → "classify_type=parameter 且" | ~25 |
+| 13:44 | Edited backend/test/unit/services/test_pre_commit_validator.py | modified test_narrative_para_skipped() | ~59 |
+| 13:44 | Edited backend/package/yuxi/services/domain_factory_service.py | 5→5 lines | ~66 |
+| 13:44 | Edited backend/package/yuxi/services/domain_factory_service.py | 2→2 lines | ~44 |
+| 13:44 | Edited backend/package/yuxi/services/domain_factory_service.py | "parameter_paragraphs" → "prose_paragraphs" | ~36 |
+| 13:44 | Edited backend/package/yuxi/services/domain_factory_service.py | 2→2 lines | ~55 |
+| 13:44 | Edited backend/package/yuxi/services/graph_builder.py | modified in() | ~43 |
+| 13:45 | Edited backend/package/yuxi/services/domain_factory_service.py | 1→3 lines | ~47 |
+| 13:45 | Edited backend/package/yuxi/services/domain_factory_service.py | modified get() | ~94 |
+| 13:45 | Edited backend/test/unit/services/test_validate_task_report.py | 2→2 lines | ~40 |
+| 13:45 | Edited backend/test/unit/services/test_validate_task_report.py | test_validate_task_counts_parameter_paragraphs() → test_validate_task_counts_prose_paragraphs() | ~202 |
+| 13:46 | Edited web/src/apis/domain_factory_api.js | inline fix | ~10 |
+| 13:46 | Edited web/src/components/domain-factory/EtlWorkbench.vue | CSS: prose | ~96 |
+| 13:46 | Edited web/src/components/domain-factory/EtlWorkbench.vue | inline fix | ~59 |
+| 13:46 | Edited web/src/components/domain-factory/EtlWorkbench.vue | "para.classify_type === " → "isProseType(para.classify" | ~30 |
+| 13:46 | Edited web/src/components/domain-factory/EtlWorkbench.vue | "selectedParagraph.classif" → "isProseType(selectedParag" | ~34 |
+| 13:46 | Edited web/src/components/domain-factory/EtlWorkbench.vue | added optional chaining | ~262 |
+| 13:49 | Edited web/src/components/domain-factory/EtlWorkbench.vue | 2→2 lines | ~52 |
+| 13:50 | Edited docs/develop-guides/changelog.md | modified fix() | ~305 |
+| 13:51 | Edited docs/superpowers/specs/2026-10-06-spec-w1-p10-p12-p11a-design.md | inline fix | ~48 |
+| 13:51 | Edited docs/superpowers/specs/2026-10-06-spec-w1-p10-p12-p11a-design.md | 1→2 lines | ~101 |
+| 13:54 | spec-W1 Task5 消费面适配收口：validator bug-370 幽灵字段修正+D7 prose门/L2×2三值/graph_builder散文章节上下文/前端散文详情双产物；回归 42+18+16 全绿 ruff零新增；2 提交 0fb2f08e+a8ea2399 | pre_commit_validator.py/domain_factory_service.py/graph_builder.py/EtlWorkbench.vue+4测试文档 | DONE | ~45k || 13:59 | Task5 实现落地 0fb2f08e+a8ea2399（11 文件）；控制器核验：test_w1 26+docx 16 容器绿，services 18 passed 需 rw 道（ro 道被 __init__ mkdir 伪炸，基线 worktree 同败已排除回归）；D7/graph_builder/前端抽检对上；specrev-t5 派出 | 11 files | spec 审查中 | ~1500 |
+| 13:59 | Session end: 44 writes across 10 files (domain_factory_service.py, test_w1_prose_pipeline.py, pre_commit_validator.py, test_pre_commit_validator.py, graph_builder.py) | 9 reads | ~114171 tok |
+| 14:00 | Session end: 44 writes across 10 files (domain_factory_service.py, test_w1_prose_pipeline.py, pre_commit_validator.py, test_pre_commit_validator.py, graph_builder.py) | 9 reads | ~114171 tok |
+| 14:09 | Task5 spec ✅COMPLIANT（specrev-t5：A5+B4+C9+微决策2+rider+记账4 全过，needsReview/list 读码判定复核成立，Extra×4 皆观察项）；qualrev-t5 派出 | 0fb2f08e, a8ea2399 | 质量审查中 | ~1100 |
+| 14:09 | Session end: 44 writes across 10 files (domain_factory_service.py, test_w1_prose_pipeline.py, pre_commit_validator.py, test_pre_commit_validator.py, graph_builder.py) | 9 reads | ~114171 tok |
+| 14:09 | Session end: 44 writes across 10 files (domain_factory_service.py, test_w1_prose_pipeline.py, pre_commit_validator.py, test_pre_commit_validator.py, graph_builder.py) | 9 reads | ~114171 tok |
+
+| 14:17 | Created ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/etl-review-ruff-baseline-and-lanes.md | — | ~277 |
+| 14:19 | Task5 质量 ✅APPROVED（qualrev-t5 独立复现 ruff 30=30/pre-image 零放松，Minor×4）；五任务全双绿关闭；派 impl-t5-consumers 三项单行 Minor 收尾（graph_builder 节头/docstring/text_pattern 负例） | graph_builder.py 等 | 收尾中 | ~900 |
+| 14:19 | Edited backend/package/yuxi/services/graph_builder.py | inline fix | ~16 |
+| 14:19 | Session end: 45 writes across 20 files (.gitignore, __init__.py, info.template.yaml, config.mts, manager.py) | 20 reads | ~23770 tok |
+| 14:19 | Edited backend/test/unit/services/test_pre_commit_validator.py | modified test_narrative_para_skipped() | ~32 |
+| 14:19 | Edited backend/test/unit/test_w1_prose_pipeline.py | modified test_text_pattern_no_longer_required() | ~118 |
+| 14:20 | Session end: 47 writes across 22 files (.gitignore, __init__.py, info.template.yaml, config.mts, manager.py) | 21 reads | ~23920 tok |
+| 1421 | Minor 收尾 c5ea51e8 落地（+5/-4 三文件，双道 42+12 绿）；控制器核验 diff 恰三项；finalrev-w1 终审派出（a41d479c..HEAD 14 提交全批） | 全批 | 终审中 | ~800 |
+| 14:21 | Session end: 47 writes across 22 files (.gitignore, __init__.py, info.template.yaml, config.mts, manager.py) | 21 reads | ~23920 tok |
+| 14:21 | Session end: 47 writes across 22 files (.gitignore, __init__.py, info.template.yaml, config.mts, manager.py) | 21 reads | ~23920 tok |
+| 14:40 | 终审 READY 附条件 I-1 处置：破案=14:12 git stash 卷走工作树（329e1995 未 pop）；buglog 从 stash 整体还原 325 条（366-370+bug-337 更新）/memory 增量合并 3515+10/cerebrum 重建（stash DNR+会话学习）；6 禁碰文件恢复待用户裁决（stash 保全中）；终审记录即将落账 | buglog.json, cerebrum.md, memory.md | 收口推进中 | ~1600 |
+| 14:40 | spec-W1 窗口收口：终审记录 e160ea5e 提交并随批推送 3751f471..e160ea5e（一次成功）。15 提交全落地；buglog 台账捞回；6 禁碰文件改动留存 stash@{0} 待用户恢复（未 drop） | 全批 | 窗口关闭 | ~900 |
+| 14:41 | Session end: 47 writes across 22 files (.gitignore, __init__.py, info.template.yaml, config.mts, manager.py) | 26 reads | ~28512 tok |
+| 14:41 | Session end: 47 writes across 22 files (.gitignore, __init__.py, info.template.yaml, config.mts, manager.py) | 26 reads | ~28512 tok |
+| 14:45 | 用户授权 stash 恢复：7 禁碰文件逐字节还原（worktree==stash 零差异）；cerebrum 增量合并找回 stash 独有 45 行（W2 窗口学习等）；临时文件清理；stash 全量被工作树超越，可 drop 待确认 | 7 禁碰文件, cerebrum.md | 事故完全闭合 | ~800 |
+| 14:45 | Session end: 47 writes across 22 files (.gitignore, __init__.py, info.template.yaml, config.mts, manager.py) | 26 reads | ~28512 tok |
+| 14:54 | stash drop（329e1995，全量超越已验证）；sync-dev 31.4s 进栈成功：localized 树含 W1 符号（_structured_support/_PROSE_TYPES ×11、isProseType ×3），api 200 正常服务，vite HMR 已更新 EtlWorkbench；148 文件差异属镜像 tip 滞后过渡期预期。spec-W1 全链路收口：代码+推送+运行栈 | localized 栈 | 窗口关闭 | ~600 |
+| 14:54 | Session end: 47 writes across 22 files (.gitignore, __init__.py, info.template.yaml, config.mts, manager.py) | 27 reads | ~28512 tok |
+
+## Session: 2026-10-06 15:11
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:54 | Created docs/superpowers/specs/2026-10-06-w2-v2-three-input-window-design.md | — | ~1580 |
+| 15:5x | W2 v2 窗开启：Q1-Q4 需求对齐+序差普查（swap-pure=0 推翻互换对）+邻居锚点普查 | specs/2026-10-06-w2-v2-three-input-window-design.md, .wolf/corpus-census/classify_order_divergence.py | spec 落账 689029b4 | ~45k |
+| 15:55 | Session end: 1 writes across 1 files (2026-10-06-w2-v2-three-input-window-design.md) | 1 reads | ~1693 tok |
+| 16:05 | Created docs/superpowers/plans/2026-10-06-w2-v2-three-input-window.md | — | ~6700 |
+| 16:0x | W2 v2 spec+plan 落账：spec 689029b4 / plan 本提交（T1-T5，全代码步骤） | plans/2026-10-06-w2-v2-three-input-window.md | 待执行 | ~30k |
+| 16:06 | Session end: 2 writes across 2 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 1 reads | ~8871 tok |
+| 16:09 | Session end: 2 writes across 2 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 1 reads | ~8871 tok |
+| 16:11 | Created backend/test/unit/test_w2v2_render_window.py | — | ~876 |
+| 16:11 | Edited backend/scripts/render_report_skeletons.py | modified _apply_anchors() | ~350 |
+| 16:11 | Edited backend/scripts/render_report_skeletons.py | modified items() | ~94 |
+| 16:11 | Edited backend/templates/coal_mining/report_skeletons/project_eia.json | 7→8 lines | ~62 |
+| 16:11 | Edited backend/templates/coal_mining/report_skeletons/planning_eia.json | 4→5 lines | ~36 |
+| 16:12 | Edited backend/templates/coal_mining/report_skeletons/planning_eia.json | 3→4 lines | ~23 |
+| 16:12 | Edited backend/templates/coal_mining/report_skeletons/rules.json | inline fix | ~19 |
+| 16:12 | Edited backend/templates/coal_mining/report_skeletons/rules.json | inline fix | ~23 |
+| 16:12 | Edited backend/test/unit/test_w2v2_render_window.py | 3→2 lines | ~14 |
+| 16:15 | Created ../../Users/Lenovo/AppData/Local/Temp/w2v2_t1_bookkeeping.py | — | ~690 |
+| 16:15 | W2v2 Task1 渲染器锚点机制：_apply_anchors + 爆破/R3 三词条 insert_after + 5 例单测（RED 3f/2p→GREEN 42p）+ ruff 清零（删任务书自带未用 import json） | render_report_skeletons.py, project_eia.json, planning_eia.json, rules.json, test_w2v2_render_window.py | commit eeabdd65 | ~46k |
+| 16:16 | Session end: 12 writes across 8 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md, test_w2v2_render_window.py, render_report_skeletons.py, project_eia.json) | 4 reads | ~11058 tok |
+| 16:23 | Session end: 12 writes across 8 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md, test_w2v2_render_window.py, render_report_skeletons.py, project_eia.json) | 4 reads | ~11058 tok |
+| 16:23 | Session end: 12 writes across 8 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md, test_w2v2_render_window.py, render_report_skeletons.py, project_eia.json) | 4 reads | ~11058 tok |
+| 16:24 | Edited backend/test/unit/test_w2v2_render_window.py | modified _mini_layers() | ~246 |
+| 16:24 | Edited backend/test/unit/test_w2v2_render_window.py | inline fix | ~25 |
+| 16:24 | Edited backend/test/unit/test_w2v2_render_window.py | modified test_no_anchor_appends_tail() | ~171 |
+| 16:24 | Edited backend/scripts/render_report_skeletons.py | expanded (+10 lines) | ~183 |
+| 16:24 | Created ../../Users/Lenovo/AppData/Local/Temp/w2v2_t1_fix_verify.py | — | ~584 |
+| 16:25 | Edited ../../Users/Lenovo/AppData/Local/Temp/w2v2_t1_fix_verify.py | 5→5 lines | ~65 |
+| 16:26 | Created ../../Users/Lenovo/AppData/Local/Temp/w2v2_t1_fix_bookkeeping.py | — | ~398 |
+| 16:26 | W2v2 T1 修复：_apply_anchors 锚块语义（同锚互挤震荡→稳定落位，评审 Deviant）+ 同锚/适配测试，43 passed + 三场景直调过 + ruff 清零 | render_report_skeletons.py, test_w2v2_render_window.py | commit f7837d32 | ~28k |
+| 16:27 | Session end: 19 writes across 10 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md, test_w2v2_render_window.py, render_report_skeletons.py, project_eia.json) | 4 reads | ~15463 tok |
+| 16:31 | Session end: 19 writes across 10 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md, test_w2v2_render_window.py, render_report_skeletons.py, project_eia.json) | 4 reads | ~15463 tok |
+| 16:32 | Session end: 19 writes across 10 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md, test_w2v2_render_window.py, render_report_skeletons.py, project_eia.json) | 4 reads | ~15463 tok |
+| 16:38 | Session end: 19 writes across 10 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md, test_w2v2_render_window.py, render_report_skeletons.py, project_eia.json) | 4 reads | ~15463 tok |
+| 16:38 | Session end: 19 writes across 10 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md, test_w2v2_render_window.py, render_report_skeletons.py, project_eia.json) | 4 reads | ~15463 tok |
+| 16:38 | Edited backend/test/unit/test_w2v2_render_window.py | modified test_same_anchor_stable_order() | ~130 |
+| 16:38 | Edited backend/scripts/render_report_skeletons.py | 2→2 lines | ~31 |
+| 16:38 | W2v2 T1 Minor 收尾：同锚测试补逆序 add 解耦断言 + docstring 收紧（l1 声明序），6 passed + ruff 清零 | render_report_skeletons.py, test_w2v2_render_window.py | commit 见 git log | ~2k |
+| 16:39 | Session end: 21 writes across 10 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md, test_w2v2_render_window.py, render_report_skeletons.py, project_eia.json) | 4 reads | ~15624 tok |
+| 16:40 | Edited backend/test/unit/test_w2v2_render_window.py | modified test_same_anchor_stable_order() | ~433 |
+| 16:41 | Edited backend/scripts/render_report_skeletons.py | 2→6 lines | ~86 |
+| 16:41 | Edited backend/scripts/render_report_skeletons.py | modified _stage_meta() | ~255 |
+| 16:41 | Edited backend/scripts/render_report_skeletons.py | 6→8 lines | ~77 |
+| 16:42 | w2v2 Task2: 渲染顶层 stage/std_ref 真源化（_stage_meta+STAGES_DIR+render 接线，测试 3 例追加，46 passed RED->GREEN） | backend/scripts/render_report_skeletons.py, backend/test/unit/test_w2v2_render_window.py | commit 98fdfc5d | ~9k |
+| 16:43 | Session end: 25 writes across 10 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md, test_w2v2_render_window.py, render_report_skeletons.py, project_eia.json) | 5 reads | ~17546 tok |
+| 16:43 | Session end: 25 writes across 10 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md, test_w2v2_render_window.py, render_report_skeletons.py, project_eia.json) | 5 reads | ~17546 tok |
+| 16:45 | Session end: 25 writes across 10 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md, test_w2v2_render_window.py, render_report_skeletons.py, project_eia.json) | 5 reads | ~17546 tok |
+| 16:45 | Session end: 25 writes across 10 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md, test_w2v2_render_window.py, render_report_skeletons.py, project_eia.json) | 5 reads | ~17546 tok |
+| 16:47 | Session end: 25 writes across 10 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md, test_w2v2_render_window.py, render_report_skeletons.py, project_eia.json) | 6 reads | ~18101 tok |
+| 16:48 | Edited backend/test/unit/test_w2v2_render_window.py | modified test_stage_meta_missing_stage_fails_loud() | ~58 |
+| 16:48 | Session end: 26 writes across 10 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md, test_w2v2_render_window.py, render_report_skeletons.py, project_eia.json) | 6 reads | ~18159 tok |
+| 16:4x | W2v2 T1 全闭环(eeabdd65/f7837d32/66aa040f 两段评审过,同锚震荡bug-372修复) + T2 全闭环(98fdfc5d/3de04075) + T3 派单 | rendered 未动 | 控制方复验均过 | ~25k |
+| 16:49 | Session end: 26 writes across 10 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md, test_w2v2_render_window.py, render_report_skeletons.py, project_eia.json) | 6 reads | ~18159 tok |
+| 16:49 | Session end: 26 writes across 10 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md, test_w2v2_render_window.py, render_report_skeletons.py, project_eia.json) | 6 reads | ~18159 tok |
+| 17:01 | Session end: 26 writes across 10 files (2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md, test_w2v2_render_window.py, render_report_skeletons.py, project_eia.json) | 6 reads | ~18159 tok |
+| -- | W2v2-T3 重渲 6 存档：双跑 md5 字节级一致；seed_gen 冒烟 454/589/469/294 对齐 W2 基准 + 显示名非空；openpit exemptions hunk 超 tripwire 范围取证上报 lead，commit 挂起 | rendered/*.json, .wolf/buglog.json | 验证全绿待裁决 | ~30k |
+
+## Session: 2026-10-06 17:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| -- | W2v2-T3 终态：裁决 B 落地——openpit 换吐鲁东 selector 重渲（EXACT-MATCH W2 旧存档 conditions），diff 收缩至顶层三字段+爆破块搬迁；终态双跑 md5 全同；冒烟真值 exit 4x0+probe1；提交 cff2c279 | rendered/*.json | DONE | ~25k |
+| 17:2x | W2v2 T3 关闭：openpit 换吐鲁东条目重渲（B 裁决），6 存档提交 cff2c279，控制器独立复验（diff 3 hunk 无 exemptions、爆破@13 固废后、复渲 md5 a38ab844 BYTE-IDENTICAL、冒烟 454/589/469/294）；T4 已派 w2v2-impl-t4（白名单+豁免收敛 21→≤2） | rendered/6份 + dispatch | DONE | ~40k |
+| 17:36 | Created backend/test/data/corpus_census/order_whitelist.json | — | ~478 |
+| 17:36 | Edited backend/test/unit/test_report_skeleton_fit.py | added 1 import(s) | ~109 |
+| 17:36 | Edited backend/test/unit/test_report_skeleton_fit.py | modified _order_pass() | ~762 |
+| 17:46 | Edited backend/test/data/corpus_census/order_whitelist.json | expanded (+18 lines) | ~696 |
+| 17:47 | Edited backend/test/unit/test_report_skeleton_fit.py | modified _order_pass() | ~301 |
+| 17:51 | Edited backend/test/unit/test_report_skeleton_fit.py | added 1 import(s) | ~33 |
+| 17:51 | Edited backend/test/unit/test_report_skeleton_fit.py | modified _order_pass() | ~363 |
+| 17:55 | T4 完成：order 白名单 18 词条+best-first 判定，豁免 21→0，提交 0d3600e8 | order_whitelist.json/conditions.json/test_report_skeleton_fit.py | 双道 46 passed，modes 14/21/0 | ~95000 |
+| 17:55 | Session end: 7 writes across 2 files (order_whitelist.json, test_report_skeleton_fit.py) | 3 reads | ~2742 tok |
+| 17:55 | Session end: 7 writes across 2 files (order_whitelist.json, test_report_skeleton_fit.py) | 3 reads | ~2742 tok |
+| 18:04 | w2v2 T4 spec 合规评审（0d3600e8）：9 项核对+反例+BFS 等价验证全过，VERDICT 合规，回报 team-lead | backend/test/unit/test_report_skeleton_fit.py 等 3 文件（只读+临时反例已还原） | ✅ | ~30k |
+| 18:05 | Session end: 7 writes across 2 files (order_whitelist.json, test_report_skeleton_fit.py) | 3 reads | ~4447 tok |
+| 18:05 | Session end: 7 writes across 2 files (order_whitelist.json, test_report_skeleton_fit.py) | 3 reads | ~4447 tok |
+| 18:12 | qualrev-T4(w2v2): 评审 0d3600e8 代码质量 | backend/test/unit/test_report_skeleton_fit.py + order_whitelist.json + conditions.json | Approved；1 Important（模块 docstring 阈值 28/35 未随 33 更新）；复验 37 passed host 道 + ruff 清 + modes natural=14/whitelist=21/exempt=0 | ~45k |
+| 18:13 | Session end: 7 writes across 2 files (order_whitelist.json, test_report_skeleton_fit.py) | 3 reads | ~4447 tok |
+| 18:13 | Edited backend/test/unit/test_report_skeleton_fit.py | inline fix | ~27 |
+| 18:13 | Session end: 8 writes across 2 files (order_whitelist.json, test_report_skeleton_fit.py) | 3 reads | ~4474 tok |
+| 18:1x | W2v2 T4 关闭：白名单 17 词条+best-first 判定 0d3600e8，豁免 21->0（modes 14/21/0），docstring 修正 143a7035；spec/质量双评审通过；T5 已派 w2v2-impl-t5（changelog+勾账） | test_report_skeleton_fit.py + 2 fixtures | DONE | ~60k |
+| 18:15 | Session end: 8 writes across 2 files (order_whitelist.json, test_report_skeleton_fit.py) | 3 reads | ~4474 tok |
+| 18:16 | Session end: 8 writes across 2 files (order_whitelist.json, test_report_skeleton_fit.py) | 3 reads | ~4474 tok |
+| 18:20 | Edited docs/develop-guides/changelog.md | modified feat() | ~270 |
+| 18:20 | Edited docs/superpowers/specs/2026-10-06-w2-v2-three-input-window-design.md | 5→5 lines | ~80 |
+| 18:20 | Edited docs/superpowers/specs/2026-10-06-w2-v2-three-input-window-design.md | 7→9 lines | ~115 |
+| 18:21 | Edited docs/superpowers/plans/2026-10-06-w2-v2-three-input-window.md | expanded (+24 lines) | ~430 |
+| 18:23 | Session end: 12 writes across 5 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 5 reads | ~5434 tok |
+| 18:24 | Session end: 12 writes across 5 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 5 reads | ~5434 tok |
+| 18:35 | Session end: 12 writes across 5 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 5 reads | ~5434 tok |
+| 18:35 | Session end: 12 writes across 5 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 5 reads | ~5434 tok |
+| 18:35 | Session end: 12 writes across 5 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 5 reads | ~5434 tok |
+| 18:35 | Session end: 12 writes across 5 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 5 reads | ~5434 tok |
+| -- | W2v2 召回：T4 豁免 21→0 后 3 存档 order 快照行重渲补账——每份恰 -1 行 order:true，md5 三连+双跑稳，underground 589 冒烟过，提交见 git log | rendered/ 3 份 | DONE | ~15k |
+| 18:4x | 终审抓 byte-identical 破（T4 删豁免未重渲，3 存档嵌旧快照=挂账⑤实例）-> impl-t3 召回重渲 1ce31309 修复，控制器复渲复验过，bug-375 落账；impl-t5 放行勾账提交 | rendered/3份 | FIXED | ~30k |
+| 18:39 | Session end: 12 writes across 5 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 5 reads | ~5434 tok |
+| 18:39 | Session end: 12 writes across 5 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 5 reads | ~5434 tok |
+
+## W2v2 三条输入小窗 会话总结（2026-10-06）
+- 窗口关闭：12 commits（689029b4 spec → 96088d4e 勾账），T1-T5 全闭环
+- DoD 终值：①爆破@固废后/R3 锚位 ②SEED 显示名非空 ③order 35/35（natural14+whitelist21+exempt0，豁免 21→0 优于≤2）④17 词条 100
+## W2v2 三条输入小窗 会话总结（2026-10-06）
+- 窗口关闭：12 commits（689029b4 spec -> 96088d4e 勾账），T1-T5 全闭环
+- DoD 终值：①爆破@固废后/R3 锚位 ②SEED 显示名非空 ③order 35/35（natural14+whitelist21+exempt0，豁免 21->0 优于<=2）④17 词条 100% 出处 ⑤双渲 byte-identical（1ce31309 快照刷新后恢复）⑥package|server 零 diff+禁碰零卷入
+- 评审链：T1 同锚振荡捕获修复(f7837d32)；T4 spec/质量双通过(best-first 语义等价 BFS 复算 21/21+反例验证)；T5 fresh-eyes 终审抓 byte-identical 漂移(bug-375,挂账⑤实例)->1ce31309 补账
+- 挂账移交用户：sync-dev 运行栈同步（禁碰 7 文件仍在工作树）；官方 sync-upstream 链；挂账⑤强制重渲机制（本窗仅实证未建机制）
+| 18:40 | Session end: 12 writes across 5 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 5 reads | ~5434 tok |
+| 18:40 | Session end: 12 writes across 5 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 5 reads | ~5434 tok |
+| 18:51 | Session end: 12 writes across 5 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 5 reads | ~5434 tok |
+| 18:57 | Session end: 12 writes across 5 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 7 reads | ~13604 tok |
+| 19:02 | Edited web/src/components/SettingsModal.vue | 14→12 lines | ~54 |
+| 19:02 | Edited web/src/components/SettingsModal.vue | removed 5 lines | ~9 |
+| 19:02 | Edited web/src/components/SettingsModal.vue | removed 14 lines | ~15 |
+| 19:0x | 7 在途文件收口（用户拍板）：e9f283f7 品牌 4 文件（丕算命名/pisuan 横幅/删上游 Star 卡+脚本死代码清理）、48a4d8c5 v2-port docs 勘误、e646c0f6 W0 plan Task 1b；控制器逐 diff 终审+ruff 过；工作树仅剩 .wolf——sync-dev 先决条件已满足 | 7 files | DONE | ~35k |
+| 19:05 | Session end: 15 writes across 6 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 7 reads | ~13688 tok |
+| 19:2x | sync-dev 执行（用户拍板）：两次同步 21.2s+9.4s 落运行栈；验证 localized 树+容器内（丕算 prompt/insert_after 词条/6 存档/pisuan-know 横幅已在跑）；途中补清 SettingsModal Star 卡样式块遗漏尾（4c164378，+83 行删除，grep star-card 双树零残留）。WatchFiles 无新 reload 属正常——品牌改动早已随此前窗同步落栈，本次新内容均在非 reload-dir | localized 栈 | DONE | ~25k |
+| 19:11 | Session end: 15 writes across 6 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 7 reads | ~13688 tok |
+| 19:16 | Edited web/src/components/SettingsModal.vue | 5→6 lines | ~26 |
+| 19:4x | bug-376 自伤回归闭环：4c164378 删样式多删一层闭合致 vite less 编译失败（sourcemap 行号错位误导），75771c20 补闭合，容器 lessc+vite transform 200 双验证过，buglog+cerebrum 落账 | SettingsModal.vue | FIXED | ~30k |
+| 19:19 | Session end: 16 writes across 6 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 8 reads | ~17534 tok |
+| 19:30 | Session end: 16 writes across 6 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 11 reads | ~17534 tok |
+| 19:32 | Session end: 16 writes across 6 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 15 reads | ~17534 tok |
+| 19:36 | Session end: 16 writes across 6 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 15 reads | ~17534 tok |
+| 19:39 | Session end: 16 writes across 6 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 15 reads | ~17534 tok |
+| 19:42 | Session end: 16 writes across 6 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 15 reads | ~17534 tok |
+| 19:44 | Session end: 16 writes across 6 files (order_whitelist.json, test_report_skeleton_fit.py, changelog.md, 2026-10-06-w2-v2-three-input-window-design.md, 2026-10-06-w2-v2-three-input-window.md) | 15 reads | ~17534 tok |
+
+## Session: 2026-10-06 19:50
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:26 | Created docs/superpowers/specs/2026-10-06-w3-scope-region-facts-design.md | — | ~2479 |
+| 20:26 | W3 spec 落账：scope×region 设计定稿（Q1-Q3 裁决；三轨 DDL + L1/L2/L3 + min-permissive 聚合 + extra_meta 归因集解 confirm-region 重算洞） | docs/superpowers/specs/2026-10-06-w3-scope-region-facts-design.md | 已提交 | ~4k |
+| 20:27 | Session end: 1 writes across 1 files (2026-10-06-w3-scope-region-facts-design.md) | 3 reads | ~2656 tok |
+| 20:50 | Created docs/superpowers/plans/2026-10-06-w3-scope-region-facts.md | — | ~3000 |
+| 20:56 | W3 执行计划落账：6 任务/42 步（三轨 DDL→纯函数模块→L2 便车→facts 写入流+聚合→薄 API+集成→收口），容器道测试协议+DoD 对照表 | docs/superpowers/plans/2026-10-06-w3-scope-region-facts.md | 已提交 | ~9k |
+| 20:57 | Session end: 2 writes across 2 files (2026-10-06-w3-scope-region-facts-design.md, 2026-10-06-w3-scope-region-facts.md) | 9 reads | ~5870 tok |
+| 21:05 | Edited backend/package/yuxi/storage/postgres/models_domain_factory.py | expanded (+6 lines) | ~121 |
+| 21:05 | Edited backend/package/yuxi/storage/postgres/models_domain_factory.py | 1→2 lines | ~50 |
+| 21:05 | Edited backend/package/yuxi/storage/postgres/models_domain_factory.py | modified to_dict() | ~550 |
+
+## Session: 2026-10-06 21:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:05 | Edited backend/package/yuxi/storage/postgres/manager.py | expanded (+23 lines) | ~544 |
+| 21:05 | Edited backend/scripts/migrate_domain_factory.sql | expanded (+26 lines) | ~404 |
+| 21:06 | Session end: 2 writes across 2 files (manager.py, migrate_domain_factory.sql) | 0 reads | ~977 tok |
+| 21:07 | W3 Task 1 三轨 DDL：Task+4列/LearnedTemplate+scope/regional_facts 新表，psql 双跑幂等全绿 | models_domain_factory.py, manager.py, migrate_domain_factory.sql | commit f244b78e | ~12k |
+| 21:09 | Session end: 2 writes across 2 files (manager.py, migrate_domain_factory.sql) | 0 reads | ~977 tok |
+| 21:09 | Session end: 2 writes across 2 files (manager.py, migrate_domain_factory.sql) | 0 reads | ~977 tok |
+| 21:12 | Session end: 2 writes across 2 files (manager.py, migrate_domain_factory.sql) | 0 reads | ~977 tok |
+| 21:12 | Session end: 2 writes across 2 files (manager.py, migrate_domain_factory.sql) | 0 reads | ~977 tok |
+| 21:17 | Session end: 2 writes across 2 files (manager.py, migrate_domain_factory.sql) | 4 reads | ~39752 tok |
+| 21:17 | Session end: 2 writes across 2 files (manager.py, migrate_domain_factory.sql) | 4 reads | ~39752 tok |
+| 21:18 | Created backend/test/unit/test_w3_region_rules.py | — | ~1442 |
+| 21:19 | Created backend/package/yuxi/services/domain_factory_region.py | — | ~1234 |
+| 21:21 | Edited backend/package/yuxi/services/domain_factory_region.py | 3→3 lines | ~22 |
+| 21:21 | Created backend/scripts/backfill_task_scope.py | — | ~667 |
+| 21:22 | Edited docs/superpowers/specs/2026-10-06-w3-scope-region-facts-design.md | inline fix | ~42 |
+| 21:23 | Edited backend/test/unit/test_w3_region_rules.py | 2→4 lines | ~65 |
+| 21:28 | Created ../../Users/Lenovo/AppData/Local/Temp/w3_t2_bookkeeping.py | — | ~651 |
+| 21:28 | W3 Task2 归属判定纯函数模块交付：TDD 红相揭出任务书 min_permissive 片段最宽/最窄逻辑反转（bug-377），修实现后 21/21 绿；3 文件+spec §4.2 措辞入 commit a7c9fa86 | domain_factory_region.py/backfill_task_scope.py/test_w3_region_rules.py/w3 spec | DONE | ~50k |
+| 21:30 | Session end: 9 writes across 7 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 5 reads | ~43878 tok |
+| 21:31 | Session end: 9 writes across 7 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 5 reads | ~43878 tok |
+| 21:34 | Session end: 9 writes across 7 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 5 reads | ~43878 tok |
+| 21:34 | Session end: 9 writes across 7 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 5 reads | ~43878 tok |
+| 21:41 | Session end: 9 writes across 7 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 8 reads | ~47222 tok |
+| 21:41 | Session end: 9 writes across 7 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 8 reads | ~47222 tok |
+| 21:43 | Created backend/test/unit/test_w3_scope_pipeline.py | — | ~1460 |
+| 21:46 | Edited backend/package/yuxi/services/domain_factory_service.py | 1→5 lines | ~70 |
+| 21:46 | Edited backend/package/yuxi/services/domain_factory_service.py | expanded (+6 lines) | ~96 |
+| 21:47 | Edited backend/package/yuxi/services/domain_factory_service.py | 1→4 lines | ~70 |
+| 21:47 | Edited backend/package/yuxi/services/domain_factory_service.py | 2→4 lines | ~61 |
+| 21:47 | Edited backend/package/yuxi/services/domain_factory_service.py | modified in() | ~131 |
+| 21:47 | Edited backend/package/yuxi/services/domain_factory_service.py | expanded (+8 lines) | ~141 |
+| 21:47 | Edited backend/package/yuxi/services/domain_factory_service.py | modified _collect_l2_suggestions() | ~562 |
+| 21:47 | Edited backend/package/yuxi/services/domain_factory_service.py | expanded (+8 lines) | ~184 |
+| 21:49 | Edited backend/test/unit/test_w3_scope_pipeline.py | modified test_w1_baseline_regression() | ~134 |
+| 21:55 | W3-T3 L2 便车+L1 并列键+归属 patch 实现，14红->41绿，ruff/HEAD 对拍零新增，bug-378 基线断言修正 | domain_factory_service.py test_w3_scope_pipeline.py | commit 903d5319 | ~45k |
+| 21:53 | Session end: 19 writes across 9 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 10 reads | ~126199 tok |
+| 21:53 | Session end: 19 writes across 9 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 10 reads | ~126199 tok |
+| 21:58 | Session end: 19 writes across 9 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 10 reads | ~126199 tok |
+| 21:58 | Session end: 19 writes across 9 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 10 reads | ~126199 tok |
+| 22:06 | W3-T3 质量审查：15/47 测试容器道复跑全绿；判定 1 Important（归属挂钩无守卫可静默跳过熔断分支）+3 Minor | domain_factory_service.py, test_w3_scope_pipeline.py | CHANGES REQUESTED | ~40k |
+| 22:08 | Session end: 19 writes across 9 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 11 reads | ~126199 tok |
+| 22:08 | Session end: 19 writes across 9 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 11 reads | ~126199 tok |
+| 22:09 | Edited backend/package/yuxi/services/domain_factory_service.py | 7→11 lines | ~207 |
+| 22:09 | Edited backend/test/unit/test_w3_scope_pipeline.py | modified test_no_evidence_no_patch() | ~245 |
+| 22:40 | W3-T3 qualrev 修复：归属挂钩独立守卫防熔断旁路（bug-379）+M-1 两例 patch 交互钉，43 绿/grep 0 | domain_factory_service.py test_w3_scope_pipeline.py | commit 69ce0e46 | ~12k |
+| 22:11 | Session end: 21 writes across 9 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 11 reads | ~126651 tok |
+| 22:11 | Session end: 21 writes across 9 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 11 reads | ~126651 tok |
+| 22:12 | W3-T3 复审终判：69ce0e46 三项复核全过（try/except 守卫+2 钉测+43 passed+红线 0），APPROVED | domain_factory_service.py, test_w3_scope_pipeline.py | 质量门通过 | ~12k |
+| 22:14 | Session end: 21 writes across 9 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 11 reads | ~126651 tok |
+| 22:14 | Session end: 21 writes across 9 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 11 reads | ~126651 tok |
+| 22:17 | Created backend/test/unit/test_w3_facts_flow.py | — | ~2085 |
+| 22:18 | Edited backend/package/yuxi/repositories/domain_factory_repository.py | 2→3 lines | ~25 |
+| 22:18 | Edited backend/package/yuxi/repositories/domain_factory_repository.py | 3→6 lines | ~72 |
+| 22:18 | Edited backend/package/yuxi/repositories/domain_factory_repository.py | 3→3 lines | ~30 |
+| 22:18 | Edited backend/package/yuxi/repositories/domain_factory_repository.py | 3→6 lines | ~79 |
+| 22:18 | Edited backend/package/yuxi/repositories/domain_factory_repository.py | 3→3 lines | ~40 |
+| 22:19 | Edited backend/package/yuxi/repositories/domain_factory_repository.py | modified insert_regional_fact() | ~1388 |
+| 22:19 | Edited backend/package/yuxi/services/domain_factory_service.py | 6→10 lines | ~70 |
+| 22:19 | Edited backend/package/yuxi/services/domain_factory_service.py | expanded (+8 lines) | ~186 |
+| 22:19 | Edited backend/package/yuxi/services/domain_factory_service.py | modified _insert_facts_for_entity() | ~1142 |
+| 22:19 | Edited backend/package/yuxi/services/domain_factory_service.py | modified _save_learned_templates_from_task() | ~108 |
+| 22:19 | Edited backend/package/yuxi/services/domain_factory_service.py | 15→19 lines | ~217 |
+| 22:19 | Edited backend/package/yuxi/services/domain_factory_service.py | inline fix | ~29 |
+| 22:21 | Edited backend/test/unit/test_w3_facts_flow.py | modified get_learned_templates_by_ids() | ~125 |
+| 22:24 | W3 Task4 facts 写入流+confirm-region 级联+min-permissive 聚合+commit 兜底，12 红相->55 全绿（facts12+pipeline17+W126），ruff 零新增违规，bug-380 fake 契约修复 | domain_factory_repository.py, domain_factory_service.py, test_w3_facts_flow.py | DONE d2952e4c | ~52k |
+| 22:25 | Session end: 35 writes across 11 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 11 reads | ~132315 tok |
+| 22:25 | Session end: 35 writes across 11 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 11 reads | ~132315 tok |
+| 22:30 | Session end: 35 writes across 11 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 11 reads | ~132315 tok |
+| 22:30 | Session end: 35 writes across 11 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 11 reads | ~132315 tok |
+| 22:37 | Session end: 35 writes across 11 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 11 reads | ~132315 tok |
+| 22:37 | Session end: 35 writes across 11 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 11 reads | ~132315 tok |
+| 22:37 | Edited backend/package/yuxi/repositories/domain_factory_repository.py | 4→4 lines | ~65 |
+| 22:38 | Edited backend/test/unit/test_w3_facts_flow.py | modified test_region_key_fallback_to_vocab() | ~93 |
+| 22:38 | Edited backend/test/unit/test_w3_facts_flow.py | 2→3 lines | ~52 |
+| 22:38 | W3 Task4 审查修复：归因集查询 ::jsonb 显式转型（C1 bug-381）+M1/M2 断言，55 全绿+实库冒烟 0 行 | domain_factory_repository.py, test_w3_facts_flow.py | DONE bbff9d44 | ~12k |
+| 22:39 | Session end: 38 writes across 11 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 11 reads | ~132525 tok |
+| 22:39 | Session end: 38 writes across 11 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 11 reads | ~132525 tok |
+| 22:44 | Session end: 38 writes across 11 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 11 reads | ~132525 tok |
+| 22:44 | Session end: 38 writes across 11 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 11 reads | ~132525 tok |
+| 22:45 | Edited backend/server/routers/domain_factory_router.py | modified confirm_region() | ~604 |
+| 22:47 | Created ../../Users/Lenovo/AppData/Local/Temp/w3_t5_verify.py | — | ~773 |
+| 22:50 | W3 T5 收官：confirm-region/retire 薄 API×2 + sync-dev + 容器全链路验证 ALL PASS + 回填 8/8 幂等 + 回归 76 passed | backend/server/routers/domain_factory_router.py | commit cbc65a2a | ~30k |
+| 22:50 | Session end: 40 writes across 13 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 12 reads | ~133902 tok |
+| 22:50 | Session end: 40 writes across 13 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 12 reads | ~133902 tok |
+| 22:55 | Session end: 40 writes across 13 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 12 reads | ~133902 tok |
+| 22:56 | Session end: 40 writes across 13 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 12 reads | ~133902 tok |
+| 22:59 | w3-t5 质量审查 cbc65a2a（confirm-region/retire 薄路由）：风格同款/权限合理/校验体面，APPROVED 带三条可忽略 Minor | backend/server/routers/domain_factory_router.py | done | ~12000 |
+| 23:01 | Edited docs/develop-guides/changelog.md | modified feat() | ~394 |
+| 23:04 | W3 T6 簿记：changelog 三条目+执行记录节落账，计划 42 步勾账（6.4 终审留待）、spec checklist 前 7 项勾选；commit cd66a89b；fresh-eyes 终审子代理已派出（w3-final-review） | docs/develop-guides/changelog.md, docs/superpowers/plans/2026-10-06-w3-scope-region-facts.md, docs/superpowers/specs/2026-10-06-w3-scope-region-facts-design.md | 提交完成 cd66a89b，终审进行中 | ~6k |
+| 23:04 | Session end: 41 writes across 14 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 14 reads | ~157967 tok |
+| 23:04 | Session end: 41 writes across 14 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 14 reads | ~157967 tok |
+| 23:16 | Edited docs/superpowers/specs/2026-10-06-w3-scope-region-facts-design.md | inline fix | ~106 |
+| 23:16 | Edited docs/superpowers/specs/2026-10-06-w3-scope-region-facts-design.md | inline fix | ~144 |
+| 23:18 | W3 窗全程收口：subagent 编排 6 任务（每任务实现者+spec/质量双审+修复复审），10 提交 f244b78e..bef9d9d0，终审 READY；3 处计划勘误+2 项审查修复（bug-379 挂钩守卫/bug-381 jsonb 转型）全落账；cerebrum 补编排层 DNR | backend/(models,manager,migrate,region 模块,service,repo,router,backfill)+test×3+docs×3 | W3 闭环，终审 READY 可合并 | ~90k |
+| 23:18 | Session end: 43 writes across 14 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 14 reads | ~158235 tok |
+| 23:18 | Session end: 43 writes across 14 files (manager.py, migrate_domain_factory.sql, test_w3_region_rules.py, domain_factory_region.py, backfill_task_scope.py) | 14 reads | ~158235 tok |
+
+## Session: 2026-10-06 23:24
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:28 | Created ../../Users/Lenovo/AppData/Local/Temp/wolf_w3_audit_append.py | — | ~376 |
+| 23:35 | W3 推送前审计：实为 9 提交（非 10，更正收口报告口径），9/9 全过——标题/作者/trailer(Claude Code)/文件集/增删量两路核验一致，无 .wolf/禁碰泄漏；push 边界 ahead 28（另含 W2v2/品牌化/SettingsModal 等 19 个本会话未审提交），待用户裁决后再推 | git 底账 + 10 代理工作流 | 审计完成，未推送 | ~190k |
+| 23:29 | Session end: 1 writes across 1 files (wolf_w3_audit_append.py) | 0 reads | ~376 tok |
+| 23:36 | Session end: 1 writes across 1 files (wolf_w3_audit_append.py) | 0 reads | ~376 tok |
+| 23:49 | Created ../../Users/Lenovo/AppData/Local/Temp/wolf_push_blocked_append.py | — | ~567 |
+| 23:58 | 19 提交审计收口：16 PASS + 3 伪 FAIL（编排方缩写声明串所致，裁决放行；4c164378 括号失衡=已知历史，75771c20 已修 HEAD 平衡）；cross PASS（behind=0 可 fast-forward，零禁碰零 wolf）；push 两连败（GitHub 直连 reset，无代理配置，bug-382）——审计全清，推送挂起待网络 | git 底账 + 20 代理工作流 | 推送阻塞待代理 | ~340k |
+| 23:50 | Session end: 2 writes across 2 files (wolf_w3_audit_append.py, wolf_push_blocked_append.py) | 1 reads | ~943 tok |
+| 00:22 | Session end: 2 writes across 2 files (wolf_w3_audit_append.py, wolf_push_blocked_append.py) | 1 reads | ~943 tok |
+| 00:26 | Created ../../Users/Lenovo/AppData/Local/Temp/wolf_push_done.py | — | ~256 |
+| 00:05 | push origin pisuan-custom 成功：e160ea5e..bef9d9d0 fast-forward 28 提交（W3 九+spec/plan 2+历史 19），本地与 origin 全同步；bug-382 网络恢复后闭合 | git | W3 推前审计→推送全流程收口 | ~小 |
+| 00:26 | Session end: 3 writes across 3 files (wolf_w3_audit_append.py, wolf_push_blocked_append.py, wolf_push_done.py) | 1 reads | ~1199 tok |
+| 00:30 | Created ../../Users/Lenovo/AppData/Local/Temp/wolf_anatomy_w4.py | — | ~401 |
+| 00:30 | Session end: 4 writes across 4 files (wolf_w3_audit_append.py, wolf_push_blocked_append.py, wolf_push_done.py, wolf_anatomy_w4.py) | 1 reads | ~1600 tok |
+| 00:36 | Created .superpowers/brainstorm/502-1791304488/content/scope.html | — | ~1225 |
+| 00:36 | Session end: 5 writes across 5 files (wolf_w3_audit_append.py, wolf_push_blocked_append.py, wolf_push_done.py, wolf_anatomy_w4.py, scope.html) | 2 reads | ~2912 tok |
+| 00:46 | Created .superpowers/brainstorm/502-1791304488/content/placement.html | — | ~1041 |
+| 00:46 | Session end: 6 writes across 6 files (wolf_w3_audit_append.py, wolf_push_blocked_append.py, wolf_push_done.py, wolf_anatomy_w4.py, scope.html) | 2 reads | ~4027 tok |
+| 00:47 | Created .superpowers/brainstorm/502-1791304488/content/waiting.html | — | ~43 |
+| 00:48 | Session end: 7 writes across 7 files (wolf_w3_audit_append.py, wolf_push_blocked_append.py, wolf_push_done.py, wolf_anatomy_w4.py, scope.html) | 2 reads | ~4073 tok |
+| 00:50 | Session end: 7 writes across 7 files (wolf_w3_audit_append.py, wolf_push_blocked_append.py, wolf_push_done.py, wolf_anatomy_w4.py, scope.html) | 2 reads | ~4073 tok |
+| 00:54 | Created ../../Users/Lenovo/AppData/Local/Temp/w4_convert_docx.py | — | ~422 |
+| 00:56 | Session end: 8 writes across 8 files (wolf_w3_audit_append.py, wolf_push_blocked_append.py, wolf_push_done.py, wolf_anatomy_w4.py, scope.html) | 2 reads | ~4495 tok |
+| 01:00 | Created .superpowers/brainstorm/502-1791304488/content/waiting-2.html | — | ~102 |
+| 01:00 | Session end: 9 writes across 9 files (wolf_w3_audit_append.py, wolf_push_blocked_append.py, wolf_push_done.py, wolf_anatomy_w4.py, scope.html) | 5 reads | ~4605 tok |
+| 01:02 | Session end: 9 writes across 9 files (wolf_w3_audit_append.py, wolf_push_blocked_append.py, wolf_push_done.py, wolf_anatomy_w4.py, scope.html) | 5 reads | ~4605 tok |
+| 01:05 | Created .superpowers/brainstorm/502-1791304488/content/ui-detail.html | — | ~2364 |
+| 01:06 | Session end: 10 writes across 10 files (wolf_w3_audit_append.py, wolf_push_blocked_append.py, wolf_push_done.py, wolf_anatomy_w4.py, scope.html) | 5 reads | ~7138 tok |
+| 08:27 | Created .superpowers/brainstorm/492-1791332830/content/vocab-candidates.html | — | ~809 |
+| 08:28 | Session end: 11 writes across 11 files (wolf_w3_audit_append.py, wolf_push_blocked_append.py, wolf_push_done.py, wolf_anatomy_w4.py, scope.html) | 5 reads | ~8005 tok |
+| 09:16 | Created docs/superpowers/specs/2026-10-07-w4-attribution-ui-design.md | — | ~2121 |
+| 09:17 | Edited docs/superpowers/specs/2026-10-07-w4-attribution-ui-design.md | 1→2 lines | ~43 |
+| 09:17 | Edited docs/superpowers/specs/2026-10-07-w4-attribution-ui-design.md | 1→3 lines | ~149 |
+| 09:17 | Created ../../Users/Lenovo/AppData/Local/Temp/wolf_w4_spec_append.py | — | ~342 |
+| 01:40 | W4 归属 UI 头脑风暴收口：六分叉裁决（ABCD 全做/tab 挂载/逐行改判/词表文档驱动 3+6 条/看板 T1 树/α+α 架构）+ 视觉伴侣两轮线框评审；spec 提交 5b3bd8ba；伴侣服务器两次被后台时限杀→nohup 脱离法 | docs/superpowers/specs/2026-10-07-w4-attribution-ui-design.md | spec 已提交，待用户审阅 | ~500k(含 4+4 代理) |
+| 09:18 | Session end: 15 writes across 13 files (wolf_w3_audit_append.py, wolf_push_blocked_append.py, wolf_push_done.py, wolf_anatomy_w4.py, scope.html) | 5 reads | ~10825 tok |
+
+## Session: 2026-10-07 09:24
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:53 | Created docs/superpowers/plans/2026-10-07-w4-attribution-ui.md | — | ~21269 |
+| 09:55 | Edited docs/superpowers/plans/2026-10-07-w4-attribution-ui.md | modified fetch_attribution_tasks() | ~30 |
+| 09:55 | Edited docs/superpowers/plans/2026-10-07-w4-attribution-ui.md | modified fetch_regional_facts() | ~648 |
+| 09:56 | Edited docs/superpowers/plans/2026-10-07-w4-attribution-ui.md | added optional chaining | ~122 |
+| 09:56 | Edited docs/superpowers/plans/2026-10-07-w4-attribution-ui.md | 3→3 lines | ~39 |
+| 09:56 | Edited docs/superpowers/plans/2026-10-07-w4-attribution-ui.md | 3→3 lines | ~49 |
+| 09:56 | Edited docs/superpowers/plans/2026-10-07-w4-attribution-ui.md | added nullish coalescing | ~63 |
+| 09:56 | Edited docs/superpowers/plans/2026-10-07-w4-attribution-ui.md | 5→5 lines | ~49 |
+| 09:56 | Edited docs/superpowers/plans/2026-10-07-w4-attribution-ui.md | inline fix | ~18 |
+| 09:58 | Created ../../Users/Lenovo/AppData/Local/Temp/wolf_w4_plan_bookkeeping.py | — | ~727 |
+| 09:58 | W4 实施计划落盘并提交（bcf91825，2102 行）：7 代理并行采集代码事实后合成；三处 spec 勘误挂 T6（tab 触点 3 处/tab-dot 实况/board 响应补 templates 数组）；自我审查修 5 处（router 顶格缩进/stats 子对象兜底/期望计数 13 与 89） | docs/superpowers/plans/2026-10-07-w4-attribution-ui.md | 已提交，待用户选执行方式 | ~190k(含 7 代理) |
+| 09:58 | Session end: 10 writes across 2 files (2026-10-07-w4-attribution-ui.md, wolf_w4_plan_bookkeeping.py) | 13 reads | ~24606 tok |
+
+## Session: 2026-10-07 10:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:51 | Created backend/test/unit/test_w4_attribution_reads.py | — | ~1898 |
+| 10:52 | Edited backend/package/yuxi/services/domain_factory_region.py | modified region_key_for_label() | ~98 |
+| 10:52 | Edited backend/package/yuxi/services/domain_factory_region.py | modified apply_min_permissive() | ~262 |
+| 10:52 | Edited backend/package/yuxi/repositories/domain_factory_repository.py | modified get_task_scopes() | ~2420 |
+| 10:53 | Edited backend/package/yuxi/services/domain_factory_service.py | 10→12 lines | ~86 |
+| 10:53 | Edited backend/package/yuxi/services/domain_factory_service.py | modified _get_existing_entities_full() | ~1584 |
+| 10:53 | Edited backend/server/routers/domain_factory_router.py | modified fetch_attribution_tasks() | ~765 |
+| 10:55 | Edited backend/package/yuxi/services/domain_factory_service.py | 3→4 lines | ~52 |
+| 10:56 | Edited backend/package/yuxi/services/domain_factory_service.py | 7→7 lines | ~80 |
+| 11:00 | Session end: 9 writes across 5 files (test_w4_attribution_reads.py, domain_factory_region.py, domain_factory_repository.py, domain_factory_service.py, domain_factory_router.py) | 5 reads | ~86215 tok |
+| 11:04 | specrev T1: 2461dddc spec-review PASS——5文件568+0、89/13 pytest 独立复跑、ruff16=基线零新增、偏差①②③④均属实最小 | domain_factory_{region,repository,service}.py, domain_factory_router.py, test_w4_attribution_reads.py | verified | ~28k |
+| 11:07 | Session end: 9 writes across 5 files (test_w4_attribution_reads.py, domain_factory_region.py, domain_factory_repository.py, domain_factory_service.py, domain_factory_router.py) | 6 reads | ~86215 tok |
+| 11:12 | qualrev W4-T1 2461dddc: 13 passed 容器道独立复跑、ruff16=基线零新增(:693 为平移旧行)、零删除/保护符号未动、分层合规，判 Ready(Yes)，5 Minor | test_w4_attribution_reads.py 等5文件 | reviewed | ~45k |
+| 11:15 | Created ../../Users/Lenovo/AppData/Local/Temp/wolf_t1_bookkeeping.py | — | ~1250 |
+| 11:17 | W4 T1 归属读接口三件套交付：commit 2461dddc（5 文件 568 行纯插入，89 passed/76 基线，ruff 16 持平走 uvx 道）；实现者抓出计划代码 2 bug（dict 列表位置解包 / 模板树 continue 与伪节点矛盾）已最小修复并经 spec 评审核实；质量评审 Yes，5 Minor 挂账（LIKE 转义/常量提取/时间格式/事实节点 label/fake 全契约） | backend 四源文件 + test_w4_attribution_reads.py | T1 完成，进入 T2 | ~170k(3 代理) |
+| 11:17 | Session end: 10 writes across 6 files (test_w4_attribution_reads.py, domain_factory_region.py, domain_factory_repository.py, domain_factory_service.py, domain_factory_router.py) | 8 reads | ~90805 tok |
+| 11:18 | Created backend/test/unit/test_w4_admin_vocab.py | — | ~676 |
+| 11:18 | Edited backend/package/yuxi/services/domain_factory_region.py | expanded (+16 lines) | ~237 |
+| 11:18 | Edited backend/package/yuxi/services/domain_factory_region.py | modified _longest_vocab_hit() | ~220 |
+| 11:18 | Edited backend/package/yuxi/services/domain_factory_region.py | modified region_label_for_key() | ~85 |
+| 11:19 | Edited backend/package/yuxi/services/domain_factory_region.py | modified l1_task_attribution() | ~236 |
+| 11:21 | Created ../../Users/Lenovo/AppData/Local/Temp/w4_t2_verify.py | — | ~1367 |
+| 11:23 | Created ../../Users/Lenovo/AppData/Local/Temp/w4_t2_commit_msg.txt | — | ~78 |
+| 11:27 | Session end: 17 writes across 9 files (test_w4_attribution_reads.py, domain_factory_region.py, domain_factory_repository.py, domain_factory_service.py, domain_factory_router.py) | 8 reads | ~93710 tok |
+| 11:30 | W4 T2 spec review 6deb6fa2: 2 files verified, same-semantic refactor byte-equal, 95 passed docker rerun, ruff clean, behavior script all-true | domain_factory_region.py, test_w4_admin_vocab.py | PASS no deviation | ~9k |
+| 11:32 | Session end: 17 writes across 9 files (test_w4_attribution_reads.py, domain_factory_region.py, domain_factory_repository.py, domain_factory_service.py, domain_factory_router.py) | 9 reads | ~94390 tok |
+| 11:38 | code-review W4-T2 行政区词表 6deb6fa2（2461dddc..6deb6fa2）：新测 6 passed + Step2.4 回归 95 passed 独立复跑，ruff check 0 err，ruff format FAIL（ADMIN_REGION_VOCAB 注释对齐为新引入；derive_template_region 签名为 T1 基线已有）；隔离性 grep 通过 | backend/package/yuxi/services/domain_factory_region.py backend/test/unit/test_w4_admin_vocab.py | With fixes（仅格式一道） | ~50k |
+| 11:41 | Session end: 17 writes across 9 files (test_w4_attribution_reads.py, domain_factory_region.py, domain_factory_repository.py, domain_factory_service.py, domain_factory_router.py) | 9 reads | ~94390 tok |
+| 11:41 | Created ../../Users/Lenovo/AppData/Local/Temp/w4_t2_style_msg.txt | — | ~51 |
+| 11:42 | Session end: 18 writes across 10 files (test_w4_attribution_reads.py, domain_factory_region.py, domain_factory_repository.py, domain_factory_service.py, domain_factory_router.py) | 9 reads | ~94444 tok |
+| 11:43 | re-review W4-T2 格式修复 0d3e2a65：恰1文件+9/-11 两处 hunk 与申报一致；AST dump 对比 6deb6fa2 逐字等值（机器验证纯格式）；ruff format/check 双绿；容器道 27 passed（6+21） | backend/package/yuxi/services/domain_factory_region.py | Approved | ~12k |
+| 11:46 | Created ../../Users/Lenovo/AppData/Local/Temp/wolf_t2_bookkeeping.py | — | ~844 |
+| -- | W4 T2 收口：行政区词表 9 条+L1 二级查找——feat 6deb6fa2 + style 0d3e2a65（ruff format 归一）；95 passed；live ALL PASS（三 GET vs SQL 实况）+ backfill 幂等 0/7×2；spec 评审✅（同语义重构逐条件等价+行为实证）质量评审 With fixes→修复→复核 Approved（AST 零语义验证）；DB 实况漂移 7 任务/事实 0（窗间重复行被移除，非本窗所致，只读核查确认）；T6 挂账 +2：plan/spec 片段 format 对齐、spec DoD#2 8/8→实况勾账 | domain_factory_region.py + test_w4_admin_vocab.py | T2 完成，进入 T3 | ~250k(5 代理) |
+| 11:48 | Session end: 19 writes across 11 files (test_w4_attribution_reads.py, domain_factory_region.py, domain_factory_repository.py, domain_factory_service.py, domain_factory_router.py) | 10 reads | ~95288 tok |
+| 11:50 | Edited web/src/apis/domain_factory_api.js | expanded (+31 lines) | ~457 |
+| 11:50 | Created web/src/components/domain-factory/RegionAttributionPanel.vue | — | ~348 |
+| 11:51 | Created web/src/components/domain-factory/AttributionTaskTable.vue | — | ~1191 |
+| 11:51 | Created web/src/components/domain-factory/AttributionEditModal.vue | — | ~965 |
+| 11:51 | Created web/src/components/domain-factory/RegionalFactsTable.vue | — | ~1582 |
+| 11:52 | Created web/src/components/domain-factory/RegionBoard.vue | — | ~1699 |
+| 11:52 | Edited web/src/views/DomainFactoryView.vue | added 1 import(s) | ~44 |
+| 11:52 | Edited web/src/views/DomainFactoryView.vue | expanded (+9 lines) | ~165 |
+| 11:52 | Edited web/src/views/DomainFactoryView.vue | 4→7 lines | ~60 |
+| 11:57 | Created ../../Users/Lenovo/AppData/Local/Temp/w4_t3_commit_msg.txt | — | ~89 |
+| 12:00 | Session end: 29 writes across 19 files (test_w4_attribution_reads.py, domain_factory_region.py, domain_factory_repository.py, domain_factory_service.py, domain_factory_router.py) | 11 reads | ~102326 tok |
+| 12:06 | Session end: 29 writes across 19 files (test_w4_attribution_reads.py, domain_factory_region.py, domain_factory_repository.py, domain_factory_service.py, domain_factory_router.py) | 11 reads | ~102326 tok |
+| 12:07 | Edited web/src/components/domain-factory/AttributionTaskTable.vue | 3→2 lines | ~14 |
+| 12:10 | Created ../../Users/Lenovo/AppData/Local/Temp/w4_t3_fix_commit_msg.txt | — | ~46 |
+| 12:11 | Session end: 31 writes across 20 files (test_w4_attribution_reads.py, domain_factory_region.py, domain_factory_repository.py, domain_factory_service.py, domain_factory_router.py) | 11 reads | ~102390 tok |
+| 12:20 | W4 T3 复核：fix 63c4b42e 删未用 total ref，容器内 7 文件 eslint 复跑 exit 0，T3 收口放行 | .wolf/buglog.json, AttributionTaskTable.vue | pass | ~2k |
+| 12:13 | Session end: 31 writes across 20 files (test_w4_attribution_reads.py, domain_factory_region.py, domain_factory_repository.py, domain_factory_service.py, domain_factory_router.py) | 11 reads | ~102390 tok |
+| qualrev-w3 T3 review | reviewed aaeef94c+63c4b42e (attribution UI frontend) | findings: broken intermediate commit (Panel imports untracked T4/T5 files), cross-subpage staleness, minor UX notes | ~9k |
+| 12:20 | Edited web/src/components/domain-factory/RegionAttributionPanel.vue | inline fix | ~9 |
+| 12:20 | Edited web/src/components/domain-factory/RegionAttributionPanel.vue | added 2 condition(s) | ~147 |
+| 12:21 | Edited web/src/components/domain-factory/RegionAttributionPanel.vue | 5→6 lines | ~41 |
+| 12:21 | Edited web/src/components/domain-factory/AttributionTaskTable.vue | added 1 condition(s) | ~51 |
+| 12:21 | Edited web/src/components/domain-factory/AttributionTaskTable.vue | 7→7 lines | ~54 |
+| 12:21 | Edited web/src/components/domain-factory/AttributionTaskTable.vue | 3→4 lines | ~26 |
+| 12:21 | Edited web/src/components/domain-factory/AttributionEditModal.vue | 2→2 lines | ~24 |
+| 12:21 | Created ../../Users/Lenovo/AppData/Local/Temp/w4_t3_qa_commit_msg.txt | — | ~63 |
+
+## Session: 2026-10-07 12:22
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| qualrev-w3 T3-fix re-review | verified 476f8b21 (watch refresh/clear-fetch/dead-branch/ok-text) all landed, contracts check out | verdict: Ready to merge (with T4/T5 landing constraint) | ~4k |
+| 12:26 | Created ../../Users/Lenovo/AppData/Local/Temp/wolf_t3_closure.py | — | ~989 |
+| 12:27 | W4 T3 收口：归属面板三件套——feat aaeef94c（API 5 方法/Panel/TaskTable/EditModal/View 3 触点 +374）+ fix 63c4b42e（未用 total ref）+ fix 476f8b21（质量评审交互修正：子页切换刷新/清空即查/死分支清理/ok-text 分叉）；spec ✅ + 质量 With fixes→修复→复核 Yes；eslint 容器道 exit 0（sync-dev ×3，第 2/3 次为容器挂载道 lint 授权偏差）；T6 挂账 +2：干净检出构建检查（中间提交不自包含=落地约束，须与 T4/T5 合并）、plan Task 3.3 片段 unused total ref 勘误；浏览器冒烟延后至 T5 后用户统一人工过（期望 7 任务/4 横城/0 事实/211 模板未归属/2 区卡+伪节点） | web RegionAttributionPanel/AttributionTaskTable/AttributionEditModal/DomainFactoryView | T3 完成，进入 T4 | ~410k(5 代理) |
+| 12:28 | Session end: 1 writes across 1 files (wolf_t3_closure.py) | 1 reads | ~989 tok |
+| 12:30 | Created ../../Users/Lenovo/AppData/Local/Temp/w4_t4_commit.txt | — | ~54 |
+| 12:31 | Session end: 2 writes across 2 files (wolf_t3_closure.py, w4_t4_commit.txt) | 2 reads | ~2628 tok |
+| 12:31 | Session end: 2 writes across 2 files (wolf_t3_closure.py, w4_t4_commit.txt) | 2 reads | ~2628 tok |
+| 12:4x | T4 规格符合性评审：b9528364 七项独立验证全过（1 文件+200/提交信息逐字/组件规格逐项/API 依赖实存/pageSizeOptions 声明属实/容器 eslint exit 0 且与 HEAD 逐字节一致/红线与超建干净） | RegionalFactsTable.vue | ✅ spec compliant 零问题 | ~4k |
+| 12:33 | Session end: 2 writes across 2 files (wolf_t3_closure.py, w4_t4_commit.txt) | 2 reads | ~2628 tok |
+| 12:34 | Session end: 2 writes across 2 files (wolf_t3_closure.py, w4_t4_commit.txt) | 2 reads | ~2628 tok |
+| 12:05 | W4 Task4 质量评审：RegionalFactsTable.vue 2 Important（选区跨筛选残留/退役后页越界）1 Minor（--warning-bg 不存在） | web/src/components/domain-factory/RegionalFactsTable.vue | 已回报 team-lead | ~30k |
+| 12:39 | Session end: 2 writes across 2 files (wolf_t3_closure.py, w4_t4_commit.txt) | 4 reads | ~6723 tok |
+| 12:39 | Session end: 2 writes across 2 files (wolf_t3_closure.py, w4_t4_commit.txt) | 4 reads | ~6723 tok |
+| 12:39 | Edited web/src/components/domain-factory/RegionalFactsTable.vue | 4→5 lines | ~26 |
+| 12:39 | Edited web/src/components/domain-factory/RegionalFactsTable.vue | 3→5 lines | ~74 |
+| 12:39 | Edited web/src/components/domain-factory/RegionalFactsTable.vue | 5→6 lines | ~37 |
+| 12:39 | Edited web/src/components/domain-factory/RegionalFactsTable.vue | inline fix | ~13 |
+| 12:40 | Created ../../Users/Lenovo/AppData/Local/Temp/w4_t4_fix_commit.txt | — | ~54 |
+| 12:41 | Session end: 7 writes across 4 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt) | 4 reads | ~6940 tok |
+| 12:41 | Session end: 7 writes across 4 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt) | 4 reads | ~6940 tok |
+| 12:50 | T4 修复复核 662f47ff：I1/I2/M1 三处均正确落地，公式在 total 刷新前求值，无越界改动 | RegionalFactsTable.vue | Ready to merge: Yes | ~8k |
+| 12:43 | Created ../../Users/Lenovo/AppData/Local/Temp/wolf_t4_closure.py | — | ~946 |
+| 12:43 | W4 T4 收口：区域事实子页——b9528364（feat，1 文件 +200，语义与计划逐段一致）+ 662f47ff（fix：筛选/下钻清选区防不可见行误退役、退役清空末页页码回缩、batch-bar 改 --color-warning-50 适配暗色）；spec 评审 ✅7/7（含容器文件与 HEAD 逐字节 diff 排除同步风险）；质量 With fixes→修复→复核 Yes；eslint 容器道 exit 0（sync-dev ×1 授权）；M2 风格统一裁决不做；T6 挂账：--warning-bg 变量不存在已就地修（plan 附录 A 片段需同步勘误） | web RegionalFactsTable.vue | T4 完成，进入 T5 | ~250k(3 代理) |
+| 12:44 | Session end: 8 writes across 5 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 4 reads | ~7886 tok |
+| 12:45 | Session end: 8 writes across 5 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 5 reads | ~9585 tok |
+| 12:46 | Created ../../Users/Lenovo/AppData/Local/Temp/commit-msg-w4-t5.txt | — | ~55 |
+| 12:47 | Session end: 9 writes across 6 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 5 reads | ~9644 tok |
+| 12:47 | Session end: 9 writes across 6 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 5 reads | ~9644 tok |
+| 12:50 | Session end: 9 writes across 6 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 5 reads | ~9644 tok |
+| 12:50 | Session end: 9 writes across 6 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 5 reads | ~9644 tok |
+| 12:56 | Session end: 9 writes across 6 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 6 reads | ~9644 tok |
+| 12:56 | Session end: 9 writes across 6 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 6 reads | ~9644 tok |
+| 12:57 | Edited web/src/components/domain-factory/RegionBoard.vue | added nullish coalescing | ~101 |
+| 12:58 | Created ../../Users/Lenovo/AppData/Local/Temp/commit-msg-w4-t5fix.txt | — | ~60 |
+| 12:59 | Session end: 11 writes across 8 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 6 reads | ~9816 tok |
+| 12:59 | Session end: 11 writes across 8 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 6 reads | ~9816 tok |
+| 13:00 | Created ../../Users/Lenovo/AppData/Local/Temp/wolf_t5_closure.py | — | ~848 |
+| 13:01 | W4 T5 收口：聚合看板子页——e36ba1b4（feat，1 文件 +206，伪节点无跳转/伪节点 _node() 全形状闭合）+ b1d4fb6d（fix：任务×region 卡 computed 按 region_key Map 归并防 label 漂移拆行）；spec ✅（容器文件与 HEAD IDENTICAL + eslint exit 0）；质量 Yes→微修→复核 Yes（三条重点：emit {regionKey} 契约/伪节点崩溃不存在/templates 缺失不可达）；五个组件任务全关闭，T3 中间提交不自包含约束就此解除；Minor 备案：首拉失败空白无重试（姊妹组件一致模式）、归并首到空 label 显示裸 key（退化场景，严格改进） | web RegionBoard.vue | T5 完成，进入 T6 | ~200k(3 代理) |
+| 13:02 | Session end: 12 writes across 9 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 6 reads | ~10664 tok |
+| 13:02 | Session end: 12 writes across 9 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 6 reads | ~10664 tok |
+| 13:05 | Edited backend/package/yuxi/repositories/domain_factory_repository.py | 3→1 lines | ~34 |
+| 13:05 | Edited backend/package/yuxi/repositories/domain_factory_repository.py | 5→3 lines | ~53 |
+| 13:05 | Edited backend/package/yuxi/repositories/domain_factory_repository.py | 7→4 lines | ~83 |
+| 13:05 | Edited backend/package/yuxi/services/domain_factory_service.py | 3→1 lines | ~34 |
+| 13:09 | Edited docs/superpowers/specs/2026-10-07-w4-attribution-ui-design.md | inline fix | ~47 |
+| 13:09 | Edited docs/superpowers/specs/2026-10-07-w4-attribution-ui-design.md | inline fix | ~28 |
+| 13:09 | Edited docs/superpowers/specs/2026-10-07-w4-attribution-ui-design.md | inline fix | ~88 |
+| 13:09 | Edited docs/superpowers/specs/2026-10-07-w4-attribution-ui-design.md | inline fix | ~16 |
+| 13:09 | Edited docs/superpowers/specs/2026-10-07-w4-attribution-ui-design.md | inline fix | ~26 |
+| 13:09 | Edited docs/superpowers/plans/2026-10-07-w4-attribution-ui.md | inline fix | ~13 |
+| 13:09 | Edited docs/superpowers/plans/2026-10-07-w4-attribution-ui.md | inline fix | ~15 |
+| 13:09 | Edited docs/superpowers/plans/2026-10-07-w4-attribution-ui.md | modified derive_template_region() | ~32 |
+| 13:09 | Edited docs/superpowers/plans/2026-10-07-w4-attribution-ui.md | 9→9 lines | ~106 |
+| 13:09 | Edited docs/develop-guides/changelog.md | modified feat() | ~240 |
+| 13:10 | Created ../../Users/Lenovo/AppData/Local/Temp/t6-style-msg.txt | — | ~71 |
+| 13:12 | Created ../../Users/Lenovo/AppData/Local/Temp/t6-final-msg.txt | — | ~38 |
+| 13:14 | Session end: 28 writes across 16 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 11 reads | ~26937 tok |
+| 13:14 | Session end: 28 writes across 16 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 11 reads | ~26937 tok |
+| 13:22 | Session end: 28 writes across 16 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 11 reads | ~26937 tok |
+| 13:22 | Session end: 28 writes across 16 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 11 reads | ~26937 tok |
+| 13:32 | Created ../../Users/Lenovo/AppData/Local/Temp/wolf_t6_closure.py | — | ~542 |
+| 13:32 | W4 T6 收口 + 全局终审通过：52f55bef（style：W4 新增区 4 处 format 归一，存量区外科保留）+ 48afe0e7（docs：changelog 三 bullet/spec 5 处勘误/plan 4 处勘误+40 勾账+执行记录）；95 passed 独立复跑（26 W1+50 W3+13 T1+6 T2）；干净检出核查 import 全跟踪 + vite build 成功；DoD 全过（禁碰 grep exit=1、View +13 行、链 12 commit——注意 5b3bd8ba..HEAD=13 含计划提交）；终审 Yes 无条件（三层命名对表 11 字段/W3 函数零改动/既有用例零删改）；Minor 挂账下一窗：changelog/spec「service 拼 source_task_file_name」实为 repository 层（list_regional_facts file_map）；观察备案：看板下钻双拉取无害、三子页常挂 4 GET 可接受。W4 全交付，待用户人工冒烟（清单已交） | docs 三件 + repo/service format | W4 完成 | ~180k(3 代理) |
+| 13:32 | Session end: 29 writes across 17 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 15 reads | ~52297 tok |
+| 13:32 | Session end: 29 writes across 17 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 15 reads | ~52297 tok |
+| 13:46 | Session end: 29 writes across 17 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 16 reads | ~52297 tok |
+| 13:54 | Session end: 29 writes across 17 files (wolf_t3_closure.py, w4_t4_commit.txt, RegionalFactsTable.vue, w4_t4_fix_commit.txt, wolf_t4_closure.py) | 18 reads | ~52297 tok |
+
+## Session: 2026-10-07 14:07
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:14 | 页面测试收车（用户选向待定，建议 B）：ch4 完成 S02-S05 四节（7.7-9.3KB），S06/S07 因 429 限流 subagent 空输出失败、主智能体暂停抛 A/B/C；sandbox 于暂停期被 idle 回收（宿主机 threads/shared/admin/workspace 证据完好）；三节一致暴露 8 类写作缺陷（占位符泄漏/标准号错配/限值引错/编造边缘/自相矛盾/清单贴牌/中英夹杂/灌水）+ 3 项运行时缺陷（429 无重试/暂停期回收/静默续跑）；buglog +3（bug-{}/{} -{}）、cerebrum +3；薄弱点→样例知识映射报告已交用户 | .wolf 三件 | 测试完成待方向决策 | ~120k |
+| 14:28 | deepseek-flash 复测启动：用户已把环评 agent 全部 LLM 切 deepseek（agents.config_json context.model=deepseek:deepseek-flash）；新对话 70c8f5a8 + 项目名合成test2矿区；deepseek 主动检测共用工作区冲突（旧 eia-report 有 test 工程在建）弹单选题，裁决后建独立目录 eia-report-test2 + 空白表单生成中；agnes 静默续跑缺陷被模型侧规避（buglog +1 工区不隔离）；待办 1/7 推进中，后台监听工作区落盘 | .wolf 三件 | 复测进行中 | ~40k |
+| 14:33 | standards_index 双因修正：62 条含 GB15618/36600 正确条目（W1a=契约未强制核对，工程问题）；limit_tables 空壳 rows=[]（W1b=真知识缺口，样例报告标准引用段是录入语料）；buglog 修正 W1 根因；test2 表单阶段用户填真实王坡煤矿数据，deepseek 主动报口径疑点+CSV 清单模板策略，待办 3/9 | .wolf 三件 | 表单收集进行中 | ~25k |
+
+## Session: 2026-10-07 14:57
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:10 | 生成王坡test2合成11张CSV测试用例；首版表头靠猜静默丢值(bug-361)，按真实表头重写修复 | eia-report-test2/templates/filled/*.csv, .wolf/buglog.json | OK | ~9k |
+| 15:15 | Created ../../Users/Lenovo/AppData/Local/Temp/gen_test2_batch2.py | — | ~3174 |
+| 15:45 | 生成第二批B系列21张CSV测试用例(王坡test2)，B02空占位行撞号修复；含勾稽链与门禁测试钩子 | eia-report-test2/templates/filled/batch2/*.csv | OK | ~14k |
+| 15:17 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 0 reads | ~3174 tok |
+| 16:15 | 深查 deepseek 轮20节质量：W2误判改判(bug-362)，{{TABLE}}是渲染契约；ch4_S01质量对比agnes显著优；在飞写者1个纪律保持 | state/sections/*, SKILL.md, .wolf/buglog.json | OK | ~12k |
+| 16:20 | 监测确认: ch4六节ABSENT系合法裁决(用户批准降档,门L2深度FAIL在案),控制器续ch5; ingest数据保真(B14b核对一致) | progress.json, conv713 | OK | ~8k |
+| 16:14 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:17 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:17 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:20 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:21 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:23 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:25 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:26 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:28 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:30 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:34 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:35 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:37 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:39 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:40 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:40 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:41 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:43 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:45 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:47 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:48 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:50 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:51 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:53 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:54 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:56 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:58 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 16:59 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 17:02 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+| 17:05 | Session end: 1 writes across 1 files (gen_test2_batch2.py) | 1 reads | ~3174 tok |
+
+## Session: 2026-10-07 17:11
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:30 | 诊断 resume 报错：checkpoint 重放 subagent_await seq=2 vs 已持久化 44767 守卫误判，bug-363 落账 | tool_message_audit_repository.py | 根因闭合未修 | ~12k |
+| 17:23 | Edited backend/test/integration/services/test_agent_run_lease.py | modified raises() | ~323 |
+| 17:26 | Edited backend/package/yuxi/repositories/tool_message_audit_repository.py | 6→5 lines | ~46 |
+| 17:26 | Edited backend/package/yuxi/repositories/tool_message_audit_repository.py | modified _require_same_start() | ~143 |
+| 17:30 | Edited backend/test/integration/services/test_agent_run_lease.py | 10→12 lines | ~148 |
+| 17:30 | Edited backend/package/yuxi/repositories/model_message_audit_repository.py | 5→4 lines | ~70 |
+| 17:30 | Edited backend/package/yuxi/repositories/model_message_audit_repository.py | reduced (-6 lines) | ~22 |
+| 17:32 | Edited docs/develop-guides/changelog.md | 3→5 lines | ~259 |
+| 18:05 | 修 bug-363：tool/model 审计守卫删 sequence 比对（checkpoint 重放重新编号），TDD 回归用例，25 passed，commit 6fc1940f | tool_message_audit_repository.py 等4文件 | 已提交 | ~18k |
+| 17:33 | Session end: 7 writes across 4 files (test_agent_run_lease.py, tool_message_audit_repository.py, model_message_audit_repository.py, changelog.md) | 6 reads | ~44390 tok |
+| 17:35 | Session end: 7 writes across 4 files (test_agent_run_lease.py, tool_message_audit_repository.py, model_message_audit_repository.py, changelog.md) | 6 reads | ~44390 tok |
+| 18:05 | Session end: 7 writes across 4 files (test_agent_run_lease.py, tool_message_audit_repository.py, model_message_audit_repository.py, changelog.md) | 6 reads | ~44390 tok |
+| 18:07 | Session end: 7 writes across 4 files (test_agent_run_lease.py, tool_message_audit_repository.py, model_message_audit_repository.py, changelog.md) | 6 reads | ~44390 tok |
+| 18:08 | Session end: 7 writes across 4 files (test_agent_run_lease.py, tool_message_audit_repository.py, model_message_audit_repository.py, changelog.md) | 6 reads | ~44390 tok |
+| 19:05 | test2 终验收口：13章全VERIFIED/71节/2.3MB BUILD_READY，consistency fail=0，SL1 复核 PASS（三类非零均甄别合法）；用户「缺章」实为前端预览截断（bug-364） | deliveries/王坡煤矿-规划环评-环境影响报告.md | 全链路完成 | ~25k |
+| 18:40 | Session end: 7 writes across 4 files (test_agent_run_lease.py, tool_message_audit_repository.py, model_message_audit_repository.py, changelog.md) | 6 reads | ~44390 tok |
+| 19:40 | 审查 agent 终验自述：1 实现bug（project_name/mine_area_name 口径，bug-365）+4 设计问题（地板全表失校/表号契约缺位/标准索引后置+删编号偏激进/manual拦停快照）+1 待确认（首次降档批准未生效）；清理 deliveries 并行现场 | build_output.py | 报告已交用户 | ~15k |
+| 19:15 | Session end: 7 writes across 4 files (test_agent_run_lease.py, tool_message_audit_repository.py, model_message_audit_repository.py, changelog.md) | 6 reads | ~44390 tok |
+| 20:10 | 用户报告三类正文质量问题实证：英文表头 913/1165+数据行1597（渲染未接 schema label，bug-366）、元话语 538 处（契约缺禁元话语+范式，bug-367）、键值表 264 处裸 key|value | build_output.py/SKILL.md | 已落账待修 | ~12k |
+| 19:46 | Session end: 7 writes across 4 files (test_agent_run_lease.py, tool_message_audit_repository.py, model_message_audit_repository.py, changelog.md) | 7 reads | ~44390 tok |
+| 19:51 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | 2→5 lines | ~76 |
+| 19:51 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | 4→9 lines | ~147 |
+| 19:52 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~35 |
+| 19:55 | Created backend/scripts/peel_worker.py | — | ~581 |
+| 19:55 | Created ../../Users/Lenovo/AppData/Local/Temp/peel_driver.py | — | ~830 |
+| 20:00 | Edited backend/scripts/peel_worker.py | modified main() | ~343 |
+| 20:00 | Edited backend/scripts/peel_worker.py | expanded (+6 lines) | ~56 |
+| 20:04 | Session end: 14 writes across 8 files (test_agent_run_lease.py, tool_message_audit_repository.py, model_message_audit_repository.py, changelog.md, build_output.py) | 9 reads | ~46471 tok |
+| 20:11 | Session end: 14 writes across 8 files (test_agent_run_lease.py, tool_message_audit_repository.py, model_message_audit_repository.py, changelog.md, build_output.py) | 9 reads | ~46471 tok |
+
+## Session: 2026-10-07 20:28
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:38 | Created docs/vibe/2026-10-07-bug367-persona-contract-peeling.md | — | ~584 |
+| 21:05 | 剥壳收尾：二轮规则 55 对替换 219→30→0（门词表），ch6 五节补谓语，ch13_S08 纪律腔统一；全量重渲染 BUILD_READY fail=0 幂等，交付稿 916k 字符 13 章完整、门词表 0、数字序列与备份零漂移；提交 c6092c26（契约+门+vibe 文档）；清理 peel_worker×4 处 | build_output.py/SKILL.md/changelog.md | 剥壳完成已提交 | ~40k |
+| 20:40 | Session end: 1 writes across 1 files (2026-10-07-bug367-persona-contract-peeling.md) | 0 reads | ~626 tok |
+| 20:49 | Created docs/vibe/2026-10-07-direction-a-paradigm-library-design.md | — | ~1500 |
+| 21:40 | 方向A范式库设计草案：盘点发现 sample_anchor/writing_patterns 13/13 已在位、独缺行文范文层；5 类角色范式+_roles.json 确定性注入+实体三防闭环；自审修正 stage 字段↔独立映射矛盾后提交 4ab2a33b | docs/vibe/2026-10-07-direction-a-paradigm-library-design.md | 草案已提交待评审 | ~30k |
+| 20:50 | Session end: 2 writes across 2 files (2026-10-07-bug367-persona-contract-peeling.md, 2026-10-07-direction-a-paradigm-library-design.md) | 0 reads | ~2234 tok |
+| 22:05 | 用户质疑横城单源太少→盘点发现语料池 41 份（~6M chars，planning~17/project9/post2）+sample_entities 24 份黑名单聚合已在位；设计修订为多源对照蒸馏（aliases 归一/成色过滤/共性≥60%/差异化保留），开放问题1关闭，提交 1cccc8f1 | docs/vibe/2026-10-07-direction-a-paradigm-library-design.md | 修订已提交 | ~25k |
+| 20:57 | Session end: 2 writes across 2 files (2026-10-07-bug367-persona-contract-peeling.md, 2026-10-07-direction-a-paradigm-library-design.md) | 0 reads | ~2234 tok |
+| 21:05 | Session end: 2 writes across 2 files (2026-10-07-bug367-persona-contract-peeling.md, 2026-10-07-direction-a-paradigm-library-design.md) | 0 reads | ~2234 tok |
+| 23:30 | bug-366 表格修复：render_family 接 schema label（表头/键值/布尔/9 枚举值级中文化）+{{TABLE:}} 内联隔离 + planning_eia schema 补漏 20 处（含 SL2 误报 70 处根因=label 文案示例数值）；重渲染全清零 fail=0；提交 8d1a13a2 | build_output.py/planning_eia.json | 已提交 | ~60k |
+| 21:33 | Session end: 2 writes across 2 files (2026-10-07-bug367-persona-contract-peeling.md, 2026-10-07-direction-a-paradigm-library-design.md) | 0 reads | ~2234 tok |
+
+## Session: 2026-10-07 21:40
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:48 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/paradigms/opener.md | — | ~403 |
+| 21:48 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/paradigms/baseline.md | — | ~394 |
+| 21:48 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/paradigms/opener.md | 2→2 lines | ~29 |
+| 21:48 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/paradigms/opener.md | 6→6 lines | ~46 |
+| 21:48 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/paradigms/baseline.md | 2→2 lines | ~30 |
+| 21:48 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/paradigms/baseline.md | inline fix | ~22 |
+| 21:49 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/paradigms/analysis.md | — | ~452 |
+| 21:49 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/paradigms/measures.md | — | ~403 |
+| 21:51 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/paradigms/baseline.md | 2→2 lines | ~31 |
+| 21:51 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/paradigms/measures.md | inline fix | ~31 |
+| 21:52 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | 5→6 lines | ~121 |
+| 21:52 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | 1→2 lines | ~34 |
+| 21:52 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | "references/chapter_exampl" → "references/paradigms/<rol" | ~49 |
+| 22:01 | Edited docs/vibe/2026-10-07-direction-a-paradigm-library-design.md | 16→16 lines | ~259 |
+| 22:02 | Edited docs/vibe/2026-10-07-direction-a-paradigm-library-design.md | reduced (-24 lines) | ~119 |
+| 22:02 | Edited docs/vibe/2026-10-07-direction-a-paradigm-library-design.md | expanded (+10 lines) | ~363 |
+| 22:03 | Edited docs/vibe/2026-10-07-direction-a-paradigm-library-design.md | expanded (+7 lines) | ~281 |
+| 22:03 | Edited docs/vibe/2026-10-07-direction-a-paradigm-library-design.md | 5→5 lines | ~91 |
+| 22:04 | Edited docs/develop-guides/changelog.md | 3→5 lines | ~371 |
+| 22:40 | 范式库P0完成：_roles.json(77节4角色)+4范式文件(5源蒸馏去实体化)+SKILL.md契约注入；A1专名扫描0命中/A2 ch6_S02 mock×2残留0实体0；实证linkage降段级；bug-368记档未修；f7724f56 | references/paradigms/*, SKILL.md, 设计文档, changelog | PASS(2项) | ~95k |
+| 22:05 | Session end: 19 writes across 7 files (opener.md, baseline.md, analysis.md, measures.md, SKILL.md) | 8 reads | ~31132 tok |
+| 22:08 | Edited docs/vibe/2026-10-07-direction-a-paradigm-library-design.md | inline fix | ~45 |
+| 22:55 | 用户裁决 A4 接受现状：analysis.md ~1200 tokens 超预算 50% 不瘦身，落设计文档 §10 | 设计文档 | 已提交 | ~3k |
+| 22:09 | Session end: 20 writes across 7 files (opener.md, baseline.md, analysis.md, measures.md, SKILL.md) | 8 reads | ~31180 tok |
+| 22:17 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | 1→2 lines | ~55 |
+| 22:20 | Edited docs/develop-guides/changelog.md | inline fix | ~81 |
+| 23:40 | bug-368修复：5 stage要素链162处英文列键→中文列名+人格条款④英文裸键禁令；裸键残留门实测否决（附录89处合法机器词会误伤）；重派验证正文英文词0 | stages/*.json, SKILL.md, changelog | PASS | ~60k |
+| 22:20 | Session end: 22 writes across 7 files (opener.md, baseline.md, analysis.md, measures.md, SKILL.md) | 8 reads | ~31324 tok |
+
+## Session: 2026-10-07 22:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:45 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_build_output_bug393.py | — | ~349 |
+| 22:47 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | modified _md_table() | ~187 |
+| 22:47 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | 2→3 lines | ~41 |
+| 22:48 | Created ../../Users/Lenovo/AppData/Local/Temp/fix393_labels.py | — | ~775 |
+| 22:49 | Edited ../../Users/Lenovo/AppData/Local/Temp/fix393_labels.py | 4→4 lines | ~53 |
+| 22:49 | Edited ../../Users/Lenovo/AppData/Local/Temp/fix393_labels.py | modified items() | ~154 |
+| 22:51 | Created ../../Users/Lenovo/AppData/Local/Temp/fix393_report.py | — | ~466 |
+| 22:55 | Edited docs/develop-guides/changelog.md | inline fix | ~150 |
+| 22:55 | bug-393 裂表修复：stage 28 组 label 竖线枚举→/ + _md_table 表头硬FAIL/数据转义 + 交付稿补丁 510+8 处复扫归零 + 同步运行栈两副本 | stages/*.json, build_output.py, test_build_output_bug393.py, changelog | fixed | ~85k |
+| 22:56 | Session end: 8 writes across 5 files (test_build_output_bug393.py, build_output.py, fix393_labels.py, fix393_report.py, changelog.md) | 3 reads | ~37009 tok |
+| 23:19 | Created ../../Users/Lenovo/AppData/Local/Temp/fix394_labels.py | — | ~756 |
+| 23:20 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | added 1 import(s) | ~36 |
+| 23:21 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | 3→5 lines | ~86 |
+| 23:21 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | modified render_family() | ~673 |
+| 23:22 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | modified items() | ~212 |
+| 23:22 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | modified make_inject() | ~188 |
+
+## Session: 2026-10-07 23:24
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:25 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | modified _assign_table_numbers() | ~498 |
+| 23:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | modified _validate_table_placement() | ~352 |
+| 23:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | modified enumerate() | ~249 |
+| 23:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | 5→7 lines | ~130 |
+| 23:27 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | 16→19 lines | ~298 |
+| 23:27 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | expanded (+9 lines) | ~212 |
+| 23:28 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_build_output_bug394.py | — | ~1271 |
+| 23:29 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | modified enumerate() | ~87 |
+| 23:29 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_build_output_bug394.py | modified test_kv_caption_numbered() | ~194 |
+| 23:30 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_build_output_bug394.py | modified test_writer_caption_merged() | ~48 |
+| 23:30 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_build_output_bug394.py | modified test_writer_caption_merged() | ~37 |
+| 23:31 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_build_output_bug394.py | expanded (+11 lines) | ~110 |
+| 23:32 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | modified _assign_table_numbers() | ~487 |
+| 23:32 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | added 1 condition(s) | ~98 |
+| 23:32 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_build_output_bug394.py | modified test_prose_line_not_matched() | ~235 |
+| 23:33 | Created ../../Users/Lenovo/AppData/Local/Temp/scan394.py | — | ~464 |
+| 23:34 | Created ../../Users/Lenovo/AppData/Local/Temp/fix394_drafts.py | — | ~1536 |
+| 23:41 | Created ../../Users/Lenovo/AppData/Local/Temp/fix394_drafts2.py | — | ~1096 |
+| 23:47 | Created ../../Users/Lenovo/AppData/Local/Temp/diag394.py | — | ~429 |
+| 23:48 | Created ../../Users/Lenovo/AppData/Local/Temp/fix394_drafts3.py | — | ~1148 |
+| 23:49 | Edited ../../Users/Lenovo/AppData/Local/Temp/fix394_drafts3.py | 12→9 lines | ~130 |
+| 23:49 | Edited ../../Users/Lenovo/AppData/Local/Temp/fix394_drafts3.py | format() → replace() | ~122 |
+| 23:51 | Created ../../Users/Lenovo/AppData/Local/Temp/dump394.py | — | ~141 |
+| 23:53 | Created ../../Users/Lenovo/AppData/Local/Temp/dump394b.py | — | ~156 |
+| 23:55 | Created ../../Users/Lenovo/AppData/Local/Temp/fix394_final.py | — | ~1463 |
+| 23:56 | Created ../../Users/Lenovo/AppData/Local/Temp/fix394_final.py | — | ~1447 |
+| 23:59 | Created ../../Users/Lenovo/AppData/Local/Temp/verify394.py | — | ~595 |
+| 23:59 | Created ../../Users/Lenovo/AppData/Local/Temp/find_uncap.py | — | ~174 |
+| 00:00 | Created ../../Users/Lenovo/AppData/Local/Temp/refcheck394.py | — | ~345 |
+| 00:04 | bug-394 表格编号/摆位体系落地：build_output 占位表题+章内落号+摆位门、SKILL 纪律、5 stage 147 族 label、test 草稿三轮 LLM+确定性修复、重建交付稿 1128 表全带号、14 测试过、运行时两路同步 | build_output.py SKILL.md stages/*.json tests/test_build_output_bug394.py | 完成 |
+| 00:05 | Session end: 29 writes across 14 files (build_output.py, SKILL.md, test_build_output_bug394.py, scan394.py, fix394_drafts.py) | 4 reads | ~34734 tok |
+| 07:02 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/consistency.py | 2→2 lines | ~55 |
+| 07:03 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_consistency_bug395.py | — | ~511 |
+| 07:06 | bug-395 NR1 表号声明正则兼容粗体表题行，warn 13→12，4 例回归测试 | consistency.py tests/test_consistency_bug395.py | 完成 |
+| 07:08 | Session end: 31 writes across 16 files (build_output.py, SKILL.md, test_build_output_bug394.py, scan394.py, fix394_drafts.py) | 5 reads | ~35300 tok |
+| 07:13 | Created ../../Users/Lenovo/AppData/Local/Temp/ch6_S05.md | — | ~324 |
+| 07:14 | Created ../../Users/Lenovo/AppData/Local/Temp/verify_page.py | — | ~707 |
+| 07:15 | bug-394/395 页面验证：按 SKILL 契约重写 ch6_S05（point_level 缺数走[待确认]），单章门一次过，全书重建后四项检查全绿（表 6-90..6-93/裂表 0/残留 0/摆位 0/槽位残留 0），验证台 /tmp/verify394 | /tmp（容器）| 完成 |
+| 07:15 | Session end: 33 writes across 18 files (build_output.py, SKILL.md, test_build_output_bug394.py, scan394.py, fix394_drafts.py) | 6 reads | ~36354 tok |
+| 07:21 | Session end: 33 writes across 18 files (build_output.py, SKILL.md, test_build_output_bug394.py, scan394.py, fix394_drafts.py) | 6 reads | ~36354 tok |
+| 07:37 | Created docs/vibe/2026-10-08-kf-refactor-direction-from-skill-testing.md | — | ~939 |
+| 07:37 | 知识工厂重构方向落档 docs/vibe（薄弱点→加工产物→方向+验收） | docs/vibe/2026-10-08-kf-refactor-direction-from-skill-testing.md | 完成 |
+| 07:38 | Session end: 34 writes across 19 files (build_output.py, SKILL.md, test_build_output_bug394.py, scan394.py, fix394_drafts.py) | 6 reads | ~37360 tok |
+
+## Session: 2026-10-07 07:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:48 | Created ../../Users/Lenovo/AppData/Local/Temp/kf_probe.py | — | ~662 |
+| 07:50 | Session end: 1 writes across 1 files (kf_probe.py) | 0 reads | ~662 tok |
+| 10:37 | Session end: 1 writes across 1 files (kf_probe.py) | 0 reads | ~662 tok |
+| 10:42 | Session end: 1 writes across 1 files (kf_probe.py) | 0 reads | ~662 tok |
+| 10:45 | Session end: 1 writes across 1 files (kf_probe.py) | 0 reads | ~662 tok |
+| 10:50 | Session end: 1 writes across 1 files (kf_probe.py) | 0 reads | ~662 tok |
+| 10:54 | Session end: 1 writes across 1 files (kf_probe.py) | 0 reads | ~662 tok |
+| 10:58 | Session end: 1 writes across 1 files (kf_probe.py) | 0 reads | ~662 tok |
+| 10:59 | Created docs/superpowers/specs/2026-10-08-coal-eia-writer-hardening-design.md | — | ~1838 |
+| 11:00 | Edited docs/superpowers/specs/2026-10-08-coal-eia-writer-hardening-design.md | inline fix | ~36 |
+| 11:00 | Created ../../Users/Lenovo/AppData/Local/Temp/spec_commit_msg.txt | — | ~89 |
+| 16:20 | coal-eia-writer 部分一优化 spec 落档（方案B：语料驱动全量加工，L0-L3）| docs/superpowers/specs/2026-10-08-coal-eia-writer-hardening-design.md | committed 68172c16 | ~3.5k |
+| 11:02 | Session end: 4 writes across 3 files (kf_probe.py, 2026-10-08-coal-eia-writer-hardening-design.md, spec_commit_msg.txt) | 0 reads | ~2765 tok |
+| 11:11 | Created docs/superpowers/plans/2026-10-08-coal-eia-writer-hardening.md | — | ~9667 |
+| 11:12 | Created ../../Users/Lenovo/AppData/Local/Temp/plan_commit_msg.txt | — | ~112 |
+| 16:55 | coal-eia-writer 部分一实施计划落档（11 任务 TDD）| docs/superpowers/plans/2026-10-08-coal-eia-writer-hardening.md | committed | ~7k |
+| 11:12 | Session end: 6 writes across 5 files (kf_probe.py, 2026-10-08-coal-eia-writer-hardening-design.md, spec_commit_msg.txt, 2026-10-08-coal-eia-writer-hardening.md, plan_commit_msg.txt) | 0 reads | ~13243 tok |
+| 11:15 | Session end: 6 writes across 5 files (kf_probe.py, 2026-10-08-coal-eia-writer-hardening-design.md, spec_commit_msg.txt, 2026-10-08-coal-eia-writer-hardening.md, plan_commit_msg.txt) | 3 reads | ~13243 tok |
+| 11:22 | Session end: 6 writes across 5 files (kf_probe.py, 2026-10-08-coal-eia-writer-hardening-design.md, spec_commit_msg.txt, 2026-10-08-coal-eia-writer-hardening.md, plan_commit_msg.txt) | 3 reads | ~13243 tok |
+| 11:27 | Session end: 6 writes across 5 files (kf_probe.py, 2026-10-08-coal-eia-writer-hardening-design.md, spec_commit_msg.txt, 2026-10-08-coal-eia-writer-hardening.md, plan_commit_msg.txt) | 3 reads | ~13243 tok |
+| 11:32 | qualrev Task1 schema_linter 代码质量复审：diff+全文+真实5stage冒烟（L2存量9条/L1全0），嵌套fields为字符串列不属L1范围；Approved | backend/.../coal-eia-writer/scripts/schema_linter.py, tests/test_schema_linter.py | Approved | ~9k |
+| 11:33 | Edited docs/superpowers/specs/2026-10-08-coal-eia-writer-hardening-design.md | 3→3 lines | ~41 |
+| 11:35 | Session end: 7 writes across 5 files (kf_probe.py, 2026-10-08-coal-eia-writer-hardening-design.md, spec_commit_msg.txt, 2026-10-08-coal-eia-writer-hardening.md, plan_commit_msg.txt) | 5 reads | ~13287 tok |
+| 11:44 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_schema_linter.py | added 1 import(s) | ~37 |
+| 11:44 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_schema_linter.py | modified test_l3_numeric_missing_unit() | ~1584 |
+| 11:45 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/schema_linter.py | — | ~1608 |
+| 11:49 | Task2 schema_linter L3/L4/L5+CLI TDD 实装+5stage 实跑(28 违规) | schema_linter.py,test_schema_linter.py | 0e4ac16b 9 passed | ~40k |
+| 11:51 | Session end: 10 writes across 7 files (kf_probe.py, 2026-10-08-coal-eia-writer-hardening-design.md, spec_commit_msg.txt, 2026-10-08-coal-eia-writer-hardening.md, plan_commit_msg.txt) | 6 reads | ~16516 tok |
+| 12:05 | qualrev T2: 0e4ac16b 对照 spec/plan 逐项核验——9/9 容器复跑过、5-stage 实跑复现(total28, planning_eia L1=0/L2=3)、KeyError 偏离实证为真、边界/规范/bug-396 均合规 | schema_linter.py, test_schema_linter.py | spec-compliant |
+| 11:59 | Session end: 10 writes across 7 files (kf_probe.py, 2026-10-08-coal-eia-writer-hardening-design.md, spec_commit_msg.txt, 2026-10-08-coal-eia-writer-hardening.md, plan_commit_msg.txt) | 6 reads | ~16516 tok |
+| 12:08 | finalrev T2 代码质量复审：diff+两文件全文+真实5stage复跑(total28吻合)+容器9/9复跑(docker cp法)+词表/旁挂键真实数据清点 | schema_linter.py,test_schema_linter.py | Approved(1 Important+6 Minor) | ~30k |
+| 12:15 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/schema_linter.py | modified is_dir() | ~126 |
+| 12:15 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_schema_linter.py | modified test_lint_stage_missing_file_raises() | ~122 |
+| 12:16 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_schema_linter.py | added 1 import(s) | ~67 |
+| 19:05 | Task2 双审通过+I1 空扫描守卫小修（10 passed）| schema_linter.py | committed | ~1k |
+| 12:17 | Session end: 13 writes across 7 files (kf_probe.py, 2026-10-08-coal-eia-writer-hardening-design.md, spec_commit_msg.txt, 2026-10-08-coal-eia-writer-hardening.md, plan_commit_msg.txt) | 6 reads | ~18439 tok |
+| 12:18 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_prepare_corpus.py | — | ~398 |
+| 12:21 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | — | ~1644 |
+| 12:22 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_prepare_corpus.py | 3→3 lines | ~50 |
+| 12:22 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_prepare_corpus.py | "## 6.5 声环境影响评价" → "## 6.5 " | ~32 |
+| 12:22 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | 1→2 lines | ~52 |
+| 12:24 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | inline fix | ~24 |
+| 12:24 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | 5→6 lines | ~69 |
+| 12:24 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_prepare_corpus.py | 2→1 lines | ~17 |
+| 12:24 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_prepare_corpus.py | inline fix | ~30 |
+| 12:25 | Task3 prepare_corpus.py docx->md 转换器 TDD（4 测试过，修正任务书 fixture 两处缺陷 + rid 保留 CJK 防空串，commit cec726ec） | coal-eia-writer/scripts/prepare_corpus.py + tests/test_prepare_corpus.py | DONE | ~40k |
+| 12:27 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | 4→6 lines | ~108 |
+| 12:28 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | modified make_rid() | ~119 |
+| 12:28 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | 6→3 lines | ~39 |
+| 12:29 | Session end: 25 writes across 9 files (kf_probe.py, 2026-10-08-coal-eia-writer-hardening-design.md, spec_commit_msg.txt, 2026-10-08-coal-eia-writer-hardening.md, plan_commit_msg.txt) | 7 reads | ~22687 tok |
+| 12:37 | rv-t3 specrev: Task3(cec726ec+c269d6f7) 审查——5 测试容器复跑通过, rid 契约实证 OK; 发现 strip_toc 在 docx_to_md 组合管线双重失效(promote 先行+
+
+ 断行), 真实语料 101 目录行成标题→bank_compile 重复章号整份跳过 | prepare_corpus.py | bug found, reported | ~30k |
+| 12:39 | Session end: 25 writes across 9 files (kf_probe.py, 2026-10-08-coal-eia-writer-hardening-design.md, spec_commit_msg.txt, 2026-10-08-coal-eia-writer-hardening.md, plan_commit_msg.txt) | 8 reads | ~31750 tok |
+| 12:40 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_prepare_corpus.py | modified test_strip_toc_blank_line_gap() | ~226 |
+| 12:42 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | len() → strip() | ~218 |
+| 12:42 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | 1→2 lines | ~35 |
+| 12:42 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | 3→4 lines | ~53 |
+| 12:47 | Task3 审查修复：strip_toc 先剔后升+空行容忍（bug-398 A1/A2），端到端目录清零；新发现第三层正文列表段误升待决策，commit df994e7d | coal-eia-writer/scripts/prepare_corpus.py + tests | DONE_WITH_CONCERNS | ~35k |
+| 12:49 | Session end: 29 writes across 9 files (kf_probe.py, 2026-10-08-coal-eia-writer-hardening-design.md, spec_commit_msg.txt, 2026-10-08-coal-eia-writer-hardening.md, plan_commit_msg.txt) | 8 reads | ~32383 tok |
+| 12:49 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_prepare_corpus.py | modified test_promote_headings() | ~265 |
+| 12:50 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | 3→4 lines | ~58 |
+| 12:50 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | modified promote_headings() | ~203 |
+| 13:05 | Task3 启发式落地（controller 决策）：列表段不升级+顿号豁免，8 测试过，端到端 33 重复片待 Task 4 兜底；发现书名号真标题误杀 3 条待决策，commit 后续见 log | coal-eia-writer/scripts/prepare_corpus.py + tests | DONE_WITH_CONCERNS | ~28k |
+
+## Session: 2026-10-08 12:55
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:59 | qualrev-t3: prepare_corpus.py 代码质量审查（bb773669..c3401c4f）——8 测试直接执行全过，strip_toc EOF 边界手工验证正确，Approved 无 Critical/Important | prepare_corpus.py, test_prepare_corpus.py | Approved | ~40k |
+| 13:00 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | 3→4 lines | ~47 |
+| 13:00 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | modified is_file() | ~105 |
+| 13:00 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_prepare_corpus.py | modified test_strip_toc_two_run_kept() | ~151 |
+| 13:10 | Task 3 质量审查 Approved→Minor 1/2/3a 直修+census 告警+EOF 测试 9 passed→58308253；bug-400 | prepare_corpus.py/test_prepare_corpus.py | Task 3 闭环 |
+| 13:15 | Task 4 实跑启动（41 docx→corpus-workdir，后台）；cerebrum 记容器名变更 | .wolf/corpus-workdir | 进行中 |
+| 13:05 | Session end: 3 writes across 2 files (prepare_corpus.py, test_prepare_corpus.py) | 1 reads | ~303 tok |
+| 13:11 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | 4→5 lines | ~68 |
+| 13:11 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | modified is_policy_conform_title() | ~354 |
+| 13:12 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_prepare_corpus.py | modified test_promote_headings_booktitle_conform() | ~217 |
+| 13:40 | Task 4 完成：37/41 转换（4 跳过具名）→ 书名号 80 条统计→豁免修复 fbf0e9ea（残留 1）→ 抽查 3 份全绿 → manifest 31 定稿（17/5/6/2/1）+ 029=tracking 修正 spec§八 | .wolf/corpus-workdir/ | bug-401 |
+| 13:25 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_bank_compile.py | — | ~710 |
+| 13:26 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_bank_compile.py | — | ~711 |
+| 13:27 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | modified slice_report() | ~529 |
+| 13:27 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 9→8 lines | ~116 |
+| 13:28 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_bank_compile.py | 5→7 lines | ~112 |
+| 14:20 | Task 5 完成：bank_compile 31/31 编译 477 片/5 组——重复章号守卫改保留最长块（c5e1f3c4 裁决反转）+ TDD 4 用例；切片/SL3 池/depth_targets 入库 8756b149（960 文件，tracking 池意外就位） | references/{samples,samples_bank,depth_targets} | 028-r 有 ch0/ch0101 噪声片（已知） |
+| 13:32 | Session end: 11 writes across 4 files (prepare_corpus.py, test_prepare_corpus.py, test_bank_compile.py, bank_compile.py) | 3 reads | ~7167 tok |
+| 13:33 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_bank_compile_aggregate.py | — | ~324 |
+| 13:33 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | added 1 import(s) | ~36 |
+| 13:33 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | modified _aggregate_depth_targets() | ~399 |
+| 13:33 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 5→10 lines | ~155 |
+| 13:33 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 11→14 lines | ~231 |
+| 13:36 | Task6 bank_compile 聚合 per 矿种→stage 级 depth_targets（TDD：先败后过，容器 15 passed，E2E 5 行 AGGREGATED，ch6 抽查 34806 一致），commit 929d5323 | bank_compile.py, tests/test_bank_compile_aggregate.py | DONE | ~4k |
+| 15:00 | Task 6 实现者 DONE 929d5323（15 passed，端到端 5×AGGREGATED）→ spec 审查派出；Task 9 编码半项核销：data_expectations.json 实测无乱码（计划描述过时），references 全 JSON 扫描零编码损伤 | references/data_expectations.json | Task 9 缩为 SKILL.md 轻改 |
+| 13:39 | Session end: 16 writes across 5 files (prepare_corpus.py, test_prepare_corpus.py, test_bank_compile.py, bank_compile.py, test_bank_compile_aggregate.py) | 3 reads | ~8312 tok |
+| 13:46 | Session end: 16 writes across 5 files (prepare_corpus.py, test_prepare_corpus.py, test_bank_compile.py, bank_compile.py, test_bank_compile_aggregate.py) | 3 reads | ~8811 tok |
+| 13:49 | 代码质量审查 929d5323（bank_compile 聚合）：读 diff+全文+测试，核 build_output 消费形状 | bank_compile.py, tests/test_bank_compile_aggregate.py | 报告 0 Critical/2 Important/4 Minor，Needs fixes | ~18k |
+| 13:52 | Session end: 16 writes across 5 files (prepare_corpus.py, test_prepare_corpus.py, test_bank_compile.py, bank_compile.py, test_bank_compile_aggregate.py) | 3 reads | ~8811 tok |
+| 13:52 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_bank_compile_aggregate.py | — | ~669 |
+| 13:53 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | modified _aggregate_depth_targets() | ~400 |
+| 13:53 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 5→6 lines | ~82 |
+| 13:54 | Task6 审查修复：聚合去 generated 守幂等/AGGREGATED 计数不虚报/glob 单次收集/删死守卫/coefficient 直取，TDD 17 passed，E2E 5 行 (N chapters)，ch6=34806 不变 | bank_compile.py, tests/test_bank_compile_aggregate.py | DONE | ~4k |
+| 13:55 | Session end: 19 writes across 5 files (prepare_corpus.py, test_prepare_corpus.py, test_bank_compile.py, bank_compile.py, test_bank_compile_aggregate.py) | 3 reads | ~9962 tok |
+| 14:05 | 复审 335da1c7（聚合审查修复）：逐项核对 6 项 + 容器 /tmp/pc_t 复跑 17 passed | bank_compile.py, tests/test_bank_compile_aggregate.py | 6/6 落地，无新问题，Approved | ~6k |
+| 15:40 | Task 6 闭环：929d5323→审查 Needs fixes→335da1c7 修复（17 passed，去 generated 守幂等/AGGREGATED 不虚报）→Approved；产物 405c3abd（手维 13 章换 37 章标定，ch6 47300→34806） | bank_compile.py/depth_targets | 幂等裁决约束 T7/T8 |
+| 14:00 | Session end: 19 writes across 5 files (prepare_corpus.py, test_prepare_corpus.py, test_bank_compile.py, bank_compile.py, test_bank_compile_aggregate.py) | 3 reads | ~9252 tok |
+| 14:01 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_bank_compile_forms.py | — | ~405 |
+| 14:02 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 2→5 lines | ~110 |
+| 14:02 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | modified classify_table_lead() | ~842 |
+| 14:02 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 3→4 lines | ~67 |
+| 14:02 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 5→6 lines | ~62 |
+| 14:02 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | expanded (+6 lines) | ~207 |
+| 14:03 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 3→6 lines | ~101 |
+| 18:57 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_bank_compile_forms.py | — | ~497 |
+
+## Session: 2026-10-08 19:02
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:10 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 3→4 lines | ~60 |
+| 19:10 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 5→7 lines | ~118 |
+| 19:10 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | inline fix | ~24 |
+| 19:11 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_bank_compile_forms.py | modified test_classify_table_lead() | ~381 |
+| 19:40 | Task 7 收尾：CAPTION_LINE_RE 补章内号 N.M-M（语料 96.6% 主流形态，bug-402）+ 例句池按形态配额各 20；56 passed + e2e 幂等 sha256 一致，提交 50d8779e | bank_compile.py, test_bank_compile_forms.py, forms_catalog.json | done | ~35k |
+| 19:26 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_bank_compile_expectations.py | — | ~843 |
+| 19:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 3→7 lines | ~122 |
+| 19:27 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | expanded (+8 lines) | ~152 |
+| 19:27 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | modified extract_sec_texts() | ~800 |
+| 19:27 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | modified items() | ~142 |
+| 19:27 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 2→3 lines | ~80 |
+| 19:28 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | modified items() | ~337 |
+| 19:29 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | modified _map_caliber() | ~137 |
+| 19:29 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | modified finditer() | ~279 |
+| 19:30 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | inline fix | ~16 |
+| 19:33 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 6→7 lines | ~100 |
+| 19:33 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_bank_compile_expectations.py | modified test_quantity_re_nfkc_unit_forms() | ~137 |
+| 19:37 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_bank_compile_expectations.py | 2→1 lines | ~25 |
+| 19:37 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 2→4 lines | ~56 |
+| 20:35 | Task 8 inline：extract_sec_texts+build_section_expectations（per stage 文件裁决、NFKC 单位 bug-404、后缀滚动归并、节号 int 元组序）；62 passed+双跑 sha256 幂等，提交 ba6f11cd | bank_compile.py, test_bank_compile_expectations.py, section_expectations/*.json | done | ~60k |
+| 19:43 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | 2→4 lines | ~115 |
+| 19:43 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | 1→2 lines | ~81 |
+| 19:43 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | 1→4 lines | ~59 |
+| 19:44 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | reduced (-6 lines) | ~118 |
+| 20:52 | Task 9：SKILL.md 三处轻改+正文人格段去重（forms_catalog/section_expectations 消费契约、写前对账、行文形态），提交 f013d69b | SKILL.md | done | ~15k |
+
+## Session: 2026-10-08 19:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:46 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_gates_systematic.py | — | ~1619 |
+| 19:47 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_gates_systematic.py | 4→5 lines | ~84 |
+| 19:47 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_gates_systematic.py | modified raises() | ~52 |
+| 19:47 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_gates_systematic.py | 1→3 lines | ~39 |
+| 21:30 | 会话收束：Task 7-11 全部完成（50d8779e..c2ed8e40 共 5 提交），68 passed，运行栈验收三基准达成（SL3 消除/XS2 持平/fail 0），changelog 已记 | SKILL.md, bank_compile.py, section_expectations/, test_gates_systematic.py, changelog.md | done | ~40k |
+| 19:59 | Session end: 4 writes across 1 files (test_gates_systematic.py) | 7 reads | ~1794 tok |
+| 19:59 | Session end: 4 writes across 1 files (test_gates_systematic.py) | 7 reads | ~1794 tok |
+| 20:11 | Edited web/src/views/DomainFactoryView.vue | inline fix | ~32 |
+| 20:11 | Edited web/src/views/DomainFactoryView.vue | expanded (+10 lines) | ~121 |
+| 20:11 | Edited web/src/views/DomainFactoryView.vue | CSS: component, LayoutGrid | ~239 |
+| 20:11 | Edited web/src/views/DomainFactoryView.vue | CSS: flex-wrap | ~43 |
+| 20:12 | Edited web/src/views/DomainFactoryView.vue | reduced (-26 lines) | ~457 |
+| 20:22 | Session end: 9 writes across 2 files (test_gates_systematic.py, DomainFactoryView.vue) | 8 reads | ~2748 tok |
+| 20:30 | 会话：hero 右侧流水线四卡（上传/AI提取/专家审核/入库）→ 应用入口磁贴（环评域/矿井域/更多，写死示例+点击占位提示，用户拍板 B 方案）；ChevronRight 未 import 潜伏警告随之消除 | web/src/views/DomainFactoryView.vue | done，待 sync-dev+eslint 验证 | ~6k |
+
+## Session: 2026-10-08 20:47
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:21 | Created docs/vibe/2026-10-08-corpus-meta-and-attachment-checklist.md | — | ~686 |
+| 21:23 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_corpus_meta.py | — | ~1410 |
+| 21:23 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_corpus_meta.py | 2→2 lines | ~40 |
+| 21:25 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | — | ~2350 |
+| 21:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | 3→3 lines | ~35 |
+| 21:28 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | "^附\s*[录件]\s*\d{1,3}\s*[:：" → "^附\s*[录件]\s*\d{1,3}(?:\s*" | ~22 |
+| 21:28 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_corpus_meta.py | modified test_extract_annex_items_two_forms() | ~118 |
+| 21:31 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | 1→2 lines | ~50 |
+| 21:31 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | modified normalize_item() | ~50 |
+| 21:32 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_corpus_meta.py | modified test_normalize_item_strips_docno_and_punct() | ~136 |
+| 21:43 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | modified build_corpus_meta() | ~411 |
+| 21:43 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_corpus_meta.py | modified test_corpus_meta_aggregates_slices() | ~153 |
+| 21:44 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/samples_bank/corpus_meta_annotations.json | — | ~213 |
+| 21:45 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_corpus_meta.py | 8→6 lines | ~34 |
+| 21:45 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_corpus_meta.py | inline fix | ~28 |
+| 21:46 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | 1→3 lines | ~129 |
+| 21:46 | Edited docs/develop-guides/changelog.md | modified feat() | ~285 |
+| 20:50 | 对比审查 eia-skill2rag.md vs 技能（RAG 中心 vs 门禁中心，缺口=知识层/时效/引用门/评测） | docs/design/eia-skill2rag.md | 已答复 | ~9k |
+| 21:30 | §九样例价值分析+行动序获批（可以）→ 落 corpus_meta+attachment_checklist（vibe 文档先行） | docs/vibe/2026-10-08-corpus-meta-and-attachment-checklist.md | 需求文档就位 | ~4k |
+| 22:05 | corpus_meta.py TDD：8 测试+实现；修逐片覆盖 bug-405 与附录空格形态/5位标准号；31/31 省名自动命中；annotations 18 条；幂等 sha256 一致；回归 76 passed | scripts/corpus_meta.py 等 5 文件 | 完成 | ~35k |
+| 21:49 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | modified items() | ~63 |
+| 22:40 | 提交链修正（amend 误落 docs 提交）→ feat 551c9874（6 文件含 newline 修正）+ docs 10f2aa44（changelog）；产物 LF 字节对齐 HEAD | scripts/corpus_meta.py 等 | 完成 | ~8k |
+| 21:53 | Session end: 18 writes across 6 files (2026-10-08-corpus-meta-and-attachment-checklist.md, test_corpus_meta.py, corpus_meta.py, corpus_meta_annotations.json, SKILL.md) | 2 reads | ~14453 tok |
+| 22:58 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 2→7 lines | ~122 |
+| 22:58 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | modified _map_caliber() | ~189 |
+| 22:58 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | modified finditer() | ~769 |
+| 22:58 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 3→5 lines | ~113 |
+| 22:59 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_bank_compile_expectations.py | modified test_sections_sorted_deterministic() | ~747 |
+| 22:59 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_bank_compile_expectations.py | 3→2 lines | ~37 |
+| 23:02 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~62 |
+| 23:02 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~72 |
+| 23:02 | Created docs/vibe/2026-10-08-value-range-guardrails.md | — | ~447 |
+| 23:04 | Edited docs/develop-guides/changelog.md | modified feat() | ~231 |
+| 23:30 | 数值区间护栏 P5-P95：v1.1 机制+4 测试（80 passed）+SKILL.md warn 契约；实测零发布（强度类 644 组 580 组 n=1），天花板与激活路径留痕待裁决 | bank_compile.py 等 8 文件 | 完成(机制)/待裁决(激活) | ~28k |
+| 23:06 | Session end: 28 writes across 9 files (2026-10-08-corpus-meta-and-attachment-checklist.md, test_corpus_meta.py, corpus_meta.py, corpus_meta_annotations.json, SKILL.md) | 3 reads | ~24053 tok |
+
+## Session: 2026-10-08 23:17
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:20 | 路径B候选清单拉全: 94组n>=2, 三分类(measure 32/site 18/junk 46), range_ready=6, 存guardrail_candidates.json | .wolf/corpus-workdir/guardrail_candidates.json | OK | ~3k |
+| 23:59 | 数据集普查工作流(9 agent): 20数据集+3脚本族, 存档+设计发现5条 | .wolf/corpus-census/dataset-census-2026-10-08.json | OK | ~15k |
+
+## Session: 2026-10-08 00:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:38 | Created backend/package/yuxi/services/eia_data_service.py | — | ~4126 |
+| 00:38 | Edited backend/package/yuxi/services/eia_data_service.py | modified _layer_items() | ~64 |
+| 00:38 | Edited backend/package/yuxi/services/eia_data_service.py | inline fix | ~17 |
+| 00:40 | Created backend/test/unit/test_eia_data_service.py | — | ~649 |
+| 00:40 | Edited backend/package/yuxi/services/eia_data_service.py | modified _skill_root_exists() | ~30 |
+| 00:41 | Edited backend/package/yuxi/services/eia_data_service.py | inline fix | ~62 |
+| 00:41 | Edited backend/package/yuxi/services/eia_data_service.py | 6→8 lines | ~152 |
+| 00:42 | Edited backend/package/yuxi/services/eia_data_service.py | modified t() | ~37 |
+| 00:42 | Edited backend/package/yuxi/services/eia_data_service.py | modified items() | ~58 |
+| 00:42 | Edited backend/package/yuxi/services/eia_data_service.py | 15→14 lines | ~141 |
+| 00:42 | Edited backend/package/yuxi/services/eia_data_service.py | modified items() | ~93 |
+| 00:42 | Edited backend/package/yuxi/services/eia_data_service.py | 8→7 lines | ~60 |
+| 00:42 | Edited backend/package/yuxi/services/eia_data_service.py | modified values() | ~199 |
+| 00:44 | Edited backend/package/yuxi/services/eia_data_service.py | 3→4 lines | ~52 |
+| 00:44 | Edited backend/package/yuxi/services/eia_data_service.py | 2→4 lines | ~64 |
+| 00:44 | Edited backend/package/yuxi/services/eia_data_service.py | inline fix | ~22 |
+| 00:45 | Edited backend/package/yuxi/services/eia_data_service.py | modified items() | ~118 |
+| 00:45 | Edited backend/package/yuxi/services/eia_data_service.py | 3→3 lines | ~31 |
+| 00:45 | Edited backend/package/yuxi/services/eia_data_service.py | inline fix | ~19 |
+| 00:46 | Edited backend/package/yuxi/services/eia_data_service.py | inline fix | ~33 |
+| 00:46 | Edited backend/test/unit/test_eia_data_service.py | 5→8 lines | ~99 |
+| 00:46 | Edited backend/package/yuxi/services/eia_data_service.py | inline fix | ~10 |
+| 00:46 | Edited backend/package/yuxi/services/eia_data_service.py | inline fix | ~21 |
+| 00:47 | Created web/src/apis/eia_data_api.js | — | ~82 |
+| 00:47 | Edited web/src/router/index.js | expanded (+6 lines) | ~116 |
+| 00:47 | Edited web/src/views/DomainFactoryView.vue | added 1 condition(s) | ~40 |
+| 00:47 | Created web/src/views/EiaDataView.vue | — | ~382 |
+| 00:49 | Created web/src/components/eia-data/DatasetStatsPanel.vue | — | ~4488 |
+| 00:49 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | 10→10 lines | ~87 |
+| 00:49 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | modified catch() | ~199 |
+| 00:51 | Created docs/design/eia-data-factory.md | — | ~871 |
+| 01:10 | 统计总览页全链交付并提交 0cdfea64（后端 eia_data_service+端点+单测 / 前端 EiaDataView+DatasetStatsPanel+api+路由 / 设计稿+changelog）；候选口径实证对齐普查（A30/range_ready6/total89）；DomainFactoryView 磁贴改动留工作树未提交（混用户改动） | 9 files | +1433 行 ruff 绿 | ~45000 |
+| 00:53 | Session end: 31 writes across 8 files (eia_data_service.py, test_eia_data_service.py, eia_data_api.js, index.js, DomainFactoryView.vue) | 0 reads | ~12854 tok |
+| 01:07 | Edited web/src/views/EiaDataView.vue | "lucide-vue-next" → "@lucide/vue" | ~11 |
+| 01:08 | Session end: 32 writes across 8 files (eia_data_service.py, test_eia_data_service.py, eia_data_api.js, index.js, DomainFactoryView.vue) | 0 reads | ~12866 tok |
+| 01:37 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | modified catch() | ~136 |
+| 01:38 | Session end: 33 writes across 8 files (eia_data_service.py, test_eia_data_service.py, eia_data_api.js, index.js, DomainFactoryView.vue) | 0 reads | ~13012 tok |
+
+## Session: 2026-10-09 10:36
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:19 | Created docs/vibe/2026-10-09-eia-lexicon-stack.md | — | ~1179 |
+| 11:28 | Edited backend/package/yuxi/storage/postgres/models_domain_factory.py | inline fix | ~33 |
+| 11:28 | Edited backend/package/yuxi/storage/postgres/models_domain_factory.py | modified to_dict() | ~742 |
+| 11:29 | Created backend/package/yuxi/repositories/eia_lexicon_repository.py | — | ~1146 |
+| 11:33 | Edited backend/package/yuxi/services/eia_data_service.py | modified _iter_mentions() | ~729 |
+| 11:34 | Edited backend/package/yuxi/services/eia_data_service.py | modified _iter_mentions() | ~226 |
+| 11:34 | Edited backend/package/yuxi/services/eia_data_service.py | inline fix | ~18 |
+| 11:34 | Created backend/package/yuxi/repositories/eia_lexicon_repository.py | — | ~989 |
+| 11:35 | Created backend/package/yuxi/services/eia_lexicon_service.py | — | ~4070 |
+| 11:36 | Edited backend/server/routers/domain_factory_router.py | modified get_eia_skill_stats() | ~1855 |
+| 11:36 | Edited backend/server/routers/domain_factory_router.py | added 1 import(s) | ~104 |
+| 11:37 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | modified _pctl() | ~322 |
+| 11:37 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | modified build_section_expectations() | ~336 |
+| 11:37 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 15→20 lines | ~324 |
+| 11:37 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 2→2 lines | ~46 |
+| 11:37 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | expanded (+7 lines) | ~126 |
+| 11:37 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/.gitignore | — | ~18 |
+| 11:37 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~96 |
+| 11:39 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_bank_compile_expectations.py | modified test_range_first_seen_unit_only() | ~889 |
+| 11:39 | Created backend/test/unit/test_eia_lexicon_service.py | — | ~620 |
+| 11:39 | Edited backend/test/unit/test_eia_lexicon_service.py | inline fix | ~32 |
+| 11:41 | Created backend/test/integration/api/test_eia_lexicon_flow.py | — | ~1496 |
+| 11:52 | Edited backend/package/yuxi/storage/postgres/manager.py | 3→5 lines | ~38 |
+| 11:52 | Edited backend/package/yuxi/storage/postgres/manager.py | 2→3 lines | ~59 |
+| 11:52 | Edited backend/package/yuxi/storage/postgres/manager.py | modified upgrade_business_v9_to_v10() | ~447 |
+| 11:52 | Edited backend/package/yuxi/storage_migration.py | 6→6 lines | ~67 |
+| 11:52 | Edited backend/package/yuxi/storage_migration.py | 2→5 lines | ~84 |
+| 12:02 | Created backend/test/integration/services/test_eia_lexicon_service_flow.py | — | ~1174 |
+
+## Session: 2026-10-09 12:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:06 | Edited backend/test/integration/services/test_eia_lexicon_service_flow.py | modified _clean_state() | ~92 |
+| 12:08 | Edited backend/test/integration/services/test_eia_lexicon_service_flow.py | 4→8 lines | ~139 |
+| 12:17 | Created web/src/apis/eia_lexicon_api.js | — | ~479 |
+| 12:17 | Created web/src/views/EiaLexiconView.vue | — | ~378 |
+| 12:17 | Edited web/src/router/index.js | expanded (+6 lines) | ~119 |
+| 12:19 | Created web/src/components/eia-data/LexiconPanel.vue | — | ~5076 |
+| 12:19 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | CSS: link, 0 | ~178 |
+| 12:19 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | 7→8 lines | ~135 |
+| 12:20 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | 3→6 lines | ~64 |
+| 12:20 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | inline fix | ~20 |
+| 12:20 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | 1→3 lines | ~43 |
+| 12:20 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | expanded (+18 lines) | ~93 |
+| 12:20 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | CSS: margin-left, white-space, text-decoration | ~84 |
+| 12:23 | Edited docs/develop-guides/changelog.md | modified feat() | ~340 |
+| 12:24 | Edited docs/vibe/2026-10-09-eia-lexicon-stack.md | 12→15 lines | ~253 |
+| 12:07 | 服务层集成测试 ScopeMismatch 修复（async fixture 降函数级）+ 导出断言语义修正（拆分致 materialized<range_ready 属正常） | test_eia_lexicon_service_flow.py | 1 passed |
+| 12:10 | 容器产出真实 curated 导出物（5 条，89 导入）并自清理 DB/开关/文件 | eia_lexicon_service.py | OK |
+| 12:12 | bank_compile 宿主 E2E（references 副本隔离）：v1.1 基线 0 range → curated 全跳过（forms 字段表缺口）→ 删文件重跑 ROLLBACK-IDENTICAL | bank_compile.py | E2E 过，forms 补录为遗留 |
+| 12:25 | 前端四件：eia_lexicon_api.js / EiaLexiconView.vue / LexiconPanel.vue / router 子路由 + DatasetStatsPanel 磁贴升级；容器内 eslint LINT-OK，vite 热编译干净 | web/src | LINT-OK |
+| 12:35 | changelog 新条目 + vibe 验收清单回写（含实证边界）+ 双提交 d9202684(feat)/083fb3d4(docs)；23 passed+1 skipped 终验 | changelog.md 等 | committed |
+| 12:29 | Session end: 15 writes across 8 files (test_eia_lexicon_service_flow.py, eia_lexicon_api.js, EiaLexiconView.vue, index.js, LexiconPanel.vue) | 4 reads | ~17031 tok |
+| 13:12 | Edited web/src/components/eia-data/LexiconPanel.vue | 2→3 lines | ~18 |
+| 13:12 | Edited web/src/components/eia-data/LexiconPanel.vue | CSS: a-empty, RefreshCw, margin-right | ~155 |
+| 13:12 | Edited web/src/components/eia-data/LexiconPanel.vue | expanded (+11 lines) | ~127 |
+| 13:12 | Edited web/src/components/eia-data/LexiconPanel.vue | expanded (+16 lines) | ~112 |
+| 13:14 | 用户报告词表页空列表 → 加空态引导（库空 CTA/筛选无匹配分流）+ 代执行导入 89 条 | LexiconPanel.vue | 已同步 HMR |
+| 13:15 | Session end: 19 writes across 8 files (test_eia_lexicon_service_flow.py, eia_lexicon_api.js, EiaLexiconView.vue, index.js, LexiconPanel.vue) | 4 reads | ~17472 tok |
+| 14:39 | Session end: 19 writes across 8 files (test_eia_lexicon_service_flow.py, eia_lexicon_api.js, EiaLexiconView.vue, index.js, LexiconPanel.vue) | 4 reads | ~17472 tok |
+
+## Session: 2026-10-10 08:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-10 08:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:06 | Edited docs/design/eia-data-factory.md | expanded (+11 lines) | ~171 |
+| 10:06 | Edited docs/design/eia-data-factory.md | expanded (+48 lines) | ~793 |
+| 10:07 | Created docs/vibe/2026-10-10-eia-meta-annotation.md | — | ~654 |
+| 10:09 | Edited backend/package/yuxi/storage/postgres/models_domain_factory.py | modified to_dict() | ~497 |
+| 10:09 | Edited backend/package/yuxi/storage/postgres/manager.py | 2→3 lines | ~42 |
+| 10:09 | Edited backend/package/yuxi/storage/postgres/manager.py | 5→6 lines | ~45 |
+| 10:09 | Edited backend/package/yuxi/storage/postgres/manager.py | modified upgrade_business_v10_to_v11() | ~441 |
+| 10:10 | Edited backend/package/yuxi/storage_migration.py | 6→6 lines | ~69 |
+| 10:10 | Edited backend/package/yuxi/storage_migration.py | 3→6 lines | ~101 |
+| 10:10 | Created backend/package/yuxi/repositories/eia_meta_repository.py | — | ~380 |
+| 10:10 | Created backend/package/yuxi/repositories/eia_meta_repository.py | — | ~366 |
+| 10:11 | Created backend/package/yuxi/services/eia_meta_service.py | — | ~2196 |
+| 10:12 | Edited backend/package/yuxi/services/eia_meta_service.py | 11→11 lines | ~121 |
+| 10:12 | Edited backend/package/yuxi/services/eia_meta_service.py | isoformat() → format_utc_datetime() | ~47 |
+| 10:12 | Edited backend/server/routers/domain_factory_router.py | added 1 import(s) | ~38 |
+| 10:20 | Created backend/test/unit/test_eia_meta_service.py | — | ~359 |
+| 10:21 | Created backend/test/integration/services/test_eia_meta_service_flow.py | — | ~930 |
+| 10:21 | Edited backend/test/integration/services/test_eia_meta_service_flow.py | 8→11 lines | ~165 |
+| 10:21 | Created backend/test/integration/api/test_eia_meta_flow.py | — | ~216 |
+| 10:22 | Created backend/test/integration/api/test_eia_meta_flow.py | — | ~218 |
+| 10:25 | Created web/src/apis/eia_meta_api.js | — | ~236 |
+| 10:25 | Created web/src/views/EiaMetaView.vue | — | ~375 |
+| 10:26 | Created web/src/components/eia-data/MetaPanel.vue | — | ~3680 |
+
+## Session: 2026-10-10 10:28
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:31 | Edited web/src/router/index.js | expanded (+6 lines) | ~120 |
+| 10:31 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | CSS: link | ~161 |
+| 10:31 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | CSS: corpus_meta, meta_annotations, curated_lexicon | ~104 |
+| 10:31 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | CSS: transition, border-color, color | ~122 |
+| 10:31 | Edited web/src/components/eia-data/MetaPanel.vue | modified catch() | ~110 |
+| 10:31 | Edited web/src/components/eia-data/MetaPanel.vue | 5→4 lines | ~16 |
+| 10:36 | Edited docs/vibe/2026-10-10-eia-meta-annotation.md | 13→16 lines | ~170 |
+| 10:38 | Edited docs/develop-guides/changelog.md | modified feat() | ~610 |
+| 10:39 | Created .git/COMMIT_MSG_DESIGN.txt | — | ~111 |
+| 10:39 | Created .git/COMMIT_MSG_FEAT.txt | — | ~286 |
+| 10:39 | Created .git/COMMIT_MSG_DOCS.txt | — | ~23 |
+| 10:42 | Edited docs/vibe/2026-10-10-eia-meta-annotation.md | inline fix | ~22 |
+| 10:50 | P2 语料元数据标注页全栈交付收口：MetaPanel/router/chip 跳转 + eslint/vite 净 + 三笔提交（7d91a360 docs-design / deb0b92b feat P2 / 9462a5f8 changelog）+ cerebrum 追加 | web/src/{components/eia-data/MetaPanel.vue,router/index.js}, docs/design/eia-data-factory.md | 提交完成，待用户浏览器点验 | ~45k |
+| 11:04 | Session end: 12 writes across 8 files (index.js, DatasetStatsPanel.vue, MetaPanel.vue, 2026-10-10-eia-meta-annotation.md, changelog.md) | 9 reads | ~49158 tok |
+| 11:13 | Session end: 12 writes across 8 files (index.js, DatasetStatsPanel.vue, MetaPanel.vue, 2026-10-10-eia-meta-annotation.md, changelog.md) | 20 reads | ~103264 tok |
+| 11:13 | 评审 deb0b92b/7d91a360 前端维度：2 发现（DatasetStatsPanel layer-chip 缺 tabindex 键盘路径断；MetaPanel scale_mt_a min=0 与后端 (0,10000] 不符） | DatasetStatsPanel.vue, MetaPanel.vue | done | ~9k |
+| 11:23 | 对抗审查 eia_meta_service import 幽灵 rid 发现：逐行核实 import/list/set/export 四路径+模型注释+测试+设计文档，坐实成立( medium)，唯一过度表述为"导入是唯一违反路径"(语料漂移亦可造幽灵) | eia_meta_service.py, models_domain_factory.py, domain_factory_router.py, test_eia_meta_service_flow.py, docs/vibe/2026-10-10-eia-meta-annotation.md | confirmed, refuted=false | ~6k |
+| 11:30 | 对抗审查:坐实 changelog.md:157 pisuan.storage_migration 失实(本仓仅 yuxi 包,compose:208=yuxi.*,localized 树才有 pisuan.*) | docs/develop-guides/changelog.md | refuted=false | ~6k |
+| 11:31 | Session end: 12 writes across 8 files (index.js, DatasetStatsPanel.vue, MetaPanel.vue, 2026-10-10-eia-meta-annotation.md, changelog.md) | 26 reads | ~105531 tok |
+| 11:35 | Edited backend/package/yuxi/services/eia_meta_service.py | modified import_annotations() | ~446 |
+| 11:36 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | CSS: 0 | ~56 |
+| 11:36 | Edited web/src/components/eia-data/MetaPanel.vue | expanded (+6 lines) | ~131 |
+| 11:36 | Edited web/src/components/eia-data/MetaPanel.vue | added 1 condition(s) | ~120 |
+| 11:36 | Edited backend/test/integration/services/test_eia_meta_service_flow.py | expanded (+22 lines) | ~401 |
+| 11:36 | Edited backend/test/integration/services/test_eia_meta_service_flow.py | 1→3 lines | ~32 |
+| 11:37 | Edited docs/vibe/2026-10-10-eia-meta-annotation.md | 6→6 lines | ~87 |
+| 11:37 | Edited docs/develop-guides/changelog.md | inline fix | ~63 |
+| 11:37 | Edited docs/develop-guides/changelog.md | inline fix | ~48 |
+| 11:42 | Edited backend/test/integration/services/test_eia_meta_service_flow.py | 2→2 lines | ~43 |
+
+## Session: 2026-10-10 11:44
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:45 | Created .git/COMMIT_MSG_FIX.txt | — | ~221 |
+| 11:55 | P2 对抗评审工作流（12 agents）7 发现全坐实→全修复→b7f63ece 提交；迁移测试网修复（v10 起红）、幽灵行过滤、前端契约、判别测试；34 passed 容器验证 | eia_meta_service.py, test_storage_migration.py +4 | bug-378/379/380 入账 | ~60k |
+| 11:47 | Session end: 1 writes across 1 files (COMMIT_MSG_FIX.txt) | 3 reads | ~6142 tok |
+| 11:51 | Edited web/src/components/eia-data/MetaPanel.vue | added 1 import(s) | ~62 |
+| 11:51 | Edited web/src/components/eia-data/MetaPanel.vue | 1→2 lines | ~16 |
+| 11:51 | Edited web/src/components/eia-data/MetaPanel.vue | added nullish coalescing | ~69 |
+| 11:52 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | 6→6 lines | ~64 |
+| 11:52 | Edited docs/develop-guides/changelog.md | inline fix | ~110 |
+| 11:52 | Edited docs/vibe/2026-10-10-eia-meta-annotation.md | 2→4 lines | ~52 |
+| 11:53 | Created .git/COMMIT_MSG_CHIP.txt | — | ~85 |
+| 12:05 | 用户裁决方案①：分层 chip 深链分流落地（meta_annotations→?state=todo 待办筛选），eslint/vite 净，提交+changelog 归并 | MetaPanel.vue, DatasetStatsPanel.vue | 完成待用户点验 | ~8k |
+| 11:53 | Session end: 8 writes across 6 files (COMMIT_MSG_FIX.txt, MetaPanel.vue, DatasetStatsPanel.vue, changelog.md, 2026-10-10-eia-meta-annotation.md) | 3 reads | ~6633 tok |
+| 11:58 | Session end: 8 writes across 6 files (COMMIT_MSG_FIX.txt, MetaPanel.vue, DatasetStatsPanel.vue, changelog.md, 2026-10-10-eia-meta-annotation.md) | 3 reads | ~6633 tok |
+| 12:05 | Created docs/vibe/2026-10-10-eia-standard-review.md | — | ~963 |
+| 12:06 | Edited backend/package/yuxi/storage/postgres/manager.py | 6→7 lines | ~52 |
+| 12:06 | Edited backend/package/yuxi/storage/postgres/manager.py | 3→4 lines | ~53 |
+| 12:06 | Edited backend/package/yuxi/storage/postgres/manager.py | modified upgrade_business_v11_to_v12() | ~402 |
+| 12:06 | Edited backend/package/yuxi/storage/postgres/models_domain_factory.py | modified to_dict() | ~595 |
+| 12:06 | Edited backend/package/yuxi/storage_migration.py | inline fix | ~26 |
+| 12:06 | Edited backend/package/yuxi/storage_migration.py | 3→6 lines | ~104 |
+| 12:07 | Created backend/package/yuxi/repositories/eia_standard_repository.py | — | ~288 |
+| 12:08 | Created docs/vibe/2026-10-10-coal-eia-writer-skill-diagrams.html | — | ~7598 |
+| 12:08 | Created backend/package/yuxi/services/eia_standard_service.py | — | ~1986 |
+| 12:08 | 分析 coal-eia-writer 技能代码实现并绘制架构图+流程图（分层 SVG：LLM 层/脚本层/磁盘状态/references 资产；流程步骤 0-7 含门 1/门 2/节级派发循环/finalize） | docs/vibe/2026-10-10-coal-eia-writer-skill-diagrams.html | 完成 | ~9k |
+| 12:09 | Edited docs/develop-guides/changelog.md | modified docs() | ~151 |
+| 12:10 | Session end: 19 writes across 13 files (COMMIT_MSG_FIX.txt, MetaPanel.vue, DatasetStatsPanel.vue, changelog.md, 2026-10-10-eia-meta-annotation.md) | 7 reads | ~75830 tok |
+
+## Session: 2026-10-10 12:11
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:12 | Edited backend/server/routers/domain_factory_router.py | added 1 import(s) | ~39 |
+| 12:12 | Edited backend/server/routers/domain_factory_router.py | modified export_eia_meta_annotations() | ~1005 |
+| 12:13 | Created backend/test/unit/test_eia_standard_service.py | — | ~378 |
+| 12:13 | Created backend/test/integration/services/test_eia_standard_service_flow.py | — | ~1351 |
+| 12:14 | Created backend/test/integration/api/test_eia_standard_flow.py | — | ~221 |
+| 12:25 | Edited backend/test/integration/services/test_eia_standard_service_flow.py | 4→5 lines | ~80 |
+| 12:27 | Edited backend/test/integration/services/test_eia_standard_service_flow.py | 5→7 lines | ~116 |
+| 12:29 | Created web/src/apis/eia_standard_api.js | — | ~228 |
+| 12:29 | Created web/src/views/EiaStandardsView.vue | — | ~382 |
+| 12:29 | Edited web/src/router/index.js | expanded (+6 lines) | ~122 |
+| 12:29 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | CSS: standards_index | ~66 |
+| 12:30 | Created web/src/components/eia-data/StandardsPanel.vue | — | ~3743 |
+| 12:34 | Edited docs/develop-guides/changelog.md | docs() → feat() | ~374 |
+| 12:34 | Edited docs/develop-guides/changelog.md | inline fix | ~34 |
+| 12:36 | P3 标准库设计漂移评审：对照裁决文档核对后端4文件/前端4文件，仅1条偏差（核实对话框red_line缺禁web_search文案） | eia_standard_service.py,StandardsPanel.vue 等 | 评审完成 | ~30k |
+| 12:39 | P3 测试判别力评审：v12 wiring 六 fake 无正向断言/流测试脆钉 62-7-2/API admin 门槛零覆盖 | backend/test/unit/services/test_storage_migration.py 等5文件 | 3 findings | ~30k |
+| 12:46 | Edited backend/server/routers/domain_factory_router.py | modified set_eia_standard_review() | ~320 |
+| 12:46 | Edited web/src/apis/eia_standard_api.js | 6→6 lines | ~77 |
+| 12:46 | Edited backend/test/integration/api/test_eia_standard_flow.py | inline fix | ~18 |
+| 12:46 | Edited web/src/components/eia-data/StandardsPanel.vue | 6→6 lines | ~77 |
+| 12:46 | Edited docs/vibe/2026-10-10-eia-standard-review.md | 1→3 lines | ~73 |
+| 12:49 | Edited backend/test/unit/services/test_storage_migration.py | modified test_supported_legacy_business_schema_is_converged_and_versioned_as_current() | ~59 |
+| 12:49 | Edited backend/test/unit/services/test_storage_migration.py | 3→8 lines | ~130 |
+| 12:50 | Edited backend/test/integration/services/test_eia_standard_service_flow.py | modified test_standard_full_flow() | ~482 |
+| 12:50 | Edited backend/test/integration/api/test_eia_standard_flow.py | modified test_standards_export_requires_admin() | ~242 |
+| 12:51 | P3 falsifier: bug-381(0.000000 slash 404) already fixed in pisuan worktree—route is body-based PUT /eia/standards/review, no {code} path param anywhere; finding stale; live localized stack still old code (sync lag) | domain_factory_router.py,eia_standard_api.js,test_eia_standard_flow.py | refuted=true | ~45k |
+| 12:55 | Edited docs/develop-guides/changelog.md | inline fix | ~235 |
+| 13:45 | P3 标准与限值库全链交付：v12 迁移实跑+服务/仓储/4端点+前端页+三件套测试；五维对抗评审 11agent（6发现去重5坐实零证伪全修：review code 走 body（%2F 404 实证）/禁web_search警示/v12判别力/脆钉自算/403-404覆盖） | eia_standard_service.py 等 16 文件 + changelog | c0656671 feat + 10ebca8e docs；39 passed+2 skip | ~250k |
+| 12:56 | Session end: 24 writes across 12 files (domain_factory_router.py, test_eia_standard_service.py, test_eia_standard_service_flow.py, test_eia_standard_flow.py, eia_standard_api.js) | 31 reads | ~113560 tok |
+| 13:30 | Edited web/src/components/eia-data/StandardsPanel.vue | 4→5 lines | ~68 |
+| 13:30 | Edited web/src/components/eia-data/StandardsPanel.vue | 5→5 lines | ~60 |
+| 13:31 | Session end: 26 writes across 12 files (domain_factory_router.py, test_eia_standard_service.py, test_eia_standard_service_flow.py, test_eia_standard_flow.py, eia_standard_api.js) | 31 reads | ~113697 tok |
+| 17:52 | Session end: 26 writes across 12 files (domain_factory_router.py, test_eia_standard_service.py, test_eia_standard_service_flow.py, test_eia_standard_flow.py, eia_standard_api.js) | 31 reads | ~113697 tok |
+| 18:16 | 功能盘点：通读 eia-data 三页面前后端+技能消费点+测试面，产出已实现功能清单与占位态记录 | LexiconPanel/MetaPanel/StandardsPanel/DatasetStatsPanel + eia_*_service.py + domain_factory_router.py | 完成 | ~40k |
+
+## Session: 2026-10-10 18:23
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 18:28 | 规模压力分析：eia 三页取证——lexicon list_entries 每请求全表+全语料现扫(eia_lexicon_service L145-146)、三处导出 write_text 非原子、P3 归一不剥 GB/T 的 T、stats 指纹全切片 stat；产出 8 条规模化提案 |
+| 18:42 | 三页面深度评审工作流完成（12 agent：4 Recon 67 事实/5 Ideate 40 提案/3 Judge 95 裁决）| .wolf/memory.md | 完成，待向用户汇报分级清单 | ~700k |
+| 18:52 | 词表口径名质量取证：本地复刻 QUANTITY_RE 抽取链挖 89 口径+上下文，19/19 报告项命中并回源；确认处置率×2 在 approved 会进物化；启动质量评审工作流 wf_77e52377-41d | .wolf/corpus-workdir/* | 运行中 | ~60k |
+| 19:50 | lexicon 口径裁决:对 lexicon_audit.json 中 8 条 candidate(价区植被覆盖度值/优势度/其盖度/出现频率/年均浓度平/浓度/超标率/频率)逐条回源裁决:rename×2(评价区植被覆盖度/SO2年均浓度平均值)、reject×6(混簇或代词断章) | .wolf/corpus-workdir/lexicon_audit.json; .wolf/lexicon_filter_tmp.py(已删) | done | ~7k |
+| 19:51 | ��ֵ�����ʱ�9��rejected�ھ��þ�(������ȡ֤):����rename 2��(�˵����������ǿn=8/ȫ��ȫ����ƽ��),ά��rejected 7�� | .wolf/corpus-workdir/lexicon_audit.json | done | ~15k |
+| 19:53 | lexicon audit adjudication: 3 assigned (控制效率/处置率×2) + 10 supplementary measure findings (水平达标率/回用率/综合利用率×2/抑尘效率/节水率/防渗率/降尘效率/环境质量达标率/危险废物处置率) | .wolf/corpus-workdir/lexicon_audit.json | done, 13 items via StructuredOutput | ~18k |
+| 19:59 | 对抗核验6条词表口径裁决：全部过验证(refuted=false)，价区植被覆盖度值改名需配重扫去重 | lexicon_audit.json,eia_data_service.py,bank_compile.py | 6/6 confirmed | ~9k |
+| 20:04 | 词表6条口径裁决对抗核验：抑尘效率split证伪(子簇2/1报<5不物化,split仅收splitting态)；4条rename证伪(重扫按旧指纹重导fresh approved,无抑制机制)；防渗率reject通过(重扫自稳) | eia_lexicon_service.py, eia_data_service.py, .wolf/corpus-workdir/lexicon_audit.json | 6 items 返回 | ~45k |
+| 20:07 | 核验词表口径裁决6条：全量枚举证实处置率(openpit,7值3rep)/水平达标率(10值2rep)/回用率(8值2rep)裁决；证伪3条split(簇仅2rep，子口径<5物化门槛无消费者)应reject；改名两条须配套处理重扫重导交互 | .wolf/corpus-workdir/_verify_mentions.txt, _verify_extract.txt | 3 upheld, 3 refuted | ~35k |
+| 20:21 | 数值护栏词表断章口径根因分析：19条全归因(R1窗切/R2过剥/R3定语不可达/R4代词/R5源虚)+4修复选项(推荐尾清洗重设计:删_STOP_TAIL五单字+整词分别+条件均+GENERIC_JUNK度词) | eia_data_service.py, bank_compile.py, .wolf/corpus-workdir/lexicon_audit.json | StructuredOutput已交付 | ~65k |
+| 20:30 | 判官核验：QUANTITY_RE/_STOP_TAIL/_MEASURE_RE/import幂等/PATCH/split/export/路由无create-delete/audit 9条上下文/回用率rep2/伤的rep8/LexiconPanel默认全部视图 全部实证，收敛最终修复计划=方案B修正版 | eia_lexicon_service.py,eia_data_service.py,bank_compile.py,LexiconPanel.vue,lexicon_audit.json | 已裁决 | ~28k |
+| 19:55 | 词表口径质量评审完成（30 条裁决/11 证伪/双判官收敛方案B：13驳+7改名+blocklist+拆分+note），已向用户汇报待裁决 | .wolf/corpus-workdir/ | 完成 | ~680k |
+| 20:41 | Edited backend/package/yuxi/services/eia_lexicon_service.py | expanded (+14 lines) | ~207 |
+| 20:41 | Edited backend/package/yuxi/services/eia_lexicon_service.py | modified import_entries() | ~371 |
+| 20:42 | Edited backend/test/unit/test_eia_lexicon_service.py | modified test_preset_status_import_mapping() | ~362 |
+
+## Session: 2026-10-10 20:54
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:00 | Edited docs/develop-guides/changelog.md | modified fix() | ~278 |
+| 21:05 | 方案B 词表修复执行完毕：13驳9注7改名+控制效率三分拆，blocklist 代码+单测，验收 import added=0/blocklist=7 物化8条；changelog+bug-411 更新 | eia_lexicon_service.py, test_eia_lexicon_service.py, changelog.md | 全部验收通过 | ~45k |
+| 21:05 | Session end: 1 writes across 1 files (changelog.md) | 1 reads | ~298 tok |
+| 21:20 | Session end: 1 writes across 1 files (changelog.md) | 1 reads | ~298 tok |
+| 21:22 | Session end: 1 writes across 1 files (changelog.md) | 1 reads | ~298 tok |
+| 21:24 | Session end: 1 writes across 1 files (changelog.md) | 1 reads | ~298 tok |
+| 21:26 | Session end: 1 writes across 1 files (changelog.md) | 1 reads | ~298 tok |
+| 21:28 | Session end: 1 writes across 1 files (changelog.md) | 1 reads | ~298 tok |
+| 21:32 | Session end: 1 writes across 1 files (changelog.md) | 1 reads | ~298 tok |
+| 21:35 | 对抗核验21条词表口径名裁决：回源逐句比对 lexicon_full_audit.json，27/27 引述在 contexts 中验证，21/21 refuted=false（#5 理由部分夸大但 broken 成立；#19/20 n_values>可见语境数已注记） | .wolf/corpus-workdir/lexicon_full_audit.json | done | ~30k |
+| 22:40 | 词表 92 条口径名全量审计：6 裁决+1 对抗核验（21/21 零证伪）；reasonable 33/minor 19/broken 16/mixed 24；发现控制效率子口径值集量纲混布（bug-412）| lexicon_full_audit.json | 报告已交付，修复待裁决 | ~180k |
+| 21:44 | Session end: 1 writes across 1 files (changelog.md) | 2 reads | ~298 tok |
+| 21:50 | Session end: 1 writes across 1 files (changelog.md) | 2 reads | ~298 tok |
+| 21:53 | Session end: 1 writes across 1 files (changelog.md) | 2 reads | ~298 tok |
+| 21:58 | Session end: 1 writes across 1 files (changelog.md) | 2 reads | ~298 tok |
+| 21:59 | Session end: 1 writes across 1 files (changelog.md) | 2 reads | ~298 tok |
+| 22:05 | Created docs/vibe/2026-10-10-eia-lexicon-rename-dialog.md | — | ~816 |
+| 22:06 | Session end: 2 writes across 2 files (changelog.md, 2026-10-10-eia-lexicon-rename-dialog.md) | 5 reads | ~11336 tok |
+| 22:14 | 审阅词表改名对话框设计稿（前端分路）：核对 LexiconPanel/api/base.js/后端契约/base.css | docs/vibe/2026-10-10-eia-lexicon-rename-dialog.md, LexiconPanel.vue, eia_lexicon_api.js, base.js | 4 should + 6 opt，无 must；行号引用全准确 | ~30k |
+| 22:27 | Created docs/vibe/2026-10-10-eia-lexicon-rename-dialog.md | — | ~1424 |
+| 23:10 | 改名对话框设计稿 v2（三路评审 29 条折入：抑制幂等/热重载协调/三段文本契约/new_caliber 回落/flow 红测修复 bug-413）| docs/vibe/2026-10-10-eia-lexicon-rename-dialog.md | 待用户确认实施 | ~260k |
+| 22:28 | Session end: 3 writes across 2 files (changelog.md, 2026-10-10-eia-lexicon-rename-dialog.md) | 11 reads | ~62451 tok |
+
+## Session: 2026-10-10 23:15
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:25 | Edited backend/package/yuxi/storage/postgres/models_domain_factory.py | modified to_dict() | ~585 |
+| 23:25 | Edited backend/package/yuxi/storage/postgres/manager.py | 7→9 lines | ~68 |
+| 23:25 | Edited backend/package/yuxi/storage/postgres/manager.py | 4→5 lines | ~69 |
+| 23:25 | Edited backend/package/yuxi/storage/postgres/manager.py | modified upgrade_business_v12_to_v13() | ~574 |
+| 23:25 | Edited backend/package/yuxi/storage/postgres/manager.py | added 1 import(s) | ~37 |
+| 23:25 | Edited backend/package/yuxi/storage_migration.py | inline fix | ~29 |
+| 23:25 | Edited backend/package/yuxi/storage_migration.py | 3→6 lines | ~108 |
+| 23:25 | Edited backend/package/yuxi/services/eia_data_service.py | modified t() | ~59 |
+| 23:25 | Edited backend/package/yuxi/services/eia_data_service.py | modified _block_span() | ~881 |
+| 23:26 | Edited backend/package/yuxi/repositories/eia_lexicon_repository.py | 8→13 lines | ~104 |
+| 23:26 | Edited backend/package/yuxi/repositories/eia_lexicon_repository.py | modified save_entry() | ~710 |
+| 23:26 | Edited backend/package/yuxi/services/eia_lexicon_service.py | 27→28 lines | ~331 |
+| 23:27 | Edited backend/package/yuxi/services/eia_lexicon_service.py | modified import_entries() | ~170 |
+| 23:27 | Edited backend/package/yuxi/services/eia_lexicon_service.py | modified get_mentions() | ~258 |
+| 23:27 | Edited backend/package/yuxi/services/eia_lexicon_service.py | expanded (+16 lines) | ~364 |
+| 23:28 | Edited backend/test/unit/test_eia_lexicon_service.py | modified test_import_blocklist_matches_adjudicated_renames() | ~224 |
+| 23:28 | Edited backend/test/unit/test_eia_lexicon_service.py | 8→13 lines | ~84 |
+| 23:28 | Edited backend/test/unit/test_eia_lexicon_service.py | added 2 condition(s) | ~552 |
+| 23:28 | Edited backend/test/unit/test_eia_lexicon_service.py | 5→6 lines | ~36 |
+| 23:29 | Edited backend/test/unit/test_eia_lexicon_service.py | modified test_block_span_extends_to_cover_match_end() | ~216 |
+| 23:29 | Edited backend/test/integration/services/test_eia_lexicon_service_flow.py | 9→9 lines | ~98 |
+| 23:29 | Edited backend/test/integration/services/test_eia_lexicon_service_flow.py | modified test_rename_suppress_and_fallback_flow() | ~649 |
+| 23:29 | Edited backend/test/integration/services/test_schema_migration_version.py | 12 → 13 | ~27 |
+| 23:30 | Edited backend/test/integration/services/test_schema_migration_version.py | modified test_v13_creates_suppression_table_seeds_and_records_version_idempotently() | ~522 |
+| 23:30 | Edited backend/test/unit/services/test_storage_migration.py | 3→4 lines | ~112 |
+| 23:30 | Edited backend/test/unit/services/test_storage_migration.py | inline fix | ~20 |
+| 23:30 | Edited backend/test/unit/services/test_storage_migration.py | 2→3 lines | ~37 |
+| 23:30 | Edited web/src/apis/eia_lexicon_api.js | 3→3 lines | ~82 |
+| 23:31 | Edited web/src/components/eia-data/LexiconPanel.vue | 1→2 lines | ~37 |
+| 23:31 | Edited web/src/components/eia-data/LexiconPanel.vue | added optional chaining | ~589 |
+| 23:31 | Edited web/src/components/eia-data/LexiconPanel.vue | inline fix | ~13 |
+| 23:31 | Edited web/src/components/eia-data/LexiconPanel.vue | added error handling | ~490 |
+| 23:31 | Edited web/src/components/eia-data/LexiconPanel.vue | expanded (+99 lines) | ~465 |
+| 23:31 | Edited web/src/components/eia-data/LexiconPanel.vue | 2→3 lines | ~55 |
+| 23:41 | Edited backend/test/unit/services/test_storage_migration.py | 3→4 lines | ~62 |
+| 23:20 | P4 实施：抑制表 v13+种子下沉、_iter_raw_matches 三段切片、update_entry 改名分支、get_mentions 回落、LexiconPanel 对话框 | 6 源文件+4 测试+前端 2 | 全绿 |
+| 23:45 | 快照发现运行库词表 0 行——bug-413 红测实跑已清掉 92 条裁决态（bug-414） | buglog | 事故记录 |
+| 23:55 | sync-dev + localized 栈 migrator v13（business=13 种子 7）+ 容器测试全绿（unit 19+8、迁移集成 14、flow 2） | 容器 | 验收过 |
+| 00:05 | 运营态重建：导入 82（种子抑制 7）+ 改名行直插 7 + 导出 5；守卫/三段契约/回落实证 | restore_state.py | 残差待用户重裁决 |
+| 00:12 | 提交 0cff2057(feat P4) + e472fe2f(changelog)；changelog P4 条目 | git | pisuan-custom |
+| 00:20 | 方案B 13 条混簇驳回按文档化裁决重驳回；final counts c27/a24/r37/s1=89 与事故前差集恰为控制效率拆分簇 | restore_rejects.py | 恢复完成 |
+| 23:55 | Session end: 35 writes across 12 files (models_domain_factory.py, manager.py, storage_migration.py, eia_data_service.py, eia_lexicon_repository.py) | 10 reads | ~79491 tok |
+| 00:35 | 控制效率重拆分+量纲归一裁决（bug-412 闭合）：42 值按语境尾词指派三子口径各 14/6，9 处 <1 ×100 归一，区间齐整，counts 回事故前基线 92，导出 8 条 | cek_resplit.py | bug-414 恢复闭环 |
+| 00:02 | Session end: 35 writes across 12 files (models_domain_factory.py, manager.py, storage_migration.py, eia_data_service.py, eia_lexicon_repository.py) | 10 reads | ~79491 tok |
+
+## Session: 2026-10-11 10:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:20 | 同步 pisuan-localized：-Revert 还原镜像态 → reset 到 aaed9a6e → 改名层重生成（1978f ±4410）→ uv lock 双目录 → 提交 f80e0000 → push github 强推；pisuan-custom bef9d9d0..aaed9a6e 同步推 origin；dry-run 幂等 0 计划 | sync-dev/sync-upstream 官方第5步 | 推送完成 |
+| 11:40 | P1 五校准裁决：stages 补录 5 字段（文本级插入）、QUANTITY_RE +能达可达、五口径全挂载（v1.2 五 stage 再生幂等）、普查钉数 90 | 2 stages json+5 expectations+bank_compile+2 测试 | 86+11 全绿 |
+| 11:55 | bug-415（overrides 被 sync-dev 清）+bug-416（连接词吞能/可）记录；changelog 条目；提交 86bd9854 | git/buglog | pisuan-custom |
+| 12:30 | 同步 pisuan-localized：首次重建因改名脚本起步崩（Windows 瞬时锁）被 grep 掩码，推坏 89c5f66b（yuxi 树+残留 curated）；reset 重跑修复推 39e5fb39（1978f ±4410 对称、dry-run 0 计划、0 脏）；pisuan-custom aaed9a6e..86bd9854 同步推 | sync-dev/apply_pisuan_rename | 修复闭合 |
+
+## Session: 2026-10-11 15:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:29 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_bank_compile_expectations.py | modified test_control_efficiency_subcalibers_mapped_after_latin_prefix() | ~300 |
+| 15:55 | Edited web/src/views/EiaLexiconView.vue | CSS: Info | ~143 |
+| 15:56 | Edited web/src/views/EiaLexiconView.vue | inline fix | ~12 |
+| 15:56 | Edited web/src/views/EiaLexiconView.vue | expanded (+51 lines) | ~271 |
+| 16:37 | Edited backend/package/yuxi/services/eia_data_service.py | 3→3 lines | ~30 |
+| 16:39 | Edited backend/test/unit/test_eia_data_service.py | 8→10 lines | ~133 |
+| 16:50 | Edited backend/test/unit/test_eia_lexicon_service.py | modified test_scan_all_matches_census() | ~176 |
+| 17:02 | Edited backend/test/unit/test_eia_data_service.py | 2→2 lines | ~22 |
+| 17:24 | Edited web/src/views/EiaLexiconView.vue | 4→6 lines | ~79 |
+| 17:29 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py | 1→2 lines | ~35 |
+| 17:25 | P2 三子口径挂载：QUANTITY_RE 受控拉丁前缀（diff 9275→9275 三分实证）、openpit air +3 字段、三口径独立挂载（61/61/90 等各 7 节）、_MEASURE_RE +控制效率（92/34/9）、词表页 Info tip 图标 | bank_compile+stages+expectations+3 测试+eia_data_service+EiaLexiconView | 88+11 全绿，fe504391 已推 |
+| 17:30 | bug-417 孤立 CR 事故记档（w/-text→diff 全文件化）；cerebrum DNR 插入铁律 + _MEASURE_RE 联动检查 | buglog/cerebrum | 收尾完成 |
+| 17:53 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | 3→3 lines | ~76 |
+| 17:53 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | 5→5 lines | ~54 |
+| 17:54 | Edited web/src/components/eia-data/LexiconPanel.vue | 5→5 lines | ~37 |
+| 17:55 | Edited backend/package/yuxi/services/eia_lexicon_service.py | 6→6 lines | ~46 |
+| 17:56 | Edited backend/test/unit/test_eia_data_service.py | "三分类：A 工程措施 / B 站点背景 / C 其" → "三分类：A 措施效率 / B 现状监测 / C 非" | ~15 |
+| 17:59 | Edited backend/package/yuxi/services/eia_data_service.py | "三分类：measure=工程措施类（可入选）/ s" → "三分类：measure=措施效率类（可入选）/ s" | ~19 |
+| 17:50 | 词表三分类展示名改易懂命名（A 措施效率/B 现状监测/C 非护栏杂项）：LexiconPanel+DatasetStatsPanel+导入 note+docstring，6 文件 15 行 | 前端 2 vue+后端 2 py+测试+changelog | c33f3f30 已推 |
+| 18:10 | Session end: 16 writes across 9 files (test_bank_compile_expectations.py, EiaLexiconView.vue, eia_data_service.py, test_eia_data_service.py, test_eia_lexicon_service.py) | 0 reads | ~1496 tok |
+| 21:00 | Edited web/src/components/eia-data/LexiconPanel.vue | 10→9 lines | ~98 |
+| 21:02 | Edited web/src/components/eia-data/LexiconPanel.vue | removed 9 lines | ~15 |
+| 21:06 | Edited web/src/components/eia-data/LexiconPanel.vue | 4→3 lines | ~40 |
+| 21:08 | Edited web/src/components/eia-data/LexiconPanel.vue | CSS: font-size, color, color | ~33 |
+| 21:15 | Edited web/src/components/eia-data/LexiconPanel.vue | reduced (-18 lines) | ~30 |
+| 21:17 | Edited web/src/components/eia-data/LexiconPanel.vue | 7→9 lines | ~55 |
+| 18:10 | 词表列表布局：删「决策」列、口径列 width 300、说明文字 2 行折行（line-clamp+title）、孤儿清理 | LexiconPanel.vue | d775cd55 已推，eslint/prettier 过 |
+| 21:50 | Edited web/src/components/eia-data/LexiconPanel.vue | 9→9 lines | ~93 |
+| 21:53 | Edited web/src/components/eia-data/LexiconPanel.vue | CSS: white-space | ~62 |
+| 21:58 | Edited web/src/components/eia-data/LexiconPanel.vue | CSS: white-space | ~46 |
+| 18:25 | 词表布局三修：口径列删 ellipsis（nowrap 继承致 line-clamp 失效根因）、分类 tag nowrap+列宽 120、操作列恢复 170 固定/口径列弹性 | LexiconPanel.vue | 已推，待用户刷新验证 |
+| 22:10 | Session end: 25 writes across 9 files (test_bank_compile_expectations.py, EiaLexiconView.vue, eia_data_service.py, test_eia_data_service.py, test_eia_lexicon_service.py) | 0 reads | ~2000 tok |
+
+## Session: 2026-10-12 09:55
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:57 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+7 lines) | ~139 |
+| 09:57 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+14 lines) | ~312 |
+| 09:57 | Edited web/src/components/eia-data/StandardsPanel.vue | added optional chaining | ~212 |
+| 09:57 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+23 lines) | ~140 |
+| 09:57 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+25 lines) | ~128 |
+| 09:59 | Edited web/src/components/eia-data/StandardsPanel.vue | 1→3 lines | ~34 |
+| 10:00 | Edited web/src/components/eia-data/StandardsPanel.vue | 1→3 lines | ~40 |
+| 10:15 | 标准与限值库页透出 role 副行 + 限值 rows 渲染（用户报告看不到记录数据；API 本就透出、纯前端补渲染）；提交 3d7ef3de | web/src/components/eia-data/StandardsPanel.vue, docs/develop-guides/changelog.md | done: eslint/prettier 新增行合规、hmr 无错 | ~28k |
+| 10:03 | Session end: 7 writes across 1 files (StandardsPanel.vue) | 0 reads | ~1078 tok |
+
+## Session: 2026-10-12 12:19
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-12 12:20
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-12 12:20
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:29 | coal-eia-writer 技能数据资产 ↔ 环评域工厂页面对账盘点（12 类资产×4 页面×运行时工具通道） | eia_data_service.py, eia_*_service, DomainFactoryView, eia-data/*.vue, SKILL.md | 对账矩阵产出：3 完整闭环+4 可视只读+5 不可视+1 反向缺口 | ~46k |
+| 12:51 | Created docs/vibe/2026-10-12-eia-data-factory-p1-gaps.md | — | ~1363 |
+| 12:33 | P1 三项缺口需求文档落稿（限值表录入/regional_facts 工具/unmapped 可视），含验收 checklist 与边界 | docs/vibe/2026-10-12-eia-data-factory-p1-gaps.md | 已创建，待用户批准实施 | ~8k |
+| 12:52 | Session end: 1 writes across 1 files (2026-10-12-eia-data-factory-p1-gaps.md) | 9 reads | ~12483 tok |
+| 13:01 | Edited backend/test/unit/test_eia_data_service.py | 7→8 lines | ~47 |
+| 13:01 | Edited backend/test/unit/test_eia_data_service.py | added 2 condition(s) | ~412 |
+| 13:03 | Edited backend/package/yuxi/services/eia_data_service.py | modified get_unmapped() | ~222 |
+| 13:03 | Edited backend/server/routers/domain_factory_router.py | inline fix | ~21 |
+| 13:03 | Edited backend/server/routers/domain_factory_router.py | 6→3 lines | ~60 |
+| 13:03 | Edited backend/server/routers/domain_factory_router.py | modified list_eia_unmapped() | ~256 |
+| 13:06 | Edited web/src/apis/eia_data_api.js | expanded (+6 lines) | ~115 |
+| 13:06 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | expanded (+33 lines) | ~587 |
+| 13:07 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | 2→1 lines | ~9 |
+| 13:07 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | added error handling | ~521 |
+| 13:07 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | added 1 import(s) | ~44 |
+| 13:07 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | expanded (+21 lines) | ~124 |
+| 13:11 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | 1→3 lines | ~34 |
+| 13:11 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | 1→3 lines | ~35 |
+| 13:11 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | expanded (+8 lines) | ~84 |
+| 13:11 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | expanded (+6 lines) | ~31 |
+| 13:11 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | 1→3 lines | ~30 |
+| 13:12 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | 4→4 lines | ~47 |
+| 13:17 | Edited backend/test/unit/test_eia_standard_service.py | expanded (+9 lines) | ~127 |
+| 13:18 | Edited backend/test/unit/test_eia_standard_service.py | modified test_norm_std_absorbs_citation_noise() | ~1896 |
+| 13:18 | Created ../../Users/Lenovo/AppData/Local/Temp/patch_migration_tests.py | — | ~513 |
+| 13:21 | Edited backend/package/yuxi/storage/postgres/models_domain_factory.py | modified EiaStandardReview() | ~9 |
+| 13:21 | Edited backend/package/yuxi/storage/postgres/models_domain_factory.py | modified to_dict() | ~291 |
+| 13:21 | Edited backend/package/yuxi/storage/postgres/manager.py | 3→4 lines | ~48 |
+| 13:21 | Edited backend/package/yuxi/storage/postgres/manager.py | 2→1 lines | ~8 |
+| 13:22 | Edited backend/package/yuxi/storage/postgres/manager.py | 3→2 lines | ~21 |
+| 13:22 | Edited backend/package/yuxi/storage/postgres/manager.py | 4→7 lines | ~43 |
+| 13:22 | Edited backend/package/yuxi/storage/postgres/manager.py | modified upgrade_business_v13_to_v14() | ~468 |
+| 13:22 | Edited backend/package/yuxi/storage_migration.py | 3→6 lines | ~110 |
+| 13:22 | Edited backend/package/yuxi/repositories/eia_standard_repository.py | modified list_reviews() | ~625 |
+
+## Session: 2026-10-12 13:24
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:27 | Edited backend/package/yuxi/services/eia_standard_service.py | modified _validate_limit_rows() | ~1186 |
+| 13:27 | Edited backend/package/yuxi/services/eia_standard_service.py | modified list_limit_tables() | ~307 |
+| 13:27 | Edited backend/package/yuxi/services/eia_standard_service.py | modified save_limit_rows() | ~658 |
+| 13:27 | Edited backend/server/routers/domain_factory_router.py | modified list_eia_standard_limits() | ~619 |
+| 13:30 | Edited backend/package/yuxi/services/eia_standard_service.py | modified _db_fields() | ~334 |
+| 13:30 | Edited backend/package/yuxi/storage_migration.py | inline fix | ~28 |
+| 13:32 | Edited backend/test/unit/test_eia_standard_service.py | 1→3 lines | ~42 |
+| 13:39 | Edited web/src/apis/eia_standard_api.js | expanded (+8 lines) | ~165 |
+| 13:39 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+13 lines) | ~174 |
+| 13:39 | Edited web/src/components/eia-data/StandardsPanel.vue | 11→14 lines | ~193 |
+| 13:39 | Edited web/src/components/eia-data/StandardsPanel.vue | 13→13 lines | ~134 |
+| 13:39 | Edited web/src/components/eia-data/StandardsPanel.vue | added optional chaining | ~299 |
+| 13:39 | Edited web/src/components/eia-data/StandardsPanel.vue | 2→3 lines | ~20 |
+| 13:39 | Edited web/src/components/eia-data/StandardsPanel.vue | added 1 condition(s) | ~77 |
+| 13:39 | Edited web/src/components/eia-data/StandardsPanel.vue | 3→4 lines | ~41 |
+| 13:39 | Edited web/src/components/eia-data/StandardsPanel.vue | added error handling | ~440 |
+| 13:39 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+7 lines) | ~95 |
+| 13:39 | Edited web/src/components/eia-data/StandardsPanel.vue | CSS: display, align-items, gap | ~70 |
+| 13:39 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+41 lines) | ~172 |
+| 13:43 | Edited web/src/components/eia-data/StandardsPanel.vue | added nullish coalescing | ~111 |
+| 13:44 | Edited web/src/components/eia-data/StandardsPanel.vue | 1→3 lines | ~36 |
+| 13:44 | Edited web/src/components/eia-data/StandardsPanel.vue | 1→3 lines | ~26 |
+| 13:44 | Edited web/src/components/eia-data/StandardsPanel.vue | 1→5 lines | ~45 |
+| 13:44 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+8 lines) | ~61 |
+| 13:45 | Edited web/src/components/eia-data/StandardsPanel.vue | 1→2 lines | ~30 |
+| 13:45 | Edited web/src/components/eia-data/StandardsPanel.vue | 3→5 lines | ~47 |
+| 13:45 | Edited web/src/components/eia-data/StandardsPanel.vue | 1→3 lines | ~29 |
+| 13:48 | Edited web/src/components/eia-data/StandardsPanel.vue | 4→4 lines | ~44 |
+| 13:48 | Edited web/src/components/eia-data/StandardsPanel.vue | 1→4 lines | ~40 |
+| 13:48 | Edited web/src/components/eia-data/LexiconPanel.vue | 1→4 lines | ~37 |
+| 13:48 | Edited web/src/components/eia-data/MetaPanel.vue | 1→4 lines | ~35 |
+| 13:52 | Edited docs/vibe/2026-10-12-eia-data-factory-p1-gaps.md | 7→10 lines | ~238 |
+| 13:52 | Edited docs/vibe/2026-10-12-eia-data-factory-p1-gaps.md | 5→5 lines | ~55 |
+| 21:20 | P1-1 GREEN：repo list_rows/replace_rows + service LIMIT_TABLE_SCHEMAS/_validate_limit_rows/save/export + 合并露出漂移表 + router PUT/POST + 前端 schema 驱动编辑对话框/导出按钮/回流提醒 | eia_standard_repository.py, eia_standard_service.py, storage_migration.py, manager.py, models_domain_factory.py, domain_factory_router.py, StandardsPanel.vue, eia_standard_api.js, LexiconPanel.vue, MetaPanel.vue | 38 passed, eslint clean, migrator v14 done, 5 路由 401 探针 |
+| 21:25 | docs/vibe P1-3/P1-1 清单勾选 + 实施追加注记 | docs/vibe/2026-10-12-eia-data-factory-p1-gaps.md | 完成 |
+| 13:57 | Created backend/test/unit/toolkits/test_lookup_regional_fact.py | — | ~1300 |
+| 13:59 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | modified lookup_regional_fact() | ~686 |
+| 18:52 | Edited backend/package/yuxi/agents/presets/subagents/data_survey_writer.py | 10→11 lines | ~85 |
+| 18:54 | Edited docs/vibe/2026-10-12-eia-data-factory-p1-gaps.md | 6→8 lines | ~201 |
+| 18:56 | Edited docs/develop-guides/changelog.md | modified feat() | ~614 |
+| 18:56 | Edited docs/develop-guides/changelog.md | inline fix | ~7 |
+| 22:05 | P1-2 完成：buildin 工具 lookup_regional_fact（TDD RED 7 failed→GREEN，confirmed 下推/hint/埋点/registry 断言）+ 挂入 data_survey_writer；changelog 2026-10-12 节 + docs/vibe P1-2 清单勾选 | tools.py, data_survey_writer.py, test_lookup_regional_fact.py, changelog.md, docs/vibe/p1-gaps.md | 48 passed 全量回归，ruff clean |
+| 18:57 | Session end: 39 writes across 13 files (eia_standard_service.py, domain_factory_router.py, storage_migration.py, test_eia_standard_service.py, eia_standard_api.js) | 7 reads | ~28997 tok |
+
+## Session: 2026-10-12 19:07
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-12 19:08
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:10 | P1 三件按 4 commit 拆分入库（1935d425/753aecf7/9e0d004f/5949a032）；router+LexiconPanel 混合文件按 hunk 拆分；外来改动（info.template/uv.lock/DomainFactoryView 178 行）甄别后留在工作树 | git | HEAD=5949a032，未推送 |
+| 20:44 | Created docs/vibe/2026-10-12-eia-data-factory-p2-pages.md | — | ~945 |
+
+## Session: 2026-10-12 20:47
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:50 | 环评域 P2/P3 页面补齐需求文档（专家参与度二分：编辑页=stages字段/formulas参数/sample_entities；查看页=节级明细/gate1/备料清单等；不立页=paradigms等）| docs/vibe/2026-10-12-eia-data-factory-p2-pages.md | 待用户确认后实施 | ~3k |
+| 21:08 | Created docs/vibe/prototypes/2026-10-12-eia-p2-ui.html | — | ~16889 |
+| 21:05 | P2/P3 高保真 UI 原型 7 屏（技术栈=纯 HTML+系统令牌，浅/暗切换，含字段编辑弹窗与只读抽屉演示）| docs/vibe/prototypes/2026-10-12-eia-p2-ui.html | 待用户评审 | ~12k |
+| 21:09 | Session end: 1 writes across 1 files (2026-10-12-eia-p2-ui.html) | 1 reads | ~18095 tok |
+| 21:30 | Edited docs/vibe/2026-10-12-eia-data-factory-p2-pages.md | expanded (+8 lines) | ~276 |
+| 21:30 | Edited backend/test/unit/services/test_storage_migration.py | 1→2 lines | ~62 |
+| 21:30 | Edited backend/test/unit/services/test_storage_migration.py | inline fix | ~23 |
+| 21:31 | Edited backend/test/unit/services/test_storage_migration.py | 5→6 lines | ~138 |
+| 21:33 | Edited backend/package/yuxi/storage/postgres/models_domain_factory.py | modified to_dict() | ~555 |
+| 21:33 | Edited backend/package/yuxi/storage/postgres/manager.py | 3→4 lines | ~28 |
+| 21:33 | Edited backend/package/yuxi/storage/postgres/manager.py | modified upgrade_business_v14_to_v15() | ~472 |
+| 21:33 | Edited backend/package/yuxi/storage_migration.py | inline fix | ~30 |
+| 21:33 | Edited backend/package/yuxi/storage_migration.py | 3→6 lines | ~115 |
+| 21:37 | Created backend/test/unit/services/test_eia_stage_service.py | — | ~3310 |
+| 21:39 | Created backend/package/yuxi/repositories/eia_stage_repository.py | — | ~830 |
+| 21:40 | Created backend/package/yuxi/services/eia_stage_service.py | — | ~3901 |
+| 21:41 | Edited backend/package/yuxi/services/eia_stage_service.py | modified __init__() | ~165 |
+| 21:41 | Edited backend/package/yuxi/services/eia_stage_service.py | to_dict() → _edit_dict() | ~97 |
+| 21:42 | Edited backend/package/yuxi/services/eia_stage_service.py | to_dict() → _edit_dict() | ~84 |
+
+## Session: 2026-10-12 21:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:45 | Edited backend/test/unit/services/test_eia_stage_service.py | modified _fam_block() | ~84 |
+| 21:48 | Edited backend/test/unit/services/test_storage_migration.py | inline fix | ~24 |
+| 21:57 | Created backend/test/unit/services/test_eia_data_sections.py | — | ~867 |
+| 21:58 | Created backend/test/unit/services/test_eia_standard_gate1.py | — | ~542 |
+| 21:59 | Edited backend/package/yuxi/services/eia_data_service.py | modified _section_sort_key() | ~427 |
+| 21:59 | Edited backend/test/unit/services/test_eia_data_sections.py | modified test_get_sections_rejects_unknown_stage() | ~63 |
+| 21:59 | Edited backend/package/yuxi/services/eia_standard_service.py | modified get_gate1_checks() | ~298 |
+| 22:01 | Edited backend/server/routers/domain_factory_router.py | added 1 import(s) | ~109 |
+| 22:01 | Edited backend/server/routers/domain_factory_router.py | modified list_eia_sections() | ~1404 |
+| 22:03 | Edited backend/package/yuxi/services/eia_stage_service.py | 3→4 lines | ~49 |
+| 22:09 | Created backend/test/integration/api/test_eia_stage_flow.py | — | ~1136 |
+| 22:14 | Edited web/src/apis/eia_data_api.js | expanded (+10 lines) | ~164 |
+| 22:14 | Edited web/src/apis/eia_standard_api.js | 3→6 lines | ~88 |
+| 22:14 | Created web/src/apis/eia_stage_api.js | — | ~346 |
+| 22:16 | Created web/src/components/eia-data/SectionsPanel.vue | — | ~6777 |
+| 22:16 | Edited web/src/components/eia-data/SectionsPanel.vue | 5→5 lines | ~59 |
+| 22:17 | Created web/src/components/eia-data/ExpectationsPanel.vue | — | ~1535 |
+| 22:18 | Edited web/src/components/eia-data/StandardsPanel.vue | CSS: ShieldCheck | ~618 |
+| 22:18 | Edited web/src/components/eia-data/StandardsPanel.vue | added 1 import(s) | ~65 |
+| 22:18 | Edited web/src/components/eia-data/StandardsPanel.vue | 4→5 lines | ~53 |
+| 22:18 | Edited web/src/components/eia-data/StandardsPanel.vue | modified catch() | ~176 |
+| 22:19 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+154 lines) | ~666 |
+| 22:19 | Created web/src/views/EiaSectionsView.vue | — | ~636 |
+| 22:19 | Created web/src/views/EiaExpectationsView.vue | — | ~620 |
+| 22:19 | Edited web/src/router/index.js | expanded (+12 lines) | ~190 |
+| 22:20 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | CSS: section_expectations, data_expectations | ~99 |
+| 22:25 | Edited web/src/components/eia-data/SectionsPanel.vue | 5→3 lines | ~42 |
+| 22:25 | Edited web/src/components/eia-data/SectionsPanel.vue | CSS: SLOT | ~56 |
+
+## Session Summary（2026-10-12 P2 数据工厂页批次收口）
+
+P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文本级插接导出 + 13 单测）、节级明细只读（自然序 + unmapped）、门 1 体检卡（规则规格 + 注册表自检）、备料清单只读；router 7 端点 + 前端双 tab /sections、/expectations、StandardsPanel gate1 卡、LAYER_LINKS 挂链。后端 42 单测 + 集成 401 恒跑全绿；迁移运行栈实跑 business=15；技能测试 88 全过（round-trip）；eslint/prettier/ruff 零错、vite 零编译错。buglog +421/422/423；changelog 与 P2 需求文档 checklist 已如实勾销。待用户确认提交拆分。
+| 22:42 | Session end: 28 writes across 19 files (test_eia_stage_service.py, test_storage_migration.py, test_eia_data_sections.py, test_eia_standard_gate1.py, eia_data_service.py) | 3 reads | ~34475 tok |

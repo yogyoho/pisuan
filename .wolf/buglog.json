@@ -4684,7 +4684,7 @@
     "error_message": "槽位type字段99.7%为\"parameter\"(1721/1726)，enum/descriptive/reference从未使用，类型系统死亡",
     "file": "backend/package/yuxi/config/static/prompt_templates.yaml + domain_factory_service.py",
     "root_cause": ":3660合法类型集{parameter,enum,descriptive,reference}与模型输出词表不匹配，:3663对非法type一律强转parameter；下游无法按类型区分数值/文本/引用槽",
-    "fix": "未修复：结构化输出约束类型词表，或对齐合法集与提示词示例",
+    "fix": "代码侧词表闭合已落地（spec-W1 P1-1a，2026-10-06）：prompt 枚举四类 + GeneralizedSlot Literal + _normalize_template_response 强转计数上浮 slot_type_coerced 三处同源；真实有效率待横城重跑验证（裁决 D）。",
     "tags": [
       "slot-type",
       "schema",
@@ -4694,8 +4694,8 @@
       "bug-333",
       "bug-334"
     ],
-    "occurrences": 1,
-    "last_seen": "2026-10-02"
+    "occurrences": 2,
+    "last_seen": "2026-10-06"
   },
   {
     "id": "bug-338",
@@ -5032,18 +5032,19 @@
     "error_message": "语料普查中 3 份 docx（九龙川/巴拉素/塔然高勒）被记为 0 字空文件，用户指出九龙川/巴拉素能正常打开且有内容",
     "file": ".wolf/corpus-census/census.json (生成脚本)",
     "root_cause": "三重：(1) 九龙川/巴拉素是 WPS 生成的病态 docx，.rels 引用不存在的 'NULL' 部件，python-docx 严格解析抛 KeyError，census 脚本 except 后静默记零；(2) 塔然高勒文件头为 UniDocSa（WPS 私有格式），真损坏；(3) census 脚本对解析失败无显式告警标记，0 与'解析失败'不可区分",
-    "fix": "zip 级手术：重写 .rels 剥除 Target=NULL 的 Relationship 条目后 python-docx 正常解析；census 失败需记 error 字段而非零值；塔然高勒确认损坏弃用",
+    "fix": "zip 级手术：重写 .rels 剥除 Target=NULL 的 Relationship 条目后 python-docx 正常解析；census 失败需记 error 字段而非零值；塔然高勒确认损坏弃用；2026-10-06 ETL 侧落地：yuxi/services/docx_guard.py 四态诊断 + 悬空关系项手术 + guarded_reparse 重试恰一次 + 空产物守卫，ETL 主解析与大纲提取两消费面接线（真实病态文件注入冒烟 2/2 PASS；spec: docs/superpowers/specs/2026-10-06-bug355-etl-docx-guard-design.md）",
     "tags": [
       "docx",
       "WPS",
       "NULL-relationship",
       "python-docx",
       "静默失败",
-      "语料普查"
+      "语料普查",
+      "etl-guard"
     ],
     "related_bugs": [],
     "occurrences": 1,
-    "last_seen": "2026-10-05"
+    "last_seen": "2026-10-06"
   },
   {
     "id": "bug-356",
@@ -5204,7 +5205,7 @@
     "error_message": "冒烟 templates total=200 ≠ 预期 230（静态 30 未加载），/app/templates 不存在",
     "file": "docker-compose.yml + docker/api.Dockerfile",
     "root_cause": "compose api 服务仅 bind mount server/package/test，镜像层也无 backend/templates 拷贝；TEMPLATES_DIR 解析 /app/templates 落空，容器栈 ETL 静态模板从未参与匹配（learned-only）",
-    "fix": "最终修复落地 commit beb1942e：镜像内 COPY backend/templates → /app/templates + compose api/worker 双 :ro 挂载，重建容器生效。激活冒烟（Task 1 两阶段评审通过）：total=230 / probe 30/30 / self-match 200；unit 2681 passed/0 failed/61 skipped。真实 ETL 行为观测（Task 2，横城 a44afc93 重跑）：激活前该任务 template_match=0（static 0/learned 0），激活后 phase-1 实测 template_match=317/335 标题段（static 277 + learned 40，30 个静态 headers 命中 21 个，最高频 TPL_HEADER_ECOLOGICAL_IMPACT_01 ×117），bug-353 学习模板 match_count 自增链在真实流量打通（命中模板 match_count=1）。该次重跑 phase-2（GENERALIZING）因云 API rate_limit 熔断终止（FAILED_PROVIDER，success=12/rate_limit=8/skipped=741，全程 3867s），任务按 P0-3 断点续跑设计保留可恢复状态；泛化阶段观测与写手侧取用率『待自然流量』口径仍挂起，判定标准 = 下一次完整 ETL（含 phase-2）完成后按 Step 2 口径采集。另记三点（终审补记）：①本任务台账的通道事实——两份 .env 无管理员凭据，重解析未走 HTTP 层，为容器内直调 service.retry_task / ARQ enqueue（与端点同链路），证据效力不受通道影响；②修复传播曾有第二层根因：sync-dev.ps1 不携带部署文件（$copyFiles 无 compose/Dockerfile），已扩单件清单修通（commit 2723e3e9，原 f884d9d0），localized diff 实测仅含新增行——occurrences=2 即此；③写手侧取用率激活后基线（committed 层留档）：total=8，get_templates graph=5 / get_chapter_outline graph=2 / list_chapter_keys graph=1，暂无 writer 来源调用。",
+    "fix": "已修（commit 6fc1940f，pisuan-custom）：_require_same_start 删 sequence 比对，tool 侧只校验 tool_name+input；model_message_audit_repository 同构守卫一并删除（同 operation_id 即幂等放行）。新增两侧 checkpoint 重放回归用例（test_agent_run_lease.py），容器内 25 passed 先红后绿。",
     "tags": [
       "deployment",
       "templates",
@@ -5215,7 +5216,7 @@
       "bug-359"
     ],
     "occurrences": 2,
-    "last_seen": "2026-10-05"
+    "last_seen": "2026-10-07T18:05:00+08:00"
   },
   {
     "id": "bug-364",
@@ -5255,5 +5256,1555 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-10-05"
+  },
+  {
+    "id": "bug-232",
+    "timestamp": "2026-10-05T22:41:31",
+    "error_message": "W2-T1 derive_conditions.py 断言失败：适配宇宙应 38 份，实得 35",
+    "file": ".wolf/corpus-census/derive_conditions.py",
+    "root_cause": "计划前提假设 census 41=38+3（仅排除简本?/note 坏档/部分骨架三类），但 labels.json 实含 3 份复垦方案族（四季屯/红庆梁/郭家台），族不在 FAMILY_MAP 被第 4 类排除 → universe=35。且 POLICY_KW='总量控制' 注释引用'郭家台 ch16 证据'，而郭家台恰为被排除的复垦方案——计划内部矛盾",
+    "fix": "未修，待控制方裁决 universe 口径（35 现状 / 郭家台入图则改 FAMILY_MAP+断言 / 修 spec 数字）；脚本按规格原样保留；控制方裁决 universe=35（spec §3.6 勘误，复垦 3 份按 §3.7 非目标排除），Task 4 阈值等比收紧 34/35、28/35；断言已改 35 重跑通过",
+    "tags": [
+      "w2-task1",
+      "corpus-census",
+      "conditions",
+      "assertion",
+      "plan-data-mismatch"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-05T22:46:16"
+  },
+  {
+    "id": "bug-233",
+    "timestamp": "2026-10-05T23:05:00",
+    "error_message": "alias_stats.py KeyError: '矿区环境影响识别与评价指标体系'（g1[t]）",
+    "file": ".wolf/corpus-census/alias_stats.py",
+    "root_cause": "gram 表 g1 只按 layer-1 章题建索引，语料章题误用 g1[t] 查表",
+    "fix": "改为 grams(t) & g1[L] 现算语料侧 4-gram",
+    "tags": [
+      "w2-task2",
+      "census-script"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-05"
+  },
+  {
+    "id": "bug-234",
+    "timestamp": "2026-10-05T23:12:00",
+    "error_message": "verify_final.py SyntaxError: truncated unicode escape（docstring 内反斜杠 u 字样）",
+    "file": ".wolf/corpus-census/verify_final.py",
+    "root_cause": "普通字符串 docstring 里出现反斜杠 u 被 Python 当 unicode 转义解析；sed 修复失败（Git Bash 转义歧义）",
+    "fix": "python replace 落盘去掉 docstring 反斜杠字样；含转义字样的代码一律 unicode 转义或双反斜杠",
+    "tags": [
+      "w2-task2",
+      "heredoc",
+      "unicode-escape"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-05"
+  },
+  {
+    "id": "bug-235",
+    "timestamp": "2026-10-05T23:23:00",
+    "error_message": "R4 require「回顾评价」裸名不在 planning canonical chapters 键，require 注入语义会叠加裸名 optional 造成重复回顾章",
+    "file": "backend/templates/coal_mining/report_skeletons/rules.json",
+    "root_cause": "spec §3.3 抽象槽名未绑定 stage 定稿全称；Task 2 按存在性检查字面登记为 optional 槽位，恰好触发重复注入风险",
+    "fix": "R4 require 改绑 canonical 全称「矿区开发环境影响回顾性评价」+note 说明 no-op 留痕语义；删 planning_eia.json 裸名 optional 槽位（commit c9b0e391）",
+    "tags": [
+      "w2-task2",
+      "r4",
+      "rules-json",
+      "coordinator-ruling"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-05"
+  },
+  {
+    "id": "bug-236",
+    "timestamp": "2026-10-05T23:52:00",
+    "error_message": "质量评审 2C+1I+3M：计划假设「underground/openpit 两 stage 差集恰为沉陷/爆破章」证伪——两 stage 实有 5 处同实异名+1 独有章，26 章双拼 canonical 含冗余双章",
+    "file": "backend/templates/coal_mining/report_skeletons/project_eia.json",
+    "root_cause": "计划 Task 2 合并伪码未做逐章比对（「差集恰为」想当然）；另有 sections 形态误判（实为 list[dict] 富对象）与 layer-3 键引用悬空",
+    "fix": "project_eia 重构井工 20 章基准；openpit 5 variant→alias、1 exclusive（爆破环境影响评价）→optional 节随迁；R1 require/R2 remove+add 改精确章题、R5 host 改实际章题+note、R6 when 加 family、post 删死 optional、planning/project 层三键改 L1 精确定义（commit 0d3abee8）",
+    "tags": [
+      "w2-task2",
+      "quality-review",
+      "plan-assumption-falsified",
+      "project_eia"
+    ],
+    "related_bugs": [
+      "bug-235"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-05"
+  },
+  {
+    "id": "bug-237",
+    "timestamp": "2026-10-05T23:59:00",
+    "error_message": "R6 add「总量控制」裸题 optional 槽位为死配置，注入语义会在郭家台渲染出双总控章（21 章）",
+    "file": "backend/templates/coal_mining/report_skeletons/rules.json",
+    "root_cause": "与 bug-236/R4 同款：抽象槽名未绑 stage 定稿全称；根因=控制方裁决后置（R6 绑 canonical 的查证在 Task 2 执行期间才完成，0d3abee8 时未回传）",
+    "fix": "R6 add→require 污染物排放总量控制分析+note 定稿口径；project_eia.json 删裸题 optional 槽位（canonical alias 污染物总量控制分析不动）（commit 73233749）",
+    "tags": [
+      "w2-task2",
+      "r6",
+      "rules-json",
+      "coordinator-ruling"
+    ],
+    "related_bugs": [
+      "bug-235",
+      "bug-236"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-05"
+  },
+  {
+    "id": "bug-366",
+    "timestamp": "2026-10-06",
+    "error_message": "NameError: name 'json' is not defined (W2 Task3 temp assertion script)",
+    "file": "C:/Users/Lenovo/AppData/Local/Temp/w2_assert.py",
+    "root_cause": "temp assertion script used json.loads without importing json (throwaway script, not repo code)",
+    "fix": "渲染层接 schema label：行表表头/键值表键名中文化（缺 label 硬 FAIL）+ 单元格值级中文化（字符串布尔+9 项登记枚举）+ {{TABLE:}} 独立成段隔离 + planning_eia schema 补漏约 20 处列 label。提交 8d1a13a2；test2 重渲染英文表头/裸键值表/英文枚举清零，fail=0。合规附录 warn 表保留机器口径；其余 4 个 stage 的族级 fields 缺欠为其首跑前置（未动）",
+    "tags": [
+      "temp-script",
+      "missing-import",
+      "w2-task3"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-07",
+    "status": "fixed"
+  },
+  {
+    "id": "bug-367",
+    "timestamp": "2026-10-06",
+    "error_message": "用户报告：行文问题很大，不像环评报告，反倒是像告诉用户 AI 是怎么写出环评报告的",
+    "file": "backend/scripts/render_report_skeletons.py",
+    "root_cause": [
+      "行文人格错位（精读 13 章抽样定型为五类病灶）：①节设计说明书段——派发契约的「上游依据/下游用途/任务性质/组织顺序」字段被写者转述为每节开头 300-500 字的元话语，全部 71 节中招；②数据纪律自述——「登记值一经引用即视为唯一口径，行文不再另行推算」等纪律条款被复述成正文承诺；③内部术语泄漏——「直渲」「表单直出」「登记口径」等管线词汇入正文（「直渲呈现」多处）；④缺项规则宣告——「凡表单未予登记的信息一律以[待确认]标识」是规则不是内容；⑤键值表打断行文。估计全文元话语 3-6 万字符，集中在每节开头，观感权重极大。正文主体（矩阵法/概率积分法/法定依据/整治区划等段落）实为专业环评行文——病灶是「壳」不是「芯」。根因：契约的导航字段与纪律条款无「不进正文」禁令、无节首段正面范式、build 门⑤残留扫描词表未覆盖元话语。"
+    ],
+    "fix": "三层修复已提交 c6092c26：①SKILL.md 4.1 正文人格契约（禁节设计说明/纪律复述/管线术语）②RESIDUE_RE 扩三组词表（不收裸「登记表」护「签到登记表」）③存量 71 节剥壳：LLM 改写（校验器锁数字/占位符）+ 规则替换约 55 对 + ch6 谓语修补；交付稿门词表 0 残留、13 章完整、构建 fail=0 幂等、数字序列零漂移",
+    "tags": [
+      [
+        "coal-eia-writer",
+        "section-writer",
+        "meta-discourse",
+        "persona-mismatch",
+        "prompt-contract",
+        "paradigm-gap"
+      ]
+    ],
+    "related_bugs": [
+      "bug-366"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-07",
+    "status": "fixed"
+  },
+  {
+    "id": "bug-368",
+    "timestamp": "2026-10-06",
+    "error_message": "Task1 TDD 落盘后 2/13 failed：合成 docx fixture 用假关系类型（example.com），python-docx 打不开主文档部件；word/_rels/document.xml.rels 内相对目标写 word/document.xml，按 OPC base=word 解析成不存在的 word/word/document.xml 恒判悬空",
+    "file": "docs/superpowers/plans/2026-10-06-bug355-etl-docx-guard.md（计划内嵌测试代码）→ backend/test/unit/test_docx_guard.py",
+    "root_cause": "控制方拟计划时 fixture 未按 OPC 规范构造：关系 Type 必须用真实 officeDocument reltype；.rels 内相对 Target 的 base 是 .rels 所在部件目录（word/_rels/x.rels → word）",
+    "fix": "三层中两层落地：①源头治本——5 个 stage 文件 elements 共 162 处英文列键改写为中文列名（59 个 snake_case 键+17 个单词键，字典驱动+逐元素断言，中文措辞与渲染表头语义一致；机制词 scale_before/capacity_inputs/risk_source 等归 B 类系统词不改）；②SKILL.md 4.1 正文人格条款补第④类禁令（英文裸键与系统词不入正文）。③残留门不引入裸键扫描——交付稿合规性附录/计算异常块有 89 处合法机器词汇（槽位键/合约 id），裸键模式会全面误伤，实测否决。验证：ch6_S02 修复后重派，剔除（含畸形）标记后正文 snake_case=0、英文词=0；同节 A2 基线曾转录 public_forest_area。",
+    "tags": [
+      "docx",
+      "OPC",
+      "test-fixture",
+      "python-docx",
+      "plan-defect",
+      "fixed"
+    ],
+    "related_bugs": [
+      "bug-355"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-07",
+    "status": "fixed"
+  },
+  {
+    "id": "bug-369",
+    "timestamp": "2026-10-06T00:00:00Z",
+    "error_message": "spec-W1 Task3 评审 NEEDS_FIXES：structured 通道 generalized 兜底网 setdefault 为死代码（model_dump() 恒物化默认字段，key 永存在），与 prompt 通道对模型省略 generalized 的行为不一致",
+    "file": "backend/package/yuxi/services/domain_factory_service.py",
+    "root_cause": "P1-1a 实现时照搬 prompt 通道的 setdefault 惯用法，未考虑 dict(model_dump()) 与 json.loads 的 key 存在性差异：前者含默认值空串，setdefault 永不触发",
+    "fix": "377440fc: 改为 if not structured.get(\"generalized\") 空值判定回填；同批 M-1 降级日志 info→warning（含 docstring 同步）、M-2 四处 E501 收行、M-3 补 ValidationError 降级路径测试、M-4 过时注释刷新",
+    "tags": [
+      "spec-W1",
+      "etl",
+      "structured-output",
+      "dead-code",
+      "quality-review"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-06"
+  },
+  {
+    "id": "bug-370",
+    "timestamp": "2026-10-06T00:00:00Z",
+    "error_message": "pre_commit_validator 要求参数段模板含 text_pattern——该字段段落侧无任何写入方（前端 0 引用；graph_builder 写的 text_pattern 是 commit 后 Neo4j 节点属性），恒空恒假门；W0 bug-354 修复激活 L1 门后，凡含参数段的任务提交必 COMMIT_FAILED",
+    "file": "backend/package/yuxi/services/pre_commit_validator.py",
+    "root_cause": "validator 校验字段与生产写入字段错位：段落 template 的真实泛化产物字段是 generalized（_normalize_template_response 回写），text_pattern 是幽灵字段；且类门只认 classify_type=='parameter'，spec-W1 新值 prose 不入门、legacy narrative 旧摘要形态模板无 generalized 若纳入会误杀",
+    "fix": "spec-W1 Task5：text_pattern 检查改查 generalized（同门内）；generalized 门收敛 classify_type in ('prose','parameter')（D7 裁决 2026-10-06：legacy narrative 豁免，防旧任务新增性提交失败）；slot>15/重名/纯数字检查原样保留。测试 TestValidatorProseGate 5 用例 + 既有 test_pre_commit_validator.py 6 处幽灵字段依赖同步",
+    "tags": [
+      "spec-W1",
+      "validator",
+      "ghost-field",
+      "pre-commit",
+      "etl"
+    ],
+    "related_bugs": [
+      "bug-354",
+      "bug-337",
+      "bug-336"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-06"
+  },
+  {
+    "id": "bug-371",
+    "timestamp": "2026-10-06T16:15:23",
+    "error_message": "ruff F401 `json` imported but unused（backend/test/unit/test_w2v2_render_window.py:10）",
+    "file": "backend/test/unit/test_w2v2_render_window.py",
+    "root_cause": "任务书提供的测试代码逐字照抄，其中 import json 实际未被使用（JSON 读取由渲染器 load_layers 内部完成），违反 Step6 零新增 lint 预期",
+    "fix": "删除未用的 import json 行（lint 合规修正，不动测试逻辑），复跑 ruff 通过、42 passed 维持",
+    "tags": [
+      "lint",
+      "ruff",
+      "F401",
+      "task-book-code"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-06T16:15:23"
+  },
+  {
+    "id": "bug-372",
+    "timestamp": "2026-10-06T16:26:19",
+    "error_message": "同锚两章（A1、B1 均 insert_after X）时 _apply_anchors 互挤震荡，耗尽轮数抛 ValueError「insert_after 链不收敛」（规格评审实证复现，spec §4.1 承诺同锚稳定）",
+    "file": "backend/scripts/render_report_skeletons.py",
+    "root_cause": "插入位恒取锚后首位（keys.index(锚)+1），每轮最后处理的同锚章把先处理者挤到块后，下轮互换——changed 永真永不收敛",
+    "fix": "内层循环改锚块语义：就位判定=位于锚块 [j+1, block_end]（锚后连续同锚锚定章），重插到锚块末尾；先处理者靠前、同锚不互挤；链式锚与异锚行为不变",
+    "tags": [
+      "renderer",
+      "anchor",
+      "stability",
+      "w2v2"
+    ],
+    "related_bugs": [
+      "bug-371"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-06T16:26:19"
+  },
+  {
+    "id": "bug-373",
+    "timestamp": "2026-10-06",
+    "error_message": "W2v2-T3 任务书 shell 管道在 Windows 下 KeyError mojibake——python -c 选出的中文 universe 键经 bash $() 捕获后以损坏编码回传第二个 python 的 --only 参数，6 份渲染全失败",
+    "file": "backend/scripts/render_report_skeletons.py",
+    "root_cause": "Windows python stdout 默认 GBK，MSYS bash 按 UTF-8 转宽字符导致中文文件名损坏；渲染器与 conditions.json 均无恙",
+    "fix": "选键+subprocess 列表参数调渲染器+mv 合并进单个 Python 驱动进程（CreateProcessW 全程 Unicode）；selector 表达式逐字保留；渲染器本体零改动",
+    "tags": [
+      "windows",
+      "encoding",
+      "gbk",
+      "render",
+      "shell-pipeline"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-06"
+  },
+  {
+    "id": "bug-374",
+    "timestamp": "2026-10-06",
+    "error_message": "T4 豁免收敛后白名单扩容，任务书提供的递归 DFS _order_pass 触发 RecursionError（伊泰2021.12 等多 mover 文件可达状态空间深度超 Python 递归上限 1000）",
+    "file": "backend/test/unit/test_report_skeleton_fit.py",
+    "root_cause": "逐章摘取-重插的移动序列可任意长（mover 可反复跳移），递归 DFS 深度不受状态数控制而受路径长度控制；白名单词条从 11→18 后部分文件的最短迁移路径仍超过递归限制，且栈序探索在 37s 量级徘徊后才爆栈",
+    "fix": "改显式 best-first 搜索（heapq，启发式=与 target 的逐位差异数，visited 去重、tick 破同构比较）：可达性语义与探索顺序无关，判定结果不变，模块耗时 41s→0.16s",
+    "tags": [
+      "recursion",
+      "dfs",
+      "best-first",
+      "fit-test",
+      "whitelist",
+      "w2v2"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-06"
+  },
+  {
+    "id": "bug-375",
+    "timestamp": "2026-10-06",
+    "error_message": "终审 DoD-5 失败：HEAD 渲染与 rendered/ 存档 byte-identical 破——3 存档（revised2019/openpit/underground）generated_from.conditions.exemptions 嵌有已删除的 \"order\": true 快照行",
+    "file": "backend/templates/coal_mining/report_skeletons/rendered/planning_eia_revised2019.json",
+    "root_cause": "T3 (cff2c279) 重渲时 conditions.json 尚带 21 条 order 豁免，exemptions 快照透传入档；T4 (0d3600e8) 删豁免后未触发存档重渲。渲染产物无强制重渲机制（W2 终审挂账⑤『rendered/ 静默漂移』的实例），数据真源与派生存档间的时序耦合仅靠流程纪律",
+    "fix": "1ce31309 对 3 源条目（五间房/吐鲁东/月儿湾）按现行 conditions 重渲覆写，每份恰删 order:true 一行；md5 三连 BYTE-IDENTICAL + underground 冒烟 589 复跑过。教训已挂 cerebrum：改 conditions.json（或任何渲染输入）后必须同步重渲受影响存档，或推进挂账⑤的强制重渲机制",
+    "tags": [
+      "rendered-archives",
+      "provenance-drift",
+      "byte-identical",
+      "conditions",
+      "w2v2"
+    ],
+    "related_bugs": [
+      "bug-372",
+      "bug-373"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-06"
+  },
+  {
+    "id": "bug-376",
+    "timestamp": "2026-10-06",
+    "error_message": "运行栈 web 容器 vite 编译失败：[vite:css] [less] Unrecognised input. Possibly missing something，SettingsModal.vue 报错行号经 sourcemap 还原错位指向 script 区 211 行",
+    "file": "web/src/components/SettingsModal.vue",
+    "root_cause": "4c164378 删 Star 卡样式块用 sed '389,471d'——原 :389 是 2 缩进的中间层闭合 }（非空行），目测验证只看了删除点附近内容未核对缩进层级语义，多删一层闭合致 style 块括号失衡（EOF 处 bal=+1），less 报「Unrecognised input」且 sourcemap 行号错位误导排查方向",
+    "fix": "75771c20 在 &.activesec 闭合与最外层闭合之间补回 2 缩进 }；验证链：python 括号计数 balance=0 → 容器内 less.render 编译 style 块 OK → vite transform 请求 200 → 容器日志零 error",
+    "tags": [
+      "less",
+      "vite",
+      "sed",
+      "brace-balance",
+      "sourcemap-misleading",
+      "settings-modal",
+      "self-inflicted"
+    ],
+    "related_bugs": [
+      "bug-372"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-06"
+  },
+  {
+    "id": "bug-377",
+    "timestamp": "2026-10-06",
+    "error_message": "W3 Task2 TDD 红相：test_mixed_takes_narrowest 失败——min_permissive_scope([\"universal\", \"regional\"]) 返回 universal，测试期望 regional（1 failed, 20 passed）",
+    "file": "backend/package/yuxi/services/domain_factory_region.py",
+    "root_cause": "任务书提供的实现片段与其自身测试矛盾：片段写的是「universal 在场即返回 universal」（最宽者胜），而测试名 test_mixed_takes_narrowest、模块 docstring「窄序 project < regional < universal」与 apply_min_permissive「永不升级」语义三方一致指向最窄者胜",
+    "fix": "min_permissive_scope 落定分支改为窄序判定：project 在场→project；regional 在场→regional；否则 universal。改后 21/21 全绿",
+    "tags": [
+      "w3",
+      "tdd",
+      "min-permissive",
+      "task-book-code-bug"
+    ],
+    "related_bugs": [
+      "bug-361"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-06"
+  },
+  {
+    "id": "bug-378",
+    "timestamp": "2026-10-06",
+    "error_message": "test_w3_scope_pipeline.py::test_w1_baseline_regression 失败：assert ['measurable', 'reusable'] == ['measurable']",
+    "file": "backend/test/unit/test_w3_scope_pipeline.py",
+    "root_cause": "任务书提供的测试期望写漏 reusable——'涌水量' 命中 _SLOT_PATTERNS（水量 子串）追加 reusable 标签，真实基线为 ['measurable', 'reusable']；W1 既有同 fixture 测试（test_w1_prose_pipeline.py:46）用的是成员断言因此从未暴露",
+    "fix": "按现场基线修正断言为 == ['measurable', 'reusable'] 并留注释指向 W1 同款测试；实现零改动（classify_tags 逻辑未被本任务触碰）",
+    "tags": [
+      "w3",
+      "task3",
+      "task-book-code-bug",
+      "classify-tags"
+    ],
+    "related_bugs": [
+      "bug-361"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-06"
+  },
+  {
+    "id": "bug-379",
+    "timestamp": "2026-10-06",
+    "error_message": "qualrev I-1：_etl_pipeline_async 归属挂钩无独立守卫——get_task/update_task 瞬时抛错会被外层 except Exception as para_error 吞掉并误报「段落级泛化失败」，且熔断持久化分支（step_ledger breaker_tripped 落库）被整体跳过",
+    "file": "backend/package/yuxi/services/domain_factory_service.py",
+    "root_cause": "挂钩插入点位于外层泛型 try 块内且在其下方还有必须可靠到达的熔断持久化分支（bug-342 纪律）；任务书原文的挂钩代码未做 fire-isolation，违反「插入既有 try 块的代码不得威胁其后必达分支」",
+    "fix": "挂钩体包独立 try/except，logger.warning 降级不影响主流程；与同函数既有 slot 映射/实体匹配守卫模式一致。顺带 M-1 补两例 patch 交互单测（词表外 region 不造键 / L1 命中已有 key 只补 scope）",
+    "tags": [
+      "w3",
+      "task3",
+      "circuit-breaker",
+      "bug-342",
+      "review-fix"
+    ],
+    "related_bugs": [
+      "bug-342"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-06"
+  },
+  {
+    "id": "bug-380",
+    "timestamp": "2026-10-06",
+    "error_message": "test_cascade_three_steps/test_aggregate_writes_scope_and_meta KeyError: 'id'（_aggregate_template_scopes 内 t['id']）",
+    "file": "backend/test/unit/test_w3_facts_flow.py",
+    "root_cause": "任务书提供的 FakeRepo.get_learned_templates_by_ids/get_learned_templates_by_contributing_task 返回原始模板 dict 无 id 键，而真实 repo 契约返回 [{id, scope, extra_meta}]——fake 与同任务书给的生产实现代码不自洽，service 按真实契约 t[id] 取键即 KeyError",
+    "fix": "fake 两 getter 同构真实契约：get_learned_templates_by_ids 返回 dict(self.templates[i], id=i)，by_contributing_task 返回 dict(t, id=tid)；生产代码零改动",
+    "tags": [
+      "w3",
+      "fake-repo",
+      "fixture-contract",
+      "test"
+    ],
+    "related_bugs": [
+      "bug-354"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-06"
+  },
+  {
+    "id": "bug-381",
+    "timestamp": "2026-10-06",
+    "error_message": "operator does not exist: json @> unknown——get_learned_templates_by_contributing_task 在运行栈实库必报错",
+    "file": "backend/package/yuxi/repositories/domain_factory_repository.py",
+    "root_cause": "domain_factory_learned_templates.extra_meta 列型是通用 sqlalchemy.JSON（PG 编译为 json），@> 包含算符仅 jsonb 支持；单测 fake repo 不走真 SQL 故未暴露",
+    "fix": "查询改 extra_meta::jsonb->contributing_task_ids @> CAST(:needle AS jsonb)（同 manager.py:532 对 config_json 的既有处理）；运行栈实库冒烟验证：无报错 0 行",
+    "tags": [
+      "w3",
+      "json-jsonb",
+      "operator-missing"
+    ],
+    "related_bugs": [
+      "bug-380"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-06"
+  },
+  {
+    "id": "bug-382",
+    "timestamp": "2026-10-06T23:55:00+08:00",
+    "error_message": "git push origin pisuan-custom 连续失败：Empty reply from server / Connection was reset（github.com HTTPS 不通）",
+    "file": "(环境) git 网络路径",
+    "root_cause": "本机到 github.com 直连间歇性受阻；git config 与环境变量均无代理配置；ls-remote 15s 超时无响应",
+    "fix": "网络路径自行恢复后 git push 成功：e160ea5e..bef9d9d0 fast-forward 28 提交；无代理配置变更",
+    "tags": [
+      "network",
+      "push",
+      "github",
+      "proxy",
+      "w3"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-07T00:05:00+08:00"
+  },
+  {
+    "id": "bug-383",
+    "timestamp": "2026-10-07",
+    "error_message": "W4 计划代码：service build_region_board 中 for rk, rl, cnt in raw[\"tasks_by_region\"] 对 dict 列表做位置解包，解出键名字符串而非值，task_count 累加即坏",
+    "file": "docs/superpowers/plans/2026-10-07-w4-attribution-ui.md（修复落在 backend/package/yuxi/services/domain_factory_service.py）",
+    "root_cause": "计划代码未实际执行过：repo 层 SQLAlchemy Row 位置解包合法（列值），同形代码搬到 service 层输入变成 dict 列表即坏——书写计划时未对每段代码核对运行时数据形状",
+    "fix": "改键访问式推导 {\"region_key\": r[\"region_key\"], \"region_label\": r[\"region_label\"], \"count\": r[\"count\"]} for r in raw[...]；TDD Step 1.9 拦截；commit 2461dddc",
+    "tags": [
+      "w4",
+      "plan-bug",
+      "tdd-caught",
+      "dict-unpacking"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-07"
+  },
+  {
+    "id": "bug-384",
+    "timestamp": "2026-10-07",
+    "error_message": "W4 计划代码：build_region_board 模板树循环 if t[\"region\"] is None or == \"mixed\": continue 把未归属(None)模板也跳过，与同函数 docstring「派生 None 进未归属伪节点」及测试断言 tree[None][\"template_count\"]==1 直接矛盾",
+    "file": "docs/superpowers/plans/2026-10-07-w4-attribution-ui.md（修复落在 backend/package/yuxi/services/domain_factory_service.py）",
+    "root_cause": "写 continue 条件时脑内模型混入了「None 不参与」的 min-permissive 语义，而树汇入处 None 恰恰要参与（进伪节点）——哨兵值语义在「参与/跳过」间切换时未逐处对照 docstring 与断言",
+    "fix": "continue 只跳 \"mixed\"；None 经 region_label_for_key(None)→None 自然落伪节点（label None）；commit 2461dddc",
+    "tags": [
+      "w4",
+      "plan-bug",
+      "tdd-caught",
+      "sentinel-semantics"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-07"
+  },
+  {
+    "id": "bug-385",
+    "timestamp": "2026-10-07",
+    "error_message": "ruff format --check fails on domain_factory_region.py（ADMIN_REGION_VOCAB 行尾注释手工对齐 + derive_template_region 签名折行，后者 T1 遗留存量）",
+    "file": "backend/package/yuxi/services/domain_factory_region.py",
+    "root_cause": "计划/spec 内嵌代码片段自带手工注释对齐，被实现者逐字照抄；且计划 Step 门只写了 ruff check 未写 ruff format --check，CLAUDE.md 的 make format（含 format）是提交硬门槛",
+    "fix": "uvx ruff format 归一（style 提交 0d3e2a65，AST 级零语义验证）；T6 勾账时同步 plan/spec 内嵌片段；后续计划 Step 门补 format --check",
+    "tags": [
+      "ruff-format",
+      "w4",
+      "domain_factory_region",
+      "lint-gate"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-07"
+  },
+  {
+    "id": "bug-341",
+    "timestamp": "2026-10-07T12:20:00+08:00",
+    "error_message": "eslint no-unused-vars: 'total' is assigned a value but never used (AttributionTaskTable.vue:10)",
+    "file": "web/src/components/domain-factory/AttributionTaskTable.vue",
+    "root_cause": "计划 Step 3.3 代码自身声明了未用的 total ref（全文件只用 pagination.total），逐字落地必踩 lint error；且 web 容器 /app/src 挂载自 pisuan-localized 工作树，sync-dev 前 lint 验的是旧代码",
+    "fix": "commit 63c4b42e 删除 const total = ref(0) 一行（独立 fix 不 amend），sync-dev 后容器内复跑 7 文件 eslint exit 0",
+    "tags": [
+      "eslint",
+      "no-unused-vars",
+      "w4",
+      "attribution",
+      "sync-dev"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-07T12:20:00+08:00"
+  },
+  {
+    "id": "bug-386",
+    "timestamp": "2026-10-07",
+    "error_message": "归属面板交互缺陷（T3 质量评审发现）：①改判级联后切到事实/看板子页显示陈旧数据；②任务表搜索框点✕清空关键词后列表仍按旧词过滤；③applyRegionFilter 含不可达且语义错误的 null→scope='unassigned' 分支；④弹窗 ok-text 固定「确认改判」不随归属确认场景分叉",
+    "file": "web/src/components/domain-factory/RegionAttributionPanel.vue（另 AttributionTaskTable.vue / AttributionEditModal.vue）",
+    "root_cause": "v-show 保持子组件挂载、各子页自行 fetch 后无跨子页失效机制；antd allow-clear 只发 change 不发 search；计划代码含未对照 spec（看板伪节点不发跳转）的死分支",
+    "fix": "476f8b21：Panel watch(activeSub) 调对应子页 refresh()（boardRef 新增）；TaskTable onKeywordChange 空值即 onFilterChange()；死分支删除、scopeFilter 恒 'all'；ok-text 三元分叉",
+    "tags": [
+      "w4",
+      "frontend",
+      "antd",
+      "stale-data",
+      "quality-review"
+    ],
+    "related_bugs": [
+      "bug-341"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-07"
+  },
+  {
+    "id": "bug-387",
+    "timestamp": "2026-10-07",
+    "error_message": "区域事实子页三缺陷（T4 质量评审发现）：①筛选/看板下钻后受控 selectedRowKeys 不清空，批量退役确认框只显示数量，可能连带当前不可见行一起不可逆退役；②退役恰好清空当前末页后停留越界空页（后端返回空 items 而 total>0）；③batch-bar 背景 var(--warning-bg) 在 base.css/base.dark.css 均未定义，暗色主题硬编码 #fff7e6 刺眼",
+    "file": "web/src/components/domain-factory/RegionalFactsTable.vue",
+    "root_cause": "受控多选状态未随数据集变更失效；变更操作后未按剩余总数回缩分页；计划附录 A 片段引用了不存在的 CSS 变量（写计划时未核对变量表）",
+    "fix": "662f47ff：onFilterChange/applyRegionFilter 各加 selectedIds.value=[]；confirmRetire 成功分支按 total-retired 回缩 pagination.current；背景改 var(--color-warning-50, #fff7e6)（base.css:101/base.dark.css:87 实存）",
+    "tags": [
+      "w4",
+      "frontend",
+      "selection-state",
+      "pagination",
+      "css-variable",
+      "quality-review"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-07"
+  },
+  {
+    "id": "bug-388",
+    "timestamp": "2026-10-07",
+    "error_message": "看板任务×region 统计卡：repo 按 (region_key, region_label) 二元组 group by，region_label 为用户自由文本，同一 region_key 历史 label 漂移时卡片拆成两行且 v-for key 重复（Vue dev 警告）——树侧 service 已按 key 合并、统计卡侧未合并（T5 质量评审 Minor 发现）",
+    "file": "web/src/components/domain-factory/RegionBoard.vue",
+    "root_cause": "group-by 维度含自由文本列而展示聚合键只应为 region_key；计划附录 B 片段直接透传后端行",
+    "fix": "b1d4fb6d：computed tbr 用 Map 按 region_key ?? '__none__' 归并（先到 label 优先、count 累加、浅拷贝不污染源、保首插序），归并键与模板 v-for :key 同源",
+    "tags": [
+      "w4",
+      "frontend",
+      "group-by",
+      "label-drift",
+      "quality-review"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-07"
+  },
+  {
+    "id": "bug-389",
+    "timestamp": "2026-10-07",
+    "error_message": "页面测试：并发波次派发节撰写者 subagent 触发上游模型 429 限流，ch4_S06/S07 两个 subagent run 失败且 output 为纯空白（'\n'×N），UI 显示「启动/等待子智能体 失败」；主智能体暂停并向用户抛 A/B/C 问答题",
+    "file": "backend/package/yuxi/agents/presets/subagents/（eia-section-writer 调度路径）",
+    "root_cause": "主智能体一次波次并发 3-4 个 subagent，各自携带数 KB prompt 打同一模型端点（agnes-2.5-flash@apihub），超出上游并发/速率配额；失败 run 无重试与降速重派机制",
+    "fix": "本轮未改代码（观察项）。方向：subagent 波次限并发（如 ≤2）+ 429 指数退避重试；失败 run 应返回结构化错误而非空白 output",
+    "tags": [
+      "coal-eia-writer",
+      "subagent",
+      "429",
+      "rate-limit",
+      "page-test"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-07"
+  },
+  {
+    "id": "bug-390",
+    "timestamp": "2026-10-07",
+    "error_message": "主智能体暂停等待用户期间（约 3-5 分钟无工具活动），sandbox 容器被 provisioner 回收（DELETE /api/sandboxes/2ba415c36ee2），运行环境随暂停一起销毁；用户若选「稍后继续」将面临 sandbox 重建+静默续跑",
+    "file": "backend/package/yuxi/agents/backends/sandbox/provider.py（release/回收策略）",
+    "root_cause": "sandbox 空闲回收计时不含「等用户输入」状态；暂停对话在生命周期上与运行中无异",
+    "fix": "本轮未改。方向：ask_user_question 挂起状态 touch 续期或回收前快照；至少在续跑时向用户声明沙盒已重建",
+    "tags": [
+      "sandbox",
+      "lifecycle",
+      "idle-reclaim",
+      "page-test"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-07"
+  },
+  {
+    "id": "bug-391",
+    "timestamp": "2026-10-07",
+    "error_message": "节稿系统性缺陷（ch4_S03/S04/S05 三节一致）：①{{TABLE:retrospective}} 占位符被塞进叙述句「经全面调查核实，{{TABLE:retrospective}}。」×10+；②标准号张冠李戴（GB 15618-2018 写成建设用地标准、实为农用地；「HJ 656-2013 煤炭工业环评导则」「GB/T 35417-2017 煤炭矿业场」存疑配对）；③PM2.5 年均限值引 60μg/m³（60 是 SO2 年均，PM2.5 二级年均 35）；④「无数据→未记录到珍稀物种」编造边缘；⑤同文档植被评价「一般/良好」自相矛盾；⑥节末标准清单与节内容无关（全局贴牌）；⑦「非法 mining 活动」中英夹杂；⑧无内容章节靠八股同构句灌满 ≥4000 字符",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/（节撰写契约与知识供给）",
+    "root_cause": "双因修正（standards_index.json 实测 62 条、含 GB 15618-2018/GB 36600-2018 正确名称与适用对象，verified=true）：①W1a 名称错配=知识在但节撰写契约未强制对照索引（模型凭记忆作答）；②W1b 限值错误=limit_tables.gb3095_concentration_limits.rows=[] 空壳（verified=false，注明须人工核实录入后冻结），模型无表可查；③其余（占位符泄漏/灌水/贴牌/自相矛盾）为范式知识缺失+字数硬指标诱发",
+    "fix": "方向修正：W1a 靠工程修复（契约强制「引用标准前对照 standards_index+limit_tables」）；W1b 靠知识加工（限值表录入——样例报告标准引用段是天然校核语料）；范式类靠方向 A 章节范式卡（样例报告加工）",
+    "tags": [
+      "coal-eia-writer",
+      "writing-quality",
+      "placeholder-leak",
+      "standard-citation",
+      "knowledge-gap",
+      "page-test"
+    ],
+    "related_bugs": [],
+    "occurrences": 3,
+    "last_seen": "2026-10-07"
+  },
+  {
+    "id": "bug-392",
+    "timestamp": "2026-10-07",
+    "error_message": "换对话+换项目名（合成test2矿区）重开测试，新对话智能体仍直接进入旧工作区 /home/gem/user-data/workspace/eia-report（技能内 slug 写死），读到旧工程 progress（ch1-3 VERIFIED/ch4 半成品）——工作区不随对话/项目隔离",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md（工作区路径约定）",
+    "root_cause": "工作区目录名 eia-report 是技能约定常量，与对话 id/项目名无关；多工程并存靠智能体自觉检测（deepseek 主动问询裁决，agnes 静默续跑——同一技能不同模型行为差异）",
+    "fix": "本轮未改代码。deepseek-flash 主动弹单选题并按裁决建独立目录 eia-report-test2，规避了静默续跑；代码侧方向：工作区路径派生自工程名（eia-report-<slug>）或会话隔离",
+    "tags": [
+      "coal-eia-writer",
+      "workspace-collision",
+      "model-comparison",
+      "deepseek",
+      "page-test"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-07"
+  },
+  {
+    "id": "bug-361",
+    "timestamp": "2026-10-07T14:59:56",
+    "error_message": "生成的 CSV 测试用例大面积空白单元格（01/02/03/04/06/08 多列丢值）",
+    "file": "$TEMP/gen_test2_csvs.py（临时脚本，产物为 eia-report-test2/templates/filled/）",
+    "root_cause": "凭记忆猜模板列名（如 面积(km²) vs 真实 面积、来源 vs 来源(user_monitoring|analog_mine)），write() 用 dict.get(c,'') 按表头取值，键不匹配时静默写空串，无任何告警",
+    "fix": "先 csv.reader 读全部 11 张真实表头（含括号内枚举注解），改为位置对齐的 list 行并 assert len(row)==len(cols)；枚举值同步改为合规写法（环境要素用 大气/地表水/地下水/声/土壤，时相=现状，生态保护红线归 类别=自然保护区）",
+    "tags": [
+      "csv",
+      "template-header",
+      "silent-data-loss",
+      "test-fixture",
+      "dict-get-mask"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-07T14:59:56"
+  },
+  {
+    "id": "bug-362",
+    "timestamp": "2026-10-07T16:11:22",
+    "error_message": "评审误判：把节稿（state/sections/*.md）中的 {{TABLE:族}} 占位符判为「泄漏缺陷」（agnes 轮 W2）",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md",
+    "root_cause": "未先读 SKILL.md 渲染契约就下结论。SKILL.md:10/33 明文设计「数字永不经过 LLM，正文只写 {{SLOT:key}}/{{TABLE:族}} 由脚本注入」，build_output.py 负责把占位符渲染为 markdown 表，consistency.py SL1 只要求终稿残留=0。节稿是中间态，占位符本就应存在",
+    "fix": "W2 改判：agnes 轮真正的问题只是占位符嵌入位置风格（句中嵌入而非独立表格位）；验证缺陷应在终稿（build_output 渲染后）查 SL1 残留。deepseek 轮 ch2_S01/ch4_S01 用法（独立行+引导段）符合契约",
+    "tags": [
+      "coal-eia-writer",
+      "TABLE-placeholder",
+      "render-contract",
+      "false-positive",
+      "SL1"
+    ],
+    "related_bugs": [
+      "bug-359"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-07T16:11:22"
+  },
+  {
+    "id": "bug-363",
+    "timestamp": "2026-10-07T17:30:00+08:00",
+    "error_message": "Error during resume: 重复 Tool start 与已持久化事实不一致",
+    "file": "backend/package/yuxi/repositories/tool_message_audit_repository.py",
+    "root_cause": "resume run(23178774) 从 LangGraph checkpoint 恢复后重试被取消的 subagent_await(call_00_ET_hfbTv9BtHwwFaCTVdkBK2910)，事件源重新发射同一 tool_call_id 的 tool-started，但新事件流 seq=2 与首次持久化的 sequence=44767 不等；_require_same_start 把流序号 sequence 当持久化事实比对，合法 checkpoint 重放被误判为事实冲突。首次事实已因子代理 run 取消被 tool-error 关闭为 failed，重试还叠加已关闭状态。守卫设计意图是防同 call_id 不同事实（name/input 冲突），sequence 参与比对属过度严格。",
+    "fix": "未修（2026-10-07 诊断完成，待拍板）。候选方案：A) _require_same_start 不比对 sequence，tool_name+input 一致即幂等放行；B) resume 路径对已存在 audit 直接复用不重放 start；C) 事件源在 checkpoint 重放时跳过已持久化的 tool-started。写作现场无损：progress.json 与节稿在文件系统，前端点继续即新建 resume run（新 run_id 不撞旧事实）。",
+    "tags": [
+      "agent-run",
+      "resume",
+      "tool-audit",
+      "langgraph-checkpoint",
+      "sequence-mismatch",
+      "coal-eia-test2"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-07T17:30:00+08:00"
+  },
+  {
+    "id": "bug-364",
+    "timestamp": "2026-10-07T19:05:00+08:00",
+    "error_message": "用户报告交付文件「王坡煤矿-规划环评-环境影响报告.md 中只有第1章到第6章，后续章节没有了」",
+    "file": "web 前端 markdown 预览（非产物文件）",
+    "root_cause": "产物无缺陷：deliveries/outputs 两份文件均实测含全部 13 章（章标题/目录/分章体量三重验证，87万字符/2.3MB）。前6章恰约38.6万字符（ch6 独占176k），落在浏览器端 markdown 预览器全量 DOM 渲染的截断区间——超长文档只渲染前几十万字符且不报错，造成「后面没有」的观感。",
+    "fix": "无产品修复（查看方式问题）：大文件用 VS Code/文本编辑器验证或下载后本地打开；已向用户给出验证指引。后续改进方向（未排期）：超大交付物分章预览或虚拟滚动渲染。",
+    "tags": [
+      "coal-eia-test2",
+      "delivery-preview",
+      "markdown-truncation",
+      "false-alarm",
+      "large-document"
+    ],
+    "related_bugs": [
+      "bug-362"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-07T19:05:00+08:00"
+  },
+  {
+    "id": "bug-365",
+    "timestamp": "2026-10-07T19:40:00+08:00",
+    "error_message": "按 stage schema 只填 mine_area_name 时，交付文件名落成「未命名项目-规划环评-环境影响报告.md」",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py:89",
+    "root_cause": "组装脚本取项目名只读 proj.get(\"project_name\")，而技能阶段表单 schema（stages/planning_eia.json forms.project）声明的字段是 mine_area_name——脚本与阶段定义口径不一致。agent 在 test2 轮手补了同值 project_name 字段绕过（_meta 留档），但所有按 schema 填表的运行都会踩中。",
+    "fix": "待修：build_output.py 取名改 proj.get(\"project_name\") or proj.get(\"mine_area_name\") or \"未命名项目\"（或在 schema 显式声明 project_name 接口字段）。test2 现场已被 agent 同值兼容处理，未改数值。",
+    "tags": [
+      "coal-eia-writer",
+      "build_output",
+      "schema-contract",
+      "delivery-naming",
+      "field-name-mismatch"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-07T19:40:00+08:00"
+  },
+  {
+    "id": "bug-366",
+    "timestamp": "2026-10-07T20:10:00+08:00",
+    "error_message": "用户报告：表格表头都是英文需要显示中文，部分表格文字列也都是英文；表 1-1 等为「字段|值」裸键值形态",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py",
+    "root_cause": "{{TABLE:族}} 表单直出渲染把 schema 字段 key 原样输出（913/1165 表头英文、1597 数据行英文 key、152 英文枚举值、264 个「字段|值」裸键值表），而 stage schema fields[] 自带中文 label、CSV 摄取层本有「中文表头→英文 key」映射——渲染层未接 label，属实现缺口非数据缺陷。",
+    "fix": "待修：TABLE 渲染读 fields[].label 作表头/键名；枚举值反查 schema enum:中文名；「字段|值」表随 label 中文化变为「指标|值」，远期按报告范式塑形（指标|数值|单位）。用户在部分查看器看到原始管道符另属查看器适配，非语法错误（表格前后有空行、标准渲染正常）。",
+    "tags": [
+      "coal-eia-writer",
+      "build_output",
+      "table-render",
+      "i18n-label",
+      "schema-contract"
+    ],
+    "related_bugs": [
+      "bug-365"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-07T20:10:00+08:00"
+  },
+  {
+    "id": "bug-367",
+    "timestamp": "2026-10-07T20:10:00+08:00",
+    "error_message": "用户报告：正文大量「如何编写」说明性文字（如「本节不作任何改写、补猜或生成…本节不再重复转录」）",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md（节写者契约）",
+    "root_cause": "写作纪律（禁编造/槽位纪律/缺项标注）是给 controller 的执行规则，节写者把「我遵守了纪律」的自我说明当成正文写给读者——契约只有禁令没有范式，且无「纪律不进正文」显式条款。实测元话语 538 处（本节不/本章不…）。",
+    "fix": "待修：节写者契约加禁元话语条款+黑名单词；给「资料来源/缺项说明」规范句式范式（真实报告用一句资料来源说明）。此问题直接实证样例报告行文范式的价值（brainstorming 方向 A：章节范式库）。",
+    "tags": [
+      "coal-eia-writer",
+      "section-writer",
+      "meta-discourse",
+      "prompt-contract",
+      "paradigm-gap"
+    ],
+    "related_bugs": [
+      "bug-366"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-07T20:10:00+08:00"
+  },
+  {
+    "id": "bug-368",
+    "timestamp": "2026-10-07",
+    "error_message": "A2 mock 派发 run1 正文出现英文键：'沉陷范围内涉及的国家级公益林面积与 {{TABLE:eco}} 中 public_forest_area 同源'——写手把派发切片要素链里的英文字段键原样转录进了报告正文（bug-366 同族问题的契约素材侧变体）",
+    "file": "SKILL.md 4.1 契约（素材组装侧）",
+    "root_cause": "stage 节切片的 elements 文案自带字段键名（如『与 {{TABLE:eco}} public_forest_area 同源』），4.1 契约没有人格/术语禁令覆盖『英文裸键不得入文』；残留门 RESIDUE_RE 也不扫描裸英文键",
+    "fix": "未修复（P0 记录）。修复方向二选一：①契约组装时把『field 键名同源』类指令转写为中文列名（治本，符合 bug-3036 不静默兜底精神）；②残留门增补裸英文键模式（需防误伤代码块/文件名）",
+    "tags": [
+      "契约素材",
+      "英文键泄漏",
+      "残留门",
+      "范式库A2",
+      "open"
+    ],
+    "related_bugs": [
+      "bug-366",
+      "bug-367"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-07"
+  },
+  {
+    "id": "bug-393",
+    "timestamp": "2026-10-07",
+    "error_message": "test2 交付稿大量表格 markdown 不渲染：表头 label 含竖线枚举（如「时相(现状|三期对比各期)」「建设状态(生产|在建|停建|规划)」）致 header/delimiter 列数不齐（349 张裂表）；一致性附录 warn 行详情 cell 含槽位寻址 [王坡一号井|层1] 裸竖线（8 行）。用户另报「表格每行缺换行」——实测文件行换行完好，系视图层软换行折叠观感。",
+    "file": "references/stages/*.json（28 组 label）+ scripts/build_output.py（_md_table）",
+    "root_cause": "stage forms 列定义用 '|' 作枚举分隔（'key 中文label(枚举1|枚举2)' 约定），label 原样进 markdown 表头 cell——'|' 是表分隔符，cell 内每个 '|' 多出一列；_md_table 渲染无竖线防线；consistency 槽位寻址记法 [井田|煤层] 入数据 cell 同裂。",
+    "fix": "三层：①5 个 stage 共 28 组 label（29 处）枚举分隔 | → /（含纯中文列名「口径标签（…）」与 key_elements 素材描述各 1 处，note 字段不动）；②_md_table 单一咽喉执法——表头 cell 含 | 硬 FAIL（bug-366 先例，防上游同步回灌），数据 cell | 转义 \\| 保真；③存量交付稿按同映射补丁（510 label + 8 槽位寻址，.bak393 备份），1165 张表形状复扫 header/row mismatch 全 0；新代码+新 stage 对真实 data 冒烟渲染 10 列对齐。回归测试 scripts/tests/test_build_output_bug393.py（3 例，容器内运行）；文件已同步运行栈 skill-sources 与 skill-projections 两副本。",
+    "tags": [
+      "coal-eia-writer",
+      "markdown-table",
+      "stage-forms",
+      "rendering",
+      "fixed"
+    ],
+    "related_bugs": [
+      "bug-366",
+      "bug-368"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-07",
+    "status": "fixed"
+  },
+  {
+    "id": "bug-394",
+    "timestamp": "2026-10-08",
+    "error_message": "测试发现表格上方的衔接文字不完整（「本节所依据的沉陷参数体系及其逐井输入条件以」）；表格上方缺少表格编号；第一章总则中表格都有编号而其他章节没有",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py",
+    "root_cause": "①写手把 {{TABLE:族}} 嵌在句中（test2 草稿 215 处），注入时表格从句中炸出切断衔接句；②管线无表号/表题体系——kv 表无表题、行表题「**label**（N 行）」为开发者腔、第一章写手自发编号与其余章无号并存；③SKILL.md 无摆位纪律且人格示例教写手写「由表 X-X 给出」（写手无法预知机发号）",
+    "fix": "render_family 全分支发射 ⟦TBLNO⟧ 占位表题（族 label 缺失硬 FAIL，5 个 stage 147 族补 label）；make_inject 增 ctx（ch_no+seq，调用方逐章重置），_assign_table_numbers 落「**表 {ch}-{seq} 名称**」并合并写手表题行（名留号机发）；validate_section 增 _validate_table_placement 摆位门（独立成行+前文句末标点/标记/表行/表题行收束）；SKILL.md 增表格引用纪律；存量草稿 deepseek 三轮改写 208 段+7 段确定性改写（段内同族表去重）+141 处组装并入，重建交付稿 1128 表全带连续表号、裂句 0、悬空引用 0",
+    "tags": [
+      "coal-eia-writer",
+      "table-numbering",
+      "injection",
+      "gate",
+      "deepseek-batch-repair"
+    ],
+    "related_bugs": [
+      "bug-366",
+      "bug-393"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-08"
+  },
+  {
+    "id": "bug-395",
+    "timestamp": "2026-10-08",
+    "error_message": "一致性附录 NR1 warn：引用了未声明的表/图号 ['表1-1','表1-10',…]（交付稿实际 1128 张表全带号且正文引用零悬空）",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/consistency.py",
+    "root_cause": "NR1 的 CAPTION_RE 只认行首裸「表 X-Y」（旧写手表题格式）；机器表题统一为「**表 X-Y 名称**」粗体行后行首是 **，声明集恒为空，REF_RE 收进的正文引用全部误报未声明。该 warn 在机器表题出现前就存在（旧式「**label**（N 行）」行首同为 **），warn 计数跨 bug-393/394 恒定即此因",
+    "fix": "CAPTION_RE 加 (?:\\*\\*)? 可选粗体前缀（裸格式保留兼容旧稿）；回归测试 test_consistency_bug395.py 4 例（粗体声明/裸格式兼容/真悬空仍 warn/跨格式重号仍 fail）。重建后 warn 13→12，NR1 悬空清零",
+    "tags": [
+      "coal-eia-writer",
+      "consistency",
+      "NR1",
+      "caption-regex"
+    ],
+    "related_bugs": [
+      "bug-394"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-08"
+  },
+  {
+    "id": "bug-396",
+    "timestamp": "2026-10-08",
+    "error_message": "Task2 任务书 CLI 片段 counts 只增量不零填充，对零违规 stage 其自带断言 out[stages][stage_b][L1]==0 会 KeyError",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/schema_linter.py",
+    "root_cause": "任务书代码块落笔未经实跑（bug-377/378 同根因第 4 起）：片段与同任务书测试块矛盾",
+    "fix": "counts = dict.fromkeys(CHECKS, 0) 零填充五类键；以自带测试为规格基准",
+    "tags": [
+      "task-book-snippet",
+      "cli",
+      "schema_linter",
+      "zero-seed"
+    ],
+    "related_bugs": [
+      "bug-377",
+      "bug-378"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-08"
+  },
+  {
+    "id": "bug-397",
+    "timestamp": "2026-10-08",
+    "error_message": "Task3 任务书自带测试两处恒假/欠驱动：strip_toc fixture 仅 2 行连续目录行不触发 >=3 剔除阈值；promote_headings 断言 \"## 6.5 ... not in out\" 因 \"## \" 是 \"### \" 子串恒假。另参考实现 rid slug 正则纯 ASCII 白名单使 41 份语料中 10 份纯中文名得空 report_id（source.md 全写 workdir 根互相覆盖）",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py + scripts/tests/test_prepare_corpus.py",
+    "root_cause": "fixture 行数不足未达到 spec 阈值语义；markdown 标题前缀嵌套使子串包含断言失效；slug 化正则未考虑全中文文件名",
+    "fix": "fixture 补第三行目录行；断言改行首锚定 startswith；rid 正则白名单加 一-鿿（实证 41 个 rid 零空串零重复）",
+    "tags": [
+      "tdd",
+      "fixture-bug",
+      "substring-assertion",
+      "slug-empty-id",
+      "coal-eia-writer"
+    ],
+    "related_bugs": [
+      "bug-393"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-08"
+  },
+  {
+    "id": "bug-398",
+    "timestamp": "2026-10-08",
+    "error_message": "Task 3 实现者将 rid slug 保留 CJK（41 份语料 10 份纯中文名在纯 ASCII 白名单下产空 rid 互相覆盖），但消费方 bank_compile RID_RE=[a-z0-9][a-z0-9-_]* fullmatch 失败即整份跳过——Task 5 编译时全部含中文 rid 的语料会被成批拒收",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py",
+    "root_cause": "子代理实现时只见本任务上下文，不知道下游 bank_compile 的 ASCII slug 守卫契约；controller 整合视野比对两侧代码才暴露",
+    "fix": "make_rid(seq, stem) 改 {序号:03d}-{ASCII折叠} 确定性格式（纯中文名 r 保底、序号前缀天然唯一、截断安全），补 RID_CONTRACT 契约测试（bank_compile.py:53 原样正则钉住）",
+    "tags": [
+      "contract-conflict",
+      "rid-slug",
+      "prepare_corpus",
+      "bank_compile",
+      "subagent-coordination"
+    ],
+    "related_bugs": [
+      "bug-396",
+      "bug-397"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-08"
+  },
+  {
+    "id": "bug-399",
+    "timestamp": "2026-10-08",
+    "error_message": "正文编号列表段（断层描述/计算公式模板/保护煤柱清单）形似节号被 promote_headings 误升标题 → bank_compile 切片 33 个重复 chapter 片；同时 30 字启发式阈值误杀书名号超长真标题（3.2.1 与《宁夏…纲要》的符合性分析等 3 条）",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py",
+    "root_cause": "docx 正文编号列表独立成段且行首数字+空白+文字，与节号标题单行同形；环评真标题可含书名号规划名超 30 字",
+    "fix": "promote_headings 加保守启发式（题名>30 或含。；，不升级，顿号豁免）——列表误升部分缓解；书名号误杀待 controller 决策豁免规则",
+    "tags": [
+      "heading-heuristic",
+      "false-positive",
+      "coal-eia-writer",
+      "end-to-end"
+    ],
+    "related_bugs": [
+      "bug-398"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-08"
+  },
+  {
+    "id": "bug-400",
+    "timestamp": "2026-10-08",
+    "error_message": "prepare_corpus --census 路径无效时静默降级为空 census，manifest 无声丢失 chars 元数据（代码质量审查 Minor 2）",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py",
+    "root_cause": "and 短路条件把「路径给错」与「未传参」同等对待，缺 stderr 警告分支",
+    "fix": "拆分为显式 is_file 判断，缺失时打印警告后继续（chars 退回实测值）；58308253",
+    "tags": [
+      "prepare_corpus",
+      "census",
+      "silent-degradation",
+      "logging",
+      "task3-review"
+    ],
+    "related_bugs": [
+      "bug-398"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-08"
+  },
+  {
+    "id": "bug-401",
+    "timestamp": "2026-10-08",
+    "error_message": "41 份语料实跑：80 条「与《…规划》的符合性分析」真节标题（34-45字）被 promote_headings 30 字阈值滤除，节级粒度损失",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py",
+    "root_cause": "法规全名入题名使真标题超常规长度上限；单行形态无法区分列表段与真标题，须语料统计后定豁免",
+    "fix": "双守卫豁免（fbf0e9ea）：节号含点（排除单号法规清单段）+ 题名≤60字 + 无句读；复跑残留 80→1；测试 10 passed",
+    "tags": [
+      "promote_headings",
+      "booktitle",
+      "false-negative",
+      "corpus-driven",
+      "task4"
+    ],
+    "related_bugs": [
+      "bug-398"
+    ],
+    "occurrences": 80,
+    "last_seen": "2026-10-08"
+  },
+  {
+    "id": "bug-402",
+    "timestamp": "2026-10-08",
+    "error_message": "FORMS_CATALOG table_lead=0.000/1.000(complete/dangling)——题注行 96% 误归 dangling，统计与例句池全错",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py",
+    "root_cause": "CAPTION_LINE_RE 从 geo md 样例归纳为「表N-M」形态，coal 语料题注主流是章内号「表N.M-M」（7698/7969 行）与三段号，正则不匹配 → classify 落入 dangling 分支；且例句池按文档序前 40 填充被主导形态灌满",
+    "fix": "正则改 \\d+(?:\\.\\d+)*[-–—]\\d+(?:\\.\\d+)* 通吃 N-M/N.M-M/N-M-K；例句池按形态配额各 20；e2e 实测分布 0.925/0.055/0.019，两次运行 sha256 幂等",
+    "tags": [
+      "bank_compile",
+      "forms_catalog",
+      "regex",
+      "corpus-reality",
+      "task7"
+    ],
+    "related_bugs": [
+      "bug-394"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-08"
+  },
+  {
+    "id": "bug-403",
+    "timestamp": "2026-10-08",
+    "error_message": "python heredoc 写测试文件后 SyntaxError: unterminated string literal——字符串内的 \n 变成了真实换行",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_bank_compile_forms.py",
+    "root_cause": "bash heredoc + python 三引号串的双层转义：JSON→bash→python 两次解码后字面量断裂；heredoc 写含转义序列的代码不可靠",
+    "fix": "改用 Write 工具直接落盘文件（含 \n 转义序列的内容一律不走 heredoc）",
+    "tags": [
+      "tooling",
+      "heredoc",
+      "escaping",
+      "test-fixture"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-08"
+  },
+  {
+    "id": "bug-404",
+    "timestamp": "2026-10-08",
+    "error_message": "section_expectations 单位抓成 km（应为 km2），公益林面积 12 处全错",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py",
+    "root_cause": "prepare_corpus 全文 NFKC 归一把 ² 归一成 2（语料实为 km2/m2），QUANTITY_RE 白名单只收 km²——km2 不中，落到更短的 km 备选",
+    "fix": "白名单补 NFKC 归一形（km2/m2/hm2/万m3/μg/m3），长形排短形之前防短路；补 test_quantity_re_nfkc_unit_forms",
+    "tags": [
+      "bank_compile",
+      "section_expectations",
+      "nfkc",
+      "regex",
+      "task8"
+    ],
+    "related_bugs": [
+      "bug-402"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-08"
+  },
+  {
+    "id": "bug-405",
+    "timestamp": "2026-10-08",
+    "error_message": "DomainFactoryView hero 渲染时控制台 Failed to resolve component: ChevronRight",
+    "file": "web/src/views/DomainFactoryView.vue",
+    "root_cause": "模板 pipeline-arrow 使用 <ChevronRight :size=\"10\"> 但 script setup 的 @lucide/vue import 列表里没有该组件（历史改动漏带），SFC 编译后按未知组件解析，每次展开 hero 报运行时警告",
+    "fix": "hero 右侧流水线示意整体替换为应用入口磁贴（app-launcher），ChevronRight 使用点随删除归零；无需补 import",
+    "tags": [
+      "frontend",
+      "vue",
+      "domain-factory",
+      "unresolved-component"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-08"
+  },
+  {
+    "id": "bug-406",
+    "timestamp": "2026-10-08",
+    "error_message": "corpus_meta 首跑 province needs_review 16/31 且候选失真（025 只剩『青海云杉』假信号）——整报告字段被排序最后一片切片覆盖",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py",
+    "root_cause": "build_corpus_meta 在切片循环内逐片计算 province/standards_cited/scale 并覆盖同一 rid 的字段，最终值只反映最后一片；省/标准/规模是整报告字段",
+    "fix": "先按 rid 聚合全部切片文本（sorted 确定序）再一次性判定；补 test_corpus_meta_aggregates_slices 回归（省名只在首片也须命中）。修复后 31/31 regex 全自动命中",
+    "tags": [
+      "corpus_meta",
+      "aggregation",
+      "province",
+      "overwrite",
+      "idempotent"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-08"
+  },
+  {
+    "id": "bug-407",
+    "timestamp": "2026-10-08",
+    "error_message": "数值区间护栏首跑 0 range 发布——forms mapped 口径（57 个）与强度类句式交集为零，全部为 extensive 量",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py",
+    "root_why": "语料强度类信号（源强/浓度/效率）存在于自由文本且短语高方差（644 组中 580 组 n=1），forms label_map 只覆盖表单字段（extensive 为主）——「节×强度类口径」粒度无足够重复覆盖",
+    "root_cause": "31 份语料规模 × 正则句式抽取管线的结构性覆盖不足，非代码缺陷；机制留 v1.1 条件发布，激活待 curated 词表或部分二槽位抽取",
+    "fix": "双门槛（RANGE_UNITS 强度类白名单 + distinct-rid≥5）保证不出伪护栏；零发布如实入库并在 vibe 文档留激活路径",
+    "tags": [
+      "value-range",
+      "guardrail",
+      "corpus-coverage",
+      "section_expectations"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-08"
+  },
+  {
+    "id": "bug-408",
+    "timestamp": "2026-10-09T01:00:00",
+    "error_message": "词表候选清洗后仍残留「占标率分别」「所占比例分别」等尾噪声",
+    "file": "backend/package/yuxi/services/eia_data_service.py",
+    "root_cause": "_STOP_TAIL 元组含双字「分别」，但剥离判断用 s[-1] in _STOP_TAIL 是单字符匹配，双字元素永远不可能命中",
+    "fix": "把「分别」拆为「别」「分」两个单字进集合（迭代剥尾先「别」后「分」，效果等价且机制归一）",
+    "tags": [
+      "coal-eia-writer",
+      "词表候选",
+      "字符串清洗",
+      "迭代剥尾"
+    ],
+    "related_bugs": [
+      "bug-409"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-09"
+  },
+  {
+    "id": "bug-409",
+    "timestamp": "2026-10-09T00:55:00",
+    "error_message": "candidates.total=472 但 measure+site+junk=89，总数与分类计数不一致",
+    "file": "backend/package/yuxi/services/eia_data_service.py",
+    "root_cause": "total 用了 n≥2 过滤之前的 len(agg)，而分类计数在过滤之后累加",
+    "fix": "total 移入过滤后累加（与 A/B/C 同口径）",
+    "tags": [
+      "coal-eia-writer",
+      "词表候选",
+      "统计口径"
+    ],
+    "related_bugs": [
+      "bug-408"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-09"
+  },
+  {
+    "id": "bug-410",
+    "timestamp": "2026-10-09T01:20:00",
+    "error_message": "页面显示 Initialize failed: invalid dom. + 重试按钮（实为 echarts.init(null) 报错被误报成接口错误）",
+    "file": "web/src/components/eia-data/DatasetStatsPanel.vue",
+    "root_cause": "fetchStats 在 loading=true 时 await nextTick() 后立即渲染图表，但图表容器在 v-else 分支内未挂载，4 个 ref 均为 null",
+    "fix": "先 loading=false 再 await nextTick()（v-else 挂载、ref 就绪）后初始化 echarts；catch 分支显式撤 loading",
+    "tags": [
+      "echarts",
+      "vue",
+      "v-if 时序",
+      "ref-null"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-09"
+  },
+  {
+    "id": "bug-375",
+    "timestamp": "2026-10-09",
+    "error_message": "ScopeMismatch: You tried to access the function scoped fixture _function_scoped_runner with a module scoped request object",
+    "file": "backend/test/integration/services/test_eia_lexicon_service_flow.py",
+    "root_cause": "pytest-asyncio 模块级 async fixture 与默认函数级 event loop runner 作用域冲突",
+    "fix": "删模块级 _pg_manager fixture，把幂等的 pg_manager.initialize() 并进函数级 autouse _clean_state fixture",
+    "tags": [
+      "pytest-asyncio",
+      "fixture-scope",
+      "integration-test"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-09"
+  },
+  {
+    "id": "bug-376",
+    "timestamp": "2026-10-09",
+    "error_message": "assert 5 >= 6（集成测试导出物化断言 materialized >= range_ready 失败）",
+    "file": "backend/test/integration/services/test_eia_lexicon_service_flow.py",
+    "root_cause": "断言语义错：控制效率是 range_ready 之一但走拆分——父条目 rejected 不再占位，子条目各拿一半值掉到 n>=5 门槛下，导出材料化数天然可小于扫描 range_ready 数",
+    "fix": "改断言为上界语义：1 <= materialized <= count(measure 且 range_ready)，并断 materialized == 文件条目数",
+    "tags": [
+      "eia-lexicon",
+      "export-overrides",
+      "test-semantics",
+      "split"
+    ],
+    "related_bugs": [
+      "bug-375"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-09"
+  },
+  {
+    "id": "bug-377",
+    "timestamp": "2026-10-09",
+    "error_message": "用户报告：数值护栏词表页面列表是空的，没有数据",
+    "file": "web/src/components/eia-data/LexiconPanel.vue",
+    "root_cause": "两因叠加：①测试自清理把运行库两表清空（设计上 DB 从空开始，靠「重扫语料导入」灌入）；②页面无首访空态引导，空表无任何行动指引",
+    "fix": "LexiconPanel 加空态分支：区分「库空未导入」（一键重扫导入 CTA + 语义说明）与「筛选无匹配」（清除筛选），已同步运行栈；并代执行一次导入（89 条候选入库）",
+    "tags": [
+      "eia-lexicon",
+      "empty-state",
+      "ux",
+      "first-run"
+    ],
+    "related_bugs": [
+      "bug-375",
+      "bug-376"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-09"
+  },
+  {
+    "id": "bug-378",
+    "timestamp": "2026-10-10",
+    "error_message": "迁移回归套件红：test_storage_migration.py 5 例 AttributeError 'SimpleNamespace' object has no attribute 'upgrade_business_v9_to_v10'；test_schema_migration_version.py assert 11 == 9 失败",
+    "file": "backend/test/unit/services/test_storage_migration.py",
+    "root_cause": "BUSINESS_SCHEMA_VERSION 递增（v10 d9202684、v11 deb0b92b）连续两次未同步迁移测试：main() 新增 pg_manager.upgrade_business_v9_to_v10/v10_to_v11 调用点，但六处 SimpleNamespace fake 均未定义这两个属性（await 即 AttributeError）；版本钉断言停在 9",
+    "fix": "六处 fake 各补两行 upgrade_business_v9_to_v10/v10_to_v11=lambda: _async_value(None)（不触 calls 免破坏序列断言）；版本钉改 == 11 并注释「随 BUSINESS_SCHEMA_VERSION 同步递增」",
+    "tags": [
+      "migration",
+      "test-fakes",
+      "schema-version",
+      "SimpleNamespace"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-10"
+  },
+  {
+    "id": "bug-379",
+    "timestamp": "2026-10-10",
+    "error_message": "P2 评审发现：import_annotations 不校验 rid ∈ corpus_meta，越界 rid 落库成 UI 不可见、API 不可管理（无 delete 路径）、导出永续物化的幽灵行",
+    "file": "backend/package/yuxi/services/eia_meta_service.py",
+    "root_cause": "导入循环只做 DB 查重（existing_ids），从不比对 corpus_meta.reports 键集；而 set/list 路径都以 corpus_meta 为全集（set 404、list 不可见），schema 注释声明的「report_id = corpus_meta.reports 键」不变量被导入这一条路径违反",
+    "fix": "导入循环内补 known_ids 成员资格过滤，越界 rid 跳过计入 skipped_unknown 并 logger.warning 上浮；返回值与前端提示带 skipped_unknown；flow test 补 skipped_unknown 断言",
+    "tags": [
+      "eia-meta",
+      "invariant",
+      "ghost-row",
+      "import"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-10"
+  },
+  {
+    "id": "bug-380",
+    "timestamp": "2026-10-10",
+    "error_message": "P2 评审发现：MetaPanel 规模输入文案「0–10000」+ :min=0 与后端 (0,10000] 开区间矛盾（输 0 必 400）；year_hint 可键入小数（后端要求 int）；分层 chip 缺 tabindex 键盘不可达（@keyup.enter 与 :focus-visible 死代码）",
+    "file": "web/src/components/eia-data/MetaPanel.vue",
+    "root_cause": "前端约束凭直觉写（min=0、无 precision），未对照 _validate_annotations 实际校验域；chip 抄 goLexicon 模式时漏抄 :tabindex 行",
+    "fix": "scale :min 改 0.1、文案改「(0, 10000]」；year_hint 加 :precision=\"0\"；DatasetStatsPanel chip 补 :tabindex=\"layerLink(item) ? 0 : undefined\"",
+    "tags": [
+      "frontend",
+      "input-contract",
+      "a11y",
+      "tabindex"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-10"
+  },
+  {
+    "id": "bug-381",
+    "timestamp": "2026-10-10T04:44:10+00:00",
+    "error_message": "P3 标准核实 PUT /eia/standards/{code}/review 对含 / 的标准编号（GB/T、HJ/T、TD/T、MT/T 共 10 条）路由层 404，端点永不执行，无法核实",
+    "file": "backend/server/routers/domain_factory_router.py",
+    "root_cause": "standards_index.json 中 10/62 个 code 含字面斜杠；前端 encodeURIComponent 把 / 编为 %2F，但 uvicorn（0.52.4）在 Starlette 路由匹配前 unquote %2F → 字面 /，{code} 段正则 [^/]+ 无法跨越，整条路由不匹配。容器内实测：GB%2FT%2014848-2017 → 404 Not Found，对照 HJ%20130-2019 → 200。test_eia_standard_flow.py 仅用无斜杠码测 401（auth 中间件先于路由），掩盖了该缺陷",
+    "fix": "未修复（评审发现）。候选方案：code 改走 query/body；或路由改 {code:path}/review（贪婪匹配+回溯 /review 后缀）；或服务端 slug 映射",
+    "tags": [
+      "p3",
+      "eia-standard",
+      "routing",
+      "path-param",
+      "slash-in-code",
+      "uvicorn"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-10T04:44:10+00:00"
+  },
+  {
+    "id": "bug-382",
+    "timestamp": "2026-10-10T13:30:00",
+    "error_message": "P3 流测试 limit_tables 断言两次修正：先写 7 表 rows 全空（==7 且 rows==[]），实况 8 键含 _comment 且 gb3096/gb12348 各登记 1 行样例逐字锚点",
+    "file": "backend/test/integration/services/test_eia_standard_service_flow.py",
+    "root_cause": "compaction 前的侦察记录『rows 全空』不准确（丢了样例锚点行事实），测试按错误侦察直接钉死数据指纹 62/7/2",
+    "fix": "断言改从 standards_index.json 自算期望值（exp_total/exp_pending/exp_rows，与 needs_verification sum 自洽范式同构）——合法演进不再误红，对抗评审同期坐实此脆钉",
+    "tags": [
+      "p3",
+      "test-brittleness",
+      "limit_tables",
+      "_comment",
+      "self-computed-assertions"
+    ],
+    "related_bugs": [
+      "bug-381"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-10"
+  },
+  {
+    "id": "bug-383",
+    "timestamp": "2026-10-10T13:35:00",
+    "error_message": "用户报告：标准与限值库页面中没有列表数据（API 两端点均 200，表格区空）",
+    "file": "web/src/components/eia-data/StandardsPanel.vue",
+    "root_cause": "chapters 字段实况为分号分隔字符串（62/62 条 str），实现凭复数直觉当数组渲染 record.chapters.join('、') → #bodyCell 渲染抛 TypeError → a-table 整表渲染中断；API/形状/认证链路全部正常故仅表格消失",
+    "fix": "两处（表格单元格+核实对话框）改为字符串直接插值，加注释说明实况类型；教训：前端消费新数据字段前先验实际 JSON 类型而非凭字段名推断",
+    "tags": [
+      "p3",
+      "vue",
+      "typeerror",
+      "chapters-str",
+      "user-reported"
+    ],
+    "related_bugs": [
+      "bug-382"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-10"
+  },
+  {
+    "id": "bug-411",
+    "timestamp": "2026-10-10",
+    "error_message": "用户报告词表口径名不清晰或不完整（19 例：上煤矿产能占比到/伤的最大允许声强/全区全硫含量平/全区平/叶阔叶林/级标准值的百/评价区所占比例高/降幅/控制效率/最高/处置率/价区植被覆盖度值/优势度/出现频率/其盖度/年均浓度平/浓度/超标率/频率）",
+    "file": "backend/package/yuxi/services/eia_data_service.py + agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py",
+    "root_cause": "QUANTITY_RE 口径窗口 ([一-鿿]{2,8}?)(?:为|达|是) 无词边界：R1 窗口头/尾切（8字上限+最早起点规则）；R2 _STOP_TAIL 单字剥尾吃掉有义后缀（均/分/别/比/占：平均→平、占比分别→空）；R3 定语为拉丁字母(TSP/PM10/SO2)或句首更远处/表头，CJK 窗口不可达；R4 代词(其)入窗；R5 语料原文本身泛化。另：LexiconPanel filters.status 默认空串=全部视图，rejected 档默认可见放大了观感问题",
+    "fix": "已执行（2026-10-10 用户批准方案B）：13驳+9补注+7改名+控制效率三分拆（TSP/PM10/PM2.5 各14值6报告，42值零剩余）；eia_lexicon_service 新增 _IMPORT_BLOCKLIST 7 指纹抑制重扫复活（单测钉死全集，5 passed）；导出物化 8 条（3 子口径+5 原始达标行）、开关置位。验收 import added=0/blocklist_skipped=7、counts 27/27/38/0、7 改名行在库零计数。QUANTITY_RE 根治（方案C）维持双判官 reject。残留机制边界：8字窗/单字剥尾的 R1/R2 根因仍在（尾清洗重设计列二期 backlog）；改名不改状态——原 candidate 行（评价区植被覆盖度）仍 candidate 待业务确认",
+    "tags": [
+      "eia-lexicon",
+      "caliber-extraction",
+      "QUANTITY_RE",
+      "over_strip",
+      "window_cut",
+      "rename-resurrection"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-10"
+  },
+  {
+    "id": "bug-412",
+    "timestamp": "2026-10-10",
+    "error_message": "控制效率三拆分子口径（TSP/PM10/PM2.5）物化区间量纲混杂：p5=0.59~0.61 与 p50=49~61、p95=70~90 并存（如 TSP p5=0.61/p50=61/p95=90）",
+    "file": "eia_lexicon_entries（values_json 数据）+ coal-eia-writer/references/overrides/curated_lexicon.json（物化产物）",
+    "root_cause": "拆分值集按语料提及原值照搬：不同报告对同一控制效率量使用两种书写——小数分数（原文「TSP控制效率为0.61%」）与百分数（59%~90%），QUANTITY_RE 照字面抓取，拆分对话框值集无量纲归一步骤，P5/P50/P95 跨量纲后区间对写手无护栏意义",
+    "fix": "已裁决（2026-10-11 控制效率重拆分顺带执行）：42 处提及按语境尾词指派 TSP/PM10/PM2.5 三子口径（各 14 值 6 报告）；值<1 的 9 处 ×100 归一——全部出自模板句「洒水抑尘,TSP控制效率为0.61%…0.59%…0.49%」（《扬尘源颗粒物排放清单编制技术指南》公式 E=E0×(1-C) 的 C 为小数分数，报告抄录错缀 %），同源数据他报告以 61%/59%/49% 百分数写法互证。归一后区间齐整：TSP 61/61/90、PM10 55/59/84、PM2.5 46/49/70",
+    "tags": [
+      "eia-lexicon",
+      "split",
+      "unit-scale",
+      "curated_lexicon",
+      "值集归一",
+      "全量审计"
+    ],
+    "related_bugs": [
+      "bug-411"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-11"
+  },
+  {
+    "id": "bug-413",
+    "timestamp": "2026-10-10",
+    "error_message": "test_eia_lexicon_service_flow.py::test_lexicon_service_full_flow FAILED：断言 added==scanned，实跑「扫描 89 候选，新增 82 条，抑制 7 条」",
+    "file": "backend/test/integration/services/test_eia_lexicon_service_flow.py（:50/:56 断言）",
+    "root_cause": "方案B（cd53c16f）为 import_entries 增加 _IMPORT_BLOCKLIST 抑制后，空库导入语义从 added==89 变为 added==82，只更新了单元测试未更新集成 flow 断言；提交前容器内只跑了 unit 5 例，未跑 integration/services 全量",
+    "fix": "已修复（P4 批次）：断言改 added == scanned - blocklist_skipped 且 total 对齐 added；容器实跑 flow 2 passed（full_flow + rename_suppress_and_fallback_flow）",
+    "tags": [
+      "eia-lexicon",
+      "test-regression",
+      "blocklist",
+      "integration-test"
+    ],
+    "related_bugs": [
+      "bug-411"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-10"
+  },
+  {
+    "id": "bug-414",
+    "timestamp": "2026-10-10",
+    "error_message": "flow 集成测试实跑清空运行库 eia_lexicon_entries 92 条人工裁决态（方案B 改名/驳回/控制效率拆分值集），当时未察觉，快照时才发现 counts=0",
+    "file": "backend/test/integration/services/test_eia_lexicon_service_flow.py（fixture 前后 wipe eia_lexicon_entries/eia_dataset_switches）",
+    "root_cause": "fixture「前后清理 DB 行，绝不污染运行库」的设计前提是导入可重建一切，但人工决策（改名新名非语料逐字不可重扫、状态裁决、拆分值集）导入不可重建；测试直连运行库 PG 执行，design 评审期实跑红测试（bug-413）时触发达成清库",
+    "fix": "本批验收后按文档化裁决重建：导入预置 82 条（7 断章指纹被 v13 种子抑制未复活）+ 7 条改名行按审计包（.wolf/corpus-workdir/lexicon_full_audit.json）事故前状态直插（6 approved + 1 candidate）+ 导出物化 5 条；控制效率保持 splitting 待重裁决（3 条拆分子口径值集不可复原且本就带量纲混布 bug-412，重裁决受益）；6 条事故前人工驳回行回落预置 candidate 待用户重驳回。教训：集成测试触碰运行库表前必须先快照且验证快照行数>0（空快照=已被清）",
+    "tags": [
+      "eia-lexicon",
+      "data-loss",
+      "fixture-wipe",
+      "runtime-db",
+      "恢复"
+    ],
+    "related_bugs": [
+      "bug-411",
+      "bug-412",
+      "bug-413"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-10"
+  },
+  {
+    "id": "bug-415",
+    "timestamp": "2026-10-11",
+    "error_message": "运行栈容器内 overrides/curated_lexicon.json 消失（bug-412 收尾时还在）",
+    "file": "references/overrides/curated_lexicon.json（localized 树运行态）",
+    "root_cause": "/app/package 直挂 localized 宿主树，sync-dev（含 -Revert）重建挂载树时清除未跟踪机生物；当时 workspace 树无该文件副本（gitignored），walker 无从搬运",
+    "fix": "词表 DB 为唯一真相（方案乙），export_overrides 重导出即再生；此后 workspace refs/overrides/ 留有副本，sync-dev walker 路径翻译搬运后 localized 侧存活。教训：运行栈机生物不是持久态",
+    "tags": [
+      "eia-lexicon",
+      "curated-lexicon",
+      "sync-dev",
+      "generated-artifact",
+      "runtime-tree"
+    ],
+    "related_bugs": [
+      "bug-412",
+      "bug-414"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-11"
+  },
+  {
+    "id": "bug-416",
+    "timestamp": "2026-10-11",
+    "error_message": "planning/抑尘效率 15 报告可物化却零挂载——bank_compile 扫描口径为「抑尘效率能」（连接词「能」被惰性窗口吞进口径尾），_map_caliber 后缀滚动只去头不去尾无法桥接词表口径「抑尘效率」",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/bank_compile.py（QUANTITY_RE）",
+    "root_cause": "QUANTITY_RE 连接词仅有 为|达|是；「X能达N%」「X可达N%」句式的能/可落入口径窗；词表侧靠 _STOP_TAIL 剥尾得净口径，bank_compile 无剥尾 → 同一语料两侧口径不一致",
+    "fix": "连接词扩为 为|达|是|能达|可达（单一真源，词表扫描动态加载同源受益）；全语料新旧 diff 实证总抽取数不变（9275→9275）纯口径净化、无词中误断（功能/性能类未出现）；语料普查钉数 89→90（+planning 煤矸石综合利用率 2/2 独立成键）",
+    "tags": [
+      "quantity-re",
+      "connector",
+      "tail-clean",
+      "map-caliber",
+      "curated-mount",
+      "P1"
+    ],
+    "related_bugs": [
+      "bug-415"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-11"
+  },
+  {
+    "id": "bug-417",
+    "timestamp": "2026-10-11",
+    "error_message": "openpit.json 插入三字段后 git diff 全文件化（7070 行）、git ls-files --eol 显示 w/-text（被判非文本）",
+    "file": ".wolf/corpus-workdir/p2_prefix_and_fields.py（插入脚本）",
+    "root_cause": "插入脚本 join 分隔符用 '\\r\\n' 后又对整块 .replace('\\n','\\r\\n')，分隔符内 \\n 被二次翻译成 \\r\\r\\n（孤立 CR）；git 的文本判定一遇孤立 CR 即判非文本，diff 不再做 autocrlf 换行滤波，工作树 CRLF vs index LF 全文件比对。第二次修复尝试又对 checkout 恢复的 CRLF 全文做 replace('\\n','\\r\\n')，同样产生全文 \\r\\r\\n",
+    "fix": "P1 两段式铁律：工作树原态已是 CRLF 时全文绝不做行尾翻译，只对插入块用 CRLF 字面量（item 内缩进 replace 与 join 分隔符全用同一形态，绝不嵌套两种行尾）；git checkout -- 恢复后重插，diff 回到 +25/−1",
+    "tags": [
+      "crlf",
+      "lone-cr",
+      "git-text-detection",
+      "stages-json",
+      "text-level-insert",
+      "P2"
+    ],
+    "related_bugs": [
+      "bug-415"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-11"
+  },
+  {
+    "id": "bug-418",
+    "timestamp": "2026-10-12",
+    "error_message": "Edit 工具静默吞并下一行：old_string 尾带 \n 而 new_string 不带 → 路由装饰器/docstring/import 被删或压行（本会话 4+ 次）",
+    "file": "backend/server/routers/domain_factory_router.py 等",
+    "root_cause": "Edit 工具对尾部换行不一致的替换会拼接相邻行，静默不报错",
+    "fix": "纪律：old_string/new_string 尾部换行保持一致；批量编辑后必跑 ast.parse + git diff --stat 验证",
+    "tags": [
+      "edit-tool",
+      "newline",
+      "silent-corruption"
+    ],
+    "related_bugs": [],
+    "occurrences": 4,
+    "last_seen": "2026-10-12"
+  },
+  {
+    "id": "bug-419",
+    "timestamp": "2026-10-12",
+    "error_message": "RuntimeError: Unsupported business schema version: 13; expected 14（api 启动失败）",
+    "file": "backend/package/yuxi/storage_migration.py",
+    "root_cause": "v14 加档漏改 _require_supported_version(upgrade_from=...) 元组——该档存量库被版本门拒绝",
+    "fix": "upgrade_from 增加 13；cerealbrum 记录四触点清单（常量/import+方法/dispatch/upgrade_from）",
+    "tags": [
+      "schema-migration",
+      "v14",
+      "storage"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-12"
+  },
+  {
+    "id": "bug-420",
+    "timestamp": "2026-10-12",
+    "error_message": "api 启动失败后 docker start 无效（容器 Up 但 app 进程已死）",
+    "file": "docker 运维",
+    "root_cause": "uvicorn 进程退出但容器仍存活；docker start 对运行中容器是 no-op",
+    "fix": "用 docker restart pisuan-localized-api-1；localized api 宿主端口 5050",
+    "tags": [
+      "docker",
+      "ops"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-12"
+  },
+  {
+    "id": "bug-421",
+    "timestamp": "2026-10-12",
+    "error_message": "AttributeError: 'types.SimpleNamespace' object has no attribute 'to_dict' (9 failed in test_eia_stage_service)",
+    "file": "backend/package/yuxi/services/eia_stage_service.py",
+    "root_cause": "save_stage_field 直接 return row.to_dict() 依赖 ORM 模型方法；服务层测试 fake 的行对象没有该方法。服务层本不应依赖模型投影方法",
+    "fix": "服务端自建 _edit_dict(r) 静态投影（stage/family_key/field_name/edit_kind/field/decided_by），repo fake 契约保持最小；模型 to_dict 仅留给模型自身消费者",
+    "tags": [
+      "service",
+      "fake-contract",
+      "projection",
+      "tdd"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-12"
+  },
+  {
+    "id": "bug-422",
+    "timestamp": "2026-10-12",
+    "error_message": "Database schema migration is incomplete or incompatible: business=14 (required 15) — API startup failed",
+    "file": "backend/package/yuxi/storage/postgres/manager.py",
+    "root_cause": "schema 加档四触点漏了第一触点：BUSINESS_SCHEMA_VERSION 常量未随 v15 方法/storage_migration 一起改，仍停在 14。迁移单测全绿掩盖了它——参数化档位 [2..14] 在 expected=14 下全部按预期路径走，而 v15 方法落库 version=15，下轮 migrator 的 _require_supported_version(expected=14) 会拒 15 启动即死",
+    "fix": "常量 14→15 + 版本注释补行；单测参数化加 [15] 档（已当前版→零增量迁移），RED 先证常量缺失再 GREEN——该档位正是防复发的判别力",
+    "tags": [
+      "migration",
+      "schema-version",
+      "four-touchpoints",
+      "tdd",
+      "startup-guard"
+    ],
+    "related_bugs": [
+      "bug-417"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-12"
+  },
+  {
+    "id": "bug-423",
+    "timestamp": "2026-10-12",
+    "error_message": "eslint vue/no-parsing-error: Parsing error: Unterminated string constant (SectionsPanel.vue:225)",
+    "file": "web/src/components/eia-data/SectionsPanel.vue",
+    "root_cause": "Vue 模板插值 {{ '{{SLOT:}}' }} 中的字面 }} 会被模板解析器当作插值闭合（解析器不识别字符串字面量边界），插值被截断成非法模板",
+    "fix": "字面 SLOT 记法挪进 script 常量 const slotNotation = '{{SLOT:family.field}}'，模板绑定 {{ slotNotation }}——插值表达式内不再出现字面 }}",
+    "tags": [
+      "vue",
+      "template",
+      "interpolation",
+      "eslint",
+      "frontend"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-12"
   }
 ]
