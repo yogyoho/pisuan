@@ -220,6 +220,25 @@ class EiaStandardService:
                 tables[key] = _db_fields(rows)
         return {"limit_tables": tables, "schemas": LIMIT_TABLE_SCHEMAS}
 
+    async def get_gate1_checks(self) -> dict[str, Any]:
+        """门 1 体检卡（P2-3 只读）：规则规格原样 + 注册表自检。
+
+        gate1_code_checks 是规则规格（desc/allowed_patterns/rules）而非违规明细数据源——
+        自检只报「standards[].code 匹配不上任何 allowed_pattern」的名单，供专家回查，
+        不伪造违规细节。
+        """
+        idx = await run_in_threadpool(_load_standards_index)
+        spec = idx.get("gate1_code_checks", {})
+        patterns = [re.compile(p) for p in spec.get("allowed_patterns", [])]
+        codes = [str(s.get("code", "")) for s in idx.get("standards", [])]
+        violations = [c for c in codes if not any(p.match(c) for p in patterns)]
+        return {
+            "desc": spec.get("desc", ""),
+            "allowed_patterns": spec.get("allowed_patterns", []),
+            "rules": spec.get("rules", []),
+            "registry_check": {"total": len(codes), "violations": violations},
+        }
+
     async def set_review(self, code: str, payload: dict[str, Any], username: str) -> dict[str, Any]:
         """核实裁决落库（upsert）：code 须在 standards_index（404），action 白名单外 400。"""
         doc = await run_in_threadpool(_load_standards_index)
