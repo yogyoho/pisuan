@@ -605,6 +605,36 @@ def get_data_expectations() -> dict[str, Any]:
     }
 
 
+def get_dataset_view(key: str) -> dict[str, Any]:
+    """三数据集只读抽屉通道（P3-3）：attachment_checklist / consistency_contracts / depth_targets。"""
+    if key == "attachment_checklist":
+        doc = _read_json(_BANK / "attachment_checklist.json")
+        return {"key": key, "provenance_note": doc.get("provenance_note"), "stages": doc.get("stages", {})}
+    if key == "consistency_contracts":
+        doc = _read_json(_REFS / "consistency_contracts.json")
+        return {
+            "key": key,
+            "version": doc.get("version"),
+            "generated": doc.get("generated"),
+            "contract_types": doc.get("contract_types", {}),
+            "caliber_labels": doc.get("caliber_labels", {}),
+            "activation_semantics": doc.get("activation_semantics"),
+            "geo_inherited_note": doc.get("geo_inherited_note"),
+            "contracts": doc.get("contracts", []),
+        }
+    if key == "depth_targets":
+        stages = {}
+        for s in STAGES:
+            doc = _read_json(_REFS / "depth_targets" / f"{s}.json")
+            stages[s] = {
+                "stage": s,
+                "confidence": doc.get("confidence"),
+                "chapters": doc.get("chapters", {}),
+            }
+        return {"key": key, "stages": stages}
+    raise KeyError(f"未知数据集: {key}")
+
+
 def get_skill_stats() -> dict[str, Any]:
     """统计总览聚合入口。mtime 指纹未变时直接返回缓存。"""
     watch = [
