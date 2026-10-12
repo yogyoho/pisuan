@@ -332,3 +332,4 @@ AI agent 修改或生成 Yuxi UI 时，优先按这一节执行。
 - `web/src/assets/css/base.dark.css`：暗色模式 token
 - `web/src/assets/css/main.css`：全局字体、布局基础样式和 `lucide-icon-btn`
 - [Awesome DESIGN.md](https://github.com/VoltAgent/awesome-design-md)：面向 AI agent 的 `DESIGN.md` 样例集合
+- [数据工厂 UI 规范](./data-factory-ui)：领域数据工厂系列页面的组件配方（源自已评审的 P2 高保真原型）

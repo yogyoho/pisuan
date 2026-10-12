@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-12T16:39:33.199Z
-> Files: 56 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-12T22:58:59.841Z
+> Files: 57 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -359,6 +359,7 @@
 ## docs/develop-guides/
 
 - `changelog.md` — 版本变更记录 (~27255 tok)
+- `data-factory-ui.md` — 数据工厂 UI 规范 (~2058 tok)
 
 ## docs/intro/
 
@@ -383,6 +384,7 @@
 
 ## docs/vibe/prototypes/
 
+- `data-factory-ui.md` — 数据工厂 UI 规范：P2 原型提炼的组件配方/暗色映射/token 正名映射 (~3800 tok)
 - `2026-10-12-eia-p2-ui.html` — 环评域数据工厂 P2/P3 · 高保真 UI 原型 (~16889 tok)
 
 ## scripts/

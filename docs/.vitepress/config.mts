@@ -120,6 +120,7 @@ export default defineConfig({
             items: [
               { text: '文档编写与维护', link: '/develop-guides/documentation-guidelines' },
               { text: '界面设计规范', link: '/develop-guides/design' },
+              { text: '数据工厂 UI 规范', link: '/develop-guides/data-factory-ui' },
               { text: '版本变更记录', link: '/develop-guides/changelog' },
               { text: '开发路线图', link: '/develop-guides/roadmap' }
             ]
