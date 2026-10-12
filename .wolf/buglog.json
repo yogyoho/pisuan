@@ -6806,5 +6806,26 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-12"
+  },
+  {
+    "id": "bug-424",
+    "timestamp": "2026-10-12T23:30:00+08:00",
+    "error_message": "导出插接后 input 行损坏：{\"name\"\"value\": 0.65, \": \"q\", ...（TDD 测试 test_export_splices_value_into_target_line_only 抓获）",
+    "file": "backend/package/yuxi/services/eia_formula_service.py",
+    "root_cause": "_input_line_span 返回的行含 8 空格缩进，_splice_value 注入点用裸 marker 长度（len('{\"name\": \"q\", ')=14）作绝对行内偏移，未先跳过缩进宽，导致注入落在键名中间",
+    "fix": "注入前先算 indent = len(line) - len(line.lstrip(' '))，inject_at = indent + len(marker)",
+    "tags": [
+      "eia",
+      "text-splice",
+      "byte-discipline",
+      "indent-offset",
+      "formulas",
+      "P3"
+    ],
+    "related_bugs": [
+      "bug-417"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-12"
   }
 ]

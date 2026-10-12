@@ -710,6 +710,17 @@
 - **eia_data_service 只读通道异常约定：** 同模块 get_unmapped 先例——参数校验失败 ValueError→400；资源寻址失败（eia_stage_service 的 stage/family）KeyError→404。两约定在 domain_factory_router 并存，按模块从众。
 - **section_expectations 实况：** sections 为 141 节 dict（chX_SYY → {title, expected_quantities:[{caliber,corpus_freq,field,tier,unit}]}）+ 顶层 unmapped 数组；tier 实况三档 required/contextual/optional。数据 Expectations：per_chapter 为 13 元素 LIST 非 dict。
 
+### 2026-10-13（P3 批次）
+- **localized 运行栈容器内包名是 `pisuan` 不是 `yuxi`：** pisuan-localized-api-1 里包根 /app/package/pisuan，`import yuxi` 必失败；debug/演练脚本需 `sys.path.insert(0, "/app/package")` + `from pisuan.services import ...`；test 文件同样被机械改名（非异常）。
+- **登录端点 `/api/auth/token` 是 form-encoded：** POST data=（表单）非 json=，json 载荷得 404/422；且运行栈管理员密码与仓库种子脚本（seed_initial_users.py zwj12138）不一致——语义集成测试按 P2 先例 skip-gated，实链验证用服务层实弹演练替代。
+- **实弹演练模式（认证 E2E 被阻断时的替代验证）：** 真库插行 → 真技能文件导出 → 字节断言 → 二次导出幂等断言 → 撤行 + 字节快照还原（容器非 git 树，git_restore 不可用）；DB 残留查 0 收尾。脚本存 .wolf/corpus-workdir/。
+- **docker cp 回传宿主路径必须带目录前缀：** `docker cp web-1:/app/src/x.vue src/x.vue` 报 invalid output path；目标要写 `web/src/x.vue`。
+- **运行栈文件 EOL 地图（P3 实测）：** router/index.js、manager.py、storage_migration.py、models_domain_factory.py、changelog.md(CRLF/LF 注意——changelog 实为纯 LF)、sample_entities registry/_index 为 CRLF；DatasetStatsPanel.vue、formulas.json、新测试文件为 LF。replace 锚点先 `file`/od 验行尾再动手。
+- **宿主 ruff 用 `python -m ruff`（0.15.12 pip 装）**，Git Bash PATH 无裸 ruff，容器内无 ruff。
+
+### Do-Not-Repeat
+- （bug-424）文本级插接注入偏移忽略行首缩进——`_input_line_span` 返回的行带缩进，注入点 = 缩进宽 + 标记串长，裸用标记长度会把 value 插进键名中间（`{"name"value": 0.65, ": "q"`）。
+
 ### Do-Not-Repeat
 - （bug-422）schema 加档后只 grep 方法名确认≠常量已改——四触点逐一 grep：`BUSINESS_SCHEMA_VERSION =` 行值、manager 方法、storage_migration dispatch、upgrade_from 元组；迁移测试必须加「已当前版」档位。
 - （bug-423）Vue 模板插值里写含 `}}` 的字面量（含 JS 字符串）。
