@@ -223,7 +223,9 @@ const LAYER_LINKS = {
   corpus_meta: '/domain-factory/eia-data/meta',
   meta_annotations: '/domain-factory/eia-data/meta?state=todo',
   curated_lexicon: '/domain-factory/eia-data/lexicon',
-  standards_index: '/domain-factory/eia-data/standards'
+  standards_index: '/domain-factory/eia-data/standards',
+  section_expectations: '/domain-factory/eia-data/sections',
+  data_expectations: '/domain-factory/eia-data/expectations'
 }
 const layerLink = (item) => LAYER_LINKS[item.key]
 const goLayer = (item) => router.push(LAYER_LINKS[item.key])

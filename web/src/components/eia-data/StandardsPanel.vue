@@ -98,6 +98,57 @@
       </a-empty>
     </div>
 
+    <!-- 门 1 体检卡（P2-3 只读）：规则规格 + 注册表自检（code 对 allowed_patterns），不伪造违规明细 -->
+    <div v-if="gate1" class="gate1-card">
+      <div class="gate1-hd">
+        <div class="gate1-badge"><ShieldCheck :size="16" /></div>
+        <div>
+          <h3>门 1 · 标准号体检</h3>
+          <div class="hd-sub" :title="gate1.desc">gate1_code_checks · 写作前标准引用合法性规则与当前命中</div>
+        </div>
+        <div class="hd-right">
+          <span v-if="gate1.registry_check.violations.length" class="pill-warn-tag">
+            {{ gate1.registry_check.violations.length }} 项待修正
+          </span>
+          <span v-else class="pill-ok-tag">全部通过</span>
+        </div>
+      </div>
+      <div class="gate1-metrics">
+        <div class="gate1-m">
+          <span class="v num">{{ gate1.registry_check.total }}</span>
+          <span class="l">在册标准</span>
+          <span class="h">standards[].code</span>
+        </div>
+        <div class="gate1-m">
+          <span class="v num">{{ gate1.allowed_patterns.length }}</span>
+          <span class="l">引用模式</span>
+          <span class="h">allowed_patterns</span>
+        </div>
+        <div class="gate1-m">
+          <span class="v num" :class="gate1.registry_check.violations.length ? 'hot' : 'zero'">
+            {{ gate1.registry_check.violations.length }}
+          </span>
+          <span class="l">命不上模式</span>
+          <span class="h">需人工核对登记</span>
+        </div>
+      </div>
+      <div class="gate1-body">
+        <div class="gate1-patterns">
+          <span class="pl-label">引用模式</span>
+          <code v-for="p in gate1.allowed_patterns" :key="p" class="k">{{ p }}</code>
+        </div>
+        <ol class="gate1-rules">
+          <li v-for="(r, i) in gate1.rules" :key="i">{{ r }}</li>
+        </ol>
+        <template v-if="gate1.registry_check.violations.length">
+          <div class="gate1-viol">
+            <span class="pl-label">命不上模式的在册编号</span>
+            <code v-for="c in gate1.registry_check.violations" :key="c" class="k viol">{{ c }}</code>
+          </div>
+        </template>
+      </div>
+    </div>
+
     <!-- 限值查找表：人工录入（整表替换，DB 真源）→ 导出物化翻转两标志 -->
     <div class="limits-section">
       <div class="limits-header">
@@ -225,6 +276,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
+import { ShieldCheck } from '@lucide/vue'
 import { eiaStandardApi } from '@/apis/eia_standard_api'
 import { useUserStore } from '@/stores/user'
 
@@ -243,6 +295,7 @@ const exporting = ref(false)
 const items = ref([])
 const limitTables = ref({})
 const schemas = ref({})
+const gate1 = ref(null)
 const counts = reactive({ total: 0, needs_verification: 0, confirmed: 0, limit_tables_pending: 0 })
 const filters = reactive({ state: '', tier: '', q: '' })
 
@@ -292,13 +345,18 @@ const clearFilters = () => {
 const fetchList = async () => {
   loading.value = true
   try {
-    const [data, limits] = await Promise.all([eiaStandardApi.listStandards(), eiaStandardApi.listLimits()])
+    const [data, limits, gate1Data] = await Promise.all([
+      eiaStandardApi.listStandards(),
+      eiaStandardApi.listLimits(),
+      eiaStandardApi.getGate1().catch(() => null) // 体检卡独立降级：不阻塞标准表主链
+    ])
     items.value = data.items
     Object.assign(counts, data.counts)
     schemas.value = limits.schemas || {}
     limitTables.value = Object.fromEntries(
       Object.entries(limits.limit_tables).filter(([, v]) => typeof v === 'object' && v !== null)
     )
+    gate1.value = gate1Data
   } catch (e) {
     message.error(e?.message || '标准库加载失败')
   } finally {
@@ -789,5 +847,159 @@ a.primary {
     color: var(--second-600);
     font-size: 12px;
   }
+}
+
+/* ── 门 1 体检卡 ── */
+.gate1-card {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--gray-0);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.gate1-hd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+
+  h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .hd-sub {
+    font-size: 12px;
+    color: var(--gray-500);
+  }
+
+  .hd-right {
+    margin-left: auto;
+  }
+}
+
+.gate1-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--main-0);
+  color: var(--main-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.pill-warn-tag,
+.pill-ok-tag {
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+.pill-warn-tag {
+  background: var(--second-50, var(--gray-100));
+  color: var(--second-600);
+}
+
+.pill-ok-tag {
+  background: var(--main-0);
+  color: var(--main-600);
+}
+
+.gate1-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--hairline);
+}
+
+.gate1-m {
+  padding: 11px 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+
+  & + & {
+    border-left: 1px solid var(--hairline);
+  }
+
+  .v {
+    font-size: 20px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+
+    &.zero {
+      color: var(--main-600);
+    }
+
+    &.hot {
+      color: var(--second-600);
+    }
+  }
+
+  .l {
+    font-size: 12px;
+    color: var(--gray-600);
+  }
+
+  .h {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--gray-500);
+  }
+}
+
+.gate1-body {
+  border-top: 1px solid var(--hairline);
+  padding: 10px 16px 12px;
+}
+
+.pl-label {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-right: 8px;
+}
+
+.gate1-patterns,
+.gate1-viol {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+code.k {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 12px;
+  background: var(--gray-100);
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: var(--gray-700);
+
+  &.viol {
+    color: var(--second-600);
+    background: var(--second-50, var(--gray-100));
+  }
+}
+
+.gate1-rules {
+  margin: 8px 0 0;
+  padding-left: 30px;
+  font-size: 12px;
+  color: var(--gray-600);
+  line-height: 1.9;
+
+  li + li {
+    margin-top: 2px;
+  }
+}
+
+.gate1-viol {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--hairline);
 }
 </style>

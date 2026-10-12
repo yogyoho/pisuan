@@ -25,5 +25,8 @@ export const eiaStandardApi = {
       body: JSON.stringify({ code, ...payload })
     }),
   /** DB → standards_index.json（仅翻转被裁决条目两标志；admin）→ { materialized, path } */
-  exportReviews: () => apiPost('/api/domain-factory/eia/standards/export')
+  exportReviews: () => apiPost('/api/domain-factory/eia/standards/export'),
+
+  /** 门 1 体检卡（只读）：规则规格（desc/allowed_patterns/rules）+ 注册表自检 { total, violations } */
+  getGate1: () => apiGet('/api/domain-factory/eia/standards/gate1')
 }
