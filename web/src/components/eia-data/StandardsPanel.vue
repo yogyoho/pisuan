@@ -98,37 +98,55 @@
       </a-empty>
     </div>
 
-    <!-- 限值查找表（只读）：rows 一期仅样例锚点行，档位录入留后续 -->
+    <!-- 限值查找表：人工录入（整表替换，DB 真源）→ 导出物化翻转两标志 -->
     <div class="limits-section">
       <div class="limits-header">
-        <h3>限值查找表（只读）</h3>
-        <p class="limits-sub">
-          档位未录入前，达标判定一律输出「需人工对照」，禁自动断言；补录唯一通道 = 人工对照标准原文录入（后续版本开放）
-        </p>
+        <div class="limits-header-main">
+          <div>
+            <h3>限值查找表</h3>
+            <p class="limits-sub">
+              档位未录入前，达标判定一律输出「需人工对照」，禁自动断言；录入须对照标准原文，导出物化后写作技能方可引用
+            </p>
+          </div>
+          <a-button
+            v-if="userStore.isAdmin"
+            size="small"
+            :disabled="!dbTableCount"
+            :loading="exporting"
+            @click="exportLimits"
+          >
+            导出限值行{{ dbTableCount ? `（${dbTableCount} 张待物化）` : '' }}
+          </a-button>
+        </div>
       </div>
       <div class="limits-grid">
         <div v-for="(t, name) in limitTables" :key="name" class="limit-card">
           <div class="limit-head">
             <span class="limit-desc">{{ t.desc }}</span>
-            <a-tag class="limit-ref">{{ t.code_ref }}</a-tag>
+            <span class="limit-head-right">
+              <a v-if="userStore.isAdmin" class="limit-edit" @click="openLimitEdit(name, t)"
+                >编辑…</a
+              >
+              <a-tag class="limit-ref">{{ t.code_ref }}</a-tag>
+            </span>
           </div>
           <div class="limit-flags">
             <span v-if="!t.needs_verification" class="flag-tag flag-ok">已核实</span>
-            <span v-else-if="(t.rows || []).length" class="flag-tag flag-pending"
-              >已录入 {{ t.rows.length }} 行 · 待核对全表</span
-            >
+            <span v-else-if="(t.rows || []).length" class="flag-tag flag-pending">
+              已录入 {{ t.rows.length }} 行 · {{ t.source === 'db' ? '待导出' : '待核对全表' }}
+            </span>
             <span v-else class="flag-tag flag-todo">未录入</span>
           </div>
-          <!-- 已录入限值行：列头取自首行键（origin 内部溯源不展示） -->
+          <!-- 已录入限值行：列头取服务端 schemas（字段顺序权威），缺席时回退首行键 -->
           <table v-if="(t.rows || []).length" class="limit-rows">
             <thead>
               <tr>
-                <th v-for="k in rowKeys(t)" :key="k">{{ rowKeyLabel(k) }}</th>
+                <th v-for="k in rowKeys(name, t)" :key="k">{{ rowKeyLabel(name, k) }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(r, i) in t.rows" :key="i">
-                <td v-for="k in rowKeys(t)" :key="k">{{ r[k] }}</td>
+                <td v-for="k in rowKeys(name, t)" :key="k">{{ r[k] }}</td>
               </tr>
             </tbody>
           </table>
@@ -165,6 +183,42 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <!-- 限值行编辑对话框（整表替换保存） -->
+    <a-modal
+      v-model:open="editDlg.open"
+      :title="`限值录入 · ${editDlg.tableMeta?.desc ?? ''}`"
+      :confirm-loading="editDlg.submitting"
+      :width="720"
+      ok-text="保存录入"
+      @ok="onSaveRows"
+    >
+      <p class="rows-editor-sub">
+        整表替换保存（DB 即导出真源）；数值字段对照标准原文录入纯数字，禁带区间或文字。
+      </p>
+      <table class="rows-edit-table">
+        <thead>
+          <tr>
+            <th v-for="(spec, k) in editFields" :key="k">{{ spec.label }}</th>
+            <th class="op-col">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(row, i) in editDlg.rows" :key="i">
+            <td v-for="(spec, k) in editFields" :key="k">
+              <a-input-number
+                v-if="spec.type === 'number'"
+                v-model:value="row[k]"
+                style="width: 100%"
+              />
+              <a-input v-else v-model:value="row[k]" />
+            </td>
+            <td class="op-col"><a class="danger" @click="editDlg.rows.splice(i, 1)">删除</a></td>
+          </tr>
+        </tbody>
+      </table>
+      <a-button size="small" @click="addBlankRow">＋ 添加一行</a-button>
+    </a-modal>
   </div>
 </template>
 
@@ -188,6 +242,7 @@ const loading = ref(false)
 const exporting = ref(false)
 const items = ref([])
 const limitTables = ref({})
+const schemas = ref({})
 const counts = reactive({ total: 0, needs_verification: 0, confirmed: 0, limit_tables_pending: 0 })
 const filters = reactive({ state: '', tier: '', q: '' })
 
@@ -205,10 +260,13 @@ const columns = [
 
 const tierLabel = (k) => TIER_LABELS[k] || k
 
-// 限值行列头中文映射；未登记的键原样展示（后续新表字段自适应）
-const ROW_KEY_LABELS = { category: '类别', day: '昼间', night: '夜间', unit: '单位' }
-const rowKeys = (t) => Object.keys(t.rows?.[0] || {}).filter((k) => k !== 'origin')
-const rowKeyLabel = (k) => ROW_KEY_LABELS[k] || k
+// 限值行列头取服务端 schemas（字段顺序与中文标签权威）；schemas 缺席时回退首行键
+const rowKeys = (name, t) => {
+  const s = schemas.value[name]
+  if (s) return Object.keys(s)
+  return Object.keys(t.rows?.[0] || {}).filter((k) => k !== 'origin')
+}
+const rowKeyLabel = (name, k) => schemas.value[name]?.[k]?.label || k
 
 const isFiltered = computed(() => Boolean(filters.state || filters.tier || filters.q))
 const emptyDesc = computed(() => (isFiltered.value ? '当前筛选无匹配标准' : '标准注册表为空'))
@@ -237,6 +295,7 @@ const fetchList = async () => {
     const [data, limits] = await Promise.all([eiaStandardApi.listStandards(), eiaStandardApi.listLimits()])
     items.value = data.items
     Object.assign(counts, data.counts)
+    schemas.value = limits.schemas || {}
     limitTables.value = Object.fromEntries(
       Object.entries(limits.limit_tables).filter(([, v]) => typeof v === 'object' && v !== null)
     )
@@ -252,7 +311,10 @@ const onExport = async () => {
   message.loading({ content: '正在物化…', key: 'std-export', duration: 0 })
   try {
     const r = await eiaStandardApi.exportReviews()
-    message.success({ content: `已翻转 ${r.materialized} 条裁决 → standards_index.json`, key: 'std-export' })
+    message.success({
+      content: `已翻转 ${r.materialized} 条裁决 → standards_index.json（落运行栈技能目录，需人工回流 pisuan-custom）`,
+      key: 'std-export'
+    })
     await fetchList()
   } catch (e) {
     message.error({ content: e?.message || '导出失败', key: 'std-export' })
@@ -285,6 +347,75 @@ const onSubmit = async () => {
     message.error(e?.message || '核实保存失败')
   } finally {
     dlg.submitting = false
+  }
+}
+
+// ── 限值行编辑对话框（整表替换保存）──────────────────────
+
+const dbTableCount = computed(
+  () => Object.values(limitTables.value).filter((t) => t.source === 'db').length
+)
+
+const editDlg = reactive({
+  open: false,
+  submitting: false,
+  tableKey: '',
+  tableMeta: null,
+  rows: []
+})
+const editFields = computed(() => schemas.value[editDlg.tableKey] || {})
+
+const addBlankRow = () => {
+  const blank = {}
+  for (const [k, spec] of Object.entries(editFields.value))
+    blank[k] = spec.type === 'number' ? null : ''
+  editDlg.rows.push(blank)
+}
+
+const openLimitEdit = (name, t) => {
+  editDlg.tableKey = name
+  editDlg.tableMeta = t
+  // 按 schema 投影装载：文件锚点行携带的 origin 等溯源字段不进编辑器（服务端校验拒收）
+  const fields = schemas.value[name] || {}
+  editDlg.rows = (t.rows || []).map((r) =>
+    Object.fromEntries(
+      Object.entries(fields).map(([k, spec]) => [k, r[k] ?? (spec.type === 'number' ? null : '')])
+    )
+  )
+  if (!editDlg.rows.length) addBlankRow()
+  editDlg.open = true
+}
+
+const onSaveRows = async () => {
+  editDlg.submitting = true
+  try {
+    const r = await eiaStandardApi.saveLimitRows(editDlg.tableKey, editDlg.rows)
+    message.success(
+      `「${editDlg.tableMeta?.desc || editDlg.tableKey}」已保存 ${r.saved} 行（导出物化后生效）`
+    )
+    editDlg.open = false
+    await fetchList()
+  } catch (e) {
+    message.error(e?.message || '限值行保存失败')
+  } finally {
+    editDlg.submitting = false
+  }
+}
+
+const exportLimits = async () => {
+  exporting.value = true
+  message.loading({ content: '正在物化限值行…', key: 'limits-export', duration: 0 })
+  try {
+    const r = await eiaStandardApi.exportLimits()
+    message.success({
+      content: `已物化 ${r.materialized} 张限值表 ${r.rows} 行 → standards_index.json（落运行栈技能目录，需人工回流 pisuan-custom）`,
+      key: 'limits-export'
+    })
+    await fetchList()
+  } catch (e) {
+    message.error({ content: e?.message || '限值行导出失败', key: 'limits-export' })
+  } finally {
+    exporting.value = false
   }
 }
 
@@ -471,6 +602,13 @@ a.primary {
 .limits-header {
   margin-bottom: 10px;
 
+  .limits-header-main {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
   h3 {
     margin: 0;
     font-size: 15px;
@@ -515,6 +653,18 @@ a.primary {
     flex-shrink: 0;
     font-size: 11px;
     color: var(--gray-600);
+  }
+
+  .limit-head-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .limit-edit {
+    font-size: 12px;
+    color: var(--main-600);
   }
 
   .limit-flags {
@@ -598,5 +748,46 @@ a.primary {
 
 .dlg-form {
   margin-top: 4px;
+}
+
+/* ── 限值行编辑对话框 ───────────────────────────────── */
+.rows-editor-sub {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--gray-500);
+}
+
+.rows-edit-table {
+  width: 100%;
+  margin-bottom: 10px;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 4px 6px;
+    border: 1px solid var(--hairline);
+  }
+
+  th {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-600);
+    background: var(--gray-50);
+    text-align: left;
+  }
+
+  td {
+    color: var(--gray-800);
+  }
+
+  .op-col {
+    width: 48px;
+    text-align: center;
+  }
+
+  a.danger {
+    color: var(--second-600);
+    font-size: 12px;
+  }
 }
 </style>

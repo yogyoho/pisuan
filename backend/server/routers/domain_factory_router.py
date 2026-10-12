@@ -1255,7 +1255,7 @@ async def list_eia_standards(
 async def list_eia_standard_limits(
     current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
-    """limit_tables 只读原样（rows 一期为空，仅展示表骨架与核实态）"""
+    """limit_tables：文件态 + DB 录入行合并（source: db|file）+ 行结构 schemas（供前端渲染编辑表格）"""
     try:
         return await get_eia_standard_service().list_limit_tables()
     except FileNotFoundError as e:
@@ -1263,6 +1263,42 @@ async def list_eia_standard_limits(
     except Exception as e:
         logger.error(f"Failed to list eia standard limits: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"获取限值表失败: {str(e)}")
+
+
+@domain_factory.put("/eia/standards/limits/{table_key}/rows")
+async def save_eia_standard_limit_rows(
+    table_key: str,
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """限值行整表替换落库（DB 即导出真源）：{rows: [...]}；未知表 404，载荷越界 400"""
+    try:
+        result = await get_eia_standard_service().save_limit_rows(
+            table_key, payload.get("rows"), current_user.username
+        )
+        return {"success": True, **result}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to save eia limit rows {table_key}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"保存限值行失败: {str(e)}")
+
+
+@domain_factory.post("/eia/standards/limits/export")
+async def export_eia_standard_limit_rows(
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """DB → standards_index.json（已录入表整表替换 rows + 翻转 nv/verified，round-trip 纪律；admin）"""
+    try:
+        result = await get_eia_standard_service().export_limit_rows(current_user.username)
+        return {"success": True, **result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to export eia limit rows: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"导出限值行失败: {str(e)}")
 
 
 @domain_factory.put("/eia/standards/review")
