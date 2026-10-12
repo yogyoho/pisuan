@@ -4994,3 +4994,8 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 00:36 | Edited backend/test/unit/services/test_eia_formula_service.py | inline fix | ~31 |
 | 00:39 | Edited docs/vibe/2026-10-12-eia-data-factory-p3-pages.md | 21→23 lines | ~344 |
 | 00:35 | P3 收尾：ruff format 9 文件+修自身 3 错（docstring E501/json import/fixture 行）、changelog P3 段、P3 文档勾账、cerebrum 6 学习+DNR bug-424 | backend 14 文件+changelog+p3 文档+cerebrum | 39 passed 全绿 | ~60k || 00:40 | Session end: 5 writes across 3 files (manager.py, test_eia_formula_service.py, 2026-10-12-eia-data-factory-p3-pages.md) | 2 reads | ~32706 tok |
+
+| 00:50 | P3 五笔提交按批准提案落地（迁移/服务层/路由/前端/docs，vibe 文档按 gitignore 惯例留本地） | git pisuan-custom 195262f8..e2d23579 | 5 commits OK 未推送 | ~5k || 06:42 | Session end: 5 writes across 3 files (manager.py, test_eia_formula_service.py, 2026-10-12-eia-data-factory-p3-pages.md) | 2 reads | ~32706 tok |
+| 06:58 | Created docs/develop-guides/data-factory-ui.md | — | ~2195 |
+
+| 01:20 | 数据工厂 UI 规范成文（P2 原型设计语言→组件配方/token 映射/暗色三则/Vue 落地），config.mts 导航 + design.md 交叉引用 + changelog | docs/develop-guides/data-factory-ui.md 等 4 文件 | 待提案提交 | ~25k || 06:59 | Session end: 6 writes across 4 files (manager.py, test_eia_formula_service.py, 2026-10-12-eia-data-factory-p3-pages.md, data-factory-ui.md) | 3 reads | ~35058 tok |
