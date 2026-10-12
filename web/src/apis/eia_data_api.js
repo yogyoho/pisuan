@@ -16,15 +16,25 @@ export const eiaDataApi = {
    * unmapped 池明细（只读）：per-stage 未归并量词短语，词表口径 label 扩充素材。
    * stage 缺省返回全部阶段。
    */
-  getUnmapped: (stage) => apiGet(`/api/domain-factory/eia/expectations/unmapped${stage ? `?stage=${encodeURIComponent(stage)}` : ''}`),
+  getUnmapped: (stage) =>
+    apiGet(
+      `/api/domain-factory/eia/expectations/unmapped${stage ? `?stage=${encodeURIComponent(stage)}` : ''}`
+    ),
 
   /**
    * 节级明细只读视图（P2-2）：节键自然序展平（key/title/quantities）+ unmapped 附带。
    */
-  getSections: (stage) => apiGet(`/api/domain-factory/eia/expectations/sections?stage=${encodeURIComponent(stage)}`),
+  getSections: (stage) =>
+    apiGet(`/api/domain-factory/eia/expectations/sections?stage=${encodeURIComponent(stage)}`),
 
   /**
    * 备料清单只读视图（P2-4）：per_chapter 分章数据族 + source_hint 词表。
    */
-  getDataExpectations: () => apiGet('/api/domain-factory/eia/expectations/data')
+  getDataExpectations: () => apiGet('/api/domain-factory/eia/expectations/data'),
+
+  /**
+   * 三数据集只读抽屉通道（P3-3）：key ∈ attachment_checklist / consistency_contracts / depth_targets。
+   */
+  getDatasetView: (key) =>
+    apiGet(`/api/domain-factory/eia/datasets/${encodeURIComponent(key)}/view`)
 }

@@ -23,7 +23,9 @@
           @keyup.enter="m.link && goLexicon()"
         >
           <span class="metric-label">{{ m.label }}</span>
-          <span class="metric-value">{{ m.value.toLocaleString() }}<small>{{ m.unit }}</small></span>
+          <span class="metric-value"
+            >{{ m.value.toLocaleString() }}<small>{{ m.unit }}</small></span
+          >
         </div>
       </div>
 
@@ -59,16 +61,27 @@
                   v-for="item in layer.items"
                   :key="item.key"
                   class="layer-chip"
-                  :class="{ planned: item.status === 'planned', link: layerLink(item) }"
+                  :class="{
+                    planned: item.status === 'planned',
+                    link: layerLink(item) || isDrawerKey(item)
+                  }"
                   :title="item.file || (item.status === 'planned' ? '本期预留位' : '')"
-                  :role="layerLink(item) ? 'button' : undefined"
-                  :tabindex="layerLink(item) ? 0 : undefined"
-                  :aria-label="layerLink(item) ? `${item.name}，进入管理页` : undefined"
-                  @click="layerLink(item) && goLayer(item)"
-                  @keyup.enter="layerLink(item) && goLayer(item)"
+                  :role="layerLink(item) || isDrawerKey(item) ? 'button' : undefined"
+                  :tabindex="layerLink(item) || isDrawerKey(item) ? 0 : undefined"
+                  :aria-label="
+                    layerLink(item)
+                      ? `${item.name}，进入管理页`
+                      : isDrawerKey(item)
+                        ? `${item.name}，查看明细`
+                        : undefined
+                  "
+                  @click="onChip(item)"
+                  @keyup.enter="onChip(item)"
                 >
                   <em>{{ item.name }}</em>
-                  <b v-if="item.count !== undefined && item.count !== null">{{ formatCount(item.count) }}<i>{{ item.unit }}</i></b>
+                  <b v-if="item.count !== undefined && item.count !== null"
+                    >{{ formatCount(item.count) }}<i>{{ item.unit }}</i></b
+                  >
                   <b v-else-if="item.status === 'planned'" class="planned-tag">预留</b>
                 </span>
               </div>
@@ -83,8 +96,9 @@
             比率/浓度型口径三分类 ·
             <span class="legend-swatch swatch-main"></span>A 措施效率 {{ stats.candidates.measure }}
             <span class="legend-swatch swatch-mid"></span>B 现状监测 {{ stats.candidates.site }}
-            <span class="legend-swatch swatch-gray"></span>C 非护栏杂项 {{ stats.candidates.junk }}
-            · 可发布区间 <b class="hl">{{ stats.candidates.range_ready }}</b> 项
+            <span class="legend-swatch swatch-gray"></span>C 非护栏杂项
+            {{ stats.candidates.junk }} · 可发布区间
+            <b class="hl">{{ stats.candidates.range_ready }}</b> 项
             <a class="panel-link" @click.prevent="goLexicon">进入词表管理 →</a>
           </p>
           <div ref="candidatesChartRef" class="chart chart-md"></div>
@@ -123,14 +137,19 @@
             >
               <span class="quality-dot" :class="q.level"></span>
               <span class="quality-label">{{ q.label }}</span>
-              <span class="quality-count">{{ q.count.toLocaleString() }}<small v-if="q.total !== undefined"> / {{ q.total }}</small></span>
+              <span class="quality-count"
+                >{{ q.count.toLocaleString()
+                }}<small v-if="q.total !== undefined"> / {{ q.total }}</small></span
+              >
               <span class="quality-hint" :title="q.hint">{{ q.hint }}</span>
             </div>
           </div>
         </section>
       </div>
 
-      <p class="generated-note">统计生成于 {{ generatedAtText }} · 数据源为技能内置语料（兜底真源），页面只读</p>
+      <p class="generated-note">
+        统计生成于 {{ generatedAtText }} · 数据源为技能内置语料（兜底真源），页面只读
+      </p>
     </template>
 
     <!-- unmapped 池明细抽屉（只读 · 词表口径 label 扩充素材） -->
@@ -164,6 +183,86 @@
           />
         </a-tab-pane>
       </a-tabs>
+    </a-drawer>
+
+    <!-- 三数据集只读抽屉（P3-3：chip 直达，最小实现不立独立页面） -->
+    <a-drawer v-model:open="dsDrawer.open" :title="dsDrawer.title" width="720">
+      <a-spin v-if="dsDrawer.loading" />
+      <template v-else-if="dsDrawer.data">
+        <template v-if="dsDrawer.key === 'attachment_checklist'">
+          <p class="ds-note">{{ dsDrawer.data.provenance_note }}</p>
+          <div v-for="(v, stage) in dsDrawer.data.stages" :key="stage" class="ds-stage">
+            <h4>
+              {{ STAGE_LABELS[stage] || stage
+              }}<span class="ds-sub">基准报告 {{ v.base_reports }}</span>
+            </h4>
+            <div v-if="v.required && v.required.length" class="ds-line">
+              <b>必备：</b>{{ v.required.join('、') }}
+            </div>
+            <div v-if="v.common && v.common.length" class="ds-line">
+              <b>常见：</b>
+              <span v-for="c in v.common" :key="c.item" class="ds-chip">
+                {{ c.item }}<i>{{ Math.round(c.freq * 100) }}% · {{ c.n_reports }} 报告</i>
+              </span>
+            </div>
+            <div v-if="v.rids_without_items && v.rids_without_items.length" class="ds-line warn">
+              无附件图件报告：{{ v.rids_without_items.join('、') }}
+            </div>
+          </div>
+        </template>
+
+        <template v-else-if="dsDrawer.key === 'consistency_contracts'">
+          <p class="ds-note">{{ dsDrawer.data.activation_semantics }}</p>
+          <div class="ds-line">
+            <b>合约类型：</b>
+            <span
+              v-for="(d, tp) in dsDrawer.data.contract_types"
+              :key="tp"
+              class="ds-chip"
+              :title="d"
+            >
+              {{ tp }}
+            </span>
+          </div>
+          <a-table
+            :data-source="dsDrawer.data.contracts"
+            :columns="contractColumns"
+            row-key="id"
+            size="small"
+            :pagination="{ pageSize: 20, size: 'small', showSizeChanger: false }"
+          >
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'name'">
+                <code class="ds-mono">{{ record.name }}</code>
+              </template>
+              <template v-else-if="column.key === 'stages'">
+                <span class="ds-mono">{{ (record.stages || []).join('、') }}</span>
+              </template>
+            </template>
+          </a-table>
+        </template>
+
+        <template v-else>
+          <a-tabs v-model:activeKey="dsDrawer.activeStage" size="small">
+            <a-tab-pane
+              v-for="(v, stage) in dsDrawer.data.stages"
+              :key="stage"
+              :tab="STAGE_LABELS[stage] || stage"
+            >
+              <p class="ds-note">
+                置信度 {{ v.confidence }} · {{ Object.keys(v.chapters).length }} 章
+              </p>
+              <a-table
+                :data-source="depthRows"
+                :columns="depthColumns"
+                row-key="ch"
+                size="small"
+                :pagination="{ pageSize: 24, size: 'small', showSizeChanger: false }"
+              />
+            </a-tab-pane>
+          </a-tabs>
+        </template>
+      </template>
     </a-drawer>
   </div>
 </template>
@@ -201,9 +300,7 @@ const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyV
 const metricStrip = computed(() => {
   const s = stats.value
   const sections = Object.values(s.expectations).reduce((acc, e) => acc + e.sections, 0)
-  const stdTotal = s.layers
-    .flatMap((l) => l.items)
-    .find((i) => i.key === 'standards_index')
+  const stdTotal = s.layers.flatMap((l) => l.items).find((i) => i.key === 'standards_index')
   return [
     { label: '案例语料切片', value: s.corpus.slices_total, unit: '片' },
     { label: '语料报告', value: s.corpus.reports_total, unit: '份' },
@@ -225,12 +322,71 @@ const LAYER_LINKS = {
   curated_lexicon: '/domain-factory/eia-data/lexicon',
   standards_index: '/domain-factory/eia-data/standards',
   section_expectations: '/domain-factory/eia-data/sections',
-  data_expectations: '/domain-factory/eia-data/expectations'
+  data_expectations: '/domain-factory/eia-data/expectations',
+  formulas: '/domain-factory/eia-data/formulas',
+  sample_entities: '/domain-factory/eia-data/entities'
 }
 const layerLink = (item) => LAYER_LINKS[item.key]
-const goLayer = (item) => router.push(LAYER_LINKS[item.key])
 
-const totalLayerItems = computed(() => stats.value.layers.reduce((acc, l) => acc + l.items.length, 0))
+// 三数据集只读抽屉（P3-3）：编辑类 chip 走路由，三只读数据集 chip 开抽屉
+const DRAWER_KEYS = ['attachment_checklist', 'consistency_contracts', 'depth_targets']
+const isDrawerKey = (item) => DRAWER_KEYS.includes(item.key)
+
+const onChip = (item) => {
+  const link = layerLink(item)
+  if (link) router.push(link)
+  else if (isDrawerKey(item)) openDatasetDrawer(item)
+}
+
+const dsDrawer = reactive({
+  open: false,
+  loading: false,
+  key: '',
+  title: '',
+  data: null,
+  activeStage: ''
+})
+
+const openDatasetDrawer = async (item) => {
+  dsDrawer.open = true
+  dsDrawer.key = item.key
+  dsDrawer.title = `${item.name}（只读）`
+  if (dsDrawer.data?.key === item.key) return
+  dsDrawer.loading = true
+  dsDrawer.data = null
+  try {
+    const data = await eiaDataApi.getDatasetView(item.key)
+    dsDrawer.data = data
+    if (item.key === 'depth_targets') dsDrawer.activeStage = Object.keys(data.stages)[0] || ''
+  } catch (e) {
+    message.error(e?.message || '获取数据集视图失败')
+    dsDrawer.open = false
+  } finally {
+    dsDrawer.loading = false
+  }
+}
+
+const contractColumns = [
+  { title: 'ID', dataIndex: 'id', key: 'id', width: 70 },
+  { title: '类型', dataIndex: 'type', key: 'type', width: 160 },
+  { title: '名称', dataIndex: 'name', key: 'name', width: 210 },
+  { title: '说明', dataIndex: 'description', key: 'description', ellipsis: true },
+  { title: '阶段', key: 'stages', width: 170 }
+]
+
+const depthColumns = [
+  { title: '节', dataIndex: 'ch', key: 'ch', width: 120 },
+  { title: '篇幅下限（字符）', dataIndex: 'floor_chars', key: 'floor_chars', width: 150 }
+]
+
+const depthRows = computed(() => {
+  const st = dsDrawer.data?.stages?.[dsDrawer.activeStage]
+  return Object.entries(st?.chapters ?? {}).map(([ch, v]) => ({ ch, ...v }))
+})
+
+const totalLayerItems = computed(() =>
+  stats.value.layers.reduce((acc, l) => acc + l.items.length, 0)
+)
 
 const tierLegend = computed(() => {
   const totals = {}
@@ -247,7 +403,9 @@ const tierLegend = computed(() => {
 
 const generatedAtText = computed(() => {
   const d = new Date(stats.value.generated_at)
-  return isNaN(d.getTime()) ? stats.value.generated_at : d.toLocaleString('zh-CN', { hour12: false })
+  return isNaN(d.getTime())
+    ? stats.value.generated_at
+    : d.toLocaleString('zh-CN', { hour12: false })
 })
 
 const formatCount = (n) => (typeof n === 'number' ? n.toLocaleString() : n)
@@ -337,8 +495,19 @@ const renderCandidatesChart = () => {
   renderChart(candidatesChartRef.value, {
     grid: { top: 28, left: 8, right: 8, bottom: 0, containLabel: true },
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: { top: 0, left: 'right', itemWidth: 10, itemHeight: 10, textStyle: { color: cssVar('--gray-600'), fontSize: 11 } },
-    xAxis: { type: 'category', data: stages.map((s) => STAGE_LABELS[s] || s), ...baseAxis(), splitLine: { show: false } },
+    legend: {
+      top: 0,
+      left: 'right',
+      itemWidth: 10,
+      itemHeight: 10,
+      textStyle: { color: cssVar('--gray-600'), fontSize: 11 }
+    },
+    xAxis: {
+      type: 'category',
+      data: stages.map((s) => STAGE_LABELS[s] || s),
+      ...baseAxis(),
+      splitLine: { show: false }
+    },
     yAxis: { type: 'value', ...baseAxis(), splitNumber: 3 },
     series: SERIES.map((ser) => ({
       name: ser.label,
@@ -359,8 +528,19 @@ const renderExpectChart = () => {
   renderChart(expectChartRef.value, {
     grid: { top: 28, left: 8, right: 8, bottom: 0, containLabel: true },
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: { top: 0, left: 'right', itemWidth: 10, itemHeight: 10, textStyle: { color: cssVar('--gray-600'), fontSize: 11 } },
-    xAxis: { type: 'category', data: stages.map((s) => STAGE_LABELS[s] || s), ...baseAxis(), splitLine: { show: false } },
+    legend: {
+      top: 0,
+      left: 'right',
+      itemWidth: 10,
+      itemHeight: 10,
+      textStyle: { color: cssVar('--gray-600'), fontSize: 11 }
+    },
+    xAxis: {
+      type: 'category',
+      data: stages.map((s) => STAGE_LABELS[s] || s),
+      ...baseAxis(),
+      splitLine: { show: false }
+    },
     yAxis: { type: 'value', ...baseAxis(), splitNumber: 3 },
     series: tierKeys.map((k, i) => ({
       name: tierLegend.value[i].label,
@@ -678,7 +858,9 @@ onBeforeUnmount(cleanup)
 
   &.link {
     cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
+    transition:
+      border-color 0.2s,
+      background 0.2s;
 
     &:hover,
     &:focus-visible {
@@ -838,5 +1020,77 @@ onBeforeUnmount(cleanup)
   .quality-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── 三数据集只读抽屉 ── */
+.ds-note {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--gray-500);
+  line-height: 1.7;
+  padding: 8px 10px;
+  background: var(--gray-50);
+  border-radius: 6px;
+}
+
+.ds-stage {
+  padding: 8px 0;
+
+  & + .ds-stage {
+    border-top: 1px dashed var(--gray-100);
+  }
+
+  h4 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-800);
+  }
+
+  .ds-sub {
+    margin-left: 8px;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--gray-500);
+  }
+}
+
+.ds-line {
+  font-size: 12px;
+  color: var(--gray-600);
+  line-height: 1.9;
+
+  b {
+    color: var(--gray-700);
+  }
+
+  &.warn {
+    color: var(--warn, #ad6800);
+  }
+}
+
+.ds-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 6px 4px 0;
+  padding: 0 8px;
+  height: 22px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid var(--gray-200);
+  background: var(--gray-0);
+  color: var(--gray-600);
+
+  i {
+    font-style: normal;
+    font-size: 11px;
+    color: var(--gray-400);
+  }
+}
+
+.ds-mono {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 11px;
 }
 </style>
