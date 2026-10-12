@@ -10,10 +10,18 @@ from fastapi.concurrency import run_in_threadpool
 
 from server.utils.auth_middleware import get_admin_user, get_required_user
 from yuxi.services.domain_factory_service import get_domain_factory_service
-from yuxi.services.eia_data_service import get_data_expectations, get_sections, get_skill_stats, get_unmapped
+from yuxi.services.eia_data_service import (
+    get_data_expectations,
+    get_dataset_view,
+    get_sections,
+    get_skill_stats,
+    get_unmapped,
+)
 from yuxi.services.eia_lexicon_service import get_eia_lexicon_service
 from yuxi.services.eia_meta_service import get_eia_meta_service
 from yuxi.services.eia_standard_service import get_eia_standard_service
+from yuxi.services.eia_entity_service import get_eia_entity_service
+from yuxi.services.eia_formula_service import get_eia_formula_service
 from yuxi.services.eia_stage_service import get_eia_stage_service
 from yuxi.storage.postgres.models_business import User
 from yuxi.utils import logger
@@ -1451,3 +1459,183 @@ async def export_eia_stage_forms(
     except Exception as e:
         logger.error(f"Failed to export eia stage forms: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"导出口径字段裁决失败: {str(e)}")
+
+
+# =============================================================================
+# EIA Formulas (环评公式参数参考值运营层：DB 覆盖层 + 导出物化 formulas.json)
+# =============================================================================
+
+
+@domain_factory.get("/eia/formulas")
+async def list_eia_formulas(
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """公式参数合并态（P3-1）：文件锚点 + DB 覆盖（value/note/pending）；expr/derived_slots 恒只读。"""
+    try:
+        return await get_eia_formula_service().list_formulas()
+    except Exception as e:
+        logger.error(f"Failed to list eia formulas: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取公式参数失败: {str(e)}")
+
+
+@domain_factory.put("/eia/formulas/{formula_id}/inputs/{input_name}")
+async def set_eia_formula_input_value(
+    formula_id: str,
+    input_name: str,
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """参数参考值裁决落库（仅 user_input；同键覆盖）。"""
+    try:
+        result = await get_eia_formula_service().set_input_value(
+            formula_id,
+            input_name,
+            payload.get("value"),
+            payload.get("note"),
+            current_user.username,
+        )
+        return {"success": True, **result}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to set eia formula value {formula_id}.{input_name}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"保存参数参考值失败: {str(e)}")
+
+
+@domain_factory.delete("/eia/formulas/{formula_id}/inputs/{input_name}")
+async def clear_eia_formula_input_value(
+    formula_id: str,
+    input_name: str,
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """撤回参数覆盖行（文件锚点不受影响）。"""
+    try:
+        cleared = await get_eia_formula_service().clear_input_value(formula_id, input_name)
+        return {"success": cleared}
+    except Exception as e:
+        logger.error(f"Failed to clear eia formula value {formula_id}/{input_name}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"撤回参数参考值失败: {str(e)}")
+
+
+@domain_factory.post("/eia/formulas/export")
+async def export_eia_formulas(
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """DB 覆盖 → formulas.json 行级插接物化（字节纪律；幂等；admin）"""
+    try:
+        result = await get_eia_formula_service().export_formulas(current_user.username)
+        return {"success": True, **result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to export eia formulas: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"导出公式参数失败: {str(e)}")
+
+
+# =============================================================================
+# EIA Entities (环评样例实体注册表补充：仅添加 + 导出物化 registry + _index)
+# =============================================================================
+
+
+@domain_factory.get("/eia/entities/samples")
+async def list_eia_entity_samples(
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """样例清单（P3-2 只读）：_index samples + skipped 透出。"""
+    try:
+        return await get_eia_entity_service().list_samples()
+    except Exception as e:
+        logger.error(f"Failed to list eia entity samples: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取样例清单失败: {str(e)}")
+
+
+@domain_factory.get("/eia/entities/{slug}")
+async def get_eia_entity_registry(
+    slug: str,
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """单样例注册表合并态（锚点条目 + DB 待导出补充 pending 标注）。"""
+    try:
+        return await get_eia_entity_service().get_registry(slug)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to get eia entity registry {slug}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取实体注册表失败: {str(e)}")
+
+
+@domain_factory.put("/eia/entities/{slug}/items")
+async def add_eia_entity(
+    slug: str,
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """实体补充落库（仅添加：etype/name/rid?/note?；锚点与待导出重复即拒）。"""
+    try:
+        result = await get_eia_entity_service().add_entity(
+            slug,
+            payload.get("etype"),
+            payload.get("name"),
+            payload.get("rid"),
+            payload.get("note"),
+            current_user.username,
+        )
+        return {"success": True, **result}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to add eia entity {slug}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"补充实体失败: {str(e)}")
+
+
+@domain_factory.delete("/eia/entities/items/{addition_id}")
+async def withdraw_eia_entity(
+    addition_id: int,
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """撤回 DB 实体补充行（文件锚点不受影响）。"""
+    try:
+        cleared = await get_eia_entity_service().withdraw_entity(addition_id)
+        return {"success": cleared}
+    except Exception as e:
+        logger.error(f"Failed to withdraw eia entity {addition_id}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"撤回实体补充失败: {str(e)}")
+
+
+@domain_factory.post("/eia/entities/export")
+async def export_eia_entities(
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """DB 补充 → registry 数组尾追加 + _index counts（字节纪律；幂等；admin）"""
+    try:
+        result = await get_eia_entity_service().export_entities(current_user.username)
+        return {"success": True, **result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to export eia entities: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"导出实体补充失败: {str(e)}")
+
+
+# =============================================================================
+# EIA Datasets (环评数据集只读抽屉：attachment_checklist / consistency_contracts / depth_targets)
+# =============================================================================
+
+
+@domain_factory.get("/eia/datasets/{key}/view")
+async def view_eia_dataset(
+    key: str,
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """三数据集只读抽屉数据通道（P3-3）。"""
+    try:
+        return await run_in_threadpool(get_dataset_view, key)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to view eia dataset {key}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取数据集视图失败: {str(e)}")
