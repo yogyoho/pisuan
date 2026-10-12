@@ -23,6 +23,8 @@ from yuxi.storage.postgres.models_knowledge import Base as KnowledgeBase
 from yuxi.storage.postgres.models_domain_factory import (
     Base as DomainFactoryBase,
     EiaDatasetSwitch,
+    EiaEntityAddition,
+    EiaFormulaOverride,
     EiaLexiconEntry,
     EiaLexiconSuppression,
     EiaMetaAnnotation,
@@ -45,7 +47,7 @@ AGENT_RUN_TERMINAL_STATUS_SQL = ", ".join(f"'{status}'" for status in AGENT_RUN_
 # v13：词表改名抑制（eia_lexicon_suppressions，建表 + 播种 7 条裁决指纹）
 # v14：标准限值查找表人工录入行（eia_standard_limit_rows）
 # v15：环评 stages forms 口径字段人工裁决（eia_stage_field_edits）
-BUSINESS_SCHEMA_VERSION = 15
+BUSINESS_SCHEMA_VERSION = 16
 KNOWLEDGE_SCHEMA_VERSION = 2
 SCHEMA_VERSION_TABLE = "yuxi_schema_migrations"
 AGENT_RUN_LEASE_SCHEMA_STATEMENTS = (
@@ -725,6 +727,34 @@ class PostgresManager(metaclass=SingletonMeta):
                     INSERT INTO {SCHEMA_VERSION_TABLE} (domain, version, applied_at)
                     VALUES ('business', 15, CURRENT_TIMESTAMP)
                     ON CONFLICT (domain) DO UPDATE SET version = 15, applied_at = EXCLUDED.applied_at
+                """)
+            )
+
+    async def upgrade_business_v15_to_v16(self) -> None:
+        """[pisuan-custom] v16：环评 formulas 参数覆盖表 + sample_entities 实体补充表。
+
+        存量库 create_all 不补表，显式建两表并记版本；幂等（version=16 直接返回），
+        两表用 create_all(tables=[...]) 仅补新表，不动其他（v9→v10 双表先例）。
+        """
+        self._check_initialized()
+        async with self.async_engine.begin() as conn:
+            version = await conn.scalar(
+                text(f"SELECT version FROM {SCHEMA_VERSION_TABLE} WHERE domain = 'business' FOR UPDATE")
+            )
+            if version == 16:
+                return
+            if version not in (None, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15):
+                raise RuntimeError(f"Unsupported business schema version: {version}")
+            await conn.run_sync(
+                lambda sync_conn: DomainFactoryBase.metadata.create_all(
+                    sync_conn, tables=[EiaFormulaOverride.__table__, EiaEntityAddition.__table__]
+                )
+            )
+            await conn.execute(
+                text(f"""
+                    INSERT INTO {SCHEMA_VERSION_TABLE} (domain, version, applied_at)
+                    VALUES ('business', 16, CURRENT_TIMESTAMP)
+                    ON CONFLICT (domain) DO UPDATE SET version = 16, applied_at = EXCLUDED.applied_at
                 """)
             )
 
