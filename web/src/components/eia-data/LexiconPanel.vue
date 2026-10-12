@@ -522,7 +522,10 @@ const onExport = () => {
   eiaLexiconApi
     .exportOverrides()
     .then((r) => {
-      message.success({ content: `物化 ${r.materialized} 条完成`, key: 'lexicon-export' })
+      message.success({
+        content: `物化 ${r.materialized} 条完成（落运行栈技能目录，需人工回流 pisuan-custom）`,
+        key: 'lexicon-export'
+      })
       exportResult.materialized = r.materialized
       exportResult.skipped = r.skipped
       exportResult.open = true
