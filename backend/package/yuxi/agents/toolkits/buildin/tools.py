@@ -1214,3 +1214,68 @@ async def lookup_standard_indicator(pollutant: str, doc_code: str | None = None)
         "count": len(rows),
         "note": "限值来自标准规范库富化结果，引用时标注 doc_code + unit_no",
     }
+
+
+LOOKUP_REGIONAL_FACT_DESCRIPTION = """
+查归属管理已核实（confirmed）的区域事实仓库（domain_factory_regional_facts）。
+fact_type 四类：monitoring（监测）/ sensitive_target（敏感目标）/ measure（措施）/ constraint（约束）。
+region_key 必填（一地区一知识库，不跨区混供），q 可按内容子串过滤。
+写监测布点、敏感目标、环保措施、区域约束相关章节时用此工具取已核实事实，不要凭记忆编造；
+无匹配时按 hint 走类比矿或向业主索取数据，不得虚构区域实况。
+"""
+
+
+@tool(
+    category="buildin",
+    tags=["知识工厂", "区域事实"],
+    display_name="查区域事实",
+    description=LOOKUP_REGIONAL_FACT_DESCRIPTION,
+)
+async def lookup_regional_fact(fact_type: str, region_key: str | None = None, q: str | None = None) -> dict:
+    """从区域事实仓库查已核实（confirmed）事实（P1-2：工厂有产物、写手可消费）。"""
+    fact_type = (fact_type or "").strip()
+    valid_types = ("monitoring", "sensitive_target", "measure", "constraint")
+    if fact_type not in valid_types:
+        return {"error": f"fact_type 非法: {fact_type or '空'}（允许 {'/'.join(valid_types)}）"}
+    region_key = (region_key or "").strip()
+    if not region_key:
+        return {"error": "region_key 必填：区域事实按矿区隔离，不跨区混供；请先向用户确认所属矿区/地区"}
+    q = (q or "").strip()
+    repo = DomainFactoryRepository()
+    items, _total = await repo.list_regional_facts(
+        region_key=region_key, fact_type=fact_type, status="confirmed", page=1, page_size=100
+    )
+    if q:
+        items = [it for it in items if q in (it.get("content") or "")]
+    facts = [
+        {
+            "fact_type": it["fact_type"],
+            "region_key": it["region_key"],
+            "content": it["content"],
+            "year": it["year"],
+            "source_ref": it["source_ref"],
+        }
+        for it in items
+    ]
+    # [pisuan-custom] W0 埋点（未命中也记，0 结果是查询质量信号）
+    _track_usage(
+        "lookup_regional_fact",
+        args_summary={"fact_type": fact_type, "region_key": region_key, "q": q or None},
+        result_count=len(facts),
+        source="regional_facts",
+    )
+    if not facts:
+        return {
+            "facts": [],
+            "total": 0,
+            "hint": (
+                f"区域 {region_key} 暂无已核实的{fact_type}类事实（归属管理页尚未裁决入库）；"
+                "禁止虚构区域实况——可检索类比矿的公开环评报告（query_kb / web_search），"
+                "或提示用户向业主索取该矿区实测资料"
+            ),
+        }
+    return {
+        "facts": facts,
+        "total": len(facts),
+        "note": "仅含归属管理已核实（confirmed）的区域事实，引用时标注 source_ref；draft/retired 不对外",
+    }
