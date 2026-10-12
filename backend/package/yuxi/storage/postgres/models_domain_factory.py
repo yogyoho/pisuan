@@ -529,6 +529,29 @@ class EiaMetaAnnotation(Base):
         }
 
 
+class EiaStandardLimitRow(Base):
+    """Domain Factory - 环评限值查找表人工录入行（P1；运营唯一真相，显式导出物化至 standards_index.json）"""
+
+    __tablename__ = "eia_standard_limit_rows"
+    __table_args__ = (Index("ix_eslr_table_key", "table_key"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    table_key = Column(String(64), nullable=False)  # = standards_index.limit_tables 键（_comment 除外）
+    row_json = Column(JSON, nullable=False)  # 行数据（列配置白名单校验后原样存，按表异构）
+    decided_by = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, nullable=True)  # 整表替换时刷新
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "table_key": self.table_key,
+            "row": self.row_json,
+            "decided_by": self.decided_by,
+            "updated_at": format_utc_datetime(self.updated_at),
+        }
+
+
 class EiaStandardReview(Base):
     """Domain Factory - 环评标准条目人工核实裁决（P3；运营唯一真相，显式导出物化至 standards_index.json）"""
 
