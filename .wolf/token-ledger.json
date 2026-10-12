@@ -2,14 +2,14 @@
   "version": 1,
   "created_at": "2026-05-12T06:40:36.630Z",
   "lifetime": {
-    "total_tokens_estimated": 82904454,
-    "total_reads": 22141,
-    "total_writes": 33363,
-    "total_sessions": 115,
-    "anatomy_hits": 7995,
+    "total_tokens_estimated": 83006110,
+    "total_reads": 22149,
+    "total_writes": 33424,
+    "total_sessions": 117,
+    "anatomy_hits": 8003,
     "anatomy_misses": 13729,
     "repeated_reads_blocked": 34600,
-    "estimated_savings_vs_bare_cli": 757967424
+    "estimated_savings_vs_bare_cli": 757969024
   },
   "sessions": [
     {
@@ -316619,6 +316619,410 @@
         "writes_count": 28,
         "repeated_reads_blocked": 0,
         "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-10-12-2143",
+      "started": "2026-10-12T13:43:54.792Z",
+      "ended": "2026-10-12T14:57:00.657Z",
+      "reads": [
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_storage_migration.py",
+          "tokens_estimated": 6874,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/services/eia_stage_service.py",
+          "tokens_estimated": 4012,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 5584,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_stage_service.py",
+          "tokens_estimated": 84,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_storage_migration.py",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_data_sections.py",
+          "tokens_estimated": 867,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_standard_gate1.py",
+          "tokens_estimated": 542,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/services/eia_data_service.py",
+          "tokens_estimated": 427,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_data_sections.py",
+          "tokens_estimated": 63,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/services/eia_standard_service.py",
+          "tokens_estimated": 298,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/server/routers/domain_factory_router.py",
+          "tokens_estimated": 109,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/server/routers/domain_factory_router.py",
+          "tokens_estimated": 1404,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/services/eia_stage_service.py",
+          "tokens_estimated": 49,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/integration/api/test_eia_stage_flow.py",
+          "tokens_estimated": 1136,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/apis/eia_data_api.js",
+          "tokens_estimated": 164,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/apis/eia_standard_api.js",
+          "tokens_estimated": 88,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/apis/eia_stage_api.js",
+          "tokens_estimated": 346,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/SectionsPanel.vue",
+          "tokens_estimated": 7261,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/SectionsPanel.vue",
+          "tokens_estimated": 63,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/ExpectationsPanel.vue",
+          "tokens_estimated": 1644,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 662,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 69,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 57,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 189,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 713,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/views/EiaSectionsView.vue",
+          "tokens_estimated": 681,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/views/EiaExpectationsView.vue",
+          "tokens_estimated": 664,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/router/index.js",
+          "tokens_estimated": 190,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/DatasetStatsPanel.vue",
+          "tokens_estimated": 106,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/SectionsPanel.vue",
+          "tokens_estimated": 45,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/SectionsPanel.vue",
+          "tokens_estimated": 60,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 16470,
+        "output_tokens_estimated": 18005,
+        "reads_count": 3,
+        "writes_count": 28,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-10-12-2143",
+      "started": "2026-10-12T13:43:54.792Z",
+      "ended": "2026-10-12T14:58:00.590Z",
+      "reads": [
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_storage_migration.py",
+          "tokens_estimated": 6874,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/services/eia_stage_service.py",
+          "tokens_estimated": 4012,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 5584,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_stage_service.py",
+          "tokens_estimated": 84,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_storage_migration.py",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_data_sections.py",
+          "tokens_estimated": 867,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_standard_gate1.py",
+          "tokens_estimated": 542,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/services/eia_data_service.py",
+          "tokens_estimated": 427,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_data_sections.py",
+          "tokens_estimated": 63,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/services/eia_standard_service.py",
+          "tokens_estimated": 298,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/server/routers/domain_factory_router.py",
+          "tokens_estimated": 109,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/server/routers/domain_factory_router.py",
+          "tokens_estimated": 1404,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/services/eia_stage_service.py",
+          "tokens_estimated": 49,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/integration/api/test_eia_stage_flow.py",
+          "tokens_estimated": 1136,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/apis/eia_data_api.js",
+          "tokens_estimated": 164,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/apis/eia_standard_api.js",
+          "tokens_estimated": 88,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/apis/eia_stage_api.js",
+          "tokens_estimated": 346,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/SectionsPanel.vue",
+          "tokens_estimated": 7261,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/SectionsPanel.vue",
+          "tokens_estimated": 63,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/ExpectationsPanel.vue",
+          "tokens_estimated": 1644,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 662,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 69,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 57,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 189,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 713,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/views/EiaSectionsView.vue",
+          "tokens_estimated": 681,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/views/EiaExpectationsView.vue",
+          "tokens_estimated": 664,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/router/index.js",
+          "tokens_estimated": 190,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/DatasetStatsPanel.vue",
+          "tokens_estimated": 106,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/SectionsPanel.vue",
+          "tokens_estimated": 45,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/SectionsPanel.vue",
+          "tokens_estimated": 60,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 16470,
+        "output_tokens_estimated": 18005,
+        "reads_count": 3,
+        "writes_count": 28,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-10-12-0035",
+      "started": "2026-10-12T16:35:18.449Z",
+      "ended": "2026-10-12T16:40:25.481Z",
+      "reads": [
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/storage/postgres/manager.py",
+          "tokens_estimated": 30835,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/docs/vibe/2026-10-12-eia-data-factory-p3-pages.md",
+          "tokens_estimated": 1389,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/storage/postgres/manager.py",
+          "tokens_estimated": 59,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_formula_service.py",
+          "tokens_estimated": 14,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_formula_service.py",
+          "tokens_estimated": 10,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_formula_service.py",
+          "tokens_estimated": 31,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/docs/vibe/2026-10-12-eia-data-factory-p3-pages.md",
+          "tokens_estimated": 368,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 32224,
+        "output_tokens_estimated": 482,
+        "reads_count": 2,
+        "writes_count": 5,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 2
       }
     }
   ],

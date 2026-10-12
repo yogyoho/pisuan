@@ -4958,3 +4958,39 @@
 
 P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文本级插接导出 + 13 单测）、节级明细只读（自然序 + unmapped）、门 1 体检卡（规则规格 + 注册表自检）、备料清单只读；router 7 端点 + 前端双 tab /sections、/expectations、StandardsPanel gate1 卡、LAYER_LINKS 挂链。后端 42 单测 + 集成 401 恒跑全绿；迁移运行栈实跑 business=15；技能测试 88 全过（round-trip）；eslint/prettier/ruff 零错、vite 零编译错。buglog +421/422/423；changelog 与 P2 需求文档 checklist 已如实勾销。待用户确认提交拆分。
 | 22:42 | Session end: 28 writes across 19 files (test_eia_stage_service.py, test_storage_migration.py, test_eia_data_sections.py, test_eia_standard_gate1.py, eia_data_service.py) | 3 reads | ~34475 tok |
+| 22:57 | Session end: 28 writes across 19 files (test_eia_stage_service.py, test_storage_migration.py, test_eia_data_sections.py, test_eia_standard_gate1.py, eia_data_service.py) | 3 reads | ~34475 tok |
+| 22:58 | Session end: 28 writes across 19 files (test_eia_stage_service.py, test_storage_migration.py, test_eia_data_sections.py, test_eia_standard_gate1.py, eia_data_service.py) | 3 reads | ~34475 tok |
+
+## Session: 2026-10-12 23:01
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:09 | Created docs/vibe/2026-10-12-eia-data-factory-p3-pages.md | — | ~1482 |
+| 23:18 | Created backend/test/unit/services/test_eia_formula_service.py | — | ~2082 |
+| 23:19 | Created backend/package/yuxi/repositories/eia_formula_repository.py | — | ~729 |
+| 23:19 | Created backend/package/yuxi/services/eia_formula_service.py | — | ~2174 |
+| 23:20 | Created backend/package/yuxi/services/eia_formula_service.py | — | ~2140 |
+| 23:32 | Created backend/test/unit/services/test_eia_entity_service.py | — | ~2041 |
+| 23:34 | Created backend/package/yuxi/repositories/eia_entity_repository.py | — | ~670 |
+| 23:35 | Created backend/package/yuxi/services/eia_entity_service.py | — | ~2807 |
+| 23:40 | Created backend/test/unit/services/test_eia_dataset_view.py | — | ~946 |
+| 23:48 | Edited backend/package/yuxi/services/eia_data_service.py | modified get_data_expectations() | ~486 |
+| 00:00 | Created backend/test/integration/api/test_eia_p3_flow.py | — | ~1429 |
+| 00:09 | Edited web/src/apis/eia_data_api.js | 5→10 lines | ~102 |
+| 00:09 | Created web/src/apis/eia_formula_api.js | — | ~288 |
+| 00:10 | Created web/src/apis/eia_entity_api.js | — | ~288 |
+| 00:11 | Created web/src/components/eia-data/FormulasPanel.vue | — | ~2776 |
+| 00:11 | Created web/src/views/EiaFormulasView.vue | — | ~635 |
+| 00:12 | Created web/src/components/eia-data/EntitiesPanel.vue | — | ~3644 |
+| 00:13 | Created web/src/views/EiaEntitiesView.vue | — | ~634 |
+
+## Session: 2026-10-12 00:35
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:36 | Edited backend/package/yuxi/storage/postgres/manager.py | 4→5 lines | ~59 |
+| 00:36 | Edited backend/test/unit/services/test_eia_formula_service.py | 2→3 lines | ~14 |
+| 00:36 | Edited backend/test/unit/services/test_eia_formula_service.py | 3→1 lines | ~10 |
+| 00:36 | Edited backend/test/unit/services/test_eia_formula_service.py | inline fix | ~31 |
+| 00:39 | Edited docs/vibe/2026-10-12-eia-data-factory-p3-pages.md | 21→23 lines | ~344 |
+| 00:35 | P3 收尾：ruff format 9 文件+修自身 3 错（docstring E501/json import/fixture 行）、changelog P3 段、P3 文档勾账、cerebrum 6 学习+DNR bug-424 | backend 14 文件+changelog+p3 文档+cerebrum | 39 passed 全绿 | ~60k || 00:40 | Session end: 5 writes across 3 files (manager.py, test_eia_formula_service.py, 2026-10-12-eia-data-factory-p3-pages.md) | 2 reads | ~32706 tok |
