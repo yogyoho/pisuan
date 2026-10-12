@@ -613,3 +613,73 @@ class EiaStageFieldEdit(Base):
             "decided_by": self.decided_by,
             "updated_at": format_utc_datetime(self.updated_at),
         }
+
+
+class EiaFormulaOverride(Base):
+    """Domain Factory - 环评 formulas 参数参考值人工裁决（P3；运营唯一真相，显式导出物化至 formulas.json）
+
+    仅覆盖 user_input 参数的参考值；expr/derived_slots/outputs/结构恒只读（写手按 expr 复算，
+    覆盖结构会破坏冻结口径）。clear 仅撤 DB 覆盖行，文件锚点不受影响。
+    """
+
+    __tablename__ = "eia_formula_overrides"
+    __table_args__ = (
+        UniqueConstraint("formula_id", "input_name", name="uq_efo_formula_input"),
+        Index("ix_efo_formula", "formula_id"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    formula_id = Column(String(64), nullable=False)  # formulas.json 公式标识
+    input_name = Column(String(64), nullable=False)  # inputs[].name（type=user_input）
+    value = Column(Text, nullable=False)  # 参考值原文（导出时 json.loads 可解析则规范化，否则字符串字面量）
+    note = Column(Text, nullable=True)  # 裁决依据（DB 侧运营语境，不物化）
+    decided_by = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "formula_id": self.formula_id,
+            "input_name": self.input_name,
+            "value": self.value,
+            "note": self.note,
+            "decided_by": self.decided_by,
+            "updated_at": format_utc_datetime(self.updated_at),
+        }
+
+
+class EiaEntityAddition(Base):
+    """Domain Factory - 环评 sample_entities 实体补充（P3；仅添加，禁删既有条目）
+
+    导出物化至 sample_entities/<slug>.json 的 entities.<etype> 数组尾 + _index.json counts。
+    rid 为 DB 侧溯源字段（来源报告），不物化——registry 文件 schema 是纯字符串数组，保持稳定。
+    """
+
+    __tablename__ = "eia_entity_additions"
+    __table_args__ = (
+        UniqueConstraint("sample_slug", "etype", "name", name="uq_eea_slug_etype_name"),
+        Index("ix_eea_slug", "sample_slug"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sample_slug = Column(String(64), nullable=False)  # 样例 slug（_index.samples）
+    etype = Column(String(16), nullable=False)  # projects | mines | orgs | places | sensitive
+    name = Column(String(255), nullable=False)  # 实体名（物化为数组条目）
+    rid = Column(String(64), nullable=True)  # 来源报告 rid（溯源，不物化）
+    note = Column(Text, nullable=True)  # 补充依据（DB 侧运营语境，不物化）
+    decided_by = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "sample_slug": self.sample_slug,
+            "etype": self.etype,
+            "name": self.name,
+            "rid": self.rid,
+            "note": self.note,
+            "decided_by": self.decided_by,
+            "updated_at": format_utc_datetime(self.updated_at),
+        }

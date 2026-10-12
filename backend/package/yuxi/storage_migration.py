@@ -125,7 +125,7 @@ async def main() -> None:
                 "business",
                 business_version,
                 BUSINESS_SCHEMA_VERSION,
-                upgrade_from=(2, 7, 8, 9, 10, 11, 12, 13, 14),  # [pisuan-custom] v14+v15：允许从 v9~v14 升级
+                upgrade_from=(2, 7, 8, 9, 10, 11, 12, 13, 14, 15),  # [pisuan-custom] v14~v16：允许从 v9~v15 升级
             )
             knowledge_version = versions.get("knowledge")
             _require_supported_version(
@@ -169,6 +169,9 @@ async def main() -> None:
             # [pisuan-custom] v15：环评 stages forms 口径字段人工裁决表（存量库显式补表，幂等）
             if business_version in {None, 2, 7, 8, 9, 10, 11, 12, 13, 14}:
                 await pg_manager.upgrade_business_v14_to_v15()
+            # [pisuan-custom] v16：环评 formulas 参数覆盖表 + sample_entities 实体补充表（存量库显式补表，幂等）
+            if business_version in {None, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15}:
+                await pg_manager.upgrade_business_v15_to_v16()
 
             if knowledge_version is None:
                 await pg_manager.create_knowledge_tables()
