@@ -37,6 +37,7 @@ PRESET = AgentPreset(
                 "set_pps_param",
                 "save_chapter",
                 "query_kb",
+                "lookup_regional_fact",
             ]
         ),
         "excluded_tools": list([]),
