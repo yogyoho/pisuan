@@ -10,10 +10,11 @@ from fastapi.concurrency import run_in_threadpool
 
 from server.utils.auth_middleware import get_admin_user, get_required_user
 from yuxi.services.domain_factory_service import get_domain_factory_service
-from yuxi.services.eia_data_service import get_skill_stats, get_unmapped
+from yuxi.services.eia_data_service import get_data_expectations, get_sections, get_skill_stats, get_unmapped
 from yuxi.services.eia_lexicon_service import get_eia_lexicon_service
 from yuxi.services.eia_meta_service import get_eia_meta_service
 from yuxi.services.eia_standard_service import get_eia_standard_service
+from yuxi.services.eia_stage_service import get_eia_stage_service
 from yuxi.storage.postgres.models_business import User
 from yuxi.utils import logger
 
@@ -387,9 +388,7 @@ async def confirm_region(
         if not region_label:
             raise HTTPException(status_code=400, detail="region_label 不能为空")
         service = get_domain_factory_service()
-        result = await service.confirm_region(
-            task_id, region_label, payload.get("region_key"), payload.get("scope")
-        )
+        result = await service.confirm_region(task_id, region_label, payload.get("region_key"), payload.get("scope"))
         if result.get("error"):
             raise HTTPException(status_code=400, detail=result["error"])
         return {"success": True, **result}
@@ -695,7 +694,11 @@ DOMAIN_FACTORY_STATUS_MAP = {
     "GENERALIZING": {"status": "running", "progress": 80, "message": "正在生成槽位模板..."},
     "WAITING_REVIEW": {"status": "running", "progress": 95, "message": "信息提取完成，等待人工审核..."},
     "COMMITTED": {"status": "success", "progress": 100, "message": "报告已入库完成"},
-    "COMMIT_PARTIAL": {"status": "success", "progress": 100, "message": "报告已入库（部分阶段有警告，请查看 partial_errors）"},
+    "COMMIT_PARTIAL": {
+        "status": "success",
+        "progress": 100,
+        "message": "报告已入库（部分阶段有警告，请查看 partial_errors）",
+    },
     "COMMIT_FAILED": {"status": "failed", "progress": 100, "message": "入库失败"},
     "FAILED": {"status": "failed", "progress": 100, "message": "执行失败"},
 }
@@ -803,6 +806,7 @@ async def query_graph_legal_references(
 
 # ========== 大纲模板管理 ==========
 
+
 @domain_factory.get("/outline-templates")
 async def list_outline_templates(
     domain: str = Query("coal"),
@@ -904,8 +908,7 @@ async def seed_outline_templates(
         subchapters = seed_subchapters(driver)
         content_chapters = seed_content(driver)
         logger.info(
-            f"标准大纲结构初始化完成: chapters={chapters}, "
-            f"subchapters={subchapters}, content={content_chapters}"
+            f"标准大纲结构初始化完成: chapters={chapters}, subchapters={subchapters}, content={content_chapters}"
         )
         return {
             "success": True,
@@ -936,9 +939,7 @@ async def extract_outline_preview(
         if not file_bytes:
             raise HTTPException(status_code=400, detail="上传文件为空")
         service = get_domain_factory_service()
-        preview = await service.extract_outline_preview(
-            file_bytes, file.filename or "upload.docx", domain, report_type
-        )
+        preview = await service.extract_outline_preview(file_bytes, file.filename or "upload.docx", domain, report_type)
         return preview
     except HTTPException:
         raise
@@ -1273,9 +1274,7 @@ async def save_eia_standard_limit_rows(
 ) -> dict[str, Any]:
     """限值行整表替换落库（DB 即导出真源）：{rows: [...]}；未知表 404，载荷越界 400"""
     try:
-        result = await get_eia_standard_service().save_limit_rows(
-            table_key, payload.get("rows"), current_user.username
-        )
+        result = await get_eia_standard_service().save_limit_rows(table_key, payload.get("rows"), current_user.username)
         return {"success": True, **result}
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -1338,3 +1337,117 @@ async def export_eia_standard_reviews(
     except Exception as e:
         logger.error(f"Failed to export eia standard reviews: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"导出标准核实裁决失败: {str(e)}")
+
+
+# =============================================================================
+# EIA Sections & Stage Forms (环评节级明细只读 + stages forms 口径字段人工裁决)
+# =============================================================================
+
+
+@domain_factory.get("/eia/expectations/sections")
+async def list_eia_sections(
+    stage: str = Query(...),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """节级明细只读视图（P2-2）：节键自然序展平 + unmapped 附带。"""
+    try:
+        return await run_in_threadpool(get_sections, stage)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to list eia sections {stage}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取节级明细失败: {str(e)}")
+
+
+@domain_factory.get("/eia/expectations/data")
+async def get_eia_data_expectations(
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """备料清单只读视图（P2-4）：per_chapter 分章数据族 + source_hint 词表。"""
+    try:
+        return await run_in_threadpool(get_data_expectations)
+    except Exception as e:
+        logger.error(f"Failed to get eia data expectations: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取备料清单失败: {str(e)}")
+
+
+@domain_factory.get("/eia/standards/gate1")
+async def get_eia_gate1_checks(
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """门 1 体检卡（P2-3 只读）：规则规格 + 注册表自检。"""
+    try:
+        return await get_eia_standard_service().get_gate1_checks()
+    except Exception as e:
+        logger.error(f"Failed to get eia gate1 checks: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取门 1 体检数据失败: {str(e)}")
+
+
+@domain_factory.get("/eia/stages/forms")
+async def list_eia_stage_forms(
+    stage: str | None = Query(None),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """stages forms 口径字段合并态（P2-1）：文件锚点 + DB 裁决（add 追加/amend 覆盖层标注）。"""
+    try:
+        return await get_eia_stage_service().list_stage_forms(stage)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to list eia stage forms: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取口径字段失败: {str(e)}")
+
+
+@domain_factory.put("/eia/stages/forms/{stage}/{family_key}/fields")
+async def save_eia_stage_field(
+    stage: str,
+    family_key: str,
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """口径字段人工裁决落库（add 新增/amend 改 label、required；name 禁改）。"""
+    try:
+        result = await get_eia_stage_service().save_stage_field(stage, family_key, payload, current_user.username)
+        return {"success": True, **result}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to save eia stage field {stage}/{family_key}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"保存口径字段裁决失败: {str(e)}")
+
+
+@domain_factory.delete("/eia/stages/forms/{stage}/{family_key}/fields/{field_name}")
+async def delete_eia_stage_field(
+    stage: str,
+    family_key: str,
+    field_name: str,
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """撤回未物化口径字段裁决行（仅草稿态；文件锚点不受影响）。"""
+    try:
+        return await get_eia_stage_service().delete_stage_field(stage, family_key, field_name)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(
+            f"Failed to delete eia stage field {stage}/{family_key}/{field_name}: {e}\n{traceback.format_exc()}"
+        )
+        raise HTTPException(status_code=500, detail=f"撤回口径字段裁决失败: {str(e)}")
+
+
+@domain_factory.post("/eia/stages/forms/export")
+async def export_eia_stage_forms(
+    stage: str | None = Query(None),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """DB 裁决 → stages/<stage>.json 文本级插接物化（字节纪律；幂等；admin）"""
+    try:
+        result = await get_eia_stage_service().export_stage_forms(stage, current_user.username)
+        return {"success": True, **result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to export eia stage forms: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"导出口径字段裁决失败: {str(e)}")

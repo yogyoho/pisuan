@@ -566,6 +566,45 @@ def get_unmapped(stage: str | None = None) -> dict[str, Any]:
     return out
 
 
+_SECTION_KEY_RE = re.compile(r"^ch(\d+)_S(\d+)$")
+
+
+def _section_sort_key(key: str) -> tuple[int, int, int]:
+    """节键自然序：ch2 先于 ch10（字符串序会倒挂）；不合规范键排最后（DNR 6.10 教训）。"""
+    m = _SECTION_KEY_RE.match(key)
+    return (0, int(m.group(1)), int(m.group(2))) if m else (1, 0, 0)
+
+
+def get_sections(stage: str) -> dict[str, Any]:
+    """节级明细只读视图（P2-2）：sections 展平为 key/title/quantities，自然序透出 + unmapped 附带。
+
+    引用文件为管线契约产物，这里只整形不再加工；未知 stage 抛 ValueError（路由翻 400，同 get_unmapped）。
+    """
+    if stage not in STAGES:
+        raise ValueError(f"未知 stage: {stage}")
+    doc = _read_json(_REFS / "section_expectations" / f"{stage}.json")
+    sections = [
+        {"key": key, "title": v.get("title", ""), "quantities": v.get("expected_quantities", [])}
+        for key, v in sorted(doc.get("sections", {}).items(), key=lambda kv: _section_sort_key(kv[0]))
+    ]
+    return {
+        "stage": stage,
+        "stage_scope": doc.get("stage_scope"),
+        "sections": sections,
+        "unmapped": doc.get("unmapped", []),
+    }
+
+
+def get_data_expectations() -> dict[str, Any]:
+    """备料清单只读视图（P2-4）：per_chapter 分章数据族 + source_hint 词表原样透出。"""
+    doc = _read_json(_REFS / "data_expectations.json")
+    return {
+        "stage_scope": doc.get("stage_scope"),
+        "source_hint_vocabulary": doc.get("source_hint_vocabulary", []),
+        "per_chapter": doc.get("per_chapter", []),
+    }
+
+
 def get_skill_stats() -> dict[str, Any]:
     """统计总览聚合入口。mtime 指纹未变时直接返回缓存。"""
     watch = [
