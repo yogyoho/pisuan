@@ -14,6 +14,26 @@
 - Large changes should have a requirements document in `docs/vibe/` with date prefix
 
 ## Key Learnings
+- 2026-10-07：coal-eia-writer 的 references/standards_index.json=62 条标准索引（framework/quality_limit/emission_limit/method_param/pending 五 tier，含 GB 15618 vs GB 36600 正确名称与适用对象），但 limit_tables 七张表多为空壳（gb3095 rows=[]，verified=false）——「引用错标准」先查这里：若索引有→契约没强制核对（工程问题）；若表空→知识缺口（加工问题）。诊断 W1 类缺陷前先看这个文件。
+- 2026-10-07：智能体模型切换走 agents.config_json.context.model（「provider:model」前缀格式，如 deepseek:deepseek-flash）；供应商与模型清单在 model_providers 表（provider_id+enabled_models json），deepseek 供应商 enabled 含 deepseek-flash（显示名 DeepSeek-V4.1-Flash）/v4-flash/v4-pro。
+- 2026-10-07：模型对比实证（同技能同 prompt）——agnes-2.5-flash：共用工区静默续跑、ask_user_question A/B/C 选项点击无效须手输；deepseek-flash：主动检测工区冲突弹结构化单选题（radio+提交可用）、真实调用 list_report_types/get_templates 并声明 found=true 免兜底、全章数据预告完整、限流纪律 「在飞≤1」被遵守。行为差异主要在模型而非技能。
+- 2026-10-07：sandbox user-data 宿主机路径 = docker/volumes/pisuan/threads/shared/<uid>/workspace/（admin 即 shared/admin/workspace/workspace/…，双 workspace 层）；sandbox 容器被回收后文件仍可从宿主机直读，容器名 pisuan-localized-sandbox-<id> 不稳定，别拿容器当存储。
+- 2026-10-07：页面测试证据链——节稿在宿主机上述路径 state/sections/；对话运行状态看页面 subagent 卡片（「已调用 N 工具·M 失败」）；tool_calls 表近 2h 无记录（仅消息终结落库）；429/失败以主智能体自报为准，api 容器日志 grep 429 全是端口子串误中。
+- 2026-10-07：eia-section-writer 配置 knowledges=['kb_cgsguljhor','kb_9ks49hyvfj'] 但 tools=[]——知识库挂载与工具权限脱节，RAG 实际不可达（标准引用全靠模型记忆的直接原因之一）。
+- 2026-10-07：W4 后端新增区行号锚（终审核实）——repo 912-1105 / service ~6737-6856 / router 418-481；ruff 16 errors 存量基线分布 repo:145、service ≤5285、router:693，全在 W4 区之前。下一窗 lint 对比：uvx ruff check 四文件=16 持平即零新增。
+- 2026-10-07：domain_factory list_regional_facts 的 source_task_file_name 批量拼接在 repository 层（file_map），service 直通——changelog/spec 曾误标「service 层拼」（终审 Minor，下一窗文档顺手修正）。
+- 2026-10-07：region_label 是用户自由文本（归属时随手填），凡按它 group by 的聚合都会在标签漂移时拆行——展示聚合一律按 region_key 归并（前端 Map 或后端 service，树侧 service:6827 先到非空 label 优先）；v-for :key 与归并键保持同源表达式。b1d4fb6d 先例。
+- 2026-10-07：前端主题色变量表——警告最浅底色用 var(--color-warning-50)（base.css:101 #fffbe6，base.dark.css:87 #2b2111 暗色覆写）；--warning-bg 不存在（计划片段曾误引，662f47ff 已修）。写样式前先 grep base.css 变量表，别发明变量名。
+- 2026-10-07：受控多选（selectedRowKeys）+ 不可逆批量操作组件，筛选/下钻改变数据集时必须同步清空选区，否则确认弹窗只显示数量的场景会连带不可见行；变更操作清空当前页后要按 total-变更数 回缩 pagination.current （Math.min(current, max(1, ceil((total-n)/pageSize)))，在 refetch 前用旧 total 求值）。662f47ff 先例。
+- 2026-10-07：antd-vue InputSearch @change 回调即原生 input 事件（e.target.value 取当前值），allow-clear 点✕只发 change 不发 search——「清空即解除过滤」要在 @change 里判空触发（Panel 先例 AttributionTaskTable onKeywordChange；同目录 RegionalFactsTable radio @change 同形）。
+- 2026-10-07：v-show 多子页容器各子页自行 fetch 时，切换子页不会自动刷新——改判等跨子页级联写操作后，父容器需 watch(activeSub) 调目标子页 defineExpose 的 refresh()（RegionAttributionPanel 476f8b21 先例，watch 非 immediate、mount 零触发）。
+- 2026-10-07：计划 Step 门必须含 `uvx ruff format --check <改动文件>`（不止 ruff check）——计划/spec 内嵌代码片段曾带手工行尾注释对齐，逐字照抄即翻车（T2，style 0d3e2a65 收敛）；后续写计划时片段先过一遍 format。
+- 2026-10-07：Windows 控制台 GBK 打印中文会乱码——验证脚本带 `PYTHONIOENCODING=utf-8`，或改为程序化相等断言（打印仅布尔/ASCII），数据本身不受影响。
+- 2026-10-07：后端 lint 道——pisuan-api:0.7.3 镜像、pisuan-localized-api-1 容器、宿主均无 ruff；宿主 `uvx ruff check <文件...>`（0.16.x）可用，T1 基线四文件 16 errors（全在存量代码区，新代码零新增）。T6 对比基线就用 uvx 道。
+- 2026-10-07：domain_factory_service.py 行号锚点快照——`_reaggregate_templates_for_task` :6505 之后并非类尾，实况还有 `_aggregate_template_scopes` :6512、`_get_existing_entities_full` :6727 等，类体真实末尾约 :6733（模块级 get_domain_factory_service :6858）；按行号锚点插入前必须 Read 目标区域确认，行号漂移就按锚点语义定位。
+- 2026-10-07：web 前端图标实况——domain-factory 组件 import 自 `@lucide/vue`（非 CLAUDE.md 推荐的 lucide-vue-next）；DomainFactoryView 的 tab「图标」是 CSS 圆点 `span.tab-dot`（less 嵌套 &.data/&.workbench 配色），新增 tab 应加配色变体行而非引入 icon 组件。
+- 2026-10-07：单测容器道惯例——service 单测用 `DomainFactoryService.__new__(DomainFactoryService)` + `svc.repo = fake` 跳过 __init__；测试为同步 def + `asyncio.run(...)`（--noconftest 下 pytest-asyncio 不可依赖）；domain_factory_repository.py 无分页无 GROUP BY（列表仅 limit），会话模式 `pg_manager.get_async_session_context()`，joinedload 为方法内局部 import（文件怪癖，勿「顺手」提升到顶部）。
+- 2026-10-07：可视化伴侣服务器（brainstorming visual companion）在 Claude Code Windows 后台任务模式下约 30 分钟被 run_in_background 时限杀掉；**用 `nohup ... & disown` 在普通 Bash 调用里脱离进程树启动即可长活**（会话目录在 <project>/.superpowers/brainstorm/<pid-ts>/，重启后端口会变，须读 state/server-info 并告知用户新 URL）。
 - (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
 - [2026-10-03] KB 存储层现状（代码+现场双重验证，推翻 7 月设计文档）：LightRAG 已退役——knowledge/runtime.py:12-14 只注册 Milvus/Dify/Notion，lightrag.py 未注册不可创建，运行栈 2 个 KB 全是 milvus 型（煤矿环评报告模板库 id=3 / 环评标准规范库 id=4），默认类型 = row.kb_type or "milvus"（manager.py:73）。MilvusKB 检索 = Milvus 向量+BM25 稀疏+混合融合+可选 reranker。KB 级图谱新引擎 = knowledge/graphs/MilvusGraphService（knowledge_graph_index 任务，LLM 抽取 chunk→Entity→RELATION 写 Neo4j + MilvusGraphVectorStore 实体向量），当前栈从未跑过（PG 图谱表 0 行、Neo4j 无 Chunk/Entity 标签）。Neo4j（容器名 graph!）里活着的是领域工厂结构图谱（ParagraphTemplate 870/ChapterTemplate 571/...）。domain_factory commit 的结构化入库分支（_ingest_structured_document/_get_lightrag_instance）在 milvus 栈上是死代码，hasattr 守卫使其永远走 manager.index_file Markdown 回退（PG knowledge_chunks 3169 行即其产物）。
 - [2026-10-03] 本宿主机是 Windows 且默认自动休眠：休眠冻结整个 Docker VM（容器日志静止、连接死亡、lease 过期），唤醒后被 durable 收敛器落 FAILED。判定「应用挂死」前先排除宿主机休眠——看容器日志里每 30s 的 arq health 心跳是否中断，心跳断=宿主机睡了，不是 bug。长任务前须关休眠：powercfg /change standby-timeout-ac 0。
@@ -80,7 +100,50 @@
 
 - [2026-10-05] 存量库（business schema 已达 9==BUSINESS_SCHEMA_VERSION）上新增 ORM 模型表不会自动落库：storage_migration.main() 所有 DDL 分支都有版本门槛（create_business_tables 仅 None；ensure_business_schema 仅 {None,2,7}；upgrade_agent_resource_selection 仅 {None,2,7,8}），版本=9 时迁移器对 schema 是 no-op，热重载也不跑 create_all（lifespan 只 initialize+require_current_schema）。新表落地双路径：①ensure_business_schema DDL 列表补 CREATE TABLE IF NOT EXISTS（覆盖全新库/旧版本库）；②存量 v9 库 psql 手工建表（match_count 列先例同此）。另：migrator 容器 docker start 可重跑（bind mount ./backend/package:ro，sync 后代码即时生效）；api 容器里裸 python -c 独立初始化 pg_manager 会因未走 lifespan 初始化而挂连池，别用它验证 DB。
 
+- 2026-10-07（bug-367 剥壳实战）：LLM 改写数字密集中文段落数字必漂移——校验器（数字序列+占位符多重集逐字比对）拦截率约 15%，这类段落改用确定性词级替换对（长短语优先、词级兜底）零风险；「其下游用途是为/为 X 提供 Y」类删除式替换会制造缺谓语句（「；第 9 章…提供判断依据」），删前缀后必须抽读补「为/用于」。
+- 中文门词表设计：子串误伤要预判——词表不收「登记表」（护住公众参与章真实文件名「参会人员签到登记表」），收四字「登记表单」；真实世界名词与管线术语同形时词表必须让位。
+- docs/vibe 在 .gitignore 中，入库需 git add -f（项目惯例是 vibe 文档要入库，changelog 会引用它）。
+
+- 开发栈容器名已换：pisuan-localized-{api,web,worker}-1（CLAUDE.md 里 api-dev/worker-dev 已过时）。api 容器把宿主 9p 挂载四路：/app/package→pisuan-localized/backend/package，/app/skill-sources、/app/skill-projections→pisuan-localized/docker/volumes/pisuan/（运行时卷，非 git 树），/app/user-data→docker/volumes/pisuan/threads。技能运行时同步=docker cp 进这两个卷（等同 sync-dev.ps1 效果）；test2 工作区实际宿主路径在 pisuan-localized/docker/volumes/pisuan/threads/user-data/ 下。
+- 技能测试继续容器内跑（pisuan-localized-api-1 python -m pytest /tmp/…），宿主 pytest 因 langchain 缺失必炸（既知）。
+- deepseek 批量改写的 prompt 必须显式写「标记/数字在输出中恰好出现一次（与输入同多重集），只能移动禁止复制」——只说"移到独立行"模型会复制一份（bug-394 三轮改写的主要失败形态）。
+- heredoc 通过 docker exec 传入 stdin 会静默无输出：脚本一律写宿主临时文件→docker cp→exec python 运行。
+
+
+- coal 语料题注行主流形态是章内号「表N.M-M」（7698/7969=96.6%），全局号「表N-M」仅 271；正则/解析器归纳自 geo 样例时必须先对 coal 语料实测分布（bug-402）
+- 本管线 docx→md 不保留粗体（语料 0 粗体行）——依赖「**粗体**」形态的解析规则对 coal 语料全部失效
+- 统计类例句池不能按文档序前 N 填充：会被主导形态灌满，须按形态配额（bank_compile lead_examples 各 20）
+
+
+- prepare_corpus 全文 NFKC 归一后语料单位是 km2/m2/万m3（²³→数字），任何单位白名单/正则必须收归一形且长形排前（bug-404）
+- 节号 6.10 是第十节不是小数——排序用 int 元组 (6,10)，float 会 6.10<6.2 错序
+- 量词短语惰性左锚定捕获全短语（「主要声源源强」），forms label 是短词——后缀滚动匹配归并；未命中进 unmapped 池（cap 200）供人工扩充
+- 语料野章号切片（ch2020/ch8760/空标题节）全部源自 028-r 已知垃圾报告（表行升标题伪影），各衍生产物一致带噪，勿在单产物层特判过滤
+
+
+- 运行栈容器重启（非重建）不清 /tmp——/tmp/verify394 测试工作台跨重启存活；docker cp `<dir>/.` 融合拷贝内容进挂点目录
+- 门深度地板经 resolve_targets 缺省探测技能基准——运行栈验证 eff 行内嵌的就是最新标定 floor（34806），无需显式 --targets
+
+### 2026-10-10（P4 批次）
+- localized 栈版本表实际名 pisuan_schema_migrations、库名 yuxi_know（改名层连 DB/表名一起改）；直连 psql 用 postgres/postgres。
+- 改名后的词表行重扫不会再生（新名非语料逐字出现不在扫描集），清库后重建只能直插；7 条改名行事故前状态存 .wolf/corpus-workdir/lexicon_full_audit.json。
+- eia_dataset_switches 主键 dataset_key 无自增 id；快照/序列脚本须查 information_schema 而非假设 id 列存在。
+- docs/vibe 是 gitignored：changelog 引用设计稿路径但文件只在本地，git add 会被拒。
+- 词表 get_mentions 的 mentions 行结构自 P4 起为 {rid, before, hit, after, value, unit}（三段文本），source 字段区分 current/old_fingerprint。
+
+### 2026-10-11（P1 五校准裁决）
+- bank_compile QUANTITY_RE 是词表扫描的单一真源：eia_data_service 动态加载它（skills 脚本不可反向 import 包），改它两侧同源生效；词表净口径 = QUANTITY_RE raw + _STOP_TAIL 剥尾 + 首尾 strip("的了与及和或")。
+- stages/*.json 格式：CRLF + indent2 + 无尾换行 + ensure_ascii=False；label_map 跨 5 stage 先到先得合并且不解析 reuse 指针（openpit 空字段节须物理补字段才能挂载）。
+- curated 挂载语义：range 挂到该口径语料自然出现的每个节（sec_label_rids），unit 门控跨单位不混布；挂载与物化是两回事（物化 8 条中 3 条控制效率子口径因 raw 口径「控制效率」无 label 映射保持跳过）。
+- sync-dev 会搬运 workspace 树未跟踪文件（路径翻译 yuxi→pisuan）——workspace 留副本即可让 localized 侧机生物存活；但 -Revert 与官方链再生仍会清，运行态真相只在 DB。
+- 五校准口径全为语料常量（85/90/100）：挂载护栏价值=钉死领域惯例值防写手杜撰变体；字段样式同充填率（number/unit/required false，无 caliber_field——该标记无程序消费方）。
+
 ## Do-Not-Repeat
+
+- [2026-10-08] markdown 标题层级断言禁止用「浅前缀 not in 输出」——"## x" 是 "### x" 的子串（后两 #+空格），恒假；必须行首锚定 startswith/splitlines。另：任务书自带的测试代码也可能有 fixture 缺陷（本例 strip_toc 样例 2 行连续目录行不足 spec 的 >=3 阈值），失败时先对照 spec/docstring/实现三方裁决谁错，不要无脑改实现迁就测试。slug 化文件名→目录名时正则白名单必须考虑全中文文件名（41 份语料 10 份纯中文，纯 ASCII 得空 id）。
+- 2026-10-07：写计划/生成代码时，凡「同形循环」跨层复用（SQLAlchemy Row 位置解包 ↔ dict 列表），必须按目标层实际输入形状重写（键访问 vs 位置解包）；哨兵值（None）语义在「参与计算」与「跳过」间切换时，逐处对照 docstring 与测试断言核。T1 计划两处 plan bug 皆因此（幸被 TDD 拦截，commit 2461dddc）。
+- 2026-10-06：审计/核验提示单里的「声明串」必须与实况逐字节一致（含全部后缀括注）——缩写版声明致 3/19 代理误报「标题不符」（实际标题=声明+信息性后缀）。裁决规则：声明为实际标题的严格前缀且语义相同 → 判一致放行，代理仅留痕不算 FAIL。
+- 2026-10-06：汇报与审计中的**数字和协议字面串**禁止凭记忆引用——W3 收口报告写「10 提交」实为 9（真源=git rev-list）；审计提示单 trailer 誊了旧串 `Claude <noreply@anthropic.com>`，现行协议是 `Claude Code <noreply@anthropic.com>`，致 7/9 审计代理误报 FAIL。今后：计数类结论先跑 rev-list/log 现查再写；trailer 等协议串以当前 system 指令为准现场誊录，不信记忆。
 - [2026-10-03] domain_factory 泛化台账 `段落级泛化完成: ... skipped=N` 的 skipped 指「熔断后剩余未尝试段落」（domain_factory_service.py:3505/3531），不是模板复用数；模板复用判定在「泛化过滤」日志（todo=template 缺失或 fallback）。误读 skipped=209 为「复用失效」白查一场。断点续跑现状：复用解析（693 段载入），泛化层因历轮熔断未达持久化点而全量重跑——「只补失败段」尚不对泛化层成立。
 - [2026-10-03] 排查 Redis 缓存问题时，未 `--scan` 键空间就按 worktree 源码里的键名 GET/DEL，查的是无人使用的残骸键 `yuxi:model_cache`，连环误判为「缓存被投毒/清空」折腾一小时。改名栈里一切字面量（键名、模块名、表名）都可能被改，先观察实际数据再下结论。
 - [2026-10-03] Python str.count/replace 是子串匹配：深缩进文本包含浅缩进模式（24 空格行内含 20 空格模式），锚点替换必须先深后浅，且写盘前 assert count==1；连续两次替换失败说明先浅后深。
@@ -110,6 +173,27 @@
 - [2026-07-10] 合并中途 `uv.lock` 里残留冲突标记会让 worker/api 启动崩在 `Failed to parse uv.lock`（TOML 解析）。合并产生锁文件冲突时，先 `git checkout --theirs` 清标记再 `uv lock` 重生成，别让容器带着冲突标记重启。
 - [2026-07-10] 领域工厂 commit/reingest 曾按 LightRAG 接口写文件记录（`kb_instance.files_meta[...]` + `_persist_file` + `database_id` 命名），LightRAG v0.7.0 移除后在 Milvus 上崩 `'MilvusKB' object has no attribute 'files_meta'`，任务转 FAILED 且 KB 无内容。改动领域工厂入库时一律用基类 `_persist_file_meta(file_id, {..., "kb_id": ...})` + `kb_manager.index_file`。相关：`slot_signature` 曾是 `VARCHAR(255)`，参数密集段落签名超限被截断、模板回流被 try/except 静默吞掉 → 已改 `TEXT`。
 
+### 2026-10-10（P4 批次）
+- 集成 flow 测试会 wipe 运行库表——跑之前必须先快照并验证快照行数>0（空快照=已被清过）。bug-414 92 条裁决态因此丢失。
+- 禁止 docker cp 宿主 test/源码文件进 localized 容器：宿主 import 名是 yuxi，容器是 pisuan（docker cp 不做改名）；要么 sync-dev，要么容器内 sed 归一。
+- MSYS 路径转换仅 MSYS_NO_PATHCONV=1 偶失效，须加 MSYS2_ARG_CONV_EXCL='*' 双保险（docker exec 参数里的 /tmp 也被转成 Windows TEMP）。
+- localized 栈的 storage-migrator 必须在 C:\workspace\pisuan-localized 下 compose up——workspace 的 compose 项目会试图另起 postgres 撞 127.0.0.1:5432。
+- parametrize 扩迁移档位时，「某增量迁移调用必出现」类断言要按档位条件化（v12 增量只在 ≤11 档触发，12 档只走 v13）。
+
+### 2026-10-11（P1 五校准裁决）
+- 禁止对 stages/*.json 做 json.load→dumps 全文件重写：会重排历史缩进（既有 10 空格 label 行等）产生噪声 diff——用文本级精准插入（括号计数定位 fields 数组）。
+- 改 QUANTITY_RE 前必须跑全语料新旧口径多重集 diff（p1_conn_diff.py 式）：「能达|可达」扩展的词中误断风险（功能达→除尘功+能达）要实证排除而非推理豁免。
+- 跑集成/flow 测试前先看 fixture 是否 wipe 运行库表（bug-414 教训持续有效）；本批只跑 unit + 技能测试。
+
+### 2026-10-11（localized 重建事故）
+- 重建链里禁止用 grep/head 过滤 apply_pisuan_rename.py 输出且不查退出码——脚本起步崩（Windows 大批量 reset 后瞬时文件锁）被掩码，yuxi 名树被当改名层提交推送。必须显式检查 $LASTEXITCODE/管道后 PIPESTATUS，并核对提交差量签名（健康重建=1978 文件 ±4410 对称；「仅 2 files changed」即是事故信号）。
+- 改名层提交通差量若非对称 ±N 相等，立即停手排查，勿推送。
+
+### 2026-10-11（P2 控制效率三子口径）
+- stages/*.json 文本级插入铁律：工作树原态是 CRLF（autocrlf=true checkout 产物）时，全文绝不做行尾翻译；只对插入块用 CRLF 字面量，且 item 缩进 replace 与 join 分隔符必须同一行尾形态——嵌套两种形态会产生 \r\r\n 孤立 CR，git 判非文本（w/-text）致 diff 全文件化（bug-417）。
+- 判定脚本编辑是否污染文件的权威信号：git ls-files --eol 的 w/ 列。w/-text = 有孤立 CR 或 NUL；正常应为 w/crlf 或 w/lf。
+- _MEASURE_RE（eia_data_service）与 QUANTITY_RE 是两处独立口径敏感点：QUANTITY_RE 新增口径形态时必须同步检查三分类正则是否认识新形态（控制效率拉丁前缀曾全落 junk，range_ready 门控静默失效）。
+
 ## Decision Log
 - [2026-10-03] ETL 并发校准（方案 A 演进为可配置）：并发 10 对串行 llama.cpp 只放大队列等待（队尾 ~10min >> 客户端超时）造成健康调用被误杀、熔断误伤；超时 120→300s；并发改为管理员可配（Option 体系：domain_factory_llm，基础设置页渲染，默认 2 钳制 1-32，运行时读取下一次生效）。不放入领域工厂页面：该 knob 是端点级全局参数（模型本身是全局默认），与默认模型同屏最贴心智。配置面扩展模式：options.py 加 Option 实例 + OPTION_DEFINITIONS 注册（[pisuan-custom] 标记），lifespan ensure_options_in_db 自动建行，零迁移零前端框架改动。
 - [2026-10-03] ETL 跑批遇本地端点推理停滞（12h 内第二次）：用户拍板「不干预，让超时→重试→熔断链自己走完」。运行期故障优先让 P0.1 自愈链收敛，人工只处理终态；用户自己的 llama.cpp 服务器不可擅动。
@@ -129,6 +213,15 @@
 - [2026-10-02] 本机 Bash 工具的 heredoc 会多吃一层反斜杠（脚本里写 \n 到达 python 时已是 
 ），且超过 ~8KB 的长命令会被截断报 "unexpected EOF"。长编辑脚本一律用 Write 工具写到临时文件再 `python 文件` 执行；heredoc 只放短脚本且避免反斜杠。
 - [2026-10-02] 本机 `python -` 从 stdin 读脚本用 GBK 默认编码，UTF-8 中文锚点会乱码不匹配。必须 `export PYTHONUTF8=1 PYTHONIOENCODING=utf-8`。ruff 用 `python -m ruff`（0.15.12 可用）；容器内无 ruff，`uv run` 因 site-packages 权限失败。sync-dev.ps1 后容器内路径是 /app/package/pisuan/（yuxi→pisuan 改名）。
+
+### 2026-10-10（P4 改名对话框）
+- 抑制清单 DB 化而非继续硬编码：UI 改名无法改代码常量；种子常量下沉 models_domain_factory 防 service→repo→manager import 环，service 同名再导出保单测路径。
+- 三段文本后端直发而非 offset：Python 码点 vs JS UTF-16 码元在 mojibake 语料下会静默错位，前端零 offset 运算。
+- 控制效率三拆分子口径不重建：值集人工指派不可复原且本就量纲混布（bug-412），保持 splitting 待重裁决反而受益。
+
+### 2026-10-11（P1 五校准裁决）
+- 连接词扩展（+能达|可达）而非启动尾清洗重设计：语料 diff 证明扩展即收敛（词表剥尾后口径一致、零词中误断实例）；尾清洗重设计（R2-R5 类）仍留 backlog。
+- 五口径全数补录挂载而非驳回：值虽全为常量，护栏语义正是「领域惯例值」钉死（防杜撰变体/小数错缀复发——bug-412 同类风险的预防面）。
 
 ## Do-Not-Repeat
 
@@ -169,7 +262,7 @@
 - api 容器内服务端口是 5050（localhost:8000 连接拒绝）；容器内自调 API 用 minted token + http://localhost:5050。
 - docs/vibe/ 整体 gitignore（.gitignore:78），需求文档只留本地，不入库。
 - graph-build 触发链：POST /api/knowledge/databases/{kb}/graph-build/config（锁 extractor，仅 extractor_type 锁定，模型/并发可改）→ POST .../graph-build/index（409 若同库在跑；不同库可并行——这正是 429 风险）。status 端点不返回 running/progress 字段（键名未知），监控进度用 worker 日志 grep "图谱构建：抽取"。
-- pre-existing lint 欠账先例：HEAD 上 domain_factory_service.py 16 处 E501、tools.py 3 处、test_commit_pipeline_status.py 1 处——判定归属用 `git stash` 对拍 HEAD；自己的新行必须 ≤120。
+- pre-existing lint 欠账先例：HEAD 上 domain_factory_service.py 16 处 E501、tools.py 3 处、test_commit_pipeline_status.py 1 处——判定归属用 `git archive`/临时 worktree 对拍 HEAD（**禁止 git stash**——共享工作树会卷走他人未提交改动，见 DNR 2026-10-06）；自己的新行必须 ≤120。
 - agnes key 在 Redis pisuan:model_cache 内、经环境变量传递不落盘；API key UI 只做掩码显示。
 
 ## Do-Not-Repeat (2026-10-04)
@@ -316,3 +409,309 @@
 - [2026-10-05] 触发服务层任务（如 retry_task）的容器内直调模板（已实测入队成功）：`docker exec worker python -u -c` → 同步 `pg_manager.initialize()` → `get_domain_factory_service()` → `asyncio.run(svc.retry_task(id))` → `os._exit(0)`。retry_task 语义：FAILED_PROVIDER + 非空 source_paragraphs → resume=True，重置 UPLOADED 清 error，经 tasker.enqueue 入 worker 队列执行。
 - [2026-10-05] ETL 泛化模型绑定不在 .env：查 `config_options` 表 key=system_options 的 default_model（当前 `openai2:agnes-2.5-flash` 云免费档）。`.env` 的 OPENAI_API_BASE（host.docker.internal:8080 宿主代理）只服务闲聊 gguf（gemma）——探活勿误探本地代理得出「端点健康」的假乐观（本次教训：探活先查 system_options 真实绑定）。
 - [2026-10-05] agnes 免费档是耗尽型配额非冷却型（实测：报错语義 reached the API rate limit for free users/upgrade to Token Plan；等 2h 后 resume 仍 45 秒即触熔断）。「等窗口再试」对该档位无效，方向只有换 provider/升级 key/接受本地模型质量折衷。- **2026-10-05 横城 retry 第 2 跑后拍板**：agnes 免费档耗尽型配额（第 3 次观测），用户选择 D=挂起静置横城 a44afc93（FAILED_PROVIDER 安全终态，resume 点 p222）。不换模型、不重试、不设自动探活；重启用 = 用户提供新 key/换 provider 后一条 retry_task。Step 2 口径采集（bug-363 挂起判定）继续挂起，阻塞点=外部配额而非代码。
+
+## Key Learnings 重建 + DNR（2026-10-06 spec-W1 收口窗口；14:12 stash 事故后工作区版本重建）
+
+- 【DNR 2026-10-06 14:12 事故】多 agent 共享工作树内**禁止 git stash**（push/pop/checkout 全变体）：某 agent 按旧版「git stash 对拍」建议执行，把并行工作流 7 文件未提交改动与 .wolf 台账增量（buglog bug-366~370/cerebrum +56 行/memory +278 行）整体卷入 stash@{0} 且未 pop。台账三件已捞回（buglog 整体还原 325 条/memory 增量合并/cerebrum 本块重建）；6 个禁碰文件的外部改动仍存于 stash@{0}，恢复待用户裁决，**stash 在用户确认前不得 drop**。
+- buglog.json 台账写入须串行：多 agent 并发写为 last-writer-wins，subagent 报告「已写入」后控制器应读回验证（本次与 stash 事故叠加造成双重丢失表象）。
+- ruff 不在 pisuan-api:0.7.3 镜像内（无二进制也无 python -m ruff）——用宿主道：`cd backend && python -m ruff ...`（0.15.12，config 由 pyproject.toml 就近发现）。
+- ruff 0.15.12 E501 按**字符数**计宽，非 unicode 显示宽（两轮探针实证，此前的 unicode width 记载系误报）；实操以 `ruff check` 输出为准收行，勿目测推断。
+- dict(model_dump()) 与 json.loads 的 key 存在性语义不同：前者恒物化默认字段（空串占位），setdefault 兜底网对其失效——泛化双通道（structured/prompt）同构兜底须用空值判定 `if not d.get(k)`（bug-369，fix 377440fc）。
+- services 单测道分野：实例化 DomainFactoryService() 的单测（pre_commit_validator/validate_task_report/commit_pipeline_status 等）在 __init__ mkdir user-data → :ro 挂载必炸（OSError 30），失败形态与回归不可分辨。有效道：`docker run --rm -w /tmp -v ".../backend:/app" pisuan-api:0.7.3 pytest /app/test/unit/services/... -q`；判回归先跑批前基线临时 worktree 对照。
+
+## stash 合并找回（2026-10-06）
+- pre-existing lint 欠账先例：HEAD 上 domain_factory_service.py 16 处 E501、tools.py 3 处、test_commit_pipeline_status.py 1 处——判定归属用 `git stash` 对拍 HEAD；自己的新行必须 ≤120。
+- (2026-10-05 W2-T2) coal-eia-writer stage JSON 结构：chapters 为 dict(cid→{title, sections})，sections 是 list[dict] 富对象（id/title/elements/uses/slots/role；此前误记 list[str]，0d3abee8 勘正）——计划脚本按 dict-of-dict 写的 .values() 会炸，layer-1 按「逐字随迁」保留富对象，渲染器节题取 title 字段。corpus_census/chapters.json 的章题字段 n 含尾随页码（如 "1 总 论 5"）与编号前缀，必须 norm()（剥空白/尾数字/第X章前缀）后才能比对。
+- (2026-10-05 W2-T2) report_skeletons 三层词汇权威链：stage JSON（唯一定稿词汇）→ layer-1 canonical/optional → 语料 aliases（只登记语料原文，禁臆造）。规则引用章题必须 defined 于 canonical∪optional（alias 不算 defined）。R4 裸名「回顾评价」语料 0 章级出现，曾登记为 planning optional 槽位，控制方裁决改绑 canonical 全称「矿区开发环境影响回顾性评价」（require 语义=校验性在场，canonical 已含则 no-op）并删裸名槽位（c9b0e391）。定则：规则抽象槽名在 layer-2 绑定 stage 定稿全称，optional 槽位只放 canonical 没有的章——裸名槽位会让 require 注入重复章。10 个近形/歧义 alias 未登记留 Task 4 差异单（见 commit 1f92038a 说明）。
+- (2026-10-05 W2-T2) Git Bash heredoc 写中文 JSON 可靠化模式：cat<<'EOF' 落盘后必须用 unicode 转义独立核验关键字面量（canonical==stage 重算、alias∈语料集合断言）——本次 「」“”、『』 全角标点实测存活，但若无断言属赌博。另：python -c 内联中文在 GBK 控制台会乱码，一律 PYTHONIOENCODING=utf-8 + TextIOWrapper(sys.stdout.buffer)。
+- (2026-10-05 W2-T2 评审) 计划假设「underground/openpit 差集恰为沉陷/爆破章」被证伪：两 stage 实有 6 处同实异名（总则/总论、地表水双拼笔误、选址±分析、资源±评价形、结论±评价）+1 独有（爆破）。教训：凡「合并/差集」类计划假设必须先用真实两集合逐章比对再落数据；layer-1 canonical 应取单一 stage 基准（井工 20 章），变异走 alias、独有走 optional（0d3abee8）。
+- (2026-10-06 W2-T2 收尾) seed_gen（scripts/seed_gen.py:123/:124）章级消费 key_elements（构造 generation_hint）与 writing_patterns 两字段、.get 容忍缺失不报错——layer-1 报告骨架章值必须随迁这两个字段（stage 章级全量携带，f7ba64e0 收口）；rule 激活型 optional 槽位（无 stage 源）按缺省 [] 不得臆造。日后改 layer-1 章值 schema 先 grep seed_gen 消费面。
+### W2 三层模板窗口（2026-10-06）
+- 渲染器输出章键 = slot_id 小写（CH3→ch3）对齐 depth_targets/{stage_id}.json 键；重编号 ch1..chN 会错位，seed_gen 按产物章键查表缺章即 FAIL（设计行为，禁静默默认地板）
+- depth_targets 按矿型分文件（project_eia_underground/openpit.json）；optional 章 slot_id 用 OPT_N 独立命名空间（按章题对回 openpit 原键会与 underground CH12 冲突）
+- l3 sections 短词菜单对 layer-1 定稿节题 0 命中（exact/子串都不全中）——v1 渲染器只消费 depth+tables，sections 留 P2 参考
+- seed_gen 章级消费 key_elements/writing_patterns、节级 elements——layer-1 schema 改动前先 grep seed_gen 消费面
+- 改数据裁决先查证语料实测（郭家台 ch16=「污染物总量控制分析」非裸题「总量控制」），alias 命中路径可能已天然存在
+- (2026-10-06 W2-T2 终件) rules R5 host 匹配口径实测：c == host or host in c——「规划实施环境影响预测与评价」仅命中 planning ch6，tracking 章题因「总体」「后续」断子串不命中，host miss=静默 no-op（R5 note 定稿口径）；写「命中范围」类 note 前先写断言实测，勿凭章题形似推断。
+- (2026-10-06 W2-T3) 语料事实：universe 35 份中无任何文档同时满足 R3（guideline_version=revised2019，仅五间房且 round=first）与 R4（round=revision 的规划全为 legacy）——「planning revision 15 章 + R3/R4」作为单产物断言不成立，须拆成五间房(R3,15章)与修编组(R4,13章)两条；验收书归并表述时先查 conditions.json 实测交集。渲染器 committed 0a1230e8，留痕语义=每动作 append（R2/R3 出现两次属预期）。
+- (2026-10-06 W2-T3 评审修) Do-Not-Repeat：产物数据容器形态以唯一消费方实测为准（seed_gen.py:126 按 list 迭代 sections），勿信计划文档对「兼容格式」形态的描述——计划写 dict、权威源实为 list[dict]，逐字落地会把计划级事实错误带进产物（评审捕获，bug-367）。渲染器终态 commit 66654a9d（0a1230e8 已被其取代）。
+- [2026-10-06] 宿主机跑后端单测：宿主 python(3.14) 无 langgraph 等项目依赖，backend/test/conftest.py 顶层 import 会炸——独立单测用 `python -m pytest <file> --noconftest` 绕过（测试文件自带路径解析，无需 conftest）；权威验证走容器
+- [2026-10-06] 当前运行栈 = pisuan-localized-* 容器（挂载 C:\workspace\pisuan-localized，非 pisuan 工作树），api-dev 容器不存在。Docker 验证替代法：`docker run --rm pisuan-api:0.7.3 -v pisuan/backend/{server,package,templates,test,scripts}:ro→/app/... -w //app python -m pytest ...`（compose 同款挂载布局；Git Bash 下容器路径加 MSYS_NO_PATHCONV=1 防 MSYS 改写）
+- [2026-10-06] layer-1 骨架模板 JSON 与 corpus_census fixtures 的写回约定：indent=2 + ensure_ascii=False + CRLF + 尾换行；json.dumps 后 bytes.replace(
+,
+) 写回可字节级复刻原格式
+- [2026-10-06] 派工词自洽性检查：派 Task 前把指令里的每条断言与 cerebrum 已记事实交叉核对（本次 Task 5 派工词写「planning revision 产物 15 章含 R3」，与已记事实「R3×R4 语料交集为空，revision 全 legacy」直接矛盾，致实现者推理卡死 600s 被 watchdog 杀）。修法：派工前重读相关 DNR/Learnings 条目
+## Key Learnings (append 2026-10-06 W2 Task5 渲染存档+seed_gen 冒烟)
+- conditions.json universe 中 R3×R4 交集为空：唯一 revised2019 规划语料是五间房且 round=first，15 份 planning revision 全 legacy——「revision 且 revised2019」的渲染存档不存在，R3 触发与 round 无关。
+- 渲染器 applied_rules 按 add/remove 目标逐条留痕：openpit 的 R2、revised2019 的 R3 各出现两次，是现有行为非 bug。
+- 渲染产物章键 = layer-1 slot_id 小写（planning/tracking CH1 起号、project/post CH0 起号），与 depth_targets 键同形；optional 章 = opt_N。
+- seed_gen 对渲染产物缺 stage/std_ref 字段不报错（.get 默认空串，仅 SEED_READY 显示名与模板名退化）——契约缺口但非错误；若要补应改渲染器，禁改 seed_gen。
+- seed_gen 的 SEED_PYDANTIC 在 pisuan 布局恒为 SKIP：KF_SCHEMAS 路径 app/extensions/knowledge_factory/schemas.py 属 coal-eia v1 仓库布局，pisuan 无 backend/app；_infer_backend 解析到 agents/backend 不存在。断言数>0 即达计划门槛。
+- exemptions 字段是适配度测试的语料侧注记，渲染器完全不消费（只用 6 维条件）——「无豁免干扰」只影响存档出处叙述，不影响渲染输出。
+## Do-Not-Repeat 追加（2026-10-06 bug-355 窗口）
+- 计划内嵌测试 fixture 涉及合成 docx/OPC 时：关系 Type 必须用真实 officeDocument reltype（python-docx 按精确 Type 找主部件）；.rels 内相对 Target 的 base = .rels 所在部件目录（word/_rels/document.xml.rels → word），写 word/document.xml 会解析成 word/word/... 恒假悬空。先在解释器里验证 fixture 可被真实实现满足，再定稿计划。
+## Key Learnings 追加（2026-10-06 bug-355 窗口）
+- `.wolf/corpus-census/patched/` 两份（九龙川 145MB/巴拉素 39MB）是普查术后**修复副本**，docx_guard.diagnose 判 ok 属正确直通；要在真实大文件上验证悬空修复路径，须内存注入 Target=NULL 病灶（zip 内重写 .rels 后 BytesIO 喂入），不要期待 patched 原样判 dangling。
+- changelog 的 dated 小节排序为**旧→新**（09-27→10-05），新小节插在文件已有最新小节之后；同日工作并入既有同日期小节（bullet 追加到节尾），不另开小节、更不回插旧小节（w2v2 勾账 2026-10-06 实操）。
+- 宿主 Python 缺 aiofiles 等依赖（2026-10-06 实测 ModuleNotFoundError），凡 import yuxi.services.* 的单测宿主必炸——只能容器道 `docker run --rm -v "C:\workspace\pisuanackend:/app:ro" pisuan-api:0.7.3 pytest ... --noconftest`；宿主 --noconftest 道仅限自包含测试（不 import yuxi 模块，如 test_docx_guard）。
+- Git Bash 下 docker 传 /app 路径会被 MSYS 改写成 C:/Program Files/Git/app/...——容器命令一律加 MSYS_NO_PATHCONV=1 前缀（2026-10-06 spec-W1 Task1 实测）。
+- domain_factory_service._UNIT_RE 单位字符类 m[²23]/[dha] 只认 ASCII m3，不含上标 ³——docx 语料相关 fixture/正则凡涉及 m³/h 一律写 m3/h。
+- DNR(2026-10-06): 计划里测试期望值必须对照 fixture 数据重算再落笔——Task2 的 (2,3) 算术笔误（散文三值分母应为 4）被 TDD 红相揭出，实现者依规停手报告而非改实现，流程正确。
+## Key Learnings 追加（2026-10-06 spec-W1 Task3 质量修复窗口）
+- ruff 不在 pisuan-api:0.7.3 镜像内（无 ruff 二进制也无 python -m ruff）——ruff check/format 用宿主道：`cd backend && python -m ruff ...`（宿主 3.14 虽缺项目依赖但 ruff 自身可跑，config 由 pyproject.toml 就近发现，0.15.12 实测）
+- ruff 0.15.12 E501 计宽口径【两轮探针实证修正 2026-10-06】：按**字符数**计，非 unicode 显示宽（复筛者探针：120 字符/160 显示宽的 CJK 行未被标记；此前"unicode width"记载系 impl-t3-fix 误报）。实操结论不变：以 `ruff check` 输出为准收行，勿目测字符数或显示宽推断
+- dict(model_dump()) 与 json.loads 的 key 存在性语义不同：前者恒物化默认字段（空串占位），setdefault 兜底网对其失效——泛化双通道（structured/prompt）做同构兜底时须用空值判定（if not d.get(k)）而非 setdefault（377440fc I-1）
+## Key Learnings (append 2026-10-06 spec-W1 Task5)
+- docker run ro 挂载跑实例化 DomainFactoryService 的单测（test_commit_pipeline_status 等）会炸在 __init__ 的 mkdir user-data（Read-only file system）——加 `-w /tmp` 让相对路径落可写层即可，勿误判为代码回归。服务类单测容器道模板：`-e PYTHONPATH=/app/package -w /tmp -v ...:ro`（PYTHONPATH 保证挂载代码优先于镜像 site-packages）。
+## Key Learnings 追加（2026-10-06 spec-W1 Task5 窗口）
+- services 单测道分野：test_w1/test_docx_guard 自包含（__new__ 绕 __init__）→ :ro 挂载可跑；但任何实例化 DomainFactoryService() 的单测（pre_commit_validator/validate_task_report/commit_pipeline_status）在 __init__ 里 mkdir user-data/domain_factory → :ro 道必炸（OSError 30），失败形态与回归不可分辨。有效道：`docker run --rm -w /tmp -v ".../backend:/app" pisuan-api:0.7.3 pytest /app/test/unit/services/... -q`（rw 挂载 + 容器临时 workdir，不污染宿主）。判回归先跑批前基线 worktree 对照
+
+- [2026-10-06] 任务书给定的代码块可能自带 lint 错（W2v2 Task1 测试文件 import json 未用，ruff F401 落在新 diff 内、违反 Step「零新增」预期）——逐字照抄后必跑 ruff 核对；为满足门禁删除未用 import 属 lint 合规修正而非改写设计，照做并在报告中记偏离即可。
+- (2026-10-06 W2v2-T3) Do-Not-Repeat：Windows 下禁用 `f=$(python -c ...)` 捕获中文再回传 python argv——GBK/UTF-8 双重损坏（bug-373）；改单 Python 驱动进程 subprocess 列表参数。另：任务书背景预期可能漏记 generated_from.conditions 透传元数据的刷新（openpit exemptions 因 W2 存档与 selector 首匹配条件条目不同源而变），重渲前先 diff 核对旧存档 conditions 与 conditions.json 首匹配条目是否同源。
+
+### Key Learnings（2026-10-06 W2v2 T4 fit 白名单追加）
+- fit 测试 _order_pass 的「摘章→重插允许前置章之后」可达性判定：递归 DFS 必爆栈（移动序列长度无界），且栈序探索在多 mover 文件上 37s 级；best-first（heapq + 逐位差异数启发式）同语义 0.16s。可达性判定与探索顺序无关，改探索策略不改 verdict（bug-374）。
+- fit order 白名单方向语义：「chapter X, after [Y]」= 从 expected 摘出 X、重插到 Y 紧后。相邻互换 [A,B]→[B,A] 的 mover 必须是 canonically 靠前的 A（摘 A 插到 B 后），不是 B——方向写反词条恒 no-op。土壤/固废互换 8x 的词条主体是土壤不是固废。
+- 收敛后分布 natural=14/whitelist=21/exempt=0（35/35），阈值 order_ok>=33、exempt<=2；w2v2 渲染窗口双道（宿主+docker pisuan-api:0.7.3）46 passed（37 fit + 9 w2v2，任务书 8 为旧口径）。
+
+- (2026-10-06 bug-376) DNR：sed 按行号删样式/代码块前，必须用带行号+显示缩进的输出（cat -A 或 sed -n '=;p'）核对边界行是「空行」还是「缩进闭合 }」——SettingsModal 删 Star 卡样式时把 2 缩进中间层闭合当空行多删，less 括号失衡，且 vite sourcemap 把报错行号错位到 script 区误导排查。纯删除类改动收口必须过编译验证（宿主无 node_modules 时用容器：docker exec web 容器 node -e less.render 提取的 style 块；bash 括号计数 python 一行即可预检）。
+- (2026-10-06 bug-376) vite [vite:css] [less] 报错行号经 sourcemap 还原，SFC 场景下可能错位到非 style 区——别信行号，先提取 style 块单独喂 lessc 定位真实错误。
+
+## Do-Not-Repeat 追加（2026-10-06 W3 Task2）
+- 2026-10-06: 任务书「照抄即可」的实现代码也可能有逻辑 bug 且与其自带测试矛盾（W3 Task2 min_permissive_scope 片段把最窄者胜写成最宽者胜，1 failed 揭出）。TDD 红相时先裁决哪侧错：测试名/docstring/合同语义三方一致时测试即规格，改实现不属 bug-361 的「即兴篡改」；裁决不了才停手报 BLOCKED。与 2026-10-06 早前 DNR（测试期望算术错须停手）互补：看错的是测试还是实现。
+
+## Do-Not-Repeat (2026-10-06 W3 Task 3)
+- 2026-10-06: 任务书测试块逐字照抄后仍可能红——本次 baseline 断言期望 ["measurable"] 漏了「涌水量」命中槽名模式产生的 reusable。红相判定顺序：先对拍现场既有同 fixture 测试（test_w1_prose_pipeline.py:46 成员断言）确认真实基线，再决定修测试期望还是修实现；禁止为了让测试过而改实现语义。本次实现零改动、仅修断言（bug-378）。
+
+## Key Learnings (append 2026-10-06 W3-T3 qualrev)
+- _etl_pipeline_async 泛化块（:898-1003）的 except Exception as para_error 会吞掉块内一切异常——W3 归属挂钩插在熔断分支（:988）之前且无独立守卫，repo 瞬时故障会静默跳过 FAILED_PROVIDER 持久化（bug-342 同族）。挂建议层钩子进这个 try 必须自带 try/except，否则熔断可靠性降级。
+- generalize_paragraphs 的 results dict 插入序=并发完成序（非文档序）；依赖「首个」语义的聚合要意识到这一点。
+- W3-T3 验证通道：MSYS_NO_PATHCONV=1 docker run --rm -v "C:\workspace\pisuan\backend:/app:ro" pisuan-api:0.7.3 pytest /app/test/unit/test_w3_scope_pipeline.py --noconftest -q（15 passed）；W1+T2 回归 47 passed 同命令多文件。
+
+### Key Learnings（2026-10-05 W3 Task4 追加）
+- 任务书自带的 fake repo fixture 可能与同任务书给的生产实现不自洽（bug-380：FakeRepo getter 返回无 id 键 dict，真实 repo 契约是 [{id, scope, extra_meta}]，service t[id] 即 KeyError）。修复方向永远是 fake 向真实 repo 返回 shape 同构（dict(原dict, id=i)），不是改生产代码迁就 fake。
+- domain_factory_repository.py 既有 lint 旧账基线（HEAD）：I001×2 + E501×1（:144）；domain_factory_service.py 14 处（F841×5/E741×4/E501×5）。归属判定用 git show HEAD:<file> | ruff check --stdin 对拍，工作树新增违规数 > 基线即自己引入。
+
+- 2026-10-06（W3 编排层复盘）：单窗出现 3 处计划勘误（bug-377 min-permissive 片段宽窄写反、bug-378 测试期望漏 reusable、bug-380 fake fixture 与生产代码不自洽）——共同根因：**计划里的代码块落笔时未经实跑**。后续写计划时，测试 fixture 与关键纯函数片段应先在容器道干跑一遍（哪怕只跑 pytest --collect 或直接 python -c 执行函数对照断言），再写进计划；实现者侧裁决基准不变：测试+spec+docstring 三方一致时修计划侧，实现零语义偏离。
+
+- [2026-10-07] 按模板生成数据时，先读真实表头（含括号内枚举注解）再逐列对位；严禁凭记忆猜列名，dict.get(c,'') 的默认值会静默掩盖键不匹配（bug-361）。
+
+- [2026-10-07] coal-eia-writer 节稿里的 {{SLOT:key}}/{{TABLE:族}} 是设计契约（SKILL.md「数字永不经过 LLM」，build_output.py 终稿渲染，SL1 门禁只查终稿残留=0）；评审节稿时看到占位符≠泄漏缺陷，别再误判（bug-362）。
+
+### Do-Not-Repeat
+- [2026-10-07] 排查 agent run 报错先查 worker 日志不是 api（arq 任务跑在 worker）；错误时间要换算时区（日志 CST=UTC+8，agent_runs 是 UTC）。
+- [2026-10-07] tool_audit 守卫的 sequence 是「事件流内序号」非稳定事实——每次 resume/checkpoint 重放都重新编号；判断幂等冲突时不能把流序号当持久化事实。
+
+### Key Learnings
+- [2026-10-07] coal-eia-writer 深度地板全表失校（test2 实测）：ch11 地板 1500 vs 实际 22380（15 倍）、ch13 9000 vs 60531、ch5 3800 vs 16119——地板只防结构性缺席，不防单薄；两轮实测数据已够做 calibrate 校准（二期待办）。
+- [2026-10-07] 表号/节引用格式规范不在节写者契约（SKILL.md/派发契约无此条，content_guidelines.md 仅一行 `表X-X` 且与写者实际输出/终稿格式三方不一致）；「表 X.Y-Z」含数字-数字串会与标准编号枚举正则产生模式冲突，test2 靠终稿批量改 142 处消歧——规范应左移到写作契约。
+- [2026-10-07] coal-eia-writer 交付现场唯一路径是工作区 outputs/（agent finalize 生成）；外部验证勿另建 deliveries/ 之类并行目录，会造成 delivery_manifest 分裂。
+
+## Key Learnings（2026-10-07 范式库 P0 会话追加）
+- sample_entities 黑名单含类别级通用名词（自然保护区/水源地/基本农田/地下水/国道/边沟…来自 ETL 抽取噪音）；实体扫描必须用「≥3 份语料黑名单子串共现→通用词豁免」规则，否则 15+ 处误报。运行时泄露门不在 build_output.py（grep 无 sample_entities 引用），防线在契约指令层。
+- 语料文件名本身含矿名实体——任何要进 skill references 的资产，溯源脚注用匿名源编号（源①-⑤），明文映射放 docs/vibe 设计文档。
+- 范式/mock 派发产物过残留门前，先剔除合法 {{TABLE:}}/{{SLOT:}} 渲染标记——RESIDUE_RE 在真实管线中于渲染后扫描，裸跑必误报。
+- 残留门禁词含裸 `XX`——契约/范式素材禁用「20XX 年」式占位，改示意年份；同理 [待确认] 形态的方括号只可用于缺项标注。
+- 本栈容器名是 pisuan-localized-api-1/worker-1（CLAUDE.md 里的 api-dev/worker-dev 已过时）；docker exec 裸容器路径须 MSYS_NO_PATHCONV=1，docker cp 源路径用 Windows 风格。
+
+## Decision Log（2026-10-07 追加）
+- 范式文件注入体积超 800 tokens 预算（analysis.md ~1200）：用户裁决接受现状——范式完整度优先，A2 已实证行为有效；实测派发预算吃紧时再裁剪，不预防性瘦身。
+
+- [2026-10-07] Key Learning: coal-eia 表头 cell 禁裸 `|`——stage forms 列定义枚举分隔约定为 `/`；`_md_table` 执法：表头含 `|` 硬 FAIL（防上游同步回灌），数据 cell 含 `|` 转义 `\|`（consistency 槽位寻址 `[井田|煤层]` 属正当内容）。
+- [2026-10-07] Key Learning: 技能自带测试（scripts/tests/）宿主 pytest 跑不了——收集链沿包路径拉起 yuxi `__init__` → langchain 缺失；惯例是 docker cp 到容器 /tmp 或运行栈技能树内跑（运行栈有 pytest）。
+- [2026-10-07] Do-Not-Repeat: 清点 JSON 内缺陷面不能只靠一种形态的 grep——纯中文列名（无 en 键前缀）躲过 `'"key …|…"'` 模式漏网；必须对 JSON 结构程序化 walk 断言归零（本次靠复核 assert 抓到第 29 处漏网）。
+- 2026-10-08：清点 LLM 改写残留时不能按旧块索引去读改写后的文件——改写把标记独立成行会在块内引入空行，重 split 后索引漂移；一律按「当前违规扫描」重定位（bug-394 踩过）。
+- 2026-10-08：对带既有格式漂移的文件（如 consistency.py）跑整文件 ruff format 会把无关重排卷进提交（236 行噪音）——先 `ruff format --diff` 看作用面，只手工格式化自己新增的 hunk；漂移是历史遗留，不顺手「修」。
+
+## Key Learnings（2026-10-08 Task2 schema_linter 追加）
+- 任务书 CLI 代码片段（counts.get 式增量）与其自带测试断言（零违规 stage 取 counts["L1"]==0）矛盾——原样实现必 KeyError。裁决沿用 W3 规则：测试+契约一致时以测试为准，实现侧零填充 dict.fromkeys(CHECKS,0)（第 4 起「计划代码块未实跑」族，bug-377/378 同根因）。
+- coal-eia-writer stage 复合字段的真实形状：fields 字符串清单条目是行内注记 "en_name 中文label"（同串空格分隔），纯中文列名（气温）与单字母列名（m/H）合法；spec 假设的 labels/columns dict 映射在 5 stage 中不存在（实现保留为旁挂兜底）。L4 判裸奔=英文蛇名行内+映射均无中文。
+- stage 枚举真实分隔符是 `|`（bug-393 旧残留，L2 管）而约定分隔符是 `/`；L5 词表分段不含 `|` 是有意的——两检查各管各的，别把 `|` 加进 L5 分段集。
+
+- [2026-10-08] 宿主 pytest 跑不了 coal-eia-writer skill 子树测试：pytest 从 scripts/tests 上溯 rootdir=backend/pyproject.toml，按包链 import yuxi/__init__.py → 宿主无 langchain_core 必炸（从 skill workdir 跑也一样）。正解=按 plan「docker cp 后容器内跑」：docker cp scripts pisuan-localized-api-1:/tmp/xx && cd /tmp/xx && pytest tests/ -q（容器 py3.13）；容器内 /app/skill-sources 与 /app/package/pisuan 两投影可能滞后 git HEAD，别拿它们当真。
+
+## Key Learnings (2026-10-08 coal-eia-writer hardening 追加)
+
+- 运行栈容器名已从 `api-dev`/`worker-dev` 变为 `pisuan-localized-api-1` 等（compose 项目名切换）；docker exec/cp 前先 `docker ps` 确认，CLAUDE.md 中的旧名命令会失败。
+- host pytest 跑 skill 内测试会沿包链 import `__init__.py` 触发 langchain_core 缺失（Col node error）；规范跑法是 docker cp 测试文件到容器 /tmp 工作台再 pytest。prepare_corpus 单测顶层仅标准库依赖，容器内无需 python-docx。
+- promote_headings 三守卫：节号 ≤12 字符、题名 ≤30 字、无句读标点（。；，；顿号豁免）。书名号长真标题（与《规划》符合性分析，34-45 字）会被误杀——参数待 Task 4 实跑统计后定。
+- 数字结尾的正文标题（如「1 抗震设防烈度 7」）与目录行形态重叠，is_toc_line 会误判单条；仅 ≥3 连续才剔除，量级待 Task 4 观察。
+
+## 2026-10-08 corpus_meta 批次追加
+- Learnings: 语料「整报告字段」（省/标准/规模）必须按 rid 聚合全部切片再判定，逐片算会被后片覆盖（bug-405）；省名整文频次判定 31/31 全自动命中，且 019「吐鲁东」正文实锤甘肃肃北——文件名直觉会错、频次+归属短语对；「青海云杉」类物种名是省名假信号。
+- Learnings: 附件清单三种形态全收才算全：裸头「附录:」+编号行、「附录N:」标点、「附录1 委托书」空格分隔（最后一种最易漏）；标准号有 5 位号（GB20426），\d{1,4} 会截断。
+- Learnings: planning 公参附件 required=0 是命名碎片化的真实信号（公众参与调查表/相关材料/说明 各自计数），语义聚类明确推迟，勿加 ad-hoc 同义归并。
+- Do-Not-Repeat: 宿主跑技能测试须走 $TEMP/pc_host 工作台（仓库 conftest/包链会把 pytest 劫持到 yuxi.agents → langchain_core 缺失）；工作台根目录勿留测试副本（import file mismatch）。
+- Do-Not-Repeat: 从 file_name 抽年份须防产能误匹配（041「2000万吨年」的 2000 不是年份）。
+
+## 2026-10-08 数值护栏批次追加
+- Learnings: section_expectations v1.1 range 双门槛（RANGE_UNITS 强度类 + distinct-rid≥5）；实测「节×强度类」粒度 31 份语料撑不起 P5-P95（644 组 580 组 n=1，n≥5 真口径仅抑尘效率 n=8）——强度类信号在自由文本且短语高方差，forms label_map 全是 extensive。激活路径：stage 级 curated 词表（跨节聚合）或部分二槽位抽取，机制自动生效。
+- Learnings: ruff format 会归位旧基线 E501（bank_compile 3 处），提交前 make/ruff format 本就会清——diff 里出现基线行变化先查是否 format 所致再定夺。
+- Learnings: QUANTITY_RE 量词截断垃圾形态（「所占比例分别/评价区所占比例仅」）能到 n=5-6 覆盖——未来数据变厚需短语合理性过滤，本轮靠门槛挡。
+
+- (2026-10-08) 候选三分类规则: MEASURE_RE(回用率|利用率|处置率|*效率|完好率|入洗率|节水率|脱灰率|防渗率|达标率|覆盖率)=工程措施类; SITE_RE(频率|超标率|盖度|优势度|城镇化率|保证率|含水率|纵坡|系数|检出限|浓度)=站点背景类——站点类语料区间不构成有效界, 不宜做护栏; 尾部噪声STOP_TAIL要含「可」(除尘效率可), 「分别」残尾「分」靠GENERIC_JUNK挡
+
+- (2026-10-08) 普查修正: label_map 实为跨5 stage forms fields 先到先得合并 178 唯一标签(planning mapped 14/unmapped 200 cap), 此前「57 mapped 全 extensive」口径作废; samples/(裸切片SL3指纹池) 与 samples_bank/slices/(带溯源标记案例库) 分工明确非冗余; bank_compile 七产物幂等可重建, stages/*.json 是全技能唯一结构真源(schema_linter L1-L5 体检, 135 缺 label 历史问题); standards_index 41/62 条 needs_verification 待人工核实=确认流最大存量; 运行态 data//state/ 在技能外由 ingest.py 独占写, 不属数据加工页范围
+
+### 2026-10-09 环评数据工厂统计页批次
+- **Key Learning**: eia_data_service 的 QUANTITY_RE 用 importlib 从 bank_compile.py 动态加载（模块可安全导入，技能测试先例），避免口径复制漂移；词表候选口径 = 比率/浓度型单位白名单 {%,dB(A),mg/L,μg/m3} + n≥2 报告门槛（普查 94/96 项全为比率型是逆推实证，几何量 km2/t 随项目走无区间意义）。
+- **Key Learning**: attachment_checklist.json 的 stages[stage].base_reports 是 **int 计数**非列表；rids_without_items 是 list；insufficient_base 是 bool。
+- **Key Learning**: changelog.md 新批次插入点 = 「### pisuan 定制增量（日期）」节按日期序插在「## v0.7.2」之前；corpus_meta rid 里的 20xx 数字不可当年份（「041-2000」是 2000万吨产能）。
+- **Key Learning**: 当前运行栈容器名是 pisuan-localized-{api,web,worker}-1（挂 C:\workspace\pisuan-localized），api-dev 不存在；pisuan 工作树改动到运行栈走 scripts/sync-dev.ps1。
+- **Do-Not-Repeat**: (2026-10-09) echarts label formatter 里 dataIndex 是序号，取原始 key 用 stages[p.dataIndex]，不要 stages.indexOf(p.dataIndex)；ResizeObserver 创建后必须 observe 具体元素；图表重试渲染前先 dispose 旧实例。
+- **Do-Not-Repeat**: (2026-10-09) web 项目 icon 包实装是 `@lucide/vue`（package.json L24，lucide 官方继任包），**不是** CLAUDE.md 前端规范文字所写的 lucide-vue-next（已过时）——import 用错包名 vite 直接 500（Failed to resolve import）。核实现役写法：grep src 的 `from '@lucide/vue'`。
+
+## Key Learnings + DNR + Decision Log（2026-10-09 数值护栏词表全栈批次追加）
+
+### Key Learnings
+- 存量库加新表必须走显式迁移函数：`create_all` 只在 business_version=None（全新库）跑。仿 tool_usage 先例写 `upgrade_business_v9_to_v10`（FOR UPDATE 行锁 + version 校验 + `metadata.create_all(tables=[...])` + 记版本表），并在 storage_migration.main() 接线 upgrade_from。版本表在改名栈叫 `pisuan_schema_migrations`（改名层连字面量都改了）。
+- sync-dev 时序陷阱：热重载先拿到新常量（BUSINESS_SCHEMA_VERSION=10）而 DB 还在 9 → api 容器 RuntimeError crash-loop；先跑迁移器再 sync，或预期 crash 后迁移完 docker restart。
+- bank_compile curated 挂载门控于 stages forms 字段表（label_map 来自 references/stages/*.json 的 forms.*.fields[].label，经 _map_caliber 后缀归并）；当前语料 5 个校准口径（抑尘效率/除尘效率/生活污水回用率/矿坑水回用率/设备完好率）都不在表内 → 覆盖层机制就绪但真实挂载为零。unmapped 池即 forms 补录清单。
+- 集成测试必须容器跑（宿主无 langgraph）；bank_compile 纯 stdlib 可宿主跑——E2E 用 references 副本隔离（cp → 副本写 overrides → 副本内 diff），dev 树零污染。
+- TEST_USERNAME/TEST_PASSWORD 缺失 → HTTP 集成测试 skip；服务层直连集成测试（get_service() 方法链 + 前后自清理）是同等覆盖面的替代路径。
+- 导出物化数 ≠ range_ready 数：拆分子条目各拿一半值可能掉到 n≥5 门槛下、父条目 rejected 不占位——断言写上界（≤ measure∧range_ready）与 ≥1。
+
+### Do-Not-Repeat
+- pytest-asyncio 模块级 async fixture 必 ScopeMismatch（_function_scoped_runner 冲突）；async fixture 一律函数级，幂等初始化（pg_manager.initialize()）放进 autouse 函数 fixture。
+- 服务层导出断言勿写 `materialized >= range_ready`（拆分语义使其天然可小于）。
+- 宿主 curl localhost:5050 不通（端口映射差异）——API 自检用容器内 urllib。
+
+### Decision Log
+- 导入预置状态固化（用户裁决）：measure→approved / site→candidate / junk→rejected 留档 / 「控制效率」→splitting；splitting→rejected 放弃拆分允许（拆分是入口不是义务），splitting→approved 禁止直设。
+- section_expectations 获「重写例外」豁免（移出字节不变清单），可逆性由 version 1.1 回落锚 + E2E diff 保证。
+- E2E 隔离方案：宿主 + references 副本（bank_compile 纯 stdlib）；零风险不动 dev 树。
+
+## Key Learnings + DNR（2026-10-10 语料元数据标注页批次追加）
+
+### Key Learnings
+- 容器内前端检查实操口径（更新 L81 旧记录）：现栈容器 `pisuan-localized-web-1` 无 pnpm，lint 用 `docker exec pisuan-localized-web-1 npx eslint <files>`；且必须先 `.\scripts\sync-dev.ps1` 文件才进容器。vite 语义：router 改动触发 page reload（非 HMR）、新文件链（动态 import）只在导航时按需编译——vite 日志无报错 ≠ 已编译过，容器内 eslint 是前置门。
+- `/api/system/ready` 503 的语义：checks 四项 startup/postgres/redis/worker，本地栈 worker 服务不在 → `WorkerUnavailableError` 恒 503、容器标 unhealthy，但 API 全功能正常（业务端点全 200）。看到 unhealthy 先打 `/api/system/ready` 看 checks 明细，别按故障排查；api 容器内端口是 5050 非 8000。
+- api 容器 crash-loop 期间 `docker exec python` 走 pg_manager 初始化会挂起（池/锁问题）且迁移工作可能已落库——验证 DB 状态用 asyncpg 直连：`asyncpg.connect(dsn=os.environ['POSTGRES_URL'].replace('+asyncpg',''))`（POSTGRES_URL 是 SQLAlchemy 风格带 +asyncpg 前缀）。
+- P2 语料元数据形状：corpus_meta.json 31 报告 stage 分布 planning_eia 17/post_eia 2/project_eia_openpit 6/project_eia_underground 5/tracking_eia 1；annotations 人工层 18 份稀疏（year 15+scale 3）；counts 语义 annotated=有任一标注字段、scale_needs_review=27（corpus_meta scale_basis 口径，不随标注消减）。
+
+### Do-Not-Repeat（2026-10-10 P2 对抗评审追加）
+- BUSINESS_SCHEMA_VERSION 每次递增必须同步两份迁移测试：①test_storage_migration.py 六处 SimpleNamespace fake——main() 每新增一个 pg_manager.upgrade_* 调用点，fake 就缺属性 await 即 AttributeError（v10 起已红两个版本没人跑单测）；②test_schema_migration_version.py 的 `assert BUSINESS_SCHEMA_VERSION == N` 版本钉随递增手改。新迁移函数落库时这两个文件与 storage_migration.py 一并改。
+- P2 修复提交 b7f63ece（对抗评审 7 条全坐实全修）：导入幽灵行过滤/迁移测试 fake/前端 min-precision-tabindex/测试判别断言。评审工作流脚本存 session workflows/scripts/p2-adversarial-review-*.js，resumeFromRunId wf_be922093-a83 可复用。
+
+## Key Learnings (append 2026-10-10 技能图示)
+
+- **coal-eia-writer 全技能图形化地图已存在**：`docs/vibe/2026-10-10-coal-eia-writer-skill-diagrams.html`（自包含 HTML+内联 SVG，浅深主题自适应）。下次要向新人/模型解释技能结构时直接指这个文件，不必从 SKILL.md 重新蒸馏。两图分工：图 1 分层架构（LLM 层/脚本层/磁盘状态/references 资产 + 琥珀色数值通路），图 2 步骤 0–7 流程（门 1/冻结/门 2/派发循环/要点包/finalize + 发卡即停停车点）。
+- **图示时最易画错的三个机制事实**：①子代理直写 state/sections/*.md 绕过脚本层（不经过 build_output）；②progress.py next 是控制器唯一导航（每轮恰好一个下一步）；③formula_state.json 手改=build 门直接 FAIL（唯一写者纪律不只 data/ 有）。
+
+## Key Learnings + DNR（2026-10-10 P3 标准与限值库追加）
+
+### Key Learnings
+- **含 `/` 的业务主键绝不能走 FastAPI 路径参数**：standards_index 62 条 code 中 10 条含 `/`（GB/T、HJ/T、TD/T、MT/T），uvicorn 在路由匹配前就把 %2F 解码成真实 `/`，`{code}` 段默认正则 `[^/]+` 无法跨越内部斜杠 → 恒 404（认证层都进不去，401 测试探不出）。此类主键一律走 body/query；`{code:path}` 虽可贪婪回溯但依赖隐晦。frontend/correctness 两维评审独立实证复现。
+- **standards_index.json 形状事实**：top 键 version/generated/scope/tier_policy/red_line/standards/limit_tables/gate1_code_checks；standards[].code/title/role/chapters/tier/needs_verification/verified/origin(+note)；limit_tables 顶层含 `_comment` 字符串注释键（遍历时 isinstance(dict) 过滤），7 表中 gb3096_zone_limits 与 gb12348_boundary_limits 各登记 1 行样例逐字锚点（rows 非全空）；tier 五档 framework 21/pending 17/quality_limit 9/emission_limit 9/method_param 6。
+- **导出翻转语义与 P2 不同**：P2 corpus_meta_annotations 导出是 `sort_keys=True + 尾换行` 全量重写；P3 standards_index 导出是 `json.dumps(ensure_ascii=False, indent=2)` 无 sort_keys 无尾换行（保原键序 round-trip 字节纪律）——两文件消费者不同，别互相抄。
+- 迁移测试判别力范式（对抗评审坐实后已落地）：新增 upgrade_* 调用点的 fake 用 `_record(calls, "upgrade_vN")` 记录调用并在 legacy 参数化测试断言在场（`upgrade_from` 档位全量进 parametrize），真实建表行为由隔离 schema 真实 PG 用例兜底（仿 `_create_isolated_manager("...")` + `record_schema_version(business, N-1)` → upgrade → 断言表存在 + 版本翻新 + 幂等重跑）。
+
+### Do-Not-Repeat（2026-10-10 P3 对抗评审追加）
+- 别在测试里钉注册表数据指纹（62 条/7 表/2 行）：合法演进（加标准/加表/加样例行）必误红。期望值从文件 `json.loads` 自算（exp_total/exp_pending/exp_rows），与 needs_verification 的 sum 自洽范式同构。
+- 版本表真名是 `pisuan_schema_migrations`（列 domain/version/applied_at），不是 schema_versions——DB 直查版本用 `SELECT version FROM pisuan_schema_migrations WHERE domain='business'`。
+- api 容器 startup 失败（如 schema 版本落后）后进程死透不再自动重启，迁移修复后必须 `docker restart pisuan-localized-api-1`；.restart 前先看 logs 尾部判因。
+
+### Do-Not-Repeat（2026-10-10 bug-383 追加）
+- standards[].chapters 是分号分隔字符串（"；"），不是数组——Vue 模板里直接插值渲染，别 .join()。前端消费新 JSON 字段前先看实际类型（一句 python type 统计的事），字段名复数 ≠ 数组。
+
+### 三页面深度评审实证（2026-10-10，wf_9e47706a）
+- P3 standards_index 双真/双无：10 条 nv+verified 同真（手写遗留违导出协议）+7 条双无（HJ 464/710/192/446+3 行政法规逃出 nv 计数）→ 真实待办 31 非页面显示 41
+- _norm_std 不去 T：语料引用全 GBxxxx 形态、注册表 GB/T 形态 → GB/T 14848/19923/50433 三条 cited_count 低估
+- 语料共引 206 归一码仅 31 命中注册表（175 未编目，含真标准 GB 18596-2023/GB 27742-2011）；62 条中 31 条从未被引
+- consistency.py CC1 恒 manual 死分支（standards_index 条目无 text/summary/year 键，allowed 集恒空）；gate1_code_checks 宣称有门实际零脚本实现（grep=0）
+- corpus_meta.json 零运行时消费者（二期）；P1 overrides/ 从未真实物化（曾导出后关开关删除）；30 approved 中 range>=5 仅 6 项达标；P3 是三页唯一有运行时消费方的物化
+- 词表 PATCH 后端支持 caliber 改名+note 编辑但 UI 只发 status；corpus_meta.py 消费 ann[province] manual basis 但 P2 页面无录入端
+- [2026-10-10] eia_lexicon 拆分/改名机制：split_entry 仅接受 splitting 状态条目（_preset_status 只有控制效率预置 splitting）；拆分子条目 values_json 携带值集，但 export_overrides 仍按 values_json 内 rids 数 ≥RANGE_MIN_REPORTS=5 现算 range，<5 报告的子簇拆了也不物化；PATCH caliber 后指纹 (stage,caliber,unit) 失配，重扫必按旧名重导 fresh 行（_MEASURE_RE 命中→预置 approved），服务层无 tombstone/抑制机制——rename_in_place 必须伴生旧指纹处置才可持久；reject 是唯一重扫自稳处置。
+
+### 词表口径抽取机制（2026-10-10 评审实证）
+- 改名≠修复：export_overrides 按 (stage, 提取器产出口径名, unit) 现算取值——改名行新名语料中不存在→永久 skip「已无提及」、n_reports 显示 0；重扫按旧指纹判重→旧断章名复活（_MEASURE_RE 命中即 A 类 approved）。改名必须配 _IMPORT_BLOCKLIST（指纹级抑制）才持久
+- rejected→approved 是 PATCH 放行方向：断章名行可被直接点成 approved 并物化破名区间（伤的行 80~80 会物化）——运维规程须写明禁止
+- _STOP_TAIL 是单字剥尾（均/分/别/比/占），平均→平、占比分别→空 即此因；QUANTITY_RE 窗口 2-8 字最早起点规则决定头切形态（损|伤的、评|价区）
+- 判官裁决范式：rejected 档消费链=0，为它改公共抽取管线是不对称代价； approved 档名称质量才是物化风险所在（处置率/综合利用率/回用率混簇）
+- LexiconPanel.vue filters.status 默认 ''（全部视图）——「rejected 默认隐藏」是想当然，9 条留档行用户看得到
+
+## Key Learnings + DNR（2026-10-10 方案B 词表修复执行追加）
+
+### Key Learnings
+- 改名 PATCH（update_entry caliber）只改口径名不改 status：原 candidate 行（评价区植被覆盖度值→评价区植被覆盖度）改名后仍是 candidate，而 export_overrides 只遍历 approved——「export skipped 里改名行 6/7」不是数据异常，第 7 个根本不进导出。预期数字前先核每行的 status 流向
+- export_overrides 的 fu 检查（首见单位≠条目单位）先于 ent None 检查：改名 approved 行的 skip reason 文案是「语料首见单位已变为 None（跨单位不混布）」而非「已无提及」——fu=None 命中在前，处置语义等价，按口径名归属统计别按 reason 文案
+- 方案B 后真实物化 8 条 = 3 拆分子口径（values_json 直挂不现算）+ 5 原始达标行（抑尘效率 planning 15 报告、生活污水回用率/矿坑水回用率/设备完好率/除尘效率 openpit 5-6 报告）；13 条 approved 因 distinct<5 恒 skip（含 underground 除尘效率 3、openpit 预湿的捕尘效率 2）
+- 运行栈容器 pisuan-localized-api-1 是 runtime 镜像：无 ruff、无 .venv、`python -m ruff` 也没有——格式检查走宿主 `uvx ruff`（backend/ 下跑以吃 pyproject 配置）；单测 `python -m pytest test/unit/... -q` 正常可用
+- 验收黄金断言是 import 的 added=0 + blocklist_skipped=7 与 counts 27/27/38/0；overrides 文件在容器 /app/package/pisuan/agents/skills/buildin/coal-eia-writer/references/overrides/curated_lexicon.json
+
+### Do-Not-Repeat（2026-10-10 方案B 执行追加）
+- 验收脚本里的诊断表达式改版后必须重跑取新版输出再引用：renamed_zero_count=[] 曾是旧版脚本残留输出，与地面真值（7 行 n_reports=0 全部成立）矛盾，为它白查一轮——诊断输出与数据操作输出分开看，异常先复算再归因
+- python -c 多行中文脚本在 MSYS bash 下引号脆弱（exit 2 无输出）——一律 Write 落盘 .py 再执行（本会话再次验证）
+
+## Key Learnings + DNR（2026-10-10 词表 92 条全量审计追加）
+
+### Key Learnings
+- 全量审计分布（92 条，6 裁决+1 对抗核验 21/21 零证伪）：reasonable 33 / minor 19 / broken 16 / mixed 24。**approved 档名称质量最好（0 broken/mixed、13 minor 全是裸名缺定语型）**；rejected 档 35/38 断章或混簇——证明三分类导入预置（junk→rejected）与方案B 裁决方向正确
+- **bug-412 量纲混布**：控制效率三子口径值集 p5=0.61 与 p95=90 并存——语料对不同报告用小数分数「0.61%」与百分数「59%~90%」两种书写，拆分对话框值集按提及原值照搬无归一步骤。凡「效率/比例/占比」类拆分都要先查值集量纲
+- 9 字超窗头切是断章新主形态（溶解性总固体超标率/贡献浓度占标率/石油类初始浓度设置/环保工程投资占总投资的比例）：原词 9-10 字 > 8 字窗必断。PATCH 改名可超 8 字不受窗限，但改名名不在语料逐字出现 → 扫描零命中 + 导出永久 skip（同方案B 机制，需 blocklist 伴生）
+- candidate 档新发现断章 3 条：献浓度占标率（贡|献）、解性总固体超标率（溶|解性）、用地的优势度（一句 16 值对 4+ 地类）；mixed 2 条：植被覆盖度（群落 70% vs 区域 73.71% 尺度混）、风向频率（静风 12.1% 与 WNW 11.1% 同簇）
+- 语境可见性 caveat：audit contexts 每条目只导出 2-3 句，n_values=15~16 的条目（设计除尘效率、underground 除尘效率、planning 抑尘效率）属「可见部分零反例但未逐值回源」——物化前全簇核验前置
+- get_mentions 只回语料扫描提及（子口径 values_json 不在其中，恒 0）；子口径值集要走 repo.list_entries() 的 values_json——容器内直连 repo 曾挂起一次（原因未明），证据已足时不必硬拉
+
+### Do-Not-Repeat（2026-10-10 全量审计追加）
+- 容器内脚本读宿主 Windows 路径必 FileNotFoundError——先 docker cp 送 /tmp 再引用容器路径
+- 对「改名行/子口径」跑 get_mentions 验证值集是空转（机制上恒 0），直接读 values_json
+
+## Key Learnings + DNR（2026-10-10 P4 改名对话框设计评审追加）
+
+### Key Learnings
+- 前端图标依赖实际是 @lucide/vue（web/package.json），CLAUDE.md 写的 lucide-vue-next 已过时——LexiconPanel.vue:197 即从 @lucide/vue 导入
+- base.js:74 把 400 固定映射「请求参数错误」且丢弃字符串 detail——后端 ValueError 文案到 UI 零信息；客户端预检是当前务实解
+- Python 码点偏移 ≠ JS UTF-16 码元：mojibake 语料下 mark offset 高亮会静默漂移——跨语言文本标记契约用「后端直发 before/hit/after 三段」根治，禁 v-html 拼
+- QUANTITY_RE 的 \s* 可吞空行致 group(0) 跨行块（实测 3/1245）——段落定位须延伸覆盖 match.end()
+- business schema 迁移注册三触点：storage_migration.py upgrade_from 增档 + manager 版本白名单 + 新 upgrade 分支，缺一即 v12 库启动 RuntimeError；热重载不重跑 storage-migrator，落栈顺序=先 migrator 再放行 api/worker
+- update_entry 是 session-per-call 两事务（manager.py:1909 提交）——跨事务约束（改名+抑制）须先插抑制后 save_entry
+- eia_data_service 模块头不变量「纯只读、无 DB 依赖」：需查 DB 的编排放 service 层，纯函数留 data_service（宿主可单测的前提）
+- 改导入/扫描语义必须同步跑 test/integration/services 全量，仅跑 unit 会漏 flow 断言红（bug-413 实证）
+
+### Do-Not-Repeat（2026-10-10 P4 设计评审追加）
+- 别在 unique 键表上裸 INSERT：循环操作（改名 A→B→A）必撞键 IntegrityError→500，一律 ON CONFLICT DO UPDATE/NOTHING
+- 验收样例的行状态别凭记忆写（解性总固体超标率是 candidate 非 rejected）——写前查库，评审员连 id 都会核
+- 2026-10-10：前端错误提示契约——backend router 把 ValueError 映射成 HTTPException(400, detail=字符串)，但 web/src/apis/base.js 的 publicErrorMessage 把 400 一律映射为通用「请求参数错误」，extractBusinessErrorDetail 只透传 {code,message} 对象形态 detail（字符串 detail 被有意丢弃）。词表/拆分等对话框里「口径已存在/口径名过短」等后端中文报错到 UI 全变成「请求参数错误」。要透出业务错误信息必须走 {code,message} 结构化 detail 通道。
+- 2026-10-10：web/package.json 图标依赖是 @lucide/vue ^1.34.0（不是 CLAUDE.md 写的 lucide-vue-next）；eia-data 组件内 import 惯例 from '@lucide/vue'、:size=14。加图标沿现状，勿引新包。
+
+### 2026-10-12（环评域对账 + P1 需求）
+- 技能数据↔环评域工厂页面对账结论：4 页面已闭环词表/标准核实/元数据标注三链；缺口=limit_tables 仅渲染无录入、regional_facts 无写手消费工具、unmapped 池仅计数不可视。P1 三项需求定稿：docs/vibe/2026-10-12-eia-data-factory-p1-gaps.md（含验收 checklist 与 P2/P3 边界）。
+- eia_* 服务的导出物化写 _SKILL_ROOT（eia_data_service.py:29 包内技能目录）：运行栈（pisuan-localized 容器）点导出落 pisuan-localized 工作树，须人工带回 pisuan-custom 提交——专家页面运营成果不自动回流 git。
+- limit_tables 行 schema 按表异构（噪声 {category,day,night,unit}），_comment 明言唯一录入通道=人工对照标准原件；7 表中 5 表 rows=0 全 nv=true。
+
+### 2026-10-12（P1 实施）
+**Key Learnings**
+- BUSINESS_SCHEMA_VERSION 加档是**四触点**（比既有记忆多一个）：manager 版本常量 + manager import/upgrade 方法 + storage_migration.py dispatch if-分支 + storage_migration.py `_require_supported_version(upgrade_from=...)` 元组——漏 upgrade_from 时该档存量库直接 RuntimeError 拒启（本次 v14 漏 13，GREEN 阶段单测抓到）
+- v14 迁移容器落地：`docker start pisuan-localized-storage-migrator-1`（存量容器，exit 0 即成），验证 SQL 在 yuxi_know 库 `pisuan_schema_migrations` 表（不是 schema_version）；新表 eia_standard_limit_rows
+- **api 启动失败后的复活方式**：uvicorn 进程死但容器存活（Up N hours），`docker start` 对运行容器是 no-op，必须 `docker restart pisuan-localized-api-1`；localized api 宿主端口 = **5050**（不是 8000）
+- localized 树 backend 路径改名：backend/package/yuxi → **backend/package/pisuan**（grep 验证落栈时勿找错路径）；web 容器内 eslint/prettier 在 /app/node_modules/.bin/（宿主无 pnpm）
+- 环评导出物化按 (table_key, id) 全序替换 + nv/verified 仅对有 DB 行的表翻转；list 合并露出「DB 有行而文件注册表漂移掉」的表（录入数据不因文件漂移不可见）
+- 前端编辑对话框装载行必须按服务端 schema 投影（文件锚点行带 origin 溯源字段，原样提交必 400 未知限值字段）
+
+**Do-Not-Repeat（2026-10-12）**
+- Edit 工具换行连接 bug（本会话 4+ 次）：old_string 以 \n 结尾而 new_string 不带尾 \n → 静默吞并下一行（曾删掉路由装饰器/docstring/压行 import）。两串尾部换行必须一致；批量编辑后必跑 `python -c "import ast; ast.parse(...)"` + `git diff --stat` 验证
+- 加业务 schema 档位漏 upgrade_from 元组（见上，v14 实证）
+- sync-dev.ps1 必须从仓库根以 `powershell -File scripts/sync-dev.ps1` 跑——cwd 不对时脚本不存在报错进 stderr，链式 && 的后续校验/格式化会对旧文件生效（假绿）
+- prettier 只采纳自己新行的形态：eia-data 面板有既有漂移（DomainFactoryView 先例），全文件 --write 会污染 diff；用容器 prettier 出标准 diff 后逐块判断归属
+
+**User Preferences**
+- （无新增，沿用 surgical changes / 方案乙同构既好）
+
+## Key Learnings + DNR（2026-10-12 P2 数据工厂页批次追加）
+
+### Key Learnings
+- **sync-dev 机械改名层透测试：** pisuan 工作树测试文件写 `from yuxi.services import ...`，sync-dev.ps1 落 pisuan-localized 运行栈时机械改名为 `pisuan.services`——容器内直接 cat 测试文件会看到 pisuan 前缀，非异常。容器内包根 = `/app/package/pisuan`（editable install 映射 pisuan→/app/package/pisuan，无 yuxi 目录）。
+- **web 容器 lint/prettier 通道：** 宿主无 pnpm；`docker exec pisuan-localized-web-1 sh -c "cd /app && pnpm exec prettier --write ..."` + `docker cp 容器:/app/... 宿主路径` 回拉格式化版本（防下次 sync 用未格式化版覆盖）。新文件必须先 sync-dev 容器里才有。
+- **schema 加档四触点判别力补强：** 迁移单测参数化加「已当前版」档（如 v15 批次加 [15]）可钉死常量触点——常量漏改时该档在 _require_supported_version 即 RED（bug-422 教训：旧参数化 [2..N-1] 在常量停 N-1 时全绿假象）。
+- **服务层测试 fake 契约最小化：** 服务端勿直接消费 ORM 行的 to_dict() 等模型方法——服务层自建静态投影（_edit_dict），repo fake 只需 SimpleNamespace 属性即可模拟（bug-421）。
+- **Vue 模板字面 `}}`：** 插值内字符串字面量里的 `}}` 会提前闭合插值（解析器无字符串感知），SLOT/花括号记法一律走 script 常量绑定（bug-423）。
+- **gate1 语义边界：** standards_index.gate1_code_checks 是规则规格（desc/allowed_patterns/rules）非违规明细数据源；只读卡 = 规则透出 + 注册表自检（codes 对 patterns 比对），不伪造违规计数。
+- **eia_data_service 只读通道异常约定：** 同模块 get_unmapped 先例——参数校验失败 ValueError→400；资源寻址失败（eia_stage_service 的 stage/family）KeyError→404。两约定在 domain_factory_router 并存，按模块从众。
+- **section_expectations 实况：** sections 为 141 节 dict（chX_SYY → {title, expected_quantities:[{caliber,corpus_freq,field,tier,unit}]}）+ 顶层 unmapped 数组；tier 实况三档 required/contextual/optional。数据 Expectations：per_chapter 为 13 元素 LIST 非 dict。
+
+### Do-Not-Repeat
+- （bug-422）schema 加档后只 grep 方法名确认≠常量已改——四触点逐一 grep：`BUSINESS_SCHEMA_VERSION =` 行值、manager 方法、storage_migration dispatch、upgrade_from 元组；迁移测试必须加「已当前版」档位。
+- （bug-423）Vue 模板插值里写含 `}}` 的字面量（含 JS 字符串）。
+- 宿主直接跑 `pnpm`（不存在）——web 工具链全走 pisuan-localized-web-1 容器。
+- 容器内 `cp` 回工作树用臆测路径（/workspace 不存在）——回传用 `docker cp 容器名:/app/... 宿主相对路径`。
