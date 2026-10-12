@@ -108,7 +108,19 @@
           <h3 class="card-title">数据质量体检</h3>
           <p class="card-sub">客观可算项即时统计 · 启发式项已标注，修复入口在语料清洗批次</p>
           <div class="quality-grid">
-            <div v-for="q in stats.quality" :key="q.key" class="quality-item">
+            <div
+              v-for="q in stats.quality"
+              :key="q.key"
+              class="quality-item"
+              :class="{ 'is-link': q.key === 'unmapped_pool' }"
+              :role="q.key === 'unmapped_pool' ? 'button' : undefined"
+              :tabindex="q.key === 'unmapped_pool' ? 0 : undefined"
+              :aria-label="
+                q.key === 'unmapped_pool' ? `未归并量词 ${q.count} 条，查看明细` : undefined
+              "
+              @click="q.key === 'unmapped_pool' && openUnmapped()"
+              @keyup.enter="q.key === 'unmapped_pool' && openUnmapped()"
+            >
               <span class="quality-dot" :class="q.level"></span>
               <span class="quality-label">{{ q.label }}</span>
               <span class="quality-count">{{ q.count.toLocaleString() }}<small v-if="q.total !== undefined"> / {{ q.total }}</small></span>
@@ -120,11 +132,45 @@
 
       <p class="generated-note">统计生成于 {{ generatedAtText }} · 数据源为技能内置语料（兜底真源），页面只读</p>
     </template>
+
+    <!-- unmapped 池明细抽屉（只读 · 词表口径 label 扩充素材） -->
+    <a-drawer v-model:open="unmappedDrawer.open" title="未归并量词（unmapped 池）" width="640">
+      <template #extra>
+        <a-button size="small" :disabled="!unmappedDrawer.data" @click="exportUnmappedCsv"
+          >导出 CSV</a-button
+        >
+      </template>
+      <p class="drawer-sub">
+        label 未命中 forms_label_map 的量词短语（5 阶段共 {{ unmappedDrawer.total }} 条）·
+        只读审阅：治理动作为扩充技能词形映射后重建，不在此编辑；planning 阶段存在 200 条截断上限
+      </p>
+      <a-spin v-if="unmappedDrawer.loading" />
+      <a-tabs
+        v-else-if="unmappedDrawer.data"
+        v-model:activeKey="unmappedDrawer.activeStage"
+        size="small"
+      >
+        <a-tab-pane
+          v-for="(v, stage) in unmappedDrawer.data.stages"
+          :key="stage"
+          :tab="`${STAGE_LABELS[stage] || stage} (${v.total})`"
+        >
+          <a-table
+            :data-source="v.items"
+            :columns="unmappedColumns"
+            :pagination="{ pageSize: 20, size: 'small', showSizeChanger: false }"
+            row-key="__idx"
+            size="small"
+          />
+        </a-tab-pane>
+      </a-tabs>
+    </a-drawer>
   </div>
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { message } from 'ant-design-vue'
 import { useRouter } from 'vue-router'
 import * as echarts from '@/utils/dashboardCharts'
 import { eiaDataApi } from '@/apis/eia_data_api'
@@ -328,6 +374,62 @@ const renderExpectChart = () => {
 const disposeCharts = () => {
   charts.forEach((c) => c?.dispose())
   charts = []
+}
+
+// unmapped 池明细抽屉（只读；条目无唯一键，装载时打 __idx 供 row-key）
+const unmappedDrawer = reactive({
+  open: false,
+  loading: false,
+  data: null,
+  total: 0,
+  activeStage: ''
+})
+const unmappedColumns = [
+  { title: '口径短语', dataIndex: 'caliber', key: 'caliber', ellipsis: true },
+  { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
+  { title: '节', dataIndex: 'section', key: 'section', width: 80 },
+  { title: '首见样例', dataIndex: 'sample', key: 'sample', width: 90 },
+  { title: '示例值', dataIndex: 'value', key: 'value', width: 100 }
+]
+
+const openUnmapped = async () => {
+  unmappedDrawer.open = true
+  if (unmappedDrawer.data) return
+  unmappedDrawer.loading = true
+  try {
+    const data = await eiaDataApi.getUnmapped()
+    Object.values(data.stages).forEach((v) => {
+      v.items = v.items.map((it, i) => ({ ...it, __idx: i }))
+    })
+    unmappedDrawer.data = data
+    unmappedDrawer.total = data.total
+    unmappedDrawer.activeStage = Object.keys(data.stages)[0] || ''
+  } catch (e) {
+    message.error(e?.message || '获取 unmapped 明细失败')
+    unmappedDrawer.open = false
+  } finally {
+    unmappedDrawer.loading = false
+  }
+}
+
+const exportUnmappedCsv = () => {
+  const rows = [['stage', 'caliber', 'unit', 'section', 'sample', 'value']]
+  Object.entries(unmappedDrawer.data?.stages || {}).forEach(([stage, v]) => {
+    v.items.forEach((it) =>
+      rows.push([stage, it.caliber, it.unit, it.section, it.sample, it.value])
+    )
+  })
+  const esc = (c) => {
+    const s = c === undefined || c === null ? '' : String(c)
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  const csv = '﻿' + rows.map((r) => r.map(esc).join(',')).join('\r\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = `unmapped_pool_${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(a.href)
 }
 
 const fetchStats = async () => {
@@ -638,6 +740,27 @@ onBeforeUnmount(cleanup)
   padding: 9px 0;
   border-bottom: 1px solid var(--gray-100);
   min-width: 0;
+
+  &.is-link {
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--main-0);
+
+      .quality-count {
+        color: var(--main-600);
+      }
+    }
+  }
+}
+
+.drawer-sub {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--gray-600);
+  line-height: 1.6;
 }
 
 .quality-dot {

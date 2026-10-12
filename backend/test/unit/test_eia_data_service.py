@@ -12,6 +12,7 @@ from yuxi.services.eia_data_service import (
     _clean_caliber,
     _skill_root_exists,
     get_skill_stats,
+    get_unmapped,
 )
 
 
@@ -66,3 +67,34 @@ def test_get_skill_stats_structure():
     # 体检项：标准待核实 41（standards_index 既有存量）
     quality = {i["key"]: i for i in stats["quality"]}
     assert quality["standards_verify"]["count"] == 41
+
+
+def test_get_unmapped_invalid_stage():
+    """非法 stage 拒绝（ValueError，路由层翻 400）。"""
+    with pytest.raises(ValueError):
+        get_unmapped(stage="nonexistent")
+
+
+@pytest.mark.skipif(not _skill_root_exists(), reason="coal-eia-writer 技能目录不存在（宿主环境）")
+def test_get_unmapped_all_stages():
+    """全阶段明细：5 阶段齐全，planning 触顶 200 cap，total 为各阶段之和，条目字段齐全。"""
+    out = get_unmapped()
+    assert set(out["stages"]) == set(STAGES)
+    assert out["total"] == sum(v["total"] for v in out["stages"].values())
+    for v in out["stages"].values():
+        assert v["total"] == len(v["items"])
+    planning = out["stages"]["planning_eia"]
+    assert planning["total"] == 200
+    assert planning["items"], "planning unmapped 池不应为空"
+    for item in planning["items"][:5]:
+        assert set(item) >= {"caliber", "sample", "section", "unit", "value"}
+
+
+@pytest.mark.skipif(not _skill_root_exists(), reason="coal-eia-writer 技能目录不存在（宿主环境）")
+def test_get_unmapped_stage_filter():
+    """按 stage 过滤：只含该阶段，计数与全量视图一致。"""
+    full = get_unmapped()
+    single = get_unmapped(stage="tracking_eia")
+    assert set(single["stages"]) == {"tracking_eia"}
+    assert single["stages"]["tracking_eia"]["total"] == full["stages"]["tracking_eia"]["total"]
+    assert single["total"] == single["stages"]["tracking_eia"]["total"]
