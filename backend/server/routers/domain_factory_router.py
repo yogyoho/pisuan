@@ -10,7 +10,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from server.utils.auth_middleware import get_admin_user, get_required_user
 from yuxi.services.domain_factory_service import get_domain_factory_service
-from yuxi.services.eia_data_service import get_skill_stats
+from yuxi.services.eia_data_service import get_skill_stats, get_unmapped
 from yuxi.services.eia_lexicon_service import get_eia_lexicon_service
 from yuxi.services.eia_meta_service import get_eia_meta_service
 from yuxi.services.eia_standard_service import get_eia_standard_service
@@ -1008,6 +1008,21 @@ async def get_eia_skill_stats(
     except Exception as e:
         logger.error(f"Failed to get eia skill stats: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"获取环评数据统计失败: {str(e)}")
+
+
+@domain_factory.get("/eia/expectations/unmapped")
+async def list_eia_unmapped(
+    stage: str | None = Query(None),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """unmapped 池明细（只读）：per-stage 未归并量词短语，词表口径 label 扩充素材。"""
+    try:
+        return await run_in_threadpool(get_unmapped, stage)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to list eia unmapped: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取 unmapped 明细失败: {str(e)}")
 
 
 # =============================================================================

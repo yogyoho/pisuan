@@ -548,6 +548,24 @@ def _quality_stats(expectations: dict[str, Any]) -> list[dict[str, Any]]:
     return items
 
 
+def get_unmapped(stage: str | None = None) -> dict[str, Any]:
+    """unmapped 池明细（只读）：per-stage 未归并量词短语，词表口径 label 扩充素材。
+
+    数据真源 = section_expectations/<stage>.json 顶层 unmapped 数组（planning 阶段
+    200 条截断上限）。stage 给定时只返回该阶段；非法 stage 抛 ValueError（路由翻 400）。
+    """
+    if stage is not None and stage not in STAGES:
+        raise ValueError(f"未知 stage: {stage}")
+    stages = (stage,) if stage is not None else STAGES
+    out: dict[str, Any] = {"stages": {}, "total": 0}
+    for s in stages:
+        p = _REFS / "section_expectations" / f"{s}.json"
+        items = _read_json(p).get("unmapped", []) if p.exists() else []
+        out["stages"][s] = {"items": items, "total": len(items)}
+        out["total"] += len(items)
+    return out
+
+
 def get_skill_stats() -> dict[str, Any]:
     """统计总览聚合入口。mtime 指纹未变时直接返回缓存。"""
     watch = [
