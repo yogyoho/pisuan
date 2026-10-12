@@ -54,6 +54,15 @@
         <template v-if="column.key === 'code'">
           <span class="code-cell" :title="record.code">{{ record.code }}</span>
         </template>
+        <template v-else-if="column.key === 'title'">
+          <!-- 主行名称 + 副行写作作用（role）：写手按 role 决定该标准在报告中的用法 -->
+          <div class="title-cell">
+            <span class="title-main" :title="record.title">{{ record.title }}</span>
+            <span v-if="record.role" class="title-role" :title="record.role">{{
+              record.role
+            }}</span>
+          </div>
+        </template>
         <template v-else-if="column.key === 'tier'">
           {{ tierLabel(record.tier) }}
         </template>
@@ -104,9 +113,25 @@
             <a-tag class="limit-ref">{{ t.code_ref }}</a-tag>
           </div>
           <div class="limit-flags">
-            <span v-if="t.needs_verification" class="flag-tag flag-todo">待录入 {{ (t.rows || []).length }} 行</span>
-            <span v-else class="flag-tag flag-ok">已录入</span>
+            <span v-if="!t.needs_verification" class="flag-tag flag-ok">已核实</span>
+            <span v-else-if="(t.rows || []).length" class="flag-tag flag-pending"
+              >已录入 {{ t.rows.length }} 行 · 待核对全表</span
+            >
+            <span v-else class="flag-tag flag-todo">未录入</span>
           </div>
+          <!-- 已录入限值行：列头取自首行键（origin 内部溯源不展示） -->
+          <table v-if="(t.rows || []).length" class="limit-rows">
+            <thead>
+              <tr>
+                <th v-for="k in rowKeys(t)" :key="k">{{ rowKeyLabel(k) }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(r, i) in t.rows" :key="i">
+                <td v-for="k in rowKeys(t)" :key="k">{{ r[k] }}</td>
+              </tr>
+            </tbody>
+          </table>
           <p v-if="t.note" class="limit-note">{{ t.note }}</p>
         </div>
       </div>
@@ -168,7 +193,8 @@ const filters = reactive({ state: '', tier: '', q: '' })
 
 const columns = [
   { title: '标准编号', key: 'code', width: 180, ellipsis: true },
-  { title: '名称', dataIndex: 'title', key: 'title', ellipsis: true },
+  // 名称列弹性宽；不设 ellipsis（nowrap 继承会压掉 role 副行折行），bodyCell 渲染主行 + role 副行
+  { title: '名称', key: 'title' },
   { title: '层级', key: 'tier', width: 110 },
   { title: '章节', key: 'chapters', width: 140, ellipsis: true },
   { title: '语料引用', key: 'cited_count', width: 90, align: 'right' },
@@ -178,6 +204,11 @@ const columns = [
 ]
 
 const tierLabel = (k) => TIER_LABELS[k] || k
+
+// 限值行列头中文映射；未登记的键原样展示（后续新表字段自适应）
+const ROW_KEY_LABELS = { category: '类别', day: '昼间', night: '夜间', unit: '单位' }
+const rowKeys = (t) => Object.keys(t.rows?.[0] || {}).filter((k) => k !== 'origin')
+const rowKeyLabel = (k) => ROW_KEY_LABELS[k] || k
 
 const isFiltered = computed(() => Boolean(filters.state || filters.tier || filters.q))
 const emptyDesc = computed(() => (isFiltered.value ? '当前筛选无匹配标准' : '标准注册表为空'))
@@ -340,6 +371,29 @@ onMounted(fetchList)
   font-size: 12px;
 }
 
+.title-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+
+  .title-main {
+    color: var(--gray-800);
+  }
+
+  .title-role {
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--gray-400);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    white-space: normal;
+    word-break: break-all;
+  }
+}
+
 .muted {
   color: var(--gray-400);
 }
@@ -465,6 +519,31 @@ a.primary {
 
   .limit-flags {
     margin-bottom: 4px;
+  }
+
+  .limit-rows {
+    width: 100%;
+    margin-top: 6px;
+    border-collapse: collapse;
+    font-size: 12px;
+
+    th,
+    td {
+      padding: 4px 8px;
+      border: 1px solid var(--hairline);
+      text-align: left;
+    }
+
+    th {
+      font-weight: 600;
+      color: var(--gray-600);
+      background: var(--gray-50);
+    }
+
+    td {
+      color: var(--gray-800);
+      font-variant-numeric: tabular-nums;
+    }
   }
 
   .limit-note {
