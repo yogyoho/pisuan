@@ -575,3 +575,41 @@ class EiaStandardReview(Base):
             "created_at": format_utc_datetime(self.created_at),
             "updated_at": format_utc_datetime(self.updated_at),
         }
+
+
+class EiaStageFieldEdit(Base):
+    """Domain Factory - 环评 stages forms 口径字段人工裁决（P2；运营唯一真相，显式导出物化至 stages/<stage>.json）
+
+    edit_kind: add=新增字段 / amend=修改 label/required。文件锚点字段禁删、name 禁改
+    （下游 {{SLOT:}} 寻址与一致性合约依赖其稳定）；未物化的 DB 裁决行可撤回（仅草稿态）。
+    """
+
+    __tablename__ = "eia_stage_field_edits"
+    __table_args__ = (
+        UniqueConstraint("stage", "family_key", "field_name", name="uq_esfe_stage_family_field"),
+        Index("ix_esfe_stage", "stage"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    stage = Column(String(64), nullable=False)  # stages/<stage>.json 文件名（五档 STAGES）
+    family_key = Column(String(64), nullable=False)  # forms 族键
+    field_name = Column(String(128), nullable=False)  # add: 新字段标识；amend: 指向既有字段标识
+    edit_kind = Column(String(16), nullable=False)  # add | amend
+    field_json = Column(
+        JSON, nullable=False
+    )  # add: {name,label,type,required,unit?,note?}；amend: {label?,required?,note?}
+    decided_by = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "stage": self.stage,
+            "family_key": self.family_key,
+            "field_name": self.field_name,
+            "edit_kind": self.edit_kind,
+            "field": self.field_json,
+            "decided_by": self.decided_by,
+            "updated_at": format_utc_datetime(self.updated_at),
+        }
