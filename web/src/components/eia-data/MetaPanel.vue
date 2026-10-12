@@ -251,7 +251,10 @@ const onExport = async () => {
   message.loading({ content: '正在物化…', key: 'meta-export', duration: 0 })
   try {
     const r = await eiaMetaApi.exportAnnotations()
-    message.success({ content: `已重写人工层文件（${r.materialized} 条）`, key: 'meta-export' })
+    message.success({
+      content: `已重写人工层文件（${r.materialized} 条；落运行栈技能目录，需人工回流 pisuan-custom）`,
+      key: 'meta-export'
+    })
   } catch (e) {
     message.error({ content: e?.message || '导出失败', key: 'meta-export' })
   } finally {
