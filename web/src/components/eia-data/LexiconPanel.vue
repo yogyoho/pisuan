@@ -283,7 +283,7 @@ const columns = [
   { title: '单位', dataIndex: 'unit', key: 'unit', width: 70 },
   { title: '分类', key: 'category', width: 120 },
   { title: '状态', key: 'status', width: 90 },
-  { title: '语料计数', key: 'counts', width: 150 },
+  { title: '语料计数', key: 'counts', width: 200 },
   { title: '操作', key: 'actions', width: 170 }
 ]
 

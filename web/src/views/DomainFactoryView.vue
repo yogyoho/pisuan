@@ -2,7 +2,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { Bot, ChevronDown, ChevronUp, ClipboardCheck, CloudUpload, Database, FlaskConical, Layers, Zap } from '@lucide/vue'
+import { ChevronDown, ChevronUp, Database, FlaskConical, Layers, Leaf, LayoutGrid, Mountain, Zap } from '@lucide/vue'
 import DataSourceDashboard from '@/components/domain-factory/DataSourceDashboard.vue'
 import EtlWorkbench from '@/components/domain-factory/EtlWorkbench.vue'
 import RegionAttributionPanel from '@/components/domain-factory/RegionAttributionPanel.vue'
@@ -30,6 +30,20 @@ const globalStats = ref({ committed_tasks: 0, entity_count: 0, learned_templates
 const toggleHero = () => {
   heroCollapsed.value = !heroCollapsed.value
   localStorage.setItem('df_hero_collapsed', String(heroCollapsed.value))
+}
+
+// [pisuan-custom] 应用入口磁贴：写死示例占位，应用中心立项后再接 getDomains() 真数据
+const APP_ENTRIES = [
+  { key: 'eia', name: '环评域', desc: '报告智能加工', icon: Leaf, tone: 'eia' },
+  { key: 'mining', name: '矿井域', desc: '规划建设中', icon: Mountain, tone: 'mining' }
+]
+
+const handleAppStub = (name) => {
+  if (name === '环评域') {
+    router.push('/domain-factory/eia-data')
+    return
+  }
+  message.info(`「${name}」建设中`)
 }
 
 const fetchDomains = async () => {
@@ -136,40 +150,27 @@ watch(
                 图谱，确保「入库即精品」。
               </p>
             </div>
-            <div class="hero-illustration">
-              <div class="pipeline-visual">
-                <div class="pipeline-node">
-                  <div class="node-icon-wrap upload"><CloudUpload :size="18" /></div>
-                  <div class="node-body">
-                    <span class="node-title">上传</span>
-                    <span class="node-desc">报告文档</span>
-                  </div>
-                </div>
-                <div class="pipeline-arrow"><ChevronRight :size="10" /></div>
-                <div class="pipeline-node accent">
-                  <div class="node-icon-wrap ai"><Bot :size="18" /></div>
-                  <div class="node-body">
-                    <span class="node-title">AI 提取</span>
-                    <span class="node-desc">智能泛化</span>
-                  </div>
-                </div>
-                <div class="pipeline-arrow"><ChevronRight :size="10" /></div>
-                <div class="pipeline-node">
-                  <div class="node-icon-wrap review"><ClipboardCheck :size="18" /></div>
-                  <div class="node-body">
-                    <span class="node-title">专家审核</span>
-                    <span class="node-desc">精校数据</span>
-                  </div>
-                </div>
-                <div class="pipeline-arrow"><ChevronRight :size="10" /></div>
-                <div class="pipeline-node success">
-                  <div class="node-icon-wrap store"><Database :size="18" /></div>
-                  <div class="node-body">
-                    <span class="node-title">入库</span>
-                    <span class="node-desc">知识精品</span>
-                  </div>
-                </div>
-              </div>
+            <div class="app-launcher">
+              <button
+                v-for="entry in APP_ENTRIES"
+                :key="entry.key"
+                class="app-tile"
+                :class="`tone-${entry.tone}`"
+                @click="handleAppStub(entry.name)"
+              >
+                <span class="app-icon-chip">
+                  <component :is="entry.icon" :size="20" />
+                </span>
+                <span class="app-name">{{ entry.name }}</span>
+                <span class="app-desc">{{ entry.desc }}</span>
+              </button>
+              <button class="app-tile more" @click="handleAppStub('应用中心')">
+                <span class="app-icon-chip">
+                  <LayoutGrid :size="20" />
+                </span>
+                <span class="app-name">更多</span>
+                <span class="app-desc">应用中心</span>
+              </button>
             </div>
           </div>
         </transition>
@@ -318,6 +319,7 @@ watch(
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: wrap;
       padding: 28px 32px 12px;
       gap: 40px;
       background:
@@ -358,100 +360,74 @@ watch(
       }
     }
 
-    .hero-illustration {
+    .app-launcher {
       flex-shrink: 0;
+      display: flex;
+      align-items: stretch;
+      gap: 12px;
 
-      .pipeline-visual {
+      .app-tile {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 0;
-        padding: 16px 24px;
-        background: linear-gradient(135deg, rgba(var(--main-color-rgb), 0.03), rgba(82, 196, 26, 0.03));
-        border-radius: 14px;
-        border: 1px solid var(--gray-100);
-      }
-
-      .pipeline-node {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 10px 14px;
-        border-radius: 10px;
+        justify-content: center;
+        gap: 7px;
+        width: 116px;
+        padding: 14px 10px 12px;
+        border-radius: 12px;
         background: var(--gray-0);
         border: 1px solid var(--gray-100);
+        cursor: pointer;
         transition: all 0.2s;
-        min-width: 100px;
+        font-family: inherit;
 
         &:hover {
           box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
           transform: translateY(-1px);
         }
 
-        &.accent {
-          border-color: rgba(var(--main-color-rgb), 0.15);
-          background: rgba(var(--main-color-rgb), 0.02);
+        &:focus-visible {
+          outline: 2px solid var(--main-color);
+          outline-offset: 2px;
         }
 
-        &.success {
-          border-color: rgba(82, 196, 26, 0.15);
-          background: rgba(82, 196, 26, 0.02);
-        }
-
-        .node-icon-wrap {
+        .app-icon-chip {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 36px;
-          height: 36px;
+          width: 40px;
+          height: 40px;
           border-radius: 10px;
-          flex-shrink: 0;
-
-          &.upload {
-            background: rgba(var(--main-color-rgb), 0.08);
-            color: var(--main-color);
-          }
-
-          &.ai {
-            background: rgba(114, 46, 209, 0.08);
-            color: #722ed1; /* [pisuan-custom] 青云素雅：一次性装饰色（领域工厂状态点缀），不随主题 */
-          }
-
-          &.review {
-            background: rgba(250, 173, 20, 0.08);
-            color: var(--color-warning-700);
-          }
-
-          &.store {
-            background: rgba(82, 196, 26, 0.08);
-            color: var(--color-success-700);
-          }
+          background: rgba(var(--main-color-rgb), 0.08);
+          color: var(--main-color);
         }
 
-        .node-body {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
+        .app-name {
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--gray-800, #1e293b);
+        }
 
-          .node-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--gray-800, #1e293b);
-          }
+        .app-desc {
+          font-size: 11px;
+          color: var(--gray-400, #94a3b8);
+        }
 
-          .node-desc {
-            font-size: 11px;
+        &.tone-mining .app-icon-chip {
+          /* [pisuan-custom] 青云素雅：一次性装饰色（矿井域琥珀点缀），不随主题 */
+          background: rgba(250, 173, 20, 0.12);
+          color: var(--color-warning-700);
+        }
+
+        &.more {
+          background: transparent;
+          border-style: dashed;
+
+          .app-icon-chip {
+            background: var(--gray-100);
             color: var(--gray-400, #94a3b8);
           }
         }
-      }
-
-      .pipeline-arrow {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 28px;
-        flex-shrink: 0;
-        color: var(--gray-300, #cbd5e1);
       }
     }
 
