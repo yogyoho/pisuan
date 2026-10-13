@@ -5140,3 +5140,19 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 23:34 | 词表页样式对齐：a-input-search/a-select×2→input.inp/select.inp，mini-dot 归位；双页比对定位+功能回归（92→30→9→92） | web/src/components/eia-data/LexiconPanel.vue | 明暗截图/console 全过 | ~5k |
 | 23:34 | bug-437 记账 + changelog/anatomy/cerebrum 追账 | docs/develop-guides/changelog.md, .wolf/* | 完成 | ~2k |
 | 23:35 | Session end: 4 writes across 3 files (EiaDataLayout.vue, changelog.md, LexiconPanel.vue) | 2 reads | ~30092 tok |
+| 23:36 | Session end: 4 writes across 3 files (EiaDataLayout.vue, changelog.md, LexiconPanel.vue) | 2 reads | ~30092 tok |
+| 23:39 | Created web/src/components/eia-data/FilterSelect.vue | — | ~930 |
+| 23:40 | Edited web/src/components/eia-data/LexiconPanel.vue | reduced (-6 lines) | ~86 |
+| 23:40 | Edited web/src/components/eia-data/LexiconPanel.vue | added 1 import(s) | ~59 |
+| 23:40 | Edited web/src/components/eia-data/LexiconPanel.vue | 3→6 lines | ~128 |
+| 23:40 | Edited web/src/components/eia-data/factory-ui.less | 5→4 lines | ~31 |
+| 23:42 | Edited web/src/components/eia-data/FilterSelect.vue | "fselect" → "wrap" | ~14 |
+| 23:50 | Edited web/src/components/eia-data/FilterSelect.vue | CSS: appearance | ~14 |
+| 23:50 | Edited web/src/components/eia-data/FilterSelect.vue | CSS: appearance, background, border | ~22 |
+| 23:54 | 自绘 FilterSelect 替换原生 select（用户裁定）：触发器 .inp 语汇+弹层菜单，fam-list 去剪裁守卫；修 ref 漏绑+UA 外观复发 | web/src/components/eia-data/FilterSelect.vue, LexiconPanel.vue, factory-ui.less | 交互/联动/明暗截图全过 | ~6k |
+| 23:54 | bug-438 记账（436 复发计数）+ changelog/cerebrum/anatomy 追账；提交提案待批 | docs/develop-guides/changelog.md, .wolf/* | 完成 | ~2k |
+
+## Session: 2026-10-13 23:56
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|

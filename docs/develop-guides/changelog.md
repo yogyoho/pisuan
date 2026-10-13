@@ -195,6 +195,8 @@ DomainFactoryView 纯增量挂载
 
 - feat(domain-factory): 环评数据工厂整页布局对齐原型 chrome，新增左侧子页导航（用户指令：整体布局与原型页对齐，左侧加各子页入口菜单栏）。新增 `EiaDataLayout.vue` 工厂壳（`.factory-chrome` flex 满高 + 216px `.chrome-side` gray-0/右 hairline + `.chrome-main` flex:1 内滚 + `.chrome-canvas` max-width 1180 对齐原型 `.screen` 画布），brand（环评数据工厂 / coal-eia-writer 技能数据资产）+ 4 组 8 项导航（lucide 16px 图标，`.on` main-50/main-600 fw600，hover gray-50）+ 底部「返回知识工厂」（margin-top:auto + 上边框）。分组为产品语义（数据分层/语料与护栏/章节与备料/参数与实体），原型评审用 P1/P2/P3 批次标签不入产品菜单（已记偏差）；原型 s8 总览应用侧未建路由，暂不入菜单待后续指令。路由改造：8 个工厂子路由收拢为 `eia-data` 嵌套 children（URL/名称/meta 全部不变，requiresAuth 经合并 to.meta 对 meta-less 布局路由照常生效）；EiaDataView 从旧返回钮头壳瘦身为 `.stats-canvas`（20/24/40 内边距——DatasetStatsPanel 根无内边距，P1 曾依赖视图外框）。**UA button 外观重置**：`.nav-item`/foot 按钮显式 `appearance:none/background:none/border:none`——全局无 button reset，UA 默认 ButtonFace + 1.6px 描边在亮色下呈白盒、暗色下爆成浅灰盒。暗色覆写 `:root.dark .factory-chrome`（.on 与 g-tag 底提亮至 main-100）。验证：8 项点击遍历（路由/高亮/面板渲染一一对应）、深链直达、foot 返回、216/1180 实测、暗色 .on #3730a3、明暗截图（.wolf/std_chrome_*.jpeg）、console 无新增错误，eslint 0 error / prettier 全过。
 
+- style(domain-factory): 词表左列分类/阶段下拉换自绘 FilterSelect（用户裁定原生 select 观感原始不要用；bug-438）。新增轻量 `FilterSelect.vue`：触发器镜像 .inp 配方（30px 发丝边/13px/圆角 6，开合态 main-500 边 + main-50 聚焦环、Caret 旋转），弹层白卡圆角 8 + 柔和投影，选项 hover gray-50、选中 main-50/main-600/500 + Check 对勾（同 nav-item.on 语言）；外点/Esc 关闭、跨实例互斥、选中即发 change 联动检索。fam-list 移除 max-height/overflow 剪裁守卫让弹层可溢出卡片（状态分组恒 5 项，守卫属投机）；暗色 :root.dark 换档聚焦环 main-100/选中底 main-100。改造期修 2 缺陷：模板漏绑 ref="wrap" 致外点关闭失效；.fs-opt 裸 button 未重置 UA 外观暗色浅灰盒（bug-436 同因复发，已计入其 occurrences）。验证：开合/外点/Esc/互斥/选中联动（92→30→复位）、触发器计算样式同 .inp、弹层越卡片底 105px 无剪裁、明暗开合截图（.wolf/lex_fs_*.jpeg）、console 无错误，eslint 0 / prettier 全过。
+
 ## v0.7.2 (2026-09-02)
 
 ::: warning Beta 升级说明

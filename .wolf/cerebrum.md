@@ -807,3 +807,15 @@
 
 **Do-Not-Repeat**
 - (2026-10-13) 工厂页新增输入/下拉时勿顺手用 AntD；先查 factory-ui 是否已有配方（.inp/.seg/.stage-chips）。
+
+## FilterSelect 下拉批（2026-10-13）
+
+**User Preferences**
+- 原生 `<select>` 被否（「不要使用原始组件」）——工厂页下拉一律用自绘 `FilterSelect.vue`（eia-data/，触发器 .inp 语汇）；它就是应用内非 AntD 下拉的既定件，新下拉需求先复用/扩展它。
+
+**Key Learnings**
+- 自绘弹层组件放滚动容器（overflow-y:auto/hidden）内必被剪裁：要么移除容器剪裁（内容固定短时），要么 Teleport to body。fam-list 的 max-height 守卫为挡弹层被删——状态分组恒 5 项。
+- 弹层菜单跨实例互斥不用专门逻辑：外点关闭监听天然覆盖（另一实例的 trigger 点击就是外点）。
+
+**Do-Not-Repeat**
+- (2026-10-13) bug-436 的 UA button 重置 DNR 当天即复发（FilterSelect .fs-opt 又漏）——**新建任何裸 <button> 的当场 checklist：appearance:none / background:none / border:none 三连，写模板时同步写样式，不留到截图才发现**。
