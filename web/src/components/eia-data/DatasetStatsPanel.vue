@@ -186,7 +186,7 @@
     </a-drawer>
 
     <!-- 三数据集只读抽屉（P3-3：chip 直达，最小实现不立独立页面） -->
-    <a-drawer v-model:open="dsDrawer.open" :title="dsDrawer.title" width="720">
+    <a-drawer v-model:open="dsDrawer.open" :title="dsDrawer.title" width="600">
       <a-spin v-if="dsDrawer.loading" />
       <template v-else-if="dsDrawer.data">
         <template v-if="dsDrawer.key === 'attachment_checklist'">
@@ -262,6 +262,11 @@
             </a-tab-pane>
           </a-tabs>
         </template>
+      </template>
+      <template #footer>
+        <p class="ds-note" style="margin: 0">
+          只读通道：本抽屉仅呈现数据集内容，无编辑入口；内容修订属工程侧 pipeline。
+        </p>
       </template>
     </a-drawer>
   </div>
