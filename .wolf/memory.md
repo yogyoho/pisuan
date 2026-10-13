@@ -5116,3 +5116,27 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 20:40 | s11 勾稽修正：counts.confirmed(0) 与 done 过滤(21) 脱节，seg/hd-sub 改客户端同源计数 | StandardsPanel.vue | 62=41+21 一致 |
 | 20:50 | s11 截图（亮/暗）+ console 干净 + changelog 补条目 | .wolf/std_s11_*.png, docs/develop-guides/changelog.md | 完成 |
 | 21:26 | Session end: 8 writes across 3 files (StandardsPanel.vue, EiaStandardsView.vue, changelog.md) | 4 reads | ~13997 tok |
+| 21:50 | 4 commit 落库：s9/s10/s11 三批复刻 + wolf 记账（changelog 按批次拆分暂存）| 74a8dc1d 70ee8c55 250d8bb6 82d1c25e | 完成，未 push |
+| 21:38 | Session end: 8 writes across 3 files (StandardsPanel.vue, EiaStandardsView.vue, changelog.md) | 4 reads | ~13997 tok |
+| 22:01 | Edited web/src/components/eia-data/factory-ui.less | 10→12 lines | ~96 |
+| 22:05 | s11 三轮对齐：pill 字体栈对齐原型（factory-ui.less .pill 声明系统栈），双页实测 font-family 为唯一偏差 | factory-ui.less, changelog.md | 词表页回归通过 |
+| 22:08 | Session end: 9 writes across 4 files (StandardsPanel.vue, EiaStandardsView.vue, changelog.md, factory-ui.less) | 5 reads | ~18355 tok |
+| 22:21 | Created web/src/components/eia-data/EiaDataLayout.vue | — | ~1187 |
+| 22:21 | Created web/src/views/EiaDataView.vue | — | ~94 |
+| 22:21 | Edited web/src/router/index.js | expanded (+6 lines) | ~573 |
+
+## Session: 2026-10-13 22:24
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:36 | Edited web/src/components/eia-data/EiaDataLayout.vue | CSS: appearance, background, border | ~54 |
+| 22:36 | Edited web/src/components/eia-data/EiaDataLayout.vue | CSS: appearance, background, border | ~35 |
+| 22:44 | Edited docs/develop-guides/changelog.md | modified feat() | ~289 |
+| 22:45 | 工厂 chrome 布局：EiaDataLayout.vue 嵌套路由壳 + 8 项左导航 + 返回钮，路由收拢 eia-data children（URL/名不变） | web/src/components/eia-data/EiaDataLayout.vue, web/src/views/EiaDataView.vue, web/src/router/index.js | 8 项遍历/深链/foot/明暗截图全过 | ~6k |
+| 22:45 | bug-436：UA button 默认外观泄漏（ButtonFace 白盒/暗色灰盒），nav-item+foot 补 appearance/background/border 重置 | web/src/components/eia-data/EiaDataLayout.vue | 修复后两态透明/高亮正确 | ~2k |
+| 22:45 | chrome 批次 changelog + anatomy(EiaDataLayout/EiaDataView) + cerebrum 3 学习记账；提交提案待批（pill 字体批 + chrome 批合并） | docs/develop-guides/changelog.md, .wolf/* | 记账完成 | ~3k |
+| 22:46 | Session end: 3 writes across 2 files (EiaDataLayout.vue, changelog.md) | 1 reads | ~29712 tok |
+| 23:25 | Edited web/src/components/eia-data/LexiconPanel.vue | 34→31 lines | ~355 |
+| 23:34 | 词表页样式对齐：a-input-search/a-select×2→input.inp/select.inp，mini-dot 归位；双页比对定位+功能回归（92→30→9→92） | web/src/components/eia-data/LexiconPanel.vue | 明暗截图/console 全过 | ~5k |
+| 23:34 | bug-437 记账 + changelog/anatomy/cerebrum 追账 | docs/develop-guides/changelog.md, .wolf/* | 完成 | ~2k |
+| 23:35 | Session end: 4 writes across 3 files (EiaDataLayout.vue, changelog.md, LexiconPanel.vue) | 2 reads | ~30092 tok |

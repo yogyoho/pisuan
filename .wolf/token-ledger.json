@@ -2,14 +2,14 @@
   "version": 1,
   "created_at": "2026-05-12T06:40:36.630Z",
   "lifetime": {
-    "total_tokens_estimated": 83782740,
-    "total_reads": 22244,
-    "total_writes": 33517,
-    "total_sessions": 122,
-    "anatomy_hits": 8059,
-    "anatomy_misses": 13768,
+    "total_tokens_estimated": 83874896,
+    "total_reads": 22256,
+    "total_writes": 33541,
+    "total_sessions": 123,
+    "anatomy_hits": 8066,
+    "anatomy_misses": 13773,
     "repeated_reads_blocked": 34658,
-    "estimated_savings_vs_bare_cli": 758314778
+    "estimated_savings_vs_bare_cli": 758316178
   },
   "sessions": [
     {
@@ -318328,6 +318328,266 @@
         "writes_count": 8,
         "repeated_reads_blocked": 0,
         "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-10-13-2104",
+      "started": "2026-10-13T13:04:48.332Z",
+      "ended": "2026-10-13T13:38:52.375Z",
+      "reads": [
+        {
+          "file": "C:/tmp/std_orig.vue",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 6153,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/views/EiaStandardsView.vue",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/views/EiaLexiconView.vue",
+          "tokens_estimated": 36,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 6835,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/views/EiaStandardsView.vue",
+          "tokens_estimated": 40,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 37,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 209,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 28,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 97,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 20,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/docs/develop-guides/changelog.md",
+          "tokens_estimated": 542,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 6189,
+        "output_tokens_estimated": 7808,
+        "reads_count": 4,
+        "writes_count": 8,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-10-13-2104",
+      "started": "2026-10-13T13:04:48.332Z",
+      "ended": "2026-10-13T14:08:47.771Z",
+      "reads": [
+        {
+          "file": "C:/tmp/std_orig.vue",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 6153,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/views/EiaStandardsView.vue",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/views/EiaLexiconView.vue",
+          "tokens_estimated": 36,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/factory-ui.less",
+          "tokens_estimated": 4255,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 6835,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/views/EiaStandardsView.vue",
+          "tokens_estimated": 40,
+          "action": "create"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 37,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 209,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 28,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 97,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/StandardsPanel.vue",
+          "tokens_estimated": 20,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/docs/develop-guides/changelog.md",
+          "tokens_estimated": 542,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/factory-ui.less",
+          "tokens_estimated": 103,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 10444,
+        "output_tokens_estimated": 7911,
+        "reads_count": 5,
+        "writes_count": 9,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-10-13-2224",
+      "started": "2026-10-13T14:24:47.999Z",
+      "ended": "2026-10-13T14:46:24.595Z",
+      "reads": [
+        {
+          "file": "C:/workspace/pisuan/docs/develop-guides/changelog.md",
+          "tokens_estimated": 29307,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/EiaDataLayout.vue",
+          "tokens_estimated": 57,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/EiaDataLayout.vue",
+          "tokens_estimated": 38,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/docs/develop-guides/changelog.md",
+          "tokens_estimated": 310,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 29307,
+        "output_tokens_estimated": 405,
+        "reads_count": 1,
+        "writes_count": 3,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-10-13-2224",
+      "started": "2026-10-13T14:24:47.999Z",
+      "ended": "2026-10-13T15:35:07.242Z",
+      "reads": [
+        {
+          "file": "C:/workspace/pisuan/docs/develop-guides/changelog.md",
+          "tokens_estimated": 29307,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/LexiconPanel.vue",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/EiaDataLayout.vue",
+          "tokens_estimated": 57,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/EiaDataLayout.vue",
+          "tokens_estimated": 38,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/docs/develop-guides/changelog.md",
+          "tokens_estimated": 310,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/LexiconPanel.vue",
+          "tokens_estimated": 380,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 29307,
+        "output_tokens_estimated": 785,
+        "reads_count": 2,
+        "writes_count": 4,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
       }
     }
   ],

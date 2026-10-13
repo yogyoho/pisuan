@@ -781,3 +781,29 @@
 - **限值表 source 字段实况**：七张表当前全为 `source:'file'`、needs_verification=true；页头「N 表待导出」pill 按 source==='db' 计数，全文件态时诚实缺席且 导出限值行 disabled。勿假设曾有 DB 录入残留。
 - **AntD modal 取消探测时序**：click() 后 wait(400) 查 `.ant-modal-wrap` display 可能误报未关（动画未完）；复探测即 display:none。判定以复查为准，勿当场加第二次点击。
 - **gate1 卡样式原样保留价值**：其 scoped 样式（gate1-m baseline 行、viol 虚线分隔、code.k chips）与原型 s7 同款且数据真实，复刻批次只需换 mono 栈，勿顺手重写。
+- **pill 字体栈裁定（s11 三轮）**：工厂页状态 pill 的「粗细不符」观感实为 font-family 差异——应用全局 Inter Variable 500 比原型系统栈（Segoe UI/Microsoft YaHei）500 观感更重；计算样式 12px/500/色值本就一致。裁决：共享配方 .pill 显式声明原型正文栈。同族问题（.btn/.stage-chip/.seg 仍继承 Inter 栈）用户未点名，勿自行扩散。
+
+
+## chrome 布局批次（2026-10-13）
+
+**Key Learnings**
+- 本应用无全局 button reset：自绘 `<button>` 必须显式 `appearance:none/background:none/border:none`，否则 UA 默认 ButtonFace+1.6px 描边亮色呈白盒、暗色爆浅灰盒（bug-436）。新写裸 button 极易漏。
+- 样式表遍历：现代 Chrome 的 CSSStyleRule 也有 `cssRules`（CSS Nesting），walk 时须先判 `selectorText` 再判 `cssRules.length`，否则所有规则被当嵌套容器跳过、遍历结果恒空。
+- 不可见/后台标签页里 CSS transition 被冻结：切暗色后 computed background 停在过渡起点旧值，貌似"覆盖未生效"。无 transition 的元素（g-tag）同批切换即现终值可作对照组；或 `el.getAnimations().forEach(a=>a.finish())` 后再读。**读 computed 前先 finish 过渡**。
+- 原型 chrome（216px 侧栏/brand/g-label+g-tag/nav-item/chrome-foot）原型注释原标"非实现范围，仅评审用"；用户指令"整体布局对齐+左菜单"已使其入范围。s8 总览页应用无路由，未入菜单——用户若要 s8 入口需先建页。
+- 嵌套路由收拢 8 子页为 eia-data children 时 URL/名称/meta 全不动即可；守卫用合并 to.matched，meta-less 布局路由不影响 requiresAuth。
+
+**Do-Not-Repeat**
+- (2026-10-13) 勿用"computed 值≠变量解析值"断言样式规则未生效——先排除过渡冻结与 UA 默认外观两种假象（本次 .on 暗色 #EEF2FF 实为冻结过渡起点，非规则失效）。
+- (2026-10-13) 勿假设"写了 class 样式=渲染生效"：裸 button 先重置 UA 外观再谈自定义样式。
+
+## 词表页样式对齐批（2026-10-13）
+
+**Key Learnings**
+- 原型表单件语汇就是 `.inp`（含 `select.inp`，见原型 .frm-row）——工厂页内自绘表单一律用 factory-ui `.inp`，勿引入 AntD 输入类控件（a-input-search/a-select 在原型语境里是突件，bug-437）。
+- 原型 `.field-src.db` = main-600/500 靛蓝（.file 灰）：DB 来源标注本就该是靛蓝，勿再「对齐」成灰色。
+- 双页样式比对必须按角色取对应元素（file↔file、db↔db），跨角色取样会得出假偏差。
+- AntD 组件在本应用已被主题化为靛蓝（a-switch checked rgb(79,70,229)），颜色不突、突的是控件形态（边框/按钮/下拉箭头）——判定 AntD 是否违和看形态而非色相。
+
+**Do-Not-Repeat**
+- (2026-10-13) 工厂页新增输入/下拉时勿顺手用 AntD；先查 factory-ui 是否已有配方（.inp/.seg/.stage-chips）。

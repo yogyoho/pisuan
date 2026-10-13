@@ -7010,5 +7010,64 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-10-13"
+  },
+  {
+    "id": "bug-435",
+    "timestamp": "2026-10-13",
+    "error_message": "用户反馈：标准页核实状态列文字字体和粗细与原型页面不一致",
+    "file": "web/src/components/eia-data/factory-ui.less",
+    "root_cause": ".pill 继承应用全局 Inter Variable 字体栈，原型 pill 继承正文系统栈（Segoe UI/Microsoft YaHei）；Inter 500 的渲染观感比系统栈 500 更重，被感知为粗细差异",
+    "fix": "factory-ui.less .pill 显式声明 -apple-system/'Segoe UI'/'PingFang SC'/'Microsoft YaHei' 字体栈；双页计算样式实测确认 12px/500/色值原本一致，font-family 为唯一偏差",
+    "tags": [
+      "factory-ui",
+      "pill",
+      "font-family",
+      "s11",
+      "prototype-rework"
+    ],
+    "related_bugs": [
+      "bug-425"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-13"
+  },
+  {
+    "id": "bug-436",
+    "timestamp": "2026-10-13",
+    "error_message": "工厂 chrome 导航项亮色呈白盒描边、暗色爆成浅灰盒，与原型扁平 nav-item 不符",
+    "file": "web/src/components/eia-data/EiaDataLayout.vue",
+    "root_cause": "应用无全局 button reset，.nav-item/.chrome-foot button 未重置 UA 默认按钮外观（appearance:button + ButtonFace rgb(240,240,240) + 1.6px 描边），样式表遍历证实无任何规则设置背景/描边——纯 UA 默认",
+    "fix": ".nav-item 与 .chrome-foot button 显式 appearance:none/background:none/border:none；hover/.on 再各自覆盖 background",
+    "tags": [
+      "eia-factory",
+      "chrome-layout",
+      "ua-button-reset",
+      "dark-mode",
+      "prototype-fidelity"
+    ],
+    "related_bugs": [
+      "bug-435"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-13"
+  },
+  {
+    "id": "bug-437",
+    "timestamp": "2026-10-13",
+    "error_message": "数值护栏词表页样式与原型不符（用户报告）",
+    "file": "web/src/components/eia-data/LexiconPanel.vue",
+    "root_cause": "s9 复刻时左列沿用了 AntD 控件（a-input-search 带蓝调搜索钮/a-select×2），与原型扁平表单件（.inp/select.inp）观感断裂；mini-dot 位置也与原型相反",
+    "fix": "a-input-search→input.inp（回车触发 fetchList）、a-select→select.inp、mini-dot 移至 fam-name 后；配方 factory-ui 均已有无需新增样式",
+    "tags": [
+      "eia-factory",
+      "lexicon",
+      "prototype-fidelity",
+      "antd-purge"
+    ],
+    "related_bugs": [
+      "bug-435"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-13"
   }
 ]
