@@ -7091,5 +7091,54 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-10-13"
+  },
+  {
+    "id": "bug-439",
+    "timestamp": "2026-10-14",
+    "error_message": "总览页新加 page-head 渲染为裸标题：factory-ui 的点阵卡/描边/ph-icon 方盒全未生效",
+    "file": "web/src/components/eia-data/DatasetStatsPanel.vue",
+    "root_cause": "factory-ui.less 全部配方挂在 .ewp 命名空间下（非 scoped 防泄漏），兄弟面板根类都是 .ewp + <style src=factory-ui.less>；总览页是老页自成体系（.stats-panel 根 + EiaDataView 自补 padding），没进命名空间也没挂配方",
+    "fix": "根类改 .ewp stats-panel 并挂 factory-ui 配方块；EiaDataView 去掉自补的 .stats-canvas padding（.ewp 自带 20/24/40 + max-width 1180），对齐兄弟页范式",
+    "tags": [
+      "eia-factory",
+      "factory-ui",
+      "css-namespace"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-14"
+  },
+  {
+    "id": "bug-440",
+    "timestamp": "2026-10-14",
+    "error_message": "数值护栏词表页面初始化效果很差（用户报告）：裸 a-spin 居中，加载后版面跳动",
+    "file": "web/src/components/eia-data/LexiconPanel.vue",
+    "root_cause": "初始化分支只有居中 spinner，无布局占位；数据到达后整版面突现",
+    "fix": "替换为按真实布局的骨架（左状态分组卡 + 右词条表卡）；通用 .sk/.sk-line 脉冲条 recipe 收进 factory-ui.less 供各页复用，总览页同期同款（指标带/四图/分层/体检）",
+    "tags": [
+      "eia-factory",
+      "skeleton",
+      "loading-ux"
+    ],
+    "related_bugs": [
+      "bug-439"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-14"
+  },
+  {
+    "id": "bug-441",
+    "timestamp": "2026-10-14",
+    "error_message": "左侧菜单项图标与对应页面标题图标不一致（用户两次点名：分层统计总览、语料元数据标注）",
+    "file": "web/src/components/eia-data/EiaDataLayout.vue, MetaPanel.vue",
+    "root_cause": "chrome 菜单图标与各面板 page-head 图标各自挑选，无一致性约束；总览 PanelRight≠页头 ChartColumn，meta Database≠菜单 LayoutGrid",
+    "fix": "页头图标按原型为准（总览 ChartColumn 柱状图、meta LayoutGrid 网格，均同原型 s8/s10 glyph），菜单图标跟随页头；后继新面板以页头原型图标为准、菜单复制同一枚",
+    "tags": [
+      "eia-factory",
+      "icon-consistency"
+    ],
+    "related_bugs": [],
+    "occurrences": 2,
+    "last_seen": "2026-10-14"
   }
 ]

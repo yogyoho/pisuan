@@ -819,3 +819,17 @@
 
 **Do-Not-Repeat**
 - (2026-10-13) bug-436 的 UA button 重置 DNR 当天即复发（FilterSelect .fs-opt 又漏）——**新建任何裸 <button> 的当场 checklist：appearance:none / background:none / border:none 三连，写模板时同步写样式，不留到截图才发现**。
+
+## 总览 s8 补差 + 骨架/图标批（2026-10-14）
+
+**User Preferences**
+- 左侧菜单图标必须与对应页面标题图标一致；页头图标按原型 glyph 为准，菜单跟随页头（bug-441）。
+- chrome 左导航时代，面板页头返回按钮一律不要（六面板全移除）；后继新面板不加 back-btn，factory-ui 的 .back-btn 配方已删。
+
+**Key Learnings**
+- factory-ui.less 全部配方挂在 `.ewp` 命名空间（非 scoped 防泄漏）：新面板根类必须 `ewp xxx-panel` + `<style lang="less" src="./factory-ui.less">`，视图层不要再补 padding（.ewp 自带 20/24/40 + max-width 1180）。漏挂 = 配方静默全不生效（bug-439）。
+- 布局骨架 recipe：`.sk`/`.sk-line`（+w-10/25/40/55/title/value 修饰符）在 factory-ui；各页 scoped 只写本页形状（sk-chart/sk-layer-row/sk-tbl-row 等）。骨架验证法：navigate initScript 把目标 API fetch 换成永不 resolve 的 Promise 钉住加载态；探针和截图都要 waitForStableDom:false（截图工具会等 stable，把窗口等没）。
+- 词表/总览初始化骨架的触发条件是 `loading && !items.length`——筛选重查（items 已有）走表格降透明度，不闪骨架。
+
+**Do-Not-Repeat**
+- (2026-10-14) 手写模板 v-for 时笔误出 `v-key`/恒真 `v-show`（自抓于验证前）：v-for 三件套写完自查 `:key` 是否冒号绑定。
