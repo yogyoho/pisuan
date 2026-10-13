@@ -181,6 +181,10 @@ DomainFactoryView 纯增量挂载
 
 - docs(design): 新增数据工厂 UI 规范 `docs/develop-guides/data-factory-ui.md`（把已评审的 P2 高保真原型设计语言固化为组件配方：页头点阵卡/指标带/筛选 chip/split 布局/体检卡/表达式暗色块/layer 卡网格/浮层规格/暗色映射三条 + 原型别名→base.css 正名映射表 + Vue 落地映射与检查清单）；vitepress 导航「项目规约」增条目，design.md 参考资料交叉引用。
 
+### pisuan 定制增量（2026-10-13）
+
+- feat(domain-factory): P2/P3 前端按原型复刻改造（用户裁定 bug-425：原型评审通过 = 像素级复刻预期，此前实现仅作「设计语言参照」擅自沿用 AntD 皮，布局/内容/样式与原型差距大；原型 s1-s7 屏零改动，P1 四页原型 s8-s11 已先行统合进同一原型文件待评审）。**共享配方**：新增非 scoped `factory-ui.less`（`.ewp` 命名空间防泄漏，按 data-factory-ui.md §1 别名→正名 token 映射换算，暗色仅 2 处 `:root.dark &` 覆写——主按钮字 #0a0a0a、unmapped 警示行 td 底/边），各面板经 `<style src>` 单次引入 vite 去重；四个 View 壳瘦身为裸挂载，页头（返回钮/图标/副题/动作区）内聚进面板。**四页复刻**：sections 双 tab（阶段 chips/metric-strip 指标带/自绘口径表置信档 pill+语料频次计量条/unmapped 橙系内联行/字段维护 split+field-src 来源标注）；expectations（取数路径图例 chips 带计数/分章手风琴 meter 进度/fam-line 复合 source_hint 拆 chip）；formulas（split 公式列表+表达式暗色块 ro-tag/tok-var 变量着色/写入槽位 chips/输入参数表核对态 pill）；entities（独立 metric-strip 三格/样本下拉+seg 类型筛选/注册表平表）。StandardsPanel 门 1 体检卡移至面板首块（原型 s7 位置，内容零改动）；DatasetStatsPanel 数据集抽屉 720→600 + footer 只读声明（原型 s7 浮层规格）。**诚实数据映射**（原型虚构指标不伪造）：命中拦截无数据删格、P5/P50/P95 无字段以 corpus_freq 计量条替代、导出 CSV 无端点去掉按钮、添加人列无时间戳、样本下拉为数据驱动必要新增、撤回操作列功能性保留；偏差已在验收记录 `docs/vibe/2026-10-13-p2p3-prototype-fidelity-rework.md` 勾账。改造期修复 6 缺陷（bug-426 负值指标/bug-427 节号双记法/bug-428 覆盖章节语义/bug-429 词表对象形状被静默吞/bug-430 槽位双包裹/bug-431 outputs 对象 join）；功能无回归（弹窗开合冒烟、tab 切换、写路径函数原样保留），暗色三规则 computed 验证通过，eslint 0 error / prettier 全过（P1 五文件既有漂移不顺手格式化）。
+
 ## v0.7.2 (2026-09-02)
 
 ::: warning Beta 升级说明

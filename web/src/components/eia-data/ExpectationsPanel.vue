@@ -1,7 +1,23 @@
 <template>
-  <div class="expectations-panel">
+  <div class="ewp expectations-panel">
+    <!-- 页头（原型 s4：ClipboardList + data_expectations 基线说明） -->
+    <div class="page-head">
+      <button class="back-btn" aria-label="返回数据工厂总览" @click="goOverview">
+        <ArrowLeft :size="16" />
+      </button>
+      <div class="ph-icon">
+        <ClipboardList :size="18" />
+      </div>
+      <div>
+        <h2>备料清单</h2>
+        <div class="ph-sub">
+          data_expectations · {{ perChapter.length }} 章应备数据族与取数路径基线（管线生成，只读）
+        </div>
+      </div>
+    </div>
+
     <!-- 取数路径图例：source_hint 词表 + 各路径数据族计数 -->
-    <div class="card">
+    <div class="card" style="margin-bottom: 12px">
       <div class="toolbar">
         <span class="toolbar-label">取数路径图例</span>
         <span
@@ -9,18 +25,20 @@
           :key="v.name"
           class="src-chip"
           :class="{ hl: v.count > 0 }"
-          :title="v.name"
+          :title="v.desc"
         >
           {{ v.name }} <b>{{ v.count }}</b>
         </span>
       </div>
     </div>
 
-    <!-- 分章备料：行展开族明细 -->
+    <!-- 分章备料：点行展开族明细 -->
     <div class="card">
       <div class="card-hd">
         <h3>分章备料</h3>
-        <span class="hd-sub">{{ perChapter.length }} 章 · {{ totalFamilies }} 族</span>
+        <span class="hd-sub" :title="stageScope"
+          >{{ perChapter.length }} 章 · {{ totalFamilies }} 族</span
+        >
       </div>
 
       <div v-for="ch in perChapter" :key="ch.chapter" class="ch-row">
@@ -28,22 +46,38 @@
           <ChevronRight class="chev" :size="14" />
           <h4>{{ ch.chapter }} · {{ ch.title }}</h4>
           <span class="fam-total">{{ ch.data_families.length }} 族</span>
+          <span
+            class="meter"
+            :class="{ low: chStats(ch).pct < 40 }"
+            :title="`已具备取数路径 ${chStats(ch).hinted}/${ch.data_families.length}`"
+            ><i :style="{ width: chStats(ch).pct + '%' }"></i
+          ></span>
+          <span class="num ch-ratio">{{ chStats(ch).hinted }}/{{ ch.data_families.length }}</span>
         </div>
         <div v-if="expanded.has(ch.chapter)" class="ch-bd">
           <div v-for="fam in ch.data_families" :key="fam.family" class="fam-line">
-            <span class="fl-name mono">{{ fam.family }}</span>
-            <span class="src-chip" :class="{ hl: !!fam.source_hint }">{{
-              fam.source_hint || '未指明'
-            }}</span>
-            <ul class="fl-items">
-              <li v-for="(item, i) in fam.items" :key="i">{{ item }}</li>
-            </ul>
+            <span class="fl-name" :title="fam.family">{{ fam.family }}</span>
+            <!-- source_hint 为「a + b」复合串，拆成多枚路径 chip -->
+            <template v-if="fam.source_hint">
+              <span
+                v-for="h in fam.source_hint.split('+').map((s) => s.trim())"
+                :key="h"
+                class="src-chip hl"
+                >{{ h }}</span
+              >
+            </template>
+            <span v-else class="src-chip">未指明</span>
+            <span class="fl-note" :title="fam.items.join('、')">{{ fam.items.join('、') }}</span>
           </div>
         </div>
       </div>
 
       <div v-if="!perChapter.length && !loading" class="empty-state">
         <a-empty description="备料清单为空" />
+      </div>
+
+      <div class="tbl-foot">
+        共 {{ perChapter.length }} 章 · 点行展开族明细 · 进度条 = 已具备明确取数路径的族占比
       </div>
     </div>
 
@@ -60,17 +94,29 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { ChevronRight, Info } from '@lucide/vue'
+import { ArrowLeft, ChevronRight, ClipboardList, Info } from '@lucide/vue'
+import { useRouter } from 'vue-router'
 import { eiaDataApi } from '@/apis/eia_data_api'
 
+const router = useRouter()
 const loading = ref(false)
 const perChapter = ref([])
 const vocabulary = ref([])
+const stageScope = ref('')
 const expanded = ref(new Set())
+
+const goOverview = () => router.push('/domain-factory/eia-data')
 
 const totalFamilies = computed(() =>
   perChapter.value.reduce((acc, ch) => acc + ch.data_families.length, 0)
 )
+
+// 章 meter 口径：source_hint 非空族数 / 总族数
+const chStats = (ch) => {
+  const total = ch.data_families.length
+  const hinted = ch.data_families.filter((f) => !!f.source_hint).length
+  return { hinted, total, pct: total ? Math.round((hinted / total) * 100) : 0 }
+}
 
 const toggle = (chapter) => {
   const next = new Set(expanded.value)
@@ -87,17 +133,25 @@ const fetchData = async () => {
   try {
     const out = await eiaDataApi.getDataExpectations()
     perChapter.value = out.per_chapter
-    // 词表计数：source_hint 在各数据族上的出现次数（未在 hint 中出现的词也列出，计数 0）
-    const counts = {}
-    for (const hint of out.source_hint_vocabulary) counts[hint] = 0
+    stageScope.value = out.stage_scope
+    // 词表为 {hint: 说明} 对象；计数按 source_hint 复合串（「a + b」）的包含关系统计
+    const vocab = Object.entries(out.source_hint_vocabulary ?? {}).map(([name, desc]) => ({
+      name,
+      desc,
+      count: 0
+    }))
     for (const ch of perChapter.value) {
       for (const fam of ch.data_families) {
-        if (fam.source_hint && fam.source_hint in counts) counts[fam.source_hint] += 1
+        if (!fam.source_hint) continue
+        for (const v of vocab) {
+          if (fam.source_hint.includes(v.name)) v.count += 1
+        }
       }
     }
-    vocabulary.value = Object.entries(counts).map(([name, count]) => ({ name, count }))
-    // 默认展开第一章，页面不留白
-    if (perChapter.value.length) expanded.value = new Set([perChapter.value[0].chapter])
+    vocabulary.value = vocab
+    // 默认展开首个有数据族的章，页面不留白
+    const first = perChapter.value.find((ch) => ch.data_families.length)
+    if (first) expanded.value = new Set([first.chapter])
   } catch (e) {
     message.error(`获取备料清单失败: ${e.message}`)
   } finally {
@@ -108,171 +162,4 @@ const fetchData = async () => {
 onMounted(fetchData)
 </script>
 
-<style lang="less" scoped>
-.expectations-panel {
-  --hairline: var(--gray-200);
-}
-
-.mono {
-  font-family: 'JetBrains Mono', Consolas, monospace;
-  font-size: 12px;
-}
-
-.card {
-  background: var(--gray-0);
-  border: 1px solid var(--hairline);
-  border-radius: 8px;
-  margin-bottom: 12px;
-}
-
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  flex-wrap: wrap;
-}
-
-.toolbar-label {
-  font-size: 12px;
-  color: var(--gray-500);
-}
-
-.card-hd {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--hairline);
-
-  h3 {
-    font-size: 14px;
-    font-weight: 600;
-    margin: 0;
-  }
-
-  .hd-sub {
-    font-size: 12px;
-    color: var(--gray-500);
-  }
-}
-
-.src-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 22px;
-  padding: 0 9px;
-  border-radius: 999px;
-  font-size: 12px;
-  border: 1px solid var(--hairline);
-  background: var(--gray-0);
-  color: var(--gray-600);
-  white-space: nowrap;
-
-  b {
-    font-size: 11px;
-    color: var(--main-600);
-    font-variant-numeric: tabular-nums;
-  }
-
-  &.hl {
-    border-color: var(--main-300, var(--main-500));
-    background: var(--main-0);
-  }
-}
-
-.ch-row {
-  border-bottom: 1px solid var(--hairline);
-
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
-.ch-hd {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 16px;
-  cursor: pointer;
-
-  &:hover {
-    background: var(--gray-50);
-  }
-
-  .chev {
-    color: var(--gray-400);
-    transition: transform 0.15s;
-  }
-
-  &.open .chev {
-    transform: rotate(90deg);
-  }
-
-  h4 {
-    font-size: 13px;
-    font-weight: 600;
-    margin: 0;
-  }
-
-  .fam-total {
-    font-size: 12px;
-    color: var(--gray-500);
-  }
-}
-
-.ch-bd {
-  padding: 2px 16px 12px 40px;
-}
-
-.fam-line {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 7px 0;
-
-  & + .fam-line {
-    border-top: 1px dashed var(--gray-100);
-  }
-
-  .fl-name {
-    flex: none;
-    width: 150px;
-    color: var(--gray-800);
-  }
-
-  .fl-items {
-    margin: 0;
-    padding-left: 16px;
-    font-size: 12px;
-    color: var(--gray-500);
-    line-height: 1.7;
-
-    li + li {
-      margin-top: 2px;
-    }
-  }
-}
-
-.empty-state {
-  padding: 32px 0;
-}
-
-.note-bar {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  background: var(--main-0);
-  border-radius: 6px;
-  padding: 9px 12px;
-  font-size: 12px;
-  color: var(--gray-600);
-
-  svg {
-    margin-top: 2px;
-    flex: none;
-    color: var(--main-600);
-  }
-}
-</style>
+<style lang="less" src="./factory-ui.less"></style>

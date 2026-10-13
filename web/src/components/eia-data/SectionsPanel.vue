@@ -1,106 +1,136 @@
 <template>
-  <div class="sections-panel">
-    <!-- 双 tab：节级明细（只读）/ 字段维护（编辑 + 导出物化） -->
-    <div class="tab-bar">
-      <div class="seg">
-        <button :class="{ on: activeTab === 'detail' }" @click="activeTab = 'detail'">
-          节级明细
-        </button>
-        <button :class="{ on: activeTab === 'fields' }" @click="switchToFields">字段维护</button>
+  <div class="ewp sections-panel">
+    <!-- 页头：双 tab seg 收编进 ph-actions（原型 s1/s2） -->
+    <div class="page-head">
+      <button class="back-btn" aria-label="返回数据工厂总览" @click="goOverview">
+        <ArrowLeft :size="16" />
+      </button>
+      <div class="ph-icon">
+        <AlignLeft :size="18" />
       </div>
-      <span class="tab-hint">
-        {{
-          activeTab === 'detail'
-            ? 'bank_compile 生成物 · 页面零写通道'
-            : '专家裁决落 DB · 导出物化回写 stages/*.json'
-        }}
-      </span>
+      <div>
+        <h2>章节口径</h2>
+        <div class="ph-sub">
+          section_expectations · 各章节应出现的数值口径全景（bank_compile 产物）
+        </div>
+      </div>
+      <div class="ph-actions">
+        <div class="seg">
+          <button :class="{ on: activeTab === 'detail' }" @click="activeTab = 'detail'">
+            节级明细
+          </button>
+          <button :class="{ on: activeTab === 'fields' }" @click="switchToFields">字段维护</button>
+        </div>
+      </div>
     </div>
 
-    <!-- ═══ Tab 1：节级明细（只读）═══ -->
+    <!-- ═══ Tab 1：节级明细（只读，s1）═══ -->
     <template v-if="activeTab === 'detail'">
       <div class="card">
         <div class="toolbar">
-          <a-radio-group v-model:value="detailStage" button-style="solid" @change="fetchSections">
-            <a-radio-button v-for="s in STAGES" :key="s.key" :value="s.key">{{
-              s.label
-            }}</a-radio-button>
-          </a-radio-group>
-          <span style="flex: 1"></span>
-          <span class="muted-chip"
-            >仅看未归并 <b>{{ unmapped.length }}</b></span
+          <button
+            v-for="s in STAGES"
+            :key="s.key"
+            class="stage-chip"
+            :class="{ on: detailStage === s.key }"
+            @click="setDetailStage(s.key)"
           >
+            {{ s.label }} <span class="cnt">{{ s.key }}</span>
+          </button>
+          <span class="flex-sp"></span>
+          <span class="src-chip">
+            <TrendingUp :size="13" />
+            仅看未归并 <b>{{ unmapped.length }}</b>
+          </span>
         </div>
 
-        <div class="metric-strip">
+        <div
+          class="metric-strip"
+          style="border: none; border-bottom: 1px solid var(--gray-200); border-radius: 0"
+        >
           <div class="metric-cell">
             <span class="metric-label">口径总条目</span>
             <span class="metric-value">{{ detailMetrics.total }}</span>
+          </div>
+          <div class="metric-cell accent">
+            <span class="metric-label"><span class="dot dot-ok"></span>已归并 mapped</span>
+            <span class="metric-value"
+              >{{ detailMetrics.mapped }}<small>{{ detailMetrics.mappedPct }}%</small></span
+            >
+          </div>
+          <div class="metric-cell" :class="{ warn: unmapped.length > 0 }">
+            <span class="metric-label"><span class="dot dot-warn"></span>未归并 unmapped</span>
+            <span class="metric-value">{{ unmapped.length }}</span>
           </div>
           <div class="metric-cell">
             <span class="metric-label">覆盖章节</span>
             <span class="metric-value">{{ detailMetrics.titledSections }}<small>节</small></span>
           </div>
-          <div class="metric-cell" :class="{ warn: unmapped.length > 0 }">
-            <span class="metric-label">未归并 unmapped</span>
-            <span class="metric-value">{{ unmapped.length }}</span>
-          </div>
         </div>
 
-        <a-table
-          v-if="sectionRows.length"
-          :data-source="sectionRows"
-          :columns="detailColumns"
-          :loading="loading"
-          :pagination="{ pageSize: 50, showTotal: (t) => `共 ${t} 条` }"
-          size="middle"
-          row-key="rowKey"
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'section'">
-              <span class="mono">{{ record.sectionLabel }}</span>
-            </template>
-            <template v-else-if="column.key === 'tier'">
-              <span class="tier" :class="`tier-${tierRank(record.tier)}`">{{
-                tierLabel(record.tier)
-              }}</span>
-            </template>
-            <template v-else-if="column.key === 'corpus_freq'">
-              <span class="num">{{
-                record.corpus_freq != null ? `${Math.round(record.corpus_freq * 100)}%` : '—'
-              }}</span>
-            </template>
-          </template>
-        </a-table>
+        <div v-if="sectionRows.length" style="overflow-x: auto">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th style="width: 64px">节</th>
+                <th style="width: 150px">节题</th>
+                <th>口径</th>
+                <th style="width: 64px">单位</th>
+                <th>置信档</th>
+                <th class="r" style="padding-right: 20px">语料频次</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="row in pagedRows"
+                :key="row.rowKey"
+                :class="{ 'unmapped-row': row.unmapped }"
+              >
+                <td class="mono">{{ row.sectionLabel }}</td>
+                <td class="sec-cite" :title="row.title">{{ row.title || '—' }}</td>
+                <td>
+                  {{ row.caliber }}
+                  <span v-if="row.unmapped" class="pill pill-orange pill-sm">未归并</span>
+                </td>
+                <td class="mono">{{ row.unit || '—' }}</td>
+                <td>
+                  <span v-if="row.tierRank" class="tier" :class="`tier-${row.tierRank}`"
+                    >T{{ row.tierRank }}</span
+                  >
+                  <span v-else class="muted-cell">—</span>
+                </td>
+                <td class="r" style="padding-right: 20px">
+                  <template v-if="row.freqPct != null">
+                    <span class="meter" :class="{ low: row.freqPct < 40 }"
+                      ><i :style="{ width: row.freqPct + '%' }"></i
+                    ></span>
+                    <span class="num">{{ row.freqPct }}%</span>
+                  </template>
+                  <span v-else class="muted-cell">—</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
         <div v-else-if="!loading" class="empty-state">
           <a-empty description="该阶段暂无节级口径数据" />
         </div>
 
-        <!-- 未归并口径：独立清单（P1-3 unmapped 抽屉的数据真源，此处只读浏览） -->
-        <template v-if="unmapped.length">
-          <div class="unmapped-block">
-            <div class="block-hd">
-              <h4>未归并口径</h4>
-              <span class="hd-sub"
-                >forms_label_map 未命中的量词短语 → 在「字段维护」补字段后重跑 bank_compile
-                归并</span
-              >
-            </div>
-            <a-table
-              :data-source="unmapped"
-              :columns="unmappedColumns"
-              :pagination="{ pageSize: 10, hideOnSinglePage: true }"
-              size="small"
-              row-key="(r) => [r.section, r.caliber, r.value].join('|')"
-            >
-              <template #bodyCell="{ column, record }">
-                <template v-if="column.key === 'section'">
-                  <span class="mono">{{ record.section }}</span>
-                </template>
-              </template>
-            </a-table>
-          </div>
-        </template>
+        <div class="tbl-foot">
+          共 {{ mergedRows.length }} 条 · 每页 {{ PAGE_SIZE }} ·
+          <span
+            >橙色行为 forms_label_map 未命中的未归并口径 → 由「字段维护」补字段后重跑 bank_compile
+            归并</span
+          >
+          <template v-if="pageCount > 1">
+            <span class="flex-sp"></span>
+            <button class="btn btn-txt btn-sm" :disabled="page <= 1" @click="page--">上一页</button>
+            <span class="num">{{ page }}/{{ pageCount }}</span>
+            <button class="btn btn-txt btn-sm" :disabled="page >= pageCount" @click="page++">
+              下一页
+            </button>
+          </template>
+        </div>
       </div>
 
       <div class="note-bar">
@@ -112,32 +142,35 @@
       </div>
     </template>
 
-    <!-- ═══ Tab 2：字段维护（编辑 + 导出）═══ -->
+    <!-- ═══ Tab 2：字段维护（编辑 + 导出，s2）═══ -->
     <template v-else>
-      <div class="card toolbar-card">
-        <div class="toolbar">
+      <div class="card">
+        <div class="toolbar" style="gap: 14px">
           <span class="toolbar-label">阶段</span>
-          <a-select v-model:value="fieldsStage" style="width: 180px" @change="fetchForms">
-            <a-select-option v-for="s in STAGES" :key="s.key" :value="s.key">{{
-              s.label
-            }}</a-select-option>
-          </a-select>
-          <span style="flex: 1"></span>
-          <span v-if="pendingCount" class="pill-warn-tag">
-            <span class="dot"></span>{{ pendingCount }} 项待导出
-          </span>
-          <a-button @click="openAddModal"
-            ><Plus :size="14" style="margin-right: 4px" />添加字段</a-button
+          <button
+            v-for="s in STAGES"
+            :key="s.key"
+            class="stage-chip"
+            :class="{ on: fieldsStage === s.key }"
+            @click="setFieldsStage(s.key)"
           >
-          <a-button
+            {{ s.label }} <span class="cnt">{{ s.key }}</span>
+          </button>
+          <span class="flex-sp"></span>
+          <span v-if="pendingCount" class="pill pill-orange">
+            <span class="dot dot-warn"></span>{{ pendingCount }} 项待导出
+          </span>
+          <button class="btn btn-pri btn-sm" @click="openAddModal">
+            <Plus :size="14" />添加字段
+          </button>
+          <button
             v-if="userStore.isAdmin"
-            type="primary"
+            class="btn btn-sec btn-sm"
             :disabled="!pendingCount"
-            :loading="exporting"
             @click="onExport"
           >
-            导出物化
-          </a-button>
+            <Download :size="14" />{{ exporting ? '导出中…' : '导出物化' }}
+          </button>
         </div>
       </div>
 
@@ -145,7 +178,7 @@
         <!-- 左：口径族列表 -->
         <div class="card fam-list">
           <div class="fam-search">
-            <a-input-search v-model:value="famQuery" placeholder="搜索口径族…" allow-clear />
+            <input v-model="famQuery" class="inp" placeholder="搜索口径族…" />
           </div>
           <div
             v-for="f in filteredFamilies"
@@ -156,7 +189,7 @@
           >
             <span v-if="f.pending" class="mini-dot"></span>
             <span class="fam-name" :title="f.label">{{ f.label }}</span>
-            <span class="fam-key mono">{{ f.key }}</span>
+            <span class="pill pill-gray pill-sm">{{ f.key }}</span>
             <span class="fam-cnt">{{ f.fields.length }} 字段</span>
           </div>
           <div v-if="!filteredFamilies.length" class="empty-state">
@@ -167,59 +200,78 @@
         <!-- 右：字段表 -->
         <div class="card">
           <template v-if="activeFamilyDetail">
-            <div class="fam-hd">
-              <h3>
-                {{ activeFamilyDetail.label }} <code class="k">{{ activeFamily }}</code>
-              </h3>
+            <div class="card-hd">
+              <h3>{{ activeFamilyDetail.label }}</h3>
+              <code class="k">{{ activeFamily }}</code>
               <span class="hd-sub">
                 {{ fieldsStage }} · {{ activeFamilyDetail.fields.length }} 个字段
                 <template v-if="activeFamilyDetail.chapters?.length">
                   · 挂载 {{ activeFamilyDetail.chapters.join('、') }}
                 </template>
               </span>
-              <span class="hd-right">
-                <span class="pill-tag">文件锚点 {{ fileFieldCount }}</span>
-                <span v-if="dbFieldCount" class="pill-tag main">DB 裁决 {{ dbFieldCount }}</span>
-              </span>
+              <div class="hd-right">
+                <span class="pill pill-gray">文件锚点 {{ fileFieldCount }}</span>
+                <span v-if="dbFieldCount" class="pill pill-main"
+                  >DB 裁决 {{ dbFieldCount }} · 待导出</span
+                >
+              </div>
             </div>
-            <a-table
-              :data-source="activeFamilyDetail.fields"
-              :columns="fieldColumns"
-              :pagination="false"
-              size="middle"
-              row-key="name"
-            >
-              <template #bodyCell="{ column, record }">
-                <template v-if="column.key === 'name'">
-                  <span class="mono">{{ record.name }}</span>
-                  <span v-if="isPendingAdd(record)" class="pill-mini warn">新增 · 未导出</span>
-                </template>
-                <template v-else-if="column.key === 'label'">
-                  {{ record.label }}
-                  <span v-if="isPendingAmend(record)" class="pill-mini warn">修改 · 未导出</span>
-                  <div v-if="isPendingAmend(record) && record.db_edit" class="amend-preview">
-                    → {{ record.db_edit.field.label ?? record.label }}
-                  </div>
-                </template>
-                <template v-else-if="column.key === 'type'">
-                  <span class="pill-mini">{{ record.type }}</span>
-                </template>
-                <template v-else-if="column.key === 'required'">
-                  <Check v-if="record.required" class="req-ic yes" :size="14" />
-                  <span v-else class="muted">选填</span>
-                </template>
-                <template v-else-if="column.key === 'source'">
-                  <span v-if="record.source === 'db'" class="field-src db"
-                    >DB · {{ record.decided_by }}</span
-                  >
-                  <span v-else class="field-src file">文件锚点</span>
-                </template>
-                <template v-else-if="column.key === 'actions'">
-                  <a class="primary" @click="openAmendModal(record)">改 label…</a>
-                  <a v-if="isPendingAdd(record)" class="danger" @click="onWithdraw(record)">撤回</a>
-                </template>
-              </template>
-            </a-table>
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>字段标识（name）</th>
+                  <th>中文名称（label）</th>
+                  <th style="width: 90px">类型</th>
+                  <th style="width: 70px">必填</th>
+                  <th style="width: 130px">来源</th>
+                  <th class="r" style="padding-right: 20px">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="record in activeFamilyDetail.fields" :key="record.name">
+                  <td class="mono">
+                    {{ record.name }}
+                    <span v-if="isPendingAdd(record)" class="pill pill-warn pill-sm"
+                      >新增 · 未导出</span
+                    >
+                  </td>
+                  <td>
+                    {{ record.label }}
+                    <span v-if="isPendingAmend(record)" class="pill pill-warn pill-sm"
+                      >修改 · 未导出</span
+                    >
+                    <div v-if="isPendingAmend(record) && record.db_edit" class="amend-preview">
+                      → {{ record.db_edit.field.label ?? record.label }}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="pill pill-gray pill-sm">{{ record.type }}</span>
+                  </td>
+                  <td>
+                    <Check v-if="record.required" class="req-ic yes" :size="14" />
+                    <span v-else class="muted-cell">选填</span>
+                  </td>
+                  <td>
+                    <span v-if="record.source === 'db'" class="field-src db"
+                      >DB · {{ record.decided_by }}</span
+                    >
+                    <span v-else class="field-src file">文件锚点</span>
+                  </td>
+                  <td class="r" style="padding-right: 20px; white-space: nowrap">
+                    <button class="btn btn-txt btn-sm" @click="openAmendModal(record)">
+                      改 label
+                    </button>
+                    <button
+                      v-if="isPendingAdd(record)"
+                      class="btn btn-txt btn-sm withdraw-btn"
+                      @click="onWithdraw(record)"
+                    >
+                      撤回
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
             <div class="tbl-foot">
               禁删字段、禁改字段标识（name）——下游
               <code class="k">{{ slotNotation }}</code>
@@ -315,26 +367,26 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { Check, Info, Plus } from '@lucide/vue'
+import { AlignLeft, ArrowLeft, Check, Download, Info, Plus, TrendingUp } from '@lucide/vue'
+import { useRouter } from 'vue-router'
 import { eiaDataApi } from '@/apis/eia_data_api'
 import { eiaStageApi } from '@/apis/eia_stage_api'
 import { useUserStore } from '@/stores/user'
 
 const STAGES = [
   { key: 'planning_eia', label: '规划环评' },
-  { key: 'post_eia', label: '事后环评' },
-  { key: 'project_eia_openpit', label: '项目环评·露天' },
-  { key: 'project_eia_underground', label: '项目环评·井工' },
-  { key: 'tracking_eia', label: '跟踪评价' }
+  { key: 'project_eia_underground', label: '井工矿环评' },
+  { key: 'project_eia_openpit', label: '露天矿环评' },
+  { key: 'tracking_eia', label: '跟踪评价' },
+  { key: 'post_eia', label: '后评价' }
 ]
 
-const TIER_DEFS = [
-  { key: 'required', label: '必须', rank: 1 },
-  { key: 'contextual', label: '情境', rank: 2 },
-  { key: 'optional', label: '可选', rank: 3 }
-]
+const TIER_RANKS = { required: 1, contextual: 2, optional: 3 }
+
+const PAGE_SIZE = 50
 
 const userStore = useUserStore()
+const router = useRouter()
 const activeTab = ref('detail')
 const loading = ref(false)
 const exporting = ref(false)
@@ -342,63 +394,97 @@ const exporting = ref(false)
 // 模板里写字面 `}}` 会提前闭合插值，SLOT 记法只能走 script 常量
 const slotNotation = '{{SLOT:family.field}}'
 
+const goOverview = () => router.push('/domain-factory/eia-data')
+
 // ── Tab 1：节级明细 ──
 const detailStage = ref('planning_eia')
 const sections = ref([])
 const unmapped = ref([])
-
-const detailColumns = [
-  { title: '节', key: 'section', width: 90 },
-  { title: '节题', dataIndex: 'title', key: 'title', width: 200, ellipsis: true },
-  { title: '口径', dataIndex: 'caliber', key: 'caliber', ellipsis: true },
-  { title: '挂载字段', dataIndex: 'field', key: 'field', width: 200, ellipsis: true },
-  { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
-  { title: '置信档', key: 'tier', width: 80 },
-  { title: '语料频次', key: 'corpus_freq', width: 90 }
-]
-
-const unmappedColumns = [
-  { title: '节', key: 'section', width: 90 },
-  { title: '量词口径', dataIndex: 'caliber', key: 'caliber', ellipsis: true },
-  { title: '样例值', dataIndex: 'value', key: 'value', width: 140, ellipsis: true },
-  { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
-  { title: '来源样本', dataIndex: 'sample', key: 'sample', width: 160, ellipsis: true }
-]
+const page = ref(1)
 
 const sectionRows = computed(() =>
   sections.value.flatMap((s) =>
-    s.quantities.map((q, i) => ({
-      ...q,
-      rowKey: `${s.key}-${i}`,
-      sectionLabel: s.key.replace(/^ch/, '').replace('_S', '.'),
-      title: s.title
-    }))
+    s.quantities.map((q, i) => {
+      const rank = TIER_RANKS[q.tier] ?? null
+      return {
+        rowKey: `${s.key}-${i}`,
+        sectionLabel: s.key.replace(/^ch/, '').replace('_S', '.'),
+        title: s.title,
+        caliber: q.caliber,
+        unit: q.unit,
+        tierRank: rank,
+        freqPct: q.corpus_freq != null ? Math.round(q.corpus_freq * 100) : null,
+        unmapped: false,
+        sortKey: s.key
+      }
+    })
   )
 )
 
-const detailMetrics = computed(() => ({
-  total: sectionRows.value.length,
-  titledSections: sections.value.filter((s) => s.title).length
-}))
+// unmapped 橙行按节号内联到对应节之后（原型 s1），对不上号的追加表尾
+// unmapped.section 与 sections[].key 同为 ch/ch_S 记法，先归一再匹配
+const normSection = (s) => (s ?? '').replace(/^ch/, '').replace('_S', '.')
 
-const tierDef = (t) => TIER_DEFS.find((d) => d.key === t)
-const tierLabel = (t) => tierDef(t)?.label ?? t ?? '—'
-const tierRank = (t) => tierDef(t)?.rank ?? 3
+const mergedRows = computed(() => {
+  const rows = [...sectionRows.value]
+  const pendingUnmapped = []
+  for (const u of unmapped.value) {
+    const label = normSection(u.section)
+    const idx = rows.findLastIndex((r) => r.sectionLabel === label && !r.unmapped)
+    if (idx >= 0) {
+      rows.splice(idx + 1, 0, {
+        rowKey: `unmapped-${rows.length}-${u.caliber}`,
+        sectionLabel: label,
+        title: '',
+        caliber: u.caliber,
+        unit: u.unit,
+        tierRank: null,
+        freqPct: null,
+        unmapped: true
+      })
+    } else {
+      pendingUnmapped.push(u)
+    }
+  }
+  for (const u of pendingUnmapped) {
+    rows.push({
+      rowKey: `unmapped-tail-${u.caliber}-${u.value}`,
+      sectionLabel: normSection(u.section),
+      title: '',
+      caliber: u.caliber,
+      unit: u.unit,
+      tierRank: null,
+      freqPct: null,
+      unmapped: true
+    })
+  }
+  return rows
+})
+
+const pageCount = computed(() => Math.max(1, Math.ceil(mergedRows.value.length / PAGE_SIZE)))
+const pagedRows = computed(() => {
+  const p = Math.min(page.value, pageCount.value)
+  return mergedRows.value.slice((p - 1) * PAGE_SIZE, p * PAGE_SIZE)
+})
+
+// 已归并 = 注册口径中已挂载字段（q.field 非空）的条目；unmapped 是未命中任何字段的独立流
+const detailMetrics = computed(() => {
+  const quantities = sections.value.flatMap((s) => s.quantities)
+  const total = quantities.length
+  const mapped = quantities.filter((q) => q.field).length
+  return {
+    total,
+    mapped,
+    mappedPct: total ? Math.round((mapped / total) * 100) : 0,
+    titledSections: sections.value.filter((s) => s.quantities.length).length
+  }
+})
 
 // ── Tab 2：字段维护 ──
 const fieldsStage = ref('planning_eia')
 const families = ref([])
 const activeFamily = ref('')
 const famQuery = ref('')
-
-const fieldColumns = [
-  { title: '字段标识（name）', key: 'name', width: 240 },
-  { title: '中文名称（label）', key: 'label', ellipsis: true },
-  { title: '类型', key: 'type', width: 110 },
-  { title: '必填', key: 'required', width: 70 },
-  { title: '来源', key: 'source', width: 130 },
-  { title: '操作', key: 'actions', width: 140 }
-]
 
 const filteredFamilies = computed(() => {
   const q = famQuery.value.trim().toLowerCase()
@@ -448,6 +534,7 @@ const fetchSections = async () => {
     const out = await eiaDataApi.getSections(detailStage.value)
     sections.value = out.sections
     unmapped.value = out.unmapped
+    page.value = 1
   } catch (e) {
     message.error(`获取节级明细失败: ${e.message}`)
   } finally {
@@ -469,6 +556,18 @@ const fetchForms = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const setDetailStage = (key) => {
+  if (detailStage.value === key) return
+  detailStage.value = key
+  fetchSections()
+}
+
+const setFieldsStage = (key) => {
+  if (fieldsStage.value === key) return
+  fieldsStage.value = key
+  fetchForms()
 }
 
 const switchToFields = () => {
@@ -580,320 +679,13 @@ onMounted(fetchSections)
 </script>
 
 <style lang="less" scoped>
-.sections-panel {
-  --hairline: var(--gray-200);
+.flex-sp {
+  flex: 1;
 }
 
-.mono {
-  font-family: 'JetBrains Mono', Consolas, monospace;
+.muted-cell {
+  color: var(--color-text-tertiary);
   font-size: 12px;
-}
-
-.num {
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── 双 tab ── */
-.tab-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.tab-hint {
-  font-size: 12px;
-  color: var(--gray-500);
-}
-
-.seg {
-  display: inline-flex;
-  border: 1px solid var(--hairline);
-  border-radius: 6px;
-  overflow: hidden;
-
-  button {
-    padding: 5px 16px;
-    font-size: 13px;
-    color: var(--gray-600);
-    background: var(--gray-0);
-    border: none;
-    cursor: pointer;
-
-    & + button {
-      border-left: 1px solid var(--hairline);
-    }
-
-    &.on {
-      background: var(--main-0);
-      color: var(--main-600);
-      font-weight: 600;
-    }
-  }
-}
-
-.card {
-  background: var(--gray-0);
-  border: 1px solid var(--hairline);
-  border-radius: 8px;
-  margin-bottom: 12px;
-}
-
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-}
-
-.toolbar-card {
-  margin-bottom: 12px;
-}
-
-.toolbar-label {
-  font-size: 12px;
-  color: var(--gray-500);
-}
-
-.muted-chip {
-  font-size: 12px;
-  color: var(--gray-500);
-
-  b {
-    color: var(--second-600);
-    font-variant-numeric: tabular-nums;
-  }
-}
-
-/* ── 指标带（同 StandardsPanel 规范）── */
-.metric-strip {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  background: var(--main-0);
-  border-top: 1px solid var(--hairline);
-  border-bottom: 1px solid var(--hairline);
-}
-
-.metric-cell {
-  padding: 12px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-
-  & + & {
-    border-left: 1px solid var(--hairline);
-  }
-
-  .metric-label {
-    font-size: 12px;
-    color: var(--gray-500);
-  }
-
-  .metric-value {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--gray-800);
-    font-variant-numeric: tabular-nums;
-    line-height: 1.1;
-
-    small {
-      margin-left: 4px;
-      font-size: 12px;
-      font-weight: 400;
-      color: var(--gray-500);
-    }
-  }
-
-  &.warn .metric-value {
-    color: var(--second-600);
-  }
-}
-
-/* ── 置信档徽标 ── */
-.tier {
-  display: inline-block;
-  min-width: 26px;
-  text-align: center;
-  height: 19px;
-  line-height: 19px;
-  padding: 0 6px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-
-  &.tier-1 {
-    background: var(--main-0);
-    color: var(--main-600);
-  }
-
-  &.tier-2 {
-    background: var(--gray-100);
-    color: var(--gray-600);
-  }
-
-  &.tier-3 {
-    background: var(--gray-50);
-    color: var(--gray-500);
-  }
-}
-
-.unmapped-block {
-  border-top: 1px solid var(--hairline);
-  padding-bottom: 8px;
-}
-
-.block-hd {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 12px 16px 6px;
-
-  h4 {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--second-600);
-  }
-
-  .hd-sub {
-    font-size: 12px;
-    color: var(--gray-500);
-  }
-}
-
-/* ── 字段维护：左右布局 ── */
-.split {
-  display: grid;
-  grid-template-columns: 264px 1fr;
-  gap: 12px;
-  align-items: start;
-}
-
-.fam-list {
-  max-height: 560px;
-  overflow-y: auto;
-  margin-bottom: 0;
-}
-
-.fam-search {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--hairline);
-}
-
-.fam-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  cursor: pointer;
-  border-bottom: 1px solid var(--gray-100);
-  transition: background 0.12s;
-  font-size: 13px;
-
-  &:hover {
-    background: var(--gray-50);
-  }
-
-  &.on {
-    background: var(--main-0);
-    box-shadow: inset 2px 0 0 var(--main-500);
-  }
-
-  .mini-dot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--second-500);
-    flex: none;
-  }
-
-  .fam-name {
-    color: var(--gray-800);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .fam-key {
-    color: var(--gray-400);
-    font-size: 11px;
-  }
-
-  .fam-cnt {
-    margin-left: auto;
-    font-size: 11px;
-    color: var(--gray-500);
-    font-variant-numeric: tabular-nums;
-    flex: none;
-  }
-}
-
-.fam-hd {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--hairline);
-
-  h3 {
-    font-size: 14px;
-    font-weight: 600;
-    margin: 0;
-  }
-
-  .hd-sub {
-    font-size: 12px;
-    color: var(--gray-500);
-  }
-
-  .hd-right {
-    margin-left: auto;
-    display: flex;
-    gap: 6px;
-  }
-}
-
-.pill-tag {
-  font-size: 11px;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--gray-100);
-  color: var(--gray-600);
-
-  &.main {
-    background: var(--main-0);
-    color: var(--main-600);
-  }
-}
-
-.pill-warn-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  color: var(--second-600);
-
-  .dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--second-500);
-  }
-}
-
-.pill-mini {
-  display: inline-block;
-  font-size: 11px;
-  padding: 0 6px;
-  height: 18px;
-  line-height: 18px;
-  border-radius: 4px;
-  background: var(--gray-100);
-  color: var(--gray-600);
-
-  &.warn {
-    background: var(--second-50, var(--gray-100));
-    color: var(--second-600);
-  }
 }
 
 .amend-preview {
@@ -901,56 +693,16 @@ onMounted(fetchSections)
   color: var(--second-600);
 }
 
-.field-src {
-  font-size: 12px;
-  white-space: nowrap;
-
-  &.file {
-    color: var(--gray-500);
-  }
-
-  &.db {
-    color: var(--main-600);
-    font-weight: 500;
-  }
-}
-
-.req-ic.yes {
+.withdraw-btn {
   color: var(--second-600);
-}
 
-.tbl-foot {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 9px 16px;
-  font-size: 12px;
-  color: var(--gray-500);
-}
-
-code.k {
-  font-family: 'JetBrains Mono', Consolas, monospace;
-  font-size: 12px;
-  background: var(--gray-100);
-  border-radius: 4px;
-  padding: 1px 6px;
-  color: var(--gray-700);
+  &:hover {
+    background: var(--second-50);
+  }
 }
 
 .empty-state {
   padding: 32px 0;
-}
-
-/* ── 表格操作列 ── */
-:deep(.ant-table-cell) {
-  a.primary {
-    color: var(--main-600);
-    margin-right: 10px;
-  }
-
-  a.danger {
-    color: var(--second-600);
-  }
 }
 
 /* ── 表单弹窗 ── */
@@ -961,11 +713,11 @@ code.k {
     display: block;
     font-size: 12px;
     font-weight: 500;
-    color: var(--gray-600);
+    color: var(--color-text-secondary);
     margin-bottom: 5px;
 
     .must {
-      color: var(--second-600);
+      color: var(--color-error-500);
       margin-left: 2px;
     }
   }
@@ -978,25 +730,9 @@ code.k {
 
 .frm-help {
   font-size: 12px;
-  color: var(--gray-500);
+  color: var(--color-text-tertiary);
   margin-top: 4px;
 }
-
-/* ── 只读提示条 ── */
-.note-bar {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  background: var(--main-0);
-  border-radius: 6px;
-  padding: 9px 12px;
-  font-size: 12px;
-  color: var(--gray-600);
-
-  svg {
-    margin-top: 2px;
-    flex: none;
-    color: var(--main-600);
-  }
-}
 </style>
+
+<style lang="less" src="./factory-ui.less"></style>

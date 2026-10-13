@@ -1,123 +1,145 @@
 <template>
-  <div class="entities-panel">
-    <div class="card toolbar-card">
-      <div class="toolbar">
-        <span class="toolbar-label">实体补充（仅添加）</span>
-        <span style="flex: 1"></span>
-        <span v-if="pendingCount" class="pill-warn-tag">
-          <span class="dot"></span>{{ pendingCount }} 项待导出
-        </span>
-        <a-button
+  <div class="ewp entities-panel">
+    <!-- 页头（原型 s6：Package + 添加实体 + 导出物化） -->
+    <div class="page-head">
+      <button class="back-btn" aria-label="返回数据工厂总览" @click="goOverview">
+        <ArrowLeft :size="16" />
+      </button>
+      <div class="ph-icon">
+        <Package :size="18" />
+      </div>
+      <div>
+        <h2>样例实体注册表</h2>
+        <div class="ph-sub">
+          sample_entities · 写手实体泄漏检测的禁用词库（{{ samples.length }} 份样本语料提取）
+        </div>
+      </div>
+      <div class="ph-actions">
+        <button class="btn btn-pri btn-sm" @click="openAddModal">
+          <Plus :size="14" />添加实体
+        </button>
+        <button
           v-if="userStore.isAdmin"
-          type="primary"
+          class="btn btn-sec btn-sm"
           :disabled="!pendingCount"
-          :loading="exporting"
           @click="onExport"
         >
-          导出物化
-        </a-button>
+          <Download :size="14" />{{ exporting ? '导出中…' : '导出物化' }}
+        </button>
       </div>
     </div>
 
-    <div class="split">
-      <!-- 左：样例清单 -->
-      <div class="card fam-list">
-        <div class="fam-search">
-          <a-input-search v-model:value="sampleQuery" placeholder="搜索样例…" allow-clear />
-        </div>
-        <div
-          v-for="s in filteredSamples"
-          :key="s.slug"
-          class="fam-item"
-          :class="{ on: s.slug === activeSlug }"
-          @click="selectSample(s.slug)"
+    <!-- 指标条（写作期命中拦截无数据，不虚构） -->
+    <div v-if="registry" class="metric-strip">
+      <div class="metric-cell">
+        <span class="metric-label">注册实体</span>
+        <span class="metric-value">{{ entityTotal }}</span>
+      </div>
+      <div class="metric-cell">
+        <span class="metric-label">实体类型</span>
+        <span class="metric-value">{{ presentTypes }}<small>类</small></span>
+      </div>
+      <div class="metric-cell" :class="{ warn: pendingCount > 0 }">
+        <span class="metric-label"><span class="dot dot-warn"></span>本批新增待导出</span>
+        <span class="metric-value">{{ pendingCount }}</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <a-select
+          v-model:value="activeSlug"
+          style="width: 200px"
+          :disabled="loading"
+          @change="fetchRegistry"
         >
-          <span v-if="slugPending[s.slug]" class="mini-dot"></span>
-          <span class="fam-name" :title="s.slug">{{ s.slug }}</span>
-          <span class="fam-cnt">{{ totalOf(s.counts) }} 实体</span>
-        </div>
-        <div v-if="skipped.length" class="skipped-block">
-          <div class="skipped-hd">skipped（不可补充）</div>
-          <div v-for="s in skipped" :key="s.slug" class="skipped-item" :title="s.reason">
+          <a-select-option v-for="s in samples" :key="s.slug" :value="s.slug">
             {{ s.slug }}
-          </div>
-        </div>
-        <div v-if="!filteredSamples.length && !loading" class="empty-state">
-          <a-empty description="无匹配样例" />
+          </a-select-option>
+          <a-select-option v-for="s in skipped" :key="s.slug" :value="s.slug" disabled>
+            {{ s.slug }}（不可补充）
+          </a-select-option>
+        </a-select>
+        <input v-model="query" class="inp" style="width: 220px" placeholder="搜索实体名 / rid…" />
+        <div class="seg">
+          <button :class="{ on: etypeFilter === 'all' }" @click="etypeFilter = 'all'">全部</button>
+          <button
+            v-for="t in ENTITY_TYPES"
+            :key="t.key"
+            :class="{ on: etypeFilter === t.key }"
+            @click="etypeFilter = t.key"
+          >
+            {{ t.label }}
+          </button>
         </div>
       </div>
 
-      <!-- 右：实体注册表 -->
-      <div class="card">
-        <template v-if="registry">
-          <div class="fam-hd">
-            <h3>
-              {{ registry.sample_slug }} <code class="k">{{ activeSlug }}</code>
-            </h3>
-            <span class="hd-sub">{{ entityTotal }} 实体 · 生成于 {{ registry.source }}</span>
-          </div>
-
-          <div v-for="t in ENTITY_TYPES" :key="t.key" class="etype-block">
-            <div class="etype-hd">
-              <span class="etype-name">{{ t.label }}</span>
-              <code class="k">{{ t.key }}</code>
-              <span class="etype-cnt">{{ registry.entities[t.key].length }}</span>
-            </div>
-            <div class="etype-items">
-              <span
-                v-for="e in registry.entities[t.key]"
-                :key="`${t.key}-${e.name}`"
-                class="ent-chip"
-                :class="{ pending: e.pending }"
-                :title="pendingTitle(e)"
+      <table v-if="registry" class="tbl">
+        <thead>
+          <tr>
+            <th>实体名</th>
+            <th style="width: 110px">类型</th>
+            <th style="width: 140px">来源样本 rid</th>
+            <th style="width: 170px">添加人</th>
+            <th style="width: 120px">状态</th>
+            <th class="r" style="padding-right: 20px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="e in flatEntities" :key="`${e.etype}-${e.name}`">
+            <td :title="pendingTitle(e)">{{ e.name }}</td>
+            <td>
+              <span class="pill pill-gray pill-sm">{{ e.etypeLabel }}</span>
+            </td>
+            <td class="mono">{{ e.rid || registry.sample_slug }}</td>
+            <td>{{ e.decided_by || (e.id == null ? '语料提取' : '—') }}</td>
+            <td>
+              <span v-if="e.pending" class="pill pill-warn">新增 · 未导出</span>
+              <span v-else class="pill pill-ok">在册</span>
+            </td>
+            <td class="r" style="padding-right: 20px">
+              <button
+                v-if="e.pending && e.id != null"
+                class="btn btn-txt btn-sm withdraw-btn"
+                @click="onWithdraw(e)"
               >
-                {{ e.name }}
-                <button
-                  v-if="e.pending"
-                  class="ent-x"
-                  aria-label="撤回待导出补充"
-                  @click="onWithdraw(e)"
-                >
-                  ×
-                </button>
-              </span>
-              <span v-if="!registry.entities[t.key].length" class="unset">（空）</span>
-              <a-button size="small" type="dashed" class="add-mini" @click="openAddModal(t)">
-                <Plus :size="12" style="margin-right: 2px" />补充
-              </a-button>
-            </div>
-          </div>
+                撤回
+              </button>
+            </td>
+          </tr>
+          <tr v-if="!flatEntities.length">
+            <td
+              colspan="6"
+              style="text-align: center; padding: 24px 0; color: var(--color-text-tertiary)"
+            >
+              该样例暂无匹配实体
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-else class="empty-state"><a-spin v-if="loading" /></div>
 
-          <div v-if="registry.notes.length" class="notes-block">
-            <div
-              v-for="(n, i) in registry.notes"
-              :key="i"
-              class="note-line"
-              v-html="mdLite(n)"
-            ></div>
-          </div>
-        </template>
-        <div v-else class="empty-state"><a-spin v-if="loading" /></div>
+      <div v-if="registry" class="tbl-foot">
+        禁删既有条目——删除等于放行实体泄漏；确需移除走工程侧评审并附泄漏复扫报告（仅可撤回本人未导出的新增行）
       </div>
-    </div>
-
-    <div class="note-bar">
-      <Info :size="14" />
-      <span>
-        边界：仅添加（name/etype/rid
-        溯源留档），文件锚点条目禁删禁改——生成时实体泄漏检测清单依赖其稳定； 导出物化追加至 registry
-        数组尾并同步 _index 计数。
-      </span>
     </div>
 
     <!-- 补充实体弹窗 -->
     <a-modal
       v-model:open="addModal.open"
-      :title="`补充实体 · ${addModal.etypeLabel}`"
+      title="添加实体"
       :confirm-loading="addModal.saving"
       @ok="submitAdd"
     >
       <div class="frm">
+        <div class="frm-row">
+          <label>实体类型（etype）</label>
+          <a-select v-model:value="addModal.etype" style="width: 100%">
+            <a-select-option v-for="t in ENTITY_TYPES" :key="t.key" :value="t.key">
+              {{ t.label }}
+            </a-select-option>
+          </a-select>
+        </div>
         <div class="frm-row">
           <label>实体名称（name）</label>
           <a-input v-model:value="addModal.name" placeholder="实体全称，与报告原文一致" />
@@ -142,11 +164,15 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { Info, Plus } from '@lucide/vue'
+import { ArrowLeft, Download, Package, Plus } from '@lucide/vue'
+import { useRouter } from 'vue-router'
 import { eiaEntityApi } from '@/apis/eia_entity_api'
 import { useUserStore } from '@/stores/user'
 
 const userStore = useUserStore()
+const router = useRouter()
+
+const goOverview = () => router.push('/domain-factory/eia-data')
 
 const ENTITY_TYPES = [
   { key: 'projects', label: '项目' },
@@ -159,26 +185,11 @@ const ENTITY_TYPES = [
 const loading = ref(true)
 const samples = ref([])
 const skipped = ref([])
-const sampleQuery = ref('')
 const activeSlug = ref('')
 const registry = ref(null)
 const exporting = ref(false)
-
-const filteredSamples = computed(() => {
-  const q = sampleQuery.value.trim().toLowerCase()
-  if (!q) return samples.value
-  return samples.value.filter((s) => s.slug.toLowerCase().includes(q))
-})
-
-const totalOf = (counts) => Object.values(counts ?? {}).reduce((a, b) => a + b, 0)
-
-const slugPending = computed(() => {
-  const map = {}
-  for (const s of samples.value) map[s.slug] = 0
-  // 待导出计数仅限当前已加载注册表（其余样例懒加载，不预取）
-  if (registry.value) map[registry.value.sample_slug] = pendingCount.value
-  return map
-})
+const query = ref('')
+const etypeFilter = ref('all')
 
 const pendingCount = computed(() =>
   Object.values(registry.value?.entities ?? {}).reduce(
@@ -191,15 +202,29 @@ const entityTotal = computed(() =>
   Object.values(registry.value?.entities ?? {}).reduce((acc, items) => acc + items.length, 0)
 )
 
+const presentTypes = computed(
+  () => Object.values(registry.value?.entities ?? {}).filter((items) => items.length).length
+)
+
+// 注册表按类型分组的条目平铺成表行（原型 s6 FLAT），待导出排前
+const flatEntities = computed(() => {
+  if (!registry.value) return []
+  const q = query.value.trim().toLowerCase()
+  const rows = []
+  for (const t of ENTITY_TYPES) {
+    if (etypeFilter.value !== 'all' && etypeFilter.value !== t.key) continue
+    for (const e of registry.value.entities[t.key] ?? []) {
+      if (q && !e.name.toLowerCase().includes(q) && !(e.rid ?? '').toLowerCase().includes(q)) {
+        continue
+      }
+      rows.push({ ...e, etype: t.key, etypeLabel: t.label })
+    }
+  }
+  return rows.sort((a, b) => Number(b.pending) - Number(a.pending))
+})
+
 const pendingTitle = (e) =>
   e.pending ? `待导出补充（${e.rid ? `rid ${e.rid}` : ''}${e.note ? ` · ${e.note}` : ''}）` : e.name
-
-// notes 里的 **加粗** 轻量渲染（生成侧标注惯例）
-const mdLite = (t) =>
-  t
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
 
 const fetchSamples = async () => {
   loading.value = true
@@ -219,6 +244,8 @@ const fetchSamples = async () => {
 }
 
 const fetchRegistry = async () => {
+  if (!activeSlug.value) return
+  registry.value = null
   try {
     registry.value = await eiaEntityApi.getRegistry(activeSlug.value)
   } catch (e) {
@@ -226,26 +253,18 @@ const fetchRegistry = async () => {
   }
 }
 
-const selectSample = async (slug) => {
-  activeSlug.value = slug
-  registry.value = null
-  await fetchRegistry()
-}
-
 // ── 补充实体 ──
 const addModal = reactive({
   open: false,
   saving: false,
-  etype: '',
-  etypeLabel: '',
+  etype: ENTITY_TYPES[0].key,
   name: '',
   rid: '',
   note: ''
 })
 
-const openAddModal = (t) => {
-  addModal.etype = t.key
-  addModal.etypeLabel = t.label
+const openAddModal = () => {
+  addModal.etype = ENTITY_TYPES[0].key
   addModal.name = ''
   addModal.rid = ''
   addModal.note = ''
@@ -307,270 +326,15 @@ onMounted(fetchSamples)
 </script>
 
 <style lang="less" scoped>
-.entities-panel {
-  --hairline: var(--gray-200);
-}
-
-.mono {
-  font-family: 'JetBrains Mono', Consolas, monospace;
-  font-size: 12px;
-}
-
-.card {
-  background: var(--gray-0);
-  border: 1px solid var(--hairline);
-  border-radius: 8px;
-  margin-bottom: 12px;
-}
-
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-}
-
-.toolbar-label {
-  font-size: 12px;
-  color: var(--gray-500);
-}
-
-.split {
-  display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 12px;
-  align-items: start;
-}
-
-.fam-list {
-  padding-bottom: 6px;
-}
-
-.fam-search {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--hairline);
-}
-
-.fam-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  cursor: pointer;
-  position: relative;
+.withdraw-btn {
+  color: var(--second-600);
 
   &:hover {
-    background: var(--gray-50);
-  }
-
-  &.on {
-    background: var(--main-0);
-
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 2px;
-      background: var(--main-600);
-    }
-  }
-
-  .fam-name {
-    flex: 1;
-    font-size: 13px;
-    color: var(--gray-800);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .fam-key {
-    color: var(--gray-400);
-  }
-
-  .fam-cnt {
-    font-size: 11px;
-    color: var(--gray-500);
-    font-variant-numeric: tabular-nums;
+    background: var(--second-50);
   }
 }
 
-.mini-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--warn, #ad6800);
-  flex: none;
-}
-
-.skipped-block {
-  margin: 8px 12px 4px;
-  padding-top: 8px;
-  border-top: 1px dashed var(--gray-100);
-
-  .skipped-hd {
-    font-size: 11px;
-    color: var(--gray-400);
-    margin-bottom: 4px;
-  }
-
-  .skipped-item {
-    font-size: 12px;
-    color: var(--gray-400);
-    text-decoration: line-through;
-  }
-}
-
-.fam-hd {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--hairline);
-
-  h3 {
-    font-size: 14px;
-    font-weight: 600;
-    margin: 0;
-  }
-
-  .hd-sub {
-    font-size: 12px;
-    color: var(--gray-500);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
-
-.k {
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--gray-100);
-  color: var(--gray-600);
-  font-family: 'JetBrains Mono', Consolas, monospace;
-  font-size: 11px;
-}
-
-.etype-block {
-  padding: 10px 16px;
-
-  & + .etype-block {
-    border-top: 1px dashed var(--gray-100);
-  }
-}
-
-.etype-hd {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 6px;
-
-  .etype-name {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--gray-700);
-  }
-
-  .etype-cnt {
-    font-size: 11px;
-    color: var(--gray-500);
-    font-variant-numeric: tabular-nums;
-  }
-}
-
-.etype-items {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-}
-
-.ent-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 24px;
-  padding: 0 9px;
-  border-radius: 999px;
-  font-size: 12px;
-  border: 1px solid var(--hairline);
-  background: var(--gray-50);
-  color: var(--gray-700);
-
-  &.pending {
-    border-color: var(--warn-2, #ffe58f);
-    background: var(--warn-0, #fff7e6);
-    color: var(--warn, #ad6800);
-  }
-
-  .ent-x {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 14px;
-    height: 14px;
-    border: none;
-    border-radius: 50%;
-    background: transparent;
-    color: inherit;
-    font-size: 12px;
-    line-height: 1;
-    cursor: pointer;
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.08);
-    }
-  }
-}
-
-.add-mini {
-  height: 24px;
-  padding: 0 8px;
-  font-size: 12px;
-}
-
-.unset {
-  font-size: 12px;
-  color: var(--gray-300);
-}
-
-.notes-block {
-  padding: 10px 16px;
-  border-top: 1px solid var(--hairline);
-
-  .note-line {
-    font-size: 12px;
-    color: var(--gray-500);
-    line-height: 1.7;
-
-    & + .note-line {
-      margin-top: 2px;
-    }
-  }
-}
-
-.pill-warn-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  color: var(--warn, #ad6800);
-  background: var(--warn-0, #fff7e6);
-  border: 1px solid var(--warn-2, #ffe58f);
-
-  .dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--warn, #ad6800);
-  }
-}
-
+/* ── 添加实体弹窗 ── */
 .frm {
   display: flex;
   flex-direction: column;
@@ -584,35 +348,16 @@ onMounted(fetchSamples)
 
     label {
       font-size: 12px;
-      color: var(--gray-600);
+      color: var(--color-text-secondary);
     }
   }
 
   .frm-help {
     font-size: 12px;
-    color: var(--gray-500);
+    color: var(--color-text-tertiary);
     line-height: 1.6;
   }
 }
-
-.empty-state {
-  padding: 32px 0;
-}
-
-.note-bar {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  background: var(--main-0);
-  border-radius: 6px;
-  padding: 9px 12px;
-  font-size: 12px;
-  color: var(--gray-600);
-
-  svg {
-    margin-top: 2px;
-    flex: none;
-    color: var(--main-600);
-  }
-}
 </style>
+
+<style lang="less" src="./factory-ui.less"></style>

@@ -1,5 +1,60 @@
 <template>
   <div class="standards-panel">
+    <!-- 门 1 体检卡（P2-3 只读）：规则规格 + 注册表自检（code 对 allowed_patterns），不伪造违规明细 -->
+    <div v-if="gate1" class="gate1-card">
+      <div class="gate1-hd">
+        <div class="gate1-badge"><ShieldCheck :size="16" /></div>
+        <div>
+          <h3>门 1 · 标准号体检</h3>
+          <div class="hd-sub" :title="gate1.desc">
+            gate1_code_checks · 写作前标准引用合法性规则与当前命中
+          </div>
+        </div>
+        <div class="hd-right">
+          <span v-if="gate1.registry_check.violations.length" class="pill-warn-tag">
+            {{ gate1.registry_check.violations.length }} 项待修正
+          </span>
+          <span v-else class="pill-ok-tag">全部通过</span>
+        </div>
+      </div>
+      <div class="gate1-metrics">
+        <div class="gate1-m">
+          <span class="v num">{{ gate1.registry_check.total }}</span>
+          <span class="l">在册标准</span>
+          <span class="h">standards[].code</span>
+        </div>
+        <div class="gate1-m">
+          <span class="v num">{{ gate1.allowed_patterns.length }}</span>
+          <span class="l">引用模式</span>
+          <span class="h">allowed_patterns</span>
+        </div>
+        <div class="gate1-m">
+          <span class="v num" :class="gate1.registry_check.violations.length ? 'hot' : 'zero'">
+            {{ gate1.registry_check.violations.length }}
+          </span>
+          <span class="l">命不上模式</span>
+          <span class="h">需人工核对登记</span>
+        </div>
+      </div>
+      <div class="gate1-body">
+        <div class="gate1-patterns">
+          <span class="pl-label">引用模式</span>
+          <code v-for="p in gate1.allowed_patterns" :key="p" class="k">{{ p }}</code>
+        </div>
+        <ol class="gate1-rules">
+          <li v-for="(r, i) in gate1.rules" :key="i">{{ r }}</li>
+        </ol>
+        <template v-if="gate1.registry_check.violations.length">
+          <div class="gate1-viol">
+            <span class="pl-label">命不上模式的在册编号</span>
+            <code v-for="c in gate1.registry_check.violations" :key="c" class="k viol">{{
+              c
+            }}</code>
+          </div>
+        </template>
+      </div>
+    </div>
+
     <!-- 指标带：标准总数 / 文件待核实 / 已核实裁决 / 限值表待录入 -->
     <div class="metric-strip">
       <div class="metric-cell">
@@ -30,9 +85,16 @@
         </a-radio-group>
         <a-select v-model:value="filters.tier" style="width: 140px">
           <a-select-option value="">全部层级</a-select-option>
-          <a-select-option v-for="t in TIERS" :key="t.key" :value="t.key">{{ t.label }}</a-select-option>
+          <a-select-option v-for="t in TIERS" :key="t.key" :value="t.key">{{
+            t.label
+          }}</a-select-option>
         </a-select>
-        <a-input-search v-model:value="filters.q" placeholder="按编号/名称搜索" style="width: 220px" allow-clear />
+        <a-input-search
+          v-model:value="filters.q"
+          placeholder="按编号/名称搜索"
+          style="width: 220px"
+          allow-clear
+        />
       </div>
       <div class="action-row">
         <a-button v-if="userStore.isAdmin" type="primary" :loading="exporting" @click="onExport">
@@ -82,12 +144,16 @@
         <template v-else-if="column.key === 'review'">
           <div v-if="record.review.action" class="review-cell">
             <span class="review-by">{{ record.review.decided_by }}</span>
-            <small v-if="record.review.note" class="review-note" :title="record.review.note">{{ record.review.note }}</small>
+            <small v-if="record.review.note" class="review-note" :title="record.review.note">{{
+              record.review.note
+            }}</small>
           </div>
           <span v-else class="muted">—</span>
         </template>
         <template v-else-if="column.key === 'actions'">
-          <a class="primary" @click="openReview(record)">{{ record.needs_verification || !record.review.action ? '核实…' : '查看…' }}</a>
+          <a class="primary" @click="openReview(record)">{{
+            record.needs_verification || !record.review.action ? '核实…' : '查看…'
+          }}</a>
         </template>
       </template>
     </a-table>
@@ -96,57 +162,6 @@
       <a-empty :description="emptyDesc">
         <a-button v-if="isFiltered" @click="clearFilters">清除筛选</a-button>
       </a-empty>
-    </div>
-
-    <!-- 门 1 体检卡（P2-3 只读）：规则规格 + 注册表自检（code 对 allowed_patterns），不伪造违规明细 -->
-    <div v-if="gate1" class="gate1-card">
-      <div class="gate1-hd">
-        <div class="gate1-badge"><ShieldCheck :size="16" /></div>
-        <div>
-          <h3>门 1 · 标准号体检</h3>
-          <div class="hd-sub" :title="gate1.desc">gate1_code_checks · 写作前标准引用合法性规则与当前命中</div>
-        </div>
-        <div class="hd-right">
-          <span v-if="gate1.registry_check.violations.length" class="pill-warn-tag">
-            {{ gate1.registry_check.violations.length }} 项待修正
-          </span>
-          <span v-else class="pill-ok-tag">全部通过</span>
-        </div>
-      </div>
-      <div class="gate1-metrics">
-        <div class="gate1-m">
-          <span class="v num">{{ gate1.registry_check.total }}</span>
-          <span class="l">在册标准</span>
-          <span class="h">standards[].code</span>
-        </div>
-        <div class="gate1-m">
-          <span class="v num">{{ gate1.allowed_patterns.length }}</span>
-          <span class="l">引用模式</span>
-          <span class="h">allowed_patterns</span>
-        </div>
-        <div class="gate1-m">
-          <span class="v num" :class="gate1.registry_check.violations.length ? 'hot' : 'zero'">
-            {{ gate1.registry_check.violations.length }}
-          </span>
-          <span class="l">命不上模式</span>
-          <span class="h">需人工核对登记</span>
-        </div>
-      </div>
-      <div class="gate1-body">
-        <div class="gate1-patterns">
-          <span class="pl-label">引用模式</span>
-          <code v-for="p in gate1.allowed_patterns" :key="p" class="k">{{ p }}</code>
-        </div>
-        <ol class="gate1-rules">
-          <li v-for="(r, i) in gate1.rules" :key="i">{{ r }}</li>
-        </ol>
-        <template v-if="gate1.registry_check.violations.length">
-          <div class="gate1-viol">
-            <span class="pl-label">命不上模式的在册编号</span>
-            <code v-for="c in gate1.registry_check.violations" :key="c" class="k viol">{{ c }}</code>
-          </div>
-        </template>
-      </div>
     </div>
 
     <!-- 限值查找表：人工录入（整表替换，DB 真源）→ 导出物化翻转两标志 -->
@@ -223,14 +238,19 @@
         </p>
         <div class="redline-box">
           <span class="redline-title">核实语义（红线）</span>
-          web_search 结果不采信，仅当已对照<strong>标准原文</strong>确认编号、年份、名称无误时才可确认。
+          web_search
+          结果不采信，仅当已对照<strong>标准原文</strong>确认编号、年份、名称无误时才可确认。
           导出物化后该条目转「已核实」，写作技能将按注册表引用规范书写；但<strong>限值数值断言仍以限值查找表数据在位为准</strong>——
           档位未录入前达标判定一律输出「需人工对照」。
         </div>
       </div>
       <a-form layout="vertical" class="dlg-form">
         <a-form-item label="备注（仅平台库留档，不进物化文件）">
-          <a-textarea v-model:value="dlg.form.note" :rows="2" placeholder="核实依据，如「已对照生态环境部官网现行版本」" />
+          <a-textarea
+            v-model:value="dlg.form.note"
+            :rows="2"
+            placeholder="核实依据，如「已对照生态环境部官网现行版本」"
+          />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -331,7 +351,9 @@ const filteredItems = computed(() => {
   if (filters.tier) list = list.filter((r) => r.tier === filters.tier)
   if (filters.q) {
     const q = filters.q.toLowerCase()
-    list = list.filter((r) => r.code.toLowerCase().includes(q) || (r.title || '').toLowerCase().includes(q))
+    list = list.filter(
+      (r) => r.code.toLowerCase().includes(q) || (r.title || '').toLowerCase().includes(q)
+    )
   }
   return list
 })
