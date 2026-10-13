@@ -1,37 +1,20 @@
 <template>
-  <div class="lexicon-panel">
-    <!-- 工具条：状态筛选 + 维度过滤 + 运营动作 -->
-    <div class="toolbar">
-      <div class="filter-row">
-        <a-radio-group v-model:value="filters.status" class="status-chips" button-style="solid" @change="fetchList">
-          <a-radio-button value="">全部 {{ total }}</a-radio-button>
-          <a-radio-button v-for="s in STATUS_DEFS" :key="s.key" :value="s.key">
-            {{ s.label }} {{ counts[s.key] ?? 0 }}
-          </a-radio-button>
-        </a-radio-group>
-        <a-select v-model:value="filters.category" style="width: 130px" @change="fetchList">
-          <a-select-option value="">全部分类</a-select-option>
-          <a-select-option v-for="c in CATEGORY_DEFS" :key="c.key" :value="c.key">{{ c.label }}</a-select-option>
-        </a-select>
-        <a-select v-model:value="filters.stage" style="width: 150px" @change="fetchList">
-          <a-select-option value="">全部阶段</a-select-option>
-          <a-select-option v-for="s in STAGES" :key="s.key" :value="s.key">{{ s.label }}</a-select-option>
-        </a-select>
-        <a-input-search
-          v-model:value="filters.q"
-          placeholder="按口径名搜索"
-          style="width: 200px"
-          allow-clear
-          @search="fetchList"
-        />
+  <div class="ewp lexicon-panel">
+    <!-- 页头（原型 s9：BookOpen + 可物化 pill + 导出物化；覆盖层开关为真实运营件，s9 无对应物） -->
+    <div class="page-head">
+      <div class="ph-icon">
+        <BookOpen :size="18" />
       </div>
-      <div class="action-row">
-        <a-button :loading="importing" @click="onImport">
-          <RefreshCw :size="14" style="margin-right: 4px" />重扫语料导入
-        </a-button>
+      <div>
+        <h2>数值护栏词表</h2>
+        <div class="ph-sub">lexicon · 写手数值护栏（指标识别 / 单位量纲 / 禁算词）的权威清单</div>
+      </div>
+      <div class="ph-actions">
+        <span v-if="counts.approved" class="pill pill-orange"
+          ><span class="dot dot-warn"></span>{{ counts.approved }} 项已入选</span
+        >
         <template v-if="userStore.isAdmin">
-          <a-button type="primary" :loading="exporting" @click="onExport">导出物化</a-button>
-          <div class="switch-box">
+          <span class="switch-box" :title="switchHint">
             <span class="switch-label">覆盖层</span>
             <a-switch
               :checked="switchState.enabled"
@@ -39,78 +22,215 @@
               size="small"
               @change="(v) => onToggleSwitch(v)"
             />
-            <span class="switch-hint" :title="switchHint">{{ switchHint }}</span>
-          </div>
+          </span>
+          <button class="btn btn-pri btn-sm" :disabled="exporting" @click="onExport">
+            <Download :size="14" />{{ exporting ? '导出中…' : '导出物化' }}
+          </button>
         </template>
-        <span v-else class="switch-hint">{{ switchHint }}</span>
+        <span v-else class="pill pill-gray" :title="switchHint">{{ switchHint }}</span>
       </div>
     </div>
 
-    <a-table
-      v-if="items.length"
-      :data-source="items"
-      :columns="columns"
-      :loading="loading"
-      :row-key="(r) => r.id"
-      :pagination="{ pageSize: 20, showTotal: (t) => `共 ${t} 条` }"
-      size="middle"
-    >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'caliber'">
-          <div class="caliber-cell">
-            <span class="caliber-name">{{ record.caliber }}</span>
-            <span v-if="record.note" class="caliber-note" :title="record.note">{{ record.note }}</span>
+    <a-spin v-if="loading && !items.length" style="display: block; margin: 48px auto" />
+    <template v-else-if="items.length || isFiltered">
+      <div class="split">
+        <!-- 左：状态分组（真实数据无「域」维度，状态即运营主轴） -->
+        <div class="card fam-list">
+          <div class="fam-search">
+            <a-input-search
+              v-model:value="filters.q"
+              placeholder="搜索口径…"
+              allow-clear
+              @search="fetchList"
+            />
           </div>
-        </template>
-        <template v-else-if="column.key === 'stage'">
-          {{ stageLabel(record.stage) }}
-        </template>
-        <template v-else-if="column.key === 'category'">
-          <span class="cat-tag" :class="`cat-${record.category}`">{{ categoryLabel(record.category) }}</span>
-        </template>
-        <template v-else-if="column.key === 'status'">
-          <span class="status-tag" :class="`st-${record.status}`">{{ statusLabel(record.status) }}</span>
-        </template>
-        <template v-else-if="column.key === 'counts'">
-          <span class="count-cell" :class="{ ready: record.range_ready }">
-            {{ record.n_values }} 值 / {{ record.n_reports }} 报告
-          </span>
-          <span v-if="record.range_ready" class="ready-badge">可发布</span>
-        </template>
-        <template v-else-if="column.key === 'actions'">
-          <div class="row-actions">
-            <template v-if="record.status === 'candidate'">
-              <a @click="onPatch(record, 'approved')">入选</a>
-              <a class="danger" @click="onPatch(record, 'rejected')">驳回</a>
-            </template>
-            <template v-else-if="record.status === 'approved'">
-              <a @click="onPatch(record, 'candidate')">撤回</a>
-            </template>
-            <template v-else-if="record.status === 'rejected'">
-              <a @click="onPatch(record, 'candidate')">恢复候选</a>
-            </template>
-            <template v-else-if="record.status === 'splitting'">
-              <a class="primary" @click="openSplit(record)">拆分…</a>
-              <a class="danger" @click="onPatch(record, 'rejected')">放弃拆分</a>
-            </template>
-            <a v-if="record.status !== 'splitting'" @click="openRename(record)">改名</a>
-            <a @click="openMentions(record)">提及</a>
+          <div
+            v-for="g in statusGroups"
+            :key="g.key"
+            class="fam-item"
+            :class="{ on: filters.status === g.key }"
+            @click="setStatus(g.key)"
+          >
+            <span v-if="g.key === 'splitting' && g.count" class="mini-dot"></span>
+            <span class="fam-name">{{ g.label }}</span>
+            <span class="fam-cnt num">{{ g.count }} 词条</span>
           </div>
-        </template>
-      </template>
-    </a-table>
+          <!-- 分类/阶段两维为真实数据特有，收在左列底部（样本下拉同款数据驱动必要） -->
+          <div class="fam-filters">
+            <a-select v-model:value="filters.category" style="width: 100%" @change="fetchList">
+              <a-select-option value="">全部分类</a-select-option>
+              <a-select-option v-for="c in CATEGORY_DEFS" :key="c.key" :value="c.key">{{
+                c.label
+              }}</a-select-option>
+            </a-select>
+            <a-select v-model:value="filters.stage" style="width: 100%" @change="fetchList">
+              <a-select-option value="">全部阶段</a-select-option>
+              <a-select-option v-for="s in STAGES" :key="s.key" :value="s.key">{{
+                s.label
+              }}</a-select-option>
+            </a-select>
+          </div>
+        </div>
+
+        <!-- 右：当前状态词条表 -->
+        <div>
+          <div class="card">
+            <div class="card-hd">
+              <h3>{{ activeGroupLabel }}</h3>
+              <span class="hd-sub"
+                >{{ total }} 词条 · 可发布 {{ readyCount }} · A {{ catCounts.measure }} · B
+                {{ catCounts.site }} · C {{ catCounts.junk }}</span
+              >
+              <div class="hd-right">
+                <button class="btn btn-sec btn-sm" :disabled="importing" @click="onImport">
+                  <RefreshCw :size="14" />{{ importing ? '扫描中…' : '重扫语料导入' }}
+                </button>
+              </div>
+            </div>
+            <table class="tbl" :style="loading && items.length ? 'opacity: .55' : ''">
+              <thead>
+                <tr>
+                  <th style="width: 19%">口径</th>
+                  <th style="width: 9%">阶段</th>
+                  <th style="width: 6%">单位</th>
+                  <th style="width: 9%">分类</th>
+                  <th style="width: 8%">状态</th>
+                  <th class="r" style="width: 12%">语料计数</th>
+                  <th style="width: 13%">来源</th>
+                  <th class="r" style="width: 24%; padding-right: 20px">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="record in pagedItems" :key="record.id">
+                  <td>
+                    <div class="caliber-cell">
+                      <span class="caliber-name" :title="record.caliber">{{ record.caliber }}</span>
+                      <span v-if="record.note" class="caliber-note" :title="record.note">{{
+                        record.note
+                      }}</span>
+                    </div>
+                  </td>
+                  <td>{{ stageLabel(record.stage) }}</td>
+                  <td class="mono">
+                    <template v-if="record.unit">{{ record.unit }}</template>
+                    <template v-else>
+                      <span class="missing-unit">缺单位</span>
+                    </template>
+                  </td>
+                  <td>
+                    <span class="pill pill-gray pill-sm">{{ categoryLabel(record.category) }}</span>
+                  </td>
+                  <td>
+                    <span class="pill pill-sm" :class="statusPillClass(record.status)">{{
+                      statusLabel(record.status)
+                    }}</span>
+                  </td>
+                  <td class="r num">
+                    <span class="count-cell" :class="{ ready: record.range_ready }"
+                      >{{ record.n_values }} 值 / {{ record.n_reports }} 报告</span
+                    >
+                    <span
+                      v-if="record.range_ready"
+                      class="pill pill-ok pill-sm"
+                      style="margin-left: 6px"
+                      >可发布</span
+                    >
+                  </td>
+                  <td>
+                    <span
+                      class="field-src db"
+                      :title="record.decided_at ? `裁决于 ${record.decided_at}` : '导入预置'"
+                      >DB · {{ record.decided_by || '导入' }}</span
+                    >
+                  </td>
+                  <td class="r" style="padding-right: 20px; white-space: nowrap">
+                    <template v-if="record.status === 'candidate'">
+                      <button class="btn btn-txt btn-sm" @click="onPatch(record, 'approved')">
+                        入选
+                      </button>
+                      <button
+                        class="btn btn-txt btn-sm withdraw-btn"
+                        @click="onPatch(record, 'rejected')"
+                      >
+                        驳回
+                      </button>
+                    </template>
+                    <template v-else-if="record.status === 'approved'">
+                      <button class="btn btn-txt btn-sm" @click="onPatch(record, 'candidate')">
+                        撤回
+                      </button>
+                    </template>
+                    <template v-else-if="record.status === 'rejected'">
+                      <button class="btn btn-txt btn-sm" @click="onPatch(record, 'candidate')">
+                        恢复候选
+                      </button>
+                    </template>
+                    <template v-else-if="record.status === 'splitting'">
+                      <button class="btn btn-pri btn-sm" @click="openSplit(record)">拆分…</button>
+                      <button
+                        class="btn btn-txt btn-sm withdraw-btn"
+                        @click="onPatch(record, 'rejected')"
+                      >
+                        放弃
+                      </button>
+                    </template>
+                    <button
+                      v-if="record.status !== 'splitting'"
+                      class="btn btn-txt btn-sm"
+                      @click="openRename(record)"
+                    >
+                      改名
+                    </button>
+                    <button class="btn btn-txt btn-sm" @click="openMentions(record)">提及</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="tbl-foot">
+              <span
+                >共 {{ total }} 条 · 语料计数实时现扫非快照 ·
+                区间护栏达报告数门槛即可发布（P5/P50/P95 语义取自 bank_compile）</span
+              >
+              <span v-if="pageCount > 1" class="pager">
+                <button class="btn btn-sm" :disabled="page <= 1" @click="page--">上一页</button>
+                <span class="num">{{ page }} / {{ pageCount }}</span>
+                <button class="btn btn-sm" :disabled="page >= pageCount" @click="page++">
+                  下一页
+                </button>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <!-- 空态：区分「库空未导入」与「筛选无匹配」，前者给一键导入 CTA -->
-    <div v-else-if="!loading" class="empty-state">
-      <a-empty :description="emptyDesc">
-        <a-button v-if="!isFiltered" type="primary" :loading="importing" @click="onImport">
-          <RefreshCw :size="14" style="margin-right: 4px" />重扫语料导入
-        </a-button>
-        <a-button v-else @click="clearFilters">清除筛选</a-button>
-      </a-empty>
-      <p v-if="!isFiltered" class="empty-hint">
-        词表数据存于平台库，首次使用需从 coal-eia-writer 技能语料扫描导入候选口径；导入幂等，重复执行只补新增、绝不覆盖人工决策。
-      </p>
+    <div v-else-if="!loading" class="card">
+      <div class="empty-state">
+        <a-empty :description="emptyDesc">
+          <button
+            v-if="!isFiltered"
+            class="btn btn-pri btn-sm"
+            :disabled="importing"
+            @click="onImport"
+          >
+            <RefreshCw :size="14" />重扫语料导入
+          </button>
+          <button v-else class="btn btn-sec btn-sm" @click="clearFilters">清除筛选</button>
+        </a-empty>
+        <p v-if="!isFiltered" class="empty-hint">
+          词表数据存于平台库，首次使用需从 coal-eia-writer
+          技能语料扫描导入候选口径；导入幂等，重复执行只补新增、绝不覆盖人工决策。
+        </p>
+      </div>
+    </div>
+
+    <div class="note-bar">
+      <Info :size="14" />
+      <span>
+        导出物化仅合并已入选条目到 references/overrides/curated_lexicon.json（range
+        一律现算）；改名旧口径自动进抑制清单，重扫语料不再复活；覆盖层开关关闭即删文件，管线回内置词表。
+      </span>
     </div>
 
     <!-- 拆分对话框：子口径定义 + 提及值逐条指派 -->
@@ -137,7 +257,9 @@
             删除
           </a-button>
         </div>
-        <a-button type="dashed" size="small" @click="splitModal.groups.push({ name: '' })">+ 增加子口径</a-button>
+        <a-button type="dashed" size="small" @click="splitModal.groups.push({ name: '' })"
+          >+ 增加子口径</a-button
+        >
       </div>
       <div class="assign-list">
         <div v-for="(m, mi) in splitModal.mentions" :key="mi" class="assign-row">
@@ -149,7 +271,9 @@
             </a-select-option>
           </a-select>
         </div>
-        <p v-if="!splitModal.mentions.length" class="assign-empty">该口径在语料中无提及（无法拆分）</p>
+        <p v-if="!splitModal.mentions.length" class="assign-empty">
+          该口径在语料中无提及（无法拆分）
+        </p>
       </div>
     </a-modal>
 
@@ -170,19 +294,25 @@
           {{ statusLabel(renameModal.entry?.status) }}
         </span>
         <span class="count-cell">
-          {{ renameModal.entry?.n_values }} 值 / {{ renameModal.entry?.n_reports }} 报告 · {{ renameModal.entry?.unit }}
+          {{ renameModal.entry?.n_values }} 值 / {{ renameModal.entry?.n_reports }} 报告 ·
+          {{ renameModal.entry?.unit }}
         </span>
       </div>
       <p class="rename-ctx-title">
         语料语境（高亮为扫描命中）
-        <a-tag v-if="renameModal.source === 'old_fingerprint'" color="orange">旧口径语境：新名在语料中零命中</a-tag>
+        <a-tag v-if="renameModal.source === 'old_fingerprint'" color="orange"
+          >旧口径语境：新名在语料中零命中</a-tag
+        >
         <span v-if="renameModal.ctxError" class="ctx-error">{{ renameModal.ctxError }}</span>
       </p>
       <div class="assign-list rename-ctx">
         <a-spin v-if="renameModal.loadingCtx" size="small" class="ctx-spin" />
         <template v-else>
           <div v-for="(m, i) in renameModal.mentions" :key="i" class="ctx-row">
-            <span class="ctx-text">{{ m.before }}<mark>{{ m.hit }}</mark>{{ m.after }}</span>
+            <span class="ctx-text"
+              >{{ m.before }}<mark>{{ m.hit }}</mark
+              >{{ m.after }}</span
+            >
             <span class="ctx-value">{{ m.value }} {{ m.unit }}</span>
             <span class="ctx-rid" :title="m.rid">{{ m.rid }}</span>
           </div>
@@ -198,16 +328,21 @@
       <div class="rename-warn">
         <Pencil :size="14" style="flex: none; margin-top: 3px" />
         <span>
-          新名若非语料逐字出现，语料计数将归 0、导出物化永久跳过（机制必然）；旧口径名自动进入抑制清单，重扫语料不会复活。
+          新名若非语料逐字出现，语料计数将归
+          0、导出物化永久跳过（机制必然）；旧口径名自动进入抑制清单，重扫语料不会复活。
         </span>
       </div>
     </a-modal>
 
     <!-- 提及明细抽屉 -->
-    <a-drawer v-model:open="mentionDrawer.open" :title="`提及明细 · ${mentionDrawer.entry?.caliber ?? ''}`" width="420">
+    <a-drawer
+      v-model:open="mentionDrawer.open"
+      :title="`提及明细 · ${mentionDrawer.entry?.caliber ?? ''}`"
+      width="420"
+    >
       <p class="drawer-sub">
-        {{ stageLabel(mentionDrawer.entry?.stage) }} · 首见单位 {{ mentionDrawer.entry?.unit || '—' }} ·
-        语料实时 {{ mentionDrawer.mentions.length }} 处提及
+        {{ stageLabel(mentionDrawer.entry?.stage) }} · 首见单位
+        {{ mentionDrawer.entry?.unit || '—' }} · 语料实时 {{ mentionDrawer.mentions.length }} 处提及
       </p>
       <div class="mention-list">
         <div v-for="(m, i) in mentionDrawer.mentions" :key="i" class="mention-row">
@@ -237,7 +372,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { Pencil, RefreshCw } from '@lucide/vue'
+import { BookOpen, Download, Info, Pencil, RefreshCw } from '@lucide/vue'
 import { eiaLexiconApi } from '@/apis/eia_lexicon_api'
 import { useUserStore } from '@/stores/user'
 
@@ -266,6 +401,13 @@ const STAGE_LABELS = Object.fromEntries(STAGES.map((s) => [s.key, s.label]))
 const CATEGORY_LABELS = Object.fromEntries(CATEGORY_DEFS.map((c) => [c.key, c.label]))
 const STATUS_LABELS = Object.fromEntries(STATUS_DEFS.map((s) => [s.key, s.label]))
 
+const STATUS_PILL_CLASS = {
+  candidate: 'pill-warn',
+  approved: 'pill-ok',
+  splitting: 'pill-orange',
+  rejected: 'pill-gray'
+}
+
 const userStore = useUserStore()
 const loading = ref(false)
 const importing = ref(false)
@@ -276,34 +418,63 @@ const total = ref(0)
 const counts = ref({})
 const filters = reactive({ status: '', category: '', stage: '', q: '' })
 const switchState = reactive({ enabled: false, file: false })
-
-const columns = [
-  { title: '口径', key: 'caliber' },
-  { title: '阶段', key: 'stage', width: 110 },
-  { title: '单位', dataIndex: 'unit', key: 'unit', width: 70 },
-  { title: '分类', key: 'category', width: 120 },
-  { title: '状态', key: 'status', width: 90 },
-  { title: '语料计数', key: 'counts', width: 200 },
-  { title: '操作', key: 'actions', width: 170 }
-]
+const page = ref(1)
+const PAGE_SIZE = 20
 
 const stageLabel = (k) => STAGE_LABELS[k] || k
 const categoryLabel = (k) => CATEGORY_LABELS[k] || k
 const statusLabel = (k) => STATUS_LABELS[k] || k
+const statusPillClass = (k) => STATUS_PILL_CLASS[k] || 'pill-gray'
+
+// 左列状态分组：counts 为全量状态分布（服务端口径），全部 = 四态合计
+const grandTotal = computed(() => Object.values(counts.value).reduce((acc, n) => acc + n, 0))
+
+const statusGroups = computed(() => [
+  { key: '', label: '全部口径', count: grandTotal.value },
+  ...STATUS_DEFS.map((s) => ({ key: s.key, label: s.label, count: counts.value[s.key] ?? 0 }))
+])
+
+const activeGroupLabel = computed(
+  () => statusGroups.value.find((g) => g.key === filters.status)?.label ?? '全部口径'
+)
+
+const readyCount = computed(() => items.value.filter((it) => it.range_ready).length)
+
+const catCounts = computed(() => {
+  const acc = { measure: 0, site: 0, junk: 0 }
+  for (const it of items.value) acc[it.category] = (acc[it.category] ?? 0) + 1
+  return acc
+})
+
+const pageCount = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)))
+const pagedItems = computed(() =>
+  items.value.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE)
+)
+
+const setStatus = (key) => {
+  filters.status = key
+  page.value = 1
+  fetchList()
+}
 
 const switchHint = computed(() => {
   if (!switchState.enabled) return '关闭：管线用内置词表'
   return switchState.file ? '开启：管线消费覆盖层' : '开启但文件缺失：待导出物化'
 })
 
-const isFiltered = computed(() => Boolean(filters.status || filters.category || filters.stage || filters.q))
-const emptyDesc = computed(() => (isFiltered.value ? '当前筛选无匹配条目' : '词表为空：尚未从语料扫描导入候选口径'))
+const isFiltered = computed(() =>
+  Boolean(filters.status || filters.category || filters.stage || filters.q)
+)
+const emptyDesc = computed(() =>
+  isFiltered.value ? '当前筛选无匹配条目' : '词表为空：尚未从语料扫描导入候选口径'
+)
 
 const clearFilters = () => {
   filters.status = ''
   filters.category = ''
   filters.stage = ''
   filters.q = ''
+  page.value = 1
   fetchList()
 }
 
@@ -319,6 +490,8 @@ const fetchList = async () => {
     items.value = data.items
     total.value = data.total
     counts.value = data.counts
+    // 筛选/变更后列表可能缩水，页码越界会切出空表——钳回有效范围
+    if (page.value > pageCount.value) page.value = pageCount.value
   } catch (e) {
     message.error(e?.message || '词表加载失败')
   } finally {
@@ -365,14 +538,18 @@ const onPatch = async (record, status) => {
 
 // ── 拆分 ────────────────────────────────────────────────
 
-const splitModal = reactive({ open: false, submitting: false, entry: null, groups: [], mentions: [], assignment: [] })
+const splitModal = reactive({
+  open: false,
+  submitting: false,
+  entry: null,
+  groups: [],
+  mentions: [],
+  assignment: []
+})
 
 const openSplit = async (record) => {
   splitModal.entry = record
-  splitModal.groups = [
-    { name: `${record.caliber}（甲）` },
-    { name: `${record.caliber}（乙）` }
-  ]
+  splitModal.groups = [{ name: `${record.caliber}（甲）` }, { name: `${record.caliber}（乙）` }]
   splitModal.mentions = []
   splitModal.assignment = []
   splitModal.open = true
@@ -477,7 +654,11 @@ const onRenameSubmit = async () => {
   if (newName !== entry.caliber) {
     // 客户端重名预检（列表可能被筛选，后端 ValueError 仍兜底）
     const clash = items.value.find(
-      (it) => it.id !== entry.id && it.stage === entry.stage && it.unit === entry.unit && it.caliber === newName
+      (it) =>
+        it.id !== entry.id &&
+        it.stage === entry.stage &&
+        it.unit === entry.unit &&
+        it.caliber === newName
     )
     if (clash) {
       message.warning(`口径已存在：${stageLabel(entry.stage)} / ${newName} / ${entry.unit}`)
@@ -555,77 +736,60 @@ onMounted(() => {
 </script>
 
 <style lang="less" scoped>
-.lexicon-panel {
-  --hairline: var(--gray-200);
-}
+.withdraw-btn {
+  color: var(--second-600);
 
-.toolbar {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-
-.empty-state {
-  padding: 48px 0;
-  background: var(--main-0);
-  border: 1px solid var(--hairline);
-  border-radius: 6px;
-  text-align: center;
-}
-
-.empty-hint {
-  max-width: 460px;
-  margin: 12px auto 0;
-  font-size: 12px;
-  color: var(--gray-400);
-  line-height: 1.6;
-}
-
-.filter-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.status-chips {
-  :deep(.ant-radio-button-wrapper) {
-    font-size: 12px;
+  &:hover {
+    background: var(--second-50);
   }
 }
 
-.action-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 .switch-box {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  border: 1px solid var(--hairline);
-  border-radius: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--gray-200);
+  border-radius: 999px;
   background: var(--main-0);
 }
 
 .switch-label {
   font-size: 12px;
-  color: var(--gray-700);
+  color: var(--color-text-secondary);
 }
 
-.switch-hint {
+/* 左列底部的分类/阶段过滤（真实数据维度，原型无对应物） */
+.fam-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px 14px;
+  border-top: 1px dashed var(--gray-100);
+}
+
+.missing-unit {
+  color: var(--second-600);
   font-size: 12px;
-  color: var(--gray-400);
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+/* 语料口径名是长句片段，auto 布局下 nowrap 最小内容宽会撑爆表格——固定布局 + 换行 */
+.lexicon-panel .tbl {
+  table-layout: fixed;
+  width: 100%;
+
+  td {
+    overflow-wrap: break-word;
+  }
 }
 
 /* ── 表格单元格 ─────────────────────────────────────── */
@@ -635,22 +799,33 @@ onMounted(() => {
   min-width: 0;
 
   .caliber-name {
-    font-weight: 600;
-    color: var(--gray-800);
+    font-weight: 500;
+    color: var(--color-text);
   }
 
   .caliber-note {
     font-size: 12px;
-    color: var(--gray-400);
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    overflow: hidden;
-    white-space: normal;
-    word-break: break-all;
+    color: var(--color-text-tertiary);
   }
 }
 
+.count-cell {
+  color: var(--color-text-tertiary);
+
+  &.ready {
+    color: var(--main-600);
+  }
+}
+
+.empty-hint {
+  max-width: 460px;
+  margin: 12px auto 0;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  line-height: 1.6;
+}
+
+/* ── 弹窗内部 ───────────────────────────────────────── */
 .cat-tag,
 .status-tag {
   display: inline-block;
@@ -706,194 +881,120 @@ onMounted(() => {
   border: 1px solid var(--second-600);
 }
 
-.count-cell {
-  font-variant-numeric: tabular-nums;
-  color: var(--gray-600);
-
-  &.ready {
-    color: var(--main-600);
-    font-weight: 600;
-  }
-}
-
-.ready-badge {
-  margin-left: 6px;
-  padding: 0 6px;
-  border-radius: 3px;
-  font-size: 11px;
-  line-height: 18px;
-  color: var(--main-600);
-  border: 1px solid var(--main-600);
-}
-
-.row-actions {
-  display: flex;
-  gap: 10px;
-
-  a {
-    font-size: 12px;
-  }
-
-  .primary {
-    color: var(--main-600);
-    font-weight: 600;
-  }
-
-  .danger {
-    color: var(--second-600);
-  }
-}
-
-/* ── 拆分对话框 ─────────────────────────────────────── */
 .split-tip {
-  margin: 0 0 10px;
-  font-size: 12px;
-  color: var(--gray-500);
-
-  b {
-    color: var(--main-600);
-  }
-
-  code {
-    font-size: 11px;
-    color: var(--gray-600);
-  }
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
 }
 
 .group-defs {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 
   .group-def {
     display: flex;
-    align-items: center;
     gap: 8px;
+    align-items: center;
   }
 }
 
 .assign-list {
-  max-height: 300px;
-  overflow-y: auto;
-  border: 1px solid var(--hairline);
-  border-radius: 6px;
-}
-
-.assign-row {
+  max-height: 320px;
+  overflow: auto;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
+  flex-direction: column;
+  gap: 8px;
 
-  & + & {
-    border-top: 1px solid var(--gray-100);
+  .assign-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
 
   .assign-value {
-    flex: none;
-    min-width: 90px;
+    min-width: 88px;
+    font-weight: 500;
     font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    color: var(--gray-800);
   }
 
-  .assign-rid {
+  .assign-rid,
+  .ctx-rid {
     flex: 1;
-    font-size: 11px;
-    color: var(--gray-400);
+    font-size: 12px;
+    color: var(--color-text-tertiary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+
+  .assign-empty {
+    margin: 8px 0;
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+  }
 }
 
-.assign-empty {
-  padding: 16px;
-  margin: 0;
-  text-align: center;
-  font-size: 12px;
-  color: var(--gray-400);
-}
-
-/* ── 改名对话框 ─────────────────────────────────────── */
 .rename-summary {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+
+  .caliber-name {
+    font-weight: 600;
+  }
 }
 
 .rename-ctx-title {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--gray-600);
-}
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
 
-.ctx-error {
-  font-weight: 400;
-  color: var(--second-600);
+  .ctx-error {
+    font-size: 12px;
+    color: var(--second-600);
+  }
 }
 
 .rename-ctx {
-  margin-bottom: 12px;
+  .ctx-spin {
+    display: block;
+    margin: 24px auto;
+  }
 
   .ctx-row {
     display: flex;
     align-items: baseline;
     gap: 10px;
-    padding: 6px 10px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: var(--main-0);
 
-    & + .ctx-row {
-      border-top: 1px solid var(--gray-100);
+    .ctx-text {
+      flex: 2;
+      font-size: 12px;
+      line-height: 1.6;
+
+      mark {
+        background: var(--main-100);
+        color: var(--main-700);
+        padding: 0 2px;
+        border-radius: 2px;
+      }
     }
-  }
 
-  .ctx-text {
-    flex: 1;
-    min-width: 0;
-    font-size: 12px;
-    line-height: 1.7;
-    color: var(--gray-700);
-    word-break: break-all;
-
-    mark {
-      padding: 0 2px;
-      border-radius: 2px;
-      background: var(--second-100);
-      color: var(--second-900);
+    .ctx-value {
+      min-width: 88px;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
     }
-  }
-
-  .ctx-value {
-    flex: none;
-    min-width: 80px;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    font-size: 12px;
-    color: var(--gray-800);
-  }
-
-  .ctx-rid {
-    flex: none;
-    max-width: 140px;
-    font-size: 11px;
-    color: var(--gray-400);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .ctx-spin {
-    display: block;
-    padding: 16px;
-    text-align: center;
   }
 }
 
@@ -901,65 +1002,80 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-top: 12px;
 }
 
 .rename-warn {
   display: flex;
   gap: 8px;
-  padding: 8px 10px;
+  margin-top: 12px;
+  padding: 10px 12px;
   border-radius: 6px;
   background: var(--second-50);
-  color: var(--second-900);
   font-size: 12px;
+  color: var(--color-text-secondary);
   line-height: 1.6;
 }
 
-/* ── 提及抽屉与导出结果 ─────────────────────────────── */
 .drawer-sub {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   font-size: 12px;
-  color: var(--gray-500);
+  color: var(--color-text-tertiary);
 }
 
-.mention-list,
-.skip-list {
-  border: 1px solid var(--hairline);
-  border-radius: 6px;
-}
-
-.mention-row,
-.skip-row {
+.mention-list {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
+  flex-direction: column;
+  gap: 6px;
 
-  & + & {
-    border-top: 1px solid var(--gray-100);
+  .mention-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: var(--main-0);
+
+    .mention-value {
+      min-width: 88px;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .mention-rid {
+      flex: 1;
+      font-size: 12px;
+      color: var(--color-text-tertiary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   }
 }
 
-.mention-value {
-  flex: none;
-  min-width: 90px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  color: var(--gray-800);
-}
+.skip-list {
+  max-height: 260px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 
-.mention-rid {
-  flex: 1;
-  font-size: 11px;
-  color: var(--gray-400);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+  .skip-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
 
-.skip-reason {
-  flex: 1;
-  font-size: 12px;
-  color: var(--gray-500);
+    .caliber-name {
+      font-weight: 500;
+    }
+
+    .skip-reason {
+      font-size: 12px;
+      color: var(--color-text-tertiary);
+    }
+  }
 }
 </style>
+
+<style lang="less" src="./factory-ui.less"></style>
