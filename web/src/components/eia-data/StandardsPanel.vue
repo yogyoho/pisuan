@@ -1,5 +1,35 @@
 <template>
-  <div class="standards-panel">
+  <div class="ewp standards-panel">
+    <!-- 页头（原型 s11：盾形图标 + 待导出 pill + 双通道导出） -->
+    <div class="page-head">
+      <div class="ph-icon">
+        <ShieldCheck :size="18" />
+      </div>
+      <div>
+        <h2>标准与限值库</h2>
+        <div class="ph-sub">
+          standards_index 核实闭环 + 限值查找表专家录入（写手引用合法性与取值的权威来源）
+        </div>
+      </div>
+      <div class="ph-actions">
+        <span v-if="dbTableCount" class="pill pill-orange"
+          ><span class="dot dot-warn"></span>{{ dbTableCount }} 表待导出</span
+        >
+        <template v-if="userStore.isAdmin">
+          <button class="btn btn-sec btn-sm" :disabled="exporting" @click="onExport">
+            {{ exporting ? '导出中…' : '导出核实结果' }}
+          </button>
+          <button
+            class="btn btn-pri btn-sm"
+            :disabled="exporting || !dbTableCount"
+            @click="exportLimits"
+          >
+            {{ exporting ? '导出中…' : '导出限值行' }}
+          </button>
+        </template>
+      </div>
+    </div>
+
     <!-- 门 1 体检卡（P2-3 只读）：规则规格 + 注册表自检（code 对 allowed_patterns），不伪造违规明细 -->
     <div v-if="gate1" class="gate1-card">
       <div class="gate1-hd">
@@ -55,170 +85,191 @@
       </div>
     </div>
 
-    <!-- 指标带：标准总数 / 文件待核实 / 已核实裁决 / 限值表待录入 -->
-    <div class="metric-strip">
-      <div class="metric-cell">
-        <span class="metric-label">标准总数</span>
-        <span class="metric-value">{{ counts.total }}<small>条</small></span>
-      </div>
-      <div class="metric-cell" :class="{ warn: counts.needs_verification > 0 }">
-        <span class="metric-label">文件待核实</span>
-        <span class="metric-value">{{ counts.needs_verification }}<small>条</small></span>
-      </div>
-      <div class="metric-cell">
-        <span class="metric-label">已核实裁决</span>
-        <span class="metric-value">{{ counts.confirmed }}<small>条</small></span>
-      </div>
-      <div class="metric-cell" :class="{ warn: counts.limit_tables_pending > 0 }">
-        <span class="metric-label">限值表待录入</span>
-        <span class="metric-value">{{ counts.limit_tables_pending }}<small>张</small></span>
-      </div>
-    </div>
-
-    <!-- 工具条 -->
-    <div class="toolbar">
-      <div class="filter-row">
-        <a-radio-group v-model:value="filters.state" button-style="solid">
-          <a-radio-button value="">全部</a-radio-button>
-          <a-radio-button value="todo">待核实</a-radio-button>
-          <a-radio-button value="done">已核实</a-radio-button>
-        </a-radio-group>
-        <a-select v-model:value="filters.tier" style="width: 140px">
-          <a-select-option value="">全部层级</a-select-option>
-          <a-select-option v-for="t in TIERS" :key="t.key" :value="t.key">{{
-            t.label
-          }}</a-select-option>
-        </a-select>
-        <a-input-search
-          v-model:value="filters.q"
-          placeholder="按编号/名称搜索"
-          style="width: 220px"
-          allow-clear
-        />
-      </div>
-      <div class="action-row">
-        <a-button v-if="userStore.isAdmin" type="primary" :loading="exporting" @click="onExport">
-          导出物化
-        </a-button>
-      </div>
-    </div>
-
-    <a-table
-      v-if="filteredItems.length"
-      :data-source="filteredItems"
-      :columns="columns"
-      :loading="loading"
-      :row-key="(r) => r.code"
-      :pagination="{ pageSize: 20, showTotal: (t) => `共 ${t} 条` }"
-      size="middle"
-    >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'code'">
-          <span class="code-cell" :title="record.code">{{ record.code }}</span>
-        </template>
-        <template v-else-if="column.key === 'title'">
-          <!-- 主行名称 + 副行写作作用（role）：写手按 role 决定该标准在报告中的用法 -->
-          <div class="title-cell">
-            <span class="title-main" :title="record.title">{{ record.title }}</span>
-            <span v-if="record.role" class="title-role" :title="record.role">{{
-              record.role
-            }}</span>
-          </div>
-        </template>
-        <template v-else-if="column.key === 'tier'">
-          {{ tierLabel(record.tier) }}
-        </template>
-        <template v-else-if="column.key === 'chapters'">
-          <!-- chapters 实况为分号分隔字符串（62/62），非数组 -->
-          <span v-if="record.chapters" class="muted">{{ record.chapters }}</span>
-          <span v-else class="muted">—</span>
-        </template>
-        <template v-else-if="column.key === 'cited_count'">
-          <span :class="record.cited_count > 0 ? 'cited' : 'muted'">{{ record.cited_count }}</span>
-        </template>
-        <template v-else-if="column.key === 'flags'">
-          <span v-if="!record.needs_verification" class="flag-tag flag-ok">已核实</span>
-          <span v-else-if="record.review.action" class="flag-tag flag-pending">已裁决·待导出</span>
-          <span v-else class="flag-tag flag-todo">待核实</span>
-        </template>
-        <template v-else-if="column.key === 'review'">
-          <div v-if="record.review.action" class="review-cell">
-            <span class="review-by">{{ record.review.decided_by }}</span>
-            <small v-if="record.review.note" class="review-note" :title="record.review.note">{{
-              record.review.note
-            }}</small>
-          </div>
-          <span v-else class="muted">—</span>
-        </template>
-        <template v-else-if="column.key === 'actions'">
-          <a class="primary" @click="openReview(record)">{{
-            record.needs_verification || !record.review.action ? '核实…' : '查看…'
-          }}</a>
-        </template>
-      </template>
-    </a-table>
-
-    <div v-else-if="!loading" class="empty-state">
-      <a-empty :description="emptyDesc">
-        <a-button v-if="isFiltered" @click="clearFilters">清除筛选</a-button>
-      </a-empty>
-    </div>
-
-    <!-- 限值查找表：人工录入（整表替换，DB 真源）→ 导出物化翻转两标志 -->
-    <div class="limits-section">
-      <div class="limits-header">
-        <div class="limits-header-main">
-          <div>
-            <h3>限值查找表</h3>
-            <p class="limits-sub">
-              档位未录入前，达标判定一律输出「需人工对照」，禁自动断言；录入须对照标准原文，导出物化后写作技能方可引用
-            </p>
-          </div>
-          <a-button
-            v-if="userStore.isAdmin"
-            size="small"
-            :disabled="!dbTableCount"
-            :loading="exporting"
-            @click="exportLimits"
+    <a-spin v-if="loading && !items.length" style="display: block; margin: 48px auto" />
+    <template v-else>
+      <!-- 标准核实清单（原型 s11：card-hd 内 seg + 搜索，自绘表） -->
+      <div class="card">
+        <div class="card-hd">
+          <h3>标准核实清单</h3>
+          <span class="hd-sub"
+            >{{ items.length }} 条 · 待核实 {{ todoCount }} · 已核实 {{ doneCount }}</span
           >
-            导出限值行{{ dbTableCount ? `（${dbTableCount} 张待物化）` : '' }}
-          </a-button>
+          <div class="hd-right">
+            <div class="seg">
+              <button :class="{ on: filters.state === '' }" @click="filters.state = ''">
+                全部 {{ items.length }}
+              </button>
+              <button :class="{ on: filters.state === 'todo' }" @click="filters.state = 'todo'">
+                待核实 {{ todoCount }}
+              </button>
+              <button :class="{ on: filters.state === 'done' }" @click="filters.state = 'done'">
+                已核实 {{ doneCount }}
+              </button>
+            </div>
+            <input
+              v-model="filters.q"
+              class="inp"
+              style="width: 180px"
+              placeholder="搜索标准号 / 名称…"
+            />
+          </div>
+        </div>
+        <table class="tbl" :style="loading && items.length ? 'opacity: .55' : ''">
+          <thead>
+            <tr>
+              <th style="width: 17%">标准号</th>
+              <th style="width: 30%">名称</th>
+              <th style="width: 10%">分级</th>
+              <th style="width: 11%">核实状态</th>
+              <th style="width: 20%">核实人 / 备注</th>
+              <th class="r" style="width: 12%; padding-right: 20px">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="record in filteredItems" :key="record.code">
+              <td class="mono">
+                {{ record.code }}
+                <span
+                  v-if="record.review.action && record.needs_verification"
+                  class="pill pill-orange pill-sm"
+                  style="margin-left: 4px"
+                  title="已裁决，导出物化后转「已核实」"
+                  >待导出</span
+                >
+              </td>
+              <td>
+                <div class="title-cell">
+                  <span
+                    class="title-main"
+                    :title="`章节：${record.chapters || '—'} · 语料引用 ${record.cited_count} 份`"
+                    >{{ record.title }}</span
+                  >
+                  <span v-if="record.role" class="title-role" :title="record.role">{{
+                    record.role
+                  }}</span>
+                </div>
+              </td>
+              <td>
+                <span
+                  class="tier"
+                  :class="tierBadge(record.tier)"
+                  :title="tierLabel(record.tier)"
+                  >{{ tierLabel(record.tier) }}</span
+                >
+              </td>
+              <td>
+                <span v-if="!record.needs_verification" class="pill pill-ok">已核实</span>
+                <span v-else-if="record.review.action" class="pill pill-orange">已裁决·待导出</span>
+                <span v-else class="pill pill-warn">待核实</span>
+              </td>
+              <td>
+                <div v-if="record.review.action" class="review-cell">
+                  <span class="review-by">{{ record.review.decided_by }}</span>
+                  <small
+                    v-if="record.review.note"
+                    class="review-note"
+                    :title="record.review.note"
+                    >{{ record.review.note }}</small
+                  >
+                </div>
+                <span v-else class="muted">—</span>
+              </td>
+              <td class="r" style="padding-right: 20px">
+                <button class="btn btn-txt btn-sm" @click="openReview(record)">
+                  {{ record.needs_verification || !record.review.action ? '核实' : '查看' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-if="!filteredItems.length" class="empty-state">
+          <a-empty :description="emptyDesc">
+            <button v-if="isFiltered" class="btn btn-sec btn-sm" @click="clearFilters">
+              清除筛选
+            </button>
+          </a-empty>
+        </div>
+        <div class="tbl-foot">
+          共 {{ filteredItems.length }} 条 · 核实 =
+          已对照标准原文确认编号/年份/名称；导出物化翻转注册表两标志
         </div>
       </div>
-      <div class="limits-grid">
-        <div v-for="(t, name) in limitTables" :key="name" class="limit-card">
-          <div class="limit-head">
-            <span class="limit-desc">{{ t.desc }}</span>
-            <span class="limit-head-right">
-              <a v-if="userStore.isAdmin" class="limit-edit" @click="openLimitEdit(name, t)"
-                >编辑…</a
-              >
-              <a-tag class="limit-ref">{{ t.code_ref }}</a-tag>
-            </span>
-          </div>
-          <div class="limit-flags">
-            <span v-if="!t.needs_verification" class="flag-tag flag-ok">已核实</span>
-            <span v-else-if="(t.rows || []).length" class="flag-tag flag-pending">
-              已录入 {{ t.rows.length }} 行 · {{ t.source === 'db' ? '待导出' : '待核对全表' }}
-            </span>
-            <span v-else class="flag-tag flag-todo">未录入</span>
-          </div>
-          <!-- 已录入限值行：列头取服务端 schemas（字段顺序权威），缺席时回退首行键 -->
-          <table v-if="(t.rows || []).length" class="limit-rows">
-            <thead>
-              <tr>
-                <th v-for="k in rowKeys(name, t)" :key="k">{{ rowKeyLabel(name, k) }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(r, i) in t.rows" :key="i">
-                <td v-for="k in rowKeys(name, t)" :key="k">{{ r[k] }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <p v-if="t.note" class="limit-note">{{ t.note }}</p>
+
+      <!-- 限值查找表（原型 s11：表 chips + 单表视图 + 整表替换编辑） -->
+      <div class="card">
+        <div class="card-hd">
+          <h3>限值查找表</h3>
+          <span class="hd-sub"
+            >{{ tableEntries.length }} 表 · schema 驱动 · 整表替换语义 ·
+            档位未录入达标判定输出「需人工对照」</span
+          >
+        </div>
+        <div class="toolbar">
+          <button
+            v-for="[name, t] in tableEntries"
+            :key="name"
+            class="stage-chip"
+            :class="{ on: activeTable === name }"
+            @click="activeTable = name"
+          >
+            {{ t.desc }} <span class="cnt">{{ (t.rows || []).length }} 行</span>
+          </button>
+          <span style="flex: 1"></span>
+          <span
+            v-if="activeMeta"
+            class="pill"
+            :class="activeMeta.source === 'db' ? 'pill-orange' : 'pill-gray'"
+            :title="
+              activeMeta.source === 'db'
+                ? 'DB 录入为导出真源，导出物化后写手可见'
+                : '文件锚点态，导出前请先录入核实'
+            "
+            >{{ activeMeta.source === 'db' ? 'DB · 待导出' : '文件态' }}</span
+          >
+          <button
+            v-if="userStore.isAdmin"
+            class="btn btn-sec btn-sm"
+            :disabled="!activeTable"
+            @click="openLimitEdit(activeTable, activeMeta)"
+          >
+            {{ (activeMeta?.rows || []).length ? '编辑限值行' : '添加限值行' }}
+          </button>
+        </div>
+        <table v-if="activeRows.length" class="tbl limit-tbl">
+          <thead>
+            <tr>
+              <th v-for="(spec, k) in activeSchema" :key="k" :class="{ r: spec.type === 'number' }">
+                {{ spec.label }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, i) in activeRows" :key="i">
+              <td v-for="(spec, k) in activeSchema" :key="k" :class="{ r: spec.type === 'number' }">
+                <span :class="spec.type === 'number' ? 'mono num' : ''">{{ row[k] }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-else class="limit-empty">
+          <a-empty :description="`「${activeMeta?.desc || ''}」暂无限值行，录入后写手方可取值`" />
+        </div>
+        <p v-if="activeMeta?.note" class="limit-note" :title="activeMeta.note">
+          {{ activeMeta.note }}
+        </p>
+        <div class="tbl-foot">
+          整表替换语义：保存即以 DB 为导出真源全量替换；导出以 (table_key, id) 全序重写 rows
+          数组并翻转核验标记；空表拒绝导出
         </div>
       </div>
+    </template>
+
+    <div class="note-bar">
+      <Info :size="14" />
+      <span
+        >体检命不上模式的编号经核实通道人工登记修正；限值行按表 schema
+        分型校验（str/number、必填），写手按 (标准号, 参数) 取值。</span
+      >
     </div>
 
     <!-- 核实对话框 -->
@@ -296,7 +347,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { ShieldCheck } from '@lucide/vue'
+import { Info, ShieldCheck } from '@lucide/vue'
 import { eiaStandardApi } from '@/apis/eia_standard_api'
 import { useUserStore } from '@/stores/user'
 
@@ -316,22 +367,20 @@ const items = ref([])
 const limitTables = ref({})
 const schemas = ref({})
 const gate1 = ref(null)
-const counts = reactive({ total: 0, needs_verification: 0, confirmed: 0, limit_tables_pending: 0 })
-const filters = reactive({ state: '', tier: '', q: '' })
-
-const columns = [
-  { title: '标准编号', key: 'code', width: 180, ellipsis: true },
-  // 名称列弹性宽；不设 ellipsis（nowrap 继承会压掉 role 副行折行），bodyCell 渲染主行 + role 副行
-  { title: '名称', key: 'title' },
-  { title: '层级', key: 'tier', width: 110 },
-  { title: '章节', key: 'chapters', width: 140, ellipsis: true },
-  { title: '语料引用', key: 'cited_count', width: 90, align: 'right' },
-  { title: '核实态', key: 'flags', width: 130 },
-  { title: '裁决', key: 'review', width: 190 },
-  { title: '操作', key: 'actions', width: 80 }
-]
+const filters = reactive({ state: '', q: '' })
+// 限值表单表视图：chips 切换当前表（原型 s11 单表视图）
+const activeTable = ref('')
 
 const tierLabel = (k) => TIER_LABELS[k] || k
+// 分级徽记按真实类别映射展示档位（非虚构 T1/T2 评级）：质量/排放为写手取值主力 → tier-1
+const TIER_BADGES = {
+  quality_limit: 'tier-1',
+  emission_limit: 'tier-1',
+  framework: 'tier-2',
+  method_param: 'tier-3',
+  pending: 'tier-3'
+}
+const tierBadge = (k) => TIER_BADGES[k] || 'tier-3'
 
 // 限值行列头取服务端 schemas（字段顺序与中文标签权威）；schemas 缺席时回退首行键
 const rowKeys = (name, t) => {
@@ -339,16 +388,23 @@ const rowKeys = (name, t) => {
   if (s) return Object.keys(s)
   return Object.keys(t.rows?.[0] || {}).filter((k) => k !== 'origin')
 }
-const rowKeyLabel = (name, k) => schemas.value[name]?.[k]?.label || k
 
-const isFiltered = computed(() => Boolean(filters.state || filters.tier || filters.q))
+// seg/头标与过滤同源：待核实 = 文件标记且无裁决；已核实 = 其余（含免核实条目）。
+// 不用服务端 counts.confirmed——它只数 DB 裁决，与表格过滤口径脱节（会显示 0 却过滤出 21 行）
+const todoCount = computed(
+  () => items.value.filter((r) => r.needs_verification && !r.review.action).length
+)
+const doneCount = computed(
+  () => items.value.filter((r) => !r.needs_verification || r.review.action).length
+)
+
+const isFiltered = computed(() => Boolean(filters.state || filters.q))
 const emptyDesc = computed(() => (isFiltered.value ? '当前筛选无匹配标准' : '标准注册表为空'))
 
 const filteredItems = computed(() => {
   let list = items.value
   if (filters.state === 'todo') list = list.filter((r) => r.needs_verification && !r.review.action)
   if (filters.state === 'done') list = list.filter((r) => !r.needs_verification || r.review.action)
-  if (filters.tier) list = list.filter((r) => r.tier === filters.tier)
   if (filters.q) {
     const q = filters.q.toLowerCase()
     list = list.filter(
@@ -360,9 +416,24 @@ const filteredItems = computed(() => {
 
 const clearFilters = () => {
   filters.state = ''
-  filters.tier = ''
   filters.q = ''
 }
+
+// ── 限值表单表视图 ──────────────────────────────────────
+
+const tableEntries = computed(() =>
+  Object.entries(limitTables.value).filter(([, v]) => typeof v === 'object' && v !== null)
+)
+const activeMeta = computed(() => limitTables.value[activeTable.value] || null)
+const activeSchema = computed(() => schemas.value[activeTable.value] || {})
+const activeRows = computed(() => {
+  const t = activeMeta.value
+  if (!t) return []
+  // schema 缺席时回退首行键投影（与 rowKeys 同一兜底）
+  if (schemas.value[activeTable.value]) return t.rows || []
+  const keys = rowKeys(activeTable.value, t)
+  return (t.rows || []).map((r) => Object.fromEntries(keys.map((k) => [k, r[k]])))
+})
 
 const fetchList = async () => {
   loading.value = true
@@ -373,12 +444,15 @@ const fetchList = async () => {
       eiaStandardApi.getGate1().catch(() => null) // 体检卡独立降级：不阻塞标准表主链
     ])
     items.value = data.items
-    Object.assign(counts, data.counts)
     schemas.value = limits.schemas || {}
     limitTables.value = Object.fromEntries(
       Object.entries(limits.limit_tables).filter(([, v]) => typeof v === 'object' && v !== null)
     )
     gate1.value = gate1Data
+    // 首次装载缺省选中第一张表；刷新后当前选中表被裁剪则回落
+    if (!limitTables.value[activeTable.value]) {
+      activeTable.value = tableEntries.value[0]?.[0] ?? ''
+    }
   } catch (e) {
     message.error(e?.message || '标准库加载失败')
   } finally {
@@ -507,79 +581,30 @@ onMounted(fetchList)
   --hairline: var(--gray-200);
 }
 
-/* ── 指标带 ─────────────────────────────────────────── */
-.metric-strip {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  background: var(--main-0);
-  border: 1px solid var(--hairline);
-  border-radius: 6px;
-  margin-bottom: 12px;
-}
+/* 清单表列宽固定（标准名/备注为长文本），同 s9/s10 结论；限值表字段短改回自动 */
+.standards-panel .tbl {
+  table-layout: fixed;
 
-.metric-cell {
-  padding: 12px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-
-  & + & {
-    border-left: 1px solid var(--hairline);
-  }
-
-  .metric-label {
-    font-size: 12px;
-    color: var(--gray-500);
-  }
-
-  .metric-value {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--gray-800);
-    font-variant-numeric: tabular-nums;
-    line-height: 1.1;
-
-    small {
-      margin-left: 4px;
-      font-size: 12px;
-      font-weight: 400;
-      color: var(--gray-500);
-    }
-  }
-
-  &.warn .metric-value {
-    color: var(--second-600);
+  td {
+    overflow-wrap: break-word;
   }
 }
 
-/* ── 工具条 ─────────────────────────────────────────── */
-.toolbar {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
+.limit-tbl {
+  table-layout: auto;
 }
 
-.filter-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+.limit-empty {
+  padding: 40px 0;
 }
 
-.action-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* ── 表格单元格 ─────────────────────────────────────── */
-.code-cell {
-  font-weight: 600;
-  color: var(--gray-800);
-  font-size: 12px;
+.limit-note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--gray-400);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .title-cell {
@@ -609,12 +634,6 @@ onMounted(fetchList)
   color: var(--gray-400);
 }
 
-.cited {
-  font-weight: 600;
-  color: var(--main-600);
-  font-variant-numeric: tabular-nums;
-}
-
 .review-cell {
   display: flex;
   flex-direction: column;
@@ -634,157 +653,10 @@ onMounted(fetchList)
   }
 }
 
-.flag-tag {
-  display: inline-block;
-  padding: 0 6px;
-  border-radius: 3px;
-  font-size: 11px;
-  line-height: 18px;
-}
-
-.flag-ok {
-  color: var(--main-600);
-  border: 1px solid var(--main-600);
-  background: var(--main-0);
-}
-
-.flag-pending {
-  color: var(--second-600);
-  border: 1px solid var(--second-600);
-  background: var(--main-0);
-}
-
-.flag-todo {
-  color: var(--gray-500);
-  border: 1px dashed var(--gray-300);
-  background: var(--gray-50);
-}
-
-a.primary {
-  color: var(--main-600);
-  font-weight: 600;
-}
-
 /* ── 空态 ───────────────────────────────────────────── */
 .empty-state {
   padding: 48px 0;
-  background: var(--main-0);
-  border: 1px solid var(--hairline);
-  border-radius: 6px;
   text-align: center;
-}
-
-/* ── 限值查找表（只读） ─────────────────────────────── */
-.limits-section {
-  margin-top: 20px;
-}
-
-.limits-header {
-  margin-bottom: 10px;
-
-  .limits-header-main {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  h3 {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--gray-800);
-  }
-
-  .limits-sub {
-    margin: 4px 0 0;
-    font-size: 12px;
-    color: var(--gray-500);
-  }
-}
-
-.limits-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 10px;
-}
-
-.limit-card {
-  padding: 12px 14px;
-  border: 1px solid var(--hairline);
-  border-radius: 6px;
-  background: var(--main-0);
-
-  .limit-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-
-  .limit-desc {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--gray-800);
-  }
-
-  .limit-ref {
-    flex-shrink: 0;
-    font-size: 11px;
-    color: var(--gray-600);
-  }
-
-  .limit-head-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-  }
-
-  .limit-edit {
-    font-size: 12px;
-    color: var(--main-600);
-  }
-
-  .limit-flags {
-    margin-bottom: 4px;
-  }
-
-  .limit-rows {
-    width: 100%;
-    margin-top: 6px;
-    border-collapse: collapse;
-    font-size: 12px;
-
-    th,
-    td {
-      padding: 4px 8px;
-      border: 1px solid var(--hairline);
-      text-align: left;
-    }
-
-    th {
-      font-weight: 600;
-      color: var(--gray-600);
-      background: var(--gray-50);
-    }
-
-    td {
-      color: var(--gray-800);
-      font-variant-numeric: tabular-nums;
-    }
-  }
-
-  .limit-note {
-    margin: 4px 0 0;
-    font-size: 11px;
-    color: var(--gray-400);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
 }
 
 /* ── 核实对话框 ─────────────────────────────────────── */
@@ -993,8 +865,9 @@ a.primary {
   flex-wrap: wrap;
 }
 
+/* mono 栈对齐原型 var(--mono)（用户裁定，2026-10-13） */
 code.k {
-  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, 'Courier New', monospace;
   font-size: 12px;
   background: var(--gray-100);
   border-radius: 4px;
@@ -1025,3 +898,5 @@ code.k {
   border-top: 1px dashed var(--hairline);
 }
 </style>
+
+<style lang="less" src="./factory-ui.less"></style>
