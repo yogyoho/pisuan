@@ -5156,3 +5156,9 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 00:26 | 提交批准的 2 commit：FilterSelect feat + docs/wolf 追账 | 4bf30dcd, d27be888 (pisuan-custom) | 完成，未推送 | ~1k |
+| 00:27 | 推送 pisuan-custom → origin（efaa024b..d27be888，10 commits） | pisuan-custom | 完成 | ~1k |
+| 01:08 | 总览 s8 补差：页头+体检去处理锚点×4+布局骨架；修 .ewp 未挂配方 bug-439 | DatasetStatsPanel.vue, EiaDataView.vue | 明暗截图/锚点全通 | ~8k |
+| 01:08 | 词表布局骨架（bug-440）+ 图标对齐（bug-441）+ 四面板去返回按钮 + .back-btn 配方清除 | Lexicon/Meta/Entities/Formulas/Sections/Expectations.vue, factory-ui.less, EiaDataLayout.vue | 全过，console 净 | ~6k |
+| 01:08 | bug-439/440/441 记账 + changelog/cerebrum 追账；提交提案待批 | docs/develop-guides/changelog.md, .wolf/* | 完成 | ~2k |
+| 01:11 | 词表左列 264→220px（用户裁定，仅本页覆写 .split） | LexiconPanel.vue | 实测 220px 无溢出截图 | ~1k |
