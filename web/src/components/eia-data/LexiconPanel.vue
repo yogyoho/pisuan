@@ -31,7 +31,35 @@
       </div>
     </div>
 
-    <a-spin v-if="loading && !items.length" style="display: block; margin: 48px auto" />
+    <!-- 初始化骨架：左状态分组 + 右词条表按真实布局占位（通用 .sk recipe 见 factory-ui），防加载后版面跳动 -->
+    <div v-if="loading && !items.length" class="lex-skeleton" aria-hidden="true">
+      <div class="split">
+        <div class="card fam-list">
+          <div class="fam-search"><span class="sk sk-inp"></span></div>
+          <div v-for="i in 5" :key="i" class="sk-fam-row">
+            <span class="sk sk-line w-40"></span>
+            <span class="sk sk-line w-10"></span>
+          </div>
+          <div class="fam-filters">
+            <span class="sk sk-inp"></span>
+            <span class="sk sk-inp"></span>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="card-hd"><span class="sk sk-line w-25"></span></div>
+            <div v-for="i in 9" :key="i" class="sk-tbl-row" :class="{ hd: i === 1 }">
+              <span
+                v-for="j in 4"
+                :key="j"
+                class="sk sk-line"
+                :class="['w-40', 'w-10', 'w-10', 'w-25'][j - 1]"
+              ></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     <template v-else-if="items.length || isFiltered">
       <div class="split">
         <!-- 左：状态分组（真实数据无「域」维度，状态即运营主轴） -->
@@ -774,6 +802,31 @@ onMounted(() => {
   border-top: 1px dashed var(--gray-100);
 }
 
+/* 初始化骨架：本页形状（通用 .sk/.sk-line recipe 在 factory-ui） */
+.sk-inp {
+  height: 30px;
+  border-radius: 6px;
+}
+
+.sk-fam-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.sk-tbl-row {
+  display: flex;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gray-100);
+
+  &.hd .sk-line {
+    height: 11px;
+  }
+}
+
 .missing-unit {
   color: var(--second-600);
   font-size: 12px;
@@ -788,6 +841,11 @@ onMounted(() => {
 }
 
 /* 语料口径名是长句片段，auto 布局下 nowrap 最小内容宽会撑爆表格——固定布局 + 换行 */
+/* 用户裁定：词表左列较原型 .split 264px 收窄（配方三页共用，此处只覆写本页） */
+.lexicon-panel .split {
+  grid-template-columns: 220px 1fr;
+}
+
 .lexicon-panel .tbl {
   table-layout: fixed;
   width: 100%;

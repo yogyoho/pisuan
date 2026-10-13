@@ -86,28 +86,6 @@
     flex: none;
   }
 
-  .back-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    border: 1px solid var(--gray-200);
-    border-radius: 6px;
-    background: var(--gray-0);
-    color: var(--color-text-tertiary);
-    cursor: pointer;
-    flex: none;
-    transition:
-      color 0.15s,
-      border-color 0.15s;
-
-    &:hover {
-      color: var(--main-600);
-      border-color: var(--main-400);
-    }
-  }
-
   /* ── 按钮 / 标签 / 输入 ── */
   .btn {
     display: inline-flex;
@@ -835,5 +813,61 @@
 
   .empty-state {
     padding: 32px 0;
+  }
+
+  /* ── 初始化骨架（通用 recipe）：.sk 脉冲条 + 宽度语义修饰符，按页组合出布局占位 ── */
+  .sk {
+    display: block;
+    background: var(--gray-100);
+    border-radius: 4px;
+    animation: sk-pulse 1.4s ease-in-out infinite;
+  }
+
+  .sk-line {
+    height: 12px;
+
+    &.title {
+      height: 13px;
+      width: 160px;
+      margin-bottom: 12px;
+    }
+
+    &.value {
+      height: 18px;
+      margin-top: 4px;
+    }
+
+    &.w-10 {
+      width: 10%;
+    }
+
+    &.w-25 {
+      width: 25%;
+    }
+
+    &.w-40 {
+      width: 40%;
+    }
+
+    &.w-55 {
+      width: 55%;
+    }
+  }
+}
+
+@keyframes sk-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ewp .sk {
+    animation: none;
   }
 }

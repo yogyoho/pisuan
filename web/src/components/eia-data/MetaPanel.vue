@@ -1,9 +1,9 @@
 <template>
   <div class="ewp meta-panel">
-    <!-- 页头（原型 s10：Database 图标 + 待办 pill + 导出物化；导入存量为真实运营件，s10 无对应物） -->
+    <!-- 页头（原型 s10：网格图标，同左侧导航 LayoutGrid + 待办 pill + 导出物化；导入存量为真实运营件，s10 无对应物） -->
     <div class="page-head">
       <div class="ph-icon">
-        <Database :size="18" />
+        <LayoutGrid :size="18" />
       </div>
       <div>
         <h2>语料元数据标注</h2>
@@ -245,7 +245,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { Database, Download, Info, RefreshCw } from '@lucide/vue'
+import { Download, Info, LayoutGrid, RefreshCw } from '@lucide/vue'
 import { eiaMetaApi } from '@/apis/eia_meta_api'
 import { useUserStore } from '@/stores/user'
 
