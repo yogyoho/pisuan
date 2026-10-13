@@ -56,16 +56,14 @@
             <span v-if="g.key === 'splitting' && g.count" class="mini-dot"></span>
             <span class="fam-cnt num">{{ g.count }} 词条</span>
           </div>
-          <!-- 分类/阶段两维为真实数据特有，收在左列底部；原型表单件即 select.inp -->
+          <!-- 分类/阶段两维为真实数据特有，收在左列底部；自绘下拉（bug-438 原生/AntD 观感均不达标） -->
           <div class="fam-filters">
-            <select v-model="filters.category" class="inp" @change="fetchList">
-              <option value="">全部分类</option>
-              <option v-for="c in CATEGORY_DEFS" :key="c.key" :value="c.key">{{ c.label }}</option>
-            </select>
-            <select v-model="filters.stage" class="inp" @change="fetchList">
-              <option value="">全部阶段</option>
-              <option v-for="s in STAGES" :key="s.key" :value="s.key">{{ s.label }}</option>
-            </select>
+            <FilterSelect
+              v-model="filters.category"
+              :options="categoryOptions"
+              @change="fetchList"
+            />
+            <FilterSelect v-model="filters.stage" :options="stageOptions" @change="fetchList" />
           </div>
         </div>
 
@@ -372,6 +370,7 @@ import { message } from 'ant-design-vue'
 import { BookOpen, Download, Info, Pencil, RefreshCw } from '@lucide/vue'
 import { eiaLexiconApi } from '@/apis/eia_lexicon_api'
 import { useUserStore } from '@/stores/user'
+import FilterSelect from './FilterSelect.vue'
 
 const STAGES = [
   { key: 'planning_eia', label: '规划环评' },
@@ -397,6 +396,15 @@ const CATEGORY_DEFS = [
 const STAGE_LABELS = Object.fromEntries(STAGES.map((s) => [s.key, s.label]))
 const CATEGORY_LABELS = Object.fromEntries(CATEGORY_DEFS.map((c) => [c.key, c.label]))
 const STATUS_LABELS = Object.fromEntries(STATUS_DEFS.map((s) => [s.key, s.label]))
+
+const categoryOptions = [
+  { value: '', label: '全部分类' },
+  ...CATEGORY_DEFS.map((c) => ({ value: c.key, label: c.label }))
+]
+const stageOptions = [
+  { value: '', label: '全部阶段' },
+  ...STAGES.map((s) => ({ value: s.key, label: s.label }))
+]
 
 const STATUS_PILL_CLASS = {
   candidate: 'pill-warn',
