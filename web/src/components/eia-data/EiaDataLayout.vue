@@ -42,11 +42,11 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   BookOpen,
   Box,
+  ChartColumn,
   ChartLine,
   ClipboardList,
   CornerDownLeft,
   LayoutGrid,
-  PanelRight,
   Rows3,
   ShieldCheck
 } from '@lucide/vue'
@@ -57,7 +57,7 @@ const router = useRouter()
 const groups = [
   {
     label: '数据分层',
-    items: [{ to: '/domain-factory/eia-data', label: '分层统计总览', icon: PanelRight }]
+    items: [{ to: '/domain-factory/eia-data', label: '分层统计总览', icon: ChartColumn }]
   },
   {
     label: '语料与护栏',

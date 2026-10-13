@@ -2,9 +2,6 @@
   <div class="ewp entities-panel">
     <!-- 页头（原型 s6：Package + 添加实体 + 导出物化） -->
     <div class="page-head">
-      <button class="back-btn" aria-label="返回数据工厂总览" @click="goOverview">
-        <ArrowLeft :size="16" />
-      </button>
       <div class="ph-icon">
         <Package :size="18" />
       </div>
@@ -164,15 +161,11 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { ArrowLeft, Download, Package, Plus } from '@lucide/vue'
-import { useRouter } from 'vue-router'
+import { Download, Package, Plus } from '@lucide/vue'
 import { eiaEntityApi } from '@/apis/eia_entity_api'
 import { useUserStore } from '@/stores/user'
 
 const userStore = useUserStore()
-const router = useRouter()
-
-const goOverview = () => router.push('/domain-factory/eia-data')
 
 const ENTITY_TYPES = [
   { key: 'projects', label: '项目' },

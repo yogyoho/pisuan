@@ -2,9 +2,6 @@
   <div class="ewp expectations-panel">
     <!-- 页头（原型 s4：ClipboardList + data_expectations 基线说明） -->
     <div class="page-head">
-      <button class="back-btn" aria-label="返回数据工厂总览" @click="goOverview">
-        <ArrowLeft :size="16" />
-      </button>
       <div class="ph-icon">
         <ClipboardList :size="18" />
       </div>
@@ -94,18 +91,14 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { ArrowLeft, ChevronRight, ClipboardList, Info } from '@lucide/vue'
-import { useRouter } from 'vue-router'
+import { ChevronRight, ClipboardList, Info } from '@lucide/vue'
 import { eiaDataApi } from '@/apis/eia_data_api'
 
-const router = useRouter()
 const loading = ref(false)
 const perChapter = ref([])
 const vocabulary = ref([])
 const stageScope = ref('')
 const expanded = ref(new Set())
-
-const goOverview = () => router.push('/domain-factory/eia-data')
 
 const totalFamilies = computed(() =>
   perChapter.value.reduce((acc, ch) => acc + ch.data_families.length, 0)

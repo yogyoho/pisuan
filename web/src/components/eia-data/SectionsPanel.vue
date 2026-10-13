@@ -2,9 +2,6 @@
   <div class="ewp sections-panel">
     <!-- 页头：双 tab seg 收编进 ph-actions（原型 s1/s2） -->
     <div class="page-head">
-      <button class="back-btn" aria-label="返回数据工厂总览" @click="goOverview">
-        <ArrowLeft :size="16" />
-      </button>
       <div class="ph-icon">
         <AlignLeft :size="18" />
       </div>
@@ -367,8 +364,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { AlignLeft, ArrowLeft, Check, Download, Info, Plus, TrendingUp } from '@lucide/vue'
-import { useRouter } from 'vue-router'
+import { AlignLeft, Check, Download, Info, Plus, TrendingUp } from '@lucide/vue'
 import { eiaDataApi } from '@/apis/eia_data_api'
 import { eiaStageApi } from '@/apis/eia_stage_api'
 import { useUserStore } from '@/stores/user'
@@ -386,15 +382,12 @@ const TIER_RANKS = { required: 1, contextual: 2, optional: 3 }
 const PAGE_SIZE = 50
 
 const userStore = useUserStore()
-const router = useRouter()
 const activeTab = ref('detail')
 const loading = ref(false)
 const exporting = ref(false)
 
 // 模板里写字面 `}}` 会提前闭合插值，SLOT 记法只能走 script 常量
 const slotNotation = '{{SLOT:family.field}}'
-
-const goOverview = () => router.push('/domain-factory/eia-data')
 
 // ── Tab 1：节级明细 ──
 const detailStage = ref('planning_eia')

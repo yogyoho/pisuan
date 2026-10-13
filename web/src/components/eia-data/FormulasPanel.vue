@@ -2,9 +2,6 @@
   <div class="ewp formulas-panel">
     <!-- 页头（原型 s5：TrendingUp + 待导出 pill + 导出物化） -->
     <div class="page-head">
-      <button class="back-btn" aria-label="返回数据工厂总览" @click="goOverview">
-        <ArrowLeft :size="16" />
-      </button>
       <div class="ph-icon">
         <TrendingUp :size="18" />
       </div>
@@ -233,15 +230,11 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { ArrowLeft, Download, Info, Lock, TrendingUp } from '@lucide/vue'
-import { useRouter } from 'vue-router'
+import { Download, Info, Lock, TrendingUp } from '@lucide/vue'
 import { eiaFormulaApi } from '@/apis/eia_formula_api'
 import { useUserStore } from '@/stores/user'
 
 const userStore = useUserStore()
-const router = useRouter()
-
-const goOverview = () => router.push('/domain-factory/eia-data')
 
 const loading = ref(true)
 const formulas = ref([])

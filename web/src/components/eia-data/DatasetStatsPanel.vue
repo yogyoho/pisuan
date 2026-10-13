@@ -1,6 +1,46 @@
 <template>
-  <div class="stats-panel">
-    <a-skeleton v-if="loading" active :paragraph="{ rows: 10 }" />
+  <!-- .ewp：数据工厂命名空间（factory-ui 配方挂载点），与兄弟面板一致 -->
+  <div class="ewp stats-panel">
+    <!-- 页头：原型 s8 语汇；文案按应用实际改写（计数走 /stats 接口即时统计，非技能目录直读） -->
+    <div class="page-head">
+      <div class="ph-icon"><ChartColumn :size="18" /></div>
+      <div>
+        <h2>环评数据工厂 · 总览</h2>
+        <div class="ph-sub">bank_compile 产物全景 · 计数即时统计 · 全页只读零写通道</div>
+      </div>
+    </div>
+
+    <!-- 初始化骨架：复用指标带/网格真实布局类占位，防加载后版面跳动 -->
+    <div v-if="loading" class="stats-skeleton" aria-hidden="true">
+      <div class="metric-strip">
+        <div v-for="i in 6" :key="i" class="metric-cell">
+          <span class="sk sk-line w-40"></span>
+          <span class="sk sk-line value w-55"></span>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <section
+          v-for="(sp, i) in [7, 5, 12, 7, 5, 12]"
+          :key="i"
+          class="panel-card"
+          :class="'span-' + sp"
+        >
+          <span class="sk sk-line title"></span>
+          <div v-if="sp !== 12" class="sk sk-chart"></div>
+          <template v-else-if="i === 2">
+            <div v-for="j in 5" :key="j" class="sk-layer-row">
+              <span class="sk sk-line w-25"></span>
+              <span class="sk sk-line chip"></span>
+              <span class="sk sk-line chip"></span>
+              <span class="sk sk-line chip w-10"></span>
+            </div>
+          </template>
+          <div v-else class="sk-quality">
+            <span v-for="j in 6" :key="j" class="sk sk-line q"></span>
+          </div>
+        </section>
+      </div>
+    </div>
 
     <div v-else-if="error" class="error-state">
       <a-empty :description="error">
@@ -126,14 +166,16 @@
               v-for="q in stats.quality"
               :key="q.key"
               class="quality-item"
-              :class="{ 'is-link': q.key === 'unmapped_pool' }"
-              :role="q.key === 'unmapped_pool' ? 'button' : undefined"
-              :tabindex="q.key === 'unmapped_pool' ? 0 : undefined"
+              :class="{ 'is-link': qualityAction(q.key) }"
+              :role="qualityAction(q.key) ? 'button' : undefined"
+              :tabindex="qualityAction(q.key) ? 0 : undefined"
               :aria-label="
-                q.key === 'unmapped_pool' ? `未归并量词 ${q.count} 条，查看明细` : undefined
+                qualityAction(q.key)
+                  ? `${q.label} ${q.count}，${qualityAction(q.key).label}`
+                  : undefined
               "
-              @click="q.key === 'unmapped_pool' && openUnmapped()"
-              @keyup.enter="q.key === 'unmapped_pool' && openUnmapped()"
+              @click="runQualityAction(q)"
+              @keyup.enter="runQualityAction(q)"
             >
               <span class="quality-dot" :class="q.level"></span>
               <span class="quality-label">{{ q.label }}</span>
@@ -142,6 +184,7 @@
                 }}<small v-if="q.total !== undefined"> / {{ q.total }}</small></span
               >
               <span class="quality-hint" :title="q.hint">{{ q.hint }}</span>
+              <span v-if="qualityAction(q.key)" class="quality-go">去处理 →</span>
             </div>
           </div>
         </section>
@@ -275,6 +318,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
+import { ChartColumn } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import * as echarts from '@/utils/dashboardCharts'
 import { eiaDataApi } from '@/apis/eia_data_api'
@@ -319,6 +363,22 @@ const metricStrip = computed(() => {
 const warnCount = (key) => stats.value.quality.find((q) => q.key === key)?.count ?? 0
 
 const goLexicon = () => router.push('/domain-factory/eia-data/lexicon')
+
+// 体检项「去处理」锚点（原型 s8）：有真实运营入口的项直达；空标题/乱码标题属语料清洗批次，无页可去不加锚
+const QUALITY_ACTIONS = {
+  standards_verify: { type: 'route', to: '/domain-factory/eia-data/standards' },
+  unmapped_pool: { type: 'unmapped' },
+  attachment_insufficient: { type: 'drawer', key: 'attachment_checklist', name: '附件核对清单' },
+  meta_annotation_coverage: { type: 'route', to: '/domain-factory/eia-data/meta' }
+}
+const qualityAction = (key) => QUALITY_ACTIONS[key]
+const runQualityAction = (q) => {
+  const act = QUALITY_ACTIONS[q.key]
+  if (!act) return
+  if (act.type === 'route') router.push(act.to)
+  else if (act.type === 'unmapped') openUnmapped()
+  else openDatasetDrawer({ key: act.key, name: act.name })
+}
 
 // 可管理数据层的 chip 点击直达对应管理页（人工标注带待办深链，两 chip 落点各有语义）
 const LAYER_LINKS = {
@@ -1003,6 +1063,45 @@ onBeforeUnmount(cleanup)
   color: var(--gray-400);
 }
 
+/* ── 初始化骨架：通用 .sk/.sk-line recipe 在 factory-ui；此处只留本页形状 ── */
+.sk-chart {
+  height: 200px;
+}
+
+.sk-layer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--gray-100);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .sk-line.chip {
+    width: 96px;
+  }
+}
+
+.sk-quality {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 32px;
+
+  .sk-line.q {
+    height: 14px;
+    margin: 10px 0;
+  }
+}
+
+.quality-go {
+  flex: none;
+  font-size: 12px;
+  color: var(--main-600);
+  white-space: nowrap;
+}
+
 /* ── 响应式 ─────────────────────────────────────────── */
 @media (max-width: 1200px) {
   .span-5,
@@ -1099,3 +1198,4 @@ onBeforeUnmount(cleanup)
   font-size: 11px;
 }
 </style>
+<style lang="less" src="./factory-ui.less"></style>
