@@ -37,11 +37,12 @@
         <!-- 左：状态分组（真实数据无「域」维度，状态即运营主轴） -->
         <div class="card fam-list">
           <div class="fam-search">
-            <a-input-search
-              v-model:value="filters.q"
+            <!-- 原型 .inp 扁平搜索框（配方 factory-ui .fam-search .inp）；词表检索是全语料现扫，回车触发不逐键 -->
+            <input
+              v-model="filters.q"
+              class="inp"
               placeholder="搜索口径…"
-              allow-clear
-              @search="fetchList"
+              @keyup.enter="fetchList"
             />
           </div>
           <div
@@ -51,24 +52,20 @@
             :class="{ on: filters.status === g.key }"
             @click="setStatus(g.key)"
           >
-            <span v-if="g.key === 'splitting' && g.count" class="mini-dot"></span>
             <span class="fam-name">{{ g.label }}</span>
+            <span v-if="g.key === 'splitting' && g.count" class="mini-dot"></span>
             <span class="fam-cnt num">{{ g.count }} 词条</span>
           </div>
-          <!-- 分类/阶段两维为真实数据特有，收在左列底部（样本下拉同款数据驱动必要） -->
+          <!-- 分类/阶段两维为真实数据特有，收在左列底部；原型表单件即 select.inp -->
           <div class="fam-filters">
-            <a-select v-model:value="filters.category" style="width: 100%" @change="fetchList">
-              <a-select-option value="">全部分类</a-select-option>
-              <a-select-option v-for="c in CATEGORY_DEFS" :key="c.key" :value="c.key">{{
-                c.label
-              }}</a-select-option>
-            </a-select>
-            <a-select v-model:value="filters.stage" style="width: 100%" @change="fetchList">
-              <a-select-option value="">全部阶段</a-select-option>
-              <a-select-option v-for="s in STAGES" :key="s.key" :value="s.key">{{
-                s.label
-              }}</a-select-option>
-            </a-select>
+            <select v-model="filters.category" class="inp" @change="fetchList">
+              <option value="">全部分类</option>
+              <option v-for="c in CATEGORY_DEFS" :key="c.key" :value="c.key">{{ c.label }}</option>
+            </select>
+            <select v-model="filters.stage" class="inp" @change="fetchList">
+              <option value="">全部阶段</option>
+              <option v-for="s in STAGES" :key="s.key" :value="s.key">{{ s.label }}</option>
+            </select>
           </div>
         </div>
 
