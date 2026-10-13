@@ -5,6 +5,8 @@
 > Last updated: 2026-05-16
 
 ## User Preferences
+
+- **数据工厂参照设计语言 = P2 高保真原型**（用户明示「非常美观」）：新页面/组件按 docs/develop-guides/data-factory-ui.md 配方实现，不再另行出原型；注意原型内 token 是别名（--warn-50 等），实现须换算 base.css 正名。
 - (2026-10-05) 消除词形/口径分裂时拒绝映射层（replace 链、别名兼容补丁），要求真实数据统一——直接改 DB 字典/存量/静态资产，前后一个词形；方案选择上偏好爆炸半径小的方向（coal vs coal_mining 一案选定 coal：DB 主导词形，零数据迁移）
 - [2026-10-01] 最大限度不修改 yuxi 核心代码（上游共有代码面），否则上游同步/rebase 麻烦。改前先 git 判定代码块出处：pisuan 自有扩展（如领域工厂 report 工具链）可改；上游共有代码必须动时先向用户说明。判据：git log -S + git show upstream/main:<path>。
 
@@ -718,6 +720,11 @@
 - **运行栈文件 EOL 地图（P3 实测）：** router/index.js、manager.py、storage_migration.py、models_domain_factory.py、changelog.md(CRLF/LF 注意——changelog 实为纯 LF)、sample_entities registry/_index 为 CRLF；DatasetStatsPanel.vue、formulas.json、新测试文件为 LF。replace 锚点先 `file`/od 验行尾再动手。
 - **宿主 ruff 用 `python -m ruff`（0.15.12 pip 装）**，Git Bash PATH 无裸 ruff，容器内无 ruff。
 
+### 2026-10-13（P2/P3 实现与原型偏差纠正）
+- **原型评审通过 = 像素级复刻预期，不是「设计语言参照」**（用户 2026-10-13 纠正）：实现必须逐屏对照原型结构/布局/内容组织/视觉样式复刻，不得擅自改用应用既有 AntD 惯例（a-table/a-drawer/a-tabs/页面 shell）；跨 P1/P2 边界组件只改原型对应屏部分。
+- **前端交付验证必须含原型↔实现可视对比**（lint/单测全绿≠视觉一致）；运行栈凭据受限时，至少用 chrome-devtools 对静态原型截图，并把实现页留待用户对照确认，不能静默跳过。
+- （更正昨日条目）「不再另行出原型」仍成立，但配套含义是「实现=复刻原型」，非「实现=自由发挥」。
+
 ### Do-Not-Repeat
 - （bug-424）文本级插接注入偏移忽略行首缩进——`_input_line_span` 返回的行带缩进，注入点 = 缩进宽 + 标记串长，裸用标记长度会把 value 插进键名中间（`{"name"value": 0.65, ": "q"`）。
 
@@ -726,3 +733,23 @@
 - （bug-423）Vue 模板插值里写含 `}}` 的字面量（含 JS 字符串）。
 - 宿主直接跑 `pnpm`（不存在）——web 工具链全走 pisuan-localized-web-1 容器。
 - 容器内 `cp` 回工作树用臆测路径（/workspace 不存在）——回传用 `docker cp 容器名:/app/... 宿主相对路径`。
+
+## Key Learnings + DNR（2026-10-13 P2/P3 原型复刻改造执行追加）
+
+### Key Learnings
+- **真实后端数据形状三件套（改造期实证）：** ① `data_expectations.json` 的 `source_hint_vocabulary` 是 `{hint: 说明}` **对象**非数组（for...of 直接 TypeError），`fam.source_hint` 是 `"standards_index + user_planning"` 复合串需 split('+') 拆 chip；② `formulas.json` 的 `formula.slots` 已是 `{{SLOT:...}}` 全记法（仅 `derived_slots[].slot` 为裸名，复用前先 startsWith 守卫）；③ `formula.outputs` 是 `[{name, unit, desc?}]` 对象数组，join 前必须 map(o => o.name)。
+- **前端运行栈登录态：** localStorage key 是 `user_token`（非 access_token/token），`/api/domain-factory/eia/*` 带 `Bearer <user_token>` 即 200；运行栈 admin 密码由用户在会话提供（.env 无管理员凭据，严禁 seed 生产库）。
+- **共享浏览器验证协议：** 用户并发使用同一浏览器——视觉验证必须 `new_page` + `isolatedContext` 开隔离页，evaluate_script 注入登录态与导航，验完 close_page 清理；直接在用户当前页导航会互相打架（页面弹回总览即此症状）。
+- **指标口径教训：** unmapped 是独立数据流而非注册口径 total 的子集——归并数必须正向计数（filter(q => q.field)），用 `total - unmapped.length` 推算在 unmapped ≫ total 时出负值（bug-426）；「覆盖章节」类指标先写清语义再选过滤条件（bug-428）。
+- **节标识双记法：** unmapped.section 为原始 `chX_SYY`，注册口径节标识已规范化（`X.YY`）——两侧统一过 normSection（去 ch 前缀 + _S→.）才能按节归位（bug-427）。
+- **暗色验证法：** 该项目暗色 = html 根加 `.dark` 类（base.dark.css 翻转同名 token），evaluate_script 一行 `documentElement.classList.add('dark')` 即可截暗色态；factory-ui.less 仅两处 `:root.dark &` 覆写（btn-pri 字 #0a0a0a、unmapped-row td 底 second-100/边 second-600），覆写目标在 **td** 层非 tr（探针读 tr computed 恒透明，勿误判失效）。
+- **AntD drawer width prop** 落在 `.ant-drawer-content-wrapper` 的 inline style，`.ant-drawer` 本体 style.width 为空——探测宽度选对节点。
+
+### Do-Not-Repeat
+- （bug-429）数据形状假设（数组 vs 对象）放进 try/catch 大包——TypeError 被静默吞掉后页面大面积空白且无任何报错线索；形状解析要么显式炸要么拆出 try 块，勿与业务赋值同 catch。
+- （bug-430）对可能已是全记法的字符串无条件二次包裹——先 startsWith 守卫。
+- （bug-431）对象数组直接 join('、')——得到 [object Object]；先取字段。
+- （bug-426/427）指标做减法推算 + 跨来源 key 直接字符串比对——先确认两来源的记法与集合关系。
+
+### Decision Log
+- **诚实数据映射边界（改造期沿用）：** 原型虚构指标不伪造——命中拦截无数据则删该格、P5/P50/P95 无字段则以 corpus_freq 计量条替代、导出 CSV 无端点则去掉按钮、添加人有 decided_by 无时间戳则只出人名；functional no-regression 优先于像素复刻（撤回列保留、样本下拉新增均属数据驱动必要）。

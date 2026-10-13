@@ -4999,3 +4999,56 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 06:58 | Created docs/develop-guides/data-factory-ui.md | — | ~2195 |
 
 | 01:20 | 数据工厂 UI 规范成文（P2 原型设计语言→组件配方/token 映射/暗色三则/Vue 落地），config.mts 导航 + design.md 交叉引用 + changelog | docs/develop-guides/data-factory-ui.md 等 4 文件 | 待提案提交 | ~25k || 06:59 | Session end: 6 writes across 4 files (manager.py, test_eia_formula_service.py, 2026-10-12-eia-data-factory-p3-pages.md, data-factory-ui.md) | 3 reads | ~35058 tok |
+
+| 01:30 | UI 规范提交 2f40a8eb（6 文件 +179）；cerebrum 记用户偏好：P2 原型=参照设计语言 | git + cerebrum | 已提交未推送 | ~2k || 07:04 | Session end: 6 writes across 4 files (manager.py, test_eia_formula_service.py, 2026-10-12-eia-data-factory-p3-pages.md, data-factory-ui.md) | 3 reads | ~35058 tok |
+
+## Session: 2026-10-12 07:25
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:28 | P1 四屏 s8-s11 原型统合入 2026-10-12-eia-p2-ui.html + 视觉QC 全过 | docs/vibe/prototypes/2026-10-12-eia-p2-ui.html | 1188行 11屏 结构与渲染均正常 | ~35k |
+| 07:36 | Created docs/vibe/2026-10-13-p2p3-prototype-fidelity-rework.md | — | ~602 |
+| 07:38 | Created web/src/components/eia-data/factory-ui.less | — | ~4216 |
+| 07:38 | Edited web/src/components/eia-data/factory-ui.less | 9→8 lines | ~47 |
+| 07:41 | Created web/src/components/eia-data/SectionsPanel.vue | — | ~6021 |
+
+## Session: 2026-10-12 07:44
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:46 | Created web/src/components/eia-data/ExpectationsPanel.vue | — | ~1302 |
+| 07:49 | Created web/src/components/eia-data/FormulasPanel.vue | — | ~3631 |
+| 07:50 | Created web/src/components/eia-data/EntitiesPanel.vue | — | ~2744 |
+| 07:52 | Edited web/src/components/eia-data/StandardsPanel.vue | removed 52 lines | ~13 |
+| 07:52 | Edited web/src/components/eia-data/StandardsPanel.vue | CSS: ShieldCheck | ~566 |
+| 07:53 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | 720 → 600 | ~20 |
+| 07:53 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | CSS: margin | ~56 |
+| 07:53 | Created web/src/views/EiaSectionsView.vue | — | ~37 |
+| 07:53 | Created web/src/views/EiaExpectationsView.vue | — | ~40 |
+| 07:53 | Created web/src/views/EiaFormulasView.vue | — | ~37 |
+| 07:53 | Created web/src/views/EiaEntitiesView.vue | — | ~37 |
+| 08:03 | Edited web/src/components/eia-data/SectionsPanel.vue | added nullish coalescing | ~469 |
+| 08:03 | Edited web/src/components/eia-data/FormulasPanel.vue | inline fix | ~22 |
+| 08:03 | Edited web/src/components/eia-data/FormulasPanel.vue | CSS: slot | ~55 |
+| 08:04 | Edited web/src/components/eia-data/SectionsPanel.vue | 12→12 lines | ~116 |
+| 08:09 | Edited web/src/components/eia-data/ExpectationsPanel.vue | 9→9 lines | ~63 |
+| 08:09 | Edited web/src/components/eia-data/ExpectationsPanel.vue | 4→4 lines | ~40 |
+| 08:09 | Edited web/src/components/eia-data/ExpectationsPanel.vue | expanded (+7 lines) | ~196 |
+| 08:10 | Edited web/src/components/eia-data/ExpectationsPanel.vue | added nullish coalescing | ~248 |
+
+## Session: 2026-10-13 08:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## 2026-10-13 P2/P3 原型复刻改造·验证与记账收尾
+| 08:33 | s5 formulas 视觉验证（slot 无双包裹/expr-block/派生槽位卡）+ 截图 impl-s5-formulas.jpeg | web/src/components/eia-data/FormulasPanel.vue | ✓ 通过 | ~3k |
+| 08:33 | s6 entities 验证：metric-strip 3 格（34/4类/0）、sample select、seg、FLAT 表 + 截图 | web/src/components/eia-data/EntitiesPanel.vue | ✓ 通过 | ~3k |
+| 08:33 | StandardsPanel gate1 移位验证：面板首块、内部渲染完好 | web/src/components/eia-data/StandardsPanel.vue | ✓ 通过 | ~1k |
+| 08:33 | DatasetStatsPanel 抽屉验证：width 600px + 只读 footer note | web/src/components/eia-data/DatasetStatsPanel.vue | ✓ 通过 | ~1k |
+| 08:33 | 暗色三规则 computed 验证（btn-pri #0a0a0a / unmapped td second-100+600 / 选中底）+ 截图 | factory-ui.less | ✓ 通过 | ~2k |
+| 08:33 | 弹窗冒烟：添加实体/公式设值 开+关不落库；隔离浏览器上下文已清理 | chrome-devtools isolated verify-ewp | ✓ 通过 | ~2k |
+| 08:33 | buglog 追加 bug-426~431（负指标/节记法/覆盖语义/vocab 形状/slot 双包/outputs 对象） | .wolf/buglog.json | 404 条 | ~4k |
+| 08:33 | cerebrum 追加（数据形状三件套/user_token/隔离浏览器/暗色验证法/DNR/诚实映射决策） | .wolf/cerebrum.md | ✓ | ~3k |
+| 08:41 | Edited docs/develop-guides/changelog.md | modified docs() | ~396 |
+| 08:41 | Session end: 1 writes across 1 files (changelog.md) | 2 reads | ~30423 tok |
