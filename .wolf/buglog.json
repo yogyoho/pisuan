@@ -6954,5 +6954,61 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-13"
+  },
+  {
+    "id": "bug-432",
+    "timestamp": "2026-10-13",
+    "error_message": "词表页自绘表格横向溢出：口径列 1610px、表格 2285px，仅首列可见且页面出横向滚动条",
+    "file": "web/src/components/eia-data/LexiconPanel.vue",
+    "root_cause": "语料扫描出的口径名是任意长句片段（非原型设想的短标识），.caliber-name 的 white-space:nowrap 在 table-layout:auto 下把列 min-content 推到 1586px，表格被最小内容宽撑爆",
+    "fix": "scoped 改 table-layout:fixed + 百分比列宽 + td overflow-wrap:break-word，caliber-name/note 去 nowrap 允许换行",
+    "tags": [
+      "eia",
+      "lexicon-panel",
+      "table-layout",
+      "min-content",
+      "nowrap"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-13"
+  },
+  {
+    "id": "bug-433",
+    "timestamp": "2026-10-13T09:33:00",
+    "error_message": "Docker Desktop 恢复后 api 启动失败: asyncpg.exceptions.CannotConnectNowError: the database system is starting up / Application startup failed. Exiting.",
+    "file": "docker-compose.yml (环境)",
+    "root_cause": "全栈冷启动竞态：api 容器与 postgres 同时拉起，api 连库早于 PG 就绪即退出，health 停在 starting；属 compose 启动顺序特性非代码缺陷",
+    "fix": "等 postgres healthy 后 docker restart pisuan-localized-api-1 pisuan-localized-worker-1 即恢复；遇 api 健康检查长时间 starting 先查启动日志再重启",
+    "tags": [
+      "docker",
+      "startup-race",
+      "postgres",
+      "asyncpg",
+      "compose"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-13"
+  },
+  {
+    "id": "bug-434",
+    "timestamp": "2026-10-13",
+    "error_message": "标准页 seg 徽记「已核实 0」但点击过滤出 21 行（勾稽脱节）",
+    "file": "web/src/components/eia-data/StandardsPanel.vue",
+    "root_cause": "seg 徽记用服务端 counts.confirmed（仅数 DB 裁决=0），过滤谓词用 !needs_verification||review.action（含文件态免核实条目=21），两口径不同源",
+    "fix": "hd-sub 与 seg 计数改客户端 computed（todoCount/doneCount）与过滤同源；移除 counts reactive 及 Object.assign",
+    "tags": [
+      "standards-panel",
+      "s11",
+      "勾稽",
+      "seg-counts",
+      "prototype-rework"
+    ],
+    "related_bugs": [
+      "bug-425"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-13"
   }
 ]

@@ -5052,3 +5052,67 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 08:33 | cerebrum 追加（数据形状三件套/user_token/隔离浏览器/暗色验证法/DNR/诚实映射决策） | .wolf/cerebrum.md | ✓ | ~3k |
 | 08:41 | Edited docs/develop-guides/changelog.md | modified docs() | ~396 |
 | 08:41 | Session end: 1 writes across 1 files (changelog.md) | 2 reads | ~30423 tok |
+| 08:52 | Created web/src/components/eia-data/LexiconPanel.vue | — | ~7670 |
+| 08:53 | Created web/src/views/EiaLexiconView.vue | — | ~36 |
+| 08:53 | Edited web/src/components/eia-data/LexiconPanel.vue | expanded (+55 lines) | ~267 |
+| 08:53 | Edited web/src/components/eia-data/LexiconPanel.vue | CSS: display, margin | ~24 |
+| 08:59 | Edited web/src/components/eia-data/LexiconPanel.vue | CSS: table-layout, width, overflow-wrap | ~120 |
+| 08:59 | Edited web/src/components/eia-data/LexiconPanel.vue | 12→12 lines | ~139 |
+| 09:06 | Edited web/src/components/eia-data/LexiconPanel.vue | inline fix | ~23 |
+| 09:08 | 词表页按原型 s9 复刻：page-head+split+状态 fam-list+8 列自绘表+tbl-foot/note-bar；左列加分类/阶段下拉（真实数据维度）；抑制名单卡因无列表端点诚实删除；EiaLexiconView 瘦身裸壳 | LexiconPanel.vue, EiaLexiconView.vue | 视觉验证通过（2 轮） | ~12k |
+| 09:08 | 修复表格撑爆：语料口径名为长句片段，nowrap min-content 1586px 撑爆 auto 布局 → scoped table-layout:fixed + %列宽 + 换行 | LexiconPanel.vue | ✓ | ~2k |
+| 09:08 | 发现 list_entries 每次调用量现扫全语料（点击 fam 后行数据长滞后）；补自绘表在途 opacity 提示；随即 Docker Desktop 崩溃，恢复中 | LexiconPanel.vue | formatting 待容器恢复 | ~1k |
+| 09:11 | Edited web/src/components/eia-data/LexiconPanel.vue | 14→10 lines | ~74 |
+| 09:12 | Edited web/src/components/eia-data/LexiconPanel.vue | added 1 condition(s) | ~56 |
+| 09:12 | Edited web/src/components/eia-data/LexiconPanel.vue | inline fix | ~15 |
+| 09:13 | Session end: 11 writes across 3 files (changelog.md, LexiconPanel.vue, EiaLexiconView.vue) | 8 reads | ~69962 tok |
+| 09:17 | Session end: 11 writes across 3 files (changelog.md, LexiconPanel.vue, EiaLexiconView.vue) | 9 reads | ~69962 tok |
+
+## Session: 2026-10-13 09:19
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:32 | Edited docs/develop-guides/changelog.md | modified feat() | ~235 |
+| 09:33 | Docker 崩溃恢复（api 比 PG 先起连库被拒退出，重启 api/worker 后 healthy）+ 容器 prettier/eslint 全过 | docker/api,web | recovered | ~2k |
+| 09:33 | 词表页最终验证：数据勾稽 92=27+27+0+38、fam 在途降透明、分页 2/2、空组钳回、暗/亮截图 | LexiconPanel.vue | passed | ~6k |
+| 09:33 | changelog 补词表批次条目 + 出提交提案待批 | changelog.md | done | ~1k |
+| 09:37 | Session end: 1 writes across 1 files (changelog.md) | 4 reads | ~37039 tok |
+| 19:31 | Created web/src/components/eia-data/MetaPanel.vue | — | ~4265 |
+| 19:31 | Edited web/src/components/eia-data/MetaPanel.vue | inline fix | ~23 |
+| 19:31 | Created web/src/views/EiaMetaView.vue | — | ~34 |
+| 19:41 | MetaPanel 按 s10 复刻重写（诚实映射：仅年份/规模/备注可标注，删文号/机构列；pill=待标注计数；导入存量/导出物化入页头）+ EiaMetaView 裸壳 | MetaPanel.vue,EiaMetaView.vue | rewritten | ~18k |
+| 19:41 | 容器 prettier 改写回拉 + eslint 0 错；数据勾稽 31=17+2+6+5+1、pill 13、省份 6；chip/seg/搜索/弹窗快填/取消交互全过 | MetaPanel.vue | passed | ~8k |
+| 19:41 | Session end: 4 writes across 3 files (changelog.md, MetaPanel.vue, EiaMetaView.vue) | 9 reads | ~66607 tok |
+| 19:42 | Edited docs/develop-guides/changelog.md | modified feat() | ~214 |
+| 19:42 | 暗色截图过（重试一次成功）+ changelog 补元数据条目 + cerebrum 探针三坑 + 出双批次提案 | changelog.md,cerebrum.md | done | ~4k |
+| 19:43 | Session end: 5 writes across 3 files (changelog.md, MetaPanel.vue, EiaMetaView.vue) | 9 reads | ~66836 tok |
+| 20:36 | Edited web/src/components/eia-data/MetaPanel.vue | reduced (-7 lines) | ~66 |
+| 20:38 | Session end: 6 writes across 3 files (changelog.md, MetaPanel.vue, EiaMetaView.vue) | 9 reads | ~63065 tok |
+| 20:40 | Edited docs/develop-guides/changelog.md | inline fix | ~30 |
+| 20:40 | 用户裁定操作列实心按钮不美观：标注…→标注，统一 btn-txt 文字链（同词表风格）；changelog 同步 | MetaPanel.vue | done | ~2k |
+| 20:40 | Session end: 7 writes across 3 files (changelog.md, MetaPanel.vue, EiaMetaView.vue) | 9 reads | ~63097 tok |
+| 20:47 | Edited web/src/components/eia-data/MetaPanel.vue | 11→10 lines | ~99 |
+| 20:47 | Edited web/src/components/eia-data/factory-ui.less | "JetBrains Mono" → "Cascadia Code" | ~22 |
+| 20:47 | Edited web/src/components/eia-data/MetaPanel.vue | "JetBrains Mono" → "Cascadia Code" | ~23 |
+| 20:50 | Edited docs/develop-guides/changelog.md | inline fix | ~91 |
+| 20:50 | 三列样式对齐原型：mono 栈改原型栈（factory-ui.less 6 处 + MetaPanel cand-tag）、年份去 val 粗体；computed 双页面全对齐 | factory-ui.less,MetaPanel.vue | done | ~4k |
+| 20:50 | Session end: 11 writes across 4 files (changelog.md, MetaPanel.vue, EiaMetaView.vue, factory-ui.less) | 9 reads | ~67745 tok |
+| 20:51 | Session end: 11 writes across 4 files (changelog.md, MetaPanel.vue, EiaMetaView.vue, factory-ui.less) | 9 reads | ~67745 tok |
+| 20:59 | Created web/src/components/eia-data/StandardsPanel.vue | — | ~6153 |
+
+## Session: 2026-10-13 21:04
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:09 | Created web/src/components/eia-data/StandardsPanel.vue | — | ~6379 |
+| 21:09 | Created web/src/views/EiaStandardsView.vue | — | ~38 |
+| 21:10 | Edited web/src/components/eia-data/StandardsPanel.vue | 3→3 lines | ~35 |
+| 21:12 | Edited web/src/components/eia-data/StandardsPanel.vue | 18→17 lines | ~195 |
+| 21:13 | Edited web/src/components/eia-data/StandardsPanel.vue | 5→4 lines | ~26 |
+| 21:13 | Edited web/src/components/eia-data/StandardsPanel.vue | 3→8 lines | ~90 |
+| 21:13 | Edited web/src/components/eia-data/StandardsPanel.vue | 3→2 lines | ~19 |
+| 21:25 | Edited docs/develop-guides/changelog.md | modified feat() | ~506 |
+| 20:35 | s11 标准与限值库复刻：StandardsPanel 重写（页头双通道导出/gate1 保留/清单 seg 自绘表/限值 chips 单表）+ EiaStandardsView 裸壳 | web/src/components/eia-data/StandardsPanel.vue, web/src/views/EiaStandardsView.vue | eslint 0 error，浏览器验证通过 |
+| 20:40 | s11 勾稽修正：counts.confirmed(0) 与 done 过滤(21) 脱节，seg/hd-sub 改客户端同源计数 | StandardsPanel.vue | 62=41+21 一致 |
+| 20:50 | s11 截图（亮/暗）+ console 干净 + changelog 补条目 | .wolf/std_s11_*.png, docs/develop-guides/changelog.md | 完成 |
+| 21:26 | Session end: 8 writes across 3 files (StandardsPanel.vue, EiaStandardsView.vue, changelog.md) | 4 reads | ~13997 tok |

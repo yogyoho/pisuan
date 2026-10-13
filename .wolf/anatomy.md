@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-13T00:41:19.973Z
-> Files: 60 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-13T13:25:26.958Z
+> Files: 61 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -358,7 +358,7 @@
 
 ## docs/develop-guides/
 
-- `changelog.md` — 版本变更记录 (~28665 tok)
+- `changelog.md` — 版本变更记录 (~29307 tok)
 - `data-factory-ui.md` — 数据工厂 UI 规范 (~2058 tok)
 
 ## docs/intro/
@@ -416,12 +416,12 @@
 - `DatasetStatsPanel.vue` — Vue: setup (~7924 tok)
 - `EntitiesPanel.vue` — Vue: setup (~2744 tok)
 - `ExpectationsPanel.vue` — Vue: setup (~1379 tok)
-- `factory-ui.less` — 数据工厂原型配方（P2/P3 七屏共用的单次定义）。 (~4207 tok)
+- `factory-ui.less` — 数据工厂原型配方（P2/P3 七屏共用的单次定义）。 (~4255 tok)
 - `FormulasPanel.vue` — Vue: setup (~3725 tok)
-- `LexiconPanel.vue` — Vue: setup (~7084 tok)
-- `MetaPanel.vue` — Vue: setup (~3841 tok)
+- `LexiconPanel.vue` — Vue component (~8123 tok)
+- `MetaPanel.vue` — Vue: setup (~4386 tok)
 - `SectionsPanel.vue` — Vue component (~6139 tok)
-- `StandardsPanel.vue` — Vue: setup (~6809 tok)
+- `StandardsPanel.vue` — s11 复刻：页头双通道导出 + gate1 体检卡 + 核实清单 seg/搜索自绘表 + 限值单卡 chips 单表视图。 (~6200 tok)
 
 ## web/src/components/modals/
 
@@ -444,5 +444,6 @@
 - `EiaEntitiesView.vue` — Vue: setup (~37 tok)
 - `EiaExpectationsView.vue` — Vue: setup (~40 tok)
 - `EiaFormulasView.vue` — Vue: setup (~37 tok)
-- `EiaLexiconView.vue` — Vue: setup (~746 tok)
+- `EiaLexiconView.vue` — Vue: setup (~36 tok)
 - `EiaSectionsView.vue` — Vue: setup (~37 tok)
+- `EiaStandardsView.vue` — 裸壳挂载 StandardsPanel（s11 批次瘦身边际）。 (~40 tok)
