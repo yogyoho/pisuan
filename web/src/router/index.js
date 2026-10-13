@@ -179,51 +179,57 @@ const router = createRouter({
         },
         {
           path: 'eia-data',
-          name: 'EiaDataFactory',
-          component: () => import('../views/EiaDataView.vue'),
-          meta: { keepAlive: false, requiresAuth: true }
-        },
-        {
-          path: 'eia-data/lexicon',
-          name: 'EiaDataLexicon',
-          component: () => import('../views/EiaLexiconView.vue'),
-          meta: { keepAlive: false, requiresAuth: true }
-        },
-        {
-          path: 'eia-data/meta',
-          name: 'EiaDataMeta',
-          component: () => import('../views/EiaMetaView.vue'),
-          meta: { keepAlive: false, requiresAuth: true }
-        },
-        {
-          path: 'eia-data/standards',
-          name: 'EiaDataStandards',
-          component: () => import('../views/EiaStandardsView.vue'),
-          meta: { keepAlive: false, requiresAuth: true }
-        },
-        {
-          path: 'eia-data/sections',
-          name: 'EiaDataSections',
-          component: () => import('../views/EiaSectionsView.vue'),
-          meta: { keepAlive: false, requiresAuth: true }
-        },
-        {
-          path: 'eia-data/expectations',
-          name: 'EiaDataExpectations',
-          component: () => import('../views/EiaExpectationsView.vue'),
-          meta: { keepAlive: false, requiresAuth: true }
-        },
-        {
-          path: 'eia-data/formulas',
-          name: 'EiaDataFormulas',
-          component: () => import('../views/EiaFormulasView.vue'),
-          meta: { keepAlive: false, requiresAuth: true }
-        },
-        {
-          path: 'eia-data/entities',
-          name: 'EiaDataEntities',
-          component: () => import('../views/EiaEntitiesView.vue'),
-          meta: { keepAlive: false, requiresAuth: true }
+          component: () => import('../components/eia-data/EiaDataLayout.vue'),
+          children: [
+            {
+              path: '',
+              name: 'EiaDataFactory',
+              component: () => import('../views/EiaDataView.vue'),
+              meta: { keepAlive: false, requiresAuth: true }
+            },
+            {
+              path: 'lexicon',
+              name: 'EiaDataLexicon',
+              component: () => import('../views/EiaLexiconView.vue'),
+              meta: { keepAlive: false, requiresAuth: true }
+            },
+            {
+              path: 'meta',
+              name: 'EiaDataMeta',
+              component: () => import('../views/EiaMetaView.vue'),
+              meta: { keepAlive: false, requiresAuth: true }
+            },
+            {
+              path: 'standards',
+              name: 'EiaDataStandards',
+              component: () => import('../views/EiaStandardsView.vue'),
+              meta: { keepAlive: false, requiresAuth: true }
+            },
+            {
+              path: 'sections',
+              name: 'EiaDataSections',
+              component: () => import('../views/EiaSectionsView.vue'),
+              meta: { keepAlive: false, requiresAuth: true }
+            },
+            {
+              path: 'expectations',
+              name: 'EiaDataExpectations',
+              component: () => import('../views/EiaExpectationsView.vue'),
+              meta: { keepAlive: false, requiresAuth: true }
+            },
+            {
+              path: 'formulas',
+              name: 'EiaDataFormulas',
+              component: () => import('../views/EiaFormulasView.vue'),
+              meta: { keepAlive: false, requiresAuth: true }
+            },
+            {
+              path: 'entities',
+              name: 'EiaDataEntities',
+              component: () => import('../views/EiaEntitiesView.vue'),
+              meta: { keepAlive: false, requiresAuth: true }
+            }
+          ]
         },
         {
           path: 'prompt-config',
