@@ -2,14 +2,14 @@
   "version": 1,
   "created_at": "2026-05-12T06:40:36.630Z",
   "lifetime": {
-    "total_tokens_estimated": 83006110,
-    "total_reads": 22149,
-    "total_writes": 33424,
-    "total_sessions": 117,
-    "anatomy_hits": 8003,
-    "anatomy_misses": 13729,
+    "total_tokens_estimated": 83139355,
+    "total_reads": 22159,
+    "total_writes": 33442,
+    "total_sessions": 120,
+    "anatomy_hits": 8011,
+    "anatomy_misses": 13731,
     "repeated_reads_blocked": 34600,
-    "estimated_savings_vs_bare_cli": 757969024
+    "estimated_savings_vs_bare_cli": 757970624
   },
   "sessions": [
     {
@@ -317021,6 +317021,224 @@
         "output_tokens_estimated": 482,
         "reads_count": 2,
         "writes_count": 5,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-10-12-0035",
+      "started": "2026-10-12T16:35:18.449Z",
+      "ended": "2026-10-12T22:42:05.126Z",
+      "reads": [
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/storage/postgres/manager.py",
+          "tokens_estimated": 30835,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/docs/vibe/2026-10-12-eia-data-factory-p3-pages.md",
+          "tokens_estimated": 1389,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/storage/postgres/manager.py",
+          "tokens_estimated": 59,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_formula_service.py",
+          "tokens_estimated": 14,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_formula_service.py",
+          "tokens_estimated": 10,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_formula_service.py",
+          "tokens_estimated": 31,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/docs/vibe/2026-10-12-eia-data-factory-p3-pages.md",
+          "tokens_estimated": 368,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 32224,
+        "output_tokens_estimated": 482,
+        "reads_count": 2,
+        "writes_count": 5,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-10-12-0035",
+      "started": "2026-10-12T16:35:18.449Z",
+      "ended": "2026-10-12T22:59:58.025Z",
+      "reads": [
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/storage/postgres/manager.py",
+          "tokens_estimated": 30835,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/docs/vibe/2026-10-12-eia-data-factory-p3-pages.md",
+          "tokens_estimated": 1389,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/docs/develop-guides/design.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/storage/postgres/manager.py",
+          "tokens_estimated": 59,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_formula_service.py",
+          "tokens_estimated": 14,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_formula_service.py",
+          "tokens_estimated": 10,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_formula_service.py",
+          "tokens_estimated": 31,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/docs/vibe/2026-10-12-eia-data-factory-p3-pages.md",
+          "tokens_estimated": 368,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/docs/develop-guides/data-factory-ui.md",
+          "tokens_estimated": 2352,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 32224,
+        "output_tokens_estimated": 2834,
+        "reads_count": 3,
+        "writes_count": 6,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-10-12-0035",
+      "started": "2026-10-12T16:35:18.449Z",
+      "ended": "2026-10-12T23:04:02.961Z",
+      "reads": [
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/storage/postgres/manager.py",
+          "tokens_estimated": 30835,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/docs/vibe/2026-10-12-eia-data-factory-p3-pages.md",
+          "tokens_estimated": 1389,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/docs/develop-guides/design.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "C:/workspace/pisuan/backend/package/yuxi/storage/postgres/manager.py",
+          "tokens_estimated": 59,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_formula_service.py",
+          "tokens_estimated": 14,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_formula_service.py",
+          "tokens_estimated": 10,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/backend/test/unit/services/test_eia_formula_service.py",
+          "tokens_estimated": 31,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/docs/vibe/2026-10-12-eia-data-factory-p3-pages.md",
+          "tokens_estimated": 368,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/docs/develop-guides/data-factory-ui.md",
+          "tokens_estimated": 2352,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 32224,
+        "output_tokens_estimated": 2834,
+        "reads_count": 3,
+        "writes_count": 6,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-10-13-0821",
+      "started": "2026-10-13T00:21:14.645Z",
+      "ended": "2026-10-13T00:41:44.151Z",
+      "reads": [
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/EntitiesPanel.vue",
+          "tokens_estimated": 2744,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/docs/develop-guides/changelog.md",
+          "tokens_estimated": 27255,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "C:/workspace/pisuan/docs/develop-guides/changelog.md",
+          "tokens_estimated": 424,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 29999,
+        "output_tokens_estimated": 424,
+        "reads_count": 2,
+        "writes_count": 1,
         "repeated_reads_blocked": 0,
         "anatomy_lookups": 2
       }

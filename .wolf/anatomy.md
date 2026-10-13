@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-12T22:58:59.841Z
-> Files: 57 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-13T00:41:19.973Z
+> Files: 60 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -358,7 +358,7 @@
 
 ## docs/develop-guides/
 
-- `changelog.md` — 版本变更记录 (~27255 tok)
+- `changelog.md` — 版本变更记录 (~28665 tok)
 - `data-factory-ui.md` — 数据工厂 UI 规范 (~2058 tok)
 
 ## docs/intro/
@@ -375,6 +375,7 @@
 - `2026-10-12-eia-data-factory-p1-gaps.md` — 环评域数据工厂 × coal-eia-writer 技能数据对账 —— P1 缺口补齐需求 (~1589 tok)
 - `2026-10-12-eia-data-factory-p2-pages.md` — 环评域数据工厂 P2/P3 页面补齐需求（专家参与度二分） (~1084 tok)
 - `2026-10-12-eia-data-factory-p3-pages.md` — 环评数据工厂 P3 页面（formulas 参数编辑 / sample_entities 补充 / 三数据集只读抽屉） (~1527 tok)
+- `2026-10-13-p2p3-prototype-fidelity-rework.md` — P2/P3 实现页原型保真重构（严格参照 2026-10-12-eia-p2-ui.html） (~565 tok)
 
 ## docs/vibe/assets/2026-09-30-coal-eia-v2-port/
 
@@ -384,8 +385,8 @@
 
 ## docs/vibe/prototypes/
 
-- `data-factory-ui.md` — 数据工厂 UI 规范：P2 原型提炼的组件配方/暗色映射/token 正名映射 (~3800 tok)
 - `2026-10-12-eia-p2-ui.html` — 环评域数据工厂 P2/P3 · 高保真 UI 原型 (~16889 tok)
+- `data-factory-ui.md` — 数据工厂 UI 规范：P2 原型提炼的组件配方/暗色映射/token 正名映射 (~3800 tok)
 
 ## scripts/
 
@@ -412,13 +413,14 @@
 
 ## web/src/components/eia-data/
 
-- `DatasetStatsPanel.vue` — Vue: setup (~6152 tok)
-- `EntitiesPanel.vue` — Vue: setup (~3644 tok)
-- `ExpectationsPanel.vue` — Vue: setup (~1535 tok)
-- `FormulasPanel.vue` — Vue: setup (~2776 tok)
+- `DatasetStatsPanel.vue` — Vue: setup (~7924 tok)
+- `EntitiesPanel.vue` — Vue: setup (~2744 tok)
+- `ExpectationsPanel.vue` — Vue: setup (~1379 tok)
+- `factory-ui.less` — 数据工厂原型配方（P2/P3 七屏共用的单次定义）。 (~4207 tok)
+- `FormulasPanel.vue` — Vue: setup (~3725 tok)
 - `LexiconPanel.vue` — Vue: setup (~7084 tok)
 - `MetaPanel.vue` — Vue: setup (~3841 tok)
-- `SectionsPanel.vue` — Vue component (~6917 tok)
+- `SectionsPanel.vue` — Vue component (~6139 tok)
 - `StandardsPanel.vue` — Vue: setup (~6809 tok)
 
 ## web/src/components/modals/
@@ -439,8 +441,8 @@
 
 ## web/src/views/
 
-- `EiaEntitiesView.vue` — Vue: setup (~634 tok)
-- `EiaExpectationsView.vue` — Vue: setup (~620 tok)
-- `EiaFormulasView.vue` — Vue: setup (~635 tok)
+- `EiaEntitiesView.vue` — Vue: setup (~37 tok)
+- `EiaExpectationsView.vue` — Vue: setup (~40 tok)
+- `EiaFormulasView.vue` — Vue: setup (~37 tok)
 - `EiaLexiconView.vue` — Vue: setup (~746 tok)
-- `EiaSectionsView.vue` — Vue: setup (~636 tok)
+- `EiaSectionsView.vue` — Vue: setup (~37 tok)

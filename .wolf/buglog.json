@@ -6827,5 +6827,132 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-10-12"
+  },
+  {
+    "id": "bug-425",
+    "timestamp": "2026-10-13T02:00:00",
+    "error_message": "用户反馈 P2/P3 实现页面与原型差距大：页面布局、显示内容、UI 样式均不一致",
+    "file": "web/src/components/eia-data/SectionsPanel.vue 等 8 组件",
+    "root_cause": "P2 实现把已评审原型当「设计语言参照」而非像素级蓝本，沿用应用既有 AntD 组件惯例（a-table/a-drawer/a-tabs/应用页壳），布局与内容组织跟随应用模式；且验证链只到 lint/单测，从未做原型↔实现可视对比（运行栈凭据受限），偏差未被发现",
+    "fix": "任务一：P1 四页（总览/词表/元数据/标准限值）新设计原型屏 s8-s11 统合进原型 HTML（s1-s7 不动）；任务二：P2/P3 实现严格按 s1-s7 逐屏复刻改造（自绘表/chips/split/expr-block/gate1 卡/浮层，替换 AntD 皮）",
+    "tags": [
+      "eia",
+      "frontend",
+      "prototype-fidelity",
+      "antd-vs-custom",
+      "P2",
+      "P3"
+    ],
+    "related_bugs": [
+      "bug-424"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-13T02:00:00"
+  },
+  {
+    "id": "bug-426",
+    "timestamp": "2026-10-13",
+    "error_message": "章节口径指标条显示 已归并 -199、归并率 -19900%（负值）",
+    "file": "web/src/components/eia-data/SectionsPanel.vue",
+    "root_cause": "mapped 用 total - unmapped.length 推算，但 unmapped（200 条独立流）远大于 total（19 条注册口径），unmapped 并非 total 的子集",
+    "fix": "改为正向计数 mapped = quantities.filter((q) => q.field).length（已挂载字段才算已归并）",
+    "tags": [
+      "eia",
+      "sections-panel",
+      "metric-calc",
+      "negative-value"
+    ],
+    "related_bugs": [
+      "bug-427"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-13"
+  },
+  {
+    "id": "bug-427",
+    "timestamp": "2026-10-13",
+    "error_message": "unmapped 明细行未按节归位，全部堆在表格尾部",
+    "file": "web/src/components/eia-data/SectionsPanel.vue",
+    "root_cause": "unmapped.section 为原始记法（ch1/ch2_S05），而注册口径的节标识已规范化（1/2.05），字符串不等导致 findLastIndex 永不命中",
+    "fix": "抽 normSection 助手（去 ch 前缀 + _S→.），匹配与展示两侧统一过一遍",
+    "tags": [
+      "eia",
+      "sections-panel",
+      "key-normalization",
+      "interleave"
+    ],
+    "related_bugs": [
+      "bug-426"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-13"
+  },
+  {
+    "id": "bug-428",
+    "timestamp": "2026-10-13",
+    "error_message": "「覆盖章节」指标显示 101 节，实际口径只覆盖 16 节",
+    "file": "web/src/components/eia-data/SectionsPanel.vue",
+    "root_cause": "统计了全部有标题的章节，而非「出现在 quantities 中的章节」——指标语义写错",
+    "fix": "改为 sections.filter((s) => s.quantities.length).length",
+    "tags": [
+      "eia",
+      "sections-panel",
+      "metric-semantics"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-13"
+  },
+  {
+    "id": "bug-429",
+    "timestamp": "2026-10-13",
+    "error_message": "备料清单页图例为空且章节全部折叠（页面近乎空白）",
+    "file": "web/src/components/eia-data/ExpectationsPanel.vue",
+    "root_cause": "source_hint_vocabulary 是 {hint: 说明} 对象而非数组，旧代码 for...of 直接抛 TypeError，被 try/catch 静默吞掉，vocabulary 与 expanded 双双未赋值",
+    "fix": "Object.entries 取 [name, desc]；计数按 source_hint 复合串包含关系统计；展开逻辑独立于词表解析",
+    "tags": [
+      "eia",
+      "expectations-panel",
+      "shape-mismatch",
+      "silent-catch"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-13"
+  },
+  {
+    "id": "bug-430",
+    "timestamp": "2026-10-13",
+    "error_message": "写入槽位 chip 显示 {{SLOT:{{SLOT:subsidence.W_max}}}}（双层包裹）",
+    "file": "web/src/components/eia-data/FormulasPanel.vue",
+    "root_cause": "formulas.json 的 slots 已是 {{SLOT:...}} 全记法（仅 derived_slots.slot 为裸名），slotTag 无条件再包了一层",
+    "fix": "slotTag 加 startsWith('{{SLOT:') 守卫，全记法原样返回",
+    "tags": [
+      "eia",
+      "formulas-panel",
+      "double-wrap",
+      "data-shape"
+    ],
+    "related_bugs": [
+      "bug-431"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-13"
+  },
+  {
+    "id": "bug-431",
+    "timestamp": "2026-10-13",
+    "error_message": "expr 卡注释行显示 // 输出 [object Object]、[object Object]",
+    "file": "web/src/components/eia-data/FormulasPanel.vue",
+    "root_cause": "formula.outputs 是 [{name, unit, desc?}] 对象数组，直接 join 得到 toString 产物",
+    "fix": "outputs.map((o) => o.name).join('、')",
+    "tags": [
+      "eia",
+      "formulas-panel",
+      "object-to-string"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-13"
   }
 ]
