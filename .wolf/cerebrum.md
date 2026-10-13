@@ -753,3 +753,31 @@
 
 ### Decision Log
 - **诚实数据映射边界（改造期沿用）：** 原型虚构指标不伪造——命中拦截无数据则删该格、P5/P50/P95 无字段则以 corpus_freq 计量条替代、导出 CSV 无端点则去掉按钮、添加人有 decided_by 无时间戳则只出人名；functional no-regression 优先于像素复刻（撤回列保留、样本下拉新增均属数据驱动必要）。
+
+## Key Learnings + DNR（2026-10-13 词表页 s9 复刻追加）
+
+### Key Learnings
+- **词表列表接口的隐性重扫：** `GET /eia/lexicon/entries` 每次调用都跑 `_scan_all()` 全语料现扫（报告数/值数「始终现扫」是设计语义），点击筛选后行数据滞后数十秒——筛选交互密集的页面要么接受在途提示（自绘表加 opacity :loading 等价物），要么后端加扫描缓存；旧 AntD 面板同样受累（a-table :loading 转圈），非前端改造引入。
+- **长中文语料串 × 表格 nowrap：** 语料扫描出的口径名是任意长句片段，`.caliber-name` 一类 nowrap 样式在 auto 表格布局下 min-content 可达 1586px 撑爆整表；真实数据驱动的自绘表首列文案长度不可假设时，用 scoped `table-layout: fixed` + %列宽 + `overflow-wrap: break-word`。
+- **.ewp max-width:1180 在应用外壳内不生效：** 规则存在于样式表但计算值为 100%（环境覆盖，源未定位）；已验收的七个工厂页一致满宽渲染——单页强行收敛 1180 反而破坏一致性，保持满宽并记录。
+- **lexicon 条目 decided_by 实况：** 导入预置行 decided_by='import'（非空），UI 来源列「DB · import」直读即可；decided_at 可空（导入行）。
+- **抑制名单无列表端点：** blocklist 只有内部查询（import 跳过 / get_mentions 反查），无 list API——原型 s9 的「抑制名单」卡无数据可填，诚实删除并在 note-bar 保留抑制语义说明。
+
+### Do-Not-Repeat
+- 原型屏的表格列按虚构短标识（mono 短 id）设计列宽——套用到真实长文案数据前先扫一遍实况数据的长度分布，别等截图才发现撑爆。
+
+## 2026-10-13 元数据页 s10 复刻追加
+
+- 浏览器 DOM 探针三个坑：(1) prettier 会把按钮文本换行缩进，textContent 匹配必须 trim/去空白，精确等值会 find undefined；(2) AntD modal 关闭后 DOM 保留（display:none），判关闭要看 computed display / offsetParent 而非节点存在；(3) stage-chip「全部」文本含计数 span（"全部31"），startsWith 而非等值。
+- 真实 meta 标注层只有 year_hint/scale_mt_a/note 三字段（服务端 _ANNOTATION_FIELDS 白名单，越界 400）；corpus_meta.json 自动层只读。原型 s10 的文号/机构列、编辑它们、逐行「未导出」脏标均无数据支撑，勿再造回。
+- take_screenshot 偶发 captureScreenshot 协议超时转后台后 failed——立即原参重试通常一次成功，不必换参数。
+- 用户反馈（s10 操作列）：表内实心主按钮（btn-pri）批量出现显重；操作列动作一律用 btn-txt 文字链（词表同款），语义靠「标注状态」pill 承担。适用全部工厂页后续改造。
+- 配方 mono 字体栈裁定：原型 var(--mono) = ui-monospace/'Cascadia Code'/Consolas/'Courier New'/monospace；factory-ui.less 自创 JetBrains Mono 是偏离，已全改原型栈。后续新增等宽元素一律用原型栈，勿再引 JetBrains Mono（其余面板 scoped 内尚存 3 处 JetBrains：FormulasPanel/StandardsPanel/DatasetStatsPanel，未动待后续批次归一）。
+- 原型 .num = 纯 tabular-nums（fw 400）；自创「人工覆盖加粗」类语义已被用户否决——语义区分用 title/辅助 pill，不改文字字重。
+
+## 2026-10-13 标准页 s11 复刻追加
+
+- **seg/chips 徽记计数必须与过滤逻辑同源**：服务端 counts.confirmed 只数 DB 裁决（0），而「已核实」过滤含文件态免核实条目（21）——徽记用服务端数、过滤用客户端谓词会显示「已核实 0」点进去 21 行。裁决：凡徽记数与点击结果需一致的场合，一律客户端 computed 同源计算；服务端 counts 只用于语义确实单一的场合。
+- **限值表 source 字段实况**：七张表当前全为 `source:'file'`、needs_verification=true；页头「N 表待导出」pill 按 source==='db' 计数，全文件态时诚实缺席且 导出限值行 disabled。勿假设曾有 DB 录入残留。
+- **AntD modal 取消探测时序**：click() 后 wait(400) 查 `.ant-modal-wrap` display 可能误报未关（动画未完）；复探测即 display:none。判定以复查为准，勿当场加第二次点击。
+- **gate1 卡样式原样保留价值**：其 scoped 样式（gate1-m baseline 行、viol 虚线分隔、code.k chips）与原型 s7 同款且数据真实，复刻批次只需换 mono 栈，勿顺手重写。
