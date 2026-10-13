@@ -2,14 +2,14 @@
   "version": 1,
   "created_at": "2026-05-12T06:40:36.630Z",
   "lifetime": {
-    "total_tokens_estimated": 83874896,
-    "total_reads": 22256,
-    "total_writes": 33541,
-    "total_sessions": 123,
-    "anatomy_hits": 8066,
-    "anatomy_misses": 13773,
+    "total_tokens_estimated": 83904988,
+    "total_reads": 22258,
+    "total_writes": 33545,
+    "total_sessions": 124,
+    "anatomy_hits": 8067,
+    "anatomy_misses": 13774,
     "repeated_reads_blocked": 34658,
-    "estimated_savings_vs_bare_cli": 758316178
+    "estimated_savings_vs_bare_cli": 758316378
   },
   "sessions": [
     {
@@ -318545,6 +318545,55 @@
       "id": "session-2026-10-13-2224",
       "started": "2026-10-13T14:24:47.999Z",
       "ended": "2026-10-13T15:35:07.242Z",
+      "reads": [
+        {
+          "file": "C:/workspace/pisuan/docs/develop-guides/changelog.md",
+          "tokens_estimated": 29307,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/LexiconPanel.vue",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/EiaDataLayout.vue",
+          "tokens_estimated": 57,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/EiaDataLayout.vue",
+          "tokens_estimated": 38,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/docs/develop-guides/changelog.md",
+          "tokens_estimated": 310,
+          "action": "edit"
+        },
+        {
+          "file": "C:/workspace/pisuan/web/src/components/eia-data/LexiconPanel.vue",
+          "tokens_estimated": 380,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 29307,
+        "output_tokens_estimated": 785,
+        "reads_count": 2,
+        "writes_count": 4,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-10-13-2224",
+      "started": "2026-10-13T14:24:47.999Z",
+      "ended": "2026-10-13T15:36:43.568Z",
       "reads": [
         {
           "file": "C:/workspace/pisuan/docs/develop-guides/changelog.md",

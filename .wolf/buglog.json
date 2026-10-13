@@ -7048,8 +7048,9 @@
     "related_bugs": [
       "bug-435"
     ],
-    "occurrences": 1,
-    "last_seen": "2026-10-13"
+    "occurrences": 2,
+    "last_seen": "2026-10-13",
+    "note": "；2026-10-13 FilterSelect .fs-opt 复发同因（新裸 button 又漏重置），截图审查抓到"
   },
   {
     "id": "bug-437",
@@ -7066,6 +7067,27 @@
     ],
     "related_bugs": [
       "bug-435"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-13"
+  },
+  {
+    "id": "bug-438",
+    "timestamp": "2026-10-13",
+    "error_message": "左侧分类和阶段下拉框需要 UI 美化，不要使用原始组件（用户报告原生 select 观感不达标）",
+    "file": "web/src/components/eia-data/FilterSelect.vue",
+    "root_cause": "select.inp 虽符合原型表单语汇，但原生下拉的 UA 箭头/弹出面板不可定制，观感原始；期间还犯两个实现错：模板漏绑 ref=\"wrap\" 致外点关闭失效（wrap.value 恒 null 短路条件），.fs-opt 裸 button 未重置 UA 外观致暗色浅灰盒（bug-436 同因复发）",
+    "fix": "新建自绘 FilterSelect.vue（触发器镜像 .inp 配方 + ChevronDown 旋转 + 弹层菜单选中态同 nav-item.on，外点/Esc 关闭、实例互斥）；fam-list 移除 max-height/overflow 剪裁守卫（弹层可溢出卡片，状态分组恒 5 项）；补 ref 绑定与 appearance/background/border 重置",
+    "tags": [
+      "eia-factory",
+      "lexicon",
+      "custom-dropdown",
+      "ua-button-reset",
+      "dark-mode"
+    ],
+    "related_bugs": [
+      "bug-436",
+      "bug-437"
     ],
     "occurrences": 1,
     "last_seen": "2026-10-13"

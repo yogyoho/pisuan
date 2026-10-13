@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-13T15:25:11.874Z
-> Files: 1 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-13T15:50:12.838Z
+> Files: 3 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -368,7 +368,9 @@
 
 ## web/src/components/eia-data/
 
-- `LexiconPanel.vue` — Vue component (~8100 tok)。词表左列表单件已换原型 .inp/select.inp（bug-437），mini-dot 在 fam-name 后
+- `factory-ui.less` — 数据工厂原型配方（P2/P3 七屏共用的单次定义）。 (~4304 tok)
+- `FilterSelect.vue` — Vue: setup (~953 tok)
+- `LexiconPanel.vue` — Vue component (~8101 tok)
 
 ## web/src/components/modals/
 
