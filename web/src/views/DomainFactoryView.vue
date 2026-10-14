@@ -1,590 +1,1324 @@
-<script setup>
-import { onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { message } from 'ant-design-vue'
-import { ChevronDown, ChevronUp, Database, FlaskConical, Layers, Leaf, LayoutGrid, Mountain, Zap } from '@lucide/vue'
-import DataSourceDashboard from '@/components/domain-factory/DataSourceDashboard.vue'
-import EtlWorkbench from '@/components/domain-factory/EtlWorkbench.vue'
-import RegionAttributionPanel from '@/components/domain-factory/RegionAttributionPanel.vue'
-import RegulationEnrichPanel from '@/extensions/regulation-library/RegulationEnrichPanel.vue'
-import { domainFactoryApi } from '@/apis/domain_factory_api'
-import { useTaskerStore } from '@/stores/tasker'
-import { useUserStore } from '@/stores/user'
-
-const route = useRoute()
-const router = useRouter()
-const taskerStore = useTaskerStore()
-const userStore = useUserStore()
-
-const activeTab = ref('data')
-const regulationPanelOpen = ref(false)
-const domains = ref([])
-const selectedDomain = ref('')
-const loadingDomains = ref(false)
-const currentTask = ref(null)
-const dashboardRef = ref(null)
-
-const heroCollapsed = ref(localStorage.getItem('df_hero_collapsed') === 'true')
-const globalStats = ref({ committed_tasks: 0, entity_count: 0, learned_templates: 0 })
-
-const toggleHero = () => {
-  heroCollapsed.value = !heroCollapsed.value
-  localStorage.setItem('df_hero_collapsed', String(heroCollapsed.value))
-}
-
-// [pisuan-custom] 应用入口磁贴：写死示例占位，应用中心立项后再接 getDomains() 真数据
-const APP_ENTRIES = [
-  { key: 'eia', name: '环评域', desc: '报告智能加工', icon: Leaf, tone: 'eia' },
-  { key: 'mining', name: '矿井域', desc: '规划建设中', icon: Mountain, tone: 'mining' }
-]
-
-const handleAppStub = (name) => {
-  if (name === '环评域') {
-    router.push('/domain-factory/eia-data')
-    return
-  }
-  message.info(`「${name}」建设中`)
-}
-
-const fetchDomains = async () => {
-  loadingDomains.value = true
-  try {
-    const res = await domainFactoryApi.getDomains()
-    let domainsList = []
-    if (Array.isArray(res)) {
-      domainsList = res
-    } else if (res?.items && Array.isArray(res.items)) {
-      domainsList = res.items
-    }
-    domains.value = domainsList
-    if (!selectedDomain.value && domains.value.length) {
-      selectedDomain.value = domains.value[0].code || domains.value[0].id || domains.value[0].name
-    }
-  } catch (error) {
-    console.warn(error)
-    message.error('加载领域列表失败，使用默认配置')
-    domains.value = []
-    selectedDomain.value = ''
-  } finally {
-    loadingDomains.value = false
-  }
-}
-
-const handleDomainChange = (domain) => {
-  selectedDomain.value = domain
-}
-
-const handleTaskOpen = (task) => {
-  currentTask.value = task
-  activeTab.value = 'workbench'
-}
-
-const handleTaskCompleted = () => {
-  message.success('任务处理完成')
-  currentTask.value = null
-  activeTab.value = 'data'
-  refreshDashboard()
-  taskerStore.loadTasks()
-}
-
-const handleTaskUpdated = () => {
-  refreshDashboard()
-  if (userStore.isAdmin && currentTask.value?.id) {
-    domainFactoryApi.syncTaskToTaskCenter(currentTask.value.id).catch((err) => {
-      console.error('同步任务中心失败:', err)
-    })
-  }
-}
-
-const handleTabChange = (key) => {
-  activeTab.value = key
-}
-
-const refreshDomains = () => {
-  fetchDomains()
-}
-
-const refreshDashboard = () => {
-  dashboardRef.value?.refresh?.()
-}
-
-const fetchStats = async () => {
-  try {
-    const res = await domainFactoryApi.getContexts()
-    if (res?.stats) globalStats.value = res.stats
-  } catch {
-    // 静默失败，不影响主页面
-  }
-}
-
-onMounted(() => {
-  fetchDomains()
-  fetchStats()
-})
-
-watch(
-  () => route.query.tab,
-  (tab) => {
-    if (tab && ['data', 'workbench'].includes(tab)) {
-      activeTab.value = tab
-      router.replace({ query: { ...route.query, tab: undefined } })
-    }
-  }
-)
-</script>
-
+<!-- [pisuan-custom] 知识工厂 Landing 首页 · 立式流水线方案（2026-10-14 用户选定；与系统首页 HomeViewV2 拉开布局差异：
+     无营销 hero/拟真窗/三列卡组/深色 CTA，以装配线主轴作页面骨架。原工作台三 tab 迁往 /domain-factory/general 通用域。
+     同日二轮精修（用户反馈「太单调」）：传送带实体化（带体+滚动刻度+进料箭头）、工位卡图标块+序号水印+顶部流光条、
+     铭牌金属质感+铆钉、顶部运转指示灯、收工带斜纹+印章、主按钮流光扫过；全部动效受 reduced-motion 约束。
+     背景配方对齐系统首页 hero（HomeViewV2 .lp-hero）：右上靛蓝光晕 + 左下橙光晕 + 32px 方格网） -->
 <template>
-  <div class="domain-factory-view">
-    <div class="factory-main">
-      <!-- 可折叠 Hero 区 -->
-      <div :class="['hero', { collapsed: heroCollapsed }]">
-        <transition name="hero-expand">
-          <div v-if="!heroCollapsed" class="hero-content">
-            <div class="hero-text">
-              <div class="badge">
-                <FlaskConical :size="12" style="margin-right: 4px" />Domain Knowledge Factory
-              </div>
-              <h1>人机协同的领域知识工厂</h1>
-              <p class="desc">
-                AI 负责粗加工，专家完成精加工，最终将高质量数据入库 Milvus / SQL /
-                图谱，确保「入库即精品」。
+  <div class="dfp">
+    <main>
+      <!-- 1) 顶部工作台横带：紧凑左文右 CTA，不做居中营销 hero -->
+      <section class="dfp-top">
+        <div class="dfp-container">
+          <div class="dfp-top-inner">
+            <div class="dfp-top-copy reveal">
+              <span class="dfp-badge">
+                <Sparkles :size="12" />
+                <span>DOMAIN KNOWLEDGE FACTORY</span>
+              </span>
+              <h1>领域知识工厂</h1>
+              <p class="dfp-sub">
+                语料从进料口上流水线：AI
+                负责解析、提取与泛化，专家双屏复核把关，入库即精品——整条管线在本页一览，工位即入口。
               </p>
+              <div class="dfp-run">
+                <span class="dfp-run-state">
+                  <i class="run-dot" aria-hidden="true"></i>
+                  <span>管线运转中</span>
+                </span>
+                <i class="run-sep" aria-hidden="true"></i>
+                <span>5 步加工 · 双屏校验 · 3 层入库</span>
+              </div>
             </div>
-            <div class="app-launcher">
+            <div class="dfp-top-cta reveal" :style="{ '--stagger': 1 }">
               <button
-                v-for="entry in APP_ENTRIES"
-                :key="entry.key"
-                class="app-tile"
-                :class="`tone-${entry.tone}`"
-                @click="handleAppStub(entry.name)"
+                class="dfp-btn dfp-btn-primary"
+                @click="router.push('/domain-factory/general')"
               >
-                <span class="app-icon-chip">
-                  <component :is="entry.icon" :size="20" />
-                </span>
-                <span class="app-name">{{ entry.name }}</span>
-                <span class="app-desc">{{ entry.desc }}</span>
+                <span>进入通用域</span>
+                <ArrowRight :size="16" />
               </button>
-              <button class="app-tile more" @click="handleAppStub('应用中心')">
-                <span class="app-icon-chip">
-                  <LayoutGrid :size="20" />
-                </span>
-                <span class="app-name">更多</span>
-                <span class="app-desc">应用中心</span>
+              <button
+                class="dfp-btn dfp-btn-outline"
+                @click="router.push('/domain-factory/eia-data')"
+              >
+                <span>环评域入口</span>
+                <ArrowRight :size="16" />
               </button>
             </div>
-          </div>
-        </transition>
-        <div class="hero-bar">
-          <div class="hero-stats">
-            <div class="hero-stat-card">
-              <Database :size="16" />
-              <div class="hero-stat-inline">
-                <strong>{{ globalStats.committed_tasks }}</strong>
-                <span>已入库</span>
-              </div>
-            </div>
-            <div class="hero-stat-card">
-              <Layers :size="16" />
-              <div class="hero-stat-inline">
-                <strong>{{ globalStats.entity_count }}</strong>
-                <span>实体</span>
-              </div>
-            </div>
-            <div class="hero-stat-card">
-              <Zap :size="16" />
-              <div class="hero-stat-inline">
-                <strong>{{ globalStats.learned_templates }}</strong>
-                <span>学习模板</span>
-              </div>
-            </div>
-          </div>
-          <span class="hero-toggle" @click="toggleHero">
-            <component :is="heroCollapsed ? ChevronDown : ChevronUp" :size="12" />
-            {{ heroCollapsed ? '展开简介' : '收起' }}
-          </span>
-          <div class="hero-actions">
-            <a-button
-              v-if="userStore.isAdmin"
-              size="small"
-              class="hero-nav-btn"
-              @click="router.push('/domain-factory/prompt-config')"
-            >
-              <Zap :size="13" /> Prompt 管理
-            </a-button>
-            <a-button
-              v-if="userStore.isAdmin"
-              size="small"
-              class="hero-nav-btn"
-              @click="router.push('/domain-factory/outline-template')"
-            >
-              大纲模板
-            </a-button>
-            <a-button
-              v-if="userStore.isAdmin"
-              size="small"
-              class="hero-nav-btn"
-              @click="router.push('/domain-factory/entity-builder')"
-            >
-              实体构建器
-            </a-button>
-            <a-button size="small" class="hero-nav-btn" @click="regulationPanelOpen = true">
-              规范库加工
-            </a-button>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div class="factory-tabs-wrapper">
-        <a-tabs
-          v-model:activeKey="activeTab"
-          size="large"
-          @change="handleTabChange"
-          class="factory-tabs"
-        >
-          <a-tab-pane key="data" tab="数据源管理">
-            <template #tab>
-              <span class="tab-label">
-                <span class="tab-dot data"></span>数据源管理
-                <span class="tab-hint">上传与任务队列</span>
+      <!-- 2) 装配线主轴：实体传送带 + 流动加工件 + 四工位卡上下交错 -->
+      <section class="dfp-floor">
+        <div class="dfp-container dfp-floor-inner">
+          <div class="dfp-rail" aria-hidden="true"></div>
+          <span
+            v-for="i in 3"
+            :key="i"
+            class="dfp-flow"
+            :class="`dfp-flow-f${i}`"
+            aria-hidden="true"
+          ></span>
+          <div class="dfp-stations">
+            <div
+              v-for="(s, i) in stations"
+              :key="s.no"
+              class="dfp-station reveal"
+              :style="{ '--stagger': i }"
+              role="link"
+              tabindex="0"
+              @click="router.push(s.to)"
+              @keydown.enter.prevent="router.push(s.to)"
+            >
+              <div class="s-card">
+                <span class="s-wm" aria-hidden="true">{{ s.wm }}</span>
+                <span class="s-ico" aria-hidden="true">
+                  <component :is="s.icon" :size="18" />
+                </span>
+                <span class="s-no">{{ s.no }}</span>
+                <h3>{{ s.title }}</h3>
+                <p>{{ s.desc }}</p>
+                <div class="s-meter">
+                  <span v-for="m in s.meters" :key="m">{{ m }}</span>
+                </div>
+                <span class="s-go">直达 {{ s.screen }} <ArrowRight :size="12" /></span>
+              </div>
+              <div class="s-stem" aria-hidden="true"></div>
+              <div class="s-dot" aria-hidden="true"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3) 工位铭牌带（机制口径，仿设备铭牌；运营统计在通用域「数据统计」屏） -->
+      <section class="dfp-plates">
+        <div class="dfp-container dfp-plates-grid">
+          <div
+            v-for="(p, i) in plates"
+            :key="p.label"
+            class="dfp-plate reveal"
+            :style="{ '--stagger': i }"
+          >
+            <i class="p-screw p-screw-l" aria-hidden="true"></i>
+            <i class="p-screw p-screw-r" aria-hidden="true"></i>
+            <b>{{ p.label }}</b>
+            <span class="p-value">{{ p.value }}</span>
+            <p class="p-desc">{{ p.desc }}</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4) 工位名录：模块横带 + 屏级 chip 直达 -->
+      <section class="dfp-mods">
+        <div class="dfp-container">
+          <div class="dfp-mods-cap reveal">
+            <b>工位名录 · 领域模块</b>
+            <span>从横带进入模块，或点 chip 直达工作屏</span>
+          </div>
+          <div class="dfp-mods-list">
+            <div
+              v-for="(mod, i) in modules"
+              :key="mod.name"
+              class="dfp-mod-row reveal"
+              :class="{ 'is-ph': mod.placeholder }"
+              :style="{ '--stagger': i }"
+              :role="mod.to ? 'link' : undefined"
+              :tabindex="mod.to ? 0 : -1"
+              @click="mod.to && router.push(mod.to)"
+              @keydown.enter.prevent="mod.to && router.push(mod.to)"
+            >
+              <span class="m-bar" :class="mod.tone" aria-hidden="true"></span>
+              <span class="m-glyph" :class="mod.tone" aria-hidden="true">
+                <component :is="mod.icon" :size="15" />
               </span>
-            </template>
-            <DataSourceDashboard
-              ref="dashboardRef"
-              :domains="domains"
-              :selected-domain="selectedDomain"
-              :loading-domains="loadingDomains"
-              @update:domain="handleDomainChange"
-              @task-open="handleTaskOpen"
-              @domains-refreshed="refreshDomains"
-            />
-          </a-tab-pane>
-          <a-tab-pane key="workbench" tab="ETL 清洗工作台">
-            <template #tab>
-              <span class="tab-label">
-                <span class="tab-dot workbench"></span>ETL 清洗工作台
-                <span class="tab-hint">双屏校验</span>
+              <span class="m-name"
+                >{{ mod.name }}<span class="m-en">{{ mod.en }}</span></span
+              >
+              <span class="m-desc">{{ mod.desc }}</span>
+              <span v-if="mod.chips?.length" class="m-chips">
+                <button
+                  v-for="chip in mod.chips"
+                  :key="chip.label"
+                  v-show="!chip.admin || userStore.isAdmin"
+                  class="dfp-chip"
+                  :class="{ 'is-admin': chip.admin }"
+                  @click.stop="router.push(chip.to)"
+                >
+                  {{ chip.label }}
+                </button>
               </span>
-            </template>
-            <EtlWorkbench
-              :task="currentTask"
-              @task-completed="handleTaskCompleted"
-              @task-updated="handleTaskUpdated"
-              @navigate-to-data-sources="activeTab = 'data'"
-            />
-          </a-tab-pane>
-          <a-tab-pane key="region" tab="归属管理">
-            <template #tab>
-              <span class="tab-label">
-                <span class="tab-dot region"></span>归属管理
-                <span class="tab-hint">改判 · 退役 · 聚合</span>
-              </span>
-            </template>
-            <RegionAttributionPanel />
-          </a-tab-pane>
-        </a-tabs>
+              <ArrowRight v-if="mod.to" :size="16" class="m-arrow" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5) 收工带 -->
+      <section class="dfp-closing">
+        <span class="c-wm" aria-hidden="true">PIPELINE READY</span>
+        <div class="dfp-container dfp-closing-inner reveal">
+          <div class="c-copy">
+            <b>流水线已就绪</b>
+            <span>领一张工单即可开工——语料上传、ETL 清洗、归属沉淀、写手消费。</span>
+          </div>
+          <span class="c-stamp" aria-hidden="true">入库即精品</span>
+          <div class="c-cta">
+            <button class="dfp-btn dfp-btn-primary" @click="router.push('/domain-factory/general')">
+              <span>进入通用域</span>
+              <ArrowRight :size="16" />
+            </button>
+            <button
+              class="dfp-btn dfp-btn-outline"
+              @click="router.push('/domain-factory/eia-data')"
+            >
+              浏览环评域
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="dfp-footer">
+      <div class="dfp-container">
+        <p>领域知识工厂 · 数据从语料到资产的单一通道{{ footerCopyright }}</p>
       </div>
-    </div>
-    <RegulationEnrichPanel v-model:open="regulationPanelOpen" />
+    </footer>
   </div>
 </template>
 
+<script setup>
+import { computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { useInfoStore } from '@/stores/info'
+import {
+  Sparkles,
+  ArrowRight,
+  Inbox,
+  Workflow,
+  Database,
+  PenLine,
+  Factory,
+  Sprout,
+  Mountain
+} from '@lucide/vue'
+
+const router = useRouter()
+const userStore = useUserStore()
+const infoStore = useInfoStore()
+
+const footerCopyright = computed(() => {
+  const c = infoStore.footer?.copyright
+  return c ? ` · ${c}` : ''
+})
+
+// 装配线工位：即四大工作屏入口
+const stations = [
+  {
+    no: 'STATION 01',
+    wm: '01',
+    icon: Inbox,
+    title: '语料进料',
+    desc: '领域文档批量上传，选择领域与报告类型，自动建任务入队解析。',
+    meters: ['批量上传', '自动入队'],
+    screen: '数据源管理',
+    to: '/domain-factory/general'
+  },
+  {
+    no: 'STATION 02',
+    wm: '02',
+    icon: Workflow,
+    title: 'ETL 清洗',
+    desc: '解析、提取、泛化流水线，双屏人机校验把守质量关。',
+    meters: ['5 步加工', '双屏校验'],
+    screen: 'ETL 工作台',
+    to: '/domain-factory/general/workbench'
+  },
+  {
+    no: 'STATION 03',
+    wm: '03',
+    icon: Database,
+    title: '归属入库',
+    desc: '归属改判与退役聚合，结构化入库 Milvus / SQL / 图谱。',
+    meters: ['3 层入库', '改判 · 退役'],
+    screen: '归属管理',
+    to: '/domain-factory/general/attribution'
+  },
+  {
+    no: 'STATION 04',
+    wm: '04',
+    icon: PenLine,
+    title: '写手消费',
+    desc: '报告写手按章节模板与护栏取用资产，成稿即成品。',
+    meters: ['模板复用', '入库即精品'],
+    screen: '环评域总览',
+    to: '/domain-factory/eia-data'
+  }
+]
+
+// 设备铭牌：机制口径而非运营统计
+const plates = [
+  { label: 'PIPELINE', value: '5 步加工', desc: '解析、提取、泛化、校验、入库，全程可复核' },
+  { label: 'REVIEW', value: '双屏校验', desc: '机器粗加工，专家双屏逐段终审' },
+  { label: 'STORAGE', value: '3 层入库', desc: 'Milvus 向量 · SQL 结构 · 图谱关联' },
+  { label: 'REUSE', value: '模板复用', desc: '章节模板与实体资产，跨报告沉淀复用' }
+]
+
+const modules = [
+  {
+    name: '通用域',
+    en: 'GENERAL',
+    icon: Factory,
+    tone: '',
+    desc: '语料加工通用管线，领域无关动作与平台工具汇集于此',
+    to: '/domain-factory/general',
+    placeholder: false,
+    chips: [
+      { label: '数据源管理', to: '/domain-factory/general' },
+      { label: 'ETL 工作台', to: '/domain-factory/general/workbench' },
+      { label: '归属管理', to: '/domain-factory/general/attribution' },
+      { label: '数据统计', to: '/domain-factory/general/stats' },
+      { label: '平台工具', to: '/domain-factory/general/prompt-config', admin: true }
+    ]
+  },
+  {
+    name: '环评域',
+    en: 'EIA',
+    icon: Sprout,
+    tone: 'is-eia',
+    desc: '环评数据资产工厂，coal-eia-writer 技能资产加工与维护',
+    to: '/domain-factory/eia-data',
+    placeholder: false,
+    chips: [
+      { label: '总览', to: '/domain-factory/eia-data' },
+      { label: '护栏词表', to: '/domain-factory/eia-data/lexicon' },
+      { label: '元数据', to: '/domain-factory/eia-data/meta' },
+      { label: '标准限值', to: '/domain-factory/eia-data/standards' },
+      { label: '章节口径', to: '/domain-factory/eia-data/sections' },
+      { label: '备料清单', to: '/domain-factory/eia-data/expectations' },
+      { label: '公式参数', to: '/domain-factory/eia-data/formulas' },
+      { label: '实体注册', to: '/domain-factory/eia-data/entities' }
+    ]
+  },
+  {
+    name: '矿井域',
+    en: 'MINING',
+    icon: Mountain,
+    tone: 'is-gray',
+    desc: '规划建设中，敬请期待',
+    to: '',
+    placeholder: true,
+    chips: []
+  }
+]
+
+// Only show sections when scrolled into view; skip animation entirely for reduced motion
+let revealObserver = null
+
+const initReveal = () => {
+  const els = document.querySelectorAll('.dfp .reveal')
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    els.forEach((el) => el.classList.add('is-visible'))
+    return
+  }
+  revealObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible')
+          revealObserver.unobserve(entry.target)
+        }
+      })
+    },
+    { threshold: 0.15 }
+  )
+  els.forEach((el) => revealObserver.observe(el))
+}
+
+onMounted(() => {
+  initReveal()
+})
+
+onUnmounted(() => {
+  if (revealObserver) {
+    revealObserver.disconnect()
+    revealObserver = null
+  }
+})
+</script>
+
 <style lang="less" scoped>
-.domain-factory-view {
-  padding: 24px 28px 32px;
-  min-height: 100%;
-  background: var(--gray-50, #f5f7fb);
+.dfp {
+  color: var(--gray-1000);
+  background: var(--gray-0);
+  min-height: 100vh;
+}
 
-  .factory-main {
-    max-width: 100%;
-    margin: 0 auto;
-  }
+.dfp-container {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 28px;
+}
 
-  .hero {
-    border-radius: 16px;
-    background: var(--gray-0);
-    border: 1px solid var(--gray-150);
-    margin-bottom: 20px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+/* ============ Buttons ============ */
+.dfp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 22px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 14.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 
-    &.collapsed {
-      border-radius: 12px;
-
-      .hero-bar {
-        padding: 8px 24px;
-      }
-    }
-
-    .hero-content {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      padding: 28px 32px 12px;
-      gap: 40px;
-      background:
-        radial-gradient(ellipse at top right, rgba(var(--main-color-rgb), 0.06), transparent 50%),
-        linear-gradient(135deg, var(--main-10) 0%, var(--gray-0) 100%);
-    }
-
-    .hero-text {
-      flex: 1;
-
-      .badge {
-        display: inline-flex;
-        align-items: center;
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--main-color);
-        background: rgba(var(--main-color-rgb), 0.08);
-        padding: 2px 10px;
-        border-radius: 999px;
-        margin-bottom: 12px;
-        letter-spacing: 0.3px;
-      }
-
-      h1 {
-        margin: 0;
-        font-size: 26px;
-        font-weight: 700;
-        color: var(--gray-900, #0f172a);
-        letter-spacing: -0.3px;
-      }
-
-      .desc {
-        margin-top: 8px;
-        color: var(--gray-500, #64748b);
-        font-size: 13px;
-        max-width: 520px;
-        line-height: 1.6;
-      }
-    }
-
-    .app-launcher {
-      flex-shrink: 0;
-      display: flex;
-      align-items: stretch;
-      gap: 12px;
-
-      .app-tile {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 7px;
-        width: 116px;
-        padding: 14px 10px 12px;
-        border-radius: 12px;
-        background: var(--gray-0);
-        border: 1px solid var(--gray-100);
-        cursor: pointer;
-        transition: all 0.2s;
-        font-family: inherit;
-
-        &:hover {
-          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
-          transform: translateY(-1px);
-        }
-
-        &:focus-visible {
-          outline: 2px solid var(--main-color);
-          outline-offset: 2px;
-        }
-
-        .app-icon-chip {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 40px;
-          height: 40px;
-          border-radius: 10px;
-          background: rgba(var(--main-color-rgb), 0.08);
-          color: var(--main-color);
-        }
-
-        .app-name {
-          font-size: 13px;
-          font-weight: 600;
-          color: var(--gray-800, #1e293b);
-        }
-
-        .app-desc {
-          font-size: 11px;
-          color: var(--gray-400, #94a3b8);
-        }
-
-        &.tone-mining .app-icon-chip {
-          /* [pisuan-custom] 青云素雅：一次性装饰色（矿井域琥珀点缀），不随主题 */
-          background: rgba(250, 173, 20, 0.12);
-          color: var(--color-warning-700);
-        }
-
-        &.more {
-          background: transparent;
-          border-style: dashed;
-
-          .app-icon-chip {
-            background: var(--gray-100);
-            color: var(--gray-400, #94a3b8);
-          }
-        }
-      }
-    }
-
-    .hero-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 32px 10px;
-      border-top: 1px solid var(--gray-100, #f1f5f9);
-
-      .hero-stats {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .hero-stat-card {
-        min-width: 60px;
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        padding: 8px 10px;
-        border-radius: 8px;
-        background: var(--main-0);
-        border: 1px solid var(--gray-100);
-        color: var(--main-color);
-
-        .hero-stat-inline {
-          display: flex;
-          flex-direction: row;
-          align-items: baseline;
-          gap: 4px;
-        }
-
-        strong {
-          font-size: 14px;
-          line-height: 1.2;
-          color: var(--gray-900);
-          white-space: nowrap;
-          font-weight: 600;
-        }
-
-        span {
-          font-size: 11px;
-          color: var(--gray-500);
-          white-space: nowrap;
-        }
-      }
-
-      .hero-toggle {
-        font-size: 12px;
-        color: var(--gray-400, #94a3b8);
-        cursor: pointer;
-        user-select: none;
-        transition: color 0.2s;
-
-        &:hover {
-          color: var(--main-color);
-        }
-      }
-
-      .hero-actions {
-        display: flex;
-        gap: 8px;
-
-        .hero-nav-btn {
-          border-radius: 6px;
-          font-size: 13px;
-          color: var(--gray-600, #475569);
-          border-color: var(--gray-200, #e2e8f0);
-
-          &:hover {
-            color: var(--main-color);
-            border-color: var(--main-color);
-          }
-        }
-      }
-    }
-  }
-
-  .factory-tabs-wrapper {
-    background: var(--gray-0);
-    border-radius: 0;
-    border: none;
-    box-shadow: none;
-    overflow: hidden;
-  }
-
-  .factory-tabs {
-    :deep(.ant-tabs-nav) {
-      margin: 0;
-      padding: 0 8px;
-      background: var(--gray-0);
-
-      &::before {
-        border-bottom: 1px solid var(--gray-100);
-      }
-    }
-
-    :deep(.ant-tabs-tab) {
-      padding: 14px 16px;
-      font-size: 14px;
-
-      .tab-label {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-      }
-
-      .tab-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-
-        &.data {
-          background: var(--main-color);
-        }
-        &.workbench {
-          background: #722ed1; /* [pisuan-custom] 青云素雅：一次性装饰色（领域工厂状态点缀），不随主题 */
-        }
-        &.region {
-          background: #0891b2; /* [pisuan-custom] W4 归属管理点缀（科技青系），不随主题 */
-        }
-      }
-
-      .tab-hint {
-        font-size: 12px;
-        color: var(--gray-400, #94a3b8);
-        margin-left: 2px;
-      }
-    }
-
-    :deep(.ant-tabs-content-holder) {
-      padding: 0;
-    }
-
-    :deep(.ant-tabs-content) {
-      background: transparent;
-    }
-
-    :deep(.ant-tabs-tabpane) {
-      padding: 0;
-    }
+  &:focus-visible {
+    outline: 2px solid var(--main-600);
+    outline-offset: 2px;
   }
 }
 
-.hero-expand-enter-active,
-.hero-expand-leave-active {
-  transition: all 0.25s ease;
+.dfp-btn-primary {
+  position: relative;
   overflow: hidden;
+  background: var(--main-600);
+  color: var(--gray-0);
+
+  /* hover 流光扫过 */
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -45%;
+    width: 36%;
+    height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transform: skewX(-18deg) translateX(0);
+    pointer-events: none;
+  }
+
+  &:hover {
+    background: var(--main-500);
+    box-shadow: 0 6px 16px var(--shadow-3);
+
+    &::after {
+      transform: skewX(-18deg) translateX(420%);
+      transition: transform 0.55s ease;
+    }
+  }
+
+  &:active {
+    background: var(--main-700);
+  }
 }
 
-.hero-expand-enter-from,
-.hero-expand-leave-to {
+.dfp-btn-outline {
+  border-color: var(--gray-200);
+  color: var(--gray-600);
+  background: var(--gray-0);
+
+  &:hover {
+    border-color: var(--main-400);
+    color: var(--main-700);
+    box-shadow: 0 4px 12px var(--shadow-2);
+  }
+}
+
+/* ============ 1) 顶部工作台横带 ============ */
+.dfp-top {
+  border-bottom: 1px solid var(--gray-150);
+
+  /* 背景配方与系统首页 hero 同款：双光晕 + 32px 方格网（token 翻转自动适配暗色） */
+  background-image:
+    radial-gradient(620px 320px at 88% 0%, var(--main-100), transparent 65%),
+    radial-gradient(520px 280px at 4% 100%, var(--second-50), transparent 60%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 31px,
+      rgba(var(--main-color-rgb), 0.05) 31px,
+      rgba(var(--main-color-rgb), 0.05) 32px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 31px,
+      rgba(var(--main-color-rgb), 0.05) 31px,
+      rgba(var(--main-color-rgb), 0.05) 32px
+    );
+}
+
+.dfp-top-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  padding: 56px 0 32px;
+}
+
+.dfp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: 1px solid var(--second-200);
+  border-radius: 999px;
+  background: var(--second-50);
+  color: var(--second-700);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.dfp-top-copy h1 {
+  margin: 14px 0 10px;
+  font-size: clamp(28px, 3vw, 34px);
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--gray-1000);
+}
+
+.dfp-sub {
+  max-width: 580px;
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: var(--gray-500);
+}
+
+/* 运转指示灯 + 机制速览 */
+.dfp-run {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  font-size: 12.5px;
+  color: var(--gray-500);
+}
+
+.dfp-run-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.run-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--main-500);
+  animation: dfp-ping-run 2s ease-out infinite;
+}
+
+.run-sep {
+  width: 1px;
+  height: 12px;
+  background: var(--gray-200);
+}
+
+@keyframes dfp-ping-run {
+  0% {
+    box-shadow: 0 0 0 0 rgba(var(--main-color-rgb), 0.4);
+  }
+
+  70%,
+  100% {
+    box-shadow: 0 0 0 7px rgba(var(--main-color-rgb), 0);
+  }
+}
+
+.dfp-top-cta {
+  display: flex;
+  gap: 10px;
+  flex: none;
+  padding-bottom: 4px;
+}
+
+/* ============ 2) 装配线主轴 ============ */
+.dfp-floor-inner {
+  position: relative;
+  padding-top: 14px;
+  padding-bottom: 6px;
+}
+
+/* 传送带：实体带体 + 滚动刻度 + 进料箭头 */
+.dfp-rail {
+  position: absolute;
+  left: -40px;
+  right: -40px;
+  top: 227px;
+  height: 6px;
+  border: 1px solid var(--gray-200);
+  border-radius: 999px;
+  background: var(--gray-100);
+  box-shadow: 0 5px 16px rgba(var(--main-color-rgb), 0.08);
+
+  /* 带面滚动的加工刻度 */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border-radius: inherit;
+    background: repeating-linear-gradient(90deg, var(--gray-300) 0 7px, transparent 7px 13px);
+    animation: dfp-belt 0.9s linear infinite;
+  }
+
+  /* 进料口箭头 */
+  &::after {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-left: 10px solid var(--main-500);
+  }
+}
+
+@keyframes dfp-belt {
+  to {
+    background-position-x: 13px;
+  }
+}
+
+/* 流动加工件：沿带移动的胶囊 */
+.dfp-flow {
+  position: absolute;
+  top: 225px;
+  z-index: 1;
+  width: 16px;
+  height: 9px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--main-400), var(--main-600));
+  box-shadow: 0 0 10px rgba(var(--main-color-rgb), 0.45);
+  opacity: 0.9;
+  animation: dfp-travel 8s linear infinite;
+}
+
+.dfp-flow-f2 {
+  animation-delay: 2.6s;
+}
+
+.dfp-flow-f3 {
+  animation-delay: 5.2s;
+}
+
+@keyframes dfp-travel {
+  from {
+    left: -40px;
+  }
+
+  to {
+    left: 100%;
+  }
+}
+
+.dfp-stations {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.dfp-station {
+  position: relative;
+  height: 430px;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: none;
+
+    .s-card {
+      border-color: var(--main-500);
+      box-shadow: 0 0 0 2px var(--main-100);
+    }
+  }
+}
+
+.s-card {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 196px;
+  padding: 17px 18px 13px;
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  background: var(--gray-0);
+  box-shadow: 0 1px 2px var(--shadow-2);
+  overflow: hidden;
+  transition:
+    box-shadow 0.25s ease,
+    transform 0.25s ease,
+    border-color 0.25s ease;
+
+  /* 顶部流光条：hover 时从左展开 */
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    height: 3px;
+    background: linear-gradient(90deg, var(--main-500), var(--second-400));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+  }
+
+  /* 文字内容抬到水印之上 */
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+.dfp-station:nth-child(odd) .s-card {
+  top: 0;
+}
+
+.dfp-station:nth-child(even) .s-card {
+  bottom: 0;
+}
+
+.dfp-station:hover .s-card {
+  transform: translateY(-3px);
+  border-color: var(--main-400);
+  box-shadow: 0 14px 30px var(--shadow-3);
+
+  &::after {
+    transform: scaleX(1);
+  }
+}
+
+.dfp-station:active .s-card {
+  transform: translateY(-1px);
+}
+
+.s-stem {
+  position: absolute;
+  left: 50%;
+  width: 2px;
+  background: var(--gray-300);
+}
+
+.dfp-station:nth-child(odd) .s-stem {
+  top: 196px;
+  height: 14px;
+}
+
+.dfp-station:nth-child(even) .s-stem {
+  top: 222px;
+  height: 14px;
+}
+
+/* 工位节点：呼吸灯 */
+.s-dot {
+  position: absolute;
+  left: 50%;
+  top: 217px;
+  z-index: 2;
+  width: 12px;
+  height: 12px;
+  transform: translate(-50%, -50%);
+  border: 3px solid var(--main-100);
+  border-radius: 50%;
+  background: var(--main-600);
+  box-shadow: 0 0 0 4px var(--gray-0);
+  animation: dfp-ping-dot 2.8s ease-out infinite;
+}
+
+.dfp-station:nth-child(2) .s-dot {
+  animation-delay: 0.7s;
+}
+
+.dfp-station:nth-child(3) .s-dot {
+  animation-delay: 1.4s;
+}
+
+.dfp-station:nth-child(4) .s-dot {
+  animation-delay: 2.1s;
+}
+
+@keyframes dfp-ping-dot {
+  0% {
+    box-shadow:
+      0 0 0 4px var(--gray-0),
+      0 0 0 5px rgba(var(--main-color-rgb), 0.4);
+  }
+
+  70%,
+  100% {
+    box-shadow:
+      0 0 0 4px var(--gray-0),
+      0 0 0 13px rgba(var(--main-color-rgb), 0);
+  }
+}
+
+.s-ico {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--main-50);
+  color: var(--main-600);
+  transition:
+    background 0.25s ease,
+    color 0.25s ease;
+
+  .dfp-station:hover & {
+    background: var(--main-100);
+    color: var(--main-700);
+  }
+}
+
+/* 卡角大序号水印 */
+.s-wm {
+  position: absolute;
+  right: 10px;
+  bottom: -12px;
+  z-index: 0;
+  font-size: 58px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 2px;
+  color: var(--gray-100);
+  user-select: none;
+  pointer-events: none;
+}
+
+.s-no {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--main-600);
+}
+
+.s-card h3 {
+  margin: 7px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gray-1000);
+}
+
+.s-card p {
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--gray-500);
+}
+
+.s-meter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.s-meter span {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  font-size: 11px;
+}
+
+.s-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--main-600);
+}
+
+/* ============ 3) 工位铭牌带 ============ */
+.dfp-plates-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  padding-top: 30px;
+  padding-bottom: 8px;
+}
+
+.dfp-plate {
+  position: relative;
+  padding: 16px 18px 14px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--gray-0) 0%, var(--gray-25) 100%);
+  box-shadow:
+    inset 0 1px 0 var(--gray-0),
+    0 1px 2px var(--shadow-2);
+
+  /* 铭牌顶部双刻线 */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 18px;
+    right: 18px;
+    height: 1px;
+    background: var(--gray-150);
+    box-shadow: 0 3px 0 var(--gray-150);
+  }
+}
+
+/* 铆钉 */
+.p-screw {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gray-300);
+  box-shadow:
+    inset 0 1px 1px var(--gray-0),
+    0 1px 0 var(--gray-0);
+}
+
+.p-screw-l {
+  top: 9px;
+  left: 9px;
+}
+
+.p-screw-r {
+  top: 9px;
+  right: 9px;
+}
+
+.dfp-plate b {
+  display: block;
+  margin: 8px 0 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--gray-400);
+}
+
+.p-value {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--main-700);
+  font-variant-numeric: tabular-nums;
+}
+
+.p-desc {
+  margin-top: 4px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--gray-500);
+}
+
+/* ============ 4) 工位名录 ============ */
+.dfp-mods-cap {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 30px 0 12px;
+
+  b {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--gray-1000);
+  }
+
+  span {
+    font-size: 12px;
+    color: var(--gray-400);
+  }
+}
+
+.dfp-mods-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 8px;
+}
+
+.dfp-mod-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 20px;
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  background: var(--gray-0);
+  cursor: pointer;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    border-color: var(--main-400);
+    background: rgba(var(--main-color-rgb), 0.03);
+    box-shadow: 0 8px 22px var(--shadow-3);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--main-500);
+    box-shadow: 0 0 0 2px var(--main-100);
+  }
+
+  &.is-ph {
+    border-style: dashed;
+    opacity: 0.55;
+    cursor: default;
+
+    &:hover {
+      transform: none;
+      border-color: var(--gray-200);
+      background: var(--gray-0);
+      box-shadow: none;
+    }
+  }
+}
+
+.m-bar {
+  flex: none;
+  width: 4px;
+  height: 28px;
+  border-radius: 2px;
+  background: var(--main-500);
+
+  &.is-eia {
+    background: var(--second-500);
+  }
+
+  &.is-gray {
+    background: var(--gray-300);
+  }
+}
+
+/* 模块图标块 */
+.m-glyph {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--main-50);
+  color: var(--main-600);
+
+  &.is-eia {
+    background: var(--second-50);
+    color: var(--second-700);
+  }
+
+  &.is-gray {
+    background: var(--gray-100);
+    color: var(--gray-400);
+  }
+}
+
+.m-name {
+  font-size: 15.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--gray-1000);
+}
+
+.m-en {
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--gray-400);
+}
+
+.m-desc {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--gray-500);
+}
+
+.m-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: flex-end;
+  max-width: 420px;
+}
+
+.dfp-chip {
+  padding: 3px 10px;
+  border: 1px solid var(--gray-200);
+  border-radius: 999px;
+  background: var(--gray-0);
+  color: var(--gray-600);
+  font-size: 11.5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
+
+  &:hover {
+    border-color: var(--main-400);
+    color: var(--main-700);
+    background: var(--main-50);
+    transform: translateY(-1px);
+  }
+
+  &.is-admin {
+    border-style: dashed;
+    border-color: var(--second-200);
+    color: var(--second-700);
+    background: var(--second-50);
+
+    &:hover {
+      border-color: var(--second-400);
+      color: var(--second-700);
+      background: var(--second-100);
+    }
+  }
+}
+
+.m-arrow {
+  flex: none;
+  color: var(--gray-400);
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+
+  .dfp-mod-row:hover & {
+    color: var(--main-500);
+    transform: translateX(2px);
+  }
+}
+
+/* ============ 5) 收工带 ============ */
+.dfp-closing {
+  position: relative;
+  margin-top: 34px;
+  border-top: 1px solid var(--gray-150);
+  overflow: hidden;
+
+  /* 顶部斜纹加工带 */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: repeating-linear-gradient(135deg, var(--gray-200) 0 7px, transparent 7px 14px);
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  /* 右侧橙色氛围 */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      420px 220px at 94% 30%,
+      color-mix(in srgb, var(--second-500) 7%, transparent),
+      transparent 70%
+    );
+    pointer-events: none;
+  }
+}
+
+.c-wm {
+  position: absolute;
+  right: -8px;
+  bottom: -20px;
+  z-index: 0;
+  font-size: 84px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 4px;
+  color: var(--gray-100);
+  user-select: none;
+  pointer-events: none;
+}
+
+.dfp-closing-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding-top: 32px;
+  padding-bottom: 36px;
+}
+
+.c-copy {
+  b {
+    display: block;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--gray-1000);
+  }
+
+  span {
+    font-size: 13px;
+    color: var(--gray-500);
+  }
+}
+
+/* 质检印章 */
+.c-stamp {
+  flex: none;
+  margin-left: auto;
+  padding: 5px 14px;
+  border: 2px solid color-mix(in srgb, var(--second-500) 65%, transparent);
+  border-radius: 8px;
+  color: var(--second-700);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  transform: rotate(-5deg);
+  background: color-mix(in srgb, var(--second-50) 80%, transparent);
+}
+
+.c-cta {
+  display: flex;
+  gap: 10px;
+}
+
+/* ============ Footer ============ */
+.dfp-footer {
+  border-top: 1px solid var(--gray-150);
+
+  p {
+    margin: 0;
+    padding: 22px 0 30px;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--gray-400);
+  }
+}
+
+/* ============ Reveal animation ============ */
+.reveal {
   opacity: 0;
-  max-height: 0;
-  padding-top: 0;
-  padding-bottom: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.55s ease-out,
+    transform 0.55s ease-out;
+  transition-delay: calc(var(--stagger, 0) * 60ms);
+
+  &.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dfp-flow,
+  .dfp-rail::before,
+  .dfp-btn-primary::after {
+    display: none;
+  }
+
+  .run-dot,
+  .s-dot {
+    animation: none;
+  }
+
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ============ Responsive ============ */
+@media (max-width: 1024px) {
+  .dfp-top-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* 窄屏收起交错轨道，工位卡改常规网格 */
+  .dfp-rail,
+  .dfp-flow,
+  .s-stem,
+  .s-dot {
+    display: none;
+  }
+
+  .dfp-stations {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .dfp-station {
+    height: auto;
+  }
+
+  .s-card {
+    position: static;
+    height: auto;
+  }
+
+  .dfp-plates-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .c-wm {
+    display: none;
+  }
+
+  .m-chips {
+    max-width: none;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 767px) {
+  .dfp-stations,
+  .dfp-plates-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dfp-mod-row {
+    flex-wrap: wrap;
+  }
+
+  .m-desc {
+    flex-basis: 100%;
+    order: 3;
+  }
+
+  .m-chips {
+    order: 4;
+  }
+
+  .dfp-top-cta .dfp-btn {
+    flex: 1 1 auto;
+  }
+
+  .c-stamp {
+    margin-left: 0;
+  }
 }
 </style>
