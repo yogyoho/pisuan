@@ -232,22 +232,66 @@ const router = createRouter({
           ]
         },
         {
+          // [pisuan-custom] 通用域：与 eia-data 平级的语料加工通用管线（壳复用 eia chrome 配方），admin 工具页一并迁入
+          path: 'general',
+          component: () => import('../components/factory-core/GeneralLayout.vue'),
+          children: [
+            {
+              path: '',
+              name: 'GeneralData',
+              component: () => import('../views/GeneralDataView.vue'),
+              meta: { keepAlive: false, requiresAuth: true }
+            },
+            {
+              path: 'workbench',
+              name: 'GeneralWorkbench',
+              component: () => import('../views/GeneralWorkbenchView.vue'),
+              meta: { keepAlive: false, requiresAuth: true }
+            },
+            {
+              path: 'attribution',
+              name: 'GeneralAttribution',
+              component: () => import('../views/GeneralAttributionView.vue'),
+              meta: { keepAlive: false, requiresAuth: true }
+            },
+            {
+              path: 'stats',
+              name: 'GeneralStats',
+              component: () => import('../views/GeneralStatsView.vue'),
+              meta: { keepAlive: false, requiresAuth: true }
+            },
+            {
+              path: 'prompt-config',
+              name: 'DomainFactoryPromptConfig',
+              component: () => import('../views/PromptConfigView.vue'),
+              meta: { keepAlive: false, requiresAuth: true, requiresAdmin: true }
+            },
+            {
+              path: 'outline-template',
+              name: 'DomainFactoryOutlineTemplate',
+              component: () => import('../views/DomainOutlineTemplateView.vue'),
+              meta: { keepAlive: false, requiresAuth: true, requiresAdmin: true }
+            },
+            {
+              path: 'entity-builder',
+              name: 'DomainEntityBuilder',
+              component: () => import('../views/DomainEntityBuilderView.vue'),
+              meta: { keepAlive: false, requiresAuth: true, requiresAdmin: true }
+            }
+          ]
+        },
+        {
+          // [pisuan-custom] 旧路径兼容：原 /domain-factory 直挂的 admin 工具页重定向到通用域
           path: 'prompt-config',
-          name: 'DomainFactoryPromptConfig',
-          component: () => import('../views/PromptConfigView.vue'),
-          meta: { keepAlive: false, requiresAuth: true, requiresAdmin: true }
+          redirect: { name: 'DomainFactoryPromptConfig' }
         },
         {
           path: 'outline-template',
-          name: 'DomainFactoryOutlineTemplate',
-          component: () => import('../views/DomainOutlineTemplateView.vue'),
-          meta: { keepAlive: false, requiresAuth: true, requiresAdmin: true }
+          redirect: { name: 'DomainFactoryOutlineTemplate' }
         },
         {
           path: 'entity-builder',
-          name: 'DomainEntityBuilder',
-          component: () => import('../views/DomainEntityBuilderView.vue'),
-          meta: { keepAlive: false, requiresAuth: true, requiresAdmin: true }
+          redirect: { name: 'DomainEntityBuilder' }
         }
       ]
     },
