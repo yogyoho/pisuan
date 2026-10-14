@@ -6,6 +6,8 @@
 
 ## User Preferences
 
+- [2026-10-14] 用户反馈：知识工厂 Landing 直接复用 HomeViewV2 配方「效果还行但与本系统首页太相似」——站内二级 landing 要与系统首页拉开布局差异，不能只换文案照搬骨架（hero+拟真窗/分区卡组/深色 CTA 全套复刻被判同质）
+
 - **数据工厂参照设计语言 = P2 高保真原型**（用户明示「非常美观」）：新页面/组件按 docs/develop-guides/data-factory-ui.md 配方实现，不再另行出原型；注意原型内 token 是别名（--warn-50 等），实现须换算 base.css 正名。
 - (2026-10-05) 消除词形/口径分裂时拒绝映射层（replace 链、别名兼容补丁），要求真实数据统一——直接改 DB 字典/存量/静态资产，前后一个词形；方案选择上偏好爆炸半径小的方向（coal vs coal_mining 一案选定 coal：DB 主导词形，零数据迁移）
 - [2026-10-01] 最大限度不修改 yuxi 核心代码（上游共有代码面），否则上游同步/rebase 麻烦。改前先 git 判定代码块出处：pisuan 自有扩展（如领域工厂 report 工具链）可改；上游共有代码必须动时先向用户说明。判据：git log -S + git show upstream/main:<path>。
@@ -15,7 +17,11 @@
 - Communication in Chinese for project discussion, English for code comments
 - Large changes should have a requirements document in `docs/vibe/` with date prefix
 
+- [2026-10-14] Landing 类页面忌「太素/单调」：结构极简的同时要有质感细节（实体感装饰、图标块、水印、微动效、氛围底纹）。用户对首版立式流水线评价「效果太单调」，二轮补齐后验收。以后 landing/展示页交付前自查：纯白底+细线框+纯文字 = 不合格。
 ## Key Learnings
+- [2026-10-14] 页测 coal-eia-writer：ask_user_question 的 questions 若被模型序列化成 JSON 字符串（非数组）服务端不校验照收；worker 重启后图重放会把 pending 卡片用选项 value 合成应答（21ms success）；对话页发卡应答链路必须以页面 DOM 为准轮询（a11y 快照有陈旧副本，uid 每次下一题后变化）。新会话默认模型 openai:gemma-4-E4B 走 host :8080，该端点没起，新对话须手动切 deepseek:deepseek-flash。
+
+- [2026-10-14] 未登录冒烟前端路由屏：curl http://localhost:5173/src/<file> 看 vite transform 是否 200（SFC 编译错会 500）；designqc 对 requiresAuth 路由会拍到 login 页，登录态屏目验只能靠用户浏览器
 - 2026-10-07：coal-eia-writer 的 references/standards_index.json=62 条标准索引（framework/quality_limit/emission_limit/method_param/pending 五 tier，含 GB 15618 vs GB 36600 正确名称与适用对象），但 limit_tables 七张表多为空壳（gb3095 rows=[]，verified=false）——「引用错标准」先查这里：若索引有→契约没强制核对（工程问题）；若表空→知识缺口（加工问题）。诊断 W1 类缺陷前先看这个文件。
 - 2026-10-07：智能体模型切换走 agents.config_json.context.model（「provider:model」前缀格式，如 deepseek:deepseek-flash）；供应商与模型清单在 model_providers 表（provider_id+enabled_models json），deepseek 供应商 enabled 含 deepseek-flash（显示名 DeepSeek-V4.1-Flash）/v4-flash/v4-pro。
 - 2026-10-07：模型对比实证（同技能同 prompt）——agnes-2.5-flash：共用工区静默续跑、ask_user_question A/B/C 选项点击无效须手输；deepseek-flash：主动检测工区冲突弹结构化单选题（radio+提交可用）、真实调用 list_report_types/get_templates 并声明 found=true 免兜底、全章数据预告完整、限流纪律 「在飞≤1」被遵守。行为差异主要在模型而非技能。
@@ -35,7 +41,7 @@
 - 2026-10-07：domain_factory_service.py 行号锚点快照——`_reaggregate_templates_for_task` :6505 之后并非类尾，实况还有 `_aggregate_template_scopes` :6512、`_get_existing_entities_full` :6727 等，类体真实末尾约 :6733（模块级 get_domain_factory_service :6858）；按行号锚点插入前必须 Read 目标区域确认，行号漂移就按锚点语义定位。
 - 2026-10-07：web 前端图标实况——domain-factory 组件 import 自 `@lucide/vue`（非 CLAUDE.md 推荐的 lucide-vue-next）；DomainFactoryView 的 tab「图标」是 CSS 圆点 `span.tab-dot`（less 嵌套 &.data/&.workbench 配色），新增 tab 应加配色变体行而非引入 icon 组件。
 - 2026-10-07：单测容器道惯例——service 单测用 `DomainFactoryService.__new__(DomainFactoryService)` + `svc.repo = fake` 跳过 __init__；测试为同步 def + `asyncio.run(...)`（--noconftest 下 pytest-asyncio 不可依赖）；domain_factory_repository.py 无分页无 GROUP BY（列表仅 limit），会话模式 `pg_manager.get_async_session_context()`，joinedload 为方法内局部 import（文件怪癖，勿「顺手」提升到顶部）。
-- 2026-10-07：可视化伴侣服务器（brainstorming visual companion）在 Claude Code Windows 后台任务模式下约 30 分钟被 run_in_background 时限杀掉；**用 `nohup ... & disown` 在普通 Bash 调用里脱离进程树启动即可长活**（会话目录在 <project>/.superpowers/brainstorm/<pid-ts>/，重启后端口会变，须读 state/server-info 并告知用户新 URL）。
+- 2026-10-07：可视化伴侣服务器（brainstorming visual companion）在 Claude Code Windows 后台任务模式下约 30 分钟被 run_in_background 时限杀掉；**用 `nohup ... & disown` 在普通 Bash 调用里脱离进程树启动即可长活**（会话目录在 <project>/.superpowers/brainstorm/<pid-ts>/，重启后端口会变，须读 state/server-info 并告知用户新 URL）。补充 [2026-10-14]：服务器另有**内建 30 分钟无访问自退**（state/server-stopped 写 reason=idle timeout）——用户隔太久才打开 URL 就是 404，这不是崩溃，重启换端口+重推屏幕即可；启动脚本自身已 nohup+disown，外层再包一层会在 log 里多一条无害的 owner-pid-invalid。
 - (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
 - [2026-10-03] KB 存储层现状（代码+现场双重验证，推翻 7 月设计文档）：LightRAG 已退役——knowledge/runtime.py:12-14 只注册 Milvus/Dify/Notion，lightrag.py 未注册不可创建，运行栈 2 个 KB 全是 milvus 型（煤矿环评报告模板库 id=3 / 环评标准规范库 id=4），默认类型 = row.kb_type or "milvus"（manager.py:73）。MilvusKB 检索 = Milvus 向量+BM25 稀疏+混合融合+可选 reranker。KB 级图谱新引擎 = knowledge/graphs/MilvusGraphService（knowledge_graph_index 任务，LLM 抽取 chunk→Entity→RELATION 写 Neo4j + MilvusGraphVectorStore 实体向量），当前栈从未跑过（PG 图谱表 0 行、Neo4j 无 Chunk/Entity 标签）。Neo4j（容器名 graph!）里活着的是领域工厂结构图谱（ParagraphTemplate 870/ChapterTemplate 571/...）。domain_factory commit 的结构化入库分支（_ingest_structured_document/_get_lightrag_instance）在 milvus 栈上是死代码，hasattr 守卫使其永远走 manager.index_file Markdown 回退（PG knowledge_chunks 3169 行即其产物）。
 - [2026-10-03] 本宿主机是 Windows 且默认自动休眠：休眠冻结整个 Docker VM（容器日志静止、连接死亡、lease 过期），唤醒后被 durable 收敛器落 FAILED。判定「应用挂死」前先排除宿主机休眠——看容器日志里每 30s 的 arq health 心跳是否中断，心跳断=宿主机睡了，不是 bug。长任务前须关休眠：powercfg /change standby-timeout-ac 0。
@@ -86,7 +92,9 @@
 - **后端集成测试凭证（2026-07-20）：** `test/integration/conftest.py` 读 `TEST_USERNAME/TEST_PASSWORD`（.env 或 test/.env.test），无则 skip。当前工作区无 .env，admin 用户=DB `admin`（superadmin，密码哈希不可逆）。集成测试文件结构正确但本地跑需先配凭证。
 - **泛化 Schema 注入曾是空接（2026-07-20 bug-128，Phase 4）：** `domain_factory_service.py` 泛化调用处历史传 `schema_variables=[]`——泛化 prompt 的 schema 注入机制（`_format_schema_variables`）wired 但从不喂数据，slot 完全自由提取。修：`_load_entity_schema_variables(domain_code, max_items=60)` 从 `DomainEntityRepository.list_all` 拍平实体属性接入。教训：prompt 模板有占位符不代表数据真接进去，要看调用处实参。
 - **规范库 §7 已被 compliance-checker skill 覆盖（2026-07-20）：** "条款引用匹配"功能目标（取章节 regulations.standard_code → query_kb 法规原文 → 逐章比对标准引用正确性 → 4 态矩阵）已由 `compliance-checker` skill 完整实现（KB 层），RegDocument 图谱层是内部结构。§8（写手查限值）缺，已补 buildin 工具 `lookup_standard_indicator` 调 `regulation_library.query_indicators`。模式：extension 的 query 函数暴露为 buildin 工具时，函数内 import + ImportError 兜底 + 无匹配 hint 引导 query_kb。
-- **ask_user_question 子 agent 全局禁用（subagent/graph.py:26 `_SUBAGENT_DISABLED_TOOLS`）→ 中继协议是正解（2026-07-20）：** data-survey-writer 要问缺数据但不能直接调 ask_user_question。修在 coal-eia-writer SKILL.md（在 BUILTIN_SKILLS，改完重启 worker + 新对话生效）：写手输出 `## MISSING_DATA` 结构化块 → 编排者解析后代调 ask_user_question。无独立 writer SKILL.md（目录都不存在），writer 行为由 DB system_prompt + 编排者 task 描述决定。
+- **ask_user_question 子 agent 全局禁用（subagent/graph.py:26 `_SUBAGENT_DISABLED_TOOLS`）→ 中继协议是正解（2026-07-20）：** data-survey-writer 要问缺数据但不能直接调 ask_user_question。修在 coal-eia-writer SKILL.md（在 BUILTIN_SKILLS，改完重启 worker + 新对话生效）：写手输出 `- base.css 无 `--second-color-rgb`，橙色半透明只能用实体 token（second-50/100 等）或 `color-mix(in srgb, var(--second-500) N%, transparent)`；`--main-color-rgb` 明暗两套主题都有定义（暗档 114,121,245），rgba(var(--main-color-rgb),x) 可安全用于氛围光晕/网格并自动适配暗色。
+- `@lucide/vue`@1.34 图标导出可先 grep `node_modules/@lucide/vue/dist/lucide-vue.d.ts` 确认存在再 import（本站无 lucide-vue-next，CLAUDE.md 的推荐名不适用）。
+## MISSING_DATA` 结构化块 → 编排者解析后代调 ask_user_question。无独立 writer SKILL.md（目录都不存在），writer 行为由 DB system_prompt + 编排者 task 描述决定。
 
 - **上游 #1088（031e2c72，2026-09-30 同步）重构 skills 后端：** 删除 1813 行 `agents/skills/service.py`，拆为 `services/skills/` 包（`shared.py` 持 `init_builtin_skills` 与模块内 `get_skills_root_dir`；`remote_install.py`/`repository.py` 同删）。pisuan 在旧 service.py 的 6 行 .tmp-/.bak- 中断清理已移植到 `shared.py` 的 `init_builtin_skills`（`synced_items` 之后）。旧路径 import 直接崩，写 skills 相关代码先看新包。
 - **上游 #1081（同版）`BaseContext.knowledges` 升级 `ResourceSelection` 类型（default="all"）：** 且 `context.py` 原生含 `excluded_tools`（:242）+ ExcludedToolsMiddleware——pisuan 旧版手工加的 excluded_tools 6 行字段定制已被上游超越，rebase 取上游侧，勿加回旧字段。
@@ -141,8 +149,14 @@
 - 五校准口径全为语料常量（85/90/100）：挂载护栏价值=钉死领域惯例值防写手杜撰变体；字段样式同充填率（number/unit/required false，无 caliber_field——该标记无程序消费方）。
 
 ## Do-Not-Repeat
+- [2026-10-14] 不要只盯 DB 判断卡片 pending：页面上的审批弹窗/卡片 DOM 才是真相源；重启 worker 前先在页面里处理完待审批命令。容器内投影目录排障 chown 后必须 -R 到具体 skill 目录（api+worker 双处）。
 
-- [2026-10-08] markdown 标题层级断言禁止用「浅前缀 not in 输出」——"## x" 是 "### x" 的子串（后两 #+空格），恒假；必须行首锚定 startswith/splitlines。另：任务书自带的测试代码也可能有 fixture 缺陷（本例 strip_toc 样例 2 行连续目录行不足 spec 的 >=3 阈值），失败时先对照 spec/docstring/实现三方裁决谁错，不要无脑改实现迁就测试。slug 化文件名→目录名时正则白名单必须考虑全中文文件名（41 份语料 10 份纯中文，纯 ASCII 得空 id）。
+- [2026-10-14] 可视伴侣推多屏时：完整 HTML 文档（DOCTYPE 开头）被原样服务、不带屏幕切换框架，根路径 / 只显示最新一屏——用户会以为其他屏丢了。多屏一律直接给 /files/<文件名> 直链（server.cjs:145）
+
+- [2026-10-14] 宿主 corepack pnpm 冷启动极慢（prettier/eslint 120s 超时挂死）——前端 lint/format 一律走「sync-dev.ps1 同步 → docker exec pisuan-localized-web-1 pnpm exec ...」容器内跑；容器内写操作（prettier --write）只改 localized 副本，产物需从 pisuan-localized 拷回 pisuan 源工作区
+
+- [2026-10-08] markdown 标题层级断言禁止用「浅前缀 not in 输出」——"- sync-dev.ps1 必须用绝对路径调用（Bash 会话 CWD 常在 web/ 子目录，相对路径 ./scripts/ 指向不存在文件且报错易被管道吞掉）；验证同步生效的唯一可靠手段是四环 grep（pisuan 源 → pisuan-localized → 容器 /app → curl vite 服务模块 grep 新代码标记），容器 prettier 'unchanged' 不能作为已同步证据（旧文件也 unchanged）。
+## x" 是 "### x" 的子串（后两 #+空格），恒假；必须行首锚定 startswith/splitlines。另：任务书自带的测试代码也可能有 fixture 缺陷（本例 strip_toc 样例 2 行连续目录行不足 spec 的 >=3 阈值），失败时先对照 spec/docstring/实现三方裁决谁错，不要无脑改实现迁就测试。slug 化文件名→目录名时正则白名单必须考虑全中文文件名（41 份语料 10 份纯中文，纯 ASCII 得空 id）。
 - 2026-10-07：写计划/生成代码时，凡「同形循环」跨层复用（SQLAlchemy Row 位置解包 ↔ dict 列表），必须按目标层实际输入形状重写（键访问 vs 位置解包）；哨兵值（None）语义在「参与计算」与「跳过」间切换时，逐处对照 docstring 与测试断言核。T1 计划两处 plan bug 皆因此（幸被 TDD 拦截，commit 2461dddc）。
 - 2026-10-06：审计/核验提示单里的「声明串」必须与实况逐字节一致（含全部后缀括注）——缩写版声明致 3/19 代理误报「标题不符」（实际标题=声明+信息性后缀）。裁决规则：声明为实际标题的严格前缀且语义相同 → 判一致放行，代理仅留痕不算 FAIL。
 - 2026-10-06：汇报与审计中的**数字和协议字面串**禁止凭记忆引用——W3 收口报告写「10 提交」实为 9（真源=git rev-list）；审计提示单 trailer 誊了旧串 `Claude <noreply@anthropic.com>`，现行协议是 `Claude Code <noreply@anthropic.com>`，致 7/9 审计代理误报 FAIL。今后：计数类结论先跑 rev-list/log 现查再写；trailer 等协议串以当前 system 指令为准现场誊录，不信记忆。
@@ -197,6 +211,8 @@
 - _MEASURE_RE（eia_data_service）与 QUANTITY_RE 是两处独立口径敏感点：QUANTITY_RE 新增口径形态时必须同步检查三分类正则是否认识新形态（控制效率拉丁前缀曾全落 junk，range_ready 门控静默失效）。
 
 ## Decision Log
+
+- [2026-10-14] 知识工厂 Landing 二轮迭代：用户在 A 立式流水线/B 分屏双域/C 蓝图图纸三方案中选定 A——流水线主轴作页面骨架（工位即导航），兼顾差异化与「工厂」主题；C 的图签/印章元素留作日后点缀备选
 - [2026-10-03] ETL 并发校准（方案 A 演进为可配置）：并发 10 对串行 llama.cpp 只放大队列等待（队尾 ~10min >> 客户端超时）造成健康调用被误杀、熔断误伤；超时 120→300s；并发改为管理员可配（Option 体系：domain_factory_llm，基础设置页渲染，默认 2 钳制 1-32，运行时读取下一次生效）。不放入领域工厂页面：该 knob 是端点级全局参数（模型本身是全局默认），与默认模型同屏最贴心智。配置面扩展模式：options.py 加 Option 实例 + OPTION_DEFINITIONS 注册（[pisuan-custom] 标记），lifespan ensure_options_in_db 自动建行，零迁移零前端框架改动。
 - [2026-10-03] ETL 跑批遇本地端点推理停滞（12h 内第二次）：用户拍板「不干预，让超时→重试→熔断链自己走完」。运行期故障优先让 P0.1 自愈链收敛，人工只处理终态；用户自己的 llama.cpp 服务器不可擅动。
 
@@ -833,3 +849,8 @@
 
 **Do-Not-Repeat**
 - (2026-10-14) 手写模板 v-for 时笔误出 `v-key`/恒真 `v-show`（自抓于验证前）：v-for 三件套写完自查 `:key` 是否冒号绑定。
+### 暗色主题灰阶反转陷阱（2026-10-14 公式排版批）
+- **Learning**: 本应用暗色主题把灰阶整体反转（:root.dark 下 --gray-1000=#fafafa、--gray-0=#0a0a0a）。「永远暗底」的块（终端/代码块/黑框）不能引用主题灰阶变量，否则暗色下变白底配硬编码浅字（bug-442）；须钉死色值（.expr-block background #18181b）。
+- **Learning**: formulas.json 的 expr 是伪数学（×−·√Σ+中文混排），KaTeX 直喂必炸。成熟模式：`web/src/components/eia-data/expr_latex.js` 纯函数切段（CJK/全角/~→文本段，ASCII→数学段）+ mathToLatex 消解（下划线键名整名不拆、多字母直立、小写→大写边界拆因子、e 计数法→×10^n）；单测 `web/test/unit/exprLatex.test.js` 用公式库全量 expr 夹具跑无损/消解/配平扫描；面板渲染 try/catch 回落 tokenizedExpr。node --test 通道（web/test/unit，相对导入）可测纯 JS 模块。
+- **Learning**: 原型文件 proto-dark 与应用暗色主题方向相反：原型把灰阶「高位→亮」整体重定义（dark 下 --gray-900=#e4e4e7、--gray-100=#1e1e20），所以原型里新 CSS 只用 token 即双主题自适配，任何 .proto-dark 重映射灰阶的覆盖都会反向炸（bug-443）；应用的 :root.dark 才是灰阶反转需钉死永远暗底（bug-442）。两套心智勿混。
+- **Learning**: 写作范式层结构：`references/paradigms/*.md`（4 角色范式，各含范文/句式模式/反模式）+ `_roles.json`（77 节→角色映射）+ `forms_catalog.json`（bank_compile 从 31 份语料统计的句式正样本）。三者均无 API/写通道，故数据工厂无对应页面（原型 s1-s7 也未列）。行文人格错位史见 bug-367（五类病灶词表在 SKILL.md 4.1 + RESIDUE_RE）。

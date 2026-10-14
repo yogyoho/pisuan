@@ -5401,9 +5401,13 @@
     "related_bugs": [
       "bug-366"
     ],
-    "occurrences": 1,
-    "last_seen": "2026-10-07",
-    "status": "fixed"
+    "occurrences": 3,
+    "last_seen": "2026-10-14",
+    "status": "fixed",
+    "recurrences": [
+      "2026-10-07 用户报告：正文大量「如何编写」说明性文字（如「本节不作任何改写、补猜或生成…本节不再重复转录」）",
+      "2026-10-14 用户技能测试再报「写作风格不像环评报告、像写说明」；待取现场节稿重新定型病灶（c6092c26 三层修复后的复发，反模式词表是否覆盖新病灶待查）"
+    ]
   },
   {
     "id": "bug-368",
@@ -6005,26 +6009,6 @@
     ],
     "related_bugs": [
       "bug-365"
-    ],
-    "occurrences": 1,
-    "last_seen": "2026-10-07T20:10:00+08:00"
-  },
-  {
-    "id": "bug-367",
-    "timestamp": "2026-10-07T20:10:00+08:00",
-    "error_message": "用户报告：正文大量「如何编写」说明性文字（如「本节不作任何改写、补猜或生成…本节不再重复转录」）",
-    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md（节写者契约）",
-    "root_cause": "写作纪律（禁编造/槽位纪律/缺项标注）是给 controller 的执行规则，节写者把「我遵守了纪律」的自我说明当成正文写给读者——契约只有禁令没有范式，且无「纪律不进正文」显式条款。实测元话语 538 处（本节不/本章不…）。",
-    "fix": "待修：节写者契约加禁元话语条款+黑名单词；给「资料来源/缺项说明」规范句式范式（真实报告用一句资料来源说明）。此问题直接实证样例报告行文范式的价值（brainstorming 方向 A：章节范式库）。",
-    "tags": [
-      "coal-eia-writer",
-      "section-writer",
-      "meta-discourse",
-      "prompt-contract",
-      "paradigm-gap"
-    ],
-    "related_bugs": [
-      "bug-366"
     ],
     "occurrences": 1,
     "last_seen": "2026-10-07T20:10:00+08:00"
@@ -7140,5 +7124,134 @@
     "related_bugs": [],
     "occurrences": 2,
     "last_seen": "2026-10-14"
+  },
+  {
+    "id": "bug-442",
+    "timestamp": "2026-10-14T02:00:00+08:00",
+    "error_message": "公式参数核对页黑框在暗色主题下白底浅字不可读（.wolf/fml_latex_dark.jpeg 首拍证实）",
+    "file": "web/src/components/eia-data/factory-ui.less",
+    "root_cause": "暗色主题灰阶整体反转（--gray-1000→#fafafa），.expr-block 背景走 var(--gray-1000) 随之变白，而文字硬编码 #e4e4e7 不随之变深 → 白底浅字。亮色主题无恙，属既有缺陷，KaTeX 批验证时暴露",
+    "fix": "「终端暗块」双主题钉死深底：background #18181b（亮色主题 --gray-1000 实值），文字/tok-var/ro-tag 色值原本就是暗底系不变",
+    "tags": [
+      "dark-mode",
+      "factory-ui",
+      "expr-block",
+      "css-variable-inversion"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-14"
+  },
+  {
+    "id": "bug-443",
+    "timestamp": "2026-10-14",
+    "error_message": "原型 s13 暗色下 stats 非 hot pill 白底浅字不可读（31 份语料/complete_sentence 等）",
+    "file": "docs/vibe/prototypes/2026-10-12-eia-p2-ui.html",
+    "root_cause": "新增 CSS 按「应用暗色=灰阶反转」心智写了 .proto-dark 覆盖（如 .stat-strip .st dark 下 background var(--gray-900)），但原型 proto-dark 是全灰阶高位→亮重定义，--gray-900 在暗色本就是 #e4e4e7 亮色，覆盖方向全反",
+    "fix": "删除全部 4 条 .proto-dark 灰阶覆盖（edt-area:focus / stat-strip .st / .st.hot / dif-box .dif-hd），仅用基础 token 让原型完整变量交换自行适配；亮暗双主题截图复核通过",
+    "tags": [
+      "prototype",
+      "proto-dark",
+      "css-tokens",
+      "dark-theme"
+    ],
+    "related_bugs": [
+      "bug-442"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-14"
+  },
+  {
+    "id": "bug-444",
+    "timestamp": "2026-10-14",
+    "error_message": "eslint no-unused-vars: GeneralLayout.vue adminGroups/userStore defined but never used; DomainFactoryView.vue BookOpen unused",
+    "file": "web/src/components/factory-core/GeneralLayout.vue",
+    "root_cause": "新写通用域壳时 adminGroups（平台配置组）定义了却忘了接进模板渲染循环，admin 工具页入口会凭空消失；同批 Landing 有一个从配方文件抄来的 import 未消费，另有 prettier 格式漂移",
+    "fix": "补 visibleGroups = computed(() => isAdmin ? [...groups, ...adminGroups]) 并让模板遍历 visibleGroups；删未用 import；prettier --write（corepack 宿主冷启动太慢，走 sync-dev + 容器内格式化再拷回源工作区）",
+    "tags": [
+      "vue",
+      "eslint",
+      "admin-gating",
+      "general-layout",
+      "prettier"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-14"
+  },
+  {
+    "id": "bug-4011",
+    "timestamp": "2026-10-14",
+    "error_message": "用户：这种表单只能选择，不能填写，这样永远也填写不了。（环评写作卡片把委托单位/编制单位/资质等级/规划批复文号/评价时段 5 个填写项渲染成单选题，选项=字段名）",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md (约束) + ask_user_question 卡片构造",
+    "root_cause": "模型(deepseek-flash)把非枚举数值/文本字段做成选择题选项（violates SKILL.md bug-3233 填写项禁做成选择题），且 questions 以 JSON 字符串而非数组传入，服务端无 schema 校验拦截",
+    "fix": "未修（测试发现）。建议：ask_user_question 服务端校验 questions 必须为数组、options 仅允许枚举族；SKILL.md 卡片纪律加输出前自检",
+    "tags": [
+      "e2e",
+      "coal-eia-writer",
+      "ask_user_question",
+      "card-design",
+      "deepseek"
+    ],
+    "related_bugs": [
+      "bug-3233"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-14"
+  },
+  {
+    "id": "bug-4012",
+    "timestamp": "2026-10-14",
+    "error_message": "ask_user_question 卡片发出后 21ms 即 status=success，answer 为选项 value 原文（如 q-1=['省/市/县名称，矿区中心坐标']）——格式提示串被当作用户数据入库",
+    "file": "backend agent graph interrupt/resume (worker 重启后 replay)",
+    "root_cause": "worker 重启丢失中断状态后图重放/队列残留 resume payload，卡片被合成答案自动应答；连环发卡 4819/4835/4837 违反发卡即停",
+    "fix": "未修（测试发现）。建议：ask_user_question 重放时禁止合成答案；中断恢复后强制重新发卡",
+    "tags": [
+      "e2e",
+      "langgraph",
+      "interrupt",
+      "worker-restart",
+      "card-flow"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-14"
+  },
+  {
+    "id": "bug-4013",
+    "timestamp": "2026-10-14",
+    "error_message": "worker/api 内 /app/skill-projections/admin/coal-eia-writer/scripts Permission denied (Errno 13)",
+    "file": "docker/volumes 投影目录属主",
+    "root_cause": "10-08 root 排障把投影目录 chown 成 root，pisuan 运行用户不可读",
+    "fix": "docker exec -u root chown -R pisuan:pisuan /app/skill-projections/admin/coal-eia-writer（api 与 worker 两处）",
+    "tags": [
+      "docker",
+      "permissions",
+      "skill-projection"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-14"
+  },
+  {
+    "id": "bug-445",
+    "timestamp": "2026-10-14T20:14:15",
+    "error_message": "用户反馈 landing「也没有啥优化呢」：二轮精修+背景配方改动从未出现在 5173 页面上",
+    "file": "scripts/sync-dev.ps1",
+    "root_cause": "在 CWD=C:\\workspace\\pisuan\\web 下用相对路径 ./scripts/sync-dev.ps1 调用，实际指向不存在的 web\\scripts\\，PowerShell 报错被 tail 管道吞掉，两轮同步全部静默空跑；且容器 prettier 'unchanged' 无法证伪（旧文件同样 unchanged），造成已同步的假象",
+    "fix": "改用绝对路径 powershell -File C:\\workspace\\pisuan\\scripts\\sync-dev.ps1 重跑（55.2s 成功）；验证链固定为 grep 源树→localized→容器→curl vite 服务模块四环全查，不再依赖 prettier 输出推断",
+    "tags": [
+      "sync-dev",
+      "powershell",
+      "cwd-relative-path",
+      "swallowed-stderr",
+      "stale-page",
+      "verification"
+    ],
+    "related_bugs": [
+      "bug-444"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-14T20:14:15"
   }
 ]

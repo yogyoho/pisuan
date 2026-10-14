@@ -5162,3 +5162,122 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 01:08 | 词表布局骨架（bug-440）+ 图标对齐（bug-441）+ 四面板去返回按钮 + .back-btn 配方清除 | Lexicon/Meta/Entities/Formulas/Sections/Expectations.vue, factory-ui.less, EiaDataLayout.vue | 全过，console 净 | ~6k |
 | 01:08 | bug-439/440/441 记账 + changelog/cerebrum 追账；提交提案待批 | docs/develop-guides/changelog.md, .wolf/* | 完成 | ~2k |
 | 01:11 | 词表左列 264→220px（用户裁定，仅本页覆写 .split） | LexiconPanel.vue | 实测 220px 无溢出截图 | ~1k |
+
+## Session: 2026-10-13 01:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 01:28 | Created web/test/unit/exprLatex.test.js | — | ~873 |
+| 01:28 | Edited web/test/unit/exprLatex.test.js | 2→1 lines | ~23 |
+| 01:29 | Created web/src/components/eia-data/expr_latex.js | — | ~1285 |
+| 01:30 | Edited web/test/unit/exprLatex.test.js | inline fix | ~26 |
+| 01:30 | Edited web/test/unit/exprLatex.test.js | inline fix | ~26 |
+| 01:30 | Edited web/test/unit/exprLatex.test.js | inline fix | ~32 |
+| 01:30 | Edited web/test/unit/exprLatex.test.js | inline fix | ~21 |
+| 01:31 | Edited web/src/components/eia-data/expr_latex.js | modified join() | ~84 |
+| 01:31 | Edited web/src/components/eia-data/FormulasPanel.vue | added 3 import(s) | ~101 |
+| 01:31 | Edited web/src/components/eia-data/FormulasPanel.vue | added error handling | ~312 |
+| 01:31 | Edited web/src/components/eia-data/FormulasPanel.vue | 2→2 lines | ~31 |
+| 01:31 | Edited web/src/components/eia-data/factory-ui.less | 3→8 lines | ~37 |
+| 01:32 | Edited web/src/components/eia-data/expr_latex.js | inline fix | ~29 |
+| 01:44 | Edited web/src/components/eia-data/factory-ui.less | 3→4 lines | ~36 |
+| 01:48 | Edited docs/develop-guides/changelog.md | modified style() | ~160 |
+| 01:48 | Edited docs/develop-guides/changelog.md | modified style() | ~194 |
+| 01:49 | 词表单位列 8%/口径 17% 验证 dB(A) 单行 | web/src/components/eia-data/LexiconPanel.vue | 待提交 |
+| 01:49 | 公式黑框 KaTeX 排版：expr_latex.js 切段转换 + 4 单测 + 7/7 渲染零回落 + 暗块钉死 #18181b 修暗色白底 | web/src/components/eia-data/{FormulasPanel.vue,expr_latex.js,factory-ui.less}, web/test/unit/exprLatex.test.js | 完成 |
+| 01:49 | 排查句式/写作范式无页面原因 + bug-367 复发报告受理 | backend/.../references/paradigms/ | 见会话报告 |
+| 01:52 | Session end: 16 writes across 5 files (exprLatex.test.js, expr_latex.js, FormulasPanel.vue, factory-ui.less, changelog.md) | 0 reads | ~3331 tok |
+| 09:04 | Session end: 16 writes across 5 files (exprLatex.test.js, expr_latex.js, FormulasPanel.vue, factory-ui.less, changelog.md) | 0 reads | ~3331 tok |
+
+## Session: 2026-10-14 09:16
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-14 09:23
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:41 | 知识工厂首页重设计 brainstorm：现状梳理完+启动可视化伴侣(:55096, session 725-1791941692)+用户定调方向B纯门户，且三tab升级为「通用域」独立模块与环评域平级不交叉 | DomainFactoryView.vue | 进行中 | ~35k |
+| 09:45 | Created .superpowers/brainstorm/725-1791941692/content/portal-layout.html | — | ~2198 |
+| 09:45 | Session end: 1 writes across 1 files (portal-layout.html) | 10 reads | ~2355 tok |
+| 10:30 | 原型新增 s12 写作范式/s13 句式范式+exportModal（ui-ux-pro-max 高保真屏），暗色反向覆盖 bug-443 即改，亮暗双主题+弹窗+seg 切换截图复核通过 | docs/vibe/prototypes/2026-10-12-eia-p2-ui.html | 完成,待原型评审 | ~28k |
+| 09:52 | Session end: 1 writes across 1 files (portal-layout.html) | 10 reads | ~2355 tok |
+| 18:05 | Session end: 1 writes across 1 files (portal-layout.html) | 10 reads | ~2355 tok |
+
+## Session: 2026-10-14 18:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 18:09 | Created docs/vibe/2026-10-14-paradigm-layer-edit-design.md | — | ~1507 |
+| 18:09 | Edited docs/vibe/2026-10-14-paradigm-layer-edit-design.md | inline fix | ~43 |
+| 10:50 | 写作范式层编辑设计文档（方向 A 后继，含自审修正：roles 对照随概览返回） | docs/vibe/2026-10-14-paradigm-layer-edit-design.md | 完成，待用户评审 | ~9k |
+| 18:10 | Session end: 2 writes across 1 files (2026-10-14-paradigm-layer-edit-design.md) | 6 reads | ~1661 tok |
+| 18:26 | Created .superpowers/brainstorm/793-1791972344/content/landing-layout.html | — | ~2507 |
+| 18:26 | Session end: 3 writes across 2 files (2026-10-14-paradigm-layer-edit-design.md, landing-layout.html) | 8 reads | ~4347 tok |
+| 18:30 | Created .superpowers/brainstorm/793-1791972344/content/landing-hv-style.html | — | ~3046 |
+| 18:30 | Session end: 4 writes across 3 files (2026-10-14-paradigm-layer-edit-design.md, landing-layout.html, landing-hv-style.html) | 9 reads | ~7610 tok |
+| 18:34 | Created .superpowers/brainstorm/793-1791972344/content/landing-hifi.html | — | ~3291 |
+| 18:34 | Session end: 5 writes across 4 files (2026-10-14-paradigm-layer-edit-design.md, landing-layout.html, landing-hv-style.html, landing-hifi.html) | 9 reads | ~11136 tok |
+| 18:35 | designqc: captured 6 screenshots (292KB, ~15000 tok) | / | ready for eval | ~0 |
+| 18:38 | Created docs/superpowers/specs/2026-10-14-factory-landing-design.md | — | ~715 |
+| 18:40 | Created web/src/views/DomainFactoryView.vue | — | ~6752 |
+
+## Session: 2026-10-14 18:42
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 18:44 | Created web/src/components/factory-core/GeneralLayout.vue | — | ~1352 |
+| 18:45 | Created web/src/views/GeneralDataView.vue | — | ~458 |
+| 18:45 | Created web/src/views/GeneralWorkbenchView.vue | — | ~339 |
+| 18:45 | Created web/src/views/GeneralAttributionView.vue | — | ~71 |
+| 18:45 | Created web/src/views/GeneralStatsView.vue | — | ~709 |
+| 18:45 | Edited web/src/router/index.js | expanded (+44 lines) | ~695 |
+| 18:45 | Edited docs/superpowers/specs/2026-10-14-factory-landing-design.md | 2→3 lines | ~57 |
+| 18:47 | Edited web/src/components/factory-core/GeneralLayout.vue | "g in groups" → "g in visibleGroups" | ~20 |
+| 18:47 | Edited web/src/components/factory-core/GeneralLayout.vue | inline fix | ~10 |
+| 18:47 | Edited web/src/components/factory-core/GeneralLayout.vue | modified if() | ~62 |
+| 18:47 | Edited web/src/views/DomainFactoryView.vue | 3→2 lines | ~7 |
+| 18:50 | Edited docs/develop-guides/changelog.md | 2→4 lines | ~146 |
+| 18:47 | 知识工厂首页重写为 Landing + 通用域模块化实现：DomainFactoryView 重写（HomeViewV2 配方五区）、新建 GeneralLayout 壳 + 4 容器/新屏 view、路由 /general/* 子树 + 旧路径 redirect | web/src/views/DomainFactoryView.vue, General{Data,Workbench,Attribution,Stats}View.vue, components/factory-core/GeneralLayout.vue, router/index.js | prettier+eslint 全绿（容器内），7 模块 vite transform 200，sync-dev 已同步 5173 | ~21k |
+| 18:53 | Session end: 12 writes across 9 files (GeneralLayout.vue, GeneralDataView.vue, GeneralWorkbenchView.vue, GeneralAttributionView.vue, GeneralStatsView.vue) | 7 reads | ~34630 tok |
+| 19:27 | Created .superpowers/brainstorm/4341-1791977035/content/varA-pipeline.html | — | ~1999 |
+| 19:28 | Created .superpowers/brainstorm/4341-1791977035/content/varB-split.html | — | ~1739 |
+| 19:28 | Created .superpowers/brainstorm/4341-1791977035/content/varC-blueprint.html | — | ~1919 |
+| 19:29 | Session end: 15 writes across 12 files (GeneralLayout.vue, GeneralDataView.vue, GeneralWorkbenchView.vue, GeneralAttributionView.vue, GeneralStatsView.vue) | 7 reads | ~40691 tok |
+| 19:33 | Created .superpowers/brainstorm/4341-1791977035/content/protoA-landing.html | — | ~2846 |
+| 19:34 | Created .superpowers/brainstorm/4341-1791977035/content/protoB-landing.html | — | ~2180 |
+| 19:34 | Created .superpowers/brainstorm/4341-1791977035/content/protoC-landing.html | — | ~2467 |
+| 19:34 | Session end: 18 writes across 15 files (GeneralLayout.vue, GeneralDataView.vue, GeneralWorkbenchView.vue, GeneralAttributionView.vue, GeneralStatsView.vue) | 7 reads | ~48719 tok |
+| 19:46 | Session end: 18 writes across 15 files (GeneralLayout.vue, GeneralDataView.vue, GeneralWorkbenchView.vue, GeneralAttributionView.vue, GeneralStatsView.vue) | 7 reads | ~48719 tok |
+| 19:51 | Created web/src/views/DomainFactoryView.vue | — | ~5155 |
+| 19:53 | Edited docs/develop-guides/changelog.md | inline fix | ~164 |
+| 19:53 | Edited docs/superpowers/specs/2026-10-14-factory-landing-design.md | expanded (+12 lines) | ~174 |
+| 19:52 | Landing 二轮迭代：用户否 HomeViewV2 同质版，三方案原型后选定 A 立式流水线并实现（传送带+四工位交错卡+铭牌带+名录横带+收工带，全 token 化） | web/src/views/DomainFactoryView.vue | prettier+eslint 绿、transform 200、sync 已上 5173 | ~16k |
+| 19:53 | Session end: 21 writes across 15 files (GeneralLayout.vue, GeneralDataView.vue, GeneralWorkbenchView.vue, GeneralAttributionView.vue, GeneralStatsView.vue) | 9 reads | ~61353 tok |
+
+## Session: 2026-10-14 19:57
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:03 | Created web/src/views/DomainFactoryView.vue | — | ~7564 |
+| 20:04 | Edited docs/superpowers/specs/2026-10-14-factory-landing-design.md | expanded (+13 lines) | ~196 |
+| 20:04 | Landing 二轮精修（太单调→质感化）：传送带实体化/工位图标水印流光/铭牌铆钉/运转灯/网格底纹/印章/按钮流光/键盘可达 | web/src/views/DomainFactoryView.vue | prettier+eslint 绿、transform 200、7 图标确认存在、sync 已上 5173 | ~18k |
+| 20:05 | Session end: 2 writes across 2 files (DomainFactoryView.vue, 2026-10-14-factory-landing-design.md) | 3 reads | ~8315 tok |
+| 20:08 | Edited web/src/views/DomainFactoryView.vue | 1→2 lines | ~37 |
+| 20:08 | Edited web/src/views/DomainFactoryView.vue | reduced (-11 lines) | ~224 |
+
+## Session: 2026-10-14 20:08
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:08 | Landing 背景改对齐系统首页 hero 配方（双光晕+32px 方格网，去自创 mask 网格） | web/src/views/DomainFactoryView.vue | lint 绿 transform 200 sync 上 5173 | ~4k |
+| 20:30 | coal-eia-writer 页面级 E2E（conv 888→889）：三件套/ingest 31 forms/审批弹窗/拒答转向均过；发现卡片构造缺陷（填写项做成单选题, bug-4011）、卡片 21ms 合成应答+连环发卡（bug-4012）、投影目录 root 属主（bug-4013 已修） | .wolf/buglog.json, cerebrum | 报告已交 | ~45k |
+| 20:14 | bug-445：sync-dev 相对路径空跑致用户看到旧版 landing；绝对路径重跑 55s 成功，四环 grep 验证已上 5173 | scripts/sync-dev.ps1 | 新代码已到达 vite | ~6k |
+| 20:17 | Edited web/src/views/DomainFactoryView.vue | CSS: ArrowRight | ~67 |
+| 20:18 | Edited web/src/views/DomainFactoryView.vue | 2→2 lines | ~22 |
+| 20:18 | Edited web/src/views/DomainFactoryView.vue | 16→15 lines | ~84 |
+| 20:18 | Edited web/src/views/DomainFactoryView.vue | reduced (-7 lines) | ~31 |
+| 20:18 | Edited web/src/views/DomainFactoryView.vue | 6→2 lines | ~16 |
+| 20:18 | 顶部副 CTA 查看管线→环评域入口（直跳 eia-data），清理 scrollToLine/lineRef/ArrowDown 孤儿 | web/src/views/DomainFactoryView.vue | lint 绿、vite 模块已检出新文案 | ~3k |
+| 20:19 | Session end: 5 writes across 1 files (DomainFactoryView.vue) | 1 reads | ~236 tok |
