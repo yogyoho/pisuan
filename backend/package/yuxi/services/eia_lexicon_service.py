@@ -307,6 +307,52 @@ class EiaLexiconService:
         logger.info(f"[eia-lexicon] 拆分 {entry.stage}/{entry.caliber} → {len(clean_items)} 条子口径")
         return {"parent_id": entry_id, "children": len(clean_items)}
 
+    # ── 抑制名单 ──
+
+    async def list_suppressions(self) -> dict[str, Any]:
+        """抑制行全量列表（改名自动登记 + 手工登记 + 迁移种子）。"""
+        items = await self.repo.list_suppressions()
+        return {"items": [s.to_dict() for s in items], "total": len(items)}
+
+    async def scan_candidates(self) -> dict[str, Any]:
+        """重扫导入将带进来的候选差集（添加抑制下拉数据源）：_scan_all − 已入库 − 已抑制。"""
+        cands = await run_in_threadpool(_scan_all)
+        existing = await self.repo.existing_keys()
+        suppressed = await self.repo.suppressed_keys()
+        skip = existing | suppressed
+        items = [c for c in cands if (c["stage"], c["caliber"], c["unit"]) not in skip]
+        return {"items": items, "total": len(items)}
+
+    async def add_suppression(self, payload: dict[str, Any], username: str) -> dict[str, Any]:
+        """手工登记抑制：仅限扫描差集内的候选指纹——屏蔽语料中不存在的指纹永不生效，
+        属误操作须报错而非静默吞掉；已抑制指纹幂等刷新（repo upsert）；手工行
+        new_caliber=''，无语境回落（无改名目标即无回落，语义自洽）。"""
+        stage = str(payload.get("stage") or "").strip()
+        caliber = str(payload.get("caliber") or "").strip()
+        unit = str(payload.get("unit") or "").strip()
+        reason = str(payload.get("reason") or "").strip()
+        if not stage or not caliber:
+            raise ValueError("stage 与 caliber 必填")
+        cands = await run_in_threadpool(_scan_all)
+        if (stage, caliber, unit) not in {(c["stage"], c["caliber"], c["unit"]) for c in cands}:
+            raise ValueError(f"指纹不在语料扫描结果中，抑制无效果: {stage}/{caliber}/{unit}")
+        if (stage, caliber, unit) in await self.repo.existing_keys():
+            raise ValueError(f"该指纹已是词表条目，请在词条上直接操作: {stage}/{caliber}/{unit}")
+        await self.repo.add_suppression(
+            stage=stage, caliber=caliber, unit=unit, new_caliber="", reason=reason, created_by=username
+        )
+        logger.info(f"[eia-lexicon] 手工登记抑制 {stage}/{caliber}/{unit}（{username}）")
+        return {"success": True}
+
+    async def withdraw_suppression(self, suppression_id: int, username: str) -> dict[str, Any]:
+        """撤回抑制（硬删行，无补种机制）：重扫可能复活旧指纹，UI 撤回前须明示两条后果。"""
+        row = await self.repo.get_suppression(suppression_id)
+        if row is None:
+            raise KeyError(f"抑制行不存在: {suppression_id}")
+        await self.repo.delete_suppression(suppression_id)
+        logger.info(f"[eia-lexicon] 撤回抑制 {row.stage}/{row.caliber}/{row.unit}（{username}）")
+        return row.to_dict()
+
     # ── 开关与导出 ──
 
     async def get_switches(self) -> list[dict[str, Any]]:
