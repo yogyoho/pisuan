@@ -26,6 +26,9 @@
     </div>
 
     <a-spin v-if="loading" style="display: block; margin: 48px auto" />
+    <div v-else-if="!overview" class="empty-state">
+      <a-empty description="范式层加载失败" />
+    </div>
     <template v-else>
       <div class="split">
         <!-- 左：角色列表 -->
@@ -47,7 +50,9 @@
             }}</span>
             <span class="fam-cnt">{{ roleCounts[p.asset_id] ?? 0 }} 节</span>
           </div>
-          <div class="tbl-foot">挂载节数取自 _roles.json（77 节全映射，查不到=拒派报错）</div>
+          <div class="tbl-foot">
+            挂载节数取自 _roles.json（{{ rolesTotal }} 节全映射，查不到=拒派报错）
+          </div>
         </div>
 
         <!-- 右：编辑器 + 角色对照 -->
@@ -64,7 +69,7 @@
                 <button v-if="draftContent !== null" class="btn btn-txt btn-sm" @click="onWithdraw">
                   丢弃草稿
                 </button>
-                <button class="btn btn-pri btn-sm" :disabled="!dirty" @click="onSave">
+                <button class="btn btn-pri btn-sm" :disabled="!dirty || saving" @click="onSave">
                   {{ saving ? '保存中…' : '保存草稿' }}
                 </button>
               </div>
@@ -133,6 +138,9 @@
               <span
                 >角色错配 = 整节范式错注入；调整映射改 _roles.json 走 git 评审，不设 UI 编辑</span
               >
+              <span v-if="filteredRoles.length === 20">
+                · 仅显示前 20 条，可用筛选/搜索缩小范围</span
+              >
             </div>
           </div>
         </div>
@@ -154,7 +162,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { message } from 'ant-design-vue'
+import { Modal, message } from 'ant-design-vue'
 import { Info, NotebookPen } from '@lucide/vue'
 import { eiaParadigmApi } from '@/apis/eia_paradigm_api'
 import { useUserStore } from '@/stores/user'
@@ -217,15 +225,40 @@ const dirty = computed(() => mdText.value !== (draftContent.value ?? fileText.va
 
 const selectRole = (id) => {
   if (id === activeId.value) return
-  activeId.value = id
+  if (!dirty.value) {
+    activeId.value = id
+    return
+  }
+  Modal.confirm({
+    title: '有未保存修改',
+    content: '切换角色将丢弃当前编辑内容，是否继续？',
+    okText: '继续（丢弃）',
+    cancelText: '留在本页',
+    onOk: () => {
+      activeId.value = id
+    }
+  })
 }
 
+let loadSeq = 0
+
 const loadAsset = async () => {
-  const out = await eiaParadigmApi.getAsset(KIND, activeId.value)
-  fileText.value = out.file_text
-  draftContent.value = out.draft ? out.draft.content.md : null
-  draftMeta.value = out.draft
-  mdText.value = out.draft ? out.draft.content.md : out.file_text
+  const seq = ++loadSeq
+  try {
+    const out = await eiaParadigmApi.getAsset(KIND, activeId.value)
+    if (seq !== loadSeq) return
+    fileText.value = out.file_text
+    draftContent.value = out.draft ? out.draft.content.md : null
+    draftMeta.value = out.draft
+    mdText.value = out.draft ? out.draft.content.md : out.file_text
+  } catch (e) {
+    if (seq !== loadSeq) return
+    fileText.value = ''
+    draftContent.value = null
+    draftMeta.value = null
+    mdText.value = ''
+    message.error(e.message)
+  }
 }
 
 const fetchAll = async () => {
@@ -240,7 +273,7 @@ const fetchAll = async () => {
   }
 }
 
-watch(activeId, () => loadAsset().catch((e) => message.error(e.message)))
+watch(activeId, () => loadAsset())
 
 const onSave = async () => {
   saving.value = true
@@ -255,14 +288,21 @@ const onSave = async () => {
   }
 }
 
-const onWithdraw = async () => {
-  try {
-    await eiaParadigmApi.withdrawDraft(KIND, activeId.value)
-    message.success('已撤回草稿（文件锚点不受影响）')
-    await fetchAll()
-  } catch (e) {
-    message.error(e.message)
-  }
+const onWithdraw = () => {
+  Modal.confirm({
+    title: '丢弃草稿',
+    content: '将删除数据库草稿（文件锚点不受影响），编辑器恢复为文件内容。',
+    okText: '丢弃',
+    onOk: async () => {
+      try {
+        await eiaParadigmApi.withdrawDraft(KIND, activeId.value)
+        message.success('已撤回草稿（文件锚点不受影响）')
+        await fetchAll()
+      } catch (e) {
+        message.error(e.message)
+      }
+    }
+  })
 }
 
 onMounted(fetchAll)
