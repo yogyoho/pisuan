@@ -112,12 +112,16 @@ def _draft(kind, aid, content):
 
 
 _ROLES = {
-    "_meta": "bank_compile 语料统计（下划线前缀键 overview 剔除）",
-    "sec_1": "opener",
-    "sec_2": "baseline",
-    "sec_3": "analysis",
-    "sec_4": "measures",
-    "sec_5": "opener",
+    "_comment": "节角色映射（bank_compile 产物；顶层元数据键与节映射嵌套并存）",
+    "schema_version": 1,
+    "paradigm_dir": "references/paradigms",
+    "roles": {
+        "ch1_S01": "opener",
+        "ch1_S02": "baseline",
+        "ch2_S01": "analysis",
+        "ch2_S02": "measures",
+        "ch2_S03": "opener",
+    },
 }
 
 
@@ -286,7 +290,14 @@ def test_overview_sync_counts_roles_and_flags_drafts(tmp_path, monkeypatch):
     )
     out = asyncio.run(_svc(repo).load_overview())
     assert out["role_counts"] == {"opener": 2, "baseline": 1, "analysis": 1, "measures": 1}
-    assert "_meta" not in out["roles_map"] and len(out["roles_map"]) == 5  # "_" 前缀键剔除
+    assert set(out["roles_map"]) == {
+        "ch1_S01",
+        "ch1_S02",
+        "ch2_S01",
+        "ch2_S02",
+        "ch2_S03",
+    }  # 只含节映射，元数据三键不入
+    assert out["roles_map"]["ch1_S01"] == "opener"
     ana = next(i for i in out["paradigms"] if i["asset_id"] == "analysis")
     ope = next(i for i in out["paradigms"] if i["asset_id"] == "opener")
     assert ana["has_draft"] and ana["drift"] and ana["updated_by"] == "alice"  # base_hash="x"≠文件 → 漂移

@@ -133,7 +133,7 @@ class EiaParadigmService:
     def _overview_sync(self, rows: list[tuple]) -> dict[str, Any]:
         drafts = {(k, a): (c, h, ub) for k, a, c, h, ub, _ua in rows}
         roles = json.loads(_read_text(_PARADIGM_DIR / "_roles.json"))
-        role_map = {k: v for k, v in roles.items() if not k.startswith("_")}
+        role_map = roles["roles"]  # 真实形状：顶层是元数据键，节映射嵌套在 roles（bug-4022；缺键走 KeyError 响亮报错）
         counts = {r: sum(1 for v in role_map.values() if v == r) for r in PARADIGM_IDS}
         forms_text = _read_text(_PARADIGM_DIR / "forms_catalog.json")
         forms_doc = _load_forms_doc(forms_text)
