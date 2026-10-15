@@ -33,16 +33,25 @@ def test_propernoun_hit_in_text():
 
 
 def test_high_frequency_and_generic_terms_exempt():
-    """≥3 份黑名单共现的词与各文件 generic_terms 声明的通用词不入扫描集。"""
+    """≥3 份不同黑名单共现的词与各文件 generic_terms 声明的通用词不入扫描集。"""
     counts: dict[str, int] = {}
-    for d in _blacklists():
-        for terms in d["entities"].values():
+    files_by_term: dict[str, set[str]] = {}
+    generic: set[str] = set()
+    for p in sorted(_ENTITIES_DIR.glob("*.json")):
+        if p.name == "_index.json":
+            continue
+        doc = json.loads(p.read_text(encoding="utf-8"))
+        for terms in doc["entities"].values():
             for t in terms:
                 counts[t] = counts.get(t, 0) + 1
-    freq = [t for t, n in counts.items() if n >= 3]
-    # 夹具镜像实现侧豁免规则①：generic_terms 含「/」复合作逐段拆分
-    generic = {seg for d in _blacklists() for g in d.get("generic_terms", []) for seg in g.split("/")}
+                files_by_term.setdefault(t, set()).add(p.name)
+        # 夹具镜像实现侧豁免规则①：generic_terms 含「/」复合作逐段拆分
+        for g in doc.get("generic_terms", []):
+            generic.update(g.split("/"))
+    freq = [t for t, fs in files_by_term.items() if len(fs) >= 3]
     assert eia_paradigm_scan.GENERIC_TERMS() >= set(freq) | generic
+    occ3 = {t for t, n in counts.items() if n >= 3 and len(files_by_term[t]) < eia_paradigm_scan.GENERIC_MIN_FILES}
+    assert not (occ3 & eia_paradigm_scan.GENERIC_TERMS())  # 「次数≥3 但不同文件<3」不是通用词（bug-448 语义锚）
     for t in list(set(freq) | generic)[:5]:
         assert t not in eia_paradigm_scan.scan_text(f"文本提及{t}不判命中。")
 
