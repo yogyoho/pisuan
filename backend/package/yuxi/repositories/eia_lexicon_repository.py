@@ -1,6 +1,6 @@
 """环评数值护栏词表数据访问层 - Repository"""
 
-from sqlalchemy import select
+from sqlalchemy import case, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from yuxi.storage.postgres.manager import pg_manager
@@ -11,6 +11,13 @@ from yuxi.storage.postgres.models_domain_factory import (
 )
 from yuxi.utils.datetime_utils import utc_now_naive
 
+# 列表业务序：A 措施效率 → B 现状监测 → C 非护栏杂项（category 为字符串，字典序 junk<measure<site 会错排）
+_CATEGORY_RANK = case(
+    (EiaLexiconEntry.category == "measure", 0),
+    (EiaLexiconEntry.category == "site", 1),
+    else_=2,
+)
+
 
 class EiaLexiconRepository:
     """eia_lexicon_entries / eia_dataset_switches 两表的访问边界（89 条量级，内存过滤足够）。"""
@@ -18,9 +25,7 @@ class EiaLexiconRepository:
     async def list_entries(self) -> list[EiaLexiconEntry]:
         async with pg_manager.get_async_session_context() as session:
             result = await session.execute(
-                select(EiaLexiconEntry).order_by(
-                    EiaLexiconEntry.category, EiaLexiconEntry.stage, EiaLexiconEntry.caliber
-                )
+                select(EiaLexiconEntry).order_by(_CATEGORY_RANK, EiaLexiconEntry.stage, EiaLexiconEntry.caliber)
             )
             return list(result.scalars().all())
 
