@@ -116,8 +116,24 @@ SCAN_CANDS = [
 ]
 
 
+class _SuppressionRow(SimpleNamespace):
+    """镜像真实行形状：EiaLexiconSuppression 含 to_dict（models_domain_factory.py:475）。"""
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "stage": self.stage,
+            "caliber": self.caliber,
+            "unit": self.unit,
+            "new_caliber": self.new_caliber,
+            "reason": self.reason,
+            "created_by": self.created_by,
+            "created_at": self.created_at,
+        }
+
+
 def _row(sid=1, new_caliber="三率水平达标率", reason="改名抑制：水平达标率 → 三率水平达标率"):
-    return SimpleNamespace(
+    return _SuppressionRow(
         id=sid,
         stage="planning_eia",
         caliber="水平达标率",
@@ -288,7 +304,7 @@ docker exec api-dev pytest /app/test/unit/test_eia_lexicon_suppression_ops.py -v
 docker exec api-dev sh -c "cd /app && ruff format package/yuxi/services/eia_lexicon_service.py test/unit/test_eia_lexicon_suppression_ops.py && ruff check package/yuxi/services/eia_lexicon_service.py test/unit/test_eia_lexicon_suppression_ops.py"
 ```
 
-Expected: 7 passed；ruff 无报错。
+Expected: 6 passed；ruff 无报错。
 
 - [ ] **Step 5: Commit**
 
