@@ -69,7 +69,7 @@
               <div class="expr-block">
                 <span class="ro-tag"><Lock :size="12" />表达式只读</span>
                 <!-- eslint-disable-next-line vue/no-v-html -->
-                <span v-html="tokenizedExpr"></span>
+                <span v-html="renderedExpr"></span>
                 <div v-if="activeFormula.outputs?.length" class="tok-cmt" style="margin-top: 4px">
                   // 输出 {{ activeFormula.outputs.map((o) => o.name).join('、') }}
                 </div>
@@ -231,8 +231,11 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import { Download, Info, Lock, TrendingUp } from '@lucide/vue'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
 import { eiaFormulaApi } from '@/apis/eia_formula_api'
 import { useUserStore } from '@/stores/user'
+import { splitMathText, mathToLatex } from './expr_latex'
 
 const userStore = useUserStore()
 
@@ -266,11 +269,13 @@ const checkedCount = computed(
     activeFormula.value?.inputs.filter((inp) => inp.override && !inp.override.pending).length ?? 0
 )
 
-// expr 变量 token 着色：先整体 HTML 转义，再单趟把 input 名包 tok-var（长名优先，避免短名误匹配）
+const escHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+// expr 变量 token 着色（KaTeX 解析失败时的回落视图）：转义后单趟把 input 名包 tok-var（长名优先，避免短名误匹配）
 const tokenizedExpr = computed(() => {
   const f = activeFormula.value
   if (!f) return ''
-  let html = f.expr.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const html = escHtml(f.expr)
   const names = [...new Set(f.inputs.map((i) => i.name).filter(Boolean))].sort(
     (a, b) => b.length - a.length
   )
@@ -278,6 +283,24 @@ const tokenizedExpr = computed(() => {
   const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const re = new RegExp(`(^|[^\\w])(${names.map(esc).join('|')})(?=[^\\w]|$)`, 'g')
   return html.replace(re, (_, pre, name) => `${pre}<span class="tok-var">${name}</span>`)
+})
+
+// 黑框公式 KaTeX 排版：中文/全角注释段原样输出（享受块内换行），ASCII 数学段转 LaTeX 内联渲染；
+// 任一数学段 KaTeX 抛错（未登记符号等）→ 整条回落 tokenizedExpr 的 token 着色视图
+const renderedExpr = computed(() => {
+  const f = activeFormula.value
+  if (!f) return ''
+  try {
+    return splitMathText(f.expr)
+      .map((seg) =>
+        seg.math
+          ? katex.renderToString(mathToLatex(seg.text), { throwOnError: true, strict: false })
+          : escHtml(seg.text)
+      )
+      .join('')
+  } catch {
+    return tokenizedExpr.value
+  }
 })
 
 const fetchFormulas = async () => {

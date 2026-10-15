@@ -655,8 +655,9 @@
   }
 
   /* ── 公式表达式暗块 / 技术徽标 ── */
+  /* 「终端暗块」双主题钉死深底：暗色主题灰阶整体反转（--gray-1000→#fafafa），走变量会白底浅字 */
   .expr-block {
-    background: var(--gray-1000);
+    background: #18181b;
     border-radius: 8px;
     padding: 16px 18px;
     font-family: ui-monospace, 'Cascadia Code', Consolas, 'Courier New', monospace;
@@ -668,6 +669,11 @@
 
     .tok-var {
       color: #fdba74;
+    }
+
+    /* KaTeX 排版段：字号贴齐块内正文，颜色随暗块 currentColor 继承 */
+    .katex {
+      font-size: 1.05em;
     }
 
     .tok-cmt {
