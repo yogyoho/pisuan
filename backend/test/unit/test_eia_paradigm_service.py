@@ -1,4 +1,4 @@
-"""eia_paradigm_service 单元测试：锚点校验 / 两键纪律 / preview 不写盘 / 导出字节纪律 / 漂移 / 回滚。
+"""eia_paradigm_service 单元测试：锚点校验 / 两键纪律 / preview 不写盘 / 导出字节纪律 / 漂移 / 回滚 / 撤回 / 空批拒绝。
 
 文件 IO 全部落在 tmp_path（monkeypatch _PARADIGM_DIR），不触真实技能文件；
 DB 流转以 FakeRepo 代表，集成环境（容器+PG）再验 API 层。
@@ -324,3 +324,42 @@ def test_get_asset_forms_branch_reads_family(tmp_path, monkeypatch):
     assert out["draft"]["base_hash"] == "x" and out["draft"]["updated_by"] == "alice"
     out_md = asyncio.run(_svc(repo).get_asset("paradigm_md", "opener"))
     assert out_md["file_text"] == MD and out_md["draft"] is None and out_md["drift"] is False
+
+
+def test_export_empty_drafts_raises(tmp_path, monkeypatch):
+    """无任何草稿时 preview/export 响亮拒绝（路由层映射 400），文件不动。"""
+    monkeypatch.setattr(svc, "_PARADIGM_DIR", tmp_path)
+    _write_assets(tmp_path)
+    before = {p.name: p.read_bytes() for p in tmp_path.iterdir()}
+    s = _svc(FakeRepo())
+    with pytest.raises(ValueError, match="无待导出"):
+        asyncio.run(s.preview_export())
+    with pytest.raises(ValueError, match="无待导出"):
+        asyncio.run(s.export_paradigms("admin"))
+    assert {p.name: p.read_bytes() for p in tmp_path.iterdir()} == before
+
+
+def test_withdraw_draft_removes_row_idempotent_and_validates(tmp_path, monkeypatch):
+    """撤回：删行返回 True 且行消失；再撤 False；未知资产 KeyError 响亮。"""
+    monkeypatch.setattr(svc, "_PARADIGM_DIR", tmp_path)
+    _write_assets(tmp_path)
+    s = _svc()
+    asyncio.run(s.save_draft("paradigm_md", "opener", {"md": MD}, "bob"))
+    assert asyncio.run(s.withdraw_draft("paradigm_md", "opener")) is True
+    assert asyncio.run(s.repo.list_drafts()) == []  # 行已删，文件锚点不受影响
+    assert asyncio.run(s.withdraw_draft("paradigm_md", "opener")) is False  # 再撤无行
+    with pytest.raises(KeyError, match="未知资产"):
+        asyncio.run(s.withdraw_draft("paradigm_md", "no_such"))
+
+
+def test_get_asset_md_with_draft_shape(tmp_path, monkeypatch):
+    """md 带草稿：file_text 仍是文件原文，draft 整包（content.md / base_hash / updated_by）。"""
+    monkeypatch.setattr(svc, "_PARADIGM_DIR", tmp_path)
+    _write_assets(tmp_path)
+    drafted = MD.replace("范文段。", "范文段（草稿）。")
+    repo = FakeRepo([_draft("paradigm_md", "analysis", {"md": drafted})])
+    out = asyncio.run(_svc(repo).get_asset("paradigm_md", "analysis"))
+    assert out["file_text"] == MD  # 文件锚点原文不受草稿影响
+    assert out["draft"]["content"] == {"md": drafted}
+    assert out["draft"]["base_hash"] == "x" and out["draft"]["updated_by"] == "alice"
+    assert out["drift"] is True and "family" not in out  # md 分支无 family 四键
