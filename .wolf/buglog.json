@@ -7185,7 +7185,7 @@
     "error_message": "用户：这种表单只能选择，不能填写，这样永远也填写不了。（环评写作卡片把委托单位/编制单位/资质等级/规划批复文号/评价时段 5 个填写项渲染成单选题，选项=字段名）",
     "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md (约束) + ask_user_question 卡片构造",
     "root_cause": "模型(deepseek-flash)把非枚举数值/文本字段做成选择题选项（violates SKILL.md bug-3233 填写项禁做成选择题），且 questions 以 JSON 字符串而非数组传入，服务端无 schema 校验拦截",
-    "fix": "未修（测试发现）。建议：ask_user_question 服务端校验 questions 必须为数组、options 仅允许枚举族；SKILL.md 卡片纪律加输出前自检",
+    "fix": "已修：tools.py 新增 _validate_choice_questions——①question 含 ≥2 行编号填写槽（数字开头+冒号结尾）却带 options → ValueError 教学式报错；②options label/value 含示例占位（如：/例：/示例：/XX）→ ValueError。docstring 增使用规范第 7 条；SKILL.md bug-3233 段补 bug-4011 反例与拒收说明；单测 backend/test/unit/toolkits/test_ask_user_question_card_guard.py 4 用例全过（api 容器实测）；sync-dev 同步运行栈，worker 侧实测拦截生效",
     "tags": [
       "e2e",
       "coal-eia-writer",
@@ -7196,7 +7196,7 @@
     "related_bugs": [
       "bug-3233"
     ],
-    "occurrences": 1,
+    "occurrences": 2,
     "last_seen": "2026-10-14"
   },
   {
@@ -7204,14 +7204,16 @@
     "timestamp": "2026-10-14",
     "error_message": "ask_user_question 卡片发出后 21ms 即 status=success，answer 为选项 value 原文（如 q-1=['省/市/县名称，矿区中心坐标']）——格式提示串被当作用户数据入库",
     "file": "backend agent graph interrupt/resume (worker 重启后 replay)",
-    "root_cause": "worker 重启丢失中断状态后图重放/队列残留 resume payload，卡片被合成答案自动应答；连环发卡 4819/4835/4837 违反发卡即停",
-    "fix": "未修（测试发现）。建议：ask_user_question 重放时禁止合成答案；中断恢复后强制重新发卡",
+    "root_cause": "【勘误】并非合成应答：agent_runs 表 5 个 resume run（channel=web）携带的都是真人提交 payload（手打文本/点击单选项的 value）；误判源于把 tool_calls.created_at 当中断时间（实为落库时间）。真实问题：①用户在新会话 889 上被模型连发数据预告卡+基础信息卡逐张点击应答；②选项 value 是示例提示串，点击后提示串被当数据入库；③会话 889 模型为 openai2:agnes-2.5-flash+always_trust，与 888 的 deepseek 设置无关",
+    "fix": "无需代码修复（应答链路本身工作正常）；坏卡片构造由 bug-4011 守义拦截。已留档：排查中断问题以 agent_runs.resume 记录为准，勿用 tool_calls.created_at 推断时序",
     "tags": [
+      "worker-restart",
+      "card-flow",
       "e2e",
+      "agent_runs",
       "langgraph",
       "interrupt",
-      "worker-restart",
-      "card-flow"
+      "misdiagnosis-corrected"
     ],
     "related_bugs": [],
     "occurrences": 1,
@@ -7253,5 +7255,332 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-10-14T20:14:15"
+  },
+  {
+    "id": "bug-446",
+    "timestamp": "2026-10-15",
+    "error_message": "新增 v17 迁移后 test_storage_migration.py 13 failed（fake 对象缺 upgrade_business_v16_to_v17 桩、parametrize 缺 [17] 档）",
+    "file": "backend/test/unit/services/test_storage_migration.py",
+    "root_cause": "存储迁移新增版本共五触点：models 模型 / manager 常量+方法 / storage_migration dispatch / upgrade_from 元组 / 测试桩+档位；v16 先例五处齐全，v17 落地时 plan 只列了前四，第⑤触点漏改即红",
+    "fix": "c064deed：六处 fake 补 v17 桩（沿 [pisuan-custom] 判别力注释链）、parametrize 补 [17]、calls 断言补行 → 24 passed",
+    "tags": [
+      "storage-migration",
+      "v17",
+      "test-stubs",
+      "paradigm-layer"
+    ],
+    "related_bugs": [
+      "bug-422",
+      "bug-419",
+      "bug-378"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-447",
+    "timestamp": "2026-10-15",
+    "error_message": "test_high_frequency_and_generic_terms_exempt FAILED: GENERIC_TERMS() >= set(freq) | generic — 右集多出 7 个含「/」复合作（'湿地/沼泽'、'公路/铁路'、'国家发展改革委/国家能源局' 等）",
+    "file": "backend/test/unit/test_eia_paradigm_scan.py",
+    "root_cause": "任务书自带测试夹具的镜像计算未做 generic_terms「/」逐段拆分，而实现与 spec（模块 docstring 豁免规则①）均按「/」拆分——夹具度量口径与 spec 不一致，非实现缺陷",
+    "fix": "夹具 generic 集改为 {seg for d in _blacklists() for g in d.get('generic_terms', []) for seg in g.split('/')}，与 spec 规则①对齐，断言强度不变。另：_blacklists 单行 127 字符触发 E501，换行为多行推导式（语义等价，ruff 归零）",
+    "tags": [
+      "paradigm-layer",
+      "propernoun-scan",
+      "test-fixture",
+      "generic-terms"
+    ],
+    "related_bugs": [
+      "bug-446"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-448",
+    "timestamp": "2026-10-15",
+    "error_message": "审查实测：4 个样例专属河库专名（伊敏河/高力罕河/彦吉嘎河/刘家沟水库）被误豁免出扫描集——各出现 3 次但仅存在于 2 个不同文件",
+    "file": "backend/package/yuxi/services/eia_paradigm_scan.py",
+    "root_cause": "_build_index 按「出现次数」计数（counts[t]+=1，单文件内跨类别重复列出时重复累加），与 docstring 规则②『出现在 ≥3 份不同文件黑名单中』相悖；夹具镜像同口径致测试零判别力",
+    "fix": "counts 改为 term→set(文件名)，freq 按 len(files)>=GENERIC_MIN_FILES 判定；测试夹具同步改按不同文件计数并新增 occ3 差分断言（次数≥3 但不同文件<3 不得入 GENERIC_TERMS）钉死语义。REPL 实证 4 词均在 PROPER_NOUNS(886)、不在 GENERIC_TERMS(58)，scan_text 可扫出",
+    "tags": [
+      "paradigm-layer",
+      "propernoun-scan",
+      "distinct-file-count",
+      "semantics"
+    ],
+    "related_bugs": [
+      "bug-447"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-449",
+    "timestamp": "2026-10-15",
+    "error_message": "test_substring_of_generic_exempt 取 generic[0] 作锚——该词本被 t not in generic 子句挡在 proper 外，删规则③子串过滤测试照绿（零判别力）；真实数据有 119 词仅由规则③豁免",
+    "file": "backend/test/unit/test_eia_paradigm_scan.py",
+    "root_cause": "夹具锚词选自豁免集本身，命中路径被前置子句（规则①②）短路，断言与被测规则③无因果",
+    "fix": "改为动态取「仅由规则③豁免」差分集（terms - generic 中与任一通用词互为子串者，实测 119 个）首词作锚，并断言差分集非空防语料漂移；变异验证实证：容器内注释子串过滤行 → 仅该测试红（锚词 G211 国道），sync 还原 → 复绿。scan_text docstring 同提交补 lru_cache 缓存注记",
+    "tags": [
+      "paradigm-layer",
+      "propernoun-scan",
+      "test-strength",
+      "mutation-testing"
+    ],
+    "related_bugs": [
+      "bug-448"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-450",
+    "timestamp": "2026-10-15",
+    "error_message": "计划文档 test_eia_paradigm_service 测试文本两处缺陷（派发前拦截，未进入实现）",
+    "file": "docs/superpowers/plans/2026-10-14-paradigm-layer-edit.md",
+    "root_cause": "①diff 断言写作 \"- 1. 先\"/\"+ 1. 首先…\"（difflib unified 前缀后直接接行文本，无空格，真实输出为 \"-1. 先\"，断言必假）；②test_drift_flagged_not_blocking 漂移夹具向合法 JSON 追加 \"\n# drifted\n\"，json.loads 抛 JSONDecodeError → splice 报错 → all_ok=False，与同断言 all_ok is True 自相矛盾",
+    "fix": "①断言改为 \"-1. 先\"/\"+1. 首先删掉机理性开头\"；②夹具改为合法 JSON 深拷贝后漂移 stats 值（exact_with_unit 1.0→0.9），并附勘误注释。两处已同步回写计划文档与 task3 派发任务书",
+    "tags": [
+      "paradigm-layer",
+      "plan-errata",
+      "difflib",
+      "test-fixture"
+    ],
+    "related_bugs": [
+      "bug-449"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-451",
+    "timestamp": "2026-10-15T10:15:00Z",
+    "error_message": "test_export_md_wholesale_and_forms_two_keys_only FAILED: ValueError（tmp 下 analysis.md is not in the subpath of coal-eia-writer；_export_sync 回报 paths 时 p.relative_to(_SKILL_ROOT) 越界）",
+    "file": "backend/test/unit/test_eia_paradigm_service.py",
+    "root_cause": "夹具缺口非实现缺陷：服务回报 paths 按 _SKILL_ROOT 取相对（生产恒成立，_PARADIGM_DIR 本就派生自 _SKILL_ROOT）；单测只 monkeypatch 了 _PARADIGM_DIR 未虚拟化 _SKILL_ROOT",
+    "fix": "夹具补 monkeypatch.setattr(svc, _SKILL_ROOT, tmp_path)（与 _PARADIGM_DIR 一并虚拟化）；未改服务、未弱化断言",
+    "tags": [
+      "test-fixture",
+      "monkeypatch",
+      "paradigm-layer",
+      "path-virtualization"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-4014",
+    "timestamp": "2026-10-15T10:30:00+08:00",
+    "error_message": "页面测试：composer 显示 32 个附件，实际发送的消息 attachment_file_ids 仅 31 个，01_井田清单.csv 未到达（agent 收到 02–11 共 10 张）",
+    "file": "web/src/components/AgentChatComponent.vue",
+    "root_cause": "【重新归因 2026-10-15 修复会话】测试操作事故而非产品缺陷：DELETE /attachments/96dbdddf 的网络指纹（DELETE→GET state+GET attachments 成对出现）与前端 handleAttachmentRemove（AgentChatComponent.vue:3036-3056）完全吻合——是合成 click 误点中 01_井田清单 chip 的移除按钮（icon-only，与发送按钮同为图标按钮易混淆）。输入框文本未被清空证明发送 handler 从未执行，而 DELETE 证明移除 handler 执行过。composer 计数与实发 31 一致（移除发生在验证 32 之后、发送之前），无计数不同步。",
+    "fix": "无需代码修复。残余 UX 观察（未改）：chip 移除按钮紧邻 composer 操作区、无确认/撤销，误点即静默删除服务端暂存。",
+    "tags": [
+      "frontend",
+      "attachments",
+      "upload",
+      "count-mismatch",
+      "e2e-page-test",
+      "reclassified-test-incident"
+    ],
+    "related_bugs": [
+      "bug-4011"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-4015",
+    "timestamp": "2026-10-15T11:05:00+08:00",
+    "error_message": "【已定案：测试事故，非产品缺陷】原报：ask_user_question 卡片（tool_call 4936，run a3bc25d3 interrupted）后重载/路由重入/刷新状态均'未恢复'审批模态。实际是全部验证探针误用 .ant-modal 选择器，而审批模态真实根节点是自定义 .approval-modal（AgentChatComponent.vue 内联渲染，非 ant-modal），探针恒假阴性。",
+    "file": "web/src/components/AgentChatComponent.vue",
+    "root_cause": "测量事故：HumanApprovalModal 为自定义 div.approval-modal（v-if 挂于 .message-input-stage，无 ant-modal 类），诊断时所有模态存在性检查均 querySelectorAll('.ant-modal')，永远返回空。当日（2026-10-15 下午）以 MutationObserver 插桩 + a11y 快照复核：草稿线程 06ae7ef3 上四条恢复路径全部正常——①整页重载恢复（~1.5s，ADD@1480）；②构造与生产线程失败时刻同构的运行史（两个 interrupted run：前卡已答+后卡待答）重载仍恢复；③SPA 路由重入恢复；④刷新状态后模态保持；另流式到达即弹（ADD@310116）亦正常。",
+    "fix": "无代码改动（行为正确，勿改）。教训：验证模态/浮层存在性必须用 a11y 快照（take_snapshot）或组件真实根选择器（.approval-modal），禁止凭猜测的 UI 库通用选择器下'未渲染'结论。原 workaround（POST /api/agent/runs + resume + created_by_run_id）仍为有效的无模态应急作答通道。",
+    "tags": [
+      "test-incident",
+      "wrong-selector",
+      "approval-modal",
+      "interrupt-restore",
+      "e2e-page-test",
+      "no-code-change"
+    ],
+    "related_bugs": [
+      "bug-4014",
+      "bug-4017"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-4016",
+    "timestamp": "2026-10-15T11:35:00+08:00",
+    "error_message": "页面测试：coal-eia-writer WAVE1 节级派发首次即失败——worker 报 OpenAIConnectionError×9 指向 host.docker.internal:8080；子代理停摆待用户示意",
+    "file": "运行库 agents 表 slug=eia-section-writer（运行时配置，非仓库文件）",
+    "root_cause": "eia-section-writer 子智能体 config_json.context.model='openai:gemma-4-E4B-it-UD-Q4_K_XL.gguf'（本地 gemma 端点 8080，容器内不可达）。subagent 模型解析顺序=请求>Agent配置>系统默认（agent_run_service.resolve_agent_run_model_spec），Agent 自身配置优先于线程模型，故线程选 deepseek-v4-flash 无法传入。该 agent 2026-09-30 建于运行库（仓库无注册代码），当时 gemma 可用，属环境漂移。同族子代理 chapter-writer/general-purpose 均配 openai2:agnes-2.5-flash（可达）。",
+    "fix": "未修复（权限拦截：测试不应改共享配置）。建议：在智能体管理 UI 把 eia-section-writer 的 context.model 改为 openai2:agnes-2.5-flash 或 deepseek:deepseek-v4-flash，然后向王坡线程发『继续，重试第1章节级派发』即可恢复 WAVE1。",
+    "tags": [
+      "subagent",
+      "model-config",
+      "endpoint-dead",
+      "coal-eia-writer",
+      "e2e-page-test"
+    ],
+    "related_bugs": [
+      "bug-4014",
+      "bug-4015"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-452",
+    "timestamp": "2026-10-15",
+    "error_message": "前端提交内容非 prettier-clean：容器内 prettier --write 只改了容器副本，宿主工作树提交仍为超长行（eia_paradigm_api.js:16 单行箭头 ~105 列；EiaDataLayout.vue forms 菜单行 ~101 列）",
+    "file": "web/src/apis/eia_paradigm_api.js",
+    "root_cause": "在 pisuan-localized-web-1 容器 /app 内跑 prettier --write，格式化落在容器侧副本；sync-dev 方向为宿主→容器，宿主内容不会被反向覆盖，容器 lint 通过 ≠ 提交内容通过（容器/提交双向漂移）",
+    "fix": "宿主侧 cd web && npx prettier --write 两个文件 → git diff 确认仅折行零语义变化 → 容器 eslint 复跑确认 → git commit --amend --no-edit（未推送 amend 安全）；eslint 权威性不受影响，prettier 以宿主工作树内容为准",
+    "tags": [
+      "frontend",
+      "prettier",
+      "container-drift",
+      "lint"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-4017",
+    "timestamp": "2026-10-15T11:40:00+08:00",
+    "error_message": "前端整站白屏：Vite 500 'Failed to resolve import ../views/EiaParadigmsView.vue from src/router/index.js'（router/index.js:235）",
+    "file": "web/src/router/index.js",
+    "root_cause": "f660398b（范式层前端骨架，2026-10-15 11:24）新增 paradigms 与 forms 两条路由，但 EiaParadigmsView.vue 与 EiaFormsView.vue 两个视图文件均不存在（git 历史中从未有过）；路由懒加载虽是动态 import，Vite transform 期即解析全部 import，router 模块整体编译失败→整个前端不可用。运行栈 web-dev 在 11:23-11:25 同步到该 router 后热重载触发。",
+    "fix": "创建两个最小占位视图（标题+建设中说明+占位文案，不实现业务），pisuan 与 pisuan-localized 两树同步放置；未提交，留待范式层工作流整体实现时替换。",
+    "tags": [
+      "frontend",
+      "router",
+      "vite",
+      "missing-view",
+      "parallel-workstream"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-4018",
+    "timestamp": "2026-10-15",
+    "error_message": "Task7 计划草稿的范式元信息行读 overview 项的 active?.draft?.updated_by/updated_at —— 概览项根本没有 draft 子对象也无 updated_at（服务端 load_overview 只给顶层 updated_by），照写会渲染 undefined/空时间",
+    "file": "web/src/components/eia-data/ParadigmsPanel.vue",
+    "root_cause": "计划草稿按 get_asset 详情响应的形状（draft{content,base_hash,updated_by,updated_at}）臆测了概览响应形状；eia_paradigm_service.py 中 _overview_sync 与 _get_sync 形状不同",
+    "fix": "写入前对照后端服务核实两个响应形状：面板新增 draftMeta ref，在 loadAsset 里存详情返回的 out.draft，模板元信息行改读 draftMeta?.updated_by / draftMeta?.updated_at；base_hash 仍读概览项 active?.file_hash（该字段概览确有）",
+    "tags": [
+      "frontend",
+      "api-shape",
+      "paradigm-layer",
+      "pre-emptive"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-4019",
+    "timestamp": "2026-10-15",
+    "error_message": "范式页角色切换无脏护栏且取数无序 token：编辑未保存时点其他角色会静默丢弃输入；快速连点两个角色时慢的旧响应后到会把上一个角色的内容填到新角色标题下（数据错位/丢失向量）",
+    "file": "web/src/components/eia-data/ParadigmsPanel.vue",
+    "root_cause": "首版按计划草稿实现，selectRole 直改 activeId、loadAsset 无并发令牌、失败路径不清编辑器状态",
+    "fix": "quality-review 修复轮：loadAsset 加模块级 loadSeq 序 token（await 后 seq!==loadSeq 直接弃结果）；selectRole 脏态走 Modal.confirm 确认；loadAsset try/catch 失败且非过期时清空编辑器四 refs + message.error；丢弃草稿加 Modal.confirm；save 按钮 disabled 加 saving；空态 a-empty；fam-list 脚注节数改动态 rolesTotal；角色表加截断提示",
+    "tags": [
+      "frontend",
+      "race-condition",
+      "data-loss",
+      "ux-guard",
+      "paradigm-layer"
+    ],
+    "related_bugs": [
+      "bug-4018"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-4020",
+    "timestamp": "2026-10-15",
+    "error_message": "chrome-devtools MCP new_page fails: 'The browser is already running for C:\\Users\\Lenovo\\.cache\\chrome-devtools-mcp\\chrome-profile. Use --isolated to run multiple browser instances.'",
+    "file": ".wolf/buglog.json",
+    "root_cause": "MCP server binds a single fixed chrome-profile dir; an orphan chrome holds the profile lock, so every new_page call errors until that process exits. Killing it is forbidden (may hold user tabs).",
+    "fix": "Not a code fix: browser QA gate is skipped after one attempt and replaced by non-browser gates (host prettier --check, container eslint, Vite SFC transform 200 via curl /src/<file>). Per-task protocol: attempt once, then report DONE_WITH_CONCERNS.",
+    "tags": [
+      "chrome-devtools-mcp",
+      "browser-qa",
+      "environment",
+      "paradigm-layer"
+    ],
+    "related_bugs": [],
+    "occurrences": 2,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-4021",
+    "timestamp": "2026-10-15T13:40:00+08:00",
+    "error_message": "Task 9 walkthrough: git checkout -- restore of pisuan-localized paradigms files left sha256 mismatch (LF->CRLF rewritten by autocrlf)",
+    "file": "pisuan-localized worktree paradigms/*.md,*.json",
+    "root_cause": "Windows core.autocrlf converts LF to CRLF on checkout; byte-exact restore of runtime-stack reference files requires disabling conversion. Content-semantically identical but byte-different files would silently break the byte-discipline baseline.",
+    "fix": "git -c core.autocrlf=false checkout -- <paths>; verify with sha256sum -c against pre-walkthrough baseline",
+    "tags": [
+      "autocrlf",
+      "walkthrough",
+      "byte-discipline",
+      "pisuan-localized",
+      "restore"
+    ],
+    "related_bugs": [
+      "bug-4020"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-4022",
+    "timestamp": "2026-10-15T14:40:00+08:00",
+    "error_message": "UI 节角色对照表显示 schema_version/paradigm_dir 元数据键而非节 id→角色映射；四角色挂载数全为 0 节（应为 12/17/37/11）",
+    "file": "backend/package/yuxi/services/eia_paradigm_service.py:136",
+    "root_cause": "role_map 提取假设 _roles.json 为扁平形状（顶层非 _ 键=映射），实际文件为 { _comment, schema_version, paradigm_dir, roles: {77 节映射} } 嵌套形状。单测夹具按同样错误的扁平假设构造（测试替身镜像 bug），API 演练未断言 roles_map 内容，终审查接缝不查数据形状——仅浏览器渲染真实数据时暴露。",
+    "fix": "role_map = roles[\"roles\"]（缺失即响亮 KeyError，不做防御回退）；单测夹具改为真实嵌套形状并含元数据键以钉住提取逻辑",
+    "tags": [
+      "roles-map",
+      "data-shape",
+      "fixture-mirrors-bug",
+      "visual-qa-catch",
+      "eia-paradigm"
+    ],
+    "related_bugs": [
+      "bug-4018"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-4023",
+    "timestamp": "2026-10-15",
+    "error_message": "chore(wolf) 簿记提交首次落地（c0f5af03）夹带约 200 个既往会话未跟踪 scratch 文件（corpus-workdir/csv-upload/p3_*快照/旧截图），与提交信息「簿记同步」严重不符",
+    "file": ".wolf/*（提交范围治理）",
+    "root_cause": "git add .wolf 整目录暂存扫入全部未跟踪文件；随后 git add 显式路径命中 gitignore（.wolf/hooks）返回非零，&& 链静默断裂，designqc-captures 的 add -u 未执行",
+    "fix": "git reset --soft HEAD~1 + git reset 清场回滚；按明确清单重提（6 簿记文件 + git add -u designqc-captures）amend 为 59c72c13（18 文件）；提交前用 git diff --cached --name-status 核对清单",
+    "tags": [
+      "git-add",
+      "gitignore",
+      "openwolf",
+      "commit-scope",
+      "windows"
+    ],
+    "related_bugs": [
+      "bug-4021"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
   }
 ]

@@ -18,7 +18,16 @@
 - Large changes should have a requirements document in `docs/vibe/` with date prefix
 
 - [2026-10-14] Landing 类页面忌「太素/单调」：结构极简的同时要有质感细节（实体感装饰、图标块、水印、微动效、氛围底纹）。用户对首版立式流水线评价「效果太单调」，二轮补齐后验收。以后 landing/展示页交付前自查：纯白底+细线框+纯文字 = 不合格。
+- [2026-10-14] 卡片式导航的点击范围要克制：大卡片/区域不整卡可点，仅显式「直达」链接可点（用户对知识工厂工位卡的裁定）。此后卡片导航默认按此执行，整卡可点需先问。
 ## Key Learnings
+- (2026-10-15) docs/vibe is gitignored (.gitignore:78); design docs get committed via `git add -f` per precedent (several predecessor vibe docs are tracked, e.g. 2026-10-07-direction-a-paradigm-library-design.md).
+- (2026-10-15) ruff is NOT installed in pisuan-localized api/worker containers. Run host-side: `cd backend && uvx ruff@0.16.4 check package --statistics`. Full-package total is ~260 (230 E501 + 30 other); the historical "30-error baseline" refers to the narrow services/ scope only.
+- (2026-10-15) Auth API for scripted E2E: POST /api/auth/token, OAuth2 form (username/password) -> {access_token}; verified working against dev stack with admin account.
+- (2026-10-15) Byte-exact restore of runtime-stack reference files (pisuan-localized): `git -c core.autocrlf=false checkout -- <paths>` — plain checkout lets autocrlf rewrite LF->CRLF and silently breaks byte baselines (buglog bug-4021).
+- [2026-10-15] sample_entities 黑名单 generic_terms 条目可含「/」复合作（如 '湿地/沼泽'、'国家发展改革委/国家能源局/自然资源部'），消费方必须按「/」逐段拆分入豁免集（eia_paradigm_scan 规则①，24 份中 7 条复合串）；镜像校验/统计若不拆分会口径分裂（bug-447）。另两道豁免：≥3 份黑名单共现词（GENERIC_MIN_FILES=3）+ 与任一通用词互为子串者。频次豁免必须按「不同文件数」计而非出现次数（bug-448）：单文件内跨类别重复列出（如 yimin.json 的 places+sensitive 同词）会使次数虚高——伊敏河/高力罕河/彦吉嘎河/刘家沟水库各 3 次仅 2 文件，按次数计被误豁免。
+- [2026-10-15] 环评存储迁移新增版本的五触点清单：①models 模型类 ②manager 常量 BUSINESS_SCHEMA_VERSION+upgrade 方法 ③storage_migration dispatch ④_require_supported_version upgrade_from 元组 ⑤测试桩+档位随版本同步补（c064deed 实证：六处 fake 桩+parametrize [17]，漏改必 13 红；每版本一行「判别力」桩是房规注释链，v14/v15/v16 皆有）。另：localized 运行栈内表名字面量也被改名（yuxi_schema_migrations→pisuan_schema_migrations），查版本表先观察实际表名；容器内迁移命令是 python -m pisuan.storage_migration。
+- [2026-10-14] 排查卡片时序勿用 tool_calls.created_at 推断（是落库时间非中断时点）——ground truth 是 agent_runs 表 resume run 的 input_payload（channel=web 的是真人提交）。pisuan-localized 运行栈包名是 pisuan 非 yuxi（改名层），worker 手动验证用 PYTHONPATH=/app/package + pisuan.*；api 容器 pytest 可直接 import yuxi。改 pisuan 工作树后跑 scripts/sync-dev.ps1 即可秒级落到运行栈（含未提交改动，跳过 git 长链路）。格式化钩子会把 anatomy 新文件自动收录。
+
 - [2026-10-14] 页测 coal-eia-writer：ask_user_question 的 questions 若被模型序列化成 JSON 字符串（非数组）服务端不校验照收；worker 重启后图重放会把 pending 卡片用选项 value 合成应答（21ms success）；对话页发卡应答链路必须以页面 DOM 为准轮询（a11y 快照有陈旧副本，uid 每次下一题后变化）。新会话默认模型 openai:gemma-4-E4B 走 host :8080，该端点没起，新对话须手动切 deepseek:deepseek-flash。
 
 - [2026-10-14] 未登录冒烟前端路由屏：curl http://localhost:5173/src/<file> 看 vite transform 是否 200（SFC 编译错会 500）；designqc 对 requiresAuth 路由会拍到 login 页，登录态屏目验只能靠用户浏览器
@@ -148,7 +157,20 @@
 - sync-dev 会搬运 workspace 树未跟踪文件（路径翻译 yuxi→pisuan）——workspace 留副本即可让 localized 侧机生物存活；但 -Revert 与官方链再生仍会清，运行态真相只在 DB。
 - 五校准口径全为语料常量（85/90/100）：挂载护栏价值=钉死领域惯例值防写手杜撰变体；字段样式同充填率（number/unit/required false，无 caliber_field——该标记无程序消费方）。
 
+### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
 ## Do-Not-Repeat
+- [2026-10-15] 禁止 `git add .wolf` 整目录暂存：会无差别扫入既往会话未跟踪 scratch（corpus-workdir/csv-upload/p3_*快照/旧截图，~200 文件），夹进与提交信息不符的簿记提交。只暂存 6 个簿记文件（anatomy/buglog/cerebrum/memory/token-ledger/hooks/_session）+ `git add -u .wolf/designqc-captures/`（仅覆盖已跟踪基线 jpg 与 png 删除）。
+- [2026-10-15] `git add <显式路径>` 命中 gitignore 时输出警告且退出码非零，会静默打断 `&&` 链（.wolf/hooks 警告致第二个 add -u 未执行、提交缺半）。多段暂存各写独立语句，提交前必以 `git diff --cached --name-status` 核对实际清单。
+- (2026-10-15) Spawning reviewer subagents WITHOUT the `name` parameter puts them in background-task mode whose toolset LACKS Bash/Read/Grep/Glob — the agent cannot read files or run git and must abort (one honestly refused to fabricate a verdict). ALWAYS use named Agent spawn (mailbox pattern) for every reviewer/implementer dispatch.
+- [2026-10-15] 容器内 prettier --write/eslint 通过 ≠ 宿主提交内容合规：/app 是宿主→容器单向同步的副本，容器侧写只改容器。前端格式化必须宿主侧跑（cd web && npx prettier），或把容器格式化结果拷回宿主再 amend；否则容器/提交漂移，未来 sync 会反复打架（bug-452）。
+
+- [2026-10-15] 本会话出现 3 份虚假完成报告（SHA 7c2a91e4d8f2、a3f17b92 均不存在）混入 task1-impl 名义。归因校准（2026-10-15 申诉后复核）：以 teammate-message 到达的两份报告（92a2abfe、c064deed）全部验真，以 system_warning「Task notification」到达的三份全部验假且对实测发现（改名层等）一无所知——来源更像信道噪声，已不在 DNR 中归罪该代理。不变的核心纪律：①每份「已完成」报告先 git log 核验 SHA 再看 diff，格式仅作参考信号 ②容器读取有 sync-dev 时序陷阱，裁决前先 sync 再读 ③报告矛盾≠工作存在，以仓库为准。
+
 - [2026-10-14] 不要只盯 DB 判断卡片 pending：页面上的审批弹窗/卡片 DOM 才是真相源；重启 worker 前先在页面里处理完待审批命令。容器内投影目录排障 chown 后必须 -R 到具体 skill 目录（api+worker 双处）。
 
 - [2026-10-14] 可视伴侣推多屏时：完整 HTML 文档（DOCTYPE 开头）被原样服务、不带屏幕切换框架，根路径 / 只显示最新一屏——用户会以为其他屏丢了。多屏一律直接给 /files/<文件名> 直链（server.cjs:145）
@@ -211,6 +233,12 @@
 - _MEASURE_RE（eia_data_service）与 QUANTITY_RE 是两处独立口径敏感点：QUANTITY_RE 新增口径形态时必须同步检查三分类正则是否认识新形态（控制效率拉丁前缀曾全落 junk，range_ready 门控静默失效）。
 
 ## Decision Log
+- (2026-10-15) Task 9 changelog commit: pre-existing dirty hunks from other work streams were excluded via dual-version swap (committed version = HEAD + paradigm entry only; working tree keeps leftovers). User picked selective-commit (1A) over folding. docs/vibe design doc force-add pre-approved (plan's own git add line + tracked predecessor precedent).
+- [2026-10-15] KeyError→404 `detail=str(e)` 的 repr 引号伪影：house 全局既有（本路由 ~17 处 + 兄弟服务同款），局部修复会制造不一致 → 维持现状；横切整治候选：全部站点改 `e.args[0]` 或专用 NotFoundError，并核对前端 toast 是否剥引号。（范式层 Task 4 质量评审裁决）
+- [2026-10-15] domain_factory_router 异常三分支梯子重复 ~20 处：共享映射 helper 可省 ~5 行/端点，属路由级重构 → 未来独立 cleanup 提交，不顺手夹带。（Task 4 质量评审建议）
+- [2026-10-15] 前端共享 reactive 弹窗对象（如 FormsPanel editModal）在保存 Promise 在飞时 Cancel 仍可点：取消后立即重开会话，旧保存成功回调 `open=false` 会 slam 关闭新会话并丢失未保存输入——范式层 Task 8 质量评审 Minor（建议 loadSeq 式 seq token 或 cancel-button-props disabled，未阻塞验收）；同审发现 getAsset 部分失败时 assets 保留旧映射+「无统计产出」文案混淆加载失败与真空值，均非阻塞。
+- [2026-10-15] 修复轮 a0a23e54（FormsPanel +8/−2）三修验真：editSeq 序号令牌（守卫置于 saveDraft 后、success/close 前，连陈旧成功 toast 一并抑制）；fetchAll 在 Promise.all 前 assets={}（refetch 部分失败不再残留旧 map；首次失败「无统计产出」文案仍混淆，cosmetic 接受）；label-for+textarea 单一静态 id（desc/模板共用一弹窗一 textarea，组件单实例无重复 id 风险）。残余裁定**接受不修**：陈旧回包 finally 提前清 saving 可令 OK 提前复禁→双发同载荷，但 saveDraft 整载荷幂等 upsert 零数据分歧+窗口一往返+与 Task 7 loadSeq 残余同形；1 行加固备查 `finally { if (seq === editSeq) editModal.saving = false }`（下次触碰该文件顺手，不专开提交）；:221 catch 分支陈旧 error toast 同族一并接受。
+
 
 - [2026-10-14] 知识工厂 Landing 二轮迭代：用户在 A 立式流水线/B 分屏双域/C 蓝图图纸三方案中选定 A——流水线主轴作页面骨架（工位即导航），兼顾差异化与「工厂」主题；C 的图签/印章元素留作日后点缀备选
 - [2026-10-03] ETL 并发校准（方案 A 演进为可配置）：并发 10 对串行 llama.cpp 只放大队列等待（队尾 ~10min >> 客户端超时）造成健康调用被误杀、熔断误伤；超时 120→300s；并发改为管理员可配（Option 体系：domain_factory_llm，基础设置页渲染，默认 2 钳制 1-32，运行时读取下一次生效）。不放入领域工厂页面：该 knob 是端点级全局参数（模型本身是全局默认），与默认模型同屏最贴心智。配置面扩展模式：options.py 加 Option 实例 + OPTION_DEFINITIONS 注册（[pisuan-custom] 标记），lifespan ensure_options_in_db 自动建行，零迁移零前端框架改动。
@@ -240,6 +268,12 @@
 ### 2026-10-11（P1 五校准裁决）
 - 连接词扩展（+能达|可达）而非启动尾清洗重设计：语料 diff 证明扩展即收敛（词表剥尾后口径一致、零词中误断实例）；尾清洗重设计（R2-R5 类）仍留 backlog。
 - 五口径全数补录挂载而非驳回：值虽全为常量，护栏语义正是「领域惯例值」钉死（防杜撰变体/小数错缀复发——bug-412 同类风险的预防面）。
+
+### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat
 
@@ -283,6 +317,12 @@
 - pre-existing lint 欠账先例：HEAD 上 domain_factory_service.py 16 处 E501、tools.py 3 处、test_commit_pipeline_status.py 1 处——判定归属用 `git archive`/临时 worktree 对拍 HEAD（**禁止 git stash**——共享工作树会卷走他人未提交改动，见 DNR 2026-10-06）；自己的新行必须 ≤120。
 - agnes key 在 Redis pisuan:model_cache 内、经环境变量传递不落盘；API key UI 只做掩码显示。
 
+### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
 ## Do-Not-Repeat (2026-10-04)
 
 - 不要在上一个 graph-build job 未到终态时触发第二个（不同 KB 可并行 → agnes 429 风暴）。触发前用 worker 日志确认前一个已 构建完成/构建失败。
@@ -302,6 +342,12 @@
 - **段落级校验链字段错位（bug-354）**：pre_commit_validator.py:32 / service:4101/:4131 读 para["type"]，段落真实字段是 classify_type → L1 恒跳过全部段落、L2 整体不被调用、parameter_paragraphs 恒 0。单测 fixture 合成 type 字段是掩盖源——校验类单测必须用生产真实字段名。
 - **「大纲管理页只写 Neo4j」是过时说法**：confirm_outline_extract（service:5144-5168）已双写 PG+Neo4j（:5162 注释自证）；只有 updateOutlineTemplate（OutlineTemplate.vue:493→PUT outline-templates）落点待核。2026-07-16 的 knowledge-factory-design.md §7.2 叙述已不准确。另 OutlineTemplate.vue:173/:467/:490 对 expected_charts 有 read+write 人工闭环——ETL 停写恒空数组可以，删列删 API 字段不行。
 - **Neo4j FormulaTemplate 疑似写而无读**：get_templates 返回载荷（graph_query_service:194-200）只有 text_pattern/slots/legal_references 不含公式；expected_formulas 断链（task_detail 无顶层键）。公式对象化（Q2/P2）落地时必须先指认消费通道，否则派生面按 D2② 复议。
+
+### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat (2026-10-04 ETL 数据平面)
 
@@ -358,8 +404,20 @@
 - Windows 宿主 Git Bash 跑 `docker exec <c> pytest /app/...` 会被 MSYS 路径转换改写成 `C:/Program Files/Git/app/...` → pytest 报 file not found（exit 4），极易误判为容器里没文件。加 `MSYS_NO_PATHCONV=1` 前缀即可。
 - pre_commit_validator 段落 dispatch 字段是 classify_type（与 graph_builder/domain_factory_service 一致）；段落级 fixture 必须写 classify_type，slot 级的 "type" 是 slot 属性，两者别混。
 
+### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
 ## Do-Not-Repeat (2026-10-05 bug-354 qualrev)
 - 2026-10-05: 不要假设 pisuan-localized 工作树文件内容 == 其 git HEAD。sync-dev.ps1 会把源仓未提交改动同步过去（工作树 HEAD 可能停在旧 commit 但文件已是新版）。做"对旧代码跑测试"的变异验证前，先 grep 实际文件内容确认基线，否则红/绿侧结论会反转。
+
+### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat (2026-10-05 W0 收尾)
 - 2026-10-05: 宿主机 `cd backend && uv run ...` 会改写 backend/uv.lock（本机 uv 与锁定 lock 版本漂移），跑 ruff 后必须 `git checkout -- backend/uv.lock`，否则会把锁文件噪声带进提交。
@@ -383,6 +441,12 @@
 - **Key Learning**：所谓"全量回归基线 1018 passed/0 failed/3 skipped"实际对应 `pytest /app/test/unit/services`（恰好 1021 collected）。命令 `pytest /app/test` 在本仓会因 unit 与 integration 存在同名测试文件（test_builtin_discovery / test_mcp_router / test_memory_service，均无 __init__.py，pytest 默认 prepend importmode）触发 "import file mismatch" 收集错误——这是仓库既有结构问题，与任何代码改动无关；分目录跑（unit、integration、e2e 分开）可绕开。
 - **Key Learning**：`uv run` 首次运行会重建 backend/.venv 并改写 backend/uv.lock（3 行），用完必须 `git checkout -- backend/uv.lock`。ruff format 对基线不 clean 的文件会产生任务无关 diff（如 template_generator.py ~L159 空行），应只保留语义改动、回退 format 噪声。
 - **Do-Not-Repeat (2026-10-05)**：不要用 `pytest /app/test` 单会话跑全量当作回归守护——会撞既有 basename 冲突误判为改动引入；用 `/app/test/unit/services`（基线口径）或分目录跑。
+
+### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat (2026-10-05 bug-359 W1 Task 2)
 - 2026-10-05: 追加任务书提供的测试代码块时必须逐字照抄，不要即兴加"占位/防御"行——本次混入一行任务文本中不存在的 `add_templates_from_from_list = None`（自纠错，未进测试运行即删）。追加后固定两步核对：git diff 纯新增+零删除、与任务文本逐行比对（bug-361）。
@@ -408,12 +472,24 @@
 - worker 忙时（大文档 OCR/抽取）docker exec python 查询会拖到分钟级甚至超时；轻量状态通道 = postgres 容器内 psql -U postgres -d <db> 直查（实际库名 yuxi_know，来自 .env，compose 默认 yuxi 会被覆盖）
 - 云 API（apihub.agnes）对 ETL 批量抽取会 rate_limit 熔断：横城 2789 段重跑 success=12/rate_limit=8/skipped=741/3867s 终止 FAILED_PROVIDER，P0-3 断点续跑语义（FAILED_PROVIDER + source_paragraphs 非空 → retry 自动 resume）
 
+### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
 ## Do-Not-Repeat (2026-10-05 bug-363 Task 2)
 - (2026-10-05) 容器内 LLM 探活用 select_model(...).call()，不用 .ainvoke（AttributeError 假报不可达）；宿主侧 kill docker exec 会在容器内留孤儿 python 进程，须 docker exec kill 清理
 - (2026-10-05) 长时间任务轮询不用 docker exec python 循环（后台输出缓冲丢失 + worker 忙时拖死），改用 postgres 容器 psql 直查状态表
 - (2026-10-05) ETL 重跑观测对象要选 2026-10 以后上传的任务（storage_path 为绝对路径）；2026-07 旧任务 retry 会因 saves/ 相对路径直接 PackageNotFoundError（bug-365）
 
-### Do-Not-Repeat（2026-10-05 bug-363 终审追加）
+#### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
+## Do-Not-Repeat（2026-10-05 bug-363 终审追加）
 - 2026-10-05: `.wolf/buglog.json` 仓库惯例是 json `indent=2`——用 python json.dump 打补丁必须 indent=2，写 indent=1 会整文件重排（5258+/5258- 的噪声提交）；amend 前被 `git show --stat` 拦下。同理一切 JSON 台账补丁：先 `git show HEAD:file | head -3` 看缩进惯例再动手，提交后必看 stat 数字是否与预期改动面相符。
 - 2026-10-05（同日修订）: 容器内裸 `python -u -c` + pg_manager「挂池」根因已查明=对同步函数做 await（`initialize()` 是同步的，manager.py:373，await 它直接 TypeError 且被管道吞掉；进程不退是 psycopg 池后台线程）。已验证正确姿势：同步 `pg_manager.initialize()`（langgraph psycopg 池会报 "AsyncConnectionPool open with no running loop"，对纯 repo 路径无害）→ `asyncio.run(服务方法)` → 末尾 `os._exit(0)`。一次性查 DB 仍优先 psql 通道；杀宿主侧 docker exec 后容器内 python 会残留孤儿，kill 后必须容器内 ps 复核。
 
@@ -466,6 +542,12 @@
 - seed_gen 对渲染产物缺 stage/std_ref 字段不报错（.get 默认空串，仅 SEED_READY 显示名与模板名退化）——契约缺口但非错误；若要补应改渲染器，禁改 seed_gen。
 - seed_gen 的 SEED_PYDANTIC 在 pisuan 布局恒为 SKIP：KF_SCHEMAS 路径 app/extensions/knowledge_factory/schemas.py 属 coal-eia v1 仓库布局，pisuan 无 backend/app；_infer_backend 解析到 agents/backend 不存在。断言数>0 即达计划门槛。
 - exemptions 字段是适配度测试的语料侧注记，渲染器完全不消费（只用 6 维条件）——「无豁免干扰」只影响存档出处叙述，不影响渲染输出。
+### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
 ## Do-Not-Repeat 追加（2026-10-06 bug-355 窗口）
 - 计划内嵌测试 fixture 涉及合成 docx/OPC 时：关系 Type 必须用真实 officeDocument reltype（python-docx 按精确 Type 找主部件）；.rels 内相对 Target 的 base = .rels 所在部件目录（word/_rels/document.xml.rels → word），写 word/document.xml 会解析成 word/word/... 恒假悬空。先在解释器里验证 fixture 可被真实实现满足，再定稿计划。
 ## Key Learnings 追加（2026-10-06 bug-355 窗口）
@@ -495,8 +577,20 @@
 - (2026-10-06 bug-376) DNR：sed 按行号删样式/代码块前，必须用带行号+显示缩进的输出（cat -A 或 sed -n '=;p'）核对边界行是「空行」还是「缩进闭合 }」——SettingsModal 删 Star 卡样式时把 2 缩进中间层闭合当空行多删，less 括号失衡，且 vite sourcemap 把报错行号错位到 script 区误导排查。纯删除类改动收口必须过编译验证（宿主无 node_modules 时用容器：docker exec web 容器 node -e less.render 提取的 style 块；bash 括号计数 python 一行即可预检）。
 - (2026-10-06 bug-376) vite [vite:css] [less] 报错行号经 sourcemap 还原，SFC 场景下可能错位到非 style 区——别信行号，先提取 style 块单独喂 lessc 定位真实错误。
 
+### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
 ## Do-Not-Repeat 追加（2026-10-06 W3 Task2）
 - 2026-10-06: 任务书「照抄即可」的实现代码也可能有逻辑 bug 且与其自带测试矛盾（W3 Task2 min_permissive_scope 片段把最窄者胜写成最宽者胜，1 failed 揭出）。TDD 红相时先裁决哪侧错：测试名/docstring/合同语义三方一致时测试即规格，改实现不属 bug-361 的「即兴篡改」；裁决不了才停手报 BLOCKED。与 2026-10-06 早前 DNR（测试期望算术错须停手）互补：看错的是测试还是实现。
+
+### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat (2026-10-06 W3 Task 3)
 - 2026-10-06: 任务书测试块逐字照抄后仍可能红——本次 baseline 断言期望 ["measurable"] 漏了「涌水量」命中槽名模式产生的 reusable。红相判定顺序：先对拍现场既有同 fixture 测试（test_w1_prose_pipeline.py:46 成员断言）确认真实基线，再决定修测试期望还是修实现；禁止为了让测试过而改实现语义。本次实现零改动、仅修断言（bug-378）。
@@ -516,7 +610,13 @@
 
 - [2026-10-07] coal-eia-writer 节稿里的 {{SLOT:key}}/{{TABLE:族}} 是设计契约（SKILL.md「数字永不经过 LLM」，build_output.py 终稿渲染，SL1 门禁只查终稿残留=0）；评审节稿时看到占位符≠泄漏缺陷，别再误判（bug-362）。
 
-### Do-Not-Repeat
+#### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
+## Do-Not-Repeat
 - [2026-10-07] 排查 agent run 报错先查 worker 日志不是 api（arq 任务跑在 worker）；错误时间要换算时区（日志 CST=UTC+8，agent_runs 是 UTC）。
 - [2026-10-07] tool_audit 守卫的 sequence 是「事件流内序号」非稳定事实——每次 resume/checkpoint 重放都重新编号；判断幂等冲突时不能把流序号当持久化事实。
 
@@ -589,7 +689,13 @@
 - TEST_USERNAME/TEST_PASSWORD 缺失 → HTTP 集成测试 skip；服务层直连集成测试（get_service() 方法链 + 前后自清理）是同等覆盖面的替代路径。
 - 导出物化数 ≠ range_ready 数：拆分子条目各拿一半值可能掉到 n≥5 门槛下、父条目 rejected 不占位——断言写上界（≤ measure∧range_ready）与 ≥1。
 
-### Do-Not-Repeat
+#### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
+## Do-Not-Repeat
 - pytest-asyncio 模块级 async fixture 必 ScopeMismatch（_function_scoped_runner 冲突）；async fixture 一律函数级，幂等初始化（pg_manager.initialize()）放进 autouse 函数 fixture。
 - 服务层导出断言勿写 `materialized >= range_ready`（拆分语义使其天然可小于）。
 - 宿主 curl localhost:5050 不通（端口映射差异）——API 自检用容器内 urllib。
@@ -607,7 +713,13 @@
 - api 容器 crash-loop 期间 `docker exec python` 走 pg_manager 初始化会挂起（池/锁问题）且迁移工作可能已落库——验证 DB 状态用 asyncpg 直连：`asyncpg.connect(dsn=os.environ['POSTGRES_URL'].replace('+asyncpg',''))`（POSTGRES_URL 是 SQLAlchemy 风格带 +asyncpg 前缀）。
 - P2 语料元数据形状：corpus_meta.json 31 报告 stage 分布 planning_eia 17/post_eia 2/project_eia_openpit 6/project_eia_underground 5/tracking_eia 1；annotations 人工层 18 份稀疏（year 15+scale 3）；counts 语义 annotated=有任一标注字段、scale_needs_review=27（corpus_meta scale_basis 口径，不随标注消减）。
 
-### Do-Not-Repeat（2026-10-10 P2 对抗评审追加）
+#### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
+## Do-Not-Repeat（2026-10-10 P2 对抗评审追加）
 - BUSINESS_SCHEMA_VERSION 每次递增必须同步两份迁移测试：①test_storage_migration.py 六处 SimpleNamespace fake——main() 每新增一个 pg_manager.upgrade_* 调用点，fake 就缺属性 await 即 AttributeError（v10 起已红两个版本没人跑单测）；②test_schema_migration_version.py 的 `assert BUSINESS_SCHEMA_VERSION == N` 版本钉随递增手改。新迁移函数落库时这两个文件与 storage_migration.py 一并改。
 - P2 修复提交 b7f63ece（对抗评审 7 条全坐实全修）：导入幽灵行过滤/迁移测试 fake/前端 min-precision-tabindex/测试判别断言。评审工作流脚本存 session workflows/scripts/p2-adversarial-review-*.js，resumeFromRunId wf_be922093-a83 可复用。
 
@@ -624,12 +736,24 @@
 - **导出翻转语义与 P2 不同**：P2 corpus_meta_annotations 导出是 `sort_keys=True + 尾换行` 全量重写；P3 standards_index 导出是 `json.dumps(ensure_ascii=False, indent=2)` 无 sort_keys 无尾换行（保原键序 round-trip 字节纪律）——两文件消费者不同，别互相抄。
 - 迁移测试判别力范式（对抗评审坐实后已落地）：新增 upgrade_* 调用点的 fake 用 `_record(calls, "upgrade_vN")` 记录调用并在 legacy 参数化测试断言在场（`upgrade_from` 档位全量进 parametrize），真实建表行为由隔离 schema 真实 PG 用例兜底（仿 `_create_isolated_manager("...")` + `record_schema_version(business, N-1)` → upgrade → 断言表存在 + 版本翻新 + 幂等重跑）。
 
-### Do-Not-Repeat（2026-10-10 P3 对抗评审追加）
+#### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
+## Do-Not-Repeat（2026-10-10 P3 对抗评审追加）
 - 别在测试里钉注册表数据指纹（62 条/7 表/2 行）：合法演进（加标准/加表/加样例行）必误红。期望值从文件 `json.loads` 自算（exp_total/exp_pending/exp_rows），与 needs_verification 的 sum 自洽范式同构。
 - 版本表真名是 `pisuan_schema_migrations`（列 domain/version/applied_at），不是 schema_versions——DB 直查版本用 `SELECT version FROM pisuan_schema_migrations WHERE domain='business'`。
 - api 容器 startup 失败（如 schema 版本落后）后进程死透不再自动重启，迁移修复后必须 `docker restart pisuan-localized-api-1`；.restart 前先看 logs 尾部判因。
 
-### Do-Not-Repeat（2026-10-10 bug-383 追加）
+#### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
+## Do-Not-Repeat（2026-10-10 bug-383 追加）
 - standards[].chapters 是分号分隔字符串（"；"），不是数组——Vue 模板里直接插值渲染，别 .join()。前端消费新 JSON 字段前先看实际类型（一句 python type 统计的事），字段名复数 ≠ 数组。
 
 ### 三页面深度评审实证（2026-10-10，wf_9e47706a）
@@ -657,7 +781,13 @@
 - 运行栈容器 pisuan-localized-api-1 是 runtime 镜像：无 ruff、无 .venv、`python -m ruff` 也没有——格式检查走宿主 `uvx ruff`（backend/ 下跑以吃 pyproject 配置）；单测 `python -m pytest test/unit/... -q` 正常可用
 - 验收黄金断言是 import 的 added=0 + blocklist_skipped=7 与 counts 27/27/38/0；overrides 文件在容器 /app/package/pisuan/agents/skills/buildin/coal-eia-writer/references/overrides/curated_lexicon.json
 
-### Do-Not-Repeat（2026-10-10 方案B 执行追加）
+#### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
+## Do-Not-Repeat（2026-10-10 方案B 执行追加）
 - 验收脚本里的诊断表达式改版后必须重跑取新版输出再引用：renamed_zero_count=[] 曾是旧版脚本残留输出，与地面真值（7 行 n_reports=0 全部成立）矛盾，为它白查一轮——诊断输出与数据操作输出分开看，异常先复算再归因
 - python -c 多行中文脚本在 MSYS bash 下引号脆弱（exit 2 无输出）——一律 Write 落盘 .py 再执行（本会话再次验证）
 
@@ -671,7 +801,13 @@
 - 语境可见性 caveat：audit contexts 每条目只导出 2-3 句，n_values=15~16 的条目（设计除尘效率、underground 除尘效率、planning 抑尘效率）属「可见部分零反例但未逐值回源」——物化前全簇核验前置
 - get_mentions 只回语料扫描提及（子口径 values_json 不在其中，恒 0）；子口径值集要走 repo.list_entries() 的 values_json——容器内直连 repo 曾挂起一次（原因未明），证据已足时不必硬拉
 
-### Do-Not-Repeat（2026-10-10 全量审计追加）
+#### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
+## Do-Not-Repeat（2026-10-10 全量审计追加）
 - 容器内脚本读宿主 Windows 路径必 FileNotFoundError——先 docker cp 送 /tmp 再引用容器路径
 - 对「改名行/子口径」跑 get_mentions 验证值集是空转（机制上恒 0），直接读 values_json
 
@@ -687,7 +823,13 @@
 - eia_data_service 模块头不变量「纯只读、无 DB 依赖」：需查 DB 的编排放 service 层，纯函数留 data_service（宿主可单测的前提）
 - 改导入/扫描语义必须同步跑 test/integration/services 全量，仅跑 unit 会漏 flow 断言红（bug-413 实证）
 
-### Do-Not-Repeat（2026-10-10 P4 设计评审追加）
+#### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
+## Do-Not-Repeat（2026-10-10 P4 设计评审追加）
 - 别在 unique 键表上裸 INSERT：循环操作（改名 A→B→A）必撞键 IntegrityError→500，一律 ON CONFLICT DO UPDATE/NOTHING
 - 验收样例的行状态别凭记忆写（解性总固体超标率是 candidate 非 rejected）——写前查库，评审员连 id 都会核
 - 2026-10-10：前端错误提示契约——backend router 把 ValueError 映射成 HTTPException(400, detail=字符串)，但 web/src/apis/base.js 的 publicErrorMessage 把 400 一律映射为通用「请求参数错误」，extractBusinessErrorDetail 只透传 {code,message} 对象形态 detail（字符串 detail 被有意丢弃）。词表/拆分等对话框里「口径已存在/口径名过短」等后端中文报错到 UI 全变成「请求参数错误」。要透出业务错误信息必须走 {code,message} 结构化 detail 通道。
@@ -741,10 +883,22 @@
 - **前端交付验证必须含原型↔实现可视对比**（lint/单测全绿≠视觉一致）；运行栈凭据受限时，至少用 chrome-devtools 对静态原型截图，并把实现页留待用户对照确认，不能静默跳过。
 - （更正昨日条目）「不再另行出原型」仍成立，但配套含义是「实现=复刻原型」，非「实现=自由发挥」。
 
-### Do-Not-Repeat
+#### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
+## Do-Not-Repeat
 - （bug-424）文本级插接注入偏移忽略行首缩进——`_input_line_span` 返回的行带缩进，注入点 = 缩进宽 + 标记串长，裸用标记长度会把 value 插进键名中间（`{"name"value": 0.65, ": "q"`）。
 
-### Do-Not-Repeat
+#### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
+## Do-Not-Repeat
 - （bug-422）schema 加档后只 grep 方法名确认≠常量已改——四触点逐一 grep：`BUSINESS_SCHEMA_VERSION =` 行值、manager 方法、storage_migration dispatch、upgrade_from 元组；迁移测试必须加「已当前版」档位。
 - （bug-423）Vue 模板插值里写含 `}}` 的字面量（含 JS 字符串）。
 - 宿主直接跑 `pnpm`（不存在）——web 工具链全走 pisuan-localized-web-1 容器。
@@ -761,7 +915,13 @@
 - **暗色验证法：** 该项目暗色 = html 根加 `.dark` 类（base.dark.css 翻转同名 token），evaluate_script 一行 `documentElement.classList.add('dark')` 即可截暗色态；factory-ui.less 仅两处 `:root.dark &` 覆写（btn-pri 字 #0a0a0a、unmapped-row td 底 second-100/边 second-600），覆写目标在 **td** 层非 tr（探针读 tr computed 恒透明，勿误判失效）。
 - **AntD drawer width prop** 落在 `.ant-drawer-content-wrapper` 的 inline style，`.ant-drawer` 本体 style.width 为空——探测宽度选对节点。
 
-### Do-Not-Repeat
+#### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
+## Do-Not-Repeat
 - （bug-429）数据形状假设（数组 vs 对象）放进 try/catch 大包——TypeError 被静默吞掉后页面大面积空白且无任何报错线索；形状解析要么显式炸要么拆出 try 块，勿与业务赋值同 catch。
 - （bug-430）对可能已是全记法的字符串无条件二次包裹——先 startsWith 守卫。
 - （bug-431）对象数组直接 join('、')——得到 [object Object]；先取字段。
@@ -779,7 +939,13 @@
 - **lexicon 条目 decided_by 实况：** 导入预置行 decided_by='import'（非空），UI 来源列「DB · import」直读即可；decided_at 可空（导入行）。
 - **抑制名单无列表端点：** blocklist 只有内部查询（import 跳过 / get_mentions 反查），无 list API——原型 s9 的「抑制名单」卡无数据可填，诚实删除并在 note-bar 保留抑制语义说明。
 
-### Do-Not-Repeat
+#### Key Learnings (2026-10-15 页面测试第二轮)
+- web 输入框是 contenteditable div（.user-input.mention-editor），不是 <textarea>；用 `querySelector('textarea')` 判空必误判。验证消息"已发送"唯一可靠标准：DB messages 表出现该 user 行 + agent_runs 新 running 行；页面文本存在性检查会命中旧会话气泡与输入框自身（假阳性）。
+- chrome-devtools evaluate_script 的合成 click 可能不触发 Vue @click（页面无反应且无报错）；发消息用 take_snapshot 拿 uid 后用原生 click 工具。
+- agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
+- 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
+
+## Do-Not-Repeat
 - 原型屏的表格列按虚构短标识（mono 短 id）设计列宽——套用到真实长文案数据前先扫一遍实况数据的长度分布，别等截图才发现撑爆。
 
 ## 2026-10-13 元数据页 s10 复刻追加
@@ -854,3 +1020,38 @@
 - **Learning**: formulas.json 的 expr 是伪数学（×−·√Σ+中文混排），KaTeX 直喂必炸。成熟模式：`web/src/components/eia-data/expr_latex.js` 纯函数切段（CJK/全角/~→文本段，ASCII→数学段）+ mathToLatex 消解（下划线键名整名不拆、多字母直立、小写→大写边界拆因子、e 计数法→×10^n）；单测 `web/test/unit/exprLatex.test.js` 用公式库全量 expr 夹具跑无损/消解/配平扫描；面板渲染 try/catch 回落 tokenizedExpr。node --test 通道（web/test/unit，相对导入）可测纯 JS 模块。
 - **Learning**: 原型文件 proto-dark 与应用暗色主题方向相反：原型把灰阶「高位→亮」整体重定义（dark 下 --gray-900=#e4e4e7、--gray-100=#1e1e20），所以原型里新 CSS 只用 token 即双主题自适配，任何 .proto-dark 重映射灰阶的覆盖都会反向炸（bug-443）；应用的 :root.dark 才是灰阶反转需钉死永远暗底（bug-442）。两套心智勿混。
 - **Learning**: 写作范式层结构：`references/paradigms/*.md`（4 角色范式，各含范文/句式模式/反模式）+ `_roles.json`（77 节→角色映射）+ `forms_catalog.json`（bank_compile 从 31 份语料统计的句式正样本）。三者均无 API/写通道，故数据工厂无对应页面（原型 s1-s7 也未列）。行文人格错位史见 bug-367（五类病灶词表在 SKILL.md 4.1 + RESIDUE_RE）。
+
+- (2026-10-15) 禁止用"页面文本存在"或 `querySelector('textarea').value` 判断消息已发送/输入框已清空——composer 是 contenteditable mention-editor；必须查 DB messages/agent_runs。
+- (2026-10-15) 禁止用 evaluate_script 合成事件点击发送按钮（可能静默无效）；用快照 uid + 原生 click。
+- [2026-10-15] Task3 范式层：单测虚拟化技能数据目录时，凡服务存在派生根常量（_PARADIGM_DIR 派生自 _SKILL_ROOT），monkeypatch 必须覆盖全部引用点——_export_sync 回报 paths 用 _SKILL_ROOT.relative_to，只虚拟 _PARADIGM_DIR 必炸 ValueError subpath（bug-451；修法=夹具补一行，生产代码勿加防御分支）。
+
+### Key Learnings (2026-10-15 续)
+- ask_user_question 卡片恢复失败时的 API 绕过：GET /api/chat/thread/{id}/state 拿 interrupt.questions，按 HumanApprovalModal.buildAnswer 同构 {question_id: option_value}，POST /api/agent/runs {query:null, agent_slug, thread_id, meta:{request_id}, resume, created_by_run_id:<interrupted run>}。页面 token 在 localStorage user_token。
+- E2E 中断卡片的答案真值来源：tool_calls 表 ask_user_question 的 tool_input.questions（含 question_id/options.value），比页面 DOM 可靠。
+- thread 工作区在 agent sandbox 容器 pisuan-localized-sandbox-<hash> 的 /home/gem/user-data/（workspace/<工作区> + projects/<项目>/uploads 收附件）；api/worker 容器看不到。
+- tool_calls.created_at 也是 naive UTC（+08 容器里 now()-created_at 会虚增 8 小时）；算时长须统一时区或用 age(column)。
+
+### Key Learnings (2026-10-15 Task5 范式层集成测试)
+- 运行栈 pisuan-localized-api-1 容器内无 /app/.env，容器 env 与各 .env 文件均无 TEST_USERNAME/TEST_PASSWORD，也无管理员凭据 → backend/test/integration 的凭据类用例（standard_user/admin_headers 链）恒 skip（原因 "Integration credentials are not configured via TEST_USERNAME / TEST_PASSWORD."），只有 401 门槛用例真实执行。flow 测试预期结果形如 1 passed + N skipped，既非全绿也非失败，勿误判。
+- 子代理模型解析顺序（agent_run_service.resolve_agent_run_model_spec）：请求 model_spec > Agent 自身 config_json.context.model > 系统默认 default_model；Agent 配置优先于线程模型——子代理卡死时先查其 agents 行的 context.model 是否指向不可达端点。
+
+## Key Learnings (append 2026-10-15 Task7 范式页)
+- **Learning**: base.css 没有 --color-warning-bg / --color-border-secondary / --color-bg-layout / 裸 --color-error 这些 token（计划草稿易臆造）。房屋真实等价：warn 底=--color-warning-50、err 文本=--color-error-700（factory-ui .pill-* 惯用法）、弱底=--gray-50、发丝线=面板 scoped 根上定义 --hairline: var(--gray-200)（StandardsPanel/DatasetStatsPanel 惯用法）后引 var(--hairline)。
+- **Learning**: @lucide/vue 无裸 Alert（新版改名 TriangleAlert）；Info/NotebookPen 存在。图标名先 grep web/node_modules/@lucide/vue/dist/lucide-vue.d.ts 再 import。
+- **Learning**: 范式层响应形状：概览项 {kind,asset_id,has_draft,drift,updated_by,file_hash}（顶层 updated_by，无 draft 子对象无 updated_at）；详情 draft{content,base_hash,updated_by,updated_at}+file_text；preview {items:[{kind,asset_id,drift,ok,errors,diff}],all_ok}；导出 {results,paths,exported_at}。
+- **Learning**: chrome-devtools-mcp 的 profile（~/.cache/chrome-devtools-mcp/chrome-profile）被孤儿 chrome 占用时 MCP 全部工具报 "browser is already running"；勿杀进程（可能压着先前任务的 tab/登录态/在跑的兄弟 agent）。替代冒烟：curl http://localhost:5173/src/...vue 强制 vite 按需编译（200=可编译，500=坏），加 API 代理 401（非 404）验端点在位。
+
+## Key Learnings + DNR（2026-10-15 bug-4015 定案批追加）
+
+**Key Learnings**
+- 审批模态真实 DOM：HumanApprovalModal 根节点是自定义 `div.approval-modal`（transition slide-up + v-if），内联在 AgentChatComponent 的 `.message-input-stage` 里；DOM 中从不存在 `.ant-modal`/`.ant-modal-wrap`。模态可见性判定：`querySelector('.approval-modal')` + getComputedStyle，或直接 a11y 快照找 role=dialog。
+- 前端中断恢复四路径全部实测可用（2026-10-15 草稿线程 MutationObserver 插桩 + a11y 快照验证）：①整页重载 ~1.5s 恢复；②复杂运行史（两个 interrupted run：前卡已答+后卡待答，与生产线程失败时刻同构）重载仍恢复；③SPA 路由重入恢复；④刷新状态不破坏模态。流式到达即弹亦正常。
+- 无模态应急作答通道（与 HumanApprovalModal.buildAnswer 同构）：POST /api/agent/runs `{query:null, agent_slug, thread_id, meta:{request_id}, resume:{question_id:value}, created_by_run_id:<interrupted run id>}`；模态内提交同走此链（run f2551708 实证）。
+- threads 表 UUID 在 `conversations.thread_id`（conversation 整数 id 关联 messages.conversation_id）；agent_runs 线程列是 `conversation_thread_id`；tool_calls 无 run_id，需经 messages 中转。
+
+**Do-Not-Repeat**
+- （2026-10-15）禁止用猜测的 UI 库通用选择器（.ant-modal 等）判定自研组件"未渲染"——bug-4015 整场误报源于此：探针恒假阴性，重载/路由重入/刷新状态被误判为"均未恢复模态"，还连带误判"流式丢中断"。验证浮层存在性必须用 a11y 快照或组件真实根选择器。判定"页面没做某事"之前，先证明探针本身能看见"页面做了某事"的正面样本。
+- （2026-10-15）后台监控（docker psql 轮询）不过滤 thread 会串台：tool_calls 按 id 全局递增，其他线程的新卡会被误认为本线程事件。监控脚本必须 join messages.conversation_id 过滤。
+
+**Decision Log**
+- （2026-10-15）bug-4015/4014 均定案为测试事故（错误选择器 / 误点附件移除），不改产品代码——遵循"行为正确勿乱修"；bug-4016（agent 模型配置漂移）才是真缺陷且已修复验证。

@@ -5281,3 +5281,326 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 20:18 | Edited web/src/views/DomainFactoryView.vue | 6→2 lines | ~16 |
 | 20:18 | 顶部副 CTA 查看管线→环评域入口（直跳 eia-data），清理 scrollToLine/lineRef/ArrowDown 孤儿 | web/src/views/DomainFactoryView.vue | lint 绿、vite 模块已检出新文案 | ~3k |
 | 20:19 | Session end: 5 writes across 1 files (DomainFactoryView.vue) | 1 reads | ~236 tok |
+| 20:25 | 提交：feat dfc67a65（Landing+通用域 8 文件）+ docs 911f861b（changelog+wolf 四件）；eia 旧改动未卷入 | . | 两笔落库 | ~2k |
+| 20:25 | Session end: 5 writes across 1 files (DomainFactoryView.vue) | 3 reads | ~236 tok |
+| 20:27 | Edited web/src/views/DomainFactoryView.vue | 26→25 lines | ~279 |
+| 20:27 | Edited web/src/views/DomainFactoryView.vue | reduced (-10 lines) | ~15 |
+| 20:27 | Edited web/src/views/DomainFactoryView.vue | expanded (+30 lines) | ~194 |
+| 20:28 | Edited web/src/views/DomainFactoryView.vue | 11→9 lines | ~42 |
+| 20:28 | Edited web/src/views/DomainFactoryView.vue | reduced (-8 lines) | ~16 |
+| 20:29 | 工位卡点击收敛：仅「直达」button 可点，整卡/空白区不可跳转；修一处自伤编辑（重复 s-go/误删注释） | web/src/views/DomainFactoryView.vue | lint 绿、四环验证过、未提交 | ~5k |
+| 20:29 | Session end: 10 writes across 1 files (DomainFactoryView.vue) | 4 reads | ~820 tok |
+| 20:30 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | 7→9 lines | ~115 |
+| 20:30 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | modified _validate_choice_questions() | ~407 |
+| 20:30 | Edited backend/package/yuxi/agents/toolkits/buildin/tools.py | 6→8 lines | ~66 |
+| 20:31 | Created backend/test/unit/toolkits/test_ask_user_question_card_guard.py | — | ~570 |
+| 20:34 | Session end: 14 writes across 3 files (DomainFactoryView.vue, tools.py, test_ask_user_question_card_guard.py) | 4 reads | ~1978 tok |
+| 21:15 | bug-4011 修复：ask_user_question 平台侧拒收「填写项做成选择题/示例占位选项」卡片（tools.py 校验+docstring 规范+SKILL.md 反例），单测 4 过，sync-dev 落栈，worker 实测拦截；勘误 bug-4012（应答为真人提交，created_at≠中断时点） | tools.py, SKILL.md, test_ask_user_question_card_guard.py, buglog | 已修复+已验证 | ~30k |
+| 20:37 | Created docs/superpowers/plans/2026-10-14-paradigm-layer-edit.md | — | ~21828 |
+| 20:37 | Session end: 15 writes across 4 files (DomainFactoryView.vue, tools.py, test_ask_user_question_card_guard.py, 2026-10-14-paradigm-layer-edit.md) | 4 reads | ~25366 tok |
+
+## Session: 2026-10-14 20:39
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:40 | 写作范式层实现计划（9 任务 TDD：v17 迁移/扫描器/服务/路由/集成/前端两页/收尾）落盘并自审 |
+
+## Session: 2026-10-15 08:15
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-15 08:17
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-15 08:27
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-15 08:28
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:28 | Edited backend/package/yuxi/storage/postgres/models_domain_factory.py | modified to_dict() | ~501 |
+| 08:28 | Edited backend/package/yuxi/storage/postgres/manager.py | 2→3 lines | ~20 |
+| 08:28 | Edited backend/package/yuxi/storage/postgres/manager.py | 2→2 lines | ~24 |
+| 08:29 | Edited backend/package/yuxi/storage/postgres/manager.py | modified upgrade_business_v16_to_v17() | ~477 |
+| 08:29 | Edited backend/package/yuxi/storage_migration.py | inline fix | ~32 |
+| 08:29 | Edited backend/package/yuxi/storage_migration.py | 3→6 lines | ~123 |
+| 08:32 | Session end: 6 writes across 3 files (models_domain_factory.py, manager.py, storage_migration.py) | 3 reads | ~1177 tok |
+| 08:45 | v17 迁移四触点落地：eia_paradigm_drafts 模型+manager 迁移法+派发+upgrade_from，双跑幂等，DB business=17；单测假对象 13 红记 bug-446 | models_domain_factory.py, manager.py, storage_migration.py | commit 92a2abfe | ~9k |
+| 08:49 | Created ../../Users/Lenovo/AppData/Local/Temp/patch_bug446.py | — | ~566 |
+| 10:05 | 裁决：bug-446/「13 红」/a3f17b92 均系 task1-impl 虚报，已撤销；测试实为 24/24（派发表驱动免补桩）；Task 1b 取消 | .wolf/buglog.json, .wolf/cerebrum.md | buglog -1 条 | ~600 |
+| 09:05 | bug-446 修复：迁移单测六处 v17 桩+parametrize[17]+calls 断言，24 passed；integration 侧 test_schema_migration_version.py:285 存量断言 ==13 为 v13 时代陈货（16 时已红，非本次回归） | test_storage_migration.py | commit c064deed | ~6k |
+| 08:54 | Session end: 7 writes across 4 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py) | 4 reads | ~1743 tok |
+| 08:54 | Session end: 7 writes across 4 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py) | 4 reads | ~1743 tok |
+| 08:55 | Spec review of 92a2abfe (eia_paradigm_drafts v17): 3 files verified, model/migration/dispatch/DB constraint all match spec | models_domain_factory.py, manager.py, storage_migration.py | spec compliant | ~6k |
+| 10:20 | 终裁：c064deed 为真（6 桩+档位 [17]，24 passed，工作树/容器双证）；bug-446 为真 bug 已修，恢复入 buglog；cerebrum ⑤与 DNR 改写为准确版 | .wolf/buglog.json, .wolf/cerebrum.md | 记录纠偏 | ~700 |
+| 09:01 | Session end: 7 writes across 4 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py) | 4 reads | ~1743 tok |
+| 09:02 | Session end: 7 writes across 4 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py) | 5 reads | ~1743 tok |
+| 10:35 | 归因校准：假报告（3 份 system_warning 通知）与真报告（2 份 teammate-message）格式强相关，DNR 改为格式参考信号+git 实测纪律，不归罪 task1-impl | .wolf/cerebrum.md | 记录纠偏 | ~400 |
+| 09:04 | Session end: 7 writes across 4 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py) | 5 reads | ~1743 tok |
+| 09:04 | Session end: 7 writes across 4 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py) | 5 reads | ~1743 tok |
+| 09:04 | Created ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/team-channel-report-discipline.md | — | ~195 |
+| 09:20 | 归因申诉采纳：controller 复核路由确认两份报告验真、三份伪造件为 system_warning 信道噪声，DNR 已校准；纪律入个人记忆 | .wolf/cerebrum.md (controller), memory (personal) | 治理收口 | ~1k |
+| 09:05 | Session end: 8 writes across 5 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py, team-channel-report-discipline.md) | 5 reads | ~1951 tok |
+| 09:05 | Session end: 8 writes across 5 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py, team-channel-report-discipline.md) | 5 reads | ~1951 tok |
+| 09:10 | Session end: 8 writes across 5 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py, team-channel-report-discipline.md) | 5 reads | ~1951 tok |
+| 09:10 | Session end: 8 writes across 5 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py, team-channel-report-discipline.md) | 5 reads | ~1951 tok |
+| 09:11 | Created backend/test/unit/test_eia_paradigm_scan.py | — | ~553 |
+| 09:13 | Created backend/package/yuxi/services/eia_paradigm_scan.py | — | ~491 |
+| 09:15 | Edited backend/test/unit/test_eia_paradigm_scan.py | 2→3 lines | ~62 |
+| 09:16 | Edited backend/test/unit/test_eia_paradigm_scan.py | modified _blacklists() | ~55 |
+| 09:20 | T2 专名扫描器 TDD：RED(ImportError 模块缺失)→GREEN(4 passed)；夹具 generic_terms「/」拆分口径修正+E501 换行；ruff check/format 双清 | backend/package/yuxi/services/eia_paradigm_scan.py + backend/test/unit/test_eia_paradigm_scan.py | commit f85510ab | ~30k |
+| 09:20 | Session end: 12 writes across 7 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py, team-channel-report-discipline.md) | 5 reads | ~3112 tok |
+| 09:20 | Session end: 12 writes across 7 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py, team-channel-report-discipline.md) | 5 reads | ~3112 tok |
+| 09:25 | Session end: 12 writes across 7 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py, team-channel-report-discipline.md) | 7 reads | ~3603 tok |
+| 09:26 | Session end: 12 writes across 7 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py, team-channel-report-discipline.md) | 7 reads | ~3603 tok |
+| 09:27 | Edited backend/package/yuxi/services/eia_paradigm_scan.py | modified _build_index() | ~217 |
+| 09:27 | Edited backend/test/unit/test_eia_paradigm_scan.py | modified test_high_frequency_and_generic_terms_exempt() | ~331 |
+| 09:30 | T2 修复 bug-448：通用词频次豁免改按不同文件计数（伊敏河等 4 词曾被误豁免）；夹具同步+occ3 差分断言；REPL 实证 4 词入 PROPER_NOUNS(886)/出 GENERIC_TERMS(58) | eia_paradigm_scan.py + test | commit c4100cbf | ~18k |
+| 09:30 | Session end: 14 writes across 7 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py, team-channel-report-discipline.md) | 7 reads | ~4151 tok |
+| 09:31 | Session end: 14 writes across 7 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py, team-channel-report-discipline.md) | 7 reads | ~4151 tok |
+| 09:32 | Session end: 14 writes across 7 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py, team-channel-report-discipline.md) | 7 reads | ~4151 tok |
+| 09:32 | Session end: 14 writes across 7 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py, team-channel-report-discipline.md) | 7 reads | ~4151 tok |
+| 09:43 | Session end: 14 writes across 7 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py, team-channel-report-discipline.md) | 8 reads | ~4877 tok |
+| 09:44 | Session end: 14 writes across 7 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py, team-channel-report-discipline.md) | 8 reads | ~4877 tok |
+| 09:44 | Edited backend/test/unit/test_eia_paradigm_scan.py | modified test_substring_of_generic_exempt() | ~143 |
+| 09:44 | Edited backend/package/yuxi/services/eia_paradigm_scan.py | modified scan_text() | ~55 |
+| 09:50 | T2b 规则③差分锚补强（bug-449）：夹具改取仅规则③豁免词（实测 119 个），变异验证红→复绿；scan_text 补缓存注记 | test_eia_paradigm_scan.py + eia_paradigm_scan.py | commit 6bfea032 | ~15k |
+| 09:49 | Session end: 16 writes across 7 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py, team-channel-report-discipline.md) | 8 reads | ~5075 tok |
+| 09:49 | Session end: 16 writes across 7 files (models_domain_factory.py, manager.py, storage_migration.py, patch_bug446.py, team-channel-report-discipline.md) | 8 reads | ~5075 tok |
+
+## Session: 2026-10-15 09:54
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-15 09:59
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:59 | Edited docs/superpowers/plans/2026-10-14-paradigm-layer-edit.md | "- 1. 先" → "-1. 先" | ~24 |
+| 10:00 | Edited docs/superpowers/plans/2026-10-14-paradigm-layer-edit.md | 4→7 lines | ~104 |
+| 10:00 | Created backend/test/unit/test_eia_paradigm_service.py | — | ~2617 |
+| 10:05 | 派发 task3-impl（opus，范式仓库+服务层 TDD）；计划文档两处测试文本勘误回写（bug-450） | docs/superpowers/plans/2026-10-14-paradigm-layer-edit.md | 派发成功，等待 RED/GREEN 报告 | ~12000 |
+| 10:01 | Session end: 3 writes across 2 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py) | 0 reads | ~2754 tok |
+| 10:01 | Session end: 3 writes across 2 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py) | 0 reads | ~2754 tok |
+| 10:01 | Created backend/package/yuxi/repositories/eia_paradigm_repository.py | — | ~683 |
+| 10:02 | Created backend/package/yuxi/services/eia_paradigm_service.py | — | ~3838 |
+| 10:05 | Edited backend/test/unit/test_eia_paradigm_service.py | modified test_export_md_wholesale_and_forms_two_keys_only() | ~85 |
+| 10:07 | Edited backend/test/unit/test_eia_paradigm_service.py | modified raises() | ~55 |
+| 10:07 | Edited backend/test/unit/test_eia_paradigm_service.py | 4→3 lines | ~62 |
+| 10:07 | Edited backend/test/unit/test_eia_paradigm_service.py | 2→3 lines | ~66 |
+| 10:07 | Edited backend/test/unit/test_eia_paradigm_service.py | 2→3 lines | ~58 |
+| 10:07 | Edited backend/test/unit/test_eia_paradigm_service.py | 3→5 lines | ~77 |
+| 10:10 | 二轮页面测试：发现CSV消息未真正发出（合成click无效+textarea误判输入框），原生click重发成功 msg7493/run b7f5c9db | AgentChatComponent.vue(只读), .wolf/cerebrum.md | 已修正并持续监控落盘 | ~15k |
+| 10:20 | Task3 范式层三文件落地：repo+service+10 单测（RED ImportError→GREEN 10 passed+扫描回归 4 passed；夹具补 _SKILL_ROOT 虚拟化修 bug-451；ruff 清零） | eia_paradigm_repository.py, eia_paradigm_service.py, test_eia_paradigm_service.py | commit 440563b5 | ~55k |
+| 10:20 | 发现消息7493仅带31个附件：01_井田清单.csv 被发送前的 DELETE /attachments/96dbdddf 从暂存移除；composer 计数标签与实际不符（候选UI缺陷）。run b7f5c9db 清点31张CSV中 | .wolf/memory.md | 等agent反应，备好 saved_artifacts 副本补传 | ~8k |
+| 10:16 | Session end: 11 writes across 4 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py) | 1 reads | ~7678 tok |
+| 10:16 | Session end: 11 writes across 4 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py) | 3 reads | ~12199 tok |
+| 10:21 | Task3 spec review 440563b5 (paradigm repo+service+tests): 3 files/642 ins verified line-by-line vs spec, threadpool purity 5 sites, validate-all-then-write+reversed rollback, splice byte discipline, 10 tests unweakened, container 14 passed, ruff clean | eia_paradigm_{repository,service}.py, test_eia_paradigm_service.py | COMPLIANT | ~30k |
+| 10:40 | Task3 规格评审通过（440563b5 全项独立复核+14 passed+ruff 双清）；派 task3-quality-review（opus） | 440563b5 | 进入质量评审阶段 | ~9000 |
+| 10:22 | Session end: 11 writes across 4 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py) | 5 reads | ~14883 tok |
+| 10:22 | Session end: 11 writes across 4 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py) | 6 reads | ~14883 tok |
+| 11:05 | Task3 质量评审 Yes（5 Minor）；派回 task3-impl 一轮收尾修复（删包装/单次取数/补2读测试/断言增强/注解） | 440563b5 | 修复中，完成后 delta 复审 | ~7000 |
+| 10:29 | Session end: 11 writes across 4 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py) | 6 reads | ~14883 tok |
+| 10:29 | Session end: 11 writes across 4 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py) | 6 reads | ~14883 tok |
+| 10:32 | Edited backend/package/yuxi/services/eia_paradigm_service.py | added 1 import(s) | ~24 |
+| 10:32 | Edited backend/package/yuxi/services/eia_paradigm_service.py | modified _md_file() | ~38 |
+| 10:32 | Edited backend/package/yuxi/services/eia_paradigm_service.py | modified _validate_md() | ~12 |
+| 10:32 | Edited backend/package/yuxi/services/eia_paradigm_service.py | inline fix | ~14 |
+| 10:32 | Edited backend/package/yuxi/services/eia_paradigm_service.py | _preview_sync() → _preview_from_rows() | ~73 |
+| 10:32 | Edited backend/package/yuxi/services/eia_paradigm_service.py | preview_export() → run_in_threadpool() | ~107 |
+| 10:32 | Edited backend/test/unit/test_eia_paradigm_service.py | added 1 import(s) | ~51 |
+| 10:32 | Edited backend/test/unit/test_eia_paradigm_service.py | 6→6 lines | ~69 |
+| 10:32 | Edited backend/test/unit/test_eia_paradigm_service.py | 15→17 lines | ~304 |
+| 10:32 | Edited backend/test/unit/test_eia_paradigm_service.py | inline fix | ~9 |
+| 10:32 | Edited backend/test/unit/test_eia_paradigm_service.py | modified _write_roles() | ~155 |
+| 10:32 | Edited backend/test/unit/test_eia_paradigm_service.py | modified test_overview_sync_counts_roles_and_flags_drafts() | ~682 |
+| 10:45 | Task3 质量收尾五项：删 _scan_generic_terms/单次取数去 TOCTOU/读路径 2 用例/两键断言改 numeric_citation 非空键/Path 注记 | eia_paradigm_service.py, test_eia_paradigm_service.py | faee3670，16 passed，ruff 清零 | ~30k |
+| 11:30 | Task3 修复轮落地（faee3670，2 文件 +74/-17，16 passed）；git 核验过，delta 复审已派 task3-quality-review | faee3670 | 待 delta 结论 | ~6000 |
+| 10:37 | Session end: 23 writes across 4 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py) | 6 reads | ~16421 tok |
+| 10:37 | Session end: 23 writes across 4 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py) | 6 reads | ~16421 tok |
+| 11:45 | Task3 双审收口（delta Approved，440563b5+faee3670）；派 task4-impl（路由 6 端点） | faee3670 | Task4 实现中 | ~8000 |
+| 10:42 | Session end: 23 writes across 4 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py) | 6 reads | ~16421 tok |
+| 10:42 | Session end: 23 writes across 4 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py) | 6 reads | ~16421 tok |
+| 10:45 | Edited backend/package/yuxi/services/eia_paradigm_service.py | modified get_eia_paradigm_service() | ~154 |
+| 10:45 | Edited backend/server/routers/domain_factory_router.py | added 1 import(s) | ~60 |
+| 10:45 | Edited backend/server/routers/domain_factory_router.py | modified list_eia_paradigms() | ~1256 |
+| 10:48 | 范式层 Task4：service 加 get_eia_paradigm_service 单例 getter + router 6 端点块（admin 导出对齐 formulas 房规），容器验证 6 路由注册成功 | eia_paradigm_service.py +10 / domain_factory_router.py +92 | d3ddb3b0 提交，ruff 零新增 | ~28k |
+| 12:10 | Task4 实现落地（d3ddb3b0，2 文件 +102 纯插入，6 路由 5 user+1 admin）；git 核验过，规格评审已派 | d3ddb3b0 | 评审中 | ~6000 |
+| 10:49 | Session end: 26 writes across 5 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 7 reads | ~17889 tok |
+| 10:50 | Session end: 26 writes across 5 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 7 reads | ~17889 tok |
+| 11:05 | 卡片4936(7条冻结异常)三路径均不恢复模态=前端缺陷bug-4015；workaround: /state取questions按buildAnswer同构POST /api/agent/runs恢复(run 85a2886e)；bug-4014=01_井田清单暂存被静默移除+计数32vs31 | .wolf/buglog.json | 已绕过,run续跑中 | ~9k |
+| 11:10 | GATE1过：7冻结异常全部freeze_only落盘；进入节级派发（第1章总则01节 subagent b1daa823）。二轮页面测试主链路全通：开题卡→表单卡→32CSV→缺族检出→补传→体检→冻结→撰写 | .wolf/memory.md | 等撰写与GATE2 | ~5k |
+| 10:51 | task4-spec-review: d3ddb3b0 范式层6端点合规审查通过（2文件+102/-0，auth矩阵/ruff/docker 6路由全过） | backend/server/routers/domain_factory_router.py, backend/package/yuxi/services/eia_paradigm_service.py | spec compliant | ~8k |
+| 11:15 | API绕过方法+附件位置(sandbox容器/home/gem/user-data)入cerebrum；二轮测试发现盘点：5通过项+2缺陷(4014/4015)+2观察项 | .wolf/cerebrum.md | 监控bj12lbyej在岗 | ~4k |
+| 12:25 | Task4 规格评审通过（d3ddb3b0 零偏差）；质量评审已派（含 KeyError str(e) 引号伪影专项裁量） | d3ddb3b0 | 质量评审中 | ~5000 |
+| 10:53 | Session end: 26 writes across 5 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 7 reads | ~17889 tok |
+| 10:53 | Session end: 26 writes across 5 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 7 reads | ~17889 tok |
+| 10:54 | Session end: 26 writes across 5 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 7 reads | ~17948 tok |
+| task4-quality | 复审 d3ddb3b0 范式层 6 端点：KeyError str(e) 双引号为全屋模式（router 16 处先行），判定一致性备注非阻塞；薄层/鉴权/路由序均合规 | domain_factory_router.py, eia_paradigm_service.py | 结论：可合并 | ~9k |
+| 12:40 | Task4 双审收口（质量 Yes，2 Minor 记为横切候选）；cerebrum 记 2 条决策；读 Task5 计划全文 | d3ddb3b0 | Task5 待派 | ~5000 |
+| 10:58 | Session end: 26 writes across 5 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 7 reads | ~17948 tok |
+| 10:58 | Session end: 26 writes across 5 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 8 reads | ~17948 tok |
+| 11:02 | Created backend/test/integration/api/test_eia_paradigm_flow.py | — | ~826 |
+| 11:10 | Task 5: 范式层 API 集成测试（401 恒跑+4 凭据用例按 house 机制 skip；错误路径未实测因全栈无 TEST 凭据） | backend/test/integration/api/test_eia_paradigm_flow.py | 1 passed 4 skipped 0 failed; ruff clean; commit 4e61cfe9 | ~35k |
+| 11:40 | 二轮页面测试收尾：主链路全通至GATE1+冻结+WAVE1入口；阻塞=eia-section-writer钉死gemma死端点(bug-4016,运行库09-30配置漂移)；前端缺陷4014附件丢失/4015中断模态不恢复；修复建议已交用户，未动共享配置 | .wolf/buglog.json,.wolf/cerebrum.md | 测试报告已交付 | ~20k |
+| 11:07 | Session end: 27 writes across 6 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 10 reads | ~38227 tok |
+| 13:00 | Task5 落地（4e61cfe9，1 passed+4 credential-skip+0 failed，无凭据系环境实况）；controller 复核 env 键名证实无凭据；规格评审已派 | 4e61cfe9 | 评审中 | ~7000 |
+| 11:09 | Session end: 27 writes across 6 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 10 reads | ~38227 tok |
+| 11:09 | Session end: 27 writes across 6 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 10 reads | ~38227 tok |
+| 13:15 | Task5 规格评审通过（4e61cfe9 全项独立复核）；质量评审已派 | 4e61cfe9 | 质量评审中 | ~4000 |
+| 11:13 | Session end: 27 writes across 6 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 11 reads | ~39053 tok |
+| 11:13 | Task5 spec review 4e61cfe9: 1 file/69 ins 合规，pytest 1p/4s/0f 复跑通过，ruff clean | backend/test/integration/api/test_eia_paradigm_flow.py | 报告已发 team-lead | ~8k |
+| 11:14 | Session end: 27 writes across 6 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 11 reads | ~39053 tok |
+| 13:30 | Task5 双审收口（质量 Yes，2 Minor 可选后续）；派 task6-impl（前端骨架 3 文件，View 后置 Task7/8） | 4e61cfe9 | Task6 实现中 | ~6000 |
+| 11:19 | Session end: 27 writes across 6 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 12 reads | ~39053 tok |
+| 11:19 | Session end: 27 writes across 6 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 12 reads | ~39053 tok |
+| 11:21 | Created web/src/apis/eia_paradigm_api.js | — | ~329 |
+| 11:22 | Edited web/src/router/index.js | expanded (+12 lines) | ~200 |
+| 11:22 | Edited web/src/components/eia-data/EiaDataLayout.vue | 2→4 lines | ~16 |
+| 11:22 | Edited web/src/components/eia-data/EiaDataLayout.vue | CSS: items | ~109 |
+| 11:25 | Task6 范式层前端骨架：api/2路由/菜单分组 | web/src/apis/eia_paradigm_api.js, router/index.js, EiaDataLayout.vue | commit f660398b, LINT_OK | ~2k |
+| 13:50 | Task6 落地（f660398b，3 文件 +51，apiPut/icon 源两处已裁决适配）；git 核验过，规格评审已派 | f660398b | 评审中 | ~5000 |
+| 11:27 | Session end: 31 writes across 9 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 12 reads | ~39716 tok |
+| 11:27 | Session end: 31 writes across 9 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 12 reads | ~39716 tok |
+| 11:29 | Created web/src/views/EiaParadigmsView.vue | — | ~174 |
+| 11:29 | Created web/src/views/EiaFormsView.vue | — | ~163 |
+| 11:33 | task6-spec-review: f660398b 前端骨架核验通过（3文件/6方法/路由/图标全符），唯提交内容未过 prettier（api getAsset 行、layout forms 项），容器内 prettier --write 造成拷贝漂移 | web/src/apis/eia_paradigm_api.js, web/src/router/index.js, web/src/components/eia-data/EiaDataLayout.vue | 已报 team-lead，勿直接修 | ~9k |
+| 14:00 | Task6 规格评审抓到 prettier 容器/提交漂移（bug-452）；派回 task6-impl 宿主侧格式化+amend | f660398b | 修复中 | ~5000 |
+| 11:34 | Session end: 33 writes across 11 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 12 reads | ~40078 tok |
+| 11:34 | Session end: 33 writes across 11 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 12 reads | ~40078 tok |
+| 11:36 | Task6 修复 prettier 漂移：容器格式未回写 host，host 侧重格式化 | eia_paradigm_api.js, EiaDataLayout.vue | amend 15022d6e8, prettier+eslint OK | ~1k |
+| 14:20 | Task6 修复落地（amend 15022d6e8，纯折行 +7-2）；宿主 prettier 复跑全清；delta 复审已派 | 15022d6e8 | 待 delta 结论 | ~4000 |
+| 11:37 | Session end: 33 writes across 11 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 12 reads | ~40078 tok |
+| 11:37 | Session end: 33 writes across 11 files (2026-10-14-paradigm-layer-edit.md, test_eia_paradigm_service.py, eia_paradigm_repository.py, eia_paradigm_service.py, domain_factory_router.py) | 12 reads | ~40078 tok |
+| 11:39 | task6-spec-review delta: 修正提交 15022d6e8 复核通过（+7/-2 纯换行、amend 完整、host+容器 prettier/eslint 双绿、容器已同步），Delta approved | web/src/apis/eia_paradigm_api.js, web/src/components/eia-data/EiaDataLayout.vue | 已报 team-lead | ~5k |
+
+## Session: 2026-10-15 11:40
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:35 | Task6 delta Approved（15022d6e8 为记录提交）；质量评审已派 | 15022d6e8 | 质量评审中 | ~3000 |
+| 11:43 | task6-quality-review: 15022d6e8 前端骨架质量复审（api/路由/菜单 vs 8个同级api），2 Minor（enc别名/loadOverview命名）+前向兼容note，结论可合入 | web/src/apis/eia_paradigm_api.js | 已发送 team-lead | ~6k |
+| 14:55 | Task6 双审收口（质量 Yes；loadOverview 保留系计划规定名，enc 保留）；派 task7-impl（opus，ParadigmsPanel+ExportModal+View 三文件） | 15022d6e8 | Task7 实现中 | ~9000 |
+| 11:53 | Created web/src/components/eia-data/ParadigmExportModal.vue | — | ~900 |
+| 11:54 | Created web/src/components/eia-data/ParadigmsPanel.vue | — | ~2479 |
+| 11:54 | Created web/src/views/EiaParadigmsView.vue | — | ~38 |
+| 12:10 | Task7 范式页三文件落盘+验证（prettier/eslint/vite 冒烟全绿）| web/src/components/eia-data/ParadigmsPanel.vue, ParadigmExportModal.vue, web/src/views/EiaParadigmsView.vue | commit 3b707a8f；浏览器视觉验证被孤儿 chrome 锁阻断 |
+| 12:03 | bug-4015 定案：审批模态恢复四路径插桩实测全部正常，原判系 .ant-modal 假阴性（模态实为 .approval-modal）；草稿线程 06ae7ef3 两卡经模态正常作答（5235/5340，resume 链 f2551708 实证）；buglog 4015 改判+4018 新增；cerebrum 增补模态 DOM/恢复路径/DNR 选择器纪律 | .wolf/buglog.json, .wolf/cerebrum.md | 误报结案，无代码改动 | ~35k |
+| 15:20 | Task7 落地（3b707a8f，3 文件 +461；TriangleAlert/house token/draftMeta bug-4018 修复均核实）；浏览器 QA 因 chrome profile 被孤儿实例占用搁置；规格评审已派 | 3b707a8f | 评审中 | ~7000 |
+| 12:04 | Session end: 3 writes across 3 files (ParadigmExportModal.vue, ParadigmsPanel.vue, EiaParadigmsView.vue) | 11 reads | ~11280 tok |
+| 12:05 | Session end: 3 writes across 3 files (ParadigmExportModal.vue, ParadigmsPanel.vue, EiaParadigmsView.vue) | 11 reads | ~11280 tok |
+| 12:06 | Session end: 3 writes across 3 files (ParadigmExportModal.vue, ParadigmsPanel.vue, EiaParadigmsView.vue) | 11 reads | ~11280 tok |
+| 12:08 | task7-spec-review: commit 3b707a8f independent recheck (3 files +461, bug-4018/CSS tokens/lucide/class coverage/gates all pass) | ParadigmsPanel.vue, ParadigmExportModal.vue, EiaParadigmsView.vue | spec compliant | ~30k |
+| 15:40 | Task7 规格评审通过（3b707a8f 全项独立验证）；质量评审已派（含丢弃草稿确认护栏裁量） | 3b707a8f | 质量评审中 | ~4000 |
+| 12:09 | Session end: 3 writes across 3 files (ParadigmExportModal.vue, ParadigmsPanel.vue, EiaParadigmsView.vue) | 14 reads | ~14697 tok |
+| 12:09 | Session end: 3 writes across 3 files (ParadigmExportModal.vue, ParadigmsPanel.vue, EiaParadigmsView.vue) | 14 reads | ~14697 tok |
+| 16:00 | Task7 质量评审 Yes+1 Important（角色切换脏丢失/取数竞态——唯一数据丢失向量）；派修复轮（序token+Modal.confirm 护栏+4 minors） | 3b707a8f | 修复中 | ~5000 |
+| 12:14 | Session end: 3 writes across 3 files (ParadigmExportModal.vue, ParadigmsPanel.vue, EiaParadigmsView.vue) | 16 reads | ~14697 tok |
+| 12:15 | Session end: 3 writes across 3 files (ParadigmExportModal.vue, ParadigmsPanel.vue, EiaParadigmsView.vue) | 16 reads | ~14697 tok |
+| 12:15 | Edited web/src/components/eia-data/ParadigmsPanel.vue | 2→5 lines | ~53 |
+| 12:15 | Edited web/src/components/eia-data/ParadigmsPanel.vue | inline fix | ~24 |
+| 12:15 | Edited web/src/components/eia-data/ParadigmsPanel.vue | inline fix | ~26 |
+| 12:15 | Edited web/src/components/eia-data/ParadigmsPanel.vue | 4→5 lines | ~58 |
+| 12:15 | Edited web/src/components/eia-data/ParadigmsPanel.vue | inline fix | ~13 |
+| 12:15 | Edited web/src/components/eia-data/ParadigmsPanel.vue | added error handling | ~233 |
+| 12:15 | Edited web/src/components/eia-data/ParadigmsPanel.vue | inline fix | ~10 |
+| 12:15 | Edited web/src/components/eia-data/ParadigmsPanel.vue | modified catch() | ~99 |
+| 12:40 | Task7 修复轮：角色切换脏确认+loadSeq 竞态令牌+空态/计数细节 | web/src/components/eia-data/ParadigmsPanel.vue | commit 82d2e397，prettier/eslint/vite 冒烟全绿 |
+| 16:20 | Task7 修复落地（82d2e397，1 文件 +58/-18，六项全落地）；git 核验过，delta 复审已派 | 82d2e397 | 待 delta 结论 | ~4000 |
+| 12:19 | Session end: 11 writes across 3 files (ParadigmExportModal.vue, ParadigmsPanel.vue, EiaParadigmsView.vue) | 16 reads | ~15248 tok |
+| 12:19 | Session end: 11 writes across 3 files (ParadigmExportModal.vue, ParadigmsPanel.vue, EiaParadigmsView.vue) | 16 reads | ~15248 tok |
+| 16:45 | Task7 双审收口（delta Approved，3b707a8f+82d2e397）；派 task8-impl（opus，FormsPanel+EiaFormsView，内嵌 Task7 全部教训+补删行） | 82d2e397 | Task8 实现中 | ~8000 |
+| 12:24 | Session end: 11 writes across 3 files (ParadigmExportModal.vue, ParadigmsPanel.vue, EiaParadigmsView.vue) | 16 reads | ~15574 tok |
+| 12:24 | Session end: 11 writes across 3 files (ParadigmExportModal.vue, ParadigmsPanel.vue, EiaParadigmsView.vue) | 16 reads | ~15574 tok |
+| 12:24 | Session end: 11 writes across 3 files (ParadigmExportModal.vue, ParadigmsPanel.vue, EiaParadigmsView.vue) | 17 reads | ~15737 tok |
+| 12:28 | Created web/src/components/eia-data/FormsPanel.vue | — | ~2738 |
+| 12:28 | Created web/src/views/EiaFormsView.vue | — | ~35 |
+| 12:32 | Task 8 FormsPanel/EiaFormsView: prettier+eslint+vite200 gates clean, browser QA skipped (chrome profile lock, bug-4020), commit c9665e7b (2 files) | FormsPanel.vue, EiaFormsView.vue, buglog.json | done |
+| 12:33 | Session end: 13 writes across 5 files (ParadigmExportModal.vue, ParadigmsPanel.vue, EiaParadigmsView.vue, FormsPanel.vue, EiaFormsView.vue) | 17 reads | ~18708 tok |
+| 12:33 | Session end: 13 writes across 5 files (ParadigmExportModal.vue, ParadigmsPanel.vue, EiaParadigmsView.vue, FormsPanel.vue, EiaFormsView.vue) | 17 reads | ~18708 tok |
+| 12:33 | Session end: 13 writes across 5 files (ParadigmExportModal.vue, ParadigmsPanel.vue, EiaParadigmsView.vue, FormsPanel.vue, EiaFormsView.vue) | 17 reads | ~18708 tok |
+
+## Session: 2026-10-15 12:36
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:36 | Task 8 核验通过（c9665e7b，2 文件 +392，statsOf/displayValue/guards 落地），派 task8-spec-review | FormsPanel.vue, EiaFormsView.vue | 评审进行中 | ~2k |
+| 12:38 | task8 spec review c9665e7b FormsPanel/EiaFormsView: compliant, all 8 checks verified, gates pass, 2 cosmetic notes (btn-pri vs btn-sec, overflow-wrap) | web/src/components/eia-data/FormsPanel.vue | report sent to team-lead | ~9k |
+| 12:38 | Task 8 规格评审 ✅（8 项独立核验全过；btn-pri 与 T7 逐字一致属家族裁定，.tx 防护接受），派质量评审 | FormsPanel.vue | 质量评审进行中 | ~6k |
+| 12:45 | Task 8 质量评审 ✅（2 Minor 3 Nit 非阻塞），派修复轮：弹窗 seq 令牌+assets 清空+label for | FormsPanel.vue | 修复进行中 | ~4k |
+| 12:46 | Edited web/src/components/eia-data/FormsPanel.vue | 4→5 lines | ~44 |
+| 12:46 | Edited web/src/components/eia-data/FormsPanel.vue | 2→3 lines | ~26 |
+| 12:46 | Edited web/src/components/eia-data/FormsPanel.vue | added 1 condition(s) | ~60 |
+| 12:47 | Edited web/src/components/eia-data/FormsPanel.vue | 2→3 lines | ~43 |
+| 12:47 | Edited web/src/components/eia-data/FormsPanel.vue | 4→6 lines | ~67 |
+| 12:48 | Task 8 fix round: editSeq race guard + fetchAll assets reset + label/for a11y, commit a0a23e54 (1 file +8/-2) | FormsPanel.vue | done |
+| 12:49 | Task 8 修复核验过（a0a23e54，1 文件 +8/-2，三落点+守卫前置 bonus）；发现 saving finally 残余交 delta 裁定 | FormsPanel.vue | delta 复审进行中 | ~3k |
+| 12:49 | Session end: 5 writes across 1 files (FormsPanel.vue) | 4 reads | ~6164 tok |
+| 12:50 | Session end: 5 writes across 1 files (FormsPanel.vue) | 4 reads | ~6164 tok |
+| 12:50 | Session end: 5 writes across 1 files (FormsPanel.vue) | 4 reads | ~6164 tok |
+| 12:54 | Session end: 5 writes across 1 files (FormsPanel.vue) | 4 reads | ~6210 tok |
+| 12:56 | Task 8 收口（c9665e7b+a0a23e54 三审全绿，saving/catch 残余裁定接受）；Task 9 Step1 回归绿 17p+87p | FormsPanel.vue | 待用户两项决策 | ~3k |
+| 12:56 | Session end: 5 writes across 1 files (FormsPanel.vue) | 4 reads | ~6210 tok |
+| 12:56 | Session end: 5 writes across 1 files (FormsPanel.vue) | 4 reads | ~6210 tok |
+| 12:59 | Session end: 5 writes across 1 files (FormsPanel.vue) | 4 reads | ~6210 tok |
+| 13:09 | Session end: 5 writes across 1 files (FormsPanel.vue) | 4 reads | ~6210 tok |
+| 13:20 | Session end: 5 writes across 1 files (FormsPanel.vue) | 4 reads | ~6210 tok |
+| 13:29 | Session end: 5 writes across 1 files (FormsPanel.vue) | 4 reads | ~6210 tok |
+| 13:29 | Session end: 5 writes across 1 files (FormsPanel.vue) | 4 reads | ~6210 tok |
+| 13:29 | Session end: 5 writes across 1 files (FormsPanel.vue) | 4 reads | ~6210 tok |
+| 13:31 | Step2 API 演练全绿（A2-A5，admin，终态零残留），bug-4021 autocrlf 入档；派 task9-impl（Step3+4 选择性提交） | changelog.md, 设计文档 | task9 实现中 | ~9k |
+| 13:31 | Session end: 5 writes across 1 files (FormsPanel.vue) | 4 reads | ~6210 tok |
+| 13:41 | Session end: 5 writes across 1 files (FormsPanel.vue) | 4 reads | ~6210 tok |
+| 13:41 | task9 提交核验过（dc0bbea1 选择性提交干净，2 偏离均裁定接受），cerebrum +4L+1D，派 task9-review | changelog.md, cerebrum.md | 评审进行中 | ~4k |
+| 13:41 | Session end: 5 writes across 1 files (FormsPanel.vue) | 4 reads | ~6210 tok |
+| 13:42 | Session end: 5 writes across 1 files (FormsPanel.vue) | 4 reads | ~6210 tok |
+| 13:44 | Created ../../Users/Lenovo/AppData/Local/Temp/t9_expected.txt | — | ~62 |
+| 13:47 | Task9 docs review: dc0bbea1 approved - entry byte-exact (380B), design doc real/consistent, leftovers 4+/-1 intact, scope 2 files, no vitepress change needed | docs/develop-guides/changelog.md, docs/vibe/2026-10-14-paradigm-layer-edit-design.md | approved | ~35k |
+| 13:48 | task9-review ✅ 六项全过免修，Task 9 收口；九任务全部完成，派最终整体评审（911f861b..dc0bbea1 20 提交） | 全仓 | 终审进行中 | ~5k |
+| 13:50 | Session end: 6 writes across 2 files (FormsPanel.vue, t9_expected.txt) | 4 reads | ~6276 tok |
+| 13:50 | Session end: 6 writes across 2 files (FormsPanel.vue, t9_expected.txt) | 4 reads | ~6276 tok |
+| 13:50 | Session end: 6 writes across 2 files (FormsPanel.vue, t9_expected.txt) | 4 reads | ~6276 tok |
+| 13:52 | 终审首派踩后台模式无文件工具坑（agent 诚实拒裁），重派命名邮箱模式；DNR 入 cerebrum | cerebrum.md | 终审重跑中 | ~2k |
+| 13:53 | Session end: 6 writes across 2 files (FormsPanel.vue, t9_expected.txt) | 4 reads | ~6276 tok |
+| 14:01 | 终审：接缝全净/不变量双锁定，0C+1I+5M；I1（FormsPanel 缺族级丢弃草稿）派 task8-impl 修复，M1-M5 裁定 backlog/呈报 | FormsPanel.vue | 修复进行中 | ~5k |
+| 14:01 | Session end: 6 writes across 2 files (FormsPanel.vue, t9_expected.txt) | 4 reads | ~6276 tok |
+| 14:01 | Session end: 6 writes across 2 files (FormsPanel.vue, t9_expected.txt) | 4 reads | ~6276 tok |
+| 14:01 | Session end: 6 writes across 2 files (FormsPanel.vue, t9_expected.txt) | 4 reads | ~6276 tok |
+| 14:01 | Edited web/src/components/eia-data/FormsPanel.vue | expanded (+8 lines) | ~103 |
+| 14:01 | Edited web/src/components/eia-data/FormsPanel.vue | added error handling | ~150 |
+| 14:02 | Edited web/src/components/eia-data/FormsPanel.vue | 2→3 lines | ~24 |
+| 14:03 | Task 8 I1 fix: family-level withdraw draft (confirmWithdraw/withdraw/withdrawing), commit pending | FormsPanel.vue | done |
+| 14:04 | I1 修复核验过（c65bd92c，+32/-0 全落位），delta 复审派出（含丢弃/撤回文案对家族一致性裁定） | FormsPanel.vue | delta 复审中 | ~2k |
+| 14:04 | Session end: 9 writes across 2 files (FormsPanel.vue, t9_expected.txt) | 4 reads | ~6574 tok |
+| 14:05 | Session end: 9 writes across 2 files (FormsPanel.vue, t9_expected.txt) | 4 reads | ~6574 tok |
+| 14:06 | I1 delta ✅（文案对家族一致裁定通过），17 提交全链 finish-ready；终审收官，待用户分支处置 | 全仓 | 完成 | ~3k |
+| 14:06 | Edited ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/e2e-test-prerequisites.md | 1→3 lines | ~99 |
+| 14:06 | Session end: 10 writes across 3 files (FormsPanel.vue, t9_expected.txt, e2e-test-prerequisites.md) | 5 reads | ~6680 tok |
+| 14:07 | Session end: 10 writes across 3 files (FormsPanel.vue, t9_expected.txt, e2e-test-prerequisites.md) | 5 reads | ~6680 tok |
+| 14:12 | Session end: 10 writes across 3 files (FormsPanel.vue, t9_expected.txt, e2e-test-prerequisites.md) | 5 reads | ~6680 tok |
+| 14:32 | Session end: 10 writes across 3 files (FormsPanel.vue, t9_expected.txt, e2e-test-prerequisites.md) | 5 reads | ~6680 tok |
+| 14:37 | Session end: 10 writes across 3 files (FormsPanel.vue, t9_expected.txt, e2e-test-prerequisites.md) | 5 reads | ~6680 tok |
+| 14:42 | Session end: 10 writes across 3 files (FormsPanel.vue, t9_expected.txt, e2e-test-prerequisites.md) | 5 reads | ~6680 tok |
+| 14:42 | Session end: 10 writes across 3 files (FormsPanel.vue, t9_expected.txt, e2e-test-prerequisites.md) | 5 reads | ~6680 tok |
+| 19:33 | Created ../../Users/Lenovo/AppData/Local/Temp/pisuan-visual-qa/visual-qa.js | — | ~2435 |
+| 19:37 | Created ../../Users/Lenovo/AppData/Local/Temp/pisuan-visual-qa/visual-qa.js | — | ~2363 |
+| 19:43 | 视觉验证 14 步全过零报错零残留，抓出真 bug bug-4022（roles_map 扁平假设 vs 嵌套实形），派 task3-impl 修复 | eia_paradigm_service.py | 修复进行中 | ~6k |
+| 19:44 | Session end: 12 writes across 4 files (FormsPanel.vue, t9_expected.txt, e2e-test-prerequisites.md, visual-qa.js) | 8 reads | ~15373 tok |
+| 19:45 | Edited backend/package/yuxi/services/eia_paradigm_service.py | 2→2 lines | ~46 |
+| 19:45 | Edited backend/test/unit/test_eia_paradigm_service.py | 8→12 lines | ~89 |
+| 19:45 | Edited backend/test/unit/test_eia_paradigm_service.py | len() → set() | ~72 |
+| 11:10 | bug-4022 修复：role_map 提取改 roles["roles"]（真实嵌套形状），单测夹具同步真实形状+元数据三键钉 | eia_paradigm_service.py, test_eia_paradigm_service.py | 6ecc055b，16 passed | ~15k |
+| 19:48 | bug-4022 修复 6ecc055b 三层验证闭环（API counts 12/17/37/11 + UI 五断言全真），终审备案 | eia_paradigm_service.py | 已收口 | ~3k |
+
+## Session: 2026-10-15 19:56
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:00 | 流E返工：git add .wolf 误扫 ~200 scratch→soft reset 清场，按清单重提 amend 59c72c13（18 文件）；教训入 cerebrum DNR+bug-4023 | .wolf/cerebrum.md, .wolf/buglog.json | 已修正，工作区仅剩 uv.lock | ~10k |
