@@ -57,11 +57,14 @@ def test_high_frequency_and_generic_terms_exempt():
 
 
 def test_substring_of_generic_exempt():
-    """专名若为某通用词的子串（或反之）→ 豁免（方向 A §8 规则）。"""
-    generic = sorted(eia_paradigm_scan.GENERIC_TERMS())
-    assert generic, "通用词集不应为空"
-    g = generic[0]
-    assert g not in eia_paradigm_scan.scan_text(f"xx{g}yy")
+    """专名若为某通用词的子串（或反之）→ 豁免（规则③；差分锚：删子串过滤必红）。"""
+    blacklists = _blacklists()
+    terms = {t for d in blacklists for terms in d.get("entities", {}).values() for t in terms}
+    generic = eia_paradigm_scan.GENERIC_TERMS()
+    rule3_only = sorted(t for t in terms - generic if any(t in g or g in t for g in generic))
+    assert rule3_only, "真实黑名单应存在仅由规则③豁免的词；为空说明语料变化，本测试需重审"
+    t0 = rule3_only[0]
+    assert t0 not in eia_paradigm_scan.scan_text(f"xx{t0}yy")
 
 
 def test_scan_deterministic_sorted():

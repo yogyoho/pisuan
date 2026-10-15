@@ -44,7 +44,10 @@ def _index():
 
 
 def scan_text(text: str, root: Path | None = None) -> list[str]:
-    """返回 text 中命中的专名（排序确定性）；root 仅测试注入用。"""
+    """返回 text 中命中的专名（排序确定性）；root 仅测试注入用。
+
+    lru_cache 按 root 串缓存；测试注入 root 后若同 root 文件中途变更需手动 _cached.cache_clear()。
+    """
     proper, _ = _cached(str(root or ENTITIES_DIR))
     return sorted(t for t in proper if t in text)
 
