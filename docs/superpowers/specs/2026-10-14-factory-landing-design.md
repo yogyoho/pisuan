@@ -82,3 +82,10 @@ GeneralLayout 新建于 `components/factory-core/`，四个容器/新屏 view �
 6. 交互：主按钮 hover 流光扫过、工位卡/名录横带补 tabindex+enter 键盘可达（role=link）、chip hover 上浮
 
 全部新动效（带体刻度/呼吸灯/流光）纳入 `prefers-reduced-motion` 禁用清单；色仅用 base.css token（靛蓝 rgba 走 `--main-color-rgb`（明暗双档已定义）、橙无 rgb 档走实体 token/`color-mix`），无裸 hex 语义色。
+
+
+## 修订 3 [2026-10-14]：工位卡点击范围收敛
+
+用户裁定：装配线区仅点击卡片内「直达 xx →」链接才进入对应屏，整卡/空白区域点击不触发跳转。
+工位卡由整卡 role=link+tabindex 收敛为普通展示块（hover 浮起/流光条保留作装饰，cursor:pointer
+与 :active 按压态随整卡点击一并移除），「直达」行改为真实 button（自带键盘可达与 focus-visible）。

@@ -66,10 +66,6 @@
               :key="s.no"
               class="dfp-station reveal"
               :style="{ '--stagger': i }"
-              role="link"
-              tabindex="0"
-              @click="router.push(s.to)"
-              @keydown.enter.prevent="router.push(s.to)"
             >
               <div class="s-card">
                 <span class="s-wm" aria-hidden="true">{{ s.wm }}</span>
@@ -82,7 +78,10 @@
                 <div class="s-meter">
                   <span v-for="m in s.meters" :key="m">{{ m }}</span>
                 </div>
-                <span class="s-go">直达 {{ s.screen }} <ArrowRight :size="12" /></span>
+                <button type="button" class="s-go" @click="router.push(s.to)">
+                  直达 {{ s.screen }}
+                  <ArrowRight :size="12" class="s-go-arr" />
+                </button>
               </div>
               <div class="s-stem" aria-hidden="true"></div>
               <div class="s-dot" aria-hidden="true"></div>
@@ -634,16 +633,6 @@ onUnmounted(() => {
 .dfp-station {
   position: relative;
   height: 430px;
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: none;
-
-    .s-card {
-      border-color: var(--main-500);
-      box-shadow: 0 0 0 2px var(--main-100);
-    }
-  }
 }
 
 .s-card {
@@ -702,8 +691,38 @@ onUnmounted(() => {
   }
 }
 
-.dfp-station:active .s-card {
-  transform: translateY(-1px);
+.s-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--main-600);
+  cursor: pointer;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: var(--main-700);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--main-600);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+.s-go-arr {
+  transition: transform 0.2s ease;
+
+  .s-go:hover & {
+    transform: translateX(2px);
+  }
 }
 
 .s-stem {
@@ -836,16 +855,6 @@ onUnmounted(() => {
   background: var(--gray-100);
   color: var(--gray-600);
   font-size: 11px;
-}
-
-.s-go {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  margin-top: 10px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--main-600);
 }
 
 /* ============ 3) 工位铭牌带 ============ */
