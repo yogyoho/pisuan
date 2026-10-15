@@ -1127,6 +1127,63 @@ async def import_eia_lexicon(
         raise HTTPException(status_code=500, detail=f"导入词表候选失败: {str(e)}")
 
 
+@domain_factory.get("/eia/lexicon/suppressions")
+async def list_eia_lexicon_suppressions(
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """抑制名单（改名自动登记 + 手工登记）：导入按 (stage, caliber, unit) 跳过"""
+    try:
+        return await get_eia_lexicon_service().list_suppressions()
+    except Exception as e:
+        logger.error(f"Failed to list eia lexicon suppressions: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取抑制名单失败: {str(e)}")
+
+
+@domain_factory.post("/eia/lexicon/suppressions")
+async def add_eia_lexicon_suppression(
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """手工登记抑制（业务人员）：仅限扫描差集内指纹，已抑制幂等刷新"""
+    try:
+        return await get_eia_lexicon_service().add_suppression(payload, current_user.username)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to add eia lexicon suppression: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"登记抑制失败: {str(e)}")
+
+
+@domain_factory.delete("/eia/lexicon/suppressions/{suppression_id}")
+async def withdraw_eia_lexicon_suppression(
+    suppression_id: int,
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """撤回抑制（硬删行）：重扫可能复活旧指纹，UI 撤回前须明示后果"""
+    try:
+        row = await get_eia_lexicon_service().withdraw_suppression(suppression_id, current_user.username)
+        return {"success": True, "row": row}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to withdraw eia lexicon suppression {suppression_id}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"撤回抑制失败: {str(e)}")
+
+
+@domain_factory.get("/eia/lexicon/scan-candidates")
+async def list_eia_lexicon_scan_candidates(
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """重扫导入将带进来的候选差集（添加抑制下拉数据源）"""
+    try:
+        return await get_eia_lexicon_service().scan_candidates()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=f"coal-eia-writer 技能数据缺失: {e}")
+    except Exception as e:
+        logger.error(f"Failed to list eia lexicon scan candidates: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取扫描候选失败: {str(e)}")
+
+
 @domain_factory.get("/eia/datasets/switches")
 async def list_eia_dataset_switches(
     current_user: User = Depends(get_required_user),
