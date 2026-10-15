@@ -22,6 +22,8 @@
 
 ### 功能与修复
 
+- 词表页词条列表分页调整：默认每页 10 条（原 20），新增 10/20/50 每页条数下拉切换，切换后回第 1 页防越界
+
 - 词表页新增抑制名单卡：列表（含改名自动登记行与手工行，空改名目标显示「—」）/ 手工添加（下拉仅列重扫会导入的扫描差集候选，服务端强校验拒绝语料外指纹与已入库词条）/ 撤回（确认弹窗明示重扫复活（A 类直接回已入选）与语境回落失效两条后果）；新增 `/eia/lexicon/suppressions`、`/eia/lexicon/scan-candidates` 4 端点与 repo/service 对应方法及 6 例零 DB 单测
 
 - 写作范式层查询+编辑页（/domain-factory/eia-data/paradigms · forms）：eia_paradigm_drafts 单表草稿（迁移 v17）+ 6 端点 + validate-all-then-write 导出（锚点/两键/专名扫描校验，round-trip 字节纪律，base_hash 漂移检测）+ 前端两页（原型 s12/s13 像素复刻）；_roles.json 只读，RESIDUE_RE 人工同步纪律入导出确认
