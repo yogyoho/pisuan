@@ -855,7 +855,8 @@ onMounted(() => {
   }
 }
 
-/* ── 表格单元格 ─────────────────────────────────────── */
+/* ── 表格单元格 ── 口径列主名/备注均单行截断（bug-4025：长备注折行曾把行高撑到 7 行），
+   全文走既有 title tooltip；td 的 break-word 只服务其余列 */
 .caliber-cell {
   display: flex;
   flex-direction: column;
@@ -869,6 +870,12 @@ onMounted(() => {
   .caliber-note {
     font-size: 12px;
     color: var(--color-text-tertiary);
+  }
+
+  > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
