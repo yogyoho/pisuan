@@ -93,8 +93,10 @@
     >
       <div class="frm">
         <div class="frm-row">
-          <label>{{ editModal.isDesc ? '族简介（desc）' : '模板句式' }}</label>
-          <a-textarea v-model:value="editModal.value" :rows="3" />
+          <label for="forms-edit-value">
+            {{ editModal.isDesc ? '族简介（desc）' : '模板句式' }}
+          </label>
+          <a-textarea id="forms-edit-value" v-model:value="editModal.value" :rows="3" />
         </div>
         <div class="frm-help">
           保存即写入该族草稿（desc / templates 两键），admin「导出物化」后回写 forms_catalog.json
@@ -127,6 +129,7 @@ const overview = ref(null)
 const assets = ref({})
 const exportOpen = ref(false)
 const deleting = ref(false)
+let editSeq = 0 // 保存竞态序号令牌：PUT 在飞时用户取消并另开弹窗，旧回包不得动新弹窗状态
 const editModal = reactive({
   open: false,
   saving: false,
@@ -144,6 +147,7 @@ const fetchAll = async () => {
   loading.value = true
   try {
     overview.value = await eiaParadigmApi.loadOverview()
+    assets.value = {} // 部分失败时不残留旧 map（首次失败也不致把「没加载到」误显为「无统计」）
     const results = await Promise.all(
       families.value.map((f) => eiaParadigmApi.getAsset(KIND, f.asset_id))
     )
@@ -188,6 +192,7 @@ const openTplEdit = (fam, index) => {
 }
 
 const submitEdit = async () => {
+  const seq = ++editSeq
   const value = editModal.value.trim()
   if (!value) {
     message.warning(editModal.isDesc ? '简介不能为空' : '模板句式不能为空')
@@ -208,6 +213,7 @@ const submitEdit = async () => {
   editModal.saving = true
   try {
     await eiaParadigmApi.saveDraft(KIND, editModal.family, content)
+    if (seq !== editSeq) return
     message.success('草稿已落库，待 admin 导出物化')
     editModal.open = false
     await fetchAll()
