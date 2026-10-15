@@ -308,6 +308,7 @@
       width="680px"
       @ok="onRenameSubmit"
     >
+      <!-- 标识区：名 + 分类 + 状态 + 量纲（原型 ident 条） -->
       <div class="rename-summary">
         <span class="caliber-name">{{ renameModal.entry?.caliber }}</span>
         <span class="cat-tag" :class="`cat-${renameModal.entry?.category}`">
@@ -316,43 +317,63 @@
         <span class="status-tag" :class="`st-${renameModal.entry?.status}`">
           {{ statusLabel(renameModal.entry?.status) }}
         </span>
-        <span class="count-cell">
+        <span class="count-cell num">
           {{ renameModal.entry?.n_values }} 值 / {{ renameModal.entry?.n_reports }} 报告 ·
           {{ renameModal.entry?.unit }}
         </span>
       </div>
+      <!-- 证据区头：提及计数 + 旧指纹徽标右锚（P6/P8） -->
       <p class="rename-ctx-title">
-        语料语境（高亮为扫描命中）
-        <a-tag v-if="renameModal.source === 'old_fingerprint'" color="orange"
+        <span>语料语境</span>
+        <span v-if="!renameModal.loadingCtx" class="sec-cnt"
+          >{{ renameModal.mentions.length }} 处提及（高亮为扫描命中）</span
+        >
+        <a-tag v-if="renameModal.source === 'old_fingerprint'" color="orange" class="fp-badge"
           >旧口径语境：新名在语料中零命中</a-tag
         >
         <span v-if="renameModal.ctxError" class="ctx-error">{{ renameModal.ctxError }}</span>
       </p>
+      <!-- 证据有界卡片：通栏文本 + meta 行（P1/P2/P3/P7） -->
       <div class="assign-list rename-ctx">
         <a-spin v-if="renameModal.loadingCtx" size="small" class="ctx-spin" />
         <template v-else>
-          <div v-for="(m, i) in renameModal.mentions" :key="i" class="ctx-row">
-            <span class="ctx-text"
-              >{{ m.before }}<mark>{{ m.hit }}</mark
-              >{{ m.after }}</span
-            >
-            <span class="ctx-value">{{ m.value }} {{ m.unit }}</span>
-            <span class="ctx-rid" :title="m.rid">{{ m.rid }}</span>
+          <div v-for="(m, i) in renameModal.mentions" :key="i" class="ctx-card">
+            <p class="ctx-text">
+              {{ m.before }}<mark>{{ m.hit }}</mark
+              >{{ m.after }}
+            </p>
+            <div class="ctx-meta">
+              <span class="ctx-value num">{{ m.value }} {{ m.unit }}</span>
+              <span class="ctx-rid" :title="m.rid">{{ m.rid }}</span>
+            </div>
           </div>
           <p v-if="!renameModal.mentions.length && !renameModal.ctxError" class="assign-empty">
             该口径在语料中无提及
           </p>
         </template>
       </div>
+      <!-- 编辑区：正式 label 不用 placeholder 代（P4，design.md 文本规范） -->
       <div class="rename-form">
-        <a-input v-model:value="renameModal.caliber" placeholder="新口径名（至少 2 个字）" />
-        <a-input v-model:value="renameModal.note" placeholder="备注（可选）" />
+        <div class="fld">
+          <label for="rn-caliber">新口径名</label>
+          <a-input id="rn-caliber" v-model:value="renameModal.caliber" />
+          <p class="fld-help">至少 2 个字；与 阶段 / 单位 联合唯一，重名将在提交时拦截</p>
+        </div>
+        <div class="fld">
+          <label for="rn-note">备注 <em>（可选）</em></label>
+          <!-- 备注是长句（改名依据），textarea 自适应 2~6 行，用户裁定 2026-10-15 -->
+          <a-textarea
+            id="rn-note"
+            v-model:value="renameModal.note"
+            :auto-size="{ minRows: 2, maxRows: 6 }"
+          />
+        </div>
       </div>
       <div class="rename-warn">
         <Pencil :size="14" style="flex: none; margin-top: 3px" />
         <span>
           新名若非语料逐字出现，语料计数将归
-          0、导出物化永久跳过（机制必然）；旧口径名自动进入抑制清单，重扫语料不会复活。
+          0、导出物化永久跳过；旧口径名自动进入抑制清单，重扫语料不会复活。
         </span>
       </div>
     </a-modal>
@@ -990,8 +1011,7 @@ onMounted(() => {
     font-variant-numeric: tabular-nums;
   }
 
-  .assign-rid,
-  .ctx-rid {
+  .assign-rid {
     flex: 1;
     font-size: 12px;
     color: var(--color-text-tertiary);
@@ -1007,14 +1027,20 @@ onMounted(() => {
   }
 }
 
+/* ── 改名对话框（原型 2026-10-15-lexicon-rename-redesign）：标识条 / 证据有界卡片 / label 化表单 ── */
 .rename-summary {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  padding: 8px 12px;
   margin-bottom: 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  background: var(--gray-50);
 
   .caliber-name {
+    font-size: 15px;
     font-weight: 600;
   }
 }
@@ -1025,7 +1051,19 @@ onMounted(() => {
   gap: 8px;
   margin: 0 0 8px;
   font-size: 13px;
+  font-weight: 600;
   color: var(--color-text-secondary);
+
+  .sec-cnt {
+    font-weight: 400;
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+  }
+
+  .fp-badge {
+    margin-left: auto;
+    margin-right: 0;
+  }
 
   .ctx-error {
     font-size: 12px;
@@ -1034,23 +1072,25 @@ onMounted(() => {
 }
 
 .rename-ctx {
+  max-height: 264px;
+
   .ctx-spin {
     display: block;
     margin: 24px auto;
   }
 
-  .ctx-row {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    padding: 6px 8px;
-    border-radius: 6px;
-    background: var(--main-0);
+  .ctx-card {
+    padding: 8px 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    background: var(--gray-50);
 
     .ctx-text {
-      flex: 2;
+      margin: 0;
       font-size: 12px;
-      line-height: 1.6;
+      line-height: 1.8;
+      color: var(--color-text);
+      overflow-wrap: anywhere;
 
       mark {
         background: var(--main-100);
@@ -1060,10 +1100,32 @@ onMounted(() => {
       }
     }
 
-    .ctx-value {
-      min-width: 88px;
-      font-weight: 500;
-      font-variant-numeric: tabular-nums;
+    .ctx-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px dashed var(--gray-200);
+
+      .ctx-value {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .ctx-rid {
+        flex: 0 1 auto;
+        min-width: 0;
+        margin-left: auto;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
     }
   }
 }
@@ -1071,8 +1133,30 @@ onMounted(() => {
 .rename-form {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   margin-top: 12px;
+
+  .fld {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    label {
+      font-size: 12px;
+      color: var(--color-text-secondary);
+
+      em {
+        font-style: normal;
+        color: var(--color-text-tertiary);
+      }
+    }
+
+    .fld-help {
+      margin: 0;
+      font-size: 12px;
+      color: var(--color-text-tertiary);
+    }
+  }
 }
 
 .rename-warn {
