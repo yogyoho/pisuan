@@ -17,7 +17,7 @@ GENERIC_MIN_FILES = 3
 
 
 def _build_index(root: Path) -> tuple[frozenset[str], frozenset[str]]:
-    counts: dict[str, int] = {}
+    files: dict[str, set[str]] = {}
     generic: set[str] = set()
     for p in sorted(root.glob("*.json")):
         if p.name == "_index.json":
@@ -25,12 +25,12 @@ def _build_index(root: Path) -> tuple[frozenset[str], frozenset[str]]:
         doc = json.loads(p.read_text(encoding="utf-8"))
         for terms in doc.get("entities", {}).values():
             for t in terms:
-                counts[t] = counts.get(t, 0) + 1
+                files.setdefault(t, set()).add(p.name)
         for g in doc.get("generic_terms", []):
             generic.update(g.split("/"))
-    freq = {t for t, n in counts.items() if n >= GENERIC_MIN_FILES}
+    freq = {t for t, fs in files.items() if len(fs) >= GENERIC_MIN_FILES}
     generic |= freq
-    proper = {t for t in counts if t not in generic and not any(t in g or g in t for g in generic)}
+    proper = {t for t in files if t not in generic and not any(t in g or g in t for g in generic)}
     return frozenset(proper), frozenset(generic)
 
 
