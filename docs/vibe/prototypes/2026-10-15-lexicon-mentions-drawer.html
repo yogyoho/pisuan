@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>提及明细抽屉重设计 · 数值护栏词表（2026-10-15）</title>
+<style>
+/* ═══ 设计令牌：取自 web/src/assets/css/base.css（浅）/ base.dark.css（暗），同 2026-10-12-eia-p2-ui ═══ */
+:root {
+  --main-1000:#1e1b4b; --main-900:#312e81; --main-800:#3730a3; --main-700:#4338ca;
+  --main-600:#4f46e5; --main-500:#6366f1; --main-400:#818cf8; --main-300:#a5b4fc;
+  --main-200:#c7d2fe; --main-100:#e0e7ff; --main-50:#eef2ff; --main-30:#f7f7fe;
+  --main-10:#fbfaff; --main-0:#ffffff; --main-color:#4f46e5;
+  --second-700:#c2410c; --second-600:#ea580c; --second-500:#f97316;
+  --second-100:#ffedd5; --second-50:#fff7ed;
+  --gray-1000:#18181b; --gray-900:#27272a; --gray-800:#3f3f46; --gray-700:#52525b;
+  --gray-600:#71717a; --gray-500:#a1a1aa; --gray-400:#c4c4cb; --gray-300:#d4d4d8;
+  --gray-200:#e4e4e7; --gray-150:#ececee; --gray-100:#f4f4f5; --gray-50:#fafafa;
+  --gray-25:#fbfbfc; --gray-10:#fdfdfd; --gray-0:#ffffff;
+  --text:var(--gray-900); --text-2:var(--gray-600); --text-3:var(--gray-500);
+  --hairline:var(--gray-200);
+  --mono:ui-monospace,'Cascadia Code',Consolas,'Courier New',monospace;
+  --font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','HarmonyOS Sans SC','Microsoft YaHei','Noto Sans SC',sans-serif;
+}
+.proto-dark {
+  --main-1000:#eef2ff; --main-900:#c7d2fe; --main-800:#a5b4fc; --main-700:#a5b4fc;
+  --main-600:#818cf8; --main-500:#7279f5; --main-400:#7279f5; --main-300:#6366f1;
+  --main-200:#4338ca; --main-100:#3730a3; --main-50:#312e81; --main-30:#28245c;
+  --main-10:#07071b; --main-0:#171717; --main-color:#818cf8;
+  --second-700:#fdba74; --second-600:#fb923c; --second-500:#f97316;
+  --second-100:#431407; --second-50:#2a1206;
+  --gray-1000:#fafafa; --gray-900:#e4e4e7; --gray-800:#d4d4d8; --gray-700:#a1a1aa;
+  --gray-600:#8b8b93; --gray-500:#71717a; --gray-400:#52525b; --gray-300:#3f3f46;
+  --gray-200:#27272a; --gray-150:#232326; --gray-100:#1e1e20; --gray-50:#171717;
+  --gray-25:#121214; --gray-10:#0e0e10; --gray-0:#0a0a0a;
+  --text:#fafafa; --text-2:rgba(255,255,255,.65); --text-3:rgba(255,255,255,.45);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:var(--font-sans); font-size:14px; line-height:1.6;
+       background:var(--gray-25); color:var(--text); transition:background .2s,color .2s; }
+.toggle { position:fixed; top:12px; right:504px; z-index:10; }
+.toggle button { font-family:inherit; font-size:12px; cursor:pointer; padding:5px 12px;
+                 border:1px solid var(--gray-300); border-radius:999px; background:var(--main-0); color:var(--text); }
+
+/* ── 背景示意：被抽屉遮住的词表页 ── */
+.page { position:fixed; inset:0; padding:28px 32px; opacity:.4; }
+.page .bar { height:14px; border-radius:6px; background:var(--gray-200); margin-bottom:12px; }
+.page .tbl { margin-top:24px; }
+.page .row { display:flex; gap:14px; padding:10px 0; border-bottom:1px solid var(--gray-150); }
+.page .row span { display:block; height:10px; border-radius:4px; background:var(--gray-150); }
+
+/* ── 抽屉骨架（480px，停靠右侧） ── */
+.drawer { position:fixed; top:0; right:0; bottom:0; width:480px; display:flex; flex-direction:column;
+          background:var(--main-0); border-left:1px solid var(--hairline);
+          box-shadow:-6px 0 16px rgba(0,0,0,.08); }
+.proto-dark .drawer { box-shadow:-6px 0 16px rgba(0,0,0,.5); }
+.dw-hd { display:flex; align-items:center; gap:12px; padding:16px 20px;
+         border-bottom:1px solid var(--hairline); flex:none; }
+.dw-hd .x { margin-left:auto; color:var(--text-3); cursor:pointer; font-size:16px; line-height:1; }
+.dw-hd h3 { font-size:16px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dw-bd { padding:16px 20px 24px; overflow:auto; flex:1; }
+
+/* ── A 标识条：阶段 + 首见单位 + 提及计数（对齐改名对话框 ident） ── */
+.ident { display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+         padding:8px 12px; margin-bottom:12px; background:var(--gray-50);
+         border:1px solid var(--hairline); border-radius:8px; }
+.ident .pill-stage { padding:1px 8px; border-radius:4px; font-size:12px; line-height:20px;
+                     color:var(--gray-700); background:var(--gray-0); border:1px solid var(--gray-300); }
+.proto-dark .ident .pill-stage { background:transparent; }
+.ident .dim { font-size:12px; color:var(--text-3); }
+.ident .cnt-badge { margin-left:auto; padding:1px 8px; border-radius:4px; font-size:12px;
+                    font-weight:600; color:var(--main-700); background:var(--main-100); }
+.proto-dark .ident .cnt-badge { color:var(--main-900); }
+
+/* ── B 值分布 chips：去重聚合（P3） ── */
+.dist { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+.dist .lab { font-size:12px; color:var(--text-3); }
+.dist .chip { display:inline-flex; align-items:center; gap:6px; padding:2px 10px;
+              border:1px solid var(--gray-200); border-radius:999px; background:var(--gray-50);
+              font-family:var(--mono); font-size:12px; font-weight:600;
+              font-variant-numeric:tabular-nums; }
+.dist .chip em { font-style:normal; font-family:var(--font-sans); font-weight:400;
+                 font-size:12px; color:var(--text-3); }
+
+/* ── C 语境卡片（复用改名对话框 ctx-card；5 行截断 + tooltip 全文） ── */
+.sec-hd { display:flex; align-items:center; gap:8px; margin:0 0 8px; font-size:13px;
+          font-weight:600; color:var(--text-2); }
+.sec-hd .cnt { font-weight:400; font-size:12px; color:var(--text-3); }
+.m-list { display:flex; flex-direction:column; gap:8px; }
+.ctx-card { background:var(--gray-50); border:1px solid var(--hairline); border-radius:8px;
+            padding:8px 12px; }
+.ctx-card .txt { font-size:12px; line-height:1.8; color:var(--text); overflow-wrap:anywhere;
+                 display:-webkit-box; -webkit-line-clamp:5; -webkit-box-orient:vertical; overflow:hidden; }
+.ctx-card mark { background:var(--main-100); color:var(--main-700); padding:0 2px; border-radius:2px; }
+.proto-dark .ctx-card mark { background:var(--main-100); color:var(--main-900); }
+.ctx-meta { display:flex; align-items:center; gap:8px; margin-top:6px; padding-top:6px;
+            border-top:1px dashed var(--hairline); }
+.ctx-meta .v { font-family:var(--mono); font-size:12px; font-weight:600;
+               font-variant-numeric:tabular-nums; }
+.ctx-meta .rid { margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--text-3);
+                 overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+</style>
+</head>
+<body>
+<div class="page" aria-hidden="true">
+  <div class="bar" style="width:32%"></div>
+  <div class="tbl">
+    <div class="row"><span style="width:22%"></span><span style="width:9%"></span><span style="width:8%"></span><span style="width:14%"></span></div>
+    <div class="row"><span style="width:26%"></span><span style="width:9%"></span><span style="width:8%"></span><span style="width:14%"></span></div>
+    <div class="row"><span style="width:18%"></span><span style="width:9%"></span><span style="width:8%"></span><span style="width:14%"></span></div>
+    <div class="row"><span style="width:24%"></span><span style="width:9%"></span><span style="width:8%"></span><span style="width:14%"></span></div>
+  </div>
+</div>
+<div class="toggle"><button onclick="document.body.classList.toggle('proto-dark')">亮 / 暗</button></div>
+<aside class="drawer">
+  <div class="dw-hd"><h3>提及明细 · 三率水平达标率</h3><span class="x">✕</span></div>
+  <div class="dw-bd">
+
+    <div class="ident">
+      <span class="pill-stage">规划环评</span>
+      <span class="dim">首见单位 %</span>
+      <span class="cnt-badge num">5 处提及</span>
+    </div>
+
+    <div class="dist">
+      <span class="lab">值分布</span>
+      <span class="chip">95 % <em>× 5</em></span>
+    </div>
+
+    <div class="sec-hd">语料语境<span class="cnt">高亮为扫描命中 · 悬停看全文</span></div>
+    <div class="m-list">
+      <div class="ctx-card" title="4)建议到2025年,矿山“三率”水平达标率达95%以上,废水利用率达85%以上,固废处理率100%,生产矿山地质环境治理率、矿区可绿化面积覆盖率达100%。">
+        <p class="txt">4)建议到2025年,矿山“三率”<mark>水平达标率</mark>达95%以上,废水利用率达85%以上,固废处理率100%,生产矿山地质环境治理率、矿区可绿化面积覆盖率达100%。</p>
+        <div class="ctx-meta"><span class="v">95 %</span><span class="rid">021-2026</span></div>
+      </div>
+      <div class="ctx-card" title="井工矿区、一号露天矿（华能伊敏露天矿）、三号露天矿|资源利用效率要求|1.原煤入选率不低于75%；煤矸石综合利用率应达到75%以上；矿井水、疏干水应采用净化、资源化技术和工艺进行处理，处置率达到100%。2.煤矿采区回采率、原料煤入选率与共伴生矿产资源综合利用率等三项指标符合自然资源部发布的《煤矿资源合理开发利用“三率”指标要求（试行）》。3.2025年，矿山“三率”水平达标率达95%以上，废水利用率达85%以上，固废处理率100%，生产矿山地质环境治理率、矿区可绿化面积覆盖率达100%。|ZH15072420011|伊敏矿区（河西区）|重点管控区|完全重合|四号露天矿、五号露天矿、二号露天矿、伊敏一井、伊敏二井、深部勘查区|同管控单元|鄂温克族自治旗煤矿 ZH15072420005 管控要求|同管控单元|鄂温克族自治旗煤矿">
+        <p class="txt">井工矿区、一号露天矿（华能伊敏露天矿）、三号露天矿|资源利用效率要求|1.原煤入选率不低于75%；煤矸石综合利用率应达到75%以上；矿井水、疏干水应采用净化、资源化技术和工艺进行处理，处置率达到100%。2.煤矿采区回采率、原料煤入选率与共伴生矿产资源综合利用率等三项指标符合自然资源部发布的《煤矿资源合理开发利用“三率”指标要求（试行）》。3.2025年，矿山“三率”<mark>水平达标率</mark>达95%以上，废水利用率达85%以上，固废处理率100%，生产矿山地质环境治理率、矿区可绿化面积覆盖率达100%。|ZH15072420011|伊敏矿区（河西区）|重点管控区|完全重合|四号露天矿、五号露天矿、二号露天矿、伊敏一井、伊敏二井、深部勘查区|同管控单元|鄂温克族自治旗煤矿 ZH15072420005 管控要求|同管控单元|鄂温克族自治旗煤矿</p>
+        <div class="ctx-meta"><span class="v">95 %</span><span class="rid">008-5---2</span></div>
+      </div>
+      <div class="ctx-card" title="到2025年，全省矿山“三率”水平达标率不低于95%，其中大中型矿山达到98%以上；历史遗留矿山生态修复率达到60%以上。">
+        <p class="txt">到2025年，全省矿山“三率”<mark>水平达标率</mark>不低于95%，其中大中型矿山达到98%以上；历史遗留矿山生态修复率达到60%以上。</p>
+        <div class="ctx-meta"><span class="v">95 %</span><span class="rid">021-2026</span></div>
+      </div>
+      <div class="ctx-card" title="严格执行自然资源部关于煤矿“三率”的考核要求，生产矿山“三率”水平达标率应持续保持95%以上，未达标矿山应限期整改。">
+        <p class="txt">严格执行自然资源部关于煤矿“三率”的考核要求，生产矿山“三率”<mark>水平达标率</mark>应持续保持95%以上，未达标矿山应限期整改。</p>
+        <div class="ctx-meta"><span class="v">95 %</span><span class="rid">021-2026</span></div>
+      </div>
+      <div class="ctx-card" title="规划期内新建矿山全部按照绿色矿山标准建设， Existing 生产矿山“三率”水平达标率稳定在95%以上，矸石综合利用率不低于75%。">
+        <p class="txt">规划期内新建矿山全部按照绿色矿山标准建设，Existing 生产矿山“三率”<mark>水平达标率</mark>稳定在95%以上，矸石综合利用率不低于75%。</p>
+        <div class="ctx-meta"><span class="v">95 %</span><span class="rid">021-2026</span></div>
+      </div>
+    </div>
+  </div>
+</aside>
+</body>
+</html>
