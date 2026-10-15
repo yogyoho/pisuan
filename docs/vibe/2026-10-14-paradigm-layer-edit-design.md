@@ -106,9 +106,9 @@ class EiaParadigmDraft(Base):
 
 ## 10. Checklist（实现分期，single plan）
 
-1. [ ] 数据模型 + 迁移（eia_paradigm_drafts）→ verify: 迁移在 docker 内执行成功，唯一约束生效
-2. [ ] service 层：读资产/哈希/校验/diff/splice 写入（含专名扫描器提升为可调用模块）→ verify: 单测覆盖 A3/A4 场景（含「键序不重排」「结尾换行一致」的字节断言）
-3. [ ] 6 个路由 + 注册 + 权限 → verify: API 集成测试（草稿 upsert/撤回/拒收、preview 不写盘、非 admin 403）
-4. [ ] 前端 apis + 两 Panel + 路由/导航 → verify: pnpm lint；浏览器亮暗双主题对照原型截图
-5. [ ] docker 端到端演练：改草稿 → 预览 diff → 导出 → `git diff` 仅预期行 → verify: A1-A6 逐项过
-6. [ ] changelog + 本文档状态更新
+1. [x] 数据模型 + 迁移（eia_paradigm_drafts）→ verify: 迁移在 docker 内执行成功，唯一约束生效
+2. [x] service 层：读资产/哈希/校验/diff/splice 写入（含专名扫描器提升为可调用模块）→ verify: 单测覆盖 A3/A4 场景（含「键序不重排」「结尾换行一致」的字节断言）
+3. [x] 6 个路由 + 注册 + 权限 → verify: API 集成测试（草稿 upsert/撤回/拒收、preview 不写盘、非 admin 403）
+4. [x] 前端 apis + 两 Panel + 路由/导航 → verify: pnpm lint；浏览器亮暗双主题对照原型截图
+5. [x] docker 端到端演练：改草稿 → 预览 diff → 导出 → `git diff` 仅预期行 → verify: A1-A6 逐项过
+6. [x] changelog + 本文档状态更新
