@@ -40,6 +40,14 @@
             <span v-if="fam.has_draft" class="pill pill-orange">
               <span class="dot dot-warn"></span>待导出
             </span>
+            <button
+              v-if="fam.has_draft"
+              class="btn btn-txt btn-sm"
+              :disabled="withdrawing"
+              @click="confirmWithdraw(fam)"
+            >
+              丢弃草稿
+            </button>
           </div>
           <div class="fam-desc-row">
             <span>{{ displayValue(fam).desc }}</span>
@@ -129,6 +137,7 @@ const overview = ref(null)
 const assets = ref({})
 const exportOpen = ref(false)
 const deleting = ref(false)
+const withdrawing = ref(false)
 let editSeq = 0 // 保存竞态序号令牌：PUT 在飞时用户取消并另开弹窗，旧回包不得动新弹窗状态
 const editModal = reactive({
   open: false,
@@ -246,6 +255,29 @@ const submitDelete = async (fam, index) => {
     message.error(e.message)
   } finally {
     deleting.value = false
+  }
+}
+
+const confirmWithdraw = (fam) => {
+  Modal.confirm({
+    title: '丢弃草稿',
+    content: '将删除该族数据库草稿（文件锚点不受影响），面板恢复为文件内容。',
+    okText: '丢弃',
+    onOk: () => withdraw(fam)
+  })
+}
+
+const withdraw = async (fam) => {
+  if (withdrawing.value) return
+  withdrawing.value = true
+  try {
+    await eiaParadigmApi.withdrawDraft(KIND, fam.asset_id)
+    message.success('已撤回该族草稿（文件锚点不受影响）')
+    await fetchAll()
+  } catch (e) {
+    message.error(e.message)
+  } finally {
+    withdrawing.value = false
   }
 }
 
