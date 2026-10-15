@@ -22,6 +22,8 @@
 
 ### 功能与修复
 
+- 词表页新增抑制名单卡：列表（含改名自动登记行与手工行，空改名目标显示「—」）/ 手工添加（下拉仅列重扫会导入的扫描差集候选，服务端强校验拒绝语料外指纹与已入库词条）/ 撤回（确认弹窗明示重扫复活（A 类直接回已入选）与语境回落失效两条后果）；新增 `/eia/lexicon/suppressions`、`/eia/lexicon/scan-candidates` 4 端点与 repo/service 对应方法及 6 例零 DB 单测
+
 - 写作范式层查询+编辑页（/domain-factory/eia-data/paradigms · forms）：eia_paradigm_drafts 单表草稿（迁移 v17）+ 6 端点 + validate-all-then-write 导出（锚点/两键/专名扫描校验，round-trip 字节纪律，base_hash 漂移检测）+ 前端两页（原型 s12/s13 像素复刻）；_roles.json 只读，RESIDUE_RE 人工同步纪律入导出确认
 
 - 修复对话提问卡片「填写项做成选择题」反模式（bug-4011，页面实测发现：模型把委托单位/编制单位/规划批复文号等填写类数据项并成一张单选题，选项=字段名、选项值=「如：XX公司」示例占位，用户只能选不能填，提示词纪律约束不住）：`ask_user_question` 工具新增发送前结构校验并教学式拒收——①question 含 ≥2 行编号填写槽（数字开头+冒号结尾）却附带 options；②options label/value 含示例占位标记（如：/例：/示例：/XX）；命中即返回中文报错引导模型拆成逐项自由文本问题重发；工具 docstring 使用规范补第 7 条（填写项禁做成选择题、选项只放真实枚举值），coal-eia-writer SKILL.md bug-3233 段补反例与拒收说明。新增单测 `backend/test/unit/toolkits/test_ask_user_question_card_guard.py`（4 例，容器内通过），运行栈经 sync-dev 热载后 worker 侧实测拦截生效。
