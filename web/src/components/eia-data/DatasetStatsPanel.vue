@@ -5,7 +5,7 @@
     <div class="page-head">
       <div class="ph-icon"><ChartColumn :size="18" /></div>
       <div>
-        <h2>环评数据工厂 · 总览</h2>
+        <h2>环评数据 · 总览</h2>
         <div class="ph-sub">bank_compile 产物全景 · 计数即时统计 · 全页只读零写通道</div>
       </div>
     </div>

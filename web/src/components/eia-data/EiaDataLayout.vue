@@ -3,7 +3,7 @@
     <!-- 左侧子页导航（原型 chrome 配方；分组为产品语义，原型的 P1/P2/P3 批次标签不入产品菜单） -->
     <aside class="chrome-side">
       <div class="chrome-brand">
-        <h1>环评数据工厂</h1>
+        <h1>环评·数据加工</h1>
         <p>coal-eia-writer 技能数据资产</p>
       </div>
       <div v-for="g in groups" :key="g.label" class="chrome-group">
