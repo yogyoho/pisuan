@@ -113,9 +113,9 @@
             <table class="tbl" :style="loading && items.length ? 'opacity: .55' : ''">
               <thead>
                 <tr>
-                  <th style="width: 19%">口径</th>
+                  <th style="width: 17%">口径</th>
                   <th style="width: 9%">阶段</th>
-                  <th style="width: 6%">单位</th>
+                  <th style="width: 8%">单位</th>
                   <th style="width: 9%">分类</th>
                   <th style="width: 8%">状态</th>
                   <th class="r" style="width: 12%">语料计数</th>
