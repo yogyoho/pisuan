@@ -182,6 +182,13 @@
 
   /* Ant Design 主色变量 */
   --ant-primary-color: #4f46e5; /* [pisuan-custom] 青云素雅 */
+
+  /* 字体栈 - 全站单一真相（正文/等宽），对齐 docs/vibe/prototypes/2026-10-12-eia-p2-ui.html
+     [pisuan-custom] 中文降级链保留鸿蒙/Noto；mono 以 JetBrains Mono 为首（既有组件实际栈） */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'HarmonyOS Sans SC',
+    'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, 'Courier New', monospace;
 }
 
 /* 文本选中美化（靛蓝点睛） */

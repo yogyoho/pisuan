@@ -9,8 +9,7 @@ export const useThemeStore = defineStore('theme', () => {
   // [pisuan-custom] 公共主题配置 - 青云素雅主题 (Tailwind indigo-600)：主色与字体均为 pisuan 定制（上游默认青碧系 #24839b + 系统字体栈；「拂晓蓝 #1890ff」系 pisuan 首个定制提交引入的中间态，非上游原值），同步时保留
   const commonTheme = {
     token: {
-      fontFamily:
-        '"Inter Variable", "Inter", "PingFang SC", "Noto Sans SC", "Microsoft Yahei", "微软雅黑", Arial, sans-serif',
+      fontFamily: 'var(--font-sans)', // 单一真相同 base.css --font-sans [pisuan-custom]
       colorPrimary: '#4f46e5', // [pisuan-custom] 青云素雅：AntD token 需参与主色派生计算，var() 不解析
       colorLink: 'var(--main-color)',
       colorLinkHover: 'var(--main-600)',
