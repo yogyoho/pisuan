@@ -75,7 +75,7 @@ tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query
 5. 填值：CSV/Excel 走 `ingest.py file`（自动乱序列匹配）；叙述性字段从上传文件提取或 `ask_user_question` 逐类收集（项目→规划方案→敏感目标→标准确认→现状监测→影响识别→预测参数→经济/投资→公众参与）。交互纪律（页面实测铁律，全套）：
    - **单回合至多一次 `ask_user_question`**——一次只问一个类别，一张表单获答落盘回执后才发下一类；连发除最后一张外全部冻结成死卡。
    - **用户可见即表单**：`ask_user_question` 问题制卡片（1–5 问/卡），`question_id`=schema 英文键（内部）、`question` 文本=中文名+单位+填写说明（label+placeholder 合并），enum→options / 其余→自由文本填写（数值合法性由 `ingest.py` 落盘校验，rc=1 拒后译中文重问）；**单卡片 ≤5 项（平台上限）**，一份数据族分多卡，跨回合仍一回合至多一卡；面向用户一律称"数据项"，禁出现「JSON/字段/field」术语。
-   - **字段构造反模式禁令（bug-3233）**：`question`/`options` 的文本必须纯中文（禁塞 JSON/字典/对象字符串）；数值数据项禁做成选择题形态（一律自由文本填写，校验交给 ingest）；同一数据项的填写说明禁在多卡间重复粘贴冗余文本。
+   - **字段构造反模式禁令（bug-3233）**：`question`/`options` 的文本必须纯中文（禁塞 JSON/字典/对象字符串）；数值数据项禁做成选择题形态（一律自由文本填写，校验交给 ingest）；同一数据项的填写说明禁在多卡间重复粘贴冗余文本。（bug-4011 页面实测：把委托单位/编制单位/文号等多个填写项并成一张单选题、选项=字段名、选项值=「如：XX公司」示例占位——用户只能选不能填；平台侧对此类卡片直接报错拒收，收到该报错必须拆成逐项自由文本问题重发，禁换措辞重试同形态）
    - **数组族批量收集三步协议（bug-3234）**：array<object> 族（targets/seams/plans/stages/rows 等）禁要求用户填 JSON——
      ① agent 从 stage schema 子字段中文 label 生成 CSV 模板（UTF-8 **with BOM**，含 1 行示例）经 present_artifacts 呈现下载；
      ② 用户 Excel 填写后对话发回（uploads 通道）；

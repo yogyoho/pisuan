@@ -512,6 +512,8 @@ ASK_USER_QUESTION_DESCRIPTION = """
 4. 若有推荐选项：把推荐项放在第一位，并在 label 末尾加 "(Recommended)"
 5. 若需要多选：将该问题的 multi_select 设为 true
 6. allow_other 只用于选择题，通常保持 true，让用户可自行填写答案
+7. 填写类数据项（单位名/文号/数值/日期等）禁做成选择题——每项单独一条自由文本问题；
+   options 只放真实可选的枚举值，禁示例占位文本（如「如：XX公司」），示例应写在 question 文本里
 
 注意事项：
 1. 不要用这个工具询问“是否继续执行”“计划是否准备好”这类流程控制问题
@@ -523,6 +525,40 @@ answer 为 object，格式为 {question_id: answer}。
 跳过的问题不会出现在 answer 中。answer 的值可能是 string（纯问答或单选）、list（多选）
 或 object（选择题的自行填写文本）。
 """
+
+
+_FILLIN_SLOT_RE = re.compile(r"^\s*\d+\s*[、.．)）]")
+_PLACEHOLDER_OPTION_RE = re.compile(r"^(如|例|例如|示例)\s*[：:]")
+
+
+def _validate_choice_questions(normalized_questions: list[dict]) -> None:
+    """拒绝「填写项做成选择题」的反模式卡片（bug-4011 页面实测）。
+
+    填写类数据项必须逐项自由文本提问；选择题的 options 只允许真实枚举值。
+    """
+    for q in normalized_questions:
+        options = q.get("options") or []
+        if not options:
+            continue
+        slot_lines = [
+            line
+            for line in str(q.get("question", "")).splitlines()
+            if _FILLIN_SLOT_RE.match(line) and line.rstrip().endswith(("：", ":"))
+        ]
+        if len(slot_lines) >= 2:
+            raise ValueError(
+                f"问题「{q['question'][:30]}」是逐项填写说明，却附带 options 选择项；"
+                "填写类数据项禁做成选择题（用户只能选不能填）。"
+                "请改写：每个数据项单独一条自由文本问题（不提供 options）后重新调用。"
+            )
+        for opt in options:
+            label = str(opt.get("label", ""))
+            value = str(opt.get("value", ""))
+            if _PLACEHOLDER_OPTION_RE.search(label) or _PLACEHOLDER_OPTION_RE.search(value) or "XX" in label + value:
+                raise ValueError(
+                    f"options 含示例占位文本（label=「{label}」value=「{value}」）；"
+                    "选项必须是真实可选的枚举值，示例/格式说明请写在 question 文本中。请改写后重新调用。"
+                )
 
 
 @tool(
@@ -554,6 +590,8 @@ def ask_user_question(
 
     if not normalized_questions:
         raise ValueError("questions 至少需要包含一个有效问题")
+
+    _validate_choice_questions(normalized_questions)
 
     interrupt_payload = {
         "questions": normalized_questions,
