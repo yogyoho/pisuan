@@ -378,21 +378,46 @@
       </div>
     </a-modal>
 
-    <!-- 提及明细抽屉 -->
+    <!-- 提及明细抽屉（原型 2026-10-15-lexicon-mentions-drawer）：标识条 + 值分布 chips + 语境卡片 -->
     <a-drawer
       v-model:open="mentionDrawer.open"
       :title="`提及明细 · ${mentionDrawer.entry?.caliber ?? ''}`"
-      width="420"
+      width="480"
     >
-      <p class="drawer-sub">
-        {{ stageLabel(mentionDrawer.entry?.stage) }} · 首见单位
-        {{ mentionDrawer.entry?.unit || '—' }} · 语料实时 {{ mentionDrawer.mentions.length }} 处提及
-      </p>
+      <div class="drawer-ident">
+        <span class="pill-stage">{{ stageLabel(mentionDrawer.entry?.stage) }}</span>
+        <span class="dim">首见单位 {{ mentionDrawer.entry?.unit || '—' }}</span>
+        <span v-if="!mentionDrawer.loading" class="cnt-badge num"
+          >{{ mentionDrawer.mentions.length }} 处提及</span
+        >
+      </div>
+      <div v-if="mentionValueDist.length" class="dist">
+        <span class="lab">值分布</span>
+        <span v-for="d in mentionValueDist" :key="d.label" class="chip num"
+          >{{ d.label }} <em>× {{ d.n }}</em></span
+        >
+      </div>
+      <p class="drawer-sec-hd">语料语境<span class="cnt">高亮为扫描命中 · 悬停看全文</span></p>
       <div class="mention-list">
-        <div v-for="(m, i) in mentionDrawer.mentions" :key="i" class="mention-row">
-          <span class="mention-value">{{ m.value }} {{ m.unit }}</span>
-          <span class="mention-rid" :title="m.rid">{{ m.rid }}</span>
-        </div>
+        <a-spin v-if="mentionDrawer.loading" size="small" class="ctx-spin" />
+        <template v-else>
+          <div
+            v-for="(m, i) in mentionDrawer.mentions"
+            :key="i"
+            class="ctx-card"
+            :title="`${m.before}${m.hit}${m.after}`"
+          >
+            <p class="ctx-text">
+              {{ m.before }}<mark>{{ m.hit }}</mark
+              >{{ m.after }}
+            </p>
+            <div class="ctx-meta">
+              <span class="ctx-value num">{{ m.value }} {{ m.unit }}</span>
+              <span class="ctx-rid" :title="m.rid">{{ m.rid }}</span>
+            </div>
+          </div>
+          <p v-if="!mentionDrawer.mentions.length" class="assign-empty">该口径在语料中无提及</p>
+        </template>
       </div>
     </a-drawer>
 
@@ -734,19 +759,32 @@ const onRenameSubmit = async () => {
 
 // ── 提及明细 ────────────────────────────────────────────
 
-const mentionDrawer = reactive({ open: false, entry: null, mentions: [] })
+const mentionDrawer = reactive({ open: false, loading: false, entry: null, mentions: [] })
 
 const openMentions = async (record) => {
   mentionDrawer.entry = record
   mentionDrawer.mentions = []
   mentionDrawer.open = true
+  mentionDrawer.loading = true
   try {
     const data = await eiaLexiconApi.getMentions(record.id)
     mentionDrawer.mentions = data.mentions
   } catch (e) {
     message.error(e?.message || '提及明细加载失败')
+  } finally {
+    mentionDrawer.loading = false
   }
 }
+
+// 值分布 chips：按 值+单位 去重计数（原型 dist 区）
+const mentionValueDist = computed(() => {
+  const acc = new Map()
+  for (const m of mentionDrawer.mentions) {
+    const key = `${m.value} ${m.unit}`
+    acc.set(key, (acc.get(key) ?? 0) + 1)
+  }
+  return [...acc.entries()].map(([label, n]) => ({ label, n }))
+})
 
 // ── 导出物化与开关（admin） ─────────────────────────────
 
@@ -1071,62 +1109,63 @@ onMounted(() => {
   }
 }
 
+/* ── 语境卡片：改名对话框与提及抽屉共用（原型 2026-10-15 两件套） ── */
+.ctx-card {
+  padding: 8px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  background: var(--gray-50);
+
+  .ctx-text {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+
+    mark {
+      background: var(--main-100);
+      color: var(--main-700);
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+  }
+
+  .ctx-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--gray-200);
+
+    .ctx-value {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .ctx-rid {
+      flex: 0 1 auto;
+      min-width: 0;
+      margin-left: auto;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--color-text-tertiary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
 .rename-ctx {
   max-height: 264px;
 
   .ctx-spin {
     display: block;
     margin: 24px auto;
-  }
-
-  .ctx-card {
-    padding: 8px 12px;
-    border: 1px solid var(--gray-200);
-    border-radius: 8px;
-    background: var(--gray-50);
-
-    .ctx-text {
-      margin: 0;
-      font-size: 12px;
-      line-height: 1.8;
-      color: var(--color-text);
-      overflow-wrap: anywhere;
-
-      mark {
-        background: var(--main-100);
-        color: var(--main-700);
-        padding: 0 2px;
-        border-radius: 2px;
-      }
-    }
-
-    .ctx-meta {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 6px;
-      padding-top: 6px;
-      border-top: 1px dashed var(--gray-200);
-
-      .ctx-value {
-        font-family: var(--font-mono);
-        font-size: 12px;
-        font-weight: 600;
-        font-variant-numeric: tabular-nums;
-      }
-
-      .ctx-rid {
-        flex: 0 1 auto;
-        min-width: 0;
-        margin-left: auto;
-        font-family: var(--font-mono);
-        font-size: 11px;
-        color: var(--color-text-tertiary);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-    }
   }
 }
 
@@ -1171,39 +1210,117 @@ onMounted(() => {
   line-height: 1.6;
 }
 
-.drawer-sub {
-  margin: 0 0 12px;
-  font-size: 12px;
-  color: var(--color-text-tertiary);
+/* ── 提及明细抽屉（原型 2026-10-15-lexicon-mentions-drawer）：标识条 / 值分布 / 语境卡片 ── */
+.drawer-ident {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  background: var(--gray-50);
+
+  .pill-stage {
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 20px;
+    color: var(--gray-700);
+    background: var(--main-0);
+    border: 1px solid var(--gray-300);
+  }
+
+  .dim {
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+  }
+
+  .cnt-badge {
+    margin-left: auto;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--main-700);
+    background: var(--main-100);
+  }
+}
+
+.dist {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+
+  .lab {
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 10px;
+    border: 1px solid var(--gray-200);
+    border-radius: 999px;
+    background: var(--gray-50);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+
+    em {
+      font-style: normal;
+      font-family: var(--font-sans);
+      font-weight: 400;
+      font-size: 12px;
+      color: var(--color-text-tertiary);
+    }
+  }
+}
+
+.drawer-sec-hd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+
+  .cnt {
+    font-weight: 400;
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+  }
 }
 
 .mention-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 
-  .mention-row {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    padding: 6px 8px;
-    border-radius: 6px;
-    background: var(--main-0);
+  .ctx-spin {
+    display: block;
+    margin: 24px auto;
+  }
 
-    .mention-value {
-      min-width: 88px;
-      font-weight: 500;
-      font-variant-numeric: tabular-nums;
-    }
+  /* 抽屉浏览场景：正文 5 行截断，整卡 title 悬停看全文（bug-4025 同口径） */
+  .ctx-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 
-    .mention-rid {
-      flex: 1;
-      font-size: 12px;
-      color: var(--color-text-tertiary);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+  .assign-empty {
+    margin: 8px 0;
+    font-size: 12px;
+    color: var(--color-text-tertiary);
   }
 }
 
