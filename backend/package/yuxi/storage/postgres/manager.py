@@ -28,6 +28,7 @@ from yuxi.storage.postgres.models_domain_factory import (
     EiaLexiconEntry,
     EiaLexiconSuppression,
     EiaMetaAnnotation,
+    EiaParadigmDraft,
     EiaStageFieldEdit,
     EiaStandardLimitRow,
     EiaStandardReview,
@@ -47,7 +48,7 @@ AGENT_RUN_TERMINAL_STATUS_SQL = ", ".join(f"'{status}'" for status in AGENT_RUN_
 # v13：词表改名抑制（eia_lexicon_suppressions，建表 + 播种 7 条裁决指纹）
 # v14：标准限值查找表人工录入行（eia_standard_limit_rows）
 # v15：环评 stages forms 口径字段人工裁决（eia_stage_field_edits）
-BUSINESS_SCHEMA_VERSION = 16
+BUSINESS_SCHEMA_VERSION = 17
 KNOWLEDGE_SCHEMA_VERSION = 2
 SCHEMA_VERSION_TABLE = "yuxi_schema_migrations"
 AGENT_RUN_LEASE_SCHEMA_STATEMENTS = (
@@ -755,6 +756,32 @@ class PostgresManager(metaclass=SingletonMeta):
                     INSERT INTO {SCHEMA_VERSION_TABLE} (domain, version, applied_at)
                     VALUES ('business', 16, CURRENT_TIMESTAMP)
                     ON CONFLICT (domain) DO UPDATE SET version = 16, applied_at = EXCLUDED.applied_at
+                """)
+            )
+
+    async def upgrade_business_v16_to_v17(self) -> None:
+        """[pisuan-custom] v17：写作范式层草稿表（eia_paradigm_drafts）。
+
+        存量库 create_all 不补表，显式建表并记版本；幂等（version=17 直接返回），
+        create_all(tables=[...]) 仅补新表，不动其他。
+        """
+        self._check_initialized()
+        async with self.async_engine.begin() as conn:
+            version = await conn.scalar(
+                text(f"SELECT version FROM {SCHEMA_VERSION_TABLE} WHERE domain = 'business' FOR UPDATE")
+            )
+            if version == 17:
+                return
+            if version not in (None, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16):
+                raise RuntimeError(f"Unsupported business schema version: {version}")
+            await conn.run_sync(
+                lambda sync_conn: DomainFactoryBase.metadata.create_all(sync_conn, tables=[EiaParadigmDraft.__table__])
+            )
+            await conn.execute(
+                text(f"""
+                    INSERT INTO {SCHEMA_VERSION_TABLE} (domain, version, applied_at)
+                    VALUES ('business', 17, CURRENT_TIMESTAMP)
+                    ON CONFLICT (domain) DO UPDATE SET version = 17, applied_at = EXCLUDED.applied_at
                 """)
             )
 
