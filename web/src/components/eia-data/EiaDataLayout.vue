@@ -47,6 +47,8 @@ import {
   ClipboardList,
   CornerDownLeft,
   LayoutGrid,
+  MessageSquareQuote,
+  NotebookPen,
   Rows3,
   ShieldCheck
 } from '@lucide/vue'
@@ -79,6 +81,17 @@ const groups = [
     items: [
       { to: '/domain-factory/eia-data/formulas', label: '公式参数核对', icon: ChartLine },
       { to: '/domain-factory/eia-data/entities', label: '实体注册补充', icon: Box }
+    ]
+  },
+  {
+    label: '写作范式',
+    items: [
+      { to: '/domain-factory/eia-data/paradigms', label: '写作范式（md）', icon: NotebookPen },
+      {
+        to: '/domain-factory/eia-data/forms',
+        label: '句式范式（catalog）',
+        icon: MessageSquareQuote
+      }
     ]
   }
 ]
