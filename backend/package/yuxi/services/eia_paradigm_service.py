@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from fastapi.concurrency import run_in_threadpool
@@ -35,11 +36,11 @@ ANCHORS = ("## 适用", "## 结构骨架", "## 范文", "## 节尾收束段", "#
 # 草稿行进线程池前的纯数据形态：(kind, asset_id, content, base_hash, updated_by, updated_at)
 
 
-def _md_file(asset_id: str):
+def _md_file(asset_id: str) -> Path:
     return _PARADIGM_DIR / f"{asset_id}.md"
 
 
-def _asset_path(kind: str, asset_id: str):
+def _asset_path(kind: str, asset_id: str) -> Path:
     if kind == KIND_MD:
         return _md_file(asset_id)
     return _PARADIGM_DIR / "forms_catalog.json"
@@ -62,10 +63,6 @@ def _read_text(path) -> str:
 
 def _sha(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
-def _scan_generic_terms() -> frozenset[str]:
-    return eia_paradigm_scan.GENERIC_TERMS()
 
 
 def _validate_md(text: str) -> list[str]:
@@ -110,7 +107,7 @@ def _unified_diff(name: str, old: str, new: str) -> str:
     )
 
 
-def _atomic_write(path, text: str) -> None:
+def _atomic_write(path: Path, text: str) -> None:
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(text, encoding="utf-8", newline="")
     os.replace(tmp, path)
@@ -230,9 +227,9 @@ class EiaParadigmService:
 
     async def preview_export(self) -> dict[str, Any]:
         rows = self._flatten(await self.repo.list_drafts())
-        return await run_in_threadpool(self._preview_sync, rows)
+        return await run_in_threadpool(self._preview_from_rows, rows)
 
-    def _preview_sync(self, rows: list[tuple]) -> dict[str, Any]:
+    def _preview_from_rows(self, rows: list[tuple]) -> dict[str, Any]:
         drafts = {(k, a): (c, h) for k, a, c, h, _ub, _ua in rows}
         items: list[dict[str, Any]] = []
         forms_drafts = {aid: c for (k, aid), (c, _h) in drafts.items() if k == KIND_FORMS}
@@ -282,9 +279,9 @@ class EiaParadigmService:
 
     async def export_paradigms(self, username: str) -> dict[str, Any]:
         rows = self._flatten(await self.repo.list_drafts())
+        preview = await run_in_threadpool(self._preview_from_rows, rows)
         md_contents = {a: c["md"] for k, a, c, _h, _ub, _ua in rows if k == KIND_MD}
         forms_contents = {a: c for k, a, c, _h, _ub, _ua in rows if k == KIND_FORMS}
-        preview = await self.preview_export()
         if not preview["all_ok"]:
             failed = [f"{i['kind']}/{i['asset_id']}: {'；'.join(i['errors'])}" for i in preview["items"] if not i["ok"]]
             raise ValueError("写前校验未通过（全批不写）—" + " | ".join(failed))

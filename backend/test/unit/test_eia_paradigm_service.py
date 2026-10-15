@@ -11,6 +11,7 @@ from types import SimpleNamespace
 import pytest
 
 from yuxi.services import eia_paradigm_service as svc
+from yuxi.services.eia_paradigm_scan import GENERIC_TERMS
 from yuxi.services.eia_paradigm_service import EiaParadigmService
 
 MD = """# 节角色范式：测试
@@ -45,7 +46,7 @@ FORMS = {
         },
         "numeric_citation": {
             "desc": "d2",
-            "examples": [],
+            "examples": [{"form": "x2", "report_id": "r2", "text": "t2"}],
             "stats": {"exact_with_unit": 1.0},
             "templates": ["{量}为 {value} {unit}。"],
         },
@@ -110,6 +111,22 @@ def _draft(kind, aid, content):
     )
 
 
+_ROLES = {
+    "_meta": "bank_compile 语料统计（下划线前缀键 overview 剔除）",
+    "sec_1": "opener",
+    "sec_2": "baseline",
+    "sec_3": "analysis",
+    "sec_4": "measures",
+    "sec_5": "opener",
+}
+
+
+def _write_roles(tmp_path):
+    (tmp_path / "_roles.json").write_text(
+        json.dumps(_ROLES, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline=""
+    )
+
+
 def test_validate_md_anchor_prefix_match(tmp_path, monkeypatch):
     """锚点校验按前缀匹配——真实文件 ## 范文（…）/## 反模式（…）带后缀。"""
     monkeypatch.setattr(svc, "_PARADIGM_DIR", tmp_path)
@@ -159,8 +176,8 @@ def test_export_md_wholesale_and_forms_two_keys_only(tmp_path, monkeypatch):
             _draft("paradigm_md", "analysis", {"md": new_md}),
             _draft(
                 "forms_catalog",
-                "table_lead",
-                {"desc": "表题行前一非空行形态（改）", "templates": ["……{主题}：", "……{主题}如下表所列。"]},
+                "numeric_citation",
+                {"desc": "数值引用句式（改）", "templates": ["{量}为 {value} {unit}。", "实测 {value} {unit}。"]},
             ),
         ]
     )
@@ -168,10 +185,12 @@ def test_export_md_wholesale_and_forms_two_keys_only(tmp_path, monkeypatch):
     assert out["results"]["paradigm_md/analysis"]["materialized"] is True  # 导出回报契约
     assert (tmp_path / "analysis.md").read_text(encoding="utf-8") == new_md  # md 整文件写回
     doc = json.loads((tmp_path / "forms_catalog.json").read_text(encoding="utf-8"))
-    assert doc["forms"]["table_lead"]["desc"].endswith("（改）")
-    assert doc["forms"]["table_lead"]["templates"] == ["……{主题}：", "……{主题}如下表所列。"]
+    assert doc["forms"]["numeric_citation"]["desc"] == "数值引用句式（改）"
+    assert doc["forms"]["numeric_citation"]["templates"] == ["{量}为 {value} {unit}。", "实测 {value} {unit}。"]
     assert doc["forms"]["caliber_disambiguation"] == FORMS["forms"]["caliber_disambiguation"]  # 无草稿 family 不动
-    assert doc["forms"]["table_lead"]["examples"] == [] and doc["forms"]["table_lead"]["stats"] == {}  # 只写两键
+    assert doc["forms"]["numeric_citation"]["stats"] == {"exact_with_unit": 1.0}  # 只写两键：非空 stats 原样存活
+    fam = doc["forms"]["numeric_citation"]
+    assert fam["examples"] == FORMS["forms"]["numeric_citation"]["examples"]  # 非空 examples 原样存活
     raw = (tmp_path / "forms_catalog.json").read_text(encoding="utf-8")
     assert raw.endswith("\n") and list(doc["forms"].keys()) == list(FORMS["forms"].keys())  # 键序/结尾换行不重排
 
@@ -208,7 +227,7 @@ def test_export_blocked_by_propernoun_scan(tmp_path, monkeypatch):
     if not ent.exists():
         pytest.skip("宿主无 sample_entities")
     term = json.loads((ent / "hengcheng.json").read_text(encoding="utf-8"))["entities"]["projects"][0]
-    if term in svc._scan_generic_terms():
+    if term in GENERIC_TERMS():
         pytest.skip("夹具词已被通用词豁免规则覆盖")
     repo = FakeRepo([_draft("paradigm_md", "opener", {"md": MD + f"\n泄露：{term}\n"})])
     with pytest.raises(ValueError, match="专名"):
@@ -253,3 +272,44 @@ def test_export_rollback_on_partial_failure(tmp_path, monkeypatch):
     with pytest.raises(OSError):
         asyncio.run(s.export_paradigms("admin"))
     assert "界定节型与职能（改）。" not in (tmp_path / "opener.md").read_text(encoding="utf-8")  # 已回滚
+
+
+def test_overview_sync_counts_roles_and_flags_drafts(tmp_path, monkeypatch):
+    monkeypatch.setattr(svc, "_PARADIGM_DIR", tmp_path)
+    _write_assets(tmp_path)
+    _write_roles(tmp_path)
+    repo = FakeRepo(
+        [
+            _draft("paradigm_md", "analysis", {"md": MD}),
+            _draft("forms_catalog", "table_lead", {"desc": "草稿描述（未物化）", "templates": ["草稿模板"]}),
+        ]
+    )
+    out = asyncio.run(_svc(repo).load_overview())
+    assert out["role_counts"] == {"opener": 2, "baseline": 1, "analysis": 1, "measures": 1}
+    assert "_meta" not in out["roles_map"] and len(out["roles_map"]) == 5  # "_" 前缀键剔除
+    ana = next(i for i in out["paradigms"] if i["asset_id"] == "analysis")
+    ope = next(i for i in out["paradigms"] if i["asset_id"] == "opener")
+    assert ana["has_draft"] and ana["drift"] and ana["updated_by"] == "alice"  # base_hash="x"≠文件 → 漂移
+    assert not ope["has_draft"] and not ope["drift"] and ope["file_hash"] == svc._sha(MD)
+    fam = next(i for i in out["families"] if i["asset_id"] == "table_lead")
+    assert fam["has_draft"] and fam["drift"]
+    assert fam["desc"] == "d3" and fam["templates"] == ["……{主题}："]  # overview 读文件值非草稿值
+
+
+def test_get_asset_forms_branch_reads_family(tmp_path, monkeypatch):
+    monkeypatch.setattr(svc, "_PARADIGM_DIR", tmp_path)
+    _write_assets(tmp_path)
+    _write_roles(tmp_path)
+    repo = FakeRepo([_draft("forms_catalog", "numeric_citation", {"desc": "草稿描述", "templates": ["草稿模板"]})])
+    out = asyncio.run(_svc(repo).get_asset("forms_catalog", "numeric_citation"))
+    assert out["family"] == {
+        "desc": "d2",
+        "templates": ["{量}为 {value} {unit}。"],
+        "examples": FORMS["forms"]["numeric_citation"]["examples"],
+        "stats": {"exact_with_unit": 1.0},
+    }  # family 恰四键、读文件值
+    assert out["drift"] is True  # base_hash="x"≠文件
+    assert out["draft"]["content"] == {"desc": "草稿描述", "templates": ["草稿模板"]}
+    assert out["draft"]["base_hash"] == "x" and out["draft"]["updated_by"] == "alice"
+    out_md = asyncio.run(_svc(repo).get_asset("paradigm_md", "opener"))
+    assert out_md["file_text"] == MD and out_md["draft"] is None and out_md["drift"] is False
