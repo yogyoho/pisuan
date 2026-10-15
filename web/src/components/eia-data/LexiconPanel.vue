@@ -210,11 +210,16 @@
               </tbody>
             </table>
             <div class="tbl-foot">
-              <span
-                >共 {{ total }} 条 · 语料计数实时现扫非快照 ·
-                区间护栏达报告数门槛即可发布（P5/P50/P95 语义取自 bank_compile）</span
-              >
+              <span>共 {{ total }} 条 · 语料计数实时现扫非快照 · 区间护栏达报告数门槛即可发布</span>
               <span v-if="pageCount > 1" class="pager">
+                <a-select
+                  :value="pageSize"
+                  size="small"
+                  class="size-select"
+                  popup-class-name="pager-size-dd"
+                  :options="sizeOptions"
+                  @change="setPageSize"
+                />
                 <button class="btn btn-sm" :disabled="page <= 1" @click="page--">上一页</button>
                 <span class="num">{{ page }} / {{ pageCount }}</span>
                 <button class="btn btn-sm" :disabled="page >= pageCount" @click="page++">
@@ -589,7 +594,9 @@ const counts = ref({})
 const filters = reactive({ status: '', category: '', stage: '', q: '' })
 const switchState = reactive({ enabled: false, file: false })
 const page = ref(1)
-const PAGE_SIZE = 20
+const PAGE_SIZE_OPTIONS = [10, 20, 50]
+const pageSize = ref(10)
+const sizeOptions = PAGE_SIZE_OPTIONS.map((n) => ({ value: n, label: `${n} 条/页` }))
 
 const stageLabel = (k) => STAGE_LABELS[k] || k
 const categoryLabel = (k) => CATEGORY_LABELS[k] || k
@@ -616,10 +623,15 @@ const catCounts = computed(() => {
   return acc
 })
 
-const pageCount = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)))
+const pageCount = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)))
 const pagedItems = computed(() =>
-  items.value.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE)
+  items.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value)
 )
+
+const setPageSize = (n) => {
+  pageSize.value = n
+  page.value = 1
+}
 
 const setStatus = (key) => {
   filters.status = key
@@ -1085,6 +1097,27 @@ onMounted(() => {
   gap: 8px;
   font-size: 12px;
   color: var(--color-text-tertiary);
+}
+
+/* 用户裁定：统计文案居左、页大小下拉与翻页控件居右（共享 .tbl-foot 无 justify，本页覆写） */
+.lexicon-panel .tbl-foot {
+  justify-content: space-between;
+}
+
+/* 页大小下拉：约束 min-width 防 flex 拉伸；字号压到 12px 对齐 tbl-foot（用户裁定调小——
+   antd 根节点可继承覆写，但 selection-item 显式置 14px，须 :deep 二段覆盖） */
+.size-select {
+  min-width: 88px;
+  font-size: 12px;
+
+  :deep(.ant-select-selection-item) {
+    font-size: 12px;
+  }
+}
+
+/* 下拉面板 teleport 到 body，scoped 触不到——popupClassName + :global 下探（同 AgentEditModal 惯例） */
+:global(.pager-size-dd .ant-select-item) {
+  font-size: 12px;
 }
 
 /* 语料口径名是长句片段，auto 布局下 nowrap 最小内容宽会撑爆表格——固定布局 + 换行 */
