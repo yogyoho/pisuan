@@ -22,6 +22,7 @@ from yuxi.services.eia_meta_service import get_eia_meta_service
 from yuxi.services.eia_standard_service import get_eia_standard_service
 from yuxi.services.eia_entity_service import get_eia_entity_service
 from yuxi.services.eia_formula_service import get_eia_formula_service
+from yuxi.services.eia_paradigm_service import get_eia_paradigm_service
 from yuxi.services.eia_stage_service import get_eia_stage_service
 from yuxi.storage.postgres.models_business import User
 from yuxi.utils import logger
@@ -1532,6 +1533,97 @@ async def export_eia_formulas(
     except Exception as e:
         logger.error(f"Failed to export eia formulas: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"导出公式参数失败: {str(e)}")
+
+
+# =============================================================================
+# EIA Paradigms (写作范式层：DB 草稿唯一真相 + admin 导出物化回写 references/paradigms/*)
+# =============================================================================
+
+
+@domain_factory.get("/eia/paradigms")
+async def list_eia_paradigms(current_user: User = Depends(get_required_user)) -> dict[str, Any]:
+    """范式层概览：4 md + 3 family 草稿态/漂移 + 角色挂载计数 + _roles 全映射（只读）"""
+    try:
+        return {"success": True, **await get_eia_paradigm_service().load_overview()}
+    except Exception as e:
+        logger.error(f"Failed to list eia paradigms: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取范式层概览失败: {str(e)}")
+
+
+@domain_factory.get("/eia/paradigms/{kind}/{asset_id}")
+async def get_eia_paradigm_asset(
+    kind: str, asset_id: str, current_user: User = Depends(get_required_user)
+) -> dict[str, Any]:
+    """单资产：md 全文（草稿在则附草稿）/ family 四键（草稿值在 draft.content）"""
+    try:
+        return {"success": True, **await get_eia_paradigm_service().get_asset(kind, asset_id)}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to get eia paradigm {kind}/{asset_id}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取范式资产失败: {str(e)}")
+
+
+@domain_factory.put("/eia/paradigms/{kind}/{asset_id}/draft")
+async def save_eia_paradigm_draft(
+    kind: str,
+    asset_id: str,
+    payload: dict = Body(...),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """保存草稿（登录用户）：md 整文件 / 仅 desc+templates 两键，其余键拒收；upsert"""
+    try:
+        return {
+            "success": True,
+            **await get_eia_paradigm_service().save_draft(kind, asset_id, payload, current_user.username),
+        }
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to save eia paradigm draft {kind}/{asset_id}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"保存草稿失败: {str(e)}")
+
+
+@domain_factory.delete("/eia/paradigms/{kind}/{asset_id}/draft")
+async def withdraw_eia_paradigm_draft(
+    kind: str, asset_id: str, current_user: User = Depends(get_required_user)
+) -> dict[str, Any]:
+    """撤回草稿（删行，文件锚点不受影响）"""
+    try:
+        ok = await get_eia_paradigm_service().withdraw_draft(kind, asset_id)
+        return {"success": True, "withdrawn": ok}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to withdraw eia paradigm draft {kind}/{asset_id}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"撤回草稿失败: {str(e)}")
+
+
+@domain_factory.post("/eia/paradigms/export/preview")
+async def preview_eia_paradigm_export(current_user: User = Depends(get_required_user)) -> dict[str, Any]:
+    """写前校验 + difflib diff（不写盘）"""
+    try:
+        return {"success": True, **await get_eia_paradigm_service().preview_export()}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to preview eia paradigm export: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"导出预览失败: {str(e)}")
+
+
+@domain_factory.post("/eia/paradigms/export")
+async def export_eia_paradigms(current_user: User = Depends(get_admin_user)) -> dict[str, Any]:
+    """DB 草稿 → references/paradigms/* 物化（validate-all-then-write；字节纪律；admin）"""
+    try:
+        result = await get_eia_paradigm_service().export_paradigms(current_user.username)
+        return {"success": True, **result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to export eia paradigms: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"导出范式失败: {str(e)}")
 
 
 # =============================================================================

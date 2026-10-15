@@ -318,3 +318,13 @@ class EiaParadigmService:
             "paths": sorted({str(p.relative_to(_SKILL_ROOT)) for p, _ in written}) or ["(无变更)"],
             "exported_at": datetime.now(UTC).isoformat(timespec="seconds"),
         }
+
+
+_service: EiaParadigmService | None = None
+
+
+def get_eia_paradigm_service() -> EiaParadigmService:
+    global _service
+    if _service is None:
+        _service = EiaParadigmService()
+    return _service
