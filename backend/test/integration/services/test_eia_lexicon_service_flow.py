@@ -60,6 +60,12 @@ async def test_lexicon_service_full_flow():
         by_status.setdefault(it["status"], []).append(it)
     assert "approved" in by_status and "candidate" in by_status
 
+    # 2b) 全部口径视图按 A 措施效率 → B 现状监测 → C 非护栏杂项 分组序
+    # （category 是字符串，字典序 junk<measure<site 会错排——bug-4024 回归锚）
+    rank = {"measure": 0, "site": 1, "junk": 2}
+    cat_seq = [rank[it["category"]] for it in data["items"]]
+    assert cat_seq == sorted(cat_seq)
+
     # 3) PATCH 状态机：candidate→approved→candidate 可逆；splitting 不可直设
     cand = by_status["candidate"][0]
     assert (await svc.update_entry(cand["id"], {"status": "approved"}, "tester"))["status"] == "approved"
