@@ -228,6 +228,18 @@ const router = createRouter({
               name: 'EiaDataEntities',
               component: () => import('../views/EiaEntitiesView.vue'),
               meta: { keepAlive: false, requiresAuth: true }
+            },
+            {
+              path: 'paradigms',
+              name: 'EiaDataParadigms',
+              component: () => import('../views/EiaParadigmsView.vue'),
+              meta: { keepAlive: false, requiresAuth: true }
+            },
+            {
+              path: 'forms',
+              name: 'EiaDataForms',
+              component: () => import('../views/EiaFormsView.vue'),
+              meta: { keepAlive: false, requiresAuth: true }
             }
           ]
         },
