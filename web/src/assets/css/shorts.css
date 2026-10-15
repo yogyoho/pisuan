@@ -42,3 +42,8 @@
   position: relative;
   bottom: -1px;
 }
+
+/* 数字等宽（数据列/统计/时间防抖动）—— 原型 eia-p2-ui .num 约定 */
+.num {
+  font-variant-numeric: tabular-nums;
+}

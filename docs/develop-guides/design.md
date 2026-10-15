@@ -88,21 +88,29 @@ Yuxi 通过 `:root.dark` 覆盖同名 token。新增 UI 必须使用 CSS 变量�
 
 ## 3. 字体与文本层级
 
-全局字体栈定义在 `web/src/assets/css/main.css`，新增组件不要私自引入新字体。代码、命令、路径和技术标识可使用 monospace，优先复用现有 `@mono-font` 或系统 monospace 栈。
+字体单一真相定义在 `web/src/assets/css/base.css` 的 `--font-sans` / `--font-mono`（正文默认 14px 在 `web/src/assets/css/main.less` body 生效）；排版基准取自知识工厂原型 `docs/vibe/prototypes/2026-10-12-eia-p2-ui.html`。新增组件不要私自引入新字体，一律引用 token。
 
-建议层级：
+| 栈 | Token | 构成 | 分工 |
+| --- | --- | --- | --- |
+| 正文 | `--font-sans` | -apple-system / Segoe UI（西文）+ PingFang SC / 鸿蒙 / 微软雅黑 / Noto Sans SC（中文降级链） | 界面文案、说明文字 |
+| 等宽 | `--font-mono` | JetBrains Mono → ui-monospace → Cascadia Code → Consolas | 代码、命令、路径、资产 id、技术标识 |
 
-| 角色 | 建议样式 | 使用场景 |
+建议层级（与原型实测谱系一致）：
+
+| 角色 | 样式 | 使用场景 |
 | --- | --- | --- |
-| 页面标题 | 20-24px，600 | 页面主标题、弹窗主标题 |
-| 分组标题 | 16-18px，600 | 卡片标题、表单分组标题 |
-| 正文 | 14-15px，400 | 常规说明、列表内容 |
-| 辅助说明 | 12-13px，400 | helper text、元信息、时间、统计说明 |
-| 标签/状态 | 12px，500 | tag、chip、状态徽标 |
-| 代码/路径 | 12-14px，monospace | 文件路径、命令、代码片段 |
+| 展示级 | 20-22px，600 | 登录/落地页主标题 |
+| 页面标题 | 16px，600 | 页头 `page-head h2`、弹窗主标题 |
+| 正文 | 14px，400 | 常规说明、列表内容（body 全局默认） |
+| 输入/编辑区 | 13px | 输入框、textarea、代码编辑区 |
+| 辅助/等宽 | 12px | helper text、元信息、mono 标识、状态徽标 |
+| 密排元信息 | 11px，600 | 统计条、pill、表格脚注等高密度场景 |
 
 文本规范：
 
+- 层级用字号+权重表达：600 为强调主权重（页题/小标题/按钮），正文 400，标签 500，不堆叠多余档位。
+- 数据列、统计数字、时间戳加 `.num`（`font-variant-numeric: tabular-nums`）防宽度抖动。
+- 等宽内容优先 `var(--font-mono)`；既有组件内 `'JetBrains Mono', Consolas, monospace` 硬编码与 token 同头可保持，新代码不再新增硬编码。
 - 标题要短，优先描述对象，不写营销式口号。
 - 按钮文案使用明确动作，如“保存配置”“重新检测”“删除文件”。
 - 危险操作必须让文案直接表达后果，如“删除知识库”。

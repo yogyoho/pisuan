@@ -24,11 +24,9 @@ body {
   color: var(--gray-900);
   background: var(--gray-0);
   line-height: 1.6;
-  // [pisuan-custom] 全局字体栈 Inter + Noto Sans SC（上游为系统字体栈），同步时保留
-  font-family:
-    'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Noto Sans SC', 'HarmonyOS Sans SC',
-    'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-  font-size: 15px;
+  // [pisuan-custom] 全局字体栈走 base.css --font-sans 单一真相（对齐原型 eia-p2-ui，正文 14px）；同步时保留
+  font-family: var(--font-sans);
+  font-size: 14px;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
