@@ -248,6 +248,95 @@
       </div>
     </div>
 
+    <!-- 抑制名单：改名/手工登记的旧指纹防复活清单（原型 s9 同位，词条表下方） -->
+    <div class="card">
+      <div class="card-hd">
+        <h3>抑制名单</h3>
+        <span class="hd-sub">{{ suppressions.length }} 条 · 命中不计入护栏统计，重扫导入跳过</span>
+        <div class="hd-right">
+          <button
+            class="btn btn-sec btn-sm"
+            :disabled="supAdd.candidatesLoading"
+            @click="openSupAdd"
+          >
+            <Ban :size="14" />添加抑制
+          </button>
+        </div>
+      </div>
+      <table v-if="suppressions.length" class="tbl">
+        <thead>
+          <tr>
+            <th style="width: 26%">被抑制指纹</th>
+            <th style="width: 12%">阶段</th>
+            <th style="width: 18%">改名目标</th>
+            <th style="width: 20%">理由</th>
+            <th style="width: 14%">登记人 · 时间</th>
+            <th class="r" style="width: 10%; padding-right: 20px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in suppressions" :key="row.id">
+            <td>
+              <span class="mono sup-fp" :title="`${row.caliber} (${row.unit})`">{{
+                row.caliber
+              }}</span>
+            </td>
+            <td>{{ stageLabel(row.stage) }}</td>
+            <td class="mono">
+              <span v-if="row.new_caliber" class="sup-new" :title="row.new_caliber">{{
+                row.new_caliber
+              }}</span>
+              <span v-else class="missing-unit">—</span>
+            </td>
+            <td>
+              <span class="sup-reason" :title="row.reason || ''">{{ row.reason || '—' }}</span>
+            </td>
+            <td class="dim-cell">{{ row.created_by || '—' }} · {{ row.created_at || '—' }}</td>
+            <td class="r" style="padding-right: 20px; white-space: nowrap">
+              <button class="btn btn-txt btn-sm withdraw-btn" @click="onWithdraw(row)">
+                撤回抑制
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-else class="sup-empty">
+        {{ suppressionLoading ? '加载中…' : '暂无抑制行 — 改名词表口径时自动登记' }}
+      </div>
+      <div class="tbl-foot">
+        <span
+          >撤回后该旧指纹若仍在语料中，重扫将重新导入（A
+          类直接回已入选）；对应改名条目的语境回落也随之失效</span
+        >
+      </div>
+    </div>
+
+    <!-- 手工添加抑制：候选下拉限定扫描差集（服务端强校验兜底） -->
+    <a-modal
+      v-model:open="supAdd.open"
+      title="添加抑制"
+      :confirm-loading="supAdd.submitting"
+      @ok="onSupAddSubmit"
+    >
+      <div class="sup-form">
+        <div class="fld">
+          <label>被抑制指纹 <em>（仅列重扫会导入的候选）</em></label>
+          <a-select
+            v-model:value="supAdd.key"
+            show-search
+            :filter-option="filterCandidate"
+            :options="candidateOptions"
+            :loading="supAdd.candidatesLoading"
+            placeholder="搜索口径名…"
+          />
+        </div>
+        <div class="fld">
+          <label>理由 <em>（可选）</em></label>
+          <a-textarea v-model:value="supAdd.reason" :auto-size="{ minRows: 2, maxRows: 6 }" />
+        </div>
+      </div>
+    </a-modal>
+
     <div class="note-bar">
       <Info :size="14" />
       <span>
@@ -440,8 +529,8 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { message } from 'ant-design-vue'
-import { BookOpen, Download, Info, Pencil, RefreshCw } from '@lucide/vue'
+import { message, Modal } from 'ant-design-vue'
+import { Ban, BookOpen, Download, Info, Pencil, RefreshCw } from '@lucide/vue'
 import { eiaLexiconApi } from '@/apis/eia_lexicon_api'
 import { useUserStore } from '@/stores/user'
 import FilterSelect from './FilterSelect.vue'
@@ -598,6 +687,7 @@ const onImport = async () => {
     const suppressed = r.blocklist_skipped ? `，抑制 ${r.blocklist_skipped} 条` : ''
     message.success(`重扫完成：扫描 ${r.scanned} 条，新增 ${r.added} 条${suppressed}`)
     await fetchList()
+    fetchSuppressions()
   } catch (e) {
     message.error(e?.message || '导入失败')
   } finally {
@@ -750,6 +840,7 @@ const onRenameSubmit = async () => {
     message.success(`已改名：${entry.caliber} → ${newName}`)
     renameModal.open = false
     await fetchList()
+    fetchSuppressions()
   } catch (e) {
     message.error(e?.message || '改名失败')
   } finally {
@@ -785,6 +876,100 @@ const mentionValueDist = computed(() => {
   }
   return [...acc.entries()].map(([label, n]) => ({ label, n }))
 })
+
+// ── 抑制名单 ────────────────────────────────────────────
+
+const suppressions = ref([])
+const suppressionLoading = ref(false)
+
+const fetchSuppressions = async () => {
+  suppressionLoading.value = true
+  try {
+    const data = await eiaLexiconApi.listSuppressions()
+    suppressions.value = data.items
+  } catch {
+    /* 抑制名单加载失败不打断主列表 */
+  } finally {
+    suppressionLoading.value = false
+  }
+}
+
+const supAdd = reactive({
+  open: false,
+  submitting: false,
+  candidatesLoading: false,
+  candidates: [],
+  key: null,
+  reason: ''
+})
+
+const candidateOptions = computed(() =>
+  supAdd.candidates.map((c, i) => ({
+    value: i,
+    label: `${stageLabel(c.stage)} · ${c.caliber}${c.unit ? ` (${c.unit})` : ''}`
+  }))
+)
+
+// 候选下拉过滤：value 是索引，show-search 须自定义 filter-option 按 label 匹配
+const filterCandidate = (input, option) => option.label.toLowerCase().includes(input.toLowerCase())
+
+const openSupAdd = async () => {
+  supAdd.key = null
+  supAdd.reason = ''
+  supAdd.open = true
+  supAdd.candidatesLoading = true
+  try {
+    const data = await eiaLexiconApi.getScanCandidates()
+    supAdd.candidates = data.items
+  } catch (e) {
+    message.error(e?.message || '候选加载失败')
+  } finally {
+    supAdd.candidatesLoading = false
+  }
+}
+
+const onSupAddSubmit = async () => {
+  if (supAdd.key === null) {
+    message.warning('请选择被抑制指纹')
+    return
+  }
+  const c = supAdd.candidates[supAdd.key]
+  supAdd.submitting = true
+  try {
+    await eiaLexiconApi.addSuppression({
+      stage: c.stage,
+      caliber: c.caliber,
+      unit: c.unit,
+      reason: supAdd.reason.trim()
+    })
+    message.success(`已登记抑制：${c.caliber}`)
+    supAdd.open = false
+    await fetchSuppressions()
+  } catch (e) {
+    message.error(e?.message || '登记失败')
+  } finally {
+    supAdd.submitting = false
+  }
+}
+
+const onWithdraw = (row) => {
+  Modal.confirm({
+    title: `撤回抑制「${row.caliber}」？`,
+    content:
+      '撤回后该旧指纹不再屏蔽：若仍在语料中，重扫将重新导入（A 类直接回已入选）；对应改名条目的语境回落也随之失效。',
+    okText: '确定撤回',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        await eiaLexiconApi.withdrawSuppression(row.id)
+        message.success(`已撤回抑制：${row.caliber}`)
+        await fetchSuppressions()
+      } catch (e) {
+        message.error(e?.message || '撤回失败')
+      }
+    }
+  })
+}
 
 // ── 导出物化与开关（admin） ─────────────────────────────
 
@@ -824,6 +1009,7 @@ const onToggleSwitch = async (enabled) => {
 onMounted(() => {
   fetchList()
   fetchSwitches()
+  fetchSuppressions()
 })
 </script>
 
@@ -1344,6 +1530,55 @@ onMounted(() => {
     .skip-reason {
       font-size: 12px;
       color: var(--color-text-tertiary);
+    }
+  }
+}
+
+/* ── 抑制名单卡 ── */
+.sup-fp,
+.sup-new,
+.sup-reason {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sup-fp {
+  max-width: 260px;
+}
+
+.sup-new {
+  max-width: 200px;
+}
+
+.sup-empty {
+  padding: 24px 20px;
+  color: var(--color-text-tertiary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.dim-cell {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.sup-form {
+  .fld {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+
+    label {
+      font-size: 12px;
+      color: var(--color-text-secondary);
+
+      em {
+        font-style: normal;
+        color: var(--color-text-tertiary);
+      }
     }
   }
 }
