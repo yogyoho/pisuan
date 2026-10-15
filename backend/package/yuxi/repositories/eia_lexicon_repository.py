@@ -119,6 +119,28 @@ class EiaLexiconRepository:
             )
             await session.execute(stmt)
 
+    async def list_suppressions(self) -> list[EiaLexiconSuppression]:
+        async with pg_manager.get_async_session_context() as session:
+            result = await session.execute(
+                select(EiaLexiconSuppression).order_by(
+                    EiaLexiconSuppression.created_at.desc(), EiaLexiconSuppression.id.desc()
+                )
+            )
+            return list(result.scalars().all())
+
+    async def get_suppression(self, suppression_id: int) -> EiaLexiconSuppression | None:
+        async with pg_manager.get_async_session_context() as session:
+            result = await session.execute(
+                select(EiaLexiconSuppression).where(EiaLexiconSuppression.id == suppression_id)
+            )
+            return result.scalar_one_or_none()
+
+    async def delete_suppression(self, suppression_id: int) -> None:
+        async with pg_manager.get_async_session_context() as session:
+            row = await session.get(EiaLexiconSuppression, suppression_id)
+            if row is not None:
+                await session.delete(row)
+
     # ========== 数据集开关 ==========
 
     async def list_switches(self) -> list[EiaDatasetSwitch]:
