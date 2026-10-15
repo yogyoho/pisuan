@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>改名对话框重设计 · 数值护栏词表（2026-10-15）</title>
+<style>
+/* ═══ 设计令牌：取自 web/src/assets/css/base.css（浅）/ base.dark.css（暗），同 2026-10-12-eia-p2-ui ═══ */
+:root {
+  --main-1000:#1e1b4b; --main-900:#312e81; --main-800:#3730a3; --main-700:#4338ca;
+  --main-600:#4f46e5; --main-500:#6366f1; --main-400:#818cf8; --main-300:#a5b4fc;
+  --main-200:#c7d2fe; --main-100:#e0e7ff; --main-50:#eef2ff; --main-30:#f7f7fe;
+  --main-10:#fbfaff; --main-0:#ffffff; --main-color:#4f46e5;
+  --second-700:#c2410c; --second-600:#ea580c; --second-500:#f97316;
+  --second-100:#ffedd5; --second-50:#fff7ed;
+  --gray-1000:#18181b; --gray-900:#27272a; --gray-800:#3f3f46; --gray-700:#52525b;
+  --gray-600:#71717a; --gray-500:#a1a1aa; --gray-400:#c4c4cb; --gray-300:#d4d4d8;
+  --gray-200:#e4e4e7; --gray-150:#ececee; --gray-100:#f4f4f5; --gray-50:#fafafa;
+  --gray-25:#fbfbfc; --gray-10:#fdfdfd; --gray-0:#ffffff;
+  --success-50:#e6f7e6; --success-700:#389e0d;
+  --error-50:#fff2f0; --error-700:#cf1322;
+  --warn-50:#fffbe6; --warn-700:#d48806; --warn-900:#614700;
+  --text:var(--gray-900); --text-2:var(--gray-600); --text-3:var(--gray-500);
+  --hairline:var(--gray-200);
+  --mono:ui-monospace,'Cascadia Code',Consolas,'Courier New',monospace;
+  --font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','HarmonyOS Sans SC','Microsoft YaHei','Noto Sans SC',sans-serif;
+}
+.proto-dark {
+  --main-1000:#eef2ff; --main-900:#c7d2fe; --main-800:#a5b4fc; --main-700:#a5b4fc;
+  --main-600:#818cf8; --main-500:#7279f5; --main-400:#7279f5; --main-300:#6366f1;
+  --main-200:#4338ca; --main-100:#3730a3; --main-50:#312e81; --main-30:#28245c;
+  --main-10:#07071b; --main-0:#171717; --main-color:#818cf8;
+  --second-700:#fdba74; --second-600:#fb923c; --second-500:#f97316;
+  --second-100:#431407; --second-50:#2a1206;
+  --gray-1000:#fafafa; --gray-900:#e4e4e7; --gray-800:#d4d4d8; --gray-700:#a1a1aa;
+  --gray-600:#8b8b93; --gray-500:#71717a; --gray-400:#52525b; --gray-300:#3f3f46;
+  --gray-200:#27272a; --gray-150:#232326; --gray-100:#1e1e20; --gray-50:#171717;
+  --gray-25:#121214; --gray-10:#0e0e10; --gray-0:#0a0a0a;
+  --success-50:#0d2410; --success-700:#7dd87d;
+  --error-50:#2c1210; --error-700:#ff7875;
+  --warn-50:#2a2205; --warn-700:#f5c542; --warn-900:#d4a017;
+  --text:#fafafa; --text-2:rgba(255,255,255,.65); --text-3:rgba(255,255,255,.45);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:var(--font-sans); font-size:14px; line-height:1.6;
+       background:var(--gray-25); color:var(--text); transition:background .2s,color .2s; }
+.stage { min-height:100vh; display:flex; align-items:flex-start; justify-content:center;
+         padding:32px 16px 48px; }
+.toggle { position:fixed; top:12px; right:16px; }
+.toggle button { font-family:inherit; font-size:12px; cursor:pointer; padding:5px 12px;
+                 border:1px solid var(--gray-300); border-radius:999px; background:var(--main-0); color:var(--text); }
+
+/* ═══ 对话框骨架（680px，同现实现） ═══ */
+.dlg { width:680px; max-width:96vw; background:var(--main-0); border:1px solid var(--hairline);
+       border-radius:12px; box-shadow:0 6px 16px rgba(0,0,0,.08),0 9px 28px 8px rgba(0,0,0,.05); }
+.proto-dark .dlg { box-shadow:0 6px 16px rgba(0,0,0,.5),0 9px 28px 8px rgba(0,0,0,.4); }
+.dlg-hd { display:flex; align-items:center; padding:16px 20px 0; }
+.dlg-hd h3 { font-size:16px; font-weight:600; }
+.dlg-hd .x { margin-left:auto; color:var(--text-3); cursor:pointer; font-size:16px; line-height:1; }
+.dlg-bd { padding:12px 20px 4px; }
+
+/* ── A 标识区：名 + 分类 + 状态 + 量纲 ── */
+.ident { display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+         padding:8px 12px; margin-bottom:12px; background:var(--gray-50);
+         border:1px solid var(--hairline); border-radius:8px; }
+.ident .name { font-size:15px; font-weight:600; }
+.pill { display:inline-block; padding:1px 8px; border-radius:4px; font-size:12px; line-height:20px; }
+.pill.cat { color:var(--main-600); background:var(--main-0); border:1px solid var(--main-600); }
+.proto-dark .pill.cat { background:transparent; }
+.pill.st { color:#fff; background:var(--main-600); border:1px solid var(--main-600); }
+.ident .dim { font-size:12px; color:var(--text-3); font-variant-numeric:tabular-nums; }
+
+/* ── B 证据区：区头计数 + 有界卡片 ── */
+.sec-hd { display:flex; align-items:center; gap:8px; margin:2px 0 8px; font-size:13px;
+          font-weight:600; color:var(--text-2); }
+.sec-hd .cnt { font-weight:400; font-size:12px; color:var(--text-3); }
+.sec-hd .badge { margin-left:auto; padding:1px 8px; border-radius:4px; font-size:12px;
+                 color:var(--warn-700); background:var(--warn-50); }
+.ctx-list { max-height:264px; overflow:auto; display:flex; flex-direction:column; gap:8px;
+            padding:2px; margin-bottom:12px; }
+.ctx-card { background:var(--gray-50); border:1px solid var(--hairline); border-radius:8px;
+            padding:8px 12px; }
+.ctx-card .txt { font-size:12px; line-height:1.8; color:var(--text); overflow-wrap:anywhere; }
+.ctx-card mark { background:var(--main-100); color:var(--main-700); padding:0 2px; border-radius:2px; }
+.proto-dark .ctx-card mark { background:var(--main-100); color:var(--main-900); }
+.ctx-meta { display:flex; align-items:center; gap:8px; margin-top:6px; padding-top:6px;
+            border-top:1px dashed var(--hairline); }
+.ctx-meta .v { font-family:var(--mono); font-size:12px; font-weight:600;
+               font-variant-numeric:tabular-nums; }
+.ctx-meta .rid { margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--text-3);
+                 overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ── C 编辑区：正式 label + 帮助文字 ── */
+.fld { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
+.fld label { font-size:12px; color:var(--text-2); }
+.fld label em { font-style:normal; color:var(--text-3); }
+.fld input,.fld textarea { font-family:inherit; font-size:13px; color:var(--text); padding:5px 10px;
+             border:1px solid var(--gray-300); border-radius:6px; background:var(--main-0); outline:none; }
+.fld input { height:32px; }
+.fld textarea { resize:vertical; line-height:1.6; }
+.fld input:focus,.fld textarea:focus { border-color:var(--main-500); box-shadow:0 0 0 2px var(--main-100); }
+.proto-dark .fld input:focus,.proto-dark .fld textarea:focus { box-shadow:0 0 0 2px var(--main-50); }
+.fld .help { font-size:12px; color:var(--text-3); }
+
+/* ── D 警告：一行核心警告 ── */
+.warn { display:flex; gap:8px; align-items:flex-start; margin-bottom:4px; padding:8px 12px;
+        border-radius:6px; background:var(--second-50); font-size:12px;
+        color:var(--second-700); line-height:1.6; }
+
+/* ── 页脚 ── */
+.dlg-ft { display:flex; justify-content:flex-end; gap:8px; padding:12px 20px 16px; }
+.btn { font-family:inherit; font-size:13px; cursor:pointer; height:30px; padding:0 16px;
+       border-radius:6px; border:1px solid var(--gray-300); background:var(--main-0); color:var(--text); }
+.btn.pri { border-color:var(--main-600); background:var(--main-600); color:#fff; }
+.proto-dark .btn { background:transparent; }
+.proto-dark .btn.pri { background:var(--main-600); }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="toggle"><button onclick="document.body.classList.toggle('proto-dark')">亮 / 暗</button></div>
+  <div class="dlg">
+    <div class="dlg-hd"><h3>改名 · 三率水平达标率</h3><span class="x">✕</span></div>
+    <div class="dlg-bd">
+
+      <div class="ident">
+        <span class="name">三率水平达标率</span>
+        <span class="pill cat">A 措施效率</span>
+        <span class="pill st">已入选</span>
+        <span class="dim">0 值 / 0 报告 · %</span>
+      </div>
+
+      <div class="sec-hd">语料语境<span class="cnt">2 处提及（高亮为扫描命中）</span>
+        <span class="badge">旧口径语境：新名在语料中零命中</span></div>
+      <div class="ctx-list">
+        <div class="ctx-card">
+          <p class="txt">4)建议到2025年,矿山“三率”<mark>水平达标率</mark>达95%以上,废水利用率达85%以上,固废处理率100%,生产矿山地质环境治理率、矿区可绿化面积覆盖率达100%。</p>
+          <div class="ctx-meta"><span class="v">95 %</span><span class="rid">021-2026</span></div>
+        </div>
+        <div class="ctx-card">
+          <p class="txt">井工矿区、一号露天矿（华能伊敏露天矿）、三号露天矿|资源利用效率要求|1.原煤入选率不低于75%；煤矸石综合利用率应达到75%以上；矿井水、疏干水应采用净化、资源化技术和工艺进行处理，处置率达到100%。2.煤矿采区回采率、原料煤入选率与共伴生矿产资源综合利用率等三项指标符合自然资源部发布的《煤矿资源合理开发利用“三率”指标要求（试行）》。3.2025年，矿山“三率”<mark>水平达标率</mark>达95%以上，废水利用率达85%以上，固废处理率100%，生产矿山地质环境治理率、矿区可绿化面积覆盖率达100%。</p>
+          <div class="ctx-meta"><span class="v">95 %</span><span class="rid">008-5---2</span></div>
+        </div>
+      </div>
+
+      <div class="fld">
+        <label for="rn-name">新口径名</label>
+        <input id="rn-name" value="三率水平达标率">
+        <p class="help">至少 2 个字；与 阶段 / 单位 联合唯一，重名将在提交时拦截</p>
+      </div>
+      <div class="fld">
+        <label for="rn-note">备注 <em>（可选）</em></label>
+        <textarea id="rn-note" rows="3">改名「方案B」：原句「矿山'三率'水平达标率达95%以上」（开采回采率/选矿回收率/综合利用率），「三率」带引号隔断窗口。</textarea>
+      </div>
+
+      <div class="warn">✎ 新名若非语料逐字出现，语料计数将归 0、导出物化永久跳过；旧口径名自动进入抑制清单，重扫语料不会复活。</div>
+    </div>
+    <div class="dlg-ft"><button class="btn">取消</button><button class="btn pri">确定</button></div>
+  </div>
+</div>
+</body>
+</html>
