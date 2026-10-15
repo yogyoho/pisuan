@@ -649,6 +649,42 @@ class EiaFormulaOverride(Base):
         }
 
 
+class EiaParadigmDraft(Base):
+    """Domain Factory - 写作范式层草稿（DB 草稿=编辑唯一真相，admin 显式导出物化回写 references/paradigms/*）
+
+    asset_kind='paradigm_md' 时 content={"md": 整文件文本}；'forms_catalog' 时 content 仅含
+    {"desc": str, "templates": [str]} 两键（stats/examples 为 bank_compile 语料统计，恒只读，
+    多余键服务层拒收）。base_hash 为保存草稿时的数据文件 sha256——导出前重算比对检测文件
+    漂移（bank_compile 整文件重算场景），漂移不阻断，导出即以草稿为准恢复。
+    """
+
+    __tablename__ = "eia_paradigm_drafts"
+    __table_args__ = (UniqueConstraint("asset_kind", "asset_id", name="uq_epd_kind_asset"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    asset_kind = Column(String(32), nullable=False)  # 'paradigm_md' | 'forms_catalog'
+    asset_id = Column(String(64), nullable=False)  # 角色名（opener/baseline/analysis/measures）| 句式族名（3）
+    content = Column(JSONB, nullable=False)  # 见类注（两键纪律由服务层执法）
+    base_hash = Column(String(64), nullable=False)
+    created_by = Column(String(64), nullable=True)
+    updated_by = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "asset_kind": self.asset_kind,
+            "asset_id": self.asset_id,
+            "content": self.content,
+            "base_hash": self.base_hash,
+            "created_by": self.created_by,
+            "updated_by": self.updated_by,
+            "created_at": format_utc_datetime(self.created_at),
+            "updated_at": format_utc_datetime(self.updated_at),
+        }
+
+
 class EiaEntityAddition(Base):
     """Domain Factory - 环评 sample_entities 实体补充（P3；仅添加，禁删既有条目）
 
