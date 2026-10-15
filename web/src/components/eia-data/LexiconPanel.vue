@@ -277,9 +277,11 @@
         <tbody>
           <tr v-for="row in suppressions" :key="row.id">
             <td>
-              <span class="mono sup-fp" :title="`${row.caliber} (${row.unit})`">{{
-                row.caliber
-              }}</span>
+              <span
+                class="mono sup-fp"
+                :title="row.unit ? `${row.caliber} (${row.unit})` : row.caliber"
+                >{{ row.caliber }}</span
+              >
             </td>
             <td>{{ stageLabel(row.stage) }}</td>
             <td class="mono">
