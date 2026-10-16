@@ -1132,6 +1132,11 @@ git commit -m "feat(domain-factory): 语料元数据标注页报告名主显与�
 Co-Authored-By: Claude Code <noreply@anthropic.com>"
 ```
 
+**Task 5 勘误（执行期记录）**：
+
+- Step 5.7 断言 2 有误：028-r 实际 `report_title_basis = cover`（封面存在且抽取成功，错字「津毛湖」系封面忠实转写，人工改写正是 AC3 的实证路径），**028-r 不显示黄点**。spec §3 本意如此：title needs_review 行为 016/032（封面缺失 →「缺报告名」+黄点）。评审以 spec 为准。
+- 交互 QA 所需的运行栈登录凭据不在 `.env`（repo 种子凭据对运行栈无效）；AC3 与九龙川改写需用户提供运行栈管理员密码或自行在 UI 完成。
+
 ---
 
 ### Task 6: changelog + 收尾
