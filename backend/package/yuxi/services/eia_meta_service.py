@@ -4,6 +4,8 @@
   - 物化目标即人工层文件本体 corpus_meta_annotations.json（无脚本消费者、纯人工输入层，
     导出 = 用 DB 真相重写，替代手编 JSON），不设 overrides 覆盖层
   - 无开关：人工层文件没有「builtin 兜底」语义，导出后常驻
+
+可标注字段 = 年份/规模/报告名/编制单位（schema 2 cover 层为对照面）。
 """
 
 from __future__ import annotations
@@ -24,7 +26,7 @@ CORPUS_META_PATH = _SKILL_ROOT / "references" / "samples_bank" / "corpus_meta.js
 META_ANNOTATIONS_PATH = _SKILL_ROOT / "references" / "samples_bank" / "corpus_meta_annotations.json"
 
 # 可标注字段与取值域（越界即 400，不静默丢弃未知字段）
-_ANNOTATION_FIELDS = {"year_hint", "scale_mt_a"}
+_ANNOTATION_FIELDS = {"year_hint", "scale_mt_a", "report_title", "eia_org"}
 
 
 def _load_corpus_meta() -> dict[str, Any]:
@@ -33,7 +35,7 @@ def _load_corpus_meta() -> dict[str, Any]:
 
 
 def _validate_annotations(payload: Any) -> dict[str, Any]:
-    """标注载荷校验（纯函数）：只认 year_hint/scale_mt_a，越界/类型错即拒。"""
+    """标注载荷校验（纯函数）：只认白名单四字段，越界/类型错即拒。"""
     if not isinstance(payload, dict):
         raise ValueError("annotations 必须是对象")
     unknown = set(payload) - _ANNOTATION_FIELDS
@@ -50,6 +52,12 @@ def _validate_annotations(payload: Any) -> dict[str, Any]:
         if isinstance(s, bool) or not isinstance(s, (int, float)) or not 0 < float(s) <= 10000:
             raise ValueError(f"scale_mt_a 须为 (0, 10000] 数值（万吨/年），得到 {s!r}")
         clean["scale_mt_a"] = float(s)
+    for key in ("report_title", "eia_org"):
+        if key in payload:
+            v = payload[key]
+            if not isinstance(v, str) or not (v := v.strip()) or len(v) > 200:
+                raise ValueError(f"{key} 须为 1–200 字非空字符串，得到 {payload[key]!r}")
+            clean[key] = v
     return clean
 
 
@@ -126,10 +134,17 @@ class EiaMetaService:
                     "scale_candidates": m.get("scale_candidates") or [],
                     "auto_year_hint": auto_year,
                     "auto_scale_mt_a": auto_scale,
+                    "auto_report_title": m.get("report_title"),
+                    "report_title_basis": m.get("report_title_basis"),
+                    "auto_eia_org": m.get("eia_org"),
+                    "eia_org_basis": m.get("eia_org_basis"),
+                    "project_no": m.get("project_no"),
                     "standards_count": len(m.get("standards_cited") or []),
                     "annotation": {
                         "year_hint": ann.get("year_hint"),
                         "scale_mt_a": ann.get("scale_mt_a"),
+                        "report_title": ann.get("report_title"),
+                        "eia_org": ann.get("eia_org"),
                         "note": row.note if row else None,
                         "decided_by": row.decided_by if row else None,
                         "decided_at": format_utc_datetime(row.decided_at) if row else None,
