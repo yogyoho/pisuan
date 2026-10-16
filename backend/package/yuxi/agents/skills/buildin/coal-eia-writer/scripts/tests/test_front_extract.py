@@ -145,3 +145,17 @@ def test_idempotent_rerun_same_bytes(tmp_path: Path):
     b1 = (refs / "samples_bank" / "front_matter.json").read_bytes()
     fx.main_with_args(argv)
     assert (refs / "samples_bank" / "front_matter.json").read_bytes() == b1
+
+
+def test_office_lock_files_do_not_consume_positions(tmp_path: Path):
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    (corpus / "~$某报告.docx").write_bytes(b"not a docx")  # Office 属主锁：占目录不占位
+    # 真文件名以中文开头（真实语料形态：~$ 排在中文前，计位漂移只发生在中文名文件上）
+    (corpus / "某矿区总体规划环境影响报告书.docx").write_bytes(
+        _docx_bytes(["甘肃省", "某矿区总体规划", "环境影响报告书", "1 总论"])
+    )
+    refs = tmp_path / "refs"
+    assert fx.main_with_args(["--corpus-dir", str(corpus), "--references", str(refs)]) == 0
+    out = json.loads((refs / "samples_bank" / "front_matter.json").read_text(encoding="utf-8"))
+    assert list(out) == [make_rid(1, "某矿区总体规划环境影响报告书")]

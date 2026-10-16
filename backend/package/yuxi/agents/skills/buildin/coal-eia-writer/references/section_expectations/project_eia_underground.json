@@ -24,11 +24,15 @@
       "expected_quantities": [],
       "title": "声环境影响评价自查表"
     },
+    "ch10_S07": {
+      "expected_quantities": [],
+      "title": "声环境影响评价自查表"
+    },
     "ch11_S01": {
       "expected_quantities": [
         {
           "caliber": "矸石产生量",
-          "corpus_freq": 0.2,
+          "corpus_freq": 0.29,
           "field": "solid_waste.gangue_generation",
           "tier": "optional",
           "unit": "万t"
@@ -40,7 +44,7 @@
       "expected_quantities": [
         {
           "caliber": "矸石产生量",
-          "corpus_freq": 0.33,
+          "corpus_freq": 0.2,
           "field": "solid_waste.gangue_generation",
           "tier": "optional",
           "unit": "万t"
@@ -50,7 +54,7 @@
     },
     "ch11_S03": {
       "expected_quantities": [],
-      "title": "土壤环境质量现状监测与评价"
+      "title": "土壤环境影响预测与评价"
     },
     "ch11_S04": {
       "expected_quantities": [],
@@ -58,7 +62,7 @@
     },
     "ch11_S05": {
       "expected_quantities": [],
-      "title": "保护措施及对策"
+      "title": "土壤环境影响评价自查表"
     },
     "ch11_S06": {
       "expected_quantities": [],
@@ -93,16 +97,24 @@
       "title": "土壤环境影响评价自查表"
     },
     "ch13_S01": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "评价区面积",
+          "corpus_freq": 0.17,
+          "field": "geography.eval_area_km2",
+          "tier": "contextual",
+          "unit": "km2"
+        }
+      ],
       "title": "评价依据"
     },
     "ch13_S02": {
       "expected_quantities": [
         {
           "caliber": "设备完好率",
-          "corpus_freq": 0.25,
+          "corpus_freq": 0.17,
           "field": "cleaner_production.equipment_integrity_rate",
-          "tier": "optional",
+          "tier": "contextual",
           "unit": "%"
         }
       ],
@@ -136,9 +148,9 @@
       "expected_quantities": [
         {
           "caliber": "除尘效率",
-          "corpus_freq": 0.25,
+          "corpus_freq": 0.17,
           "field": "air.dust_removal_efficiency",
-          "tier": "optional",
+          "tier": "contextual",
           "unit": "%"
         }
       ],
@@ -148,10 +160,17 @@
       "expected_quantities": [
         {
           "caliber": "矸石产生量",
-          "corpus_freq": 0.25,
+          "corpus_freq": 0.17,
           "field": "solid_waste.gangue_generation",
-          "tier": "optional",
+          "tier": "contextual",
           "unit": "万t"
+        },
+        {
+          "caliber": "设备完好率",
+          "corpus_freq": 0.17,
+          "field": "cleaner_production.equipment_integrity_rate",
+          "tier": "contextual",
+          "unit": "%"
         }
       ],
       "title": "矸石周转场选址的环境可行性"
@@ -161,12 +180,20 @@
       "title": "项目选址环境可行性综合评价"
     },
     "ch14_S04": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "生活污水回用率",
+          "corpus_freq": 0.25,
+          "field": "water.domestic_water_reuse_rate",
+          "tier": "optional",
+          "unit": "%"
+        }
+      ],
       "title": "环保设施验收清单"
     },
     "ch14_S05": {
       "expected_quantities": [],
-      "title": "环境管理的优化调整"
+      "title": "排污口及沉陷区规范化管理"
     },
     "ch14_S06": {
       "expected_quantities": [],
@@ -180,7 +207,7 @@
       "expected_quantities": [
         {
           "caliber": "设备完好率",
-          "corpus_freq": 0.2,
+          "corpus_freq": 0.29,
           "field": "cleaner_production.equipment_integrity_rate",
           "tier": "optional",
           "unit": "%"
@@ -216,9 +243,9 @@
       "expected_quantities": [
         {
           "caliber": "除尘效率",
-          "corpus_freq": 0.2,
+          "corpus_freq": 0.14,
           "field": "air.dust_removal_efficiency",
-          "tier": "optional",
+          "tier": "contextual",
           "unit": "%"
         }
       ],
@@ -239,13 +266,17 @@
         },
         {
           "caliber": "除尘效率",
-          "corpus_freq": 1.0,
+          "corpus_freq": 0.5,
           "field": "air.dust_removal_efficiency",
-          "tier": "required",
+          "tier": "optional",
           "unit": "%"
         }
       ],
       "title": "环保设施验收清单"
+    },
+    "ch16_S05": {
+      "expected_quantities": [],
+      "title": "排污口及沉陷区规范化管理"
     },
     "ch17_S01": {
       "expected_quantities": [],
@@ -255,23 +286,23 @@
       "expected_quantities": [
         {
           "caliber": "设备完好率",
-          "corpus_freq": 0.2,
+          "corpus_freq": 0.14,
           "field": "cleaner_production.equipment_integrity_rate",
-          "tier": "optional",
+          "tier": "contextual",
           "unit": "%"
         },
         {
           "caliber": "除尘效率",
-          "corpus_freq": 0.2,
+          "corpus_freq": 0.14,
           "field": "air.dust_removal_efficiency",
-          "tier": "optional",
+          "tier": "contextual",
           "unit": "%"
         },
         {
           "caliber": "国家级公益林面积",
-          "corpus_freq": 0.2,
+          "corpus_freq": 0.14,
           "field": "eco.public_forest_area",
-          "tier": "optional",
+          "tier": "contextual",
           "unit": "km2"
         }
       ],
@@ -285,14 +316,14 @@
       "expected_quantities": [
         {
           "caliber": "生活污水回用率",
-          "corpus_freq": 0.33,
+          "corpus_freq": 0.25,
           "field": "water.domestic_water_reuse_rate",
           "tier": "optional",
           "unit": "%"
         },
         {
           "caliber": "除尘效率",
-          "corpus_freq": 0.33,
+          "corpus_freq": 0.25,
           "field": "air.dust_removal_efficiency",
           "tier": "optional",
           "unit": "%"
@@ -309,14 +340,22 @@
       "title": "项目概况及主要建设内容"
     },
     "ch18_S02": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "矸石产生量",
+          "corpus_freq": 0.25,
+          "field": "solid_waste.gangue_generation",
+          "tier": "optional",
+          "unit": "万t"
+        }
+      ],
       "title": "项目政策符合性分析"
     },
     "ch18_S03": {
       "expected_quantities": [
         {
           "caliber": "除尘效率",
-          "corpus_freq": 0.5,
+          "corpus_freq": 0.33,
           "field": "air.dust_removal_efficiency",
           "tier": "optional",
           "unit": "%"
@@ -327,6 +366,10 @@
     "ch18_S04": {
       "expected_quantities": [],
       "title": "结论与建议"
+    },
+    "ch18_S05": {
+      "expected_quantities": [],
+      "title": "建议"
     },
     "ch19_S01": {
       "expected_quantities": [],
@@ -364,9 +407,9 @@
       "expected_quantities": [
         {
           "caliber": "评价区面积",
-          "corpus_freq": 0.25,
+          "corpus_freq": 0.17,
           "field": "geography.eval_area_km2",
-          "tier": "optional",
+          "tier": "contextual",
           "unit": "km2"
         }
       ],
@@ -379,18 +422,18 @@
     "ch1_S05": {
       "expected_quantities": [
         {
-          "caliber": "国家级公益林面积",
-          "corpus_freq": 0.2,
-          "field": "eco.public_forest_area",
+          "caliber": "评价区面积",
+          "corpus_freq": 0.29,
+          "field": "geography.eval_area_km2",
           "tier": "optional",
           "unit": "km2"
         },
         {
-          "caliber": "评价区面积",
-          "corpus_freq": 0.2,
-          "field": "geography.eval_area_km2",
-          "tier": "optional",
-          "unit": "hm2"
+          "caliber": "国家级公益林面积",
+          "corpus_freq": 0.14,
+          "field": "eco.public_forest_area",
+          "tier": "contextual",
+          "unit": "km2"
         }
       ],
       "title": "评价工作等级、范围"
@@ -399,16 +442,35 @@
       "expected_quantities": [
         {
           "caliber": "国家级公益林面积",
-          "corpus_freq": 0.25,
+          "corpus_freq": 0.33,
           "field": "eco.public_forest_area",
           "tier": "optional",
           "unit": "km2"
+        },
+        {
+          "caliber": "评价区面积",
+          "corpus_freq": 0.17,
+          "field": "geography.eval_area_km2",
+          "tier": "contextual",
+          "unit": "hm2"
         }
       ],
       "title": "环境保护目标"
     },
     "ch1_S07": {
       "expected_quantities": [],
+      "title": "评价时段"
+    },
+    "ch1_S08": {
+      "expected_quantities": [
+        {
+          "caliber": "国家级公益林面积",
+          "corpus_freq": 1.0,
+          "field": "eco.public_forest_area",
+          "tier": "required",
+          "unit": "km2"
+        }
+      ],
       "title": "环境保护目标"
     },
     "ch2_S01": {
@@ -427,23 +489,23 @@
       "expected_quantities": [
         {
           "caliber": "孔隙率",
-          "corpus_freq": 0.2,
+          "corpus_freq": 0.14,
           "field": "backfill.void_ratio",
-          "tier": "optional",
+          "tier": "contextual",
           "unit": "%"
         },
         {
           "caliber": "充填率",
-          "corpus_freq": 0.2,
+          "corpus_freq": 0.14,
           "field": "backfill.fill_rate",
-          "tier": "optional",
+          "tier": "contextual",
           "unit": "%"
         },
         {
           "caliber": "除尘效率",
-          "corpus_freq": 0.2,
+          "corpus_freq": 0.14,
           "field": "air.dust_removal_efficiency",
-          "tier": "optional",
+          "tier": "contextual",
           "unit": "%"
         }
       ],
@@ -461,7 +523,7 @@
       "expected_quantities": [
         {
           "caliber": "除尘效率",
-          "corpus_freq": 0.75,
+          "corpus_freq": 0.67,
           "field": "air.dust_removal_efficiency",
           "tier": "required",
           "unit": "%"
@@ -480,10 +542,17 @@
     "ch3_S02": {
       "expected_quantities": [
         {
+          "caliber": "矸石产生量",
+          "corpus_freq": 0.14,
+          "field": "solid_waste.gangue_generation",
+          "tier": "contextual",
+          "unit": "万t"
+        },
+        {
           "caliber": "国家级公益林面积",
-          "corpus_freq": 0.2,
+          "corpus_freq": 0.14,
           "field": "eco.public_forest_area",
-          "tier": "optional",
+          "tier": "contextual",
           "unit": "km2"
         }
       ],
@@ -493,9 +562,9 @@
       "expected_quantities": [
         {
           "caliber": "矸石产生量",
-          "corpus_freq": 0.2,
+          "corpus_freq": 0.14,
           "field": "solid_waste.gangue_generation",
-          "tier": "optional",
+          "tier": "contextual",
           "unit": "万t"
         }
       ],
@@ -523,11 +592,11 @@
     },
     "ch5_S01": {
       "expected_quantities": [],
-      "title": "采煤沉陷环境影响回顾分析"
+      "title": "沉陷影响建构筑物和水体敏感目标分布"
     },
     "ch5_S02": {
       "expected_quantities": [],
-      "title": "改扩建后开采沉陷影响预测分析"
+      "title": "保护煤柱留设情况"
     },
     "ch5_S03": {
       "expected_quantities": [],
@@ -569,17 +638,17 @@
       "expected_quantities": [
         {
           "caliber": "评价区面积",
-          "corpus_freq": 0.5,
+          "corpus_freq": 0.33,
           "field": "geography.eval_area_km2",
           "tier": "optional",
           "unit": "km2"
         }
       ],
-      "title": "概述"
+      "title": "概况"
     },
     "ch7_S02": {
       "expected_quantities": [],
-      "title": "区域地质及井田地质"
+      "title": "地质条件"
     },
     "ch7_S03": {
       "expected_quantities": [],
@@ -606,7 +675,15 @@
       "title": "概述"
     },
     "ch8_S02": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.17,
+          "field": "air.dust_removal_efficiency",
+          "tier": "contextual",
+          "unit": "%"
+        }
+      ],
       "title": "环境空气质量现状调查与评价"
     },
     "ch8_S03": {
@@ -617,14 +694,14 @@
       "expected_quantities": [
         {
           "caliber": "除尘效率",
-          "corpus_freq": 0.33,
+          "corpus_freq": 0.25,
           "field": "air.dust_removal_efficiency",
           "tier": "optional",
           "unit": "%"
         },
         {
           "caliber": "抑尘效率",
-          "corpus_freq": 0.33,
+          "corpus_freq": 0.25,
           "field": "measures.dust_suppression_efficiency",
           "tier": "optional",
           "unit": "%"
@@ -660,9 +737,9 @@
       "expected_quantities": [
         {
           "caliber": "除尘效率",
-          "corpus_freq": 0.2,
+          "corpus_freq": 0.14,
           "field": "air.dust_removal_efficiency",
-          "tier": "optional",
+          "tier": "contextual",
           "unit": "%"
         }
       ],
@@ -672,9 +749,9 @@
       "expected_quantities": [
         {
           "caliber": "除尘效率",
-          "corpus_freq": 0.25,
+          "corpus_freq": 0.17,
           "field": "air.dust_removal_efficiency",
-          "tier": "optional",
+          "tier": "contextual",
           "unit": "%"
         }
       ],
@@ -685,14 +762,29 @@
       "title": "建设期噪声环境影响分析与防治措施"
     },
     "ch9_S04": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.2,
+          "field": "air.dust_removal_efficiency",
+          "tier": "optional",
+          "unit": "%"
+        },
+        {
+          "caliber": "抑尘效率",
+          "corpus_freq": 0.2,
+          "field": "measures.dust_suppression_efficiency",
+          "tier": "optional",
+          "unit": "%"
+        }
+      ],
       "title": "运行期噪声环境影响分析与防治措施"
     },
     "ch9_S05": {
       "expected_quantities": [
         {
           "caliber": "除尘效率",
-          "corpus_freq": 0.33,
+          "corpus_freq": 0.25,
           "field": "air.dust_removal_efficiency",
           "tier": "optional",
           "unit": "%"
@@ -704,14 +796,14 @@
       "expected_quantities": [
         {
           "caliber": "除尘效率",
-          "corpus_freq": 0.5,
+          "corpus_freq": 0.33,
           "field": "air.dust_removal_efficiency",
           "tier": "optional",
           "unit": "%"
         },
         {
           "caliber": "抑尘效率",
-          "corpus_freq": 0.5,
+          "corpus_freq": 0.33,
           "field": "measures.dust_suppression_efficiency",
           "tier": "optional",
           "unit": "%"
@@ -721,7 +813,7 @@
     },
     "ch9_S07": {
       "expected_quantities": [],
-      "title": "地表水环境影响评价自查表"
+      "title": "大气环境影响评价自查表"
     },
     "ch9_S08": {
       "expected_quantities": [],

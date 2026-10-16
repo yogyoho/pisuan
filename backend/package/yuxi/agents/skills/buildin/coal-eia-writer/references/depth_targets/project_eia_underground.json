@@ -1,13 +1,13 @@
 {
   "chapters": {
     "ch1": {
-      "floor_chars": 6246
+      "floor_chars": 7095
     },
     "ch10": {
       "floor_chars": 2605
     },
     "ch11": {
-      "floor_chars": 2061
+      "floor_chars": 2328
     },
     "ch12": {
       "floor_chars": 2286
@@ -19,7 +19,7 @@
       "floor_chars": 1724
     },
     "ch15": {
-      "floor_chars": 1054
+      "floor_chars": 1104
     },
     "ch16": {
       "floor_chars": 955
@@ -28,7 +28,7 @@
       "floor_chars": 1322
     },
     "ch18": {
-      "floor_chars": 3900
+      "floor_chars": 6840
     },
     "ch19": {
       "floor_chars": 8142
@@ -43,19 +43,19 @@
       "floor_chars": 1500
     },
     "ch5": {
-      "floor_chars": 5305
+      "floor_chars": 5830
     },
     "ch6": {
       "floor_chars": 21996
     },
     "ch7": {
-      "floor_chars": 9384
+      "floor_chars": 13272
     },
     "ch8": {
-      "floor_chars": 5170
+      "floor_chars": 5592
     },
     "ch9": {
-      "floor_chars": 6115
+      "floor_chars": 6226
     }
   },
   "confidence": "calibrated",
