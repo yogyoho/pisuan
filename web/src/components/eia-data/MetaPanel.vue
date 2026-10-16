@@ -47,7 +47,7 @@
             v-for="j in 7"
             :key="j"
             class="sk sk-line"
-            :class="['w-10', 'w-10', 'w-10', 'w-10', 'w-25', 'w-10', 'w-25'][j - 1]"
+            :class="['w-25', 'w-10', 'w-10', 'w-10', 'w-25', 'w-10', 'w-10'][j - 1]"
           ></span>
         </div>
       </div>
@@ -90,7 +90,7 @@
             v-model="filters.q"
             class="inp"
             style="width: 200px"
-            placeholder="搜索 rid / 省份…"
+            placeholder="搜索 rid / 报告名 / 省份…"
           />
           <div class="seg">
             <button :class="{ on: filters.state === '' }" @click="setState('')">全部</button>
@@ -103,22 +103,36 @@
           </div>
         </div>
 
-        <!-- 自绘表（rid/省份/阶段/年份/规模/标注状态/操作） -->
+        <!-- 自绘表（报告名/rid/省份/阶段/年份/规模/标注状态/操作） -->
         <table class="tbl" :style="loading && items.length ? 'opacity: .55' : ''">
           <thead>
             <tr>
-              <th style="width: 15%">rid</th>
+              <th style="width: 24%">报告名 / rid</th>
               <th style="width: 8%">省份</th>
-              <th style="width: 14%">阶段</th>
-              <th style="width: 9%">年份</th>
-              <th style="width: 20%">规模（Mt/a）</th>
-              <th style="width: 13%">标注状态</th>
-              <th class="r" style="width: 21%; padding-right: 20px">操作</th>
+              <th style="width: 12%">阶段</th>
+              <th style="width: 8%">年份</th>
+              <th style="width: 18%">规模（Mt/a）</th>
+              <th style="width: 12%">标注状态</th>
+              <th class="r" style="width: 18%; padding-right: 20px">操作</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="record in filteredItems" :key="record.report_id">
-              <td class="mono">{{ record.report_id }}</td>
+              <td>
+                <div class="rep-cell">
+                  <template v-if="dispTitle(record)">{{ dispTitle(record) }}</template>
+                  <span v-else class="miss" title="报告名缺失（封面未抽取，标注弹窗可补）"
+                    >缺报告名</span
+                  >
+                  <span
+                    v-if="record.report_title_basis === 'needs_review'"
+                    class="dot dot-warn"
+                    style="margin-left: 6px"
+                    title="报告名待复核（封面缺失/脏样本，建议人工确认）"
+                  ></span>
+                </div>
+                <div class="rep-rid">{{ record.report_id }}</div>
+              </td>
               <td>
                 <template v-if="record.province">{{ record.province }}</template>
                 <span v-else class="miss" title="省份未标识（标注缺失计入未标识）">未标识</span>
@@ -193,7 +207,7 @@
       >
     </div>
 
-    <!-- 标注对话框（原型 metaModal：rid + 阶段 pill，frm 行式表单；可标注字段仅年份/规模/备注） -->
+    <!-- 标注对话框（原型 metaModal：rid + 阶段 pill，frm 行式表单；可标注字段：年份/规模/报告名/编制单位/备注） -->
     <a-modal :open="dlg.open" :width="560" :footer="null" @cancel="dlg.open = false">
       <template #title>
         <span class="modal-title">标注 · {{ dlg.record?.report_id }}</span>
@@ -204,8 +218,8 @@
       <div v-if="dlg.record" class="modal-bd">
         <p class="dlg-line">
           {{ dlg.record.province || '未标识' }} · 自动年份 {{ dlg.record.auto_year_hint ?? '—' }} ·
-          自动规模
-          {{ dlg.record.auto_scale_mt_a ?? '—' }}
+          自动规模 {{ dlg.record.auto_scale_mt_a ?? '—' }} · 封面报告名
+          {{ dlg.record.auto_report_title || '—' }}
           <template v-if="dlg.record.scale_basis === 'manual'">（规模已核实）</template>
           <template v-else-if="dlg.record.scale_basis === 'needs_review'"
             >（规模依据待复核）</template
@@ -245,6 +259,16 @@
             step="0.1"
           />
           <div class="frm-help">供 PPS 项目参数对账；(0, 10000]，留空表示清除该项标注</div>
+        </div>
+        <div class="frm-row">
+          <label>报告书名</label>
+          <input v-model="dlg.form.report_title" class="inp" maxlength="200" />
+          <div class="frm-help">写手溯源引用主名；预填封面抽取值，留空表示清除该项标注</div>
+        </div>
+        <div class="frm-row">
+          <label>编制单位</label>
+          <input v-model="dlg.form.eia_org" class="inp" maxlength="200" />
+          <div class="frm-help">环评编制机构；留空表示清除该项标注</div>
         </div>
         <div class="frm-row" style="margin-bottom: 0">
           <label>备注（可选）</label>
@@ -305,7 +329,11 @@ if (deepState === 'todo' || deepState === 'annotated') {
 
 const stageLabel = (k) => STAGE_LABELS[k] || k
 const hasAnnotation = (r) =>
-  r.annotation && (r.annotation.year_hint != null || r.annotation.scale_mt_a != null)
+  r.annotation &&
+  (r.annotation.year_hint != null ||
+    r.annotation.scale_mt_a != null ||
+    r.annotation.report_title != null ||
+    r.annotation.eia_org != null)
 const candidatesText = (r) => r.scale_candidates.map((c) => `${c.label} ${c.value}`).join('；')
 const candidatesTitle = (r) => (r.scale_candidates.length ? `候选簇：${candidatesText(r)}` : '')
 const annotatedTitle = (r) =>
@@ -315,6 +343,7 @@ const annotatedTitle = (r) =>
 // 生效值 = 人工标注覆盖自动抽取（二者缺席才显示「缺」）
 const effYear = (r) => r.annotation.year_hint ?? r.auto_year_hint
 const effScale = (r) => r.annotation.scale_mt_a ?? r.auto_scale_mt_a
+const dispTitle = (r) => r.annotation?.report_title || r.auto_report_title || ''
 
 const todoCount = computed(() => counts.total - counts.annotated)
 const provinceCount = computed(
@@ -341,7 +370,10 @@ const filteredItems = computed(() => {
   if (filters.q) {
     const q = filters.q.toLowerCase()
     list = list.filter(
-      (r) => r.report_id.toLowerCase().includes(q) || (r.province || '').toLowerCase().includes(q)
+      (r) =>
+        r.report_id.toLowerCase().includes(q) ||
+        (r.province || '').toLowerCase().includes(q) ||
+        dispTitle(r).toLowerCase().includes(q)
     )
   }
   return list
@@ -413,13 +445,15 @@ const dlg = reactive({
   open: false,
   submitting: false,
   record: null,
-  form: { year_hint: null, scale_mt_a: null, note: '' }
+  form: { year_hint: null, scale_mt_a: null, report_title: '', eia_org: '', note: '' }
 })
 
 const openAnnotate = (record) => {
   dlg.record = record
   dlg.form.year_hint = record.annotation?.year_hint ?? null
   dlg.form.scale_mt_a = record.annotation?.scale_mt_a ?? null
+  dlg.form.report_title = record.annotation?.report_title ?? record.auto_report_title ?? ''
+  dlg.form.eia_org = record.annotation?.eia_org ?? record.auto_eia_org ?? ''
   dlg.form.note = record.annotation?.note || ''
   dlg.open = true
 }
@@ -427,11 +461,23 @@ const openAnnotate = (record) => {
 const onSubmit = async () => {
   // number input 清空后是 ''，归一成 null 再走「留空清除」语义
   const norm = (v) => (v === '' || v == null ? null : v)
+  const normStr = (v) => {
+    const t = (v ?? '').trim()
+    return t === '' ? null : t
+  }
   const year_hint = norm(dlg.form.year_hint)
   const scale_mt_a = norm(dlg.form.scale_mt_a)
+  const report_title = normStr(dlg.form.report_title)
+  const eia_org = normStr(dlg.form.eia_org)
   const note = dlg.form.note || null
-  if (year_hint == null && scale_mt_a == null && !hasAnnotation(dlg.record)) {
-    message.warning('年份与规模至少标注一项（或留空保存以清除标注）')
+  if (
+    year_hint == null &&
+    scale_mt_a == null &&
+    report_title == null &&
+    eia_org == null &&
+    !hasAnnotation(dlg.record)
+  ) {
+    message.warning('年份 / 规模 / 报告名 / 编制单位至少标注一项（或留空保存以清除标注）')
     return
   }
   dlg.submitting = true
@@ -440,7 +486,9 @@ const onSubmit = async () => {
       annotations: Object.fromEntries(
         [
           ['year_hint', year_hint],
-          ['scale_mt_a', scale_mt_a]
+          ['scale_mt_a', scale_mt_a],
+          ['report_title', report_title],
+          ['eia_org', eia_org]
         ].filter(([, v]) => v != null)
       ),
       note
@@ -471,6 +519,20 @@ onMounted(fetchList)
 .miss {
   color: var(--second-600);
   font-size: 12px;
+}
+
+/* 报告名主显 + rid 副显：rid 退为技术主键（spec §7） */
+.rep-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.rep-rid {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--gray-400);
+  margin-top: 2px;
 }
 
 .empty-state {
