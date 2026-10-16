@@ -26,28 +26,53 @@
       </div>
     </div>
 
-    <!-- 指标带（原型 s10 四格：总数 / 已标注 / 待标注 / 覆盖省份；省份由标注聚合，缺失计入未标识） -->
-    <div class="metric-strip">
-      <div class="metric-cell">
-        <span class="metric-label">样本总数</span>
-        <span class="metric-value">{{ counts.total }}<small>份</small></span>
+    <!-- 初始化骨架：指标带 4 格 + 工具条 + 表 7 列按真实布局占位（通用 .sk recipe 见 factory-ui），
+         与词表页骨架同节奏——整页骨架→数据原子切换，防加载后版面跳动 -->
+    <div v-if="loading && !items.length" class="meta-skeleton" aria-hidden="true">
+      <div class="metric-strip">
+        <div v-for="i in 4" :key="i" class="metric-cell">
+          <span class="sk sk-line w-25"></span>
+          <span class="sk sk-line value w-10"></span>
+        </div>
       </div>
-      <div class="metric-cell">
-        <span class="metric-label"><span class="dot dot-ok"></span>已标注</span>
-        <span class="metric-value">{{ counts.annotated }}</span>
-      </div>
-      <div class="metric-cell" :class="{ warn: todoCount > 0 }">
-        <span class="metric-label"><span class="dot dot-warn"></span>待标注</span>
-        <span class="metric-value">{{ todoCount }}</span>
-      </div>
-      <div class="metric-cell accent">
-        <span class="metric-label">覆盖省份</span>
-        <span class="metric-value">{{ provinceCount }}</span>
+      <div class="card">
+        <div class="toolbar">
+          <span v-for="i in 6" :key="i" class="sk sk-chip"></span>
+          <span style="flex: 1"></span>
+          <span class="sk sk-inp"></span>
+          <span class="sk sk-seg"></span>
+        </div>
+        <div v-for="i in 10" :key="i" class="sk-tbl-row" :class="{ hd: i === 1 }">
+          <span
+            v-for="j in 7"
+            :key="j"
+            class="sk sk-line"
+            :class="['w-10', 'w-10', 'w-10', 'w-10', 'w-25', 'w-10', 'w-25'][j - 1]"
+          ></span>
+        </div>
       </div>
     </div>
-
-    <a-spin v-if="loading && !items.length" style="display: block; margin: 48px auto" />
     <template v-else-if="items.length || isFiltered">
+      <!-- 指标带（原型 s10 四格：总数 / 已标注 / 待标注 / 覆盖省份；省份由标注聚合，缺失计入未标识） -->
+      <div class="metric-strip">
+        <div class="metric-cell">
+          <span class="metric-label">样本总数</span>
+          <span class="metric-value">{{ counts.total }}<small>份</small></span>
+        </div>
+        <div class="metric-cell">
+          <span class="metric-label"><span class="dot dot-ok"></span>已标注</span>
+          <span class="metric-value">{{ counts.annotated }}</span>
+        </div>
+        <div class="metric-cell" :class="{ warn: todoCount > 0 }">
+          <span class="metric-label"><span class="dot dot-warn"></span>待标注</span>
+          <span class="metric-value">{{ todoCount }}</span>
+        </div>
+        <div class="metric-cell accent">
+          <span class="metric-label">覆盖省份</span>
+          <span class="metric-value">{{ provinceCount }}</span>
+        </div>
+      </div>
+
       <div class="card">
         <!-- 工具条：阶段 chips + 搜索 + 标注态分段器 -->
         <div class="toolbar">
@@ -543,6 +568,36 @@ onMounted(fetchList)
   justify-content: flex-end;
   gap: 8px;
   margin-top: 16px;
+}
+
+/* 初始化骨架：本页形状（通用 .sk/.sk-line recipe 在 factory-ui；.sk-tbl-row 同词表页配方） */
+.sk-inp {
+  width: 200px;
+  height: 30px;
+  border-radius: 6px;
+}
+
+.sk-chip {
+  width: 72px;
+  height: 24px;
+  border-radius: 999px;
+}
+
+.sk-seg {
+  width: 140px;
+  height: 24px;
+  border-radius: 6px;
+}
+
+.sk-tbl-row {
+  display: flex;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gray-100);
+
+  &.hd .sk-line {
+    height: 11px;
+  }
 }
 </style>
 
