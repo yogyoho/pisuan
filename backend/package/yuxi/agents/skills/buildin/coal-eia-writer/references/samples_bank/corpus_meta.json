@@ -1,8 +1,13 @@
 {
  "reports": {
   "001-wps": {
+   "eia_org": "中煤科工集团北京华宇工程有限公司",
+   "eia_org_basis": "cover",
+   "project_no": "H95011（2）BG",
    "province": "宁夏",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -92,11 +97,18 @@
     "HJ776-2015",
     "HJ84-2016",
     "HJ964-2018"
-   ]
+   ],
+   "year_basis": "cover",
+   "year_hint": 2024
   },
   "002-016-2024-7-9": {
+   "eia_org": null,
+   "eia_org_basis": "needs_review",
+   "project_no": "ZH0125BG",
    "province": "黑龙江",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "黑龙江省七台河矿区总体规划（修编）环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -175,8 +187,13 @@
    "year_hint": 2024
   },
   "003-1-2024-1-30": {
+   "eia_org": null,
+   "eia_org_basis": "needs_review",
+   "project_no": "H005034Z",
    "province": "新疆",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "新疆伊宁矿区北区总体规划（修编）环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -184,7 +201,7 @@
      "value": 99.0
     },
     {
-     "label": "总规模",
+     "label": "封面总规模",
      "value": 107.0
     },
     {
@@ -254,8 +271,13 @@
    "year_hint": 2024
   },
   "004-2-2021-1": {
+   "eia_org": "中煤科工集团北京华宇工程有限公司",
+   "eia_org_basis": "body",
+   "project_no": "H7367Z",
    "province": "宁夏",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "宁夏回族自治区横城矿区总体规划（修编）环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -275,7 +297,7 @@
      "value": 1.1
     },
     {
-     "label": "生产规模",
+     "label": "封面总规模",
      "value": 9.2
     }
    ],
@@ -326,8 +348,13 @@
    "year_hint": 2021
   },
   "007-3": {
+   "eia_org": "兰州洁华环境评价咨询有限公司",
+   "eia_org_basis": "body",
+   "project_no": "H75041Z",
    "province": "甘肃",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "甘肃省灵台矿区总体规划（修编）环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -339,7 +366,7 @@
      "value": 1.2
     },
     {
-     "label": "生产规模",
+     "label": "封面总规模",
      "value": 21.4
     },
     {
@@ -407,11 +434,18 @@
     "HJ953-2018",
     "HJ964-2018",
     "HJ991-2018"
-   ]
+   ],
+   "year_basis": "cover",
+   "year_hint": 2025
   },
   "008-5---2": {
+   "eia_org": null,
+   "eia_org_basis": "needs_review",
+   "project_no": "ZH7091BG",
    "province": "内蒙古",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "内蒙古自治区伊敏矿区（河西区）总体规划（修编）环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -471,11 +505,18 @@
     "HJ619-2011",
     "HJ651-2013",
     "HJ964-2018"
-   ]
+   ],
+   "year_basis": "cover",
+   "year_hint": 2023
   },
   "010-r": {
+   "eia_org": null,
+   "eia_org_basis": "needs_review",
+   "project_no": "H7091Z",
    "province": "新疆",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "新疆哈密三塘湖矿区总体规划（修编）环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -491,7 +532,7 @@
      "value": 122.0
     },
     {
-     "label": "总规模",
+     "label": "封面总规模",
      "value": 136.0
     },
     {
@@ -541,11 +582,18 @@
     "HJ619-2011",
     "HJ953-2018",
     "HJ964-2018"
-   ]
+   ],
+   "year_basis": "cover",
+   "year_hint": 2022
   },
   "012-r": {
+   "eia_org": null,
+   "eia_org_basis": "needs_review",
+   "project_no": "ZH7330",
    "province": "内蒙古",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "内蒙古自治区锡林郭勒盟五间房矿区总体规划环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -553,7 +601,7 @@
      "value": 15.0
     },
     {
-     "label": "总规模",
+     "label": "封面总规模",
      "value": 59.2
     },
     {
@@ -606,11 +654,18 @@
     "HJ463-2009",
     "HJ610-2016",
     "HJ619-2011"
-   ]
+   ],
+   "year_basis": "cover",
+   "year_hint": 2018
   },
   "013-3500-----2024-4-11": {
+   "eia_org": "中煤科工集团北京华宇工程有限公司",
+   "eia_org_basis": "cover",
+   "project_no": "H7350BG",
    "province": "内蒙古",
    "province_basis": "regex",
+   "report_title": "环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "manual",
    "scale_mt_a": 35.0,
    "stage": "project_eia_openpit",
@@ -660,8 +715,11 @@
    "year_hint": 2024
   },
   "016-2021-12": {
+   "eia_org": "新疆煤炭设计院",
+   "eia_org_basis": "body",
    "province": "新疆",
    "province_basis": "regex",
+   "report_title_basis": "needs_review",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -740,8 +798,12 @@
    "year_hint": 2021
   },
   "017-2024-11": {
+   "eia_org": "中煤科工集团北京华宇工程有限公司",
+   "eia_org_basis": "body",
    "province": "甘肃",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "甘肃省华亭矿区总体规划（修编）环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -812,8 +874,13 @@
    "year_hint": 2024
   },
   "018-_5-900-2023-8": {
+   "eia_org": "中煤科工集团北京华宇工程有限公司",
+   "eia_org_basis": "cover",
+   "project_no": "H905064BG",
    "province": "新疆",
    "province_basis": "regex",
+   "report_title": "环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "manual",
    "scale_mt_a": 9.0,
    "stage": "project_eia_openpit",
@@ -872,8 +939,13 @@
    "year_hint": 2023
   },
   "019-2023-7": {
+   "eia_org": "中煤科工集团北京华宇工程有限公司",
+   "eia_org_basis": "cover",
+   "project_no": "H405009BG",
    "province": "甘肃",
    "province_basis": "regex",
+   "report_title": "环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -942,8 +1014,13 @@
    "year_hint": 2023
   },
   "021-2026": {
+   "eia_org": null,
+   "eia_org_basis": "needs_review",
+   "project_no": "H05061（1）Z",
    "province": "内蒙古",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "内蒙古自治区呼伦贝尔市牙克石-五九煤田矿区总体规划环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -1024,8 +1101,13 @@
    "year_hint": 2026
   },
   "022-r": {
+   "eia_org": null,
+   "eia_org_basis": "needs_review",
+   "project_no": "ZH7244BG",
    "province": "内蒙古",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "内蒙古锡林郭勒盟胜利矿区总体规划（修编）环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -1085,11 +1167,18 @@
     "HJ610-2016",
     "HJ619-2011",
     "HJ964-2018"
-   ]
+   ],
+   "year_basis": "cover",
+   "year_hint": 2023
   },
   "023-r": {
+   "eia_org": "中煤科工集团北京华宇工程有限公司",
+   "eia_org_basis": "cover",
+   "project_no": "H7402BG",
    "province": "陕西",
    "province_basis": "regex",
+   "report_title": "环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -1183,15 +1272,22 @@
     "HJ776-2015",
     "HJ84-2016",
     "HJ964-2018"
-   ]
+   ],
+   "year_basis": "cover",
+   "year_hint": 2024
   },
   "025-r": {
+   "eia_org": "中煤科工集团北京华宇工程有限公司",
+   "eia_org_basis": "body",
+   "project_no": "Z0078",
    "province": "甘肃",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "甘肃省沙井子矿区总体规划（修编）环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
-     "label": "建设规模",
+     "label": "封面总规模",
      "value": 38.9
     },
     {
@@ -1260,11 +1356,18 @@
     "HJ953-2018",
     "HJ964-2018",
     "HJ991-2018"
-   ]
+   ],
+   "year_basis": "cover",
+   "year_hint": 2026
   },
   "026-2023-9": {
+   "eia_org": "中煤科工集团北京华宇工程有限公司",
+   "eia_org_basis": "cover",
+   "project_no": "H7365",
    "province": "陕西",
    "province_basis": "regex",
+   "report_title": "环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -1347,8 +1450,13 @@
    "year_hint": 2023
   },
   "027-2025-11": {
+   "eia_org": "中煤科工集团北京华宇工程有限公司",
+   "eia_org_basis": "body",
+   "project_no": "H05060(1)Z",
    "province": "新疆",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "新疆哈密淖毛湖矿区总体规划（修编）环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -1356,7 +1464,7 @@
      "value": 29.0
     },
     {
-     "label": "总规模",
+     "label": "封面总规模",
      "value": 143.0
     },
     {
@@ -1426,8 +1534,15 @@
    "year_hint": 2025
   },
   "028-r": {
+   "eia_org": null,
+   "eia_org_basis": "needs_review",
+   "eia_org_candidates": [
+    "中煤科工集团武汉设计研究院有限公司中煤科工集团北京华宇工程有限公司"
+   ],
    "province": "新疆",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "新疆哈密津毛湖矿区总体规划〈修编〉环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -1495,8 +1610,13 @@
    ]
   },
   "029-r": {
+   "eia_org": "中煤科工集团武汉设计研究院有限公司",
+   "eia_org_basis": "body",
+   "project_no": "H95279Z",
    "province": "新疆",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "新疆哈密淖毛湖矿区总体规划（修编）环境影响跟踪评价报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -1508,7 +1628,7 @@
      "value": 13.0
     },
     {
-     "label": "总规模",
+     "label": "封面总规模",
      "value": 143.0
     },
     {
@@ -1562,11 +1682,18 @@
     "HJ651-2013",
     "HJ652-2013",
     "HJ964-2018"
-   ]
+   ],
+   "year_basis": "cover",
+   "year_hint": 2024
   },
   "031-2026-3": {
+   "eia_org": "中煤科工集团北京华宇工程有限公司",
+   "eia_org_basis": "cover",
+   "project_no": "H45017BG",
    "province": "内蒙古",
    "province_basis": "regex",
+   "report_title": "环境影响后评价报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -1631,8 +1758,11 @@
    "year_hint": 2026
   },
   "032-2021-10": {
+   "eia_org": "中国环境科学研究院",
+   "eia_org_basis": "body",
    "province": "内蒙古",
    "province_basis": "regex",
+   "report_title_basis": "needs_review",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -1712,8 +1842,13 @@
    "year_hint": 2021
   },
   "033-r": {
+   "eia_org": null,
+   "eia_org_basis": "needs_review",
+   "project_no": "ZH0120BG",
    "province": "内蒙古",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "内蒙古自治区鄂尔多斯纳林希里矿区总体规划环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -1772,11 +1907,18 @@
     "HJ619-2011",
     "HJ651-2013",
     "HJ964-2018"
-   ]
+   ],
+   "year_basis": "cover",
+   "year_hint": 2022
   },
   "034-2024-12": {
+   "eia_org": "中煤科工集团北京华宇工程有限公司",
+   "eia_org_basis": "cover",
+   "project_no": "H705016BG",
    "province": "新疆",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -1852,8 +1994,12 @@
    "year_hint": 2024
   },
   "035-2022-12-7": {
+   "eia_org": "中煤科工集团北京华宇工程有限公司",
+   "eia_org_basis": "body",
    "province": "宁夏",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "宁夏回族自治区韦州矿区总体规划（修编）环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -1925,8 +2071,13 @@
    "year_hint": 2022
   },
   "037-5-15": {
+   "eia_org": "中煤科工集团北京华宇工程有限公司",
+   "eia_org_basis": "cover",
+   "project_no": "H15357BG",
    "province": "甘肃",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "甘肃省景泰县安家岭能源有限公司白岩子矿区郭家台二号煤矿项目环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -2010,11 +2161,18 @@
     "HJ953-2018",
     "HJ964-2018",
     "HJ991-2018"
-   ]
+   ],
+   "year_basis": "cover",
+   "year_hint": 2024
   },
   "038-2023-5": {
+   "eia_org": "山西文龙中美环能科技股份有限公司",
+   "eia_org_basis": "body",
+   "project_no": "ZH7158BG",
    "province": "内蒙古",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "内蒙古自治区鄂尔多斯市东胜煤田高头窑煤炭矿区总体规划（修编）环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -2084,8 +2242,13 @@
    "year_hint": 2023
   },
   "039-1000": {
+   "eia_org": "中煤科工集团北京华宇工程有限公司",
+   "eia_org_basis": "cover",
+   "project_no": "H7394BG",
    "province": "新疆",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "manual",
    "scale_mt_a": 10.0,
    "stage": "project_eia_openpit",
@@ -2140,11 +2303,18 @@
     "HJ953-2018",
     "HJ964-2018",
     "HJ991-2018"
-   ]
+   ],
+   "year_basis": "cover",
+   "year_hint": 2025
   },
   "040-r": {
+   "eia_org": "中煤科工集团北京华宇工程有限公司",
+   "eia_org_basis": "body",
+   "project_no": "H0127",
    "province": "黑龙江",
-   "province_basis": "regex",
+   "province_basis": "cover",
+   "report_title": "黑龙江省鹤岗煤炭矿区总体规划（修编）环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "needs_review",
    "scale_candidates": [
     {
@@ -2152,7 +2322,7 @@
      "value": 21.65
     },
     {
-     "label": "总规模",
+     "label": "封面总规模",
      "value": 19.15
     },
     {
@@ -2214,11 +2384,18 @@
     "HJ618-2011",
     "HJ619-2011",
     "HJ964-2018"
-   ]
+   ],
+   "year_basis": "cover",
+   "year_hint": 2023
   },
   "041-2000": {
+   "eia_org": "中煤科工集团北京华宇工程有限公司",
+   "eia_org_basis": "cover",
+   "project_no": "H7398",
    "province": "新疆",
    "province_basis": "regex",
+   "report_title": "环境影响报告书",
+   "report_title_basis": "cover",
    "scale_basis": "manual",
    "scale_mt_a": 20.0,
    "stage": "project_eia_openpit",
@@ -2264,8 +2441,10 @@
     "HJ619-2011",
     "HJ651-2013",
     "HJ964-2018"
-   ]
+   ],
+   "year_basis": "cover",
+   "year_hint": 2023
   }
  },
- "schema": 1
+ "schema": 2
 }

@@ -135,3 +135,102 @@ def test_corpus_meta_merge_and_determinism(tmp_path):
     b1 = json.dumps(doc1, sort_keys=True, ensure_ascii=False, indent=1)
     b2 = json.dumps(doc2, sort_keys=True, ensure_ascii=False, indent=1)
     assert hashlib.sha256(b1.encode()).hexdigest() == hashlib.sha256(b2.encode()).hexdigest()
+
+
+# ── ⑥ cover 层（spec 2026-10-16-corpus-meta-pipeline-refactor）─────────────
+
+FRONT_007 = {
+    "report_title": "甘肃省灵台矿区总体规划（修编）环境影响报告书",
+    "eia_org": None,
+    "eia_org_candidates": ["中煤科工集团西安研究院"],
+    "year": 2025,
+    "project_no": "H75041Z",
+    "cover_scale_mt_a": 21.4,
+    "province": "甘肃",
+}
+
+
+def test_cover_layer_merged_and_schema2(tmp_path):
+    root = tmp_path
+    _mk_slice(
+        root,
+        "planning_eia",
+        "007-3",
+        "矿区总体规划环评。委托中煤科工集团北京华宇工程有限公司编制《甘肃省灵台矿区总体规划（修编）环境影响报告书》。",
+    )
+    meta = corpus_meta.build_corpus_meta(root, {}, front={"007-3": FRONT_007})
+    assert meta["schema"] == 2
+    r = meta["reports"]["007-3"]
+    assert r["report_title"] == FRONT_007["report_title"]
+    assert r["report_title_basis"] == "cover"
+    assert r["eia_org"] == "中煤科工集团北京华宇工程有限公司"
+    assert r["eia_org_basis"] == "body"
+    assert r["year_hint"] == 2025 and r["year_basis"] == "cover"
+    assert r["province"] == "甘肃" and r["province_basis"] == "cover"
+    assert r["project_no"] == "H75041Z"
+
+
+def test_manual_annotation_overrides_cover(tmp_path):
+    root = tmp_path
+    _mk_slice(root, "planning_eia", "007-3", "某矿区环评。")
+    ann = {"007-3": {"year_hint": 2024, "province": "宁夏"}}
+    meta = corpus_meta.build_corpus_meta(root, ann, front={"007-3": FRONT_007})
+    r = meta["reports"]["007-3"]
+    assert r["year_hint"] == 2024 and r["year_basis"] == "manual"
+    assert r["province"] == "宁夏" and r["province_basis"] == "manual"
+
+
+def test_org_needs_review_with_candidates(tmp_path):
+    root = tmp_path
+    _mk_slice(root, "planning_eia", "007-3", "某矿区环评正文。")
+    meta = corpus_meta.build_corpus_meta(root, {}, front={"007-3": FRONT_007})
+    r = meta["reports"]["007-3"]
+    assert r["eia_org"] is None and r["eia_org_basis"] == "needs_review"
+    assert r["eia_org_candidates"] == FRONT_007["eia_org_candidates"]
+
+
+def test_delegate_org_noise_rejected(tmp_path):
+    root = tmp_path
+    text = "后在当地进行了开展环境影响评价的公告;第二次是在环境影响评价报告书基本定稿后。委托某院编制工作正在开展。"
+    _mk_slice(root, "planning_eia", "007-3", text)
+    meta = corpus_meta.build_corpus_meta(root, {}, front={"007-3": FRONT_007})
+    r = meta["reports"]["007-3"]
+    assert r["eia_org"] is None and r["eia_org_basis"] == "needs_review"
+
+
+def test_scale_candidate_injection_and_dedup(tmp_path):
+    root = tmp_path
+    _mk_slice(root, "planning_eia", "007-3", "建设规模 10.0 Mt/a；生产规模 12.0 Mt/a。")
+    front = {**FRONT_007, "cover_scale_mt_a": 12.0}
+    meta = corpus_meta.build_corpus_meta(root, {}, front={"007-3": front})
+    cands = meta["reports"]["007-3"]["scale_candidates"]
+    assert {"label": "封面总规模", "value": 12.0} in cands
+    assert sum(1 for c in cands if c["value"] == 12.0) == 1
+
+
+# ── ⑦ 分支钉死（质量评审 96224584 round-1）─────────────────────────────────
+
+
+def test_org_cover_tier_beats_body_and_hides_candidates(tmp_path):
+    """front 带标签环评单位 → cover 胜 body（正文委托句在场也不夺权），且不得泄漏候选。"""
+    root = tmp_path
+    _mk_slice(
+        root,
+        "planning_eia",
+        "007-3",
+        "某矿区环评。委托中煤科工集团北京华宇工程有限公司编制《甘肃省灵台矿区总体规划（修编）环境影响报告书》。",
+    )
+    front = {**FRONT_007, "eia_org": "某研究院"}
+    meta = corpus_meta.build_corpus_meta(root, {}, front={"007-3": front})
+    r = meta["reports"]["007-3"]
+    assert r["eia_org"] == "某研究院" and r["eia_org_basis"] == "cover"
+    assert "eia_org_candidates" not in r
+
+
+def test_report_title_needs_review_when_front_entry_lacks_title(tmp_path):
+    """front 条目缺 report_title → 不落 report_title 键，仅 needs_review 基准。"""
+    root = tmp_path
+    _mk_slice(root, "planning_eia", "007-3", "某矿区环评正文。")
+    meta = corpus_meta.build_corpus_meta(root, {}, front={"007-3": {}})
+    r = meta["reports"]["007-3"]
+    assert "report_title" not in r and r["report_title_basis"] == "needs_review"

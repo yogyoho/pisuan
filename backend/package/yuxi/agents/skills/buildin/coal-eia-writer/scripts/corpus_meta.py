@@ -39,6 +39,11 @@ ANNEX_ITEM_CAP = 100
 _DOCNO_GROUP_RE = re.compile(r"[（(][^（）()]*〔[^（）()]*[)）]|[（(][^（）()]*\d{4}[^（）()]*[)）]")
 _TAIL_DOCNO_RE = re.compile(r"[,，、;；\s]*[一-鿿a-zA-Z0-9]*[〔\[]\d{2,4}[〕\]]\d{1,5}\s*号?")
 
+DELEGATE_RE = re.compile(
+    r"委托\s*([^，。；、（）()《》\s]{4,30}?(?:有限公司|研究院|设计院|评估中心|科学研究院|勘查院|中心|大学|学院))\s*(?:编制|开展)"
+)
+ORG_SENT_NOISE_RE = re.compile(r"(公告|第二次|基本|批复)")
+
 PROVENANCE_NOTE = (
     "案例层统计：附件必备项为已批复语料在本 stage 内的出现率结论，不构成法规依据；法规必备性以条款库/标准库为准。"
 )
@@ -52,10 +57,12 @@ def extract_standards(text: str) -> list[str]:
     return sorted({normalize_standard(m) for m in STANDARD_CODE_RE.findall(text)})
 
 
-def detect_province(text: str, ann: dict | None = None) -> dict:
-    """manual 注 > 频次胜者（≥3 且超次名两倍）> needs_review（带候选）。"""
+def detect_province(text: str, ann: dict | None = None, front: dict | None = None) -> dict:
+    """manual 注 > cover 封面（front_extract 标题/首段命中）> 频次胜者（≥3 且超次名两倍）> needs_review（带候选）。"""
     if ann and ann.get("province"):
         return {"value": ann["province"], "basis": "manual"}
+    if front and front.get("province"):
+        return {"value": front["province"], "basis": "cover"}
     counts = {p: n for p in PROVINCES if (n := text.count(p))}
     if not counts:
         return {"value": None, "basis": "needs_review", "candidates": []}
@@ -111,7 +118,18 @@ def extract_scale(text: str) -> dict:
     return {"basis": "needs_review", "candidates": [{"label": lb, "value": v} for lb, v in seen]}
 
 
-def build_corpus_meta(slices_root: Path, annotations: dict) -> dict:
+def delegate_org(text: str) -> str | None:
+    """正文委托编制句 → 环评机构（cover 标签行缺席时的第二层）；噪声句剔除，频次胜者。"""
+    counts: Counter = Counter()
+    for sent in re.split(r"[。；;\n]", text):
+        if ORG_SENT_NOISE_RE.search(sent):
+            continue
+        if m := DELEGATE_RE.search(sent):
+            counts[m.group(1)] += 1
+    return counts.most_common(1)[0][0] if counts else None
+
+
+def build_corpus_meta(slices_root: Path, annotations: dict, front: dict | None = None) -> dict:
     """按 rid 聚合全部切片再判定（省/标准/规模是整报告字段，逐片算会被后片覆盖）。"""
     by_rid: dict[str, list] = {}
     for stage_dir in sorted(p for p in slices_root.iterdir() if p.is_dir()):
@@ -123,6 +141,7 @@ def build_corpus_meta(slices_root: Path, annotations: dict) -> dict:
     for rid, (stage, text) in sorted(by_rid.items()):
         r: dict = {"stage": stage}
         ann = annotations.get(rid, {})
+        front_entry = (front or {}).get(rid) or {}
         if ann.get("scale_mt_a") is not None:
             r["scale_mt_a"], r["scale_basis"] = ann["scale_mt_a"], "manual"
         else:
@@ -132,15 +151,39 @@ def build_corpus_meta(slices_root: Path, annotations: dict) -> dict:
                 r["scale_mt_a"] = sc["value"]
             else:
                 r["scale_candidates"] = sc["candidates"]
-        prov = detect_province(text, ann)
+                if front_entry.get("cover_scale_mt_a") is not None:
+                    v = round(float(front_entry["cover_scale_mt_a"]), 2)
+                    if v in {c["value"] for c in r["scale_candidates"]}:  # 等值去重：候选改挂封面标签
+                        for c in r["scale_candidates"]:
+                            if c["value"] == v:
+                                c["label"] = "封面总规模"
+                    else:
+                        r["scale_candidates"].append({"label": "封面总规模", "value": v})
+        prov = detect_province(text, ann, front_entry)
         r["province"], r["province_basis"] = prov["value"], prov["basis"]
         if prov.get("candidates"):
             r["province_candidates"] = prov["candidates"]
         if ann.get("year_hint") is not None:
             r["year_hint"], r["year_basis"] = ann["year_hint"], "manual"
+        elif front_entry.get("year"):
+            r["year_hint"], r["year_basis"] = front_entry["year"], "cover"
+        if front_entry.get("report_title"):
+            r["report_title"], r["report_title_basis"] = front_entry["report_title"], "cover"
+        else:
+            r["report_title_basis"] = "needs_review"
+        if front_entry.get("eia_org"):
+            r["eia_org"], r["eia_org_basis"] = front_entry["eia_org"], "cover"
+        elif org := delegate_org(text):
+            r["eia_org"], r["eia_org_basis"] = org, "body"
+        else:
+            r["eia_org"], r["eia_org_basis"] = None, "needs_review"
+            if front_entry.get("eia_org_candidates"):
+                r["eia_org_candidates"] = front_entry["eia_org_candidates"]
+        if front_entry.get("project_no"):
+            r["project_no"] = front_entry["project_no"]
         r["standards_cited"] = extract_standards(text)
         reports[rid] = r
-    return {"schema": 1, "reports": reports}
+    return {"schema": 2, "reports": reports}
 
 
 def build_attachment_checklist(slices_root: Path) -> dict:
@@ -177,14 +220,25 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="编译语料元数据与附件必备清单（幂等）")
     ap.add_argument("--slices-root", default=str(SCRIPTS_DIR.parent / "references" / "samples_bank"))
     ap.add_argument("--annotations", default=None, help="默认 slices-root 下 corpus_meta_annotations.json")
+    ap.add_argument(
+        "--front-matter",
+        default=None,
+        help="默认 references/samples_bank 下 front_matter.json；rid 为目录排序位，跨库复用需防 rid 碰撞",
+    )
     ap.add_argument("--out-dir", default=None)
     args = ap.parse_args(argv)
     root = Path(args.slices_root)
     ann_path = Path(args.annotations) if args.annotations else root / "corpus_meta_annotations.json"
     annotations = json.loads(ann_path.read_text(encoding="utf-8")) if ann_path.exists() else {}
+    front_path = (
+        Path(args.front_matter)
+        if args.front_matter
+        else SCRIPTS_DIR.parent / "references" / "samples_bank" / "front_matter.json"  # 勘误：指向提交物位置
+    )
+    front = json.loads(front_path.read_text(encoding="utf-8")) if front_path.exists() else {}
     out_dir = Path(args.out_dir) if args.out_dir else root
     docs = {
-        "corpus_meta.json": build_corpus_meta(root, annotations),
+        "corpus_meta.json": build_corpus_meta(root, annotations, front),
         "attachment_checklist.json": build_attachment_checklist(root),
     }
     for name, doc in docs.items():
@@ -197,8 +251,8 @@ def main(argv: list[str] | None = None) -> int:
     by_basis = Counter(r["province_basis"] for r in reports.values())
     print(
         f"corpus_meta: {len(reports)} report(s), "
-        f"province regex={by_basis.get('regex', 0)} manual={by_basis.get('manual', 0)} "
-        f"needs_review={by_basis.get('needs_review', 0)}"
+        f"province cover={by_basis.get('cover', 0)} regex={by_basis.get('regex', 0)} "
+        f"manual={by_basis.get('manual', 0)} needs_review={by_basis.get('needs_review', 0)}"
     )
     for stage, entry in docs["attachment_checklist.json"]["stages"].items():
         mark = " [insufficient_base]" if entry.get("insufficient_base") else ""
