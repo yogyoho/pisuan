@@ -257,7 +257,10 @@
     <div class="card">
       <div class="card-hd">
         <h3>抑制名单</h3>
-        <span class="hd-sub">{{ suppressions.length }} 条 · 命中不计入护栏统计，重扫导入跳过</span>
+        <span class="hd-sub">
+          <template v-if="!supBodySk">{{ suppressions.length }} 条 · </template
+          >命中不计入护栏统计，重扫导入跳过
+        </span>
         <div class="hd-right">
           <button
             class="btn btn-sec btn-sm"
@@ -268,7 +271,19 @@
           </button>
         </div>
       </div>
-      <table v-if="suppressions.length" class="tbl">
+      <!-- 骨架优先于表 v-if：init 窗口即使抑制数据已到也先占位（与词条骨架同拍原子切换） -->
+      <div v-if="supBodySk" class="sup-sk" aria-hidden="true">
+        <!-- 初始化骨架：抑制卡本体常驻（卡头真实渲染），仅表体占位——列宽镜像真实表 26/12/18/20/14/10% -->
+        <div v-for="i in 4" :key="i" class="sk-tbl-row">
+          <span
+            v-for="j in 6"
+            :key="j"
+            class="sk sk-line"
+            :class="['w-25', 'w-10', 'w-25', 'w-40', 'w-10', 'w-10'][j - 1]"
+          ></span>
+        </div>
+      </div>
+      <table v-else-if="suppressions.length" class="tbl">
         <thead>
           <tr>
             <th style="width: 26%">被抑制指纹</th>
@@ -307,9 +322,7 @@
           </tr>
         </tbody>
       </table>
-      <div v-else class="sup-empty">
-        {{ suppressionLoading ? '加载中…' : '暂无抑制行 — 改名词表口径时自动登记' }}
-      </div>
+      <div v-else class="sup-empty">暂无抑制行 — 改名词表口径时自动登记</div>
       <div class="tbl-foot">
         <span
           >撤回后该旧指纹若仍在语料中，重扫将重新导入（A
@@ -895,6 +908,16 @@ const mentionValueDist = computed(() => {
 
 const suppressions = ref([])
 const suppressionLoading = ref(false)
+
+/* 表体骨架与词条表 init 骨架同拍：抑制是小表直读、毫秒级返回，仅靠 suppressionLoading
+   骨架一闪而过（用户实测不可见）；init 窗口即使抑制数据已到也先占位，整页骨架→数据原子切换。
+   第二子句要求 suppressions 为空——撤回/添加后的 suppressionLoading 重扫不闪已渲染的行；
+   排除 isFiltered 防搜索重扫时抑制卡闪骨架 */
+const supBodySk = computed(
+  () =>
+    (loading.value && !items.value.length && !isFiltered.value) ||
+    (suppressionLoading.value && !suppressions.value.length)
+)
 
 const fetchSuppressions = async () => {
   suppressionLoading.value = true
@@ -1592,6 +1615,11 @@ onMounted(() => {
   color: var(--color-text-tertiary);
   font-size: 13px;
   text-align: center;
+}
+
+/* 抑制名单加载占位：复用 .sk recipe，行容器左右与卡体同边距 */
+.sup-sk {
+  padding: 4px 20px;
 }
 
 .dim-cell {
