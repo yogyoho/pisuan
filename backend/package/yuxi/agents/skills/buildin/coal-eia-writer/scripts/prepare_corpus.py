@@ -5,7 +5,8 @@
 输出：<workdir>/<report_id>/source.md（UTF-8、节号标题 ##/###/#### 化、GFM 表格）
       + <workdir>/manifest.json 草稿（report_id/stage/mineral/file_name——stage 人工过目后定稿）
 用法：
-  python -X utf8 prepare_corpus.py --corpus-dir <语料目录> --workdir <输出目录> [--census <census.json>]
+  python -X utf8 prepare_corpus.py --corpus-dir <语料目录> --workdir <输出目录>
+                                   [--census <census.json>] [--only <文件名>]…
 边界：
   - 节号标题：正文行「数字(.数字)* + 空白 + 题名」（census 实测 679 标题仅 81 个有 style 标记，正文行匹配为主）
   - 目录页剔除：「节号+题+尾随页码」行连续 ≥3（行间空行不打断累计）判为目录区段整段剔除；
@@ -159,11 +160,22 @@ def make_rid(seq: int, stem: str) -> str:
     return f"{seq:03d}-{ascii_slug or 'r'}"[:60]
 
 
+def merge_manifest(existing: list[dict], updates: list[dict]) -> list[dict]:
+    """--only 增量合并：已定稿 stage/mineral 保留（复跑绝不覆盖人工裁决），chars 刷新，rid 序输出。"""
+    by_file = {e["file_name"]: dict(e) for e in existing}
+    for u in updates:
+        prev = by_file.get(u["file_name"], {})
+        prev.update({k: v for k, v in u.items() if k != "stage" or v})
+        by_file[u["file_name"]] = prev
+    return sorted(by_file.values(), key=lambda e: e["report_id"])
+
+
 def main_with_args(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="语料 docx → bank_compile 输入（source.md + manifest 草稿）")
     ap.add_argument("--corpus-dir", required=True)
     ap.add_argument("--workdir", required=True)
     ap.add_argument("--census", default=None, help="corpus-census/census.json——继承普查元数据")
+    ap.add_argument("--only", action="append", default=[], help="只处理指定文件名（可重复）；缺省全量")
     args = ap.parse_args(argv)
     corpus, workdir = Path(args.corpus_dir), Path(args.workdir)
     workdir.mkdir(parents=True, exist_ok=True)
@@ -175,9 +187,18 @@ def main_with_args(argv: list[str]) -> int:
         else:
             # 路径打错不应静默丢 chars 元数据（与逐份警告惯例一致）
             print(f"[prepare_corpus] census 文件不存在——manifest chars 退回实测值：{args.census}", file=sys.stderr)
-    manifest, ok = [], 0
-    for seq, docx in enumerate(sorted(corpus.glob("*.docx")), start=1):
+    only = set(args.only)
+    manifest_path = workdir / "manifest.json"
+    manifest: dict[str, dict] = {}
+    if manifest_path.is_file():
+        manifest = {e["file_name"]: e for e in json.loads(manifest_path.read_text(encoding="utf-8"))}
+    docxs = [p for p in sorted(corpus.glob("*.docx")) if not p.name.startswith("~$")]  # Office 属主锁不占排序位
+    updates: list[dict] = []
+    ok = 0
+    for seq, docx in enumerate(docxs, start=1):
         rid = make_rid(seq, docx.stem)
+        if only and docx.name not in only:
+            continue
         # 逐份解析失败：警告+跳过（bank_compile 既有惯例）
         try:
             md = docx_to_md(docx)
@@ -191,7 +212,9 @@ def main_with_args(argv: list[str]) -> int:
         d.mkdir(exist_ok=True)
         (d / "source.md").write_text(md + "\n", encoding="utf-8", newline="\n")
         meta = census.get(docx.stem, {})
-        manifest.append(
+        ok += 1
+        print(f"[prepare_corpus] {docx.name} -> {rid}（{len(md)} chars）")
+        updates.append(
             {
                 "report_id": rid,
                 "stage": "",
@@ -200,10 +223,11 @@ def main_with_args(argv: list[str]) -> int:
                 "chars": meta.get("chars", len(md)),
             }
         )
-        ok += 1
-        print(f"[prepare_corpus] {docx.name} -> {rid}（{len(md)} chars）")
     (workdir / "manifest.json").write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
+        json.dumps(merge_manifest(list(manifest.values()), updates), ensure_ascii=False, indent=2, sort_keys=True)
+        + "\n",
+        encoding="utf-8",
+        newline="\n",
     )
     print(f"PREPARED: {ok} report(s) -> {workdir}")
     return 0 if ok else 1

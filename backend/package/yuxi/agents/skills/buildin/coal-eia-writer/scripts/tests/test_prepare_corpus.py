@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from prepare_corpus import SEC_LINE_RE, is_toc_line, strip_toc, table_to_gfm, promote_headings
+from prepare_corpus import SEC_LINE_RE, is_toc_line, merge_manifest, strip_toc, table_to_gfm, promote_headings
 
 
 def test_sec_line_levels():
@@ -88,7 +88,8 @@ def test_promote_headings_booktitle_conform():
     """书名号豁免（Task 4 实跑 80 条/16 份）：多级号+《》+无句读 ≤60 字真标题升级；
     单号法规清单段、含句读、超 60 字仍保留原行。"""
     body = (
-        "3.2.1 与《宁夏回族自治区国民经济和社会发展第十四个五年规划和2035年远景目标纲要》的符合性分析\n"  # 多级号含《 → 升级
+        # 多级号含《 → 升级
+        "3.2.1 与《宁夏回族自治区国民经济和社会发展第十四个五年规划和2035年远景目标纲要》的符合性分析\n"
         "12 《中华人民共和国环境保护法》（2015年1月1日施行）中华人民共和国主席令第二十三号\n"  # 单号法规清单段 → 不升级
         "3.3.1 项目与《某矿区规划》逐项对比，结论如下。\n"  # 含句读 → 不升级
         "3.4.1 与《" + "某规划实施细则补充说明" * 5 + "》的符合性分析\n"  # >60 字 → 不升级
@@ -117,3 +118,35 @@ def test_make_rid_ascii_slug_contract():
     # 不同序号永不冲突；同函数确定性
     assert make_rid(2, "九龙川矿井及选煤厂环评") != r1
     assert make_rid(3, "九龙川矿井及选煤厂环评") == r1
+
+
+def test_merge_preserves_reviewed_stage_and_appends_new():
+    existing = [
+        {
+            "report_id": "001-wps",
+            "stage": "project_eia_underground",
+            "mineral": "coal",
+            "file_name": "a.docx",
+            "chars": 1,
+        },
+    ]
+    updates = [
+        {"report_id": "001-wps", "stage": "", "mineral": "coal", "file_name": "a.docx", "chars": 2},
+        {
+            "report_id": "011-800--2026-2",
+            "stage": "project_eia_underground",
+            "mineral": "coal",
+            "file_name": "b.docx",
+            "chars": 3,
+        },
+    ]
+    out = merge_manifest(existing, updates)
+    assert {e["report_id"] for e in out} == {"001-wps", "011-800--2026-2"}
+    assert next(e for e in out if e["report_id"] == "001-wps")["stage"] == "project_eia_underground"
+    assert out == sorted(out, key=lambda e: e["report_id"])
+
+
+def test_merge_refresh_chars_for_existing():
+    existing = [{"report_id": "001-wps", "stage": "s", "mineral": "coal", "file_name": "a.docx", "chars": 1}]
+    updates = [{"report_id": "001-wps", "stage": "s", "mineral": "coal", "file_name": "a.docx", "chars": 9}]
+    assert merge_manifest(existing, updates)[0]["chars"] == 9

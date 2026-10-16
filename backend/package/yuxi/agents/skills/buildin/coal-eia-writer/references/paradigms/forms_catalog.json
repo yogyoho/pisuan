@@ -376,20 +376,20 @@
         },
         {
           "form": "dangling",
-          "report_id": "012-r",
-          "text": "续表6.7-3"
+          "report_id": "011-800--2026-2",
+          "text": "项目所在水功能区划分表"
         },
         {
           "form": "dangling",
-          "report_id": "013-3500-----2024-4-11",
-          "text": "表11.3.1"
+          "report_id": "012-r",
+          "text": "续表6.7-3"
         }
       ],
       "stats": {
         "colon_lead": 0.0,
-        "complete_sentence": 0.055,
-        "dangling": 0.019,
-        "standalone_caption": 0.925
+        "complete_sentence": 0.056,
+        "dangling": 0.02,
+        "standalone_caption": 0.924
       },
       "templates": [
         "……{主题}如下表所列。",
@@ -398,6 +398,6 @@
       ]
     }
   },
-  "source": "corpus slices statistics (31 report(s))",
+  "source": "corpus slices statistics (33 report(s))",
   "version": "1.0"
 }

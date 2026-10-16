@@ -148,7 +148,8 @@ def main_with_args(argv: list[str]) -> int:
     excludes = set(args.exclude)
     entries: dict[str, dict] = {}
     excluded: list[dict] = []
-    for seq, docx in enumerate(sorted(corpus.glob("*.docx")), start=1):
+    docxs = [p for p in sorted(corpus.glob("*.docx")) if not p.name.startswith("~$")]  # Office 属主锁不占排序位
+    for seq, docx in enumerate(docxs, start=1):
         rid = make_rid(seq, docx.stem)  # 全量排序位——两门在 rid 之后应用（spec §4 约束）
         if GENRE_RE.search(docx.name):
             excluded.append({"file": docx.name, "rid": rid, "reason": "genre"})

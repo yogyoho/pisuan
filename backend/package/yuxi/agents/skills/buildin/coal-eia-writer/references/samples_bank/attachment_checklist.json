@@ -340,29 +340,19 @@
    "rids_without_items": []
   },
   "project_eia_underground": {
-   "base_reports": 5,
+   "base_reports": 7,
    "common": [
     {
-     "freq": 0.4,
+     "freq": 0.4286,
      "item": "排污许可证",
-     "n_reports": 2
-    },
-    {
-     "freq": 0.4,
-     "item": "监测报告",
-     "n_reports": 2
-    },
-    {
-     "freq": 0.4,
-     "item": "矿井水综合利用协议",
-     "n_reports": 2
+     "n_reports": 3
     }
    ],
    "required": [
     {
      "freq": 1.0,
      "item": "委托书",
-     "n_reports": 5
+     "n_reports": 7
     }
    ],
    "rids_without_items": []
