@@ -1,0 +1,383 @@
+{
+ "001-wps": {
+  "cover_scale_mt_a": null,
+  "eia_org": "中煤科工集团北京华宇工程有限公司",
+  "eia_org_candidates": [
+   "宁夏通达新能源集团有限公司"
+  ],
+  "project_no": "H95011（2）BG",
+  "province": "宁夏",
+  "report_title": "环境影响报告书",
+  "source_file": "(WPS)宁夏通达新能源集团有限公司月儿湾矿井及选煤厂环评报告书-排版.docx",
+  "source_sha1": "7ceb5e55c3bcf1c4500100af7692056d288fc0b7",
+  "year": 2024
+ },
+ "002-016-2024-7-9": {
+  "cover_scale_mt_a": null,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": "ZH0125BG",
+  "province": "黑龙江",
+  "report_title": "黑龙江省七台河矿区总体规划（修编）环境影响报告书",
+  "source_file": "016审查会后 最新排版后（黑字版）改七台河矿区（修编）环评2024.7.9.docx",
+  "source_sha1": "6d297a9dc0175c34016c9daa19f63385a376313e",
+  "year": 2024
+ },
+ "003-1-2024-1-30": {
+  "cover_scale_mt_a": 107.0,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": "H005034Z",
+  "province": "新疆",
+  "report_title": "新疆伊宁矿区北区总体规划（修编）环境影响报告书",
+  "source_file": "1新疆伊宁矿区北区总体规划（修编）环境影响报告书 报批版 2024.1.30.docx",
+  "source_sha1": "d8d687c6d7ea07693673a7f5665f8d93af31f119",
+  "year": 2024
+ },
+ "004-2-2021-1": {
+  "cover_scale_mt_a": 9.2,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": "H7367Z",
+  "province": "宁夏",
+  "report_title": "宁夏回族自治区横城矿区总体规划（修编）环境影响报告书",
+  "source_file": "2横城矿区总体规划（修编）环评——报告书报批版2021.1.docx",
+  "source_sha1": "4d1d53e6ac6c1e8e733c64313c369d3f940ff6a8",
+  "year": 2021
+ },
+ "007-3": {
+  "cover_scale_mt_a": 21.4,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": "H75041Z",
+  "province": "甘肃",
+  "report_title": "甘肃省灵台矿区总体规划（修编）环境影响报告书",
+  "source_file": "3灵台矿区总体规划（修编）环境影响报告书 .docx",
+  "source_sha1": "bfe6c4a70491ee3c2492bdfc2df20efee5f49c4b",
+  "year": 2025
+ },
+ "008-5---2": {
+  "cover_scale_mt_a": null,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": "ZH7091BG",
+  "province": "内蒙古",
+  "report_title": "内蒙古自治区伊敏矿区（河西区）总体规划（修编）环境影响报告书",
+  "source_file": "5伊敏矿区规划环评（最终归档版）-出版，2套，蓝白皮.docx",
+  "source_sha1": "eb3ab171399614629752b894bc102bff1e023a21",
+  "year": 2023
+ },
+ "010-r": {
+  "cover_scale_mt_a": 136.0,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": "H7091Z",
+  "province": "新疆",
+  "report_title": "新疆哈密三塘湖矿区总体规划（修编）环境影响报告书",
+  "source_file": "三塘湖矿区规划环评修编（报批版）.docx",
+  "source_sha1": "c3bc170cc15c4e171da8827293fd5821fc42d2a4",
+  "year": 2022
+ },
+ "011-800--2026-2": {
+  "cover_scale_mt_a": null,
+  "eia_org": "中煤科工集团北京华宇工程有限公司",
+  "eia_org_candidates": [],
+  "project_no": "H1740BG",
+  "province": "甘肃",
+  "report_title": "环境影响报告书",
+  "source_file": "九龙川矿井及选煤厂800万吨项目环评-2026.2.docx",
+  "source_sha1": "99ac671fb772b46bffac2a2ff782013b3f2d1101",
+  "year": 2026
+ },
+ "012-r": {
+  "cover_scale_mt_a": 59.2,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": "ZH7330",
+  "province": "内蒙古",
+  "report_title": "内蒙古自治区锡林郭勒盟五间房矿区总体规划环境影响报告书",
+  "source_file": "五间房矿区总体规划环评-报批-终稿.docx",
+  "source_sha1": "c828f7e68ab05e33451ba8c2038f8027ebdf5d98",
+  "year": 2018
+ },
+ "013-3500-----2024-4-11": {
+  "cover_scale_mt_a": null,
+  "eia_org": "中煤科工集团北京华宇工程有限公司",
+  "eia_org_candidates": [],
+  "project_no": "H7350BG",
+  "province": null,
+  "report_title": "环境影响报告书",
+  "source_file": "伊敏3500万吨环评项目---最终2024.4.11.docx",
+  "source_sha1": "0712ffbbc3e1bf51422929759b93c0c93b912959",
+  "year": 2024
+ },
+ "016-2021-12": {
+  "cover_scale_mt_a": null,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": null,
+  "province": null,
+  "report_title": null,
+  "source_file": "出版最终 会后修改——伊泰煤矿（露天部分）及选煤厂环评2021.12.docx",
+  "source_sha1": "c6380601f973c3ae3ab3b8c8d5a80736df26fdea",
+  "year": null
+ },
+ "017-2024-11": {
+  "cover_scale_mt_a": null,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": null,
+  "province": "甘肃",
+  "report_title": "甘肃省华亭矿区总体规划（修编）环境影响报告书",
+  "source_file": "华亭矿区总体规划修编环境影响报告书-正式评审会后修改2024.11（加一句话在铁路建成前，采用清洁能源运输车运输）.docx",
+  "source_sha1": "ab6bc567b24b562aa8fe2a92146660fecb7955ec",
+  "year": 2024
+ },
+ "018-_5-900-2023-8": {
+  "cover_scale_mt_a": null,
+  "eia_org": "中煤科工集团北京华宇工程有限公司",
+  "eia_org_candidates": [
+   "伊泰伊犁矿业有限公司"
+  ],
+  "project_no": "H905064BG",
+  "province": null,
+  "report_title": "环境影响报告书",
+  "source_file": "压缩_5最终修改黑字版 伊泰煤矿（露天部分）及选煤厂900万吨环评2023.8.docx",
+  "source_sha1": "fe080ad3ecffa01aa07229418b9c99e25fdb5ff5",
+  "year": 2023
+ },
+ "019-2023-7": {
+  "cover_scale_mt_a": null,
+  "eia_org": "中煤科工集团北京华宇工程有限公司",
+  "eia_org_candidates": [],
+  "project_no": "H405009BG",
+  "province": null,
+  "report_title": "环境影响报告书",
+  "source_file": "吐鲁东露天矿环评-报批版（2023.7）.docx",
+  "source_sha1": "31f0628bf25558ed8f87a50e328a8ee8ed47f733",
+  "year": 2023
+ },
+ "020-2023-4": {
+  "cover_scale_mt_a": null,
+  "eia_org": "中煤科工集团北京华宇工程有限公司",
+  "eia_org_candidates": [
+   "陕西延长石油巴拉素煤业有限公司"
+  ],
+  "project_no": "H7296（2）",
+  "province": "陕西",
+  "report_title": "陕西延长石油巴拉素煤业有限公司巴拉素矿井及选煤厂调整建设规模（10.0Mt/a调整至15.0Mt/a）环境影响报告书",
+  "source_file": "巴拉素调整建设规模项目环境影响报告书（报批版）-2023.4.docx",
+  "source_sha1": "3809ccc5c01d416a02ac90ef57ca68069ceee9e5",
+  "year": 2023
+ },
+ "021-2026": {
+  "cover_scale_mt_a": null,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": "H05061（1）Z",
+  "province": "内蒙古",
+  "report_title": "内蒙古自治区呼伦贝尔市牙克石-五九煤田矿区总体规划环境影响报告书",
+  "source_file": "文字——牙克石-五九煤田矿区总规环评2026.docx",
+  "source_sha1": "c3001224498213ec295c4b427e5c26ddcf4349b8",
+  "year": 2026
+ },
+ "022-r": {
+  "cover_scale_mt_a": null,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": "ZH7244BG",
+  "province": "内蒙古",
+  "report_title": "内蒙古锡林郭勒盟胜利矿区总体规划（修编）环境影响报告书",
+  "source_file": "最终黑字——出版 胜利矿区修编规划环评.docx",
+  "source_sha1": "265f45a4f9cdc65abd68d990b3af6d7bf53007b5",
+  "year": 2023
+ },
+ "023-r": {
+  "cover_scale_mt_a": null,
+  "eia_org": "中煤科工集团北京华宇工程有限公司",
+  "eia_org_candidates": [
+   "陕煤集团神木柠条塔矿业有限公司"
+  ],
+  "project_no": "H7402BG",
+  "province": null,
+  "report_title": "环境影响报告书",
+  "source_file": "柠条塔矿井及选煤厂改扩建工程环境影响报告书 - 去颜色.docx",
+  "source_sha1": "daa8e6d39d5a9c5f37123af5faf397cf99f2372b",
+  "year": 2024
+ },
+ "025-r": {
+  "cover_scale_mt_a": 38.9,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": "Z0078",
+  "province": "甘肃",
+  "report_title": "甘肃省沙井子矿区总体规划（修编）环境影响报告书",
+  "source_file": "沙井子矿区总体规划（修编）环境影响报告书.docx",
+  "source_sha1": "d69115ee416a262ab9e52d0af2db0d37422804c5",
+  "year": 2026
+ },
+ "026-2023-9": {
+  "cover_scale_mt_a": null,
+  "eia_org": "中煤科工集团北京华宇工程有限公司",
+  "eia_org_candidates": [
+   "中国神华能源股份有限公司神东煤炭分公司"
+  ],
+  "project_no": "H7365",
+  "province": null,
+  "report_title": "环境影响报告书",
+  "source_file": "活鸡兔煤矿改扩建项目环评报告-2023.9.docx",
+  "source_sha1": "d2d6b706db56c503ec27383729989a10c2b2579f",
+  "year": 2023
+ },
+ "027-2025-11": {
+  "cover_scale_mt_a": 143.0,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": "H05060(1)Z",
+  "province": "新疆",
+  "report_title": "新疆哈密淖毛湖矿区总体规划（修编）环境影响报告书",
+  "source_file": "淖毛湖总规（修编）环评2025.11.docx",
+  "source_sha1": "5481a4e9a3c56c5b91d73210e2e7617b4ec2e29d",
+  "year": 2025
+ },
+ "028-r": {
+  "cover_scale_mt_a": null,
+  "eia_org": null,
+  "eia_org_candidates": [
+   "中煤科工集团武汉设计研究院有限公司中煤科工集团北京华宇工程有限公司"
+  ],
+  "project_no": null,
+  "province": "新疆",
+  "report_title": "新疆哈密津毛湖矿区总体规划〈修编〉环境影响报告书",
+  "source_file": "淖毛湖规划修编环评-报批版.docx",
+  "source_sha1": "329d78da2b4615a01d8ae4aa9d11141286185872",
+  "year": null
+ },
+ "029-r": {
+  "cover_scale_mt_a": 143.0,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": "H95279Z",
+  "province": "新疆",
+  "report_title": "新疆哈密淖毛湖矿区总体规划（修编）环境影响跟踪评价报告书",
+  "source_file": "淖毛湖规划（修编）环境影响跟踪评价报告书（报批版）.docx",
+  "source_sha1": "fdedfb81dd8a48ffb87fe6a21b818a1ab1c373c8",
+  "year": 2024
+ },
+ "031-2026-3": {
+  "cover_scale_mt_a": null,
+  "eia_org": "中煤科工集团北京华宇工程有限公司",
+  "eia_org_candidates": [
+   "国家电投集团内蒙古白音华煤电有限公司露天矿"
+  ],
+  "project_no": "H45017BG",
+  "province": null,
+  "report_title": "环境影响后评价报告书",
+  "source_file": "白音华二号露天矿项目环境影响后评价报告书-2026.3.docx",
+  "source_sha1": "261a7385379f362d9462f8ce2a21672d29e7fe0e",
+  "year": 2026
+ },
+ "032-2021-10": {
+  "cover_scale_mt_a": null,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": null,
+  "province": null,
+  "report_title": null,
+  "source_file": "白音华煤田三号露天矿项目环境影响后评价报告书-2021.10.docx",
+  "source_sha1": "20fe7187e8ed91efa9d3340a658fe94b8ac69875",
+  "year": null
+ },
+ "033-r": {
+  "cover_scale_mt_a": null,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": "ZH0120BG",
+  "province": "内蒙古",
+  "report_title": "内蒙古自治区鄂尔多斯纳林希里矿区总体规划环境影响报告书",
+  "source_file": "纳林希里矿区总体规划环境影响报告书-审查会后修改(补充).docx",
+  "source_sha1": "5525eda57049dafb499e3492d92ce20402ac332f",
+  "year": 2022
+ },
+ "034-2024-12": {
+  "cover_scale_mt_a": null,
+  "eia_org": "中煤科工集团北京华宇工程有限公司",
+  "eia_org_candidates": [],
+  "project_no": "H705016BG",
+  "province": "新疆",
+  "report_title": "环境影响报告书",
+  "source_file": "英格玛二号项目环评（报批版）2024.12.docx",
+  "source_sha1": "306a0b917f9d68b6a3b0f456775e15c8d05e2fae",
+  "year": 2024
+ },
+ "035-2022-12-7": {
+  "cover_scale_mt_a": null,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": null,
+  "province": "宁夏",
+  "report_title": "宁夏回族自治区韦州矿区总体规划（修编）环境影响报告书",
+  "source_file": "评审会后修改韦州矿区总体规划（修编）环评报告书 2022.12.7.docx",
+  "source_sha1": "a43691b06e3e3284589f27be0e45d5a21e5e01d8",
+  "year": 2022
+ },
+ "037-5-15": {
+  "cover_scale_mt_a": null,
+  "eia_org": "中煤科工集团北京华宇工程有限公司",
+  "eia_org_candidates": [
+   "甘肃省景泰县安家岭能源有限公司"
+  ],
+  "project_no": "H15357BG",
+  "province": "甘肃",
+  "report_title": "甘肃省景泰县安家岭能源有限公司白岩子矿区郭家台二号煤矿项目环境影响报告书",
+  "source_file": "郭家台二号煤矿环评报告（报批稿）5.15.docx",
+  "source_sha1": "2ce1db51e888ad3617394332722da715d8fd4a68",
+  "year": 2024
+ },
+ "038-2023-5": {
+  "cover_scale_mt_a": null,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": "ZH7158BG",
+  "province": "内蒙古",
+  "report_title": "内蒙古自治区鄂尔多斯市东胜煤田高头窑煤炭矿区总体规划（修编）环境影响报告书",
+  "source_file": "鄂尔多斯市东胜煤田高头窑矿区总体规划修编环境影响报告书2023.5.docx",
+  "source_sha1": "c4a2b673f0027bfe21225945064011af42176331",
+  "year": 2023
+ },
+ "039-1000": {
+  "cover_scale_mt_a": null,
+  "eia_org": "中煤科工集团北京华宇工程有限公司",
+  "eia_org_candidates": [
+   "伊吾广汇矿业有限公司"
+  ],
+  "project_no": "H7394BG",
+  "province": "新疆",
+  "report_title": "环境影响报告书",
+  "source_file": "马朗一号煤矿（露天）项目1000万吨年环评-报批版.docx",
+  "source_sha1": "5d6b66fc488ebef175416dadd0003dbbefeba085",
+  "year": 2025
+ },
+ "040-r": {
+  "cover_scale_mt_a": 19.15,
+  "eia_org": null,
+  "eia_org_candidates": [],
+  "project_no": "H0127",
+  "province": "黑龙江",
+  "report_title": "黑龙江省鹤岗煤炭矿区总体规划（修编）环境影响报告书",
+  "source_file": "黑龙江省鹤岗煤炭矿区总体规划（修编）环境影响报告书 .docx",
+  "source_sha1": "685db7bac1e79e1d3fa10c13edda32cdd0e9bba6",
+  "year": 2023
+ },
+ "041-2000": {
+  "cover_scale_mt_a": null,
+  "eia_org": "中煤科工集团北京华宇工程有限公司",
+  "eia_org_candidates": [],
+  "project_no": "H7398",
+  "province": null,
+  "report_title": "环境影响报告书",
+  "source_file": "（报批版）国能集团红沙泉一号露天矿改扩建项目2000万吨年项目排版.docx",
+  "source_sha1": "b9b21b793c578bc1740f4514acd0fa07ba111e97",
+  "year": 2023
+ }
+}
