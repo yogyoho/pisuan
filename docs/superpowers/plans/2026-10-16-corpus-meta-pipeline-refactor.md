@@ -533,10 +533,14 @@ def build_corpus_meta(slices_root: Path, annotations: dict, front: dict | None =
 ④ `main_with_args` 增参数与装载：
 
 ```python
-    ap.add_argument("--front-matter", default=None, help="默认 slices-root 下 front_matter.json")
+    ap.add_argument("--front-matter", default=None, help="默认 references/samples_bank 下 front_matter.json")
 ```
 ```python
-    front_path = Path(args.front_matter) if args.front_matter else root / "front_matter.json"
+    front_path = (
+        Path(args.front_matter)
+        if args.front_matter
+        else SCRIPTS_DIR.parent / "references" / "samples_bank" / "front_matter.json"  # 勘误：指向提交物位置（常量以 corpus_meta.py 既有命名为准）
+    )
     front = json.loads(front_path.read_text(encoding="utf-8")) if front_path.exists() else {}
 ```
 ```python
@@ -1157,3 +1161,16 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 - **Spec 覆盖**：§4 数据流→Task 1/3；§5 schema→Task 1/2；§6 服务层→Task 4；§7 前端→Task 5；§8 验收 AC1→Step 2.6、AC2→Step 3.5/3.6、AC3→Step 5.7；§9 顺序→任务编排（Task 2 与 3 的编译实跑交叉已显式注明控制器保证顺序）；§10 非目标未引入。
 - **占位符扫描**：无 TBD/TODO；Step 1.3 的 `is None is None` 笔误已就地标注修正指令；Step 3.3 的占位行已标注删除。
 - **类型一致性**：front_matter 键名（report_title/eia_org/eia_org_candidates/year/project_no/cover_scale_mt_a/province）在 Task 1 产出、Task 2 消费、Task 4 透出、Task 5 展示四处一致；rid 推导单一来源 make_rid。
+
+## Task 1 实施勘误（2026-10-16，commit b6069ccf）
+
+实施时计划稿自身 4 处代码 bug 被 TDD/评审逼出修正（测试块为验收基准，未动）：
+
+1. `SCALE_LINE_RE` 量词错位：`^矿区?开发?总规模…` 使 矿/开 成为必选字符 → 改 `^(?:矿区)?(?:开发)?总规模[：:](\d+(?:\.\d+)?)Mt?/?a?$`（可选前缀必须加括号；顺带收紧捕获防 `float("2..4")` ValueError 丢整份字段）。
+2. 裸机构名分支需剥掉行首「建设单位：/环评单位：/编制单位：/评价单位：」标签再入 `eia_org_candidates`（计划测试要求裸名，Task 2 fixture 佐证候选为裸名格式）。
+3. workdir 排除日志写入前需 `log_path.parent.mkdir(parents=True, exist_ok=True)`（计划自己的测试用全新 tmp workdir）。
+4. 【评审 C1】`read_front_paras` 先 SPACE 归一后判界使 SEC_HEAD_RE（要求 `\s+`）永假——边界判据改用归一前 `raw.strip()`；补 test_read_front_paras_stops_at_sec_heading + split-run 测试 + source_sha1 断言。
+
+Quality 复审小项一并落地：ZipFile `with` 块、`BACK_JOIN_BLOCK_RE`/`PROVINCES_BY_LEN` 提模块常量、docstring 补用法行。复审遗留（非阻塞）：corrupt-docx 跳过路径与全排除 exit-1 两个补测，折进后续任务测试。
+
+**Task 2/3 runbook 注意**：rid 一致性只在「prepare_corpus 切片实跑与 front_extract 实跑之间目录内容不变」时成立（两者都对活目录重算排序位）——两条命令必须同批执行，中间不得增删 docx。scripts 测试在宿主机 repo 内不可收集（pytest 9 沿祖先包触发 langchain_core，仅 Docker 有）——一律用 repo 外临时目录字节同副本 harness。
