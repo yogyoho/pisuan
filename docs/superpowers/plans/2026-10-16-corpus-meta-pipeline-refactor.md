@@ -1174,3 +1174,12 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 Quality 复审小项一并落地：ZipFile `with` 块、`BACK_JOIN_BLOCK_RE`/`PROVINCES_BY_LEN` 提模块常量、docstring 补用法行。复审遗留（非阻塞）：corrupt-docx 跳过路径与全排除 exit-1 两个补测，折进后续任务测试。
 
 **Task 2/3 runbook 注意**：rid 一致性只在「prepare_corpus 切片实跑与 front_extract 实跑之间目录内容不变」时成立（两者都对活目录重算排序位）——两条命令必须同批执行，中间不得增删 docx。scripts 测试在宿主机 repo 内不可收集（pytest 9 沿祖先包触发 langchain_core，仅 Docker 有）——一律用 repo 外临时目录字节同副本 harness。
+
+## Task 2 实施勘误（2026-10-16，commit 495e5e57）
+
+1. 计划文写 `main_with_args`，corpus_meta.py 实际入口为 `main`——按实际函数改。
+2. Step 2.3 代码块漏了省份汇总 print 的 cover 档（Step 2.6 预期 stdout 却含 cover=…）——已补为固定四档：`province cover=N regex=N manual=N needs_review=N`。
+3. 适配 A：规模候选等值碰撞时「改挂封面标签（值保持）」取代 Step 2.3 的 append-only 片段——计划自测要求封面标签恰一次，append-only 必挂；真实语料 9/31 rid 命中该路径（全部值不变）。
+4. 锁文件防波及（runbook 增补）：Office 属主锁 `~$*.docx` 一旦混入语料目录即占排序位 → 全体 rid +1 漂移；front_extract/prepare_corpus 均须跳过 `~$*`。Task 2 实跑以临时副本法完成（41 真件拷贝跳 `~$*`，sha1 溯源不变）。
+5. Step 2.6 slices-root 前提勘误：真实切片在 `references/samples_bank/<stage>/slices/ch*/`（脚本默认参数即正确），`.wolf/corpus-workdir` 是 prepare/bank 的 workdir，非 slices-root。
+6. 塔然高勒监测 docx 磁盘损坏（非 zip）——读失败跳过与体裁门排除同效，不影响管线；语料属主可择机修复/重取该文件。
