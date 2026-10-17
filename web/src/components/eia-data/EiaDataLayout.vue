@@ -46,6 +46,7 @@ import {
   ChartLine,
   ClipboardList,
   CornerDownLeft,
+  FolderOpen,
   LayoutGrid,
   MessageSquareQuote,
   NotebookPen,
@@ -64,6 +65,7 @@ const groups = [
   {
     label: '语料与护栏',
     items: [
+      { to: '/domain-factory/eia-data/library', label: '环评文件库', icon: FolderOpen },
       { to: '/domain-factory/eia-data/lexicon', label: '数值护栏词表', icon: BookOpen },
       { to: '/domain-factory/eia-data/meta', label: '语料元数据标注', icon: LayoutGrid },
       { to: '/domain-factory/eia-data/standards', label: '标准与限值库', icon: ShieldCheck }
