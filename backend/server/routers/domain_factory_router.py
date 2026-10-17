@@ -1325,9 +1325,10 @@ async def upload_eia_library_file(
     try:
         return await get_eia_library_service().upload(file, folder_id, current_user.username if current_user else None)
     except FileExistsError as e:
-        raise HTTPException(status_code=409, detail=f"文件已存在：{e}")
+        # 结构化 detail（base.js extractBusinessErrorDetail 契约）：字符串 detail 会被公共文案覆盖
+        raise HTTPException(status_code=409, detail={"code": "eia_library_file_exists", "message": str(e)})
     except LibraryFileTooLarge as e:
-        raise HTTPException(status_code=413, detail=str(e))
+        raise HTTPException(status_code=413, detail={"code": "eia_library_file_too_large", "message": str(e)})
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
