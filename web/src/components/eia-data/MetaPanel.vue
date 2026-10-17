@@ -47,7 +47,7 @@
             v-for="j in 7"
             :key="j"
             class="sk sk-line"
-            :class="['w-25', 'w-10', 'w-10', 'w-10', 'w-25', 'w-10', 'w-10'][j - 1]"
+            :class="['w-40', 'w-10', 'w-10', 'w-10', 'w-10', 'w-10', 'w-10'][j - 1]"
           ></span>
         </div>
       </div>
@@ -107,12 +107,12 @@
         <table class="tbl" :style="loading && items.length ? 'opacity: .55' : ''">
           <thead>
             <tr>
-              <th style="width: 24%">报告名 / rid</th>
+              <th>报告名 / rid</th>
               <th style="width: 8%">省份</th>
               <th style="width: 12%">阶段</th>
               <th style="width: 8%">年份</th>
-              <th style="width: 18%">规模（Mt/a）</th>
-              <th style="width: 12%">标注状态</th>
+              <th style="width: 10%">规模（Mt/a）</th>
+              <th style="width: 8%">标注状态</th>
               <th class="r" style="width: 18%; padding-right: 20px">操作</th>
             </tr>
           </thead>
