@@ -182,9 +182,7 @@
                 <span v-else class="pill pill-warn">待标注</span>
               </td>
               <td class="r" style="padding-right: 20px">
-                <button class="btn btn-txt btn-sm" @click="openAnnotate(record)">
-                  {{ hasAnnotation(record) ? '查看' : '标注' }}
-                </button>
+                <button class="btn btn-txt btn-sm" @click="openAnnotate(record)">标注</button>
               </td>
             </tr>
           </tbody>
