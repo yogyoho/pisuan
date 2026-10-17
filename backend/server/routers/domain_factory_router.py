@@ -1337,10 +1337,11 @@ async def upload_eia_library_file(
 async def list_eia_library_files(
     folder_id: int | None = None,
     q: str | None = None,
+    uncategorized: bool = False,
     current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
-    """文件列表：folder_id 缺省=全库；q 文件名模糊。"""
-    files = await get_eia_library_service().list_files(folder_id=folder_id, q=q)
+    """文件列表：folder_id 定向；uncategorized=未归类；都缺省=全库；q 文件名模糊。"""
+    files = await get_eia_library_service().list_files(folder_id=folder_id, q=q, uncategorized=uncategorized)
     return {"files": files}
 
 

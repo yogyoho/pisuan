@@ -42,9 +42,10 @@ export const eiaDataApi = {
 
   listLibraryFolders: () => apiGet('/api/domain-factory/eia/library/folders'),
 
-  listLibraryFiles: (folderId, q) => {
+  listLibraryFiles: (folderId, q, uncategorized) => {
     const params = new URLSearchParams()
     if (folderId != null) params.set('folder_id', String(folderId))
+    if (uncategorized) params.set('uncategorized', '1')
     if (q) params.set('q', q)
     const qs = params.toString()
     return apiGet(`/api/domain-factory/eia/library/files${qs ? `?${qs}` : ''}`)

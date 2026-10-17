@@ -211,11 +211,12 @@ const moveOptions = computed(() => [
 ])
 
 const reload = async () => {
-  // 搜索范围为全库（folder_id 不传）；文件夹视图按夹过滤
+  // 搜索=全库；未归类（folderId null）走 uncategorized 参数，与全库语义区分
   const queryFolder = q.value ? null : folderId.value
+  const uncategorized = !q.value && folderId.value === null
   const [folderRes, fileRes] = await Promise.all([
     eiaDataApi.listLibraryFolders(),
-    eiaDataApi.listLibraryFiles(queryFolder, q.value || undefined)
+    eiaDataApi.listLibraryFiles(queryFolder, q.value || undefined, uncategorized)
   ])
   folders.value = folderRes.folders
   totalCount.value = folderRes.total_files

@@ -25,7 +25,10 @@ class EiaLibraryRepository:
         async with pg_manager.get_async_session_context() as session:
             return await session.get(EiaLibraryFolder, folder_id)
 
-    async def list_files(self, *, folder_id: int | None = None, q: str | None = None) -> list[dict]:
+    async def list_files(
+        self, *, folder_id: int | None = None, q: str | None = None, uncategorized: bool = False
+    ) -> list[dict]:
+        """folder_id 定向；uncategorized=未归类（folder_id IS NULL）；q 文件名模糊。"""
         async with pg_manager.get_async_session_context() as session:
             stmt = (
                 select(EiaLibraryFile, EiaLibraryFolder.name)
@@ -34,6 +37,8 @@ class EiaLibraryRepository:
             )
             if folder_id is not None:
                 stmt = stmt.where(EiaLibraryFile.folder_id == folder_id)
+            elif uncategorized:
+                stmt = stmt.where(EiaLibraryFile.folder_id.is_(None))
             if q:
                 stmt = stmt.where(EiaLibraryFile.original_filename.ilike(f"%{q}%"))
             rows = (await session.execute(stmt)).all()

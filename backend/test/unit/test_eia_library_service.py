@@ -30,10 +30,12 @@ class FakeRepo:
     async def get_file_by_sha1(self, sha1):
         return next((f for f in self.files if f.content_sha1 == sha1), None)
 
-    async def list_files(self, *, folder_id=None, q=None):
+    async def list_files(self, *, folder_id=None, q=None, uncategorized=False):
         rows = self.files
         if folder_id is not None:
             rows = [f for f in rows if f.folder_id == folder_id]
+        elif uncategorized:
+            rows = [f for f in rows if f.folder_id is None]
         if q:
             rows = [f for f in rows if q.lower() in f.original_filename.lower()]
         return [
@@ -132,6 +134,14 @@ def test_list_files_joins_folder_name(tmp_path):
     assert names["beta.docx"] is None
     hit = asyncio.run(svc.list_files(q="alp"))
     assert [f["original_filename"] for f in hit] == ["alpha.docx"]
+
+
+def test_list_files_uncategorized_filters_null_folder(tmp_path):
+    svc = make_service(tmp_path)
+    asyncio.run(svc.upload(make_upload(b"hello", "alpha.docx"), folder_id=1, uploaded_by="admin"))
+    asyncio.run(svc.upload(make_upload(b"world", "beta.docx"), folder_id=None, uploaded_by="admin"))
+    hit = asyncio.run(svc.list_files(uncategorized=True))
+    assert [f["original_filename"] for f in hit] == ["beta.docx"]
 
 
 def test_safe_filename_strips_unsafe_chars():
