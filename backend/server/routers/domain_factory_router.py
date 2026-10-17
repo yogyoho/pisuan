@@ -7,6 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import FileResponse
 
 from server.utils.auth_middleware import get_admin_user, get_required_user
 from yuxi.services.domain_factory_service import get_domain_factory_service
@@ -18,6 +19,7 @@ from yuxi.services.eia_data_service import (
     get_unmapped,
 )
 from yuxi.services.eia_lexicon_service import get_eia_lexicon_service
+from yuxi.services.eia_library_service import LibraryFileTooLarge, get_eia_library_service
 from yuxi.services.eia_meta_service import get_eia_meta_service
 from yuxi.services.eia_standard_service import get_eia_standard_service
 from yuxi.services.eia_entity_service import get_eia_entity_service
@@ -1297,6 +1299,94 @@ async def export_eia_meta_annotations(
     except Exception as e:
         logger.error(f"Failed to export eia meta annotations: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"导出元数据标注失败: {str(e)}")
+
+
+# =============================================================================
+# EIA Library（环评文件库 P1：上传即登记；加工属 P2 显式触发）
+# =============================================================================
+
+
+@domain_factory.get("/eia/library/folders")
+async def list_eia_library_folders(
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """文件夹树（含各夹计数）+ 全库登记总数。"""
+    service = get_eia_library_service()
+    return {"folders": await service.list_folders(), "total_files": await service.count_files()}
+
+
+@domain_factory.post("/eia/library/files")
+async def upload_eia_library_file(
+    file: UploadFile = File(...),
+    folder_id: int | None = Form(None),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """上传即登记：sha1 全库去重（409 携既有位置），超限 413。"""
+    try:
+        return await get_eia_library_service().upload(file, folder_id, current_user.username if current_user else None)
+    except FileExistsError as e:
+        raise HTTPException(status_code=409, detail=f"文件已存在：{e}")
+    except LibraryFileTooLarge as e:
+        raise HTTPException(status_code=413, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@domain_factory.get("/eia/library/files")
+async def list_eia_library_files(
+    folder_id: int | None = None,
+    q: str | None = None,
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """文件列表：folder_id 缺省=全库；q 文件名模糊。"""
+    files = await get_eia_library_service().list_files(folder_id=folder_id, q=q)
+    return {"files": files}
+
+
+@domain_factory.get("/eia/library/files/{file_id}/download")
+async def download_eia_library_file(
+    file_id: int,
+    current_user: User = Depends(get_required_user),
+) -> FileResponse:
+    """下载（FileResponse 以 original_filename 恢复原名）。"""
+    try:
+        row, path = await get_eia_library_service().download(file_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="文件不存在（或磁盘文件已丢失）")
+    return FileResponse(
+        path=path, filename=row.original_filename, media_type=row.content_type or "application/octet-stream"
+    )
+
+
+@domain_factory.patch("/eia/library/files/{file_id}")
+async def move_eia_library_file(
+    file_id: int,
+    body: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """移动文件夹（folder_id=null 移出为未归类）。"""
+    folder_id = body.get("folder_id")
+    if folder_id is not None and not isinstance(folder_id, int):
+        raise HTTPException(status_code=400, detail="folder_id 须为整数或 null")
+    try:
+        return await get_eia_library_service().move(file_id, folder_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="文件不存在")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@domain_factory.delete("/eia/library/files/{file_id}")
+async def delete_eia_library_file(
+    file_id: int,
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """删除（DB 记录与磁盘文件同删）。"""
+    try:
+        await get_eia_library_service().delete(file_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="文件不存在")
+    return {"success": True}
 
 
 # =============================================================================
