@@ -100,6 +100,8 @@
 
 - 标注对话框 UI 对齐词表改名重设计原型（2026-10-15-lexicon-rename-redesign）：标识条（报告名主显 + 阶段/标注态 pill + 省份/rid 副显）、规模候选证据区头（计数副注 + 已核实/待复核徽标右锚）、.fld 表单配方（12px 次级 label + 帮助文字）、底部警告条一处说清留空清除/覆盖语义、antd 默认 footer（confirm-loading 确认态）；弹宽 560→680，移除年份必填星号残留（与「至少标注一项」守卫矛盾）
 
+- 标注页遗留收口（Task 5 质量评审两项 follow-up + 文档对齐）：服务端 `counts.annotated` 判据扩至可标注四字段（任一 _ANNOTATION_FIELDS 有值即计，与前端 hasAnnotation 对齐，修复指标带显示 18/15 而实际 20/13 的口径分裂，含纯文本标注计数单测）；编制单位 needs_review（9/33 份）补 UI 信号——表格报告名副行「编制单位待复核」自描述标 + 标注弹窗「依据待复核」徽标（与规模待复核同配方），spec §7.2 完整落地；SKILL.md corpus_meta 参考行对齐 33 份/schema 2/DB 真相现状
+
 ### 运行与维护
 
 - API 启动依赖补齐 Milvus 健康条件（`milvus: condition: service_healthy`）：Milvus 冷启动最慢，整机重启时 API 抢跑致 knowledge_base 启动组件失败且不重试，容器停留 unhealthy；现在 compose 先等 Milvus 健康再拉起 API。
