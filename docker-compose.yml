@@ -66,6 +66,9 @@ services:
       - type: bind
         source: ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/skill-projections
         target: /app/skill-projections
+      - type: bind
+        source: ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/eia-library
+        target: /app/eia-library
       - ./backend/test:/app/test
       - ./backend/scripts:/app/scripts
       - ./docker/sandbox_provisioner:/app/docker/sandbox_provisioner:ro

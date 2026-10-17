@@ -3,7 +3,7 @@
  * 环评域数据工厂（coal-eia-writer 技能数据加工与管理）相关接口
  */
 
-import { apiGet } from './base'
+import { apiDelete, apiGet, apiPatch, apiPost, apiRequest } from './base'
 
 export const eiaDataApi = {
   /**
@@ -36,5 +36,32 @@ export const eiaDataApi = {
    * 三数据集只读抽屉通道（P3-3）：key ∈ attachment_checklist / consistency_contracts / depth_targets。
    */
   getDatasetView: (key) =>
-    apiGet(`/api/domain-factory/eia/datasets/${encodeURIComponent(key)}/view`)
+    apiGet(`/api/domain-factory/eia/datasets/${encodeURIComponent(key)}/view`),
+
+  // ── 环评文件库（P1：上传即登记；加工属 P2 显式触发）──
+
+  listLibraryFolders: () => apiGet('/api/domain-factory/eia/library/folders'),
+
+  listLibraryFiles: (folderId, q) => {
+    const params = new URLSearchParams()
+    if (folderId != null) params.set('folder_id', String(folderId))
+    if (q) params.set('q', q)
+    const qs = params.toString()
+    return apiGet(`/api/domain-factory/eia/library/files${qs ? `?${qs}` : ''}`)
+  },
+
+  uploadLibraryFile: (file, folderId) => {
+    const form = new FormData()
+    form.append('file', file)
+    if (folderId != null) form.append('folder_id', String(folderId))
+    return apiPost('/api/domain-factory/eia/library/files', form)
+  },
+
+  downloadLibraryFile: (id) =>
+    apiRequest(`/api/domain-factory/eia/library/files/${id}/download`, {}, true, 'blob'),
+
+  moveLibraryFile: (id, folderId) =>
+    apiPatch(`/api/domain-factory/eia/library/files/${id}`, { folder_id: folderId }),
+
+  deleteLibraryFile: (id) => apiDelete(`/api/domain-factory/eia/library/files/${id}`)
 }

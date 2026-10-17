@@ -261,6 +261,28 @@ export function apiPost(url, data = {}, options = {}, requiresAuth = true, respo
   )
 }
 
+/**
+ * 发送PATCH请求
+ * @param {string} url - API端点
+ * @param {Object|FormData} data - 请求体
+ * @param {Object} options - 请求选项
+ * @param {boolean} requiresAuth - 是否需要认证
+ * @param {string} responseType - 响应类型: 'json' | 'text' | 'blob'
+ * @returns {Promise} - 请求结果
+ */
+export function apiPatch(url, data = {}, options = {}, requiresAuth = true, responseType = 'json') {
+  return apiRequest(
+    url,
+    {
+      method: 'PATCH',
+      body: data instanceof FormData ? data : JSON.stringify(data),
+      ...options
+    },
+    requiresAuth,
+    responseType
+  )
+}
+
 export function apiAdminPost(url, data = {}, options = {}, responseType = 'json') {
   checkAdminPermission()
   return apiPost(url, data, options, true, responseType)
