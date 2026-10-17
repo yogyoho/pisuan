@@ -125,7 +125,20 @@ async def main() -> None:
                 "business",
                 business_version,
                 BUSINESS_SCHEMA_VERSION,
-                upgrade_from=(2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17),  # [pisuan-custom] v14~v18：允许从 v9~v17 升级
+                upgrade_from=(
+                    2,
+                    7,
+                    8,
+                    9,
+                    10,
+                    11,
+                    12,
+                    13,
+                    14,
+                    15,
+                    16,
+                    17,
+                ),  # [pisuan-custom] v14~v18：允许从 v9~v17 升级
             )
             knowledge_version = versions.get("knowledge")
             _require_supported_version(
