@@ -1197,3 +1197,5 @@ Quality 复审小项一并落地：ZipFile `with` 块、`BACK_JOIN_BLOCK_RE`/`PR
 
 1. **标注计数口径分裂**：服务端 `list_reports` 的 `annotated` 判据仍只看 year_hint/scale_mt_a，客户端 `hasAnnotation` 已扩到 report_title/eia_org → 指标带显示 已标注 18/待标注 15，实际 20 行带已标注 pill、待标注过滤得 13 行（文本-only 标注：028-r、011-800--2026-2）。修法：服务端 annotated 判据同步扩为四字段（或前端自派生计数）。
 2. **eia_org_basis needs_review 无 UI 信号**（spec §7.2 半落地，系计划层遗漏非实现走样）：33 份中 org basis 分布 cover 13 / needs_review 9 / body 11，9 份待复核无任何 UI 提示（表格无黄点、弹窗无编制单位状态行）。修法二选一：报告名黄点旁补 org 点 / 弹窗补「编制单位待复核」注记（对齐规模待复核惯例）；或明文 descope 修订 spec §7.2。
+
+**裁决与落地（2026-10-17）**：两项均裁定修复、当日落地——①服务端 `counts.annotated` 判据扩至 `_ANNOTATION_FIELDS` 四字段（6b46ef86，含纯文本标注计数单测，容器 9 测试过）；②编制单位 needs_review UI 信号：表格报告名副行「编制单位待复核」自描述标 + 弹窗「依据待复核」徽标（71803812，`.basis-badge` 提为两用共享类），spec §7.2 完整落地、不 descope。浏览器 QA：9 标对位、指标带 33/20/13 三面一致、亮暗两态可读、console 零告警。SKILL.md corpus_meta 参考行同步对齐 33 份/schema 2/DB 真相现状（同日 docs 提交）。
