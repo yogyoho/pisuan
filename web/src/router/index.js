@@ -194,6 +194,12 @@ const router = createRouter({
               meta: { keepAlive: false, requiresAuth: true }
             },
             {
+              path: 'library',
+              name: 'EiaDataLibrary',
+              component: () => import('../views/EiaLibraryView.vue'),
+              meta: { keepAlive: false, requiresAuth: true }
+            },
+            {
               path: 'meta',
               name: 'EiaDataMeta',
               component: () => import('../views/EiaMetaView.vue'),
