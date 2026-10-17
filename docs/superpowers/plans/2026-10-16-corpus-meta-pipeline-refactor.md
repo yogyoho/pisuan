@@ -1188,3 +1188,7 @@ Quality 复审小项一并落地：ZipFile `with` 块、`BACK_JOIN_BLOCK_RE`/`PR
 4. 锁文件防波及（runbook 增补）：Office 属主锁 `~$*.docx` 一旦混入语料目录即占排序位 → 全体 rid +1 漂移；front_extract/prepare_corpus 均须跳过 `~$*`。Task 2 实跑以临时副本法完成（41 真件拷贝跳 `~$*`，sha1 溯源不变）。
 5. Step 2.6 slices-root 前提勘误：真实切片在 `references/samples_bank/<stage>/slices/ch*/`（脚本默认参数即正确），`.wolf/corpus-workdir` 是 prepare/bank 的 workdir，非 slices-root。
 6. 塔然高勒监测 docx 磁盘损坏（非 zip）——读失败跳过与体裁门排除同效，不影响管线；语料属主可择机修复/重取该文件。
+
+## 九龙川 rid 实测值勘误（2026-10-17，Task 6 收尾）
+
+计划 §2.4/§4 预测九龙川 rid 为 `011-800-2026-2`（单横线）；实跑（commit 774a14ba）为 `011-800--2026-2`（双横线）——文件名「九龙川矿井及选煤厂800万吨项目…」的 ASCII 残渣在 `800` 与年份段之间留下空段分隔，make_rid 按实测语义产出双横线。rid 冻结语义不受影响：切片文件名、bank_index、corpus_meta、DB 标注均已烙进实测值，展示层报告名主显、rid 退为技术主键（spec §2.4）。巴拉素预测值 `020-2023-4` 与实测一致。
