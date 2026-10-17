@@ -131,7 +131,15 @@
                     title="报告名待复核（封面缺失/脏样本，建议人工确认）"
                   ></span>
                 </div>
-                <div class="rep-rid">{{ record.report_id }}</div>
+                <div class="rep-rid">
+                  {{ record.report_id }}
+                  <span
+                    v-if="record.eia_org_basis === 'needs_review'"
+                    class="org-flag"
+                    title="编制单位待复核（封面/委托句均未命中，建议人工确认）"
+                    >编制单位待复核</span
+                  >
+                </div>
               </td>
               <td>
                 <template v-if="record.province">{{ record.province }}</template>
@@ -288,7 +296,15 @@
             <p class="fld-help">写手溯源引用主名；预填封面抽取值</p>
           </div>
           <div class="fld">
-            <label for="mf-org">编制单位</label>
+            <label for="mf-org">
+              编制单位
+              <span
+                v-if="dlg.record.eia_org_basis === 'needs_review'"
+                class="basis-badge warn"
+                title="编制单位待复核（封面/委托句均未命中，建议人工确认）"
+                >依据待复核</span
+              >
+            </label>
             <a-input id="mf-org" v-model:value="dlg.form.eia_org" :maxlength="200" />
             <p class="fld-help">环评编制机构</p>
           </div>
@@ -561,6 +577,12 @@ onMounted(fetchList)
   margin-top: 2px;
 }
 
+/* 编制单位依据待复核标：报告名副行自描述信号（spec §7.2，黄点惯例的色+文变体） */
+.org-flag {
+  margin-left: 6px;
+  color: var(--color-warning-700);
+}
+
 .empty-state {
   padding: 48px 0;
   text-align: center;
@@ -638,17 +660,22 @@ onMounted(fetchList)
 
   .basis-badge {
     margin-left: auto;
-    padding: 1px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 400;
-    color: var(--main-700);
-    background: var(--main-100);
+  }
+}
 
-    &.warn {
-      color: var(--color-warning-700);
-      background: var(--color-warning-50);
-    }
+/* 核实态徽标两用：sec-hd 右锚（规模）/ fld label 行内（编制单位）；warn = 待复核 */
+.basis-badge {
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--main-700);
+  background: var(--main-100);
+
+  &.warn {
+    color: var(--color-warning-700);
+    background: var(--color-warning-50);
   }
 }
 
