@@ -104,7 +104,10 @@ class EiaMetaService:
         return {"scanned": len(existing_file), "added": added, "skipped_unknown": skipped_unknown}
 
     async def list_reports(self) -> dict[str, Any]:
-        """31 份报告总览：自动层只读 + DB 标注合并；counts 汇总待办。"""
+        """报告总览：自动层只读 + DB 标注合并；counts 汇总待办。
+
+        annotated 口径：任一可标注字段有值（与前端 hasAnnotation 对齐）。
+        """
         meta = await run_in_threadpool(_load_corpus_meta)
         rows = {r.report_id: r for r in await self.repo.list_annotations()}
         items: list[dict[str, Any]] = []
@@ -117,7 +120,7 @@ class EiaMetaService:
             auto_scale = m.get("scale_mt_a")
             eff_year = ann.get("year_hint", auto_year)
             eff_scale = ann.get("scale_mt_a", auto_scale)
-            if ann.get("year_hint") is not None or ann.get("scale_mt_a") is not None:
+            if any(ann.get(k) is not None for k in _ANNOTATION_FIELDS):
                 counts["annotated"] += 1
             if eff_year is None:
                 counts["year_missing"] += 1

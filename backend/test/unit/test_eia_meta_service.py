@@ -140,3 +140,53 @@ def test_list_reports_annotation_passthrough_values(monkeypatch):
     item = next(i for i in out["items"] if i["report_id"] == "007-3")
     assert item["annotation"]["report_title"] == "DB名"
     assert item["annotation"]["eia_org"] == "DB单位"
+
+
+def test_list_reports_annotated_counts_text_only_annotations(monkeypatch):
+    """counts.annotated 口径与前端 hasAnnotation 对齐：纯文本标注（报告名/编制单位，无年份规模）也计已标注。"""
+    meta = {
+        "schema": 2,
+        "reports": {
+            "a-1": {
+                "stage": "planning_eia",
+                "year_hint": 2025,
+                "scale_basis": "needs_review",
+                "scale_candidates": [],
+                "standards_cited": [],
+            },
+            "b-2": {
+                "stage": "planning_eia",
+                "year_hint": None,
+                "scale_basis": "needs_review",
+                "scale_candidates": [],
+                "standards_cited": [],
+            },
+        },
+    }
+    rows = [
+        SimpleNamespace(
+            report_id="a-1",
+            annotations={"report_title": "只有报告名"},
+            note=None,
+            decided_by="qa",
+            decided_at=datetime(2025, 6, 1),
+        ),
+        SimpleNamespace(
+            report_id="b-2",
+            annotations={"eia_org": "只有单位"},
+            note=None,
+            decided_by="qa",
+            decided_at=datetime(2025, 6, 1),
+        ),
+    ]
+
+    class _FakeRepo:
+        async def list_annotations(self):
+            return rows
+
+    monkeypatch.setattr(eia_meta_service, "_load_corpus_meta", lambda: meta)
+    svc = EiaMetaService()
+    svc.repo = _FakeRepo()
+    out = asyncio.run(svc.list_reports())
+    assert out["counts"]["total"] == 2
+    assert out["counts"]["annotated"] == 2
