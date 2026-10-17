@@ -5604,3 +5604,424 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 20:00 | 流E返工：git add .wolf 误扫 ~200 scratch→soft reset 清场，按清单重提 amend 59c72c13（18 文件）；教训入 cerebrum DNR+bug-4023 | .wolf/cerebrum.md, .wolf/buglog.json | 已修正，工作区仅剩 uv.lock | ~10k |
+| 20:03 | uv.lock 还原（autocrlf=false 字节精确）+ pisuan-custom 推送 origin（689192ee..afad4e6a，25 提交） | backend/uv.lock, 远端分支 | 用户明令执行，4 项清单全闭环 | ~2k |
+| 20:06 | Edited backend/test/unit/test_eia_paradigm_service.py | inline fix | ~25 |
+| 20:06 | Edited backend/test/unit/test_eia_paradigm_service.py | modified test_export_empty_drafts_raises() | ~588 |
+| 20:10 | 终审遗留 M2~M5 处理：3 个服务层单测（空批拒绝/撤回幂等/md带草稿形状）+设计doc 6 checkbox 销项+changelog | test_eia_paradigm_service.py, 设计doc, changelog | 容器 15p、ruff 净、已提交待推 | ~6k |
+| 20:10 | Session end: 2 writes across 1 files (test_eia_paradigm_service.py) | 1 reads | ~4169 tok |
+| 20:15 | Edited web/src/assets/css/base.css | CSS: --font-sans, --font-mono | ~138 |
+| 20:15 | Edited web/src/assets/css/main.less | 5→3 lines | ~36 |
+| 20:16 | Edited web/src/assets/css/extensions.less | inline fix | ~19 |
+| 20:16 | Edited web/src/stores/theme.js | 2→1 lines | ~24 |
+| 20:16 | Edited web/src/assets/css/shorts.css | CSS: font-variant-numeric | ~42 |
+| 20:16 | Edited docs/develop-guides/design.md | expanded (+8 lines) | ~323 |
+| 20:19 | 排版对齐原型 eia-p2-ui：--font-sans/--font-mono 单一真相+正文14px+.num+design.md §3 重写 | base.css, main.less, extensions.less, shorts.css, theme.js, design.md | 双主题零溢出零报错，已提交待推 | ~15k |
+| 20:19 | Session end: 8 writes across 7 files (test_eia_paradigm_service.py, base.css, main.less, extensions.less, theme.js) | 1 reads | ~4778 tok |
+
+## Session: 2026-10-15 20:35
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:25 | 通用域全量梳理：路由/壳/4屏/3admin页/抽屉/API层/后端router 探索完毕，向用户呈功能清单 | router/index.js, GeneralLayout.vue, General*View.vue, domain_factory_api.js, domain_factory_router.py | 已产出清单+澄清问题待复 | ~25k |
+| 20:59 | Edited backend/package/yuxi/repositories/eia_lexicon_repository.py | modified list_entries() | ~296 |
+| 20:59 | Edited backend/test/integration/services/test_eia_lexicon_service_flow.py | expanded (+6 lines) | ~129 |
+| 21:04 | bug-4024 词表排序：repo ORDER BY CASE rank A→B→C+集成 2b 回归锚；只读实证 92 条真实数据 | eia_lexicon_repository.py, 集成测试, changelog | 实证通过已提交待推 | ~8k |
+| 21:05 | Session end: 2 writes across 2 files (eia_lexicon_repository.py, test_eia_lexicon_service_flow.py) | 17 reads | ~18023 tok |
+| 21:07 | 品牌文案两处（用户并发改动）单独提交+推送 pisuan-custom | EiaDataLayout.vue, DatasetStatsPanel.vue | 已推送 | ~1k |
+| 21:07 | Session end: 2 writes across 2 files (eia_lexicon_repository.py, test_eia_lexicon_service_flow.py) | 17 reads | ~18023 tok |
+| 21:13 | Edited web/src/components/eia-data/LexiconPanel.vue | CSS: overflow, text-overflow, white-space | ~115 |
+| 21:14 | bug-4025 口径列单行截断+tooltip，行高 7 行→61px 恒定 | LexiconPanel.vue, changelog | 浏览器实证通过已提交 | ~5k |
+| 21:15 | Session end: 3 writes across 3 files (eia_lexicon_repository.py, test_eia_lexicon_service_flow.py, LexiconPanel.vue) | 17 reads | ~18147 tok |
+| 21:19 | 推送 pisuan-custom（6e438e5f 词表截断修复） | 远端分支 | 已同步 | ~1k |
+| 21:21 | Session end: 3 writes across 3 files (eia_lexicon_repository.py, test_eia_lexicon_service_flow.py, LexiconPanel.vue) | 17 reads | ~18147 tok |
+
+## Session: 2026-10-15 21:25
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:27 | Created docs/vibe/prototypes/2026-10-15-lexicon-rename-redesign.html | — | ~2398 |
+| 21:28 | Edited docs/vibe/prototypes/2026-10-15-lexicon-rename-redesign.html | inline fix | ~22 |
+| 21:28 | Edited docs/vibe/prototypes/2026-10-15-lexicon-rename-redesign.html | inline fix | ~28 |
+| 21:40 | 改名对话框布局分析+重设计原型（P1-P8 问题清单；证据有界卡片/label 化/警告一行；亮暗双主题截图验证，修复 body 作用域 text 过渡假阴性与暗 mark 对比度） | docs/vibe/prototypes/2026-10-15-lexicon-rename-redesign.html | 原型完成待用户评审 | ~3k |
+| 21:30 | Session end: 3 writes across 1 files (2026-10-15-lexicon-rename-redesign.html) | 0 reads | ~2623 tok |
+| 21:36 | Edited web/src/components/eia-data/LexiconPanel.vue | expanded (+18 lines) | ~715 |
+| 21:36 | Edited web/src/components/eia-data/LexiconPanel.vue | 9→8 lines | ~45 |
+| 21:36 | Edited web/src/components/eia-data/LexiconPanel.vue | expanded (+64 lines) | ~638 |
+| 21:43 | Edited docs/develop-guides/changelog.md | 1→3 lines | ~115 |
+| 21:44 | Edited web/src/components/eia-data/LexiconPanel.vue | CSS: minRows, maxRows | ~86 |
+| 21:44 | Edited docs/vibe/prototypes/2026-10-15-lexicon-rename-redesign.html | 4→4 lines | ~55 |
+| 21:44 | Edited docs/vibe/prototypes/2026-10-15-lexicon-rename-redesign.html | 4→6 lines | ~134 |
+| 22:00 | 改名对话框重排落地（textarea 备注 + 有界卡片 + label 化；eslint 容器复检；真实数据亮暗实测；amend 为 f081c2b6） | web/src/components/eia-data/LexiconPanel.vue + docs/vibe/prototypes/2026-10-15-lexicon-rename-redesign.html | 已提交未推送（与 bug-4025 一并待推） | ~6k |
+| 21:48 | Session end: 10 writes across 3 files (2026-10-15-lexicon-rename-redesign.html, LexiconPanel.vue, changelog.md) | 2 reads | ~13104 tok |
+| 21:56 | Created docs/vibe/prototypes/2026-10-15-lexicon-mentions-drawer.html | — | ~2667 |
+| 22:20 | 提及抽屉原型（用户报样式难看；分析 P1-P6：白底白卡/语境丢弃/无聚合；设计=标识条+值分布 chips+语境卡片，480px；亮暗截图验证） | docs/vibe/prototypes/2026-10-15-lexicon-mentions-drawer.html | 原型完成待用户评审 | ~4k |
+| 21:57 | Session end: 11 writes across 4 files (2026-10-15-lexicon-rename-redesign.html, LexiconPanel.vue, changelog.md, 2026-10-15-lexicon-mentions-drawer.html) | 2 reads | ~15962 tok |
+| 21:59 | Edited web/src/components/eia-data/LexiconPanel.vue | 58→59 lines | ~300 |
+| 21:59 | Edited web/src/components/eia-data/LexiconPanel.vue | expanded (+29 lines) | ~462 |
+| 21:59 | Edited web/src/components/eia-data/LexiconPanel.vue | expanded (+78 lines) | ~566 |
+| 21:59 | Edited web/src/components/eia-data/LexiconPanel.vue | added nullish coalescing | ~207 |
+| 22:03 | Edited docs/develop-guides/changelog.md | 1→3 lines | ~200 |
+| 22:55 | 提及抽屉重排落地（语境卡片复用 ctx-card 提升共用；值分布 chips；加载/空态；480px；真实数据亮暗+加载态实测，d0592554） | web/src/components/eia-data/LexiconPanel.vue + docs/vibe/prototypes/2026-10-15-lexicon-mentions-drawer.html | 已提交未推送 | ~6k |
+| 22:04 | Session end: 16 writes across 4 files (2026-10-15-lexicon-rename-redesign.html, LexiconPanel.vue, changelog.md, 2026-10-15-lexicon-mentions-drawer.html) | 2 reads | ~18390 tok |
+| 22:10 | Session end: 16 writes across 4 files (2026-10-15-lexicon-rename-redesign.html, LexiconPanel.vue, changelog.md, 2026-10-15-lexicon-mentions-drawer.html) | 3 reads | ~18390 tok |
+| 22:17 | Session end: 16 writes across 4 files (2026-10-15-lexicon-rename-redesign.html, LexiconPanel.vue, changelog.md, 2026-10-15-lexicon-mentions-drawer.html) | 3 reads | ~18390 tok |
+| 22:19 | Session end: 16 writes across 4 files (2026-10-15-lexicon-rename-redesign.html, LexiconPanel.vue, changelog.md, 2026-10-15-lexicon-mentions-drawer.html) | 4 reads | ~18390 tok |
+| 22:21 | Session end: 16 writes across 4 files (2026-10-15-lexicon-rename-redesign.html, LexiconPanel.vue, changelog.md, 2026-10-15-lexicon-mentions-drawer.html) | 4 reads | ~18390 tok |
+| 22:23 | Session end: 16 writes across 4 files (2026-10-15-lexicon-rename-redesign.html, LexiconPanel.vue, changelog.md, 2026-10-15-lexicon-mentions-drawer.html) | 4 reads | ~18390 tok |
+| 22:24 | Session end: 16 writes across 4 files (2026-10-15-lexicon-rename-redesign.html, LexiconPanel.vue, changelog.md, 2026-10-15-lexicon-mentions-drawer.html) | 4 reads | ~18390 tok |
+
+## Session: 2026-10-15 22:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:32 | Created docs/superpowers/specs/2026-10-15-lexicon-suppression-ui-design.md | — | ~1382 |
+| 22:3x | 抑制名单 UI 设计定稿：4 端点+第二卡+撤回后果确认，spec 提交 771a5500 | docs/superpowers/specs/2026-10-15-lexicon-suppression-ui-design.md | committed | ~4k |
+| 22:32 | Session end: 1 writes across 1 files (2026-10-15-lexicon-suppression-ui-design.md) | 0 reads | ~1481 tok |
+| 22:44 | Session end: 1 writes across 1 files (2026-10-15-lexicon-suppression-ui-design.md) | 0 reads | ~1481 tok |
+| 22:57 | Created docs/superpowers/plans/2026-10-15-lexicon-suppression-ui.md | — | ~6826 |
+| 22:57 | Edited docs/superpowers/plans/2026-10-15-lexicon-suppression-ui.md | 5→5 lines | ~105 |
+| 22:57 | Edited docs/superpowers/plans/2026-10-15-lexicon-suppression-ui.md | 2→3 lines | ~42 |
+| 22:4x | 抑制名单 UI 实施计划：5 任务（repo/service TDD/router/前端/QA），spec 偏差 KeyError→404 从惯例 | docs/superpowers/plans/2026-10-15-lexicon-suppression-ui.md | committed | ~6k |
+| 22:58 | Session end: 4 writes across 2 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md) | 7 reads | ~44206 tok |
+| 23:36 | Session end: 4 writes across 2 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md) | 10 reads | ~44206 tok |
+| 23:44 | Session end: 4 writes across 2 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md) | 11 reads | ~44206 tok |
+| 23:44 | Session end: 4 writes across 2 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md) | 11 reads | ~44206 tok |
+| 23:46 | Session end: 4 writes across 2 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md) | 11 reads | ~44206 tok |
+| 23:46 | Session end: 4 writes across 2 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md) | 11 reads | ~44206 tok |
+| 23:49 | Session end: 4 writes across 2 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md) | 12 reads | ~50588 tok |
+| 23:49 | Session end: 4 writes across 2 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md) | 12 reads | ~50588 tok |
+| 23:50 | Created backend/test/unit/test_eia_lexicon_suppression_ops.py | — | ~1175 |
+| 23:51 | Edited backend/package/yuxi/services/eia_lexicon_service.py | added 3 condition(s) | ~705 |
+| 23:53 | Edited backend/test/unit/test_eia_lexicon_suppression_ops.py | modified to_dict() | ~162 |
+| 23:58 | T2 service 抑制名单 4 方法 TDD（红 6 failed AttributeError → 绿 6 passed 容器道）+ fixture to_dict 缺陷裁决修复（bug-4029）+ ruff 清 | eia_lexicon_service.py test_eia_lexicon_suppression_ops.py | c652cf1f | ~24k |
+| 23:58 | Edited docs/superpowers/plans/2026-10-15-lexicon-suppression-ui.md | modified to_dict() | ~206 |
+| 23:58 | Edited docs/superpowers/plans/2026-10-15-lexicon-suppression-ui.md | 7 → 6 | ~8 |
+| 23:58 | Session end: 9 writes across 4 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md, test_eia_lexicon_suppression_ops.py, eia_lexicon_service.py) | 13 reads | ~54167 tok |
+| 23:58 | Session end: 9 writes across 4 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md, test_eia_lexicon_suppression_ops.py, eia_lexicon_service.py) | 13 reads | ~54167 tok |
+| 00:15 | Task2 spec review: c652cf1f verbatim vs plan, 2 files +188 insertions-only, 6/6 passed in pisuan-localized-api-1, spec compliant | eia_lexicon_service.py, test_eia_lexicon_suppression_ops.py | PASS | ~6k |
+| 00:01 | Session end: 9 writes across 4 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md, test_eia_lexicon_suppression_ops.py, eia_lexicon_service.py) | 13 reads | ~54167 tok |
+| 00:01 | Session end: 9 writes across 4 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md, test_eia_lexicon_suppression_ops.py, eia_lexicon_service.py) | 13 reads | ~54167 tok |
+| 00:06 | qual-rev T2 service TDD 复审：diff/服务/测试全读，sync 后容器实测 6+8=14 passed，ruff format+check 双文件零错；裁决 Ready（1 个 Minor：手工刷新会覆写改名行 new_caliber 链接） | backend/package/yuxi/services/eia_lexicon_service.py, backend/test/unit/test_eia_lexicon_suppression_ops.py | done | ~9k |
+| 00:08 | Session end: 9 writes across 4 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md, test_eia_lexicon_suppression_ops.py, eia_lexicon_service.py) | 14 reads | ~59757 tok |
+| 00:08 | Session end: 9 writes across 4 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md, test_eia_lexicon_suppression_ops.py, eia_lexicon_service.py) | 14 reads | ~59757 tok |
+| 00:10 | Edited backend/server/routers/domain_factory_router.py | modified list_eia_lexicon_suppressions() | ~736 |
+| 00:15 | T3 抑制名单路由 4 端点插入 router（+57/-0 纯插入），容器冒烟 4 路由断言过，ruff 零错 | backend/server/routers/domain_factory_router.py | commit 4caf382c | ~3k |
+| 00:13 | Session end: 10 writes across 5 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md, test_eia_lexicon_suppression_ops.py, eia_lexicon_service.py, domain_factory_router.py) | 14 reads | ~60493 tok |
+| 00:15 | spec-rev Task3 router: 4caf382c verbatim=plan+2分隔空行, 0删行, 锚点1126→1187, 容器smoke 4路由 | backend/server/routers/domain_factory_router.py | PASS | ~3k |
+| 00:16 | Session end: 10 writes across 5 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md, test_eia_lexicon_suppression_ops.py, eia_lexicon_service.py, domain_factory_router.py) | 14 reads | ~60493 tok |
+| 00:16 | Session end: 10 writes across 5 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md, test_eia_lexicon_suppression_ops.py, eia_lexicon_service.py, domain_factory_router.py) | 14 reads | ~60493 tok |
+| 00:19 | Session end: 10 writes across 5 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md, test_eia_lexicon_suppression_ops.py, eia_lexicon_service.py, domain_factory_router.py) | 14 reads | ~60493 tok |
+| 00:19 | Session end: 10 writes across 5 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md, test_eia_lexicon_suppression_ops.py, eia_lexicon_service.py, domain_factory_router.py) | 14 reads | ~60493 tok |
+| 00:20 | Edited web/src/apis/eia_lexicon_api.js | expanded (+9 lines) | ~259 |
+| 00:20 | Edited web/src/components/eia-data/LexiconPanel.vue | 2→2 lines | ~34 |
+| 00:20 | Edited web/src/components/eia-data/LexiconPanel.vue | expanded (+85 lines) | ~843 |
+| 00:20 | Edited web/src/components/eia-data/LexiconPanel.vue | added error handling | ~627 |
+| 00:20 | Edited web/src/components/eia-data/LexiconPanel.vue | modified catch() | ~47 |
+| 00:20 | Edited web/src/components/eia-data/LexiconPanel.vue | modified catch() | ~50 |
+| 00:20 | Edited web/src/components/eia-data/LexiconPanel.vue | 4→5 lines | ~20 |
+| 00:20 | Edited web/src/components/eia-data/LexiconPanel.vue | expanded (+49 lines) | ~283 |
+| 00:23 | Session end: 18 writes across 7 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md, test_eia_lexicon_suppression_ops.py, eia_lexicon_service.py, domain_factory_router.py) | 14 reads | ~62792 tok |
+| 00:23 | Session end: 18 writes across 7 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md, test_eia_lexicon_suppression_ops.py, eia_lexicon_service.py, domain_factory_router.py) | 14 reads | ~62792 tok |
+| 00:27 | spec-rev-t4: d3762ba0 全量核对（2文件/4函数verbatim/锚点/接线/样式隔离/prettier+eslint 实测绿） | eia_lexicon_api.js, LexiconPanel.vue | PASS |
+| 00:28 | Session end: 18 writes across 7 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md, test_eia_lexicon_suppression_ops.py, eia_lexicon_service.py, domain_factory_router.py) | 14 reads | ~62792 tok |
+| 00:28 | Session end: 18 writes across 7 files (2026-10-15-lexicon-suppression-ui-design.md, 2026-10-15-lexicon-suppression-ui.md, test_eia_lexicon_suppression_ops.py, eia_lexicon_service.py, domain_factory_router.py) | 14 reads | ~62792 tok |
+| 00:34 | qual-rev Task4 前端抑制名单卡审查：全模板绑定/字段契约/路由URL/AntD4 API/索引时效逐一核验通过，仅3条Minor（空unit的title括号、fld样式重复、错误态空文案）| web/src/components/eia-data/LexiconPanel.vue, web/src/apis/eia_lexicon_api.js | 结论：可合（Yes）| ~28k |
+
+## Session: 2026-10-15 00:37
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:45 | Task 4 收口：qual-rev-t4 补发截断尾部裁决 Yes（Critical0/Important0/Minor×3 非阻断）；eslint 待核实项以实测闭合——host 两文件 clean + 容器道 eslint exit 0（HEAD=d3762ba0=容器 synced 态三合一）；Minor #1 tooltip 空括号一行修复派发 impl-t4-web（msg 50c0a7d0），Minor #2/#3 裁决不修 | LexiconPanel.vue, eia_lexicon_api.js | T4 放行，等 Minor#1 修复 | ~3k |
+| 00:38 | Edited web/src/components/eia-data/LexiconPanel.vue | inline fix | ~29 |
+| 00:38 | Session end: 1 writes across 1 files (LexiconPanel.vue) | 0 reads | ~31 tok |
+| 00:45 | Edited docs/develop-guides/changelog.md | 2→4 lines | ~122 |
+| 01:20 | Task 5 收口（controller 内联）：只读 QA 四点全过——①抑制卡 7 条种子/created_at 倒序/mono tooltip 条件绑定（cc6d6ad2 真实栈生效）②添加弹窗差集下拉恰 2 候选（水平达标率缺席）取 ③撤回确认两条后果逐字符合 spec 取 ④暗色 token 自适应无破损；GET-only 全程保持（账目 7 条无增减），截图 4 张存 .wolf 未跟踪；changelog 补条（去 stale bug-4028 引用，功能条目不带 bug 号）提交 3a87ce23；QA 隔离页已关闭 | docs/develop-guides/changelog.md, .wolf/sup_qa_*.jpeg | T5 完成，进入最终整体审查 | ~25k |
+| 00:47 | Session end: 2 writes across 2 files (LexiconPanel.vue, changelog.md) | 1 reads | ~31394 tok |
+| 00:47 | Session end: 2 writes across 2 files (LexiconPanel.vue, changelog.md) | 1 reads | ~31394 tok |
+| 01:40 | 最终整体审查（qual-rev-t1 复用信道，brief 要求搁置 T1 旧语境 fresh 审 759b24a9..HEAD 六提交）：契约四链逐键零漂移、spec 验收 5 条全满足、实测 pytest 6 passed/ruff/prettier/路由冒烟全绿；Critical0/Important0/Minor×3 皆既有备案；controller 抽核容器 pytest 复跑 6 passed 一致。Assessment: Ready to merge? Yes——特性收官，8 提交待用户指令推送 | (range 759b24a9..HEAD) | 特性完成，不 push | ~6k |
+| 00:52 | Session end: 2 writes across 2 files (LexiconPanel.vue, changelog.md) | 1 reads | ~31394 tok |
+| 00:52 | Session end: 2 writes across 2 files (LexiconPanel.vue, changelog.md) | 1 reads | ~31394 tok |
+| 06:56 | Session end: 2 writes across 2 files (LexiconPanel.vue, changelog.md) | 2 reads | ~32691 tok |
+| 07:04 | Session end: 2 writes across 2 files (LexiconPanel.vue, changelog.md) | 2 reads | ~32691 tok |
+| 07:15 | Edited web/src/components/eia-data/LexiconPanel.vue | 2→3 lines | ~23 |
+| 07:15 | Edited web/src/components/eia-data/LexiconPanel.vue | 4→9 lines | ~74 |
+| 07:15 | Edited web/src/components/eia-data/LexiconPanel.vue | CSS: on | ~146 |
+| 07:15 | Edited web/src/components/eia-data/LexiconPanel.vue | CSS: padding | ~64 |
+| 07:17 | Edited docs/develop-guides/changelog.md | 2→4 lines | ~79 |
+| 02:10 | 词表分页改动（controller 直改小任务）：默认 10 条/页（原 20）+ 10/20/50 seg 切换（复用 factory-ui.less .seg + 紧凑覆写），切页大小回第 1 页防越界；链 prettier→sync→容器 eslint 绿；浏览器实测 10→1/10、20→1/5、50→1/2、切大小页码回 1（2/5→50→1/2）；提交 d646fa63 含 changelog 一条；另：用户澄清左栏分类指词表页内左栏（原型 s9 词条族模型 vs 系统状态分组，系诚实数据映射有意决策），给三路线建议后用户裁决暂不改动 | LexiconPanel.vue, docs/develop-guides/changelog.md | done 未推送 | ~15k |
+| 07:18 | Session end: 7 writes across 2 files (LexiconPanel.vue, changelog.md) | 3 reads | ~44605 tok |
+| 07:19 | Edited web/src/components/eia-data/LexiconPanel.vue | CSS: a-select | ~102 |
+| 07:19 | Edited web/src/components/eia-data/LexiconPanel.vue | CSS: value, label | ~40 |
+| 07:20 | Edited web/src/components/eia-data/LexiconPanel.vue | CSS: min-width | ~24 |
+| 07:22 | Edited docs/develop-guides/changelog.md | inline fix | ~17 |
+| 07:30 | 分页切换 seg→下拉（用户要求）：a-select size=small「N 条/页」形态（复用词表既有 AntD 依赖）+ min-width 88px；changelog 措辞同步；amend d646fa63→c3b902c3（未推送同需求中途形态修正）；链 prettier→sync（walker:0 容器 bind mount 已热）→容器 eslint 绿；浏览器实测下拉三选项/选 50 → 1/2 + 57 行账目吻合；注：d646fa63 曾混入用户自己删的「（P5/P50/P95…）」文案一行，已随 amend 保留并向用户说明 | LexiconPanel.vue, docs/develop-guides/changelog.md | done 未推送 | ~10k |
+| 07:22 | Session end: 11 writes across 2 files (LexiconPanel.vue, changelog.md) | 3 reads | ~44977 tok |
+| 07:31 | Edited web/src/components/eia-data/LexiconPanel.vue | CSS: justify-content | ~67 |
+
+## Session: 2026-10-15 07:33
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:35 | Edited web/src/components/eia-data/LexiconPanel.vue | CSS: font-size | ~38 |
+| 07:37 | Edited web/src/components/eia-data/LexiconPanel.vue | modified deep() | ~65 |
+| 07:38 | Edited web/src/components/eia-data/LexiconPanel.vue | 7→8 lines | ~75 |
+| 07:38 | Edited web/src/components/eia-data/LexiconPanel.vue | modified deep() | ~106 |
+| 07:40 | 词表分页器右对齐(tbl-foot space-between 本页覆写)+下拉框字号压 12px(:deep selection-item + popupClassName/:global 面板)，1440x900 浏览器实测通过，amend 进分页提交 | web/src/components/eia-data/LexiconPanel.vue | 8a7e4934 | ~8k |
+| 07:40 | Session end: 4 writes across 1 files (LexiconPanel.vue) | 1 reads | ~12011 tok |
+| 07:54 | Edited web/src/components/eia-data/LexiconPanel.vue | expanded (+9 lines) | ~130 |
+| 07:54 | Edited web/src/components/eia-data/LexiconPanel.vue | 6→11 lines | ~51 |
+| 08:01 | 抑制名单初始化骨架：sup-empty 三分支(suppressionLoading→.sup-sk 4行×6条 sk recipe 替代「加载中…」文本)，Slow 3G 哨兵证生命周期+setupState 定格拍视觉，新提交 | web/src/components/eia-data/LexiconPanel.vue | 90d1209e | ~10k |
+| 08:02 | Session end: 6 writes across 1 files (LexiconPanel.vue) | 1 reads | ~12260 tok |
+| 08:21 | Edited web/src/components/eia-data/LexiconPanel.vue | expanded (+7 lines) | ~88 |
+| 08:21 | Edited web/src/components/eia-data/LexiconPanel.vue | 1→3 lines | ~38 |
+| 08:21 | Edited web/src/components/eia-data/LexiconPanel.vue | 11→11 lines | ~111 |
+| 08:24 | Edited web/src/components/eia-data/LexiconPanel.vue | 6→9 lines | ~100 |
+| 08:24 | Edited web/src/components/eia-data/LexiconPanel.vue | expanded (+12 lines) | ~142 |
+| 08:24 | Edited web/src/components/eia-data/LexiconPanel.vue | removed 13 lines | ~21 |
+| 08:27 | Edited docs/develop-guides/changelog.md | inline fix | ~88 |
+| 08:27 | 抑制骨架同拍修复：表 v-if 抢分支致 init 窗口内真实行先现（哨兵 43/94 拍）——分支重排骨架优先+supBodySk 并入 init 窗口(排除 isFiltered/已有行防重扫闪)，Slow 3G 全程覆盖 94/94+搜索零闪烁，amend+changelog | web/src/components/eia-data/LexiconPanel.vue | 1180e0c2 | ~12k |
+| 08:28 | Session end: 13 writes across 2 files (LexiconPanel.vue, changelog.md) | 2 reads | ~44429 tok |
+| 08:45 | Session end: 13 writes across 2 files (LexiconPanel.vue, changelog.md) | 3 reads | ~44429 tok |
+| 08:53 | Edited web/src/components/eia-data/MetaPanel.vue | CSS: flex, hd | ~530 |
+| 08:53 | Edited web/src/components/eia-data/MetaPanel.vue | expanded (+30 lines) | ~141 |
+| 08:53 | Edited docs/develop-guides/changelog.md | 1→3 lines | ~117 |
+| 08:56 | 标注页初始化骨架：指标带4格+工具条+表7列占位复用 .sk recipe，a-spin 替换，指标带移入数据分支原子切换；Slow 3G DOM 捕获+setupState 定格截图，Slow3G 截图竞态再败用定格法胜 | web/src/components/eia-data/MetaPanel.vue | 16a3c1a6 | ~9k |
+
+## Session: 2026-10-16 08:58
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:50 | 语料报告书名可行性摸底：31/31 有候选，委托句 12 直接锁名，频次冠军有张冠李戴实证；文号仅引用文号不可自动对齐 | corpus_meta.py/samples_bank | 结论已呈用户 | ~8k |
+| 12:23 | 字段梳理勘察：31份原件仅5份存盘(coal-eai-sample 3+knowledge 2)，26份缺失；封面五字段在5份上验证可得性；文号确认仅人工 | manifest/knowledge/coal-eai-sample | 已呈用户待裁定原件下落 | ~12k |
+| 12:58 | Created docs/superpowers/specs/2026-10-16-corpus-meta-pipeline-refactor-design.md | — | ~1613 |
+| 12:59 | Edited docs/superpowers/specs/2026-10-16-corpus-meta-pipeline-refactor-design.md | 1→2 lines | ~43 |
+| 12:59 | spec 提交 905caed4：语料元数据管线重构设计（front-extract 侧车+cover层+省份升级+33份裁定+rid冻结） | docs/superpowers/specs/2026-10-16-corpus-meta-pipeline-refactor-design.md | 待用户评审 | ~6k |
+| 12:59 | Session end: 2 writes across 1 files (2026-10-16-corpus-meta-pipeline-refactor-design.md) | 0 reads | ~1774 tok |
+| 13:11 | Created docs/superpowers/plans/2026-10-16-corpus-meta-pipeline-refactor.md | — | ~11652 |
+
+## Session: 2026-10-16 13:13
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:20 | 写语料元数据管线重构实施计划（6 任务 TDD 完整代码，含执行顺序交叉说明与 self-review 记录） | docs/superpowers/plans/2026-10-16-corpus-meta-pipeline-refactor.md | 计划落盘待执行 | ~9k |
+
+| 13:19 | Edited docs/superpowers/plans/2026-10-16-corpus-meta-pipeline-refactor.md | modified extract_front() | ~57 |
+| 13:21 | Session end: 1 writes across 1 files (2026-10-16-corpus-meta-pipeline-refactor.md) | 4 reads | ~61 tok |
+| 13:22 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_front_extract.py | — | ~1185 |
+| 13:22 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/front_extract.py | — | ~1978 |
+| 13:35 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/front_extract.py | "^矿区?开发?总规模[：:]([\d.]+)Mt?" → "^(?:矿区)?(?:开发)?总规模[：:]([\" | ~20 |
+| 13:35 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/front_extract.py | 3→4 lines | ~66 |
+| 13:35 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/front_extract.py | 3→4 lines | ~51 |
+| 13:40 | Task1 front_extract.py 实现完成（TDD 9 passed；3 处计划稿 bug 被测试逼出修正；宿主 pytest 环境墙→临时目录 harness） | scripts/front_extract.py scripts/tests/test_front_extract.py | commit 54c2303a 待评审 | ~12k |
+| 13:40 | Session end: 6 writes across 3 files (2026-10-16-corpus-meta-pipeline-refactor.md, test_front_extract.py, front_extract.py) | 4 reads | ~3361 tok |
+| 13:45 | Session end: 6 writes across 3 files (2026-10-16-corpus-meta-pipeline-refactor.md, test_front_extract.py, front_extract.py) | 6 reads | ~6562 tok |
+| 20:40 | Session end: 6 writes across 3 files (2026-10-16-corpus-meta-pipeline-refactor.md, test_front_extract.py, front_extract.py) | 7 reads | ~6562 tok |
+| 20:40 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/front_extract.py | 2→3 lines | ~48 |
+| 20:40 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/front_extract.py | 1→2 lines | ~36 |
+| 20:40 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/front_extract.py | "^(?:矿区)?(?:开发)?总规模[：:]([\" → "^(?:矿区)?(?:开发)?总规模[：:](\d" | ~22 |
+| 20:40 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/front_extract.py | 1→2 lines | ~20 |
+| 20:40 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/front_extract.py | modified findall() | ~149 |
+| 20:40 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/front_extract.py | inline fix | ~24 |
+| 20:40 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/front_extract.py | 5→5 lines | ~65 |
+| 20:41 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_front_extract.py | added 1 import(s) | ~18 |
+| 20:41 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_front_extract.py | modified _docx_bytes() | ~79 |
+| 20:41 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_front_extract.py | 1→4 lines | ~62 |
+| 20:41 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_front_extract.py | modified test_read_front_paras_stops_at_sec_heading() | ~164 |
+| 20:43 | Session end: 17 writes across 3 files (2026-10-16-corpus-meta-pipeline-refactor.md, test_front_extract.py, front_extract.py) | 7 reads | ~7249 tok |
+| 20:47 | Edited docs/superpowers/plans/2026-10-16-corpus-meta-pipeline-refactor.md | inline fix | ~29 |
+| 20:47 | Edited docs/superpowers/plans/2026-10-16-corpus-meta-pipeline-refactor.md | 2→6 lines | ~82 |
+| 20:48 | Edited docs/superpowers/plans/2026-10-16-corpus-meta-pipeline-refactor.md | expanded (+13 lines) | ~311 |
+- 2026-10-16 | Task1 评审闭环（spec ✅ + 质量 With fixes→修复→Yes）+ 计划勘误落盘 | plans/2026-10-16-…refactor.md scripts/front_extract.py | HEAD=b6069ccf+勘误提交 | ~18k |
+
+| 20:50 | Session end: 20 writes across 3 files (2026-10-16-corpus-meta-pipeline-refactor.md, test_front_extract.py, front_extract.py) | 9 reads | ~7702 tok |
+| 20:53 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_corpus_meta.py | modified test_cover_layer_merged_and_schema2() | ~822 |
+| 20:55 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | 2→5 lines | ~97 |
+| 20:55 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | modified detect_province() | ~234 |
+| 20:55 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | modified delegate_org() | ~889 |
+| 20:56 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | expanded (+7 lines) | ~322 |
+| 21:15 | Task2 corpus_meta cover层+schema2 TDD：临时副本法绕过~$锁文件rid漂移；AC1零漂移0违例；commit 96224584（4文件） | corpus_meta.py/test_corpus_meta.py/corpus_meta.json/front_matter.json | 24 passed + 幂等sha1稳定 | ~40k |
+| 21:16 | Session end: 25 writes across 5 files (2026-10-16-corpus-meta-pipeline-refactor.md, test_front_extract.py, front_extract.py, test_corpus_meta.py, corpus_meta.py) | 9 reads | ~10172 tok |
+| 21:31 | Session end: 25 writes across 5 files (2026-10-16-corpus-meta-pipeline-refactor.md, test_front_extract.py, front_extract.py, test_corpus_meta.py, corpus_meta.py) | 11 reads | ~10172 tok |
+| 21:42 | Session end: 25 writes across 5 files (2026-10-16-corpus-meta-pipeline-refactor.md, test_front_extract.py, front_extract.py, test_corpus_meta.py, corpus_meta.py) | 11 reads | ~15651 tok |
+| 21:43 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | modified get() | ~676 |
+| 21:43 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | inline fix | ~38 |
+| 21:43 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | 5→5 lines | ~71 |
+| 21:43 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_corpus_meta.py | modified test_org_cover_tier_beats_body_and_hides_candidates() | ~333 |
+| 21:40 | Task2 质量评审修复 I1/I2/M3/M4：print 补 cover 档、2 钉死分支测试(f=26 passed)、f→front_entry、help 加 rid 碰撞提示；JSON 字节不变(sha1 91b17cf5 复验) amend→495e5e57 | corpus_meta.py/test_corpus_meta.py | 26 passed, references porcelain clean | ~12k |
+| 21:46 | Edited docs/superpowers/plans/2026-10-16-corpus-meta-pipeline-refactor.md | expanded (+9 lines) | ~254 |
+| 22:05 | Task2 修复轮（print四档cover/2钉死测试/改名/help）amend 96224584→495e5e57，26 passed，JSON字节不变 | corpus_meta.py test_corpus_meta.py | 待复审 | ~8k |
+| 21:47 | Session end: 30 writes across 5 files (2026-10-16-corpus-meta-pipeline-refactor.md, test_front_extract.py, front_extract.py, test_corpus_meta.py, corpus_meta.py) | 11 reads | ~17041 tok |
+| 22:20 | Task2 评审闭环：质量复审 Yes（495e5e57）；Task2 勘误提交 574ba637 | corpus_meta.py 等4文件 | schema 2 31份 AC1零漂移 | ~15k |
+| 21:51 | Session end: 30 writes across 5 files (2026-10-16-corpus-meta-pipeline-refactor.md, test_front_extract.py, front_extract.py, test_corpus_meta.py, corpus_meta.py) | 11 reads | ~17041 tok |
+| 21:58 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_prepare_corpus.py | inline fix | ~32 |
+| 21:58 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_front_extract.py | modified test_office_lock_files_do_not_consume_positions() | ~253 |
+| 21:58 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_prepare_corpus.py | modified test_merge_preserves_reviewed_stage_and_appends_new() | ~338 |
+| 21:59 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_front_extract.py | modified test_office_lock_files_do_not_consume_positions() | ~181 |
+| 22:00 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | modified make_rid() | ~236 |
+| 22:00 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | modified is_file() | ~692 |
+| 22:00 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | inline fix | ~32 |
+| 22:00 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/front_extract.py | modified enumerate() | ~44 |
+| 22:03 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/prepare_corpus.py | 1→2 lines | ~42 |
+| 22:03 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_prepare_corpus.py | 2→3 lines | ~28 |
+| 12:00 | Task3: prepare_corpus --only + merge_manifest + ~$ 锁过滤；front_extract parity 复跑字节同 HEAD；九龙川 011-800--2026-2 / 巴拉素 020-2023-4 经 bug-355 手术副本入库（33 份） | scripts/prepare_corpus.py, front_extract.py, tests/×2, references 聚合物 | 39 passed, bank_compile/corpus_meta 重编译零漂移, 已提交 | ~90k |
+| 22:21 | Session end: 40 writes across 7 files (2026-10-16-corpus-meta-pipeline-refactor.md, test_front_extract.py, front_extract.py, test_corpus_meta.py, corpus_meta.py) | 13 reads | ~19153 tok |
+| 22:41 | Session end: 40 writes across 7 files (2026-10-16-corpus-meta-pipeline-refactor.md, test_front_extract.py, front_extract.py, test_corpus_meta.py, corpus_meta.py) | 13 reads | ~19153 tok |
+| 23:30 | Task3 评审闭环：spec ✅ + 质量 Yes（774a14ba，33份入库 AC2 过） | prepare_corpus.py front_extract.py +77 artifacts | 39 passed 存量切片零漂移 | ~20k |
+
+## Session: 2026-10-16 22:58
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:58 | Edited backend/test/unit/test_eia_meta_service.py | added 2 import(s) | ~84 |
+| 22:59 | Edited backend/test/unit/test_eia_meta_service.py | modified test_validate_annotations_rejects_unknown_fields_and_non_dict() | ~668 |
+| 23:01 | Edited backend/package/yuxi/services/eia_meta_service.py | 2→2 lines | ~31 |
+| 23:01 | Edited backend/package/yuxi/services/eia_meta_service.py | modified _validate_annotations() | ~338 |
+| 23:01 | Edited backend/package/yuxi/services/eia_meta_service.py | expanded (+7 lines) | ~233 |
+| 23:01 | Edited backend/package/yuxi/services/eia_meta_service.py | 4→6 lines | ~56 |
+| 23:05 | Task4 eia_meta_service 扩 report_title/eia_org 标注字段（TDD：容器 pytest 2红→7绿 + ruff + 提交）| eia_meta_service.py, test_eia_meta_service.py | commit 542477fc | ~35k |
+| 23:06 | Session end: 6 writes across 2 files (test_eia_meta_service.py, eia_meta_service.py) | 0 reads | ~1410 tok |
+| 23:16 | Session end: 6 writes across 2 files (test_eia_meta_service.py, eia_meta_service.py) | 1 reads | ~1410 tok |
+| 23:22 | Session end: 6 writes across 2 files (test_eia_meta_service.py, eia_meta_service.py) | 3 reads | ~4955 tok |
+| 23:23 | Edited backend/test/unit/test_eia_meta_service.py | added 2 import(s) | ~73 |
+| 23:23 | Edited backend/test/unit/test_eia_meta_service.py | modified test_list_reports_annotation_passthrough_values() | ~488 |
+| 23:25 | Session end: 8 writes across 2 files (test_eia_meta_service.py, eia_meta_service.py) | 3 reads | ~5516 tok |
+| 00:15 | Task4 闭环：spec ✅ + 质量 Approved（2 Minor 修复后复核过）｜标注层扩 report_title/eia_org | eia_meta_service.py test_eia_meta_service.py c521bb14 | 8 passed 容器 | ~15k |
+| 23:30 | Session end: 8 writes across 2 files (test_eia_meta_service.py, eia_meta_service.py) | 4 reads | ~16928 tok |
+| 23:33 | Edited web/src/components/eia-data/MetaPanel.vue | 7→7 lines | ~96 |
+| 23:33 | Edited web/src/components/eia-data/MetaPanel.vue | inline fix | ~14 |
+| 23:33 | Edited web/src/components/eia-data/MetaPanel.vue | CSS: margin-left | ~171 |
+| 23:33 | Edited web/src/components/eia-data/MetaPanel.vue | "搜索 rid / 省份…" → "搜索 rid / 报告名 / 省份…" | ~12 |
+| 23:33 | Edited web/src/components/eia-data/MetaPanel.vue | 3→6 lines | ~52 |
+| 23:33 | Edited web/src/components/eia-data/MetaPanel.vue | 2→3 lines | ~51 |
+| 23:33 | Edited web/src/components/eia-data/MetaPanel.vue | expanded (+10 lines) | ~137 |
+| 23:33 | Edited web/src/components/eia-data/MetaPanel.vue | inline fix | ~22 |
+| 23:33 | Edited web/src/components/eia-data/MetaPanel.vue | 2→6 lines | ~53 |
+| 23:33 | Edited web/src/components/eia-data/MetaPanel.vue | added optional chaining | ~58 |
+| 23:34 | Edited web/src/components/eia-data/MetaPanel.vue | CSS: report_title, eia_org | ~155 |
+| 23:34 | Edited web/src/components/eia-data/MetaPanel.vue | added nullish coalescing | ~254 |
+| 23:34 | Edited web/src/components/eia-data/MetaPanel.vue | inline fix | ~23 |
+| 23:34 | Edited web/src/components/eia-data/MetaPanel.vue | expanded (+14 lines) | ~78 |
+| 00:50 | Task5 实现完成 7f73c01a（QA 凭据墙挂起；028-r basis=cover 与计划断言不符→spec 本意） | MetaPanel.vue | 链路绿+热重载证 | ~18k |
+| 23:52 | Edited docs/superpowers/plans/2026-10-16-corpus-meta-pipeline-refactor.md | modified feat() | ~142 |
+| 23:53 | Session end: 23 writes across 4 files (test_eia_meta_service.py, eia_meta_service.py, MetaPanel.vue, 2026-10-16-corpus-meta-pipeline-refactor.md) | 6 reads | ~23109 tok |
+| 23:59 | Session end: 23 writes across 4 files (test_eia_meta_service.py, eia_meta_service.py, MetaPanel.vue, 2026-10-16-corpus-meta-pipeline-refactor.md) | 6 reads | ~23109 tok |
+| 00:01 | Session end: 23 writes across 4 files (test_eia_meta_service.py, eia_meta_service.py, MetaPanel.vue, 2026-10-16-corpus-meta-pipeline-refactor.md) | 6 reads | ~23109 tok |
+
+## Session: 2026-10-17 08:39
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:00 | Edited web/src/components/eia-data/MetaPanel.vue | expanded (+24 lines) | ~1051 |
+| 09:01 | Edited web/src/components/eia-data/MetaPanel.vue | modified deep() | ~738 |
+| 09:20 | 用户令：标注/查看弹窗对齐 2026-10-15-lexicon-rename-redesign 原型 | MetaPanel.vue | 提交 0980188a，标识条/证据区头/fld 表单/警告条/antd footer 全套对齐，QA 两态+守卫过 | ~31k |
+| 09:25 | QA 意外：001-wps 预填非空致守卫直通落库一行，DB 定向 DELETE 回滚 | eia_meta_annotations | 已回滚，20 行恢复点击前态；补做清空预填守卫测试通过 | ~2k |
+| 09:22 | Edited docs/develop-guides/changelog.md | 3→7 lines | ~156 |
+| 09:22 | Edited docs/superpowers/plans/2026-10-16-corpus-meta-pipeline-refactor.md | 1→5 lines | ~102 |
+
+## Session: 2026-10-17 09:22
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:40 | Task 6 收尾实施者派发（changelog 两条目+九龙川 rid 勘误+scratch 清理，2 commit） | docs/develop-guides/changelog.md, docs/superpowers/plans/2026-10-16-corpus-meta-pipeline-refactor.md | 运行中 | ~3k |
+| 09:25 | Task6 收尾：changelog 补 2 条语料元数据管线重构条目 + 计划补九龙川 rid 双横线勘误 + 清理 corpus-workdir 镜像/手术脚本 | docs/develop-guides/changelog.md, docs/superpowers/plans/2026-10-16-corpus-meta-pipeline-refactor.md, .wolf/corpus-workdir | DONE 0421b904/e70925d0 本地提交 | ~6k |
+| 09:50 | Task 6 验收通过：changelog 两日志 0421b904 + rid 勘误 e70925d0（diff 逐字核对）+ scratch 清理实测确认 | docs/develop-guides/changelog.md, docs/superpowers/plans/2026-10-16-corpus-meta-pipeline-refactor.md | DONE | ~4k |
+| 10:05 | Task 5 质量评审收口：Ready to merge Yes；两项 Important 落计划遗留节 0a70ee38；全实现终审已派发（16a3c1a6..HEAD） | docs/superpowers/plans/2026-10-16-corpus-meta-pipeline-refactor.md | 运行中 | ~5k |
+| 10:35 | 全实现终审通过：Ready to merge Yes（AC1-3 全满足、39+8 测试过、14 commit 卫生合格、4 Minor 非阻断）；epic 语料元数据管线重构收口 | (epic 16a3c1a6..HEAD) | DONE | ~8k |
+
+## Session 摘要（2026-10-17 上午）
+语料元数据管线重构 epic（spec 905caed4 → Task 1-6）全部收口：本窗口完成 0980188a 标注弹窗对齐原型（frontend-design 全链路+QA）、Task 6 收尾（0421b904 changelog 双条目 / e70925d0 九龙川 rid 勘误 / 0a70ee38 遗留事项节）、Task 5 质量评审 Yes、全实现终审 Yes。两项待用户裁决 follow-up 在计划遗留节：①服务端 annotated 判据只数 year/scale 与客户端 hasAnnotation 口径分裂；②eia_org_basis needs_review 9 份无 UI 信号。4 项 Minor 非阻断（admin skill-projection 仍 31 份陈旧、计划 checkbox 未勾、test 注释引用非祖先 commit、materialized json 落后 DB 属设计内）。全程未 push。
+| 10:28 | Edited backend/package/yuxi/services/eia_meta_service.py | "31 份报告总览：自动层只读 + DB 标注合并；" → "报告总览：自动层只读 + DB 标注合并；coun" | ~27 |
+| 10:28 | Edited backend/package/yuxi/services/eia_meta_service.py | 2→2 lines | ~32 |
+| 10:30 | Edited backend/package/yuxi/services/eia_meta_service.py | "报告总览：自动层只读 + DB 标注合并；coun" → "报告总览：自动层只读 + DB 标注合并；coun" | ~27 |
+| 10:30 | Edited backend/package/yuxi/services/eia_meta_service.py | 1→4 lines | ~32 |
+| 10:32 | Edited web/src/components/eia-data/MetaPanel.vue | expanded (+8 lines) | ~91 |
+| 10:32 | Edited web/src/components/eia-data/MetaPanel.vue | expanded (+8 lines) | ~79 |
+| 10:32 | Edited web/src/components/eia-data/MetaPanel.vue | CSS: margin-left | ~64 |
+| 10:32 | Edited web/src/components/eia-data/MetaPanel.vue | 21→26 lines | ~126 |
+| 10:38 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~84 |
+| 10:38 | Edited docs/develop-guides/changelog.md | 1→3 lines | ~150 |
+| 11:30 | 遗留两项+SKILL.md 收口：6b46ef86 计数四字段（TDD 9 过）/ 71803812 org 待复核信号（QA 亮暗过）/ e40c075b 文档；buglog+cerebrum 记账 | backend eia_meta_service.py, web MetaPanel.vue, SKILL.md | DONE | ~12k |
+| 10:41 | Session end: 10 writes across 4 files (eia_meta_service.py, MetaPanel.vue, SKILL.md, changelog.md) | 5 reads | ~42103 tok |
+| 11:45 | push pisuan-custom → origin（6d16f1c4..e40c075b，32 提交快进，epic 全链+收口） | (branch pisuan-custom) | DONE | ~1k |
+| 10:47 | Session end: 10 writes across 4 files (eia_meta_service.py, MetaPanel.vue, SKILL.md, changelog.md) | 5 reads | ~42103 tok |
+| 12:20 | pisuan-localized 再生：-Revert→reset e40c075b→改名（清障 overrides 运行时数据后回植，sha1 同源）→uv lock→b228051d；推送遇 GitHub 443 不通，后台重试环挂起 | C:/workspace/pisuan-localized | 推送待通 | ~6k |
+| 10:59 | Session end: 10 writes across 4 files (eia_meta_service.py, MetaPanel.vue, SKILL.md, changelog.md) | 5 reads | ~42103 tok |
+| 12:40 | pisuan-localized 推送成功（后台环第8次，39e5fb39..b228051d forced update）；ls-remote 实测双分支 tip 到位；curated_lexicon 运行时数据完好回植 | (pisuan-localized) | DONE | ~2k |
+| 11:23 | Session end: 10 writes across 4 files (eia_meta_service.py, MetaPanel.vue, SKILL.md, changelog.md) | 6 reads | ~42103 tok |
+| 11:28 | Edited web/src/components/eia-data/MetaPanel.vue | 6→6 lines | ~70 |
+| 11:28 | Edited web/src/components/eia-data/MetaPanel.vue | inline fix | ~23 |
+| 13:05 | 标注页列宽再平衡（规模18→10/状态12→8/报告列撤宽自动36| 13:05 | 标注页列宽再平衡（规模 18→10 / 状态 12→8 / 报告列撤宽自动 ~36%）链绿+QA 截图过 | web MetaPanel.vue | DONE | ~2k |
+| 11:42 | Session end: 12 writes across 4 files (eia_meta_service.py, MetaPanel.vue, SKILL.md, changelog.md) | 6 reads | ~42202 tok |
+
+## Session: 2026-10-17 11:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:05 | push pisuan-custom f5a7a056 + 再生 pisuan-localized 改名层 efc1d2e4（列宽调整同步） | pisuan-localized @ efc1d2e4 | 推送中（后台重试环） | ~15k |
+| 20:12 | pisuan-localized efc1d2e4 推送成功（attempt 1），ls-remote 终验 pisuan-custom=f5a7a056 / pisuan-localized=efc1d2e4 | C:/workspace/pisuan-localized | 完成 | ~3k |
+| 20:40 | 标注按钮文案统一「标注」（用户指出查看=可编辑标注名不副实）e66960ec | MetaPanel.vue | 本地已提交未推送 | ~8k |
+| 21:05 | 待复核信号加 annotation 判空（人工标注后隐藏，6处）74c474ce；033-r/010-r 正反对照实测 | MetaPanel.vue | 本地已提交未推送 | ~12k |
+| 15:08 | Created docs/superpowers/specs/2026-10-17-eia-file-library-design.md | — | ~1889 |
+| 15:10 | Edited docs/superpowers/specs/2026-10-17-eia-file-library-design.md | inline fix | ~59 |
+| 21:55 | 环评文件库 P1 spec 定稿提交 2a92a92a（D1 撤销P0/D2 轻量自建/D4 五阶段夹/AC1-9） | docs/superpowers/specs/2026-10-17-eia-file-library-design.md | 待用户评审后转 writing-plans | ~18k |
+| 15:14 | Session end: 2 writes across 1 files (2026-10-17-eia-file-library-design.md) | 2 reads | ~2087 tok |
+| 15:57 | Created docs/superpowers/plans/2026-10-17-eia-file-library.md | — | ~11838 |
+
+## Session: 2026-10-17 16:02
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:10 | 环评文件库 P1 实施计划写入并提交（7 任务：v18 迁移/仓储/服务+单测/六端点/卷+API 层/页面/QA 收尾） | docs/superpowers/plans/2026-10-17-eia-file-library.md | 提交 4a18539c | ~11k |
+| 16:27 | Created docs/vibe/prototypes/2026-10-17-eia-library-ui.html | — | ~8152 |
+| 16:40 | 环评文件库高保真原型完成（chrome 框架+点阵页头+左树五夹+全库搜索+行菜单/移动/删除弹窗+toast，双态截图 QA 通过）；docs/vibe 在 gitignore 不入库 | docs/vibe/prototypes/2026-10-17-eia-library-ui.html | 截图 .wolf/lib_proto_{light,dark,menu}.jpeg | ~8k |
+| 17:40 | Session end: 1 writes across 1 files (2026-10-17-eia-library-ui.html) | 1 reads | ~8734 tok |
+| 18:06 | Edited backend/package/yuxi/storage/postgres/models_domain_factory.py | expanded (+12 lines) | ~50 |
+| 18:10 | Edited backend/package/yuxi/storage/postgres/manager.py | 3→5 lines | ~32 |
+| 18:12 | Edited backend/package/yuxi/storage/postgres/manager.py | 2→3 lines | ~42 |
+| 18:14 | Edited backend/package/yuxi/storage/postgres/manager.py | modified upgrade_business_v17_to_v18() | ~677 |
+| 18:17 | Edited backend/package/yuxi/storage_migration.py | 3→6 lines | ~118 |
+| 18:45 | Edited backend/package/yuxi/storage_migration.py | inline fix | ~33 |
+| 18:55 | Task1 v18 迁移+两模型落库验证通过（upgrade_from 漏 17 已补；迁移脚本需手动跑；版本表实为 pisuan_schema_migrations）| models_domain_factory/manager/storage_migration | 提交 22ce1ec5 | ~6k |
+| 19:09 | Created backend/package/yuxi/repositories/eia_library_repository.py | — | ~1004 |
+| 19:16 | Created backend/test/unit/test_eia_library_service.py | — | ~1307 |
+
+## Session: 2026-10-17 19:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:30 | Created backend/package/yuxi/services/eia_library_service.py | — | ~1455 |
+| 19:34 | Edited backend/test/unit/test_eia_library_service.py | modified get_file_by_sha1() | ~163 |
+| 19:34 | Edited backend/package/yuxi/services/eia_library_service.py | modified _safe_filename() | ~79 |
+| 19:20 | Task3 服务层TDD完成：8单测全绿（TDD咬出_safe_filename(..)计划bug已修）；提交a8829307 | eia_library_service.py, test_eia_library_service.py | 8 passed | 9k |
+| 19:46 | Edited backend/server/routers/domain_factory_router.py | added 1 import(s) | ~53 |
+| 19:46 | Edited backend/server/routers/domain_factory_router.py | added 1 import(s) | ~46 |
+| 19:46 | Edited backend/server/routers/domain_factory_router.py | modified list_eia_library_folders() | ~1013 |
+| 19:55 | Task4 路由六端点完成：无token全401判别注册+鉴权；openapi关闭改判别法；提交待填 | domain_factory_router.py | 6端点401 | 6k |
+| 20:03 | Edited web/src/apis/base.js | modified apiPost() | ~242 |
+| 20:03 | Edited web/src/apis/eia_data_api.js | inline fix | ~21 |
+| 20:03 | Edited web/src/apis/eia_data_api.js | added 3 condition(s) | ~345 |
+| 20:07 | Edited docker-compose.yml | 8→11 lines | ~128 |
+| 20:45 | Edited backend/server/routers/domain_factory_router.py | 4→5 lines | ~106 |
+| 20:48 | Created web/src/components/eia-data/LibraryPanel.vue | — | ~3517 |
+| 20:49 | Created web/src/views/EiaLibraryView.vue | — | ~36 |
+| 20:49 | Edited web/src/router/index.js | expanded (+6 lines) | ~131 |
+| 20:49 | Edited web/src/components/eia-data/EiaDataLayout.vue | 2→3 lines | ~12 |
+| 20:49 | Edited web/src/components/eia-data/EiaDataLayout.vue | 3→4 lines | ~54 |
+| 22:10 | Edited backend/test/unit/test_eia_library_service.py | modified list_files() | ~111 |
+| 22:10 | Edited backend/test/unit/test_eia_library_service.py | modified test_list_files_uncategorized_filters_null_folder() | ~154 |
+| 22:10 | Edited backend/package/yuxi/repositories/eia_library_repository.py | modified list_files() | ~222 |
+| 22:10 | Edited backend/package/yuxi/services/eia_library_service.py | modified list_files() | ~68 |
+| 22:10 | Edited backend/server/routers/domain_factory_router.py | modified list_eia_library_files() | ~127 |
+| 22:10 | Edited web/src/apis/eia_data_api.js | added 1 condition(s) | ~105 |
+| 22:10 | Edited web/src/components/eia-data/LibraryPanel.vue | 11→12 lines | ~130 |
+| 21:30 | QA咬出未归类=全库语义碰撞bug：uncategorized参数贯穿四层+单测9绿；浏览器复验中 | repo/service/router/api.js/Panel | 9 passed | 5k |
+
+## Session: 2026-10-17 22:24
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:26 | Edited docs/develop-guides/changelog.md | 1→3 lines | ~187 |
+| 22:35 | bug-4038 uncategorized 修复提交（6 文件）+ storage_migration 格式修正 + 环评文件库 P1 changelog 条目 | backend 4 文件, web 2 文件, changelog.md | fb22583b / 851fe2df / 48d2e28e；plan 7 任务全部完成，AC1-9 全过 | ~8k |
+| 22:29 | Session end: 1 writes across 1 files (changelog.md) | 1 reads | ~31774 tok |
+| 22:43 | 用户明示推送+再生：pisuan-custom 14 commits 推 origin；localized 清 detached 暂存→reset 48d2e28e→改名重生成（2069 改动/1485 R）→uv lock×2→f5763459 force-with-lease 推 github | pisuan-localized 仓库 | 双分支推送完成，栈热载无恙（api 401/web 200）；backend/package/pisuan 非忽略残留需路径级 clean -fd | ~6k |
+| 22:43 | Session end: 1 writes across 1 files (changelog.md) | 1 reads | ~31774 tok |

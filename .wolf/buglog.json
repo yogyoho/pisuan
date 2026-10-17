@@ -5032,7 +5032,7 @@
     "error_message": "语料普查中 3 份 docx（九龙川/巴拉素/塔然高勒）被记为 0 字空文件，用户指出九龙川/巴拉素能正常打开且有内容",
     "file": ".wolf/corpus-census/census.json (生成脚本)",
     "root_cause": "三重：(1) 九龙川/巴拉素是 WPS 生成的病态 docx，.rels 引用不存在的 'NULL' 部件，python-docx 严格解析抛 KeyError，census 脚本 except 后静默记零；(2) 塔然高勒文件头为 UniDocSa（WPS 私有格式），真损坏；(3) census 脚本对解析失败无显式告警标记，0 与'解析失败'不可区分",
-    "fix": "zip 级手术：重写 .rels 剥除 Target=NULL 的 Relationship 条目后 python-docx 正常解析；census 失败需记 error 字段而非零值；塔然高勒确认损坏弃用；2026-10-06 ETL 侧落地：yuxi/services/docx_guard.py 四态诊断 + 悬空关系项手术 + guarded_reparse 重试恰一次 + 空产物守卫，ETL 主解析与大纲提取两消费面接线（真实病态文件注入冒烟 2/2 PASS；spec: docs/superpowers/specs/2026-10-06-bug355-etl-docx-guard-design.md）",
+    "fix": "zip 级手术：重写 .rels 剥除 Target=NULL 的 Relationship 条目后 python-docx 正常解析；census 失败需记 error 字段而非零值；塔然高勒确认损坏弃用；2026-10-06 ETL 侧落地：yuxi/services/docx_guard.py 四态诊断 + 悬空关系项手术 + guarded_reparse 重试恰一次 + 空产物守卫，ETL 主解析与大纲提取两消费面接线（真实病态文件注入冒烟 2/2 PASS；spec: docs/superpowers/specs/2026-10-06-bug355-etl-docx-guard-design.md）；2026-10-16 复发：C:/项目管理/样例文件 源 docx 未就地修复，prepare_corpus --only 首跑同错——手术副本法（.wolf/corpus-workdir/_task3_surgery.py + _mirror_corpus/，document.xml 逐字节不变断言）绕过入库，用户原文件未动",
     "tags": [
       "docx",
       "WPS",
@@ -5043,8 +5043,8 @@
       "etl-guard"
     ],
     "related_bugs": [],
-    "occurrences": 1,
-    "last_seen": "2026-10-06"
+    "occurrences": 2,
+    "last_seen": "2026-10-16"
   },
   {
     "id": "bug-356",
@@ -7582,5 +7582,298 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-4024",
+    "timestamp": "2026-10-15",
+    "error_message": "数值护栏词表 tab 初始化后，全部口径视图未按 A类/B类/C类 排序（实际按字典序 C→A→B）",
+    "file": "backend/package/yuxi/repositories/eia_lexicon_repository.py",
+    "root_cause": "list_entries 的 ORDER BY 直接用 category 字符串列，字典序 junk<measure<site 与业务序相悖",
+    "fix": "order_by 前置 CASE rank（measure=0/site=1/else=2）再按 stage/caliber；集成流程测试补 2b 分组序回归锚（rank 序非降）；容器只读直调实证 92 条真实数据 measure→site→junk",
+    "tags": [
+      "eia-lexicon",
+      "sort-order",
+      "sql-case",
+      "domain-factory"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-4025",
+    "timestamp": "2026-10-15",
+    "error_message": "口径列单元格说明文字过长折行，挤占单元格（行高达 7 行）",
+    "file": "web/src/components/eia-data/LexiconPanel.vue",
+    "root_cause": ".caliber-cell 主名/备注无单行约束，td overflow-wrap: break-word 使长 note 逐字折行",
+    "fix": "caliber-cell 子 span 统一 white-space: nowrap + ellipsis + overflow hidden（主名一并截断——导入原句型长名同样撑行）；全文走既有 title tooltip；实测行高 7 行→恒定 61px 两行",
+    "tags": [
+      "lexicon",
+      "truncation",
+      "table-ux",
+      "domain-factory"
+    ],
+    "related_bugs": [
+      "bug-4024"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-4026",
+    "timestamp": "2026-10-15T21:50:00+08:00",
+    "error_message": "用户截图：词表「改名」对话框布局臃肿——巨型语料语境段落把 新名/备注 表单推到折叠线下；三栏比例失衡（文本 flex:2 / 报告 ID flex:1），值与 ID 纵向漂浮",
+    "file": "web/src/components/eia-data/LexiconPanel.vue",
+    "root_cause": "rename 模态的语境行是三栏 flex 行式布局（ctx-text flex:2 + ctx-value 88px + ctx-rid flex:1），长段落 mention 在 ~340px 宽的窄列里折成 10+ 行；320px 列表限高下仅 1-2 条证据可见，表单无 label 仅 placeholder，警告块 3 行",
+    "fix": "按评审通过的原型 docs/vibe/prototypes/2026-10-15-lexicon-rename-redesign.html 重排：语境条目改有界卡片（通栏文本 + meta 行：值 mono 左/报告 ID 右），列表限高 264px 内滚；区头带提及计数、旧指纹徽标右锚；表单 label 化 + 帮助文字；备注为 textarea 自适应 2~6 行（用户裁定）；警告压缩一行。逻辑零改动",
+    "tags": [
+      "lexicon",
+      "rename-dialog",
+      "layout",
+      "prototype-first",
+      "form-ux",
+      "domain-factory"
+    ],
+    "related_bugs": [
+      "bug-4025"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-4027",
+    "timestamp": "2026-10-15T22:50:00+08:00",
+    "error_message": "用户截图：词表「提及」抽屉样式难看——5 行裸文本（95 % + 报告 ID）无边界的散落白底上，下半屏大量留白",
+    "file": "web/src/components/eia-data/LexiconPanel.vue",
+    "root_cause": "mention-row 背景 var(--main-0) 白色贴白色抽屉底等于零视觉；接口返回 before/hit/after 语境但模板只渲染 value+rid；无值分布聚合、无加载/空态",
+    "fix": "按原型 docs/vibe/prototypes/2026-10-15-lexicon-mentions-drawer.html 重排：语境卡片（首次渲染原文 mark 高亮 + meta 行，5 行截断 + tooltip 全文）与改名对话框共用提升后的 ctx-card 样式；标识条 + 值分布 chips（mentionValueDist computed 去重计数）；a-spin 加载态 + 空态；宽度 420→480",
+    "tags": [
+      "lexicon",
+      "mentions-drawer",
+      "layout",
+      "prototype-first",
+      "domain-factory"
+    ],
+    "related_bugs": [
+      "bug-4026",
+      "bug-4025"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-15"
+  },
+  {
+    "id": "bug-4028",
+    "timestamp": "2026-10-15T23:50:00+08:00",
+    "error_message": "Task 任务书指定容器 api-dev 不存在（No such container: api-dev），容器内 ruff 缺失",
+    "file": "docs/superpowers/plans/2026-10-15-lexicon-suppression-ui.md",
+    "root_cause": "CLAUDE.md 文档记载的容器名 api-dev/worker-dev 已过时；本机运行栈是 pisuan-localized 改名树，容器实名 pisuan-localized-api-1/-web-1/-worker-1，模块路径 pisuan.*；ruff 未装进容器",
+    "fix": "后续任务书改用 pisuan-localized-api-1 容器名 + 宿主侧 python -m ruff；已记入 cerebrum Key Learnings",
+    "tags": [
+      "docker",
+      "container-name",
+      "pisuan-localized",
+      "ruff",
+      "environment"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-15T23:50:00+08:00"
+  },
+  {
+    "id": "bug-4029",
+    "timestamp": "2026-10-15T23:58:00+08:00",
+    "error_message": "TDD 绿步 2 failed: AttributeError: 'types.SimpleNamespace' object has no attribute 'to_dict'（test_list_suppressions_maps_rows / test_withdraw_suppression_deletes_row_or_raises）",
+    "file": "backend/test/unit/test_eia_lexicon_suppression_ops.py",
+    "root_cause": "任务书自带测试代码的 fixture 缺陷：_row() 用裸 SimpleNamespace 造行，未镜像真实模型 EiaLexiconSuppression 的行形状（models_domain_factory.py:475 有 to_dict），而 service 实现按真实契约调 s.to_dict()/row.to_dict()",
+    "fix": "三方裁决判 fixture 错（实现与真实模型契约一致）；_row() 改返回 _SuppressionRow(SimpleNamespace) 子类，补 to_dict() 镜像模型序列化；测试函数与断言保持任务书逐字不变",
+    "tags": [
+      "tdd",
+      "fixture",
+      "fake-repo",
+      "to_dict",
+      "eia-lexicon",
+      "suppression"
+    ],
+    "related_bugs": [
+      "bug-4028"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-15T23:58:00+08:00"
+  },
+  {
+    "id": "bug-4030",
+    "timestamp": "2026-10-16",
+    "error_message": "host pytest cannot collect skills scripts tests: ancestor backend/package/yuxi/agents/__init__.py imports langchain_core (Docker-only) during collection; sibling test_corpus_meta.py fails identically (8 setup errors)",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_front_extract.py",
+    "root_cause": "host Python 3.14 + pytest 9 walks ancestor package __init__.py at collection; scripts tests are stdlib-only but repo package chain drags Docker-only deps, so in-repo runs were assumed possible but are not",
+    "fix": "run scripts tests from a fresh temp dir outside the repo with byte-identical copies (scripts/*.py + tests/ preserving relative layout); same interpreter; plan Tasks 2/3 pytest steps must use this harness or docker",
+    "tags": [
+      "pytest",
+      "environment",
+      "scripts-tests",
+      "collection-error"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-16"
+  },
+  {
+    "id": "bug-4031",
+    "timestamp": "2026-10-16",
+    "error_message": "front-matter boundary dead code: SEC_HEAD_RE (requires \\s+) tested against post-SPACE_RE-collapsed text, so '1 总论'→'1总论' never matches — body paras leak into cover extraction; on real corpus a body date/org would be recorded with basis=cover in corpus_meta.json and eia_org_candidates get polluted",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/front_extract.py",
+    "root_cause": "plan bug #4 (inherited from plan Step 1.3 code block): whitespace normalization applied before boundary matching; no test asserted boundary exclusion through read_front_paras",
+    "fix": "match boundary on pre-collapse text (SEC_HEAD_RE.match(raw.strip())) then append collapsed t; pinning test test_read_front_paras_stops_at_sec_heading + split-run test + sha1 assertion added; commit b6069ccf (amend of 54c2303a)",
+    "tags": [
+      "front-extract",
+      "boundary",
+      "regex",
+      "provenance",
+      "code-review"
+    ],
+    "related_bugs": [
+      "bug-4030"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-16"
+  },
+  {
+    "id": "bug-4032",
+    "timestamp": "2026-10-16",
+    "error_message": "front_extract 全量排序位 rid 整体 +1 漂移（016-2021-12→017-2021-12 等），front_matter 键与已入库 slices rid 不匹配",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/front_extract.py",
+    "root_cause": "语料目录混入 Office 属主锁文件 ~.docx（162B，非 zip），sorted() 中 ~ (U+007E) 排在数字后 CJK 前，占据 009 位；rid=make_rid(全量排序位) 含读失败/锁文件",
+    "fix": "不删用户文件（权限拒）：把 41 份真 docx 复制到临时目录（跳过 ~），--corpus-dir 指向副本重跑——字节同 sha1 同，排序位复原；塔然高勒监测 docx 已损坏（非 zip）读失败跳过，成员结果与体裁门一致",
+    "tags": [
+      "corpus",
+      "rid-shift",
+      "office-lock-file",
+      "front_extract",
+      "sort-position"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-16"
+  },
+  {
+    "id": "bug-447",
+    "timestamp": "2026-10-17",
+    "error_message": "QA 空值守卫测试误写库：001-wps 弹窗预填非空（auto 报告名+编制单位），直接点保存标注绕过「至少标注一项」守卫，DB 新增一行标注",
+    "file": "web/src/components/eia-data/MetaPanel.vue",
+    "root_cause": "守卫只拦全空提交，而弹窗 openAnnotate 预填 auto 层值；挑待标注行测试守卫时未先清空预填，保存直通落库",
+    "fix": "asyncpg 定向 DELETE 该行（decided_by=admin AND decided_at>=当日）恢复点击前态；补测改为清空两个预填输入后再点保存，守卫正确拦截且不落库",
+    "tags": [
+      "qa-side-effect",
+      "metapanel",
+      "annotation-guard",
+      "db-rollback"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-17"
+  },
+  {
+    "id": "bug-4033",
+    "timestamp": "2026-10-17",
+    "error_message": "标注页指标带已标注/待标注显示 18/15，实际行内已标注 pill 20 行、待标注筛选 13 行，三处口径分裂",
+    "file": "backend/package/yuxi/services/eia_meta_service.py",
+    "root_cause": "Task 5（7f73c01a）扩前端 hasAnnotation 至四字段时，服务端 counts.annotated 判据仍只认 year_hint/scale_mt_a，纯文本标注（028-r/011-800--2026-2）不被计入",
+    "fix": "list_reports 判据改 any(ann.get(k) is not None for k in _ANNOTATION_FIELDS)，与字段白名单同源防再漂移；新增纯文本标注计数单测（6b46ef86，容器 9 过）；UI 侧同步补编制单位 needs_review 信号（71803812）",
+    "tags": [
+      "eia-meta",
+      "counts",
+      "口径分裂",
+      "task5-followup",
+      "spec-7.2"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-17"
+  },
+  {
+    "id": "bug-4034",
+    "timestamp": "2026-10-17T12:54:44",
+    "error_message": "用户指出：标注/查看两态按钮弹框一样且都可编辑，已标注记录显示「查看」名不副实（进去照样能改能存）",
+    "file": "web/src/components/eia-data/MetaPanel.vue",
+    "root_cause": "按钮文案随 hasAnnotation 切换（未标注→标注/已标注→查看），但两态打开同一可编辑弹框；标注为覆盖式 upsert 可反复保存，查看文案暗示只读，误导",
+    "fix": "按钮文案恒为「标注」（去掉三元切换）；标注状态 pill 判定不变",
+    "tags": [
+      "ux-copy",
+      "meta-panel",
+      "annotation"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-17T12:54:44"
+  },
+  {
+    "id": "bug-4035",
+    "timestamp": "2026-10-17T13:33:27",
+    "error_message": "用户报告：纳林希里矿区报告（033-r）弹框已填写编制单位，列表仍显示「编制单位待复核」，不合理",
+    "file": "web/src/components/eia-data/MetaPanel.vue",
+    "root_cause": "needs_review 信号只读自动层 basis（eia_org_basis 等），不查 DB 标注层是否已有人工决策；人工标注后信号照显，名实矛盾",
+    "fix": "六处信号（行内报告名dot/编制单位flag/规模dot + 弹框对应3处）均加对应字段 annotation 判空条件；实测 6 条已标注 needs_review 隐藏、3 条未标注保留",
+    "tags": [
+      "meta-panel",
+      "needs-review",
+      "annotation",
+      "ux-consistency"
+    ],
+    "related_bugs": [
+      "bug-4034"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-17T13:33:27"
+  },
+  {
+    "id": "bug-4036",
+    "timestamp": "2026-10-17",
+    "error_message": "v18 迁移实施计划遗漏 storage_migration.py _require_supported_version(upgrade_from) 元组补 17；且 dev 栈迁移非自动执行，首次验证时表未建",
+    "file": "backend/package/yuxi/storage_migration.py",
+    "root_cause": "计划只照抄了 if-chain 块，漏看同文件上方 upgrade_from 显式元组；并误以为 api 启动会跑迁移",
+    "fix": "upgrade_from 补 17；容器内手动 python -m pisuan.storage_migration 执行迁移；经验录入 cerebrum",
+    "tags": [
+      "migration",
+      "schema",
+      "v18",
+      "storage_migration"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-17"
+  },
+  {
+    "id": "bug-4037",
+    "timestamp": "2026-10-17",
+    "error_message": "_safe_filename(\"..\") 返回 \"..\" 而非 \"unnamed\"（测试断言失败）",
+    "file": "backend/package/yuxi/services/eia_library_service.py",
+    "root_cause": "计划代码假设 Path(\"..\").name 返回空串，但 pathlib 将 .. 作为普通组件透出，strip() 不去点号",
+    "fix": "_safe_filename 显式守卫：cleaned 不在 (\"\", \".\", \"..\") 中才返回，否则 unnamed",
+    "tags": [
+      "pathlib",
+      "filename-sanitize",
+      "plan-bug",
+      "tdd-caught"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-17"
+  },
+  {
+    "id": "bug-4038",
+    "timestamp": "2026-10-17",
+    "error_message": "未归类视图显示全库文件（含已归类），底栏「共 3（未归类）」与树计数 2 不符（浏览器 QA AC1 发现）",
+    "file": "backend/server/routers/domain_factory_router.py",
+    "root_cause": "folder_id=null 同时承担「未归类」与「全库」两种语义：前端 pickFolder(null) 期望未归类，后端把缺省 folder_id 当全库（不过滤）",
+    "fix": "新增 uncategorized 查询参数贯穿 router/service/repo（folder_id IS NULL 过滤）；前端未归类视图传 uncategorized=1；补单测 test_list_files_uncategorized_filters_null_folder",
+    "tags": [
+      "eia-library",
+      "query-param-semantics",
+      "null-vs-absent",
+      "qa-caught"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-17"
   }
 ]

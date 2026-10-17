@@ -20,6 +20,12 @@
 - [2026-10-14] Landing 类页面忌「太素/单调」：结构极简的同时要有质感细节（实体感装饰、图标块、水印、微动效、氛围底纹）。用户对首版立式流水线评价「效果太单调」，二轮补齐后验收。以后 landing/展示页交付前自查：纯白底+细线框+纯文字 = 不合格。
 - [2026-10-14] 卡片式导航的点击范围要克制：大卡片/区域不整卡可点，仅显式「直达」链接可点（用户对知识工厂工位卡的裁定）。此后卡片导航默认按此执行，整卡可点需先问。
 ## Key Learnings
+- (2026-10-17) bug-4038：列表类 API 的 folder_id=null 同时承担「未归类」与「全库」两种语义必串台（未归类视图列出全库）。修复模式：显式 `uncategorized` 布尔参数贯通路由/服务/仓储/前端 API/面板，folder_id=null 仅作 IS NULL 过滤，全库检索不带任何过滤参数；用单元测试锁死 IS NULL 语义。搜索时前端必须丢弃目录维度（queryFolder 置 null）。
+- (2026-10-17) 宿主机无 pnpm/node_modules（前端依赖仅在 web-dev 容器内）：lint 用 `docker exec pisuan-localized-web-1 sh -lc "cd /app && pnpm run lint"`。既有 5 错误基线在 e2e 基建（playwright.config.js / e2e/fixtures/auth.js 的 process 未定义），与本功能无关。
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
+- [2026-10-15] test/integration/services/test_eia_lexicon_service_flow.py 前后 **清空 eia_lexicon_entries 表**（wipe fixture）——运行栈库有真实词表与人工裁决时**绝不可在运行栈跑**，只读验证改用 `docker exec pisuan-localized-api-1 python -c "...list_entries()"`（注意容器内包名是 pisuan.* 非 yuxi.*，且 exec 起独立进程不受热重载时序影响）。该套件仅可在可弃栈/CI 跑。
+- [2026-10-15] 全站字体单一真相在 base.css `--font-sans`/`--font-mono`（2026-10-15 a0117f0e 起）；main.less body 引用 token（正文 14px）。原 main.less/theme.js/extensions @mono-font 五处平行栈已收敛——Inter 从未以 webfont 加载（无 @font-face/woff），栈首 'Inter Variable','Inter' 一直是死引用。eia-data 面板的 'JetBrains Mono',Consolas 硬编码与 --font-mono 同头可保持；新代码一律 var() 引用。排版层级基准原型：docs/vibe/prototypes/2026-10-12-eia-p2-ui.html（22/16/14/13/12/11 谱系，600 主权重，.num tabular-nums）。
 - (2026-10-15) docs/vibe is gitignored (.gitignore:78); design docs get committed via `git add -f` per precedent (several predecessor vibe docs are tracked, e.g. 2026-10-07-direction-a-paradigm-library-design.md).
 - (2026-10-15) ruff is NOT installed in pisuan-localized api/worker containers. Run host-side: `cd backend && uvx ruff@0.16.4 check package --statistics`. Full-package total is ~260 (230 E501 + 30 other); the historical "30-error baseline" refers to the narrow services/ scope only.
 - (2026-10-15) Auth API for scripted E2E: POST /api/auth/token, OAuth2 form (username/password) -> {access_token}; verified working against dev stack with admin account.
@@ -164,6 +170,8 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat
+
+- (2026-10-17) localized 再生前若工作树留有上一次改名层残留（语义 reset 后 backend/package/pisuan/ 变纯未跟踪、非 ignored），脚本内置 clean -fdX（仅 ignored）清不掉会 raise——处置：`git -C C:/workspace/pisuan-localized clean -fd backend/package/pisuan`（指引允许的唯一路径级清理，该路径整体为脚本所有物），再重跑 --apply。另：localized 克隆可能滞留 detached HEAD+暂存改名层（sync-dev 遗留），官方链首步前先 reset --hard HEAD 丢弃。
 - [2026-10-15] 禁止 `git add .wolf` 整目录暂存：会无差别扫入既往会话未跟踪 scratch（corpus-workdir/csv-upload/p3_*快照/旧截图，~200 文件），夹进与提交信息不符的簿记提交。只暂存 6 个簿记文件（anatomy/buglog/cerebrum/memory/token-ledger/hooks/_session）+ `git add -u .wolf/designqc-captures/`（仅覆盖已跟踪基线 jpg 与 png 删除）。
 - [2026-10-15] `git add <显式路径>` 命中 gitignore 时输出警告且退出码非零，会静默打断 `&&` 链（.wolf/hooks 警告致第二个 add -u 未执行、提交缺半）。多段暂存各写独立语句，提交前必以 `git diff --cached --name-status` 核对实际清单。
 - (2026-10-15) Spawning reviewer subagents WITHOUT the `name` parameter puts them in background-task mode whose toolset LACKS Bash/Read/Grep/Glob — the agent cannot read files or run git and must abort (one honestly refused to fabricate a verdict). ALWAYS use named Agent spawn (mailbox pattern) for every reviewer/implementer dispatch.
@@ -235,6 +243,7 @@
 ## Decision Log
 - (2026-10-15) Task 9 changelog commit: pre-existing dirty hunks from other work streams were excluded via dual-version swap (committed version = HEAD + paradigm entry only; working tree keeps leftovers). User picked selective-commit (1A) over folding. docs/vibe design doc force-add pre-approved (plan's own git add line + tracked predecessor precedent).
 - [2026-10-15] KeyError→404 `detail=str(e)` 的 repr 引号伪影：house 全局既有（本路由 ~17 处 + 兄弟服务同款），局部修复会制造不一致 → 维持现状；横切整治候选：全部站点改 `e.args[0]` 或专用 NotFoundError，并核对前端 toast 是否剥引号。（范式层 Task 4 质量评审裁决）
+- [2026-10-15] 抑制名单 T2 质量评审留痕：add_suppression 对已抑制指纹走 repo upsert 幂等刷新时 new_caliber 硬传 ""，会覆写改名行的语境回落反查键（find_fingerprint_suppression 按 new_caliber 反查）——UI 候选下拉只列未抑制指纹故正常路径不可达，仅直调 API 可触发；计划/测试明文裁定「幂等刷新」语义，维持现状，日后触碰该文件可考虑刷新时保留原 new_caliber 或对改名源行拒绝手工刷新。（抑制名单 T2 质量评审）
 - [2026-10-15] domain_factory_router 异常三分支梯子重复 ~20 处：共享映射 helper 可省 ~5 行/端点，属路由级重构 → 未来独立 cleanup 提交，不顺手夹带。（Task 4 质量评审建议）
 - [2026-10-15] 前端共享 reactive 弹窗对象（如 FormsPanel editModal）在保存 Promise 在飞时 Cancel 仍可点：取消后立即重开会话，旧保存成功回调 `open=false` 会 slam 关闭新会话并丢失未保存输入——范式层 Task 8 质量评审 Minor（建议 loadSeq 式 seq token 或 cancel-button-props disabled，未阻塞验收）；同审发现 getAsset 部分失败时 assets 保留旧映射+「无统计产出」文案混淆加载失败与真空值，均非阻塞。
 - [2026-10-15] 修复轮 a0a23e54（FormsPanel +8/−2）三修验真：editSeq 序号令牌（守卫置于 saveDraft 后、success/close 前，连陈旧成功 toast 一并抑制）；fetchAll 在 Promise.all 前 assets={}（refetch 部分失败不再残留旧 map；首次失败「无统计产出」文案仍混淆，cosmetic 接受）；label-for+textarea 单一静态 id（desc/模板共用一弹窗一 textarea，组件单实例无重复 id 风险）。残余裁定**接受不修**：陈旧回包 finally 提前清 saving 可令 OK 提前复禁→双发同载荷，但 saveDraft 整载荷幂等 upsert 零数据分歧+窗口一往返+与 Task 7 loadSeq 残余同形；1 行加固备查 `finally { if (seq === editSeq) editModal.saving = false }`（下次触碰该文件顺手，不专开提交）；:221 catch 分支陈旧 error toast 同族一并接受。
@@ -280,6 +289,8 @@
 - [2026-09-30] **派发实现子代理必须禁用后台监视器模式**：首个 Tasks 1+2 实现者把文件拷贝委派给「后台监视器」异步执行，两轮 ~67k tokens 后目标目录不存在、零提交，且中途汇报听起来进展正常（buglog-319 同源）。修复：提示词开头加 CRITICAL 铁律（每条命令同步亲自跑、逐步核对 Expected、禁 watcher/deferred）；控制器在派发前与收到完成通知后都先做只读状态核查（目录存在性/git log），不轻信汇报文字。
 
 ## Key Learnings (append 2026-09-30 task3)
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
 - Skill 投影链路：worker 启动 init_builtin_skills 只把 buildin 同步到 skill-sources/shared/<slug> 并 upsert skills 表（保留 enabled 不动）；用户投影 skill-projections/<uid>/ 是 DB 驱动、只含 enabled=true 的技能，且在 Agent Run 初始化时才懒刷新（composite.py sync_agent_context_skills）。新增 buildin 技能若 DB 已有同名 disabled 行（历史残留），投影永远不出现。
 - 运行栈容器内包名是 pisuan（改名层），python -c 需 import pisuan.* 而非 yuxi.*；POSTGRES_URL 为 +asyncpg 形式。skills 表无 is_deleted 列。
@@ -304,6 +315,8 @@
 - 2026-10-02 测量教训（bug-338）：PG ARE 无 lookbehind，(?!\{)\{ 自废恒0；\{[^{] 把双括号内部{也计数。正确法=先剥双括号再数剩余。修正后bug-335真实规模：修复前49处/修复后1处（残留=模型畸形括号组，非归一化缺口）。任何正则计数先用构造样本双向验证。
 
 ## Key Learnings (append 2026-10-04 D1-D6 + graph build)
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
 
 - agnes 免费层只 sustains 单并发请求：graph 抽取 extractor concurrency_count 必须 =1，且同一时间只允许一个 graph-build job（两个 KB 并行 = 2 路并发 → 429 风暴）；attempt 1/3、2/3 的瞬态 429 由内置重试（delay 2s）吸收，无需干预。
@@ -336,6 +349,8 @@
 - lightrag.py 删除与 pyproject.toml 残留依赖（上游共有）按"最大限度不动上游"原则推迟，已记录在 vibe 文档 deferred 清单。
 
 ## Key Learnings (append 2026-10-04 ETL 数据平面裁决)
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
 
 - **match_count ETL 增量断链（bug-353）**：service:648 调的 _increment_learned_template_match_counts 根本不存在，:649-650 try/except 静默吞 → 「1107 模板 0 复用」有两个根因：槽名 77% 唯一率（已知）+ match_count 永无增量（新发现）。修复前任何「模板复用率」观测都是 0，观察期判停标准会失真。
@@ -356,6 +371,8 @@
 - 「写而无读」判定必须全仓 grep（web/src + backend/test + scripts + agents md），只查 service 会漏掉 OutlineTemplate.vue 这类 UI 人工闭环消费者（expected_charts 差点误删列）。
 
 ## Key Learnings (append 2026-10-04 KF×v2 整合设计)
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
 
 - **coal-eia-writer v2 实施状态**：资产已落地（scripts/10 脚本+references 全套），eia-section-writer 是 DB-only 子代理（agents id=13，无代码 preset）——环境重建即失。SKILL.md tool_dependencies=6 件无 save_chapter。
@@ -367,10 +384,14 @@
 - check_content_contract 从未接线（tools.py 仅 L880 定义+单测引用）——v2 语境翻案依据：consistency.py 23 合约终验能力覆盖面远超它，且它对 {{SLOT}} 注入正文会系统性误报。
 
 ## Key Learnings (append 2026-10-04 样例报告价值分析 ch1-3)
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
 - backend/test/横城矿区总体规划环评报告书.md 是 coal-eia-writer v2 的样例语料（即红线3/standards_index「横城 9 处实证」来源）；该 md 副本所有表格仅存表题（表1.4-1…表3.4-25），表体数值在 md 中不可得，引用样例表值必须回查原始 PDF/DOCX。
 
 ## Key Learnings (append 2026-10-04 样例报告与导则)
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
 
 - **运行栈为 pisuan-localized-*（非 api-dev）**：当前 docker ps 显示 pisuan-localized-api-1/worker-1/web-1 等；两个工作树（pisuan / pisuan-localized）的 .env 都**没有管理员凭据**（CLAUDE.md「从 .env 读取管理员账户」已过期）。验证运行栈数据：优先 API 只读查询（需向用户要凭据），docker exec 须先报批。
@@ -467,6 +488,8 @@
 - 可逆清淤模式：同盘 `mv` 陈旧目录至 `.wolf/` 备份位（字节保全 + 镜像 tip git 对象双重可恢复），替代 `git checkout -f` + `git clean -fd`（auto-mode 分类器正确拦截了不可逆删除：用户未点名目标，且指令链源自子代理报告）。
 
 ## Key Learnings (append 2026-10-05 bug-363 Task 2)
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - 领域工厂 ETL 两阶段结构：phase-1（parse/split/classify/模板匹配）在 PARSING 态完成并持久化 source_paragraphs，phase-2（GENERALIZING，LLM 泛化）失败不回滚 phase-1 产物；模板匹配（TemplateMatcher.match，仅 is_title 段）在 phase-1 尾部执行，matched>0 时自增学习模板 match_count（bug-353 链路已在真实 ETL 验证：命中模板 match_count 落库为 1）
 - pisuan.models.chat.select_model 返回的 LangChainChatAdapter 只有 .call(message, stream=False)，没有 .ainvoke
 - worker 忙时（大文档 OCR/抽取）docker exec python 查询会拖到分钟级甚至超时；轻量状态通道 = postgres 容器内 psql -U postgres -d <db> 直查（实际库名 yuxi_know，来自 .env，compose 默认 yuxi 会被覆盖）
@@ -505,6 +528,8 @@
 - [2026-10-05] agnes 免费档是耗尽型配额非冷却型（实测：报错语義 reached the API rate limit for free users/upgrade to Token Plan；等 2h 后 resume 仍 45 秒即触熔断）。「等窗口再试」对该档位无效，方向只有换 provider/升级 key/接受本地模型质量折衷。- **2026-10-05 横城 retry 第 2 跑后拍板**：agnes 免费档耗尽型配额（第 3 次观测），用户选择 D=挂起静置横城 a44afc93（FAILED_PROVIDER 安全终态，resume 点 p222）。不换模型、不重试、不设自动探活；重启用 = 用户提供新 key/换 provider 后一条 retry_task。Step 2 口径采集（bug-363 挂起判定）继续挂起，阻塞点=外部配额而非代码。
 
 ## Key Learnings 重建 + DNR（2026-10-06 spec-W1 收口窗口；14:12 stash 事故后工作区版本重建）
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
 - 【DNR 2026-10-06 14:12 事故】多 agent 共享工作树内**禁止 git stash**（push/pop/checkout 全变体）：某 agent 按旧版「git stash 对拍」建议执行，把并行工作流 7 文件未提交改动与 .wolf 台账增量（buglog bug-366~370/cerebrum +56 行/memory +278 行）整体卷入 stash@{0} 且未 pop。台账三件已捞回（buglog 整体还原 325 条/memory 增量合并/cerebrum 本块重建）；6 个禁碰文件的外部改动仍存于 stash@{0}，恢复待用户裁决，**stash 在用户确认前不得 drop**。
 - buglog.json 台账写入须串行：多 agent 并发写为 last-writer-wins，subagent 报告「已写入」后控制器应读回验证（本次与 stash 事故叠加造成双重丢失表象）。
@@ -536,6 +561,8 @@
 ) 写回可字节级复刻原格式
 - [2026-10-06] 派工词自洽性检查：派 Task 前把指令里的每条断言与 cerebrum 已记事实交叉核对（本次 Task 5 派工词写「planning revision 产物 15 章含 R3」，与已记事实「R3×R4 语料交集为空，revision 全 legacy」直接矛盾，致实现者推理卡死 600s 被 watchdog 杀）。修法：派工前重读相关 DNR/Learnings 条目
 ## Key Learnings (append 2026-10-06 W2 Task5 渲染存档+seed_gen 冒烟)
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - conditions.json universe 中 R3×R4 交集为空：唯一 revised2019 规划语料是五间房且 round=first，15 份 planning revision 全 legacy——「revision 且 revised2019」的渲染存档不存在，R3 触发与 round 无关。
 - 渲染器 applied_rules 按 add/remove 目标逐条留痕：openpit 的 R2、revised2019 的 R3 各出现两次，是现有行为非 bug。
 - 渲染产物章键 = layer-1 slot_id 小写（planning/tracking CH1 起号、project/post CH0 起号），与 depth_targets 键同形；optional 章 = opt_N。
@@ -551,6 +578,8 @@
 ## Do-Not-Repeat 追加（2026-10-06 bug-355 窗口）
 - 计划内嵌测试 fixture 涉及合成 docx/OPC 时：关系 Type 必须用真实 officeDocument reltype（python-docx 按精确 Type 找主部件）；.rels 内相对 Target 的 base = .rels 所在部件目录（word/_rels/document.xml.rels → word），写 word/document.xml 会解析成 word/word/... 恒假悬空。先在解释器里验证 fixture 可被真实实现满足，再定稿计划。
 ## Key Learnings 追加（2026-10-06 bug-355 窗口）
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - `.wolf/corpus-census/patched/` 两份（九龙川 145MB/巴拉素 39MB）是普查术后**修复副本**，docx_guard.diagnose 判 ok 属正确直通；要在真实大文件上验证悬空修复路径，须内存注入 Target=NULL 病灶（zip 内重写 .rels 后 BytesIO 喂入），不要期待 patched 原样判 dangling。
 - changelog 的 dated 小节排序为**旧→新**（09-27→10-05），新小节插在文件已有最新小节之后；同日工作并入既有同日期小节（bullet 追加到节尾），不另开小节、更不回插旧小节（w2v2 勾账 2026-10-06 实操）。
 - 宿主 Python 缺 aiofiles 等依赖（2026-10-06 实测 ModuleNotFoundError），凡 import yuxi.services.* 的单测宿主必炸——只能容器道 `docker run --rm -v "C:\workspace\pisuanackend:/app:ro" pisuan-api:0.7.3 pytest ... --noconftest`；宿主 --noconftest 道仅限自包含测试（不 import yuxi 模块，如 test_docx_guard）。
@@ -558,12 +587,18 @@
 - domain_factory_service._UNIT_RE 单位字符类 m[²23]/[dha] 只认 ASCII m3，不含上标 ³——docx 语料相关 fixture/正则凡涉及 m³/h 一律写 m3/h。
 - DNR(2026-10-06): 计划里测试期望值必须对照 fixture 数据重算再落笔——Task2 的 (2,3) 算术笔误（散文三值分母应为 4）被 TDD 红相揭出，实现者依规停手报告而非改实现，流程正确。
 ## Key Learnings 追加（2026-10-06 spec-W1 Task3 质量修复窗口）
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - ruff 不在 pisuan-api:0.7.3 镜像内（无 ruff 二进制也无 python -m ruff）——ruff check/format 用宿主道：`cd backend && python -m ruff ...`（宿主 3.14 虽缺项目依赖但 ruff 自身可跑，config 由 pyproject.toml 就近发现，0.15.12 实测）
 - ruff 0.15.12 E501 计宽口径【两轮探针实证修正 2026-10-06】：按**字符数**计，非 unicode 显示宽（复筛者探针：120 字符/160 显示宽的 CJK 行未被标记；此前"unicode width"记载系 impl-t3-fix 误报）。实操结论不变：以 `ruff check` 输出为准收行，勿目测字符数或显示宽推断
 - dict(model_dump()) 与 json.loads 的 key 存在性语义不同：前者恒物化默认字段（空串占位），setdefault 兜底网对其失效——泛化双通道（structured/prompt）做同构兜底时须用空值判定（if not d.get(k)）而非 setdefault（377440fc I-1）
 ## Key Learnings (append 2026-10-06 spec-W1 Task5)
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - docker run ro 挂载跑实例化 DomainFactoryService 的单测（test_commit_pipeline_status 等）会炸在 __init__ 的 mkdir user-data（Read-only file system）——加 `-w /tmp` 让相对路径落可写层即可，勿误判为代码回归。服务类单测容器道模板：`-e PYTHONPATH=/app/package -w /tmp -v ...:ro`（PYTHONPATH 保证挂载代码优先于镜像 site-packages）。
 ## Key Learnings 追加（2026-10-06 spec-W1 Task5 窗口）
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - services 单测道分野：test_w1/test_docx_guard 自包含（__new__ 绕 __init__）→ :ro 挂载可跑；但任何实例化 DomainFactoryService() 的单测（pre_commit_validator/validate_task_report/commit_pipeline_status）在 __init__ 里 mkdir user-data/domain_factory → :ro 道必炸（OSError 30），失败形态与回归不可分辨。有效道：`docker run --rm -w /tmp -v ".../backend:/app" pisuan-api:0.7.3 pytest /app/test/unit/services/... -q`（rw 挂载 + 容器临时 workdir，不污染宿主）。判回归先跑批前基线 worktree 对照
 
 - [2026-10-06] 任务书给定的代码块可能自带 lint 错（W2v2 Task1 测试文件 import json 未用，ruff F401 落在新 diff 内、违反 Step「零新增」预期）——逐字照抄后必跑 ruff 核对；为满足门禁删除未用 import 属 lint 合规修正而非改写设计，照做并在报告中记偏离即可。
@@ -596,6 +631,8 @@
 - 2026-10-06: 任务书测试块逐字照抄后仍可能红——本次 baseline 断言期望 ["measurable"] 漏了「涌水量」命中槽名模式产生的 reusable。红相判定顺序：先对拍现场既有同 fixture 测试（test_w1_prose_pipeline.py:46 成员断言）确认真实基线，再决定修测试期望还是修实现；禁止为了让测试过而改实现语义。本次实现零改动、仅修断言（bug-378）。
 
 ## Key Learnings (append 2026-10-06 W3-T3 qualrev)
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - _etl_pipeline_async 泛化块（:898-1003）的 except Exception as para_error 会吞掉块内一切异常——W3 归属挂钩插在熔断分支（:988）之前且无独立守卫，repo 瞬时故障会静默跳过 FAILED_PROVIDER 持久化（bug-342 同族）。挂建议层钩子进这个 try 必须自带 try/except，否则熔断可靠性降级。
 - generalize_paragraphs 的 results dict 插入序=并发完成序（非文档序）；依赖「首个」语义的聚合要意识到这一点。
 - W3-T3 验证通道：MSYS_NO_PATHCONV=1 docker run --rm -v "C:\workspace\pisuan\backend:/app:ro" pisuan-api:0.7.3 pytest /app/test/unit/test_w3_scope_pipeline.py --noconftest -q（15 passed）；W1+T2 回归 47 passed 同命令多文件。
@@ -626,6 +663,8 @@
 - [2026-10-07] coal-eia-writer 交付现场唯一路径是工作区 outputs/（agent finalize 生成）；外部验证勿另建 deliveries/ 之类并行目录，会造成 delivery_manifest 分裂。
 
 ## Key Learnings（2026-10-07 范式库 P0 会话追加）
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - sample_entities 黑名单含类别级通用名词（自然保护区/水源地/基本农田/地下水/国道/边沟…来自 ETL 抽取噪音）；实体扫描必须用「≥3 份语料黑名单子串共现→通用词豁免」规则，否则 15+ 处误报。运行时泄露门不在 build_output.py（grep 无 sample_entities 引用），防线在契约指令层。
 - 语料文件名本身含矿名实体——任何要进 skill references 的资产，溯源脚注用匿名源编号（源①-⑤），明文映射放 docs/vibe 设计文档。
 - 范式/mock 派发产物过残留门前，先剔除合法 {{TABLE:}}/{{SLOT:}} 渲染标记——RESIDUE_RE 在真实管线中于渲染后扫描，裸跑必误报。
@@ -642,6 +681,8 @@
 - 2026-10-08：对带既有格式漂移的文件（如 consistency.py）跑整文件 ruff format 会把无关重排卷进提交（236 行噪音）——先 `ruff format --diff` 看作用面，只手工格式化自己新增的 hunk；漂移是历史遗留，不顺手「修」。
 
 ## Key Learnings（2026-10-08 Task2 schema_linter 追加）
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - 任务书 CLI 代码片段（counts.get 式增量）与其自带测试断言（零违规 stage 取 counts["L1"]==0）矛盾——原样实现必 KeyError。裁决沿用 W3 规则：测试+契约一致时以测试为准，实现侧零填充 dict.fromkeys(CHECKS,0)（第 4 起「计划代码块未实跑」族，bug-377/378 同根因）。
 - coal-eia-writer stage 复合字段的真实形状：fields 字符串清单条目是行内注记 "en_name 中文label"（同串空格分隔），纯中文列名（气温）与单字母列名（m/H）合法；spec 假设的 labels/columns dict 映射在 5 stage 中不存在（实现保留为旁挂兜底）。L4 判裸奔=英文蛇名行内+映射均无中文。
 - stage 枚举真实分隔符是 `|`（bug-393 旧残留，L2 管）而约定分隔符是 `/`；L5 词表分段不含 `|` 是有意的——两检查各管各的，别把 `|` 加进 L5 分段集。
@@ -649,6 +690,8 @@
 - [2026-10-08] 宿主 pytest 跑不了 coal-eia-writer skill 子树测试：pytest 从 scripts/tests 上溯 rootdir=backend/pyproject.toml，按包链 import yuxi/__init__.py → 宿主无 langchain_core 必炸（从 skill workdir 跑也一样）。正解=按 plan「docker cp 后容器内跑」：docker cp scripts pisuan-localized-api-1:/tmp/xx && cd /tmp/xx && pytest tests/ -q（容器 py3.13）；容器内 /app/skill-sources 与 /app/package/pisuan 两投影可能滞后 git HEAD，别拿它们当真。
 
 ## Key Learnings (2026-10-08 coal-eia-writer hardening 追加)
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
 - 运行栈容器名已从 `api-dev`/`worker-dev` 变为 `pisuan-localized-api-1` 等（compose 项目名切换）；docker exec/cp 前先 `docker ps` 确认，CLAUDE.md 中的旧名命令会失败。
 - host pytest 跑 skill 内测试会沿包链 import `__init__.py` 触发 langchain_core 缺失（Col node error）；规范跑法是 docker cp 测试文件到容器 /tmp 工作台再 pytest。prepare_corpus 单测顶层仅标准库依赖，容器内无需 python-docx。
@@ -680,6 +723,8 @@
 - **Do-Not-Repeat**: (2026-10-09) web 项目 icon 包实装是 `@lucide/vue`（package.json L24，lucide 官方继任包），**不是** CLAUDE.md 前端规范文字所写的 lucide-vue-next（已过时）——import 用错包名 vite 直接 500（Failed to resolve import）。核实现役写法：grep src 的 `from '@lucide/vue'`。
 
 ## Key Learnings + DNR + Decision Log（2026-10-09 数值护栏词表全栈批次追加）
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
 ### Key Learnings
 - 存量库加新表必须走显式迁移函数：`create_all` 只在 business_version=None（全新库）跑。仿 tool_usage 先例写 `upgrade_business_v9_to_v10`（FOR UPDATE 行锁 + version 校验 + `metadata.create_all(tables=[...])` + 记版本表），并在 storage_migration.main() 接线 upgrade_from。版本表在改名栈叫 `pisuan_schema_migrations`（改名层连字面量都改了）。
@@ -706,6 +751,8 @@
 - E2E 隔离方案：宿主 + references 副本（bank_compile 纯 stdlib）；零风险不动 dev 树。
 
 ## Key Learnings + DNR（2026-10-10 语料元数据标注页批次追加）
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
 ### Key Learnings
 - 容器内前端检查实操口径（更新 L81 旧记录）：现栈容器 `pisuan-localized-web-1` 无 pnpm，lint 用 `docker exec pisuan-localized-web-1 npx eslint <files>`；且必须先 `.\scripts\sync-dev.ps1` 文件才进容器。vite 语义：router 改动触发 page reload（非 HMR）、新文件链（动态 import）只在导航时按需编译——vite 日志无报错 ≠ 已编译过，容器内 eslint 是前置门。
@@ -724,11 +771,15 @@
 - P2 修复提交 b7f63ece（对抗评审 7 条全坐实全修）：导入幽灵行过滤/迁移测试 fake/前端 min-precision-tabindex/测试判别断言。评审工作流脚本存 session workflows/scripts/p2-adversarial-review-*.js，resumeFromRunId wf_be922093-a83 可复用。
 
 ## Key Learnings (append 2026-10-10 技能图示)
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
 - **coal-eia-writer 全技能图形化地图已存在**：`docs/vibe/2026-10-10-coal-eia-writer-skill-diagrams.html`（自包含 HTML+内联 SVG，浅深主题自适应）。下次要向新人/模型解释技能结构时直接指这个文件，不必从 SKILL.md 重新蒸馏。两图分工：图 1 分层架构（LLM 层/脚本层/磁盘状态/references 资产 + 琥珀色数值通路），图 2 步骤 0–7 流程（门 1/冻结/门 2/派发循环/要点包/finalize + 发卡即停停车点）。
 - **图示时最易画错的三个机制事实**：①子代理直写 state/sections/*.md 绕过脚本层（不经过 build_output）；②progress.py next 是控制器唯一导航（每轮恰好一个下一步）；③formula_state.json 手改=build 门直接 FAIL（唯一写者纪律不只 data/ 有）。
 
 ## Key Learnings + DNR（2026-10-10 P3 标准与限值库追加）
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
 ### Key Learnings
 - **含 `/` 的业务主键绝不能走 FastAPI 路径参数**：standards_index 62 条 code 中 10 条含 `/`（GB/T、HJ/T、TD/T、MT/T），uvicorn 在路由匹配前就把 %2F 解码成真实 `/`，`{code}` 段默认正则 `[^/]+` 无法跨越内部斜杠 → 恒 404（认证层都进不去，401 测试探不出）。此类主键一律走 body/query；`{code:path}` 虽可贪婪回溯但依赖隐晦。frontend/correctness 两维评审独立实证复现。
@@ -773,6 +824,8 @@
 - LexiconPanel.vue filters.status 默认 ''（全部视图）——「rejected 默认隐藏」是想当然，9 条留档行用户看得到
 
 ## Key Learnings + DNR（2026-10-10 方案B 词表修复执行追加）
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
 ### Key Learnings
 - 改名 PATCH（update_entry caliber）只改口径名不改 status：原 candidate 行（评价区植被覆盖度值→评价区植被覆盖度）改名后仍是 candidate，而 export_overrides 只遍历 approved——「export skipped 里改名行 6/7」不是数据异常，第 7 个根本不进导出。预期数字前先核每行的 status 流向
@@ -792,6 +845,8 @@
 - python -c 多行中文脚本在 MSYS bash 下引号脆弱（exit 2 无输出）——一律 Write 落盘 .py 再执行（本会话再次验证）
 
 ## Key Learnings + DNR（2026-10-10 词表 92 条全量审计追加）
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
 ### Key Learnings
 - 全量审计分布（92 条，6 裁决+1 对抗核验 21/21 零证伪）：reasonable 33 / minor 19 / broken 16 / mixed 24。**approved 档名称质量最好（0 broken/mixed、13 minor 全是裸名缺定语型）**；rejected 档 35/38 断章或混簇——证明三分类导入预置（junk→rejected）与方案B 裁决方向正确
@@ -812,6 +867,8 @@
 - 对「改名行/子口径」跑 get_mentions 验证值集是空转（机制上恒 0），直接读 values_json
 
 ## Key Learnings + DNR（2026-10-10 P4 改名对话框设计评审追加）
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
 ### Key Learnings
 - 前端图标依赖实际是 @lucide/vue（web/package.json），CLAUDE.md 写的 lucide-vue-next 已过时——LexiconPanel.vue:197 即从 @lucide/vue 导入
@@ -859,6 +916,8 @@
 - （无新增，沿用 surgical changes / 方案乙同构既好）
 
 ## Key Learnings + DNR（2026-10-12 P2 数据工厂页批次追加）
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
 ### Key Learnings
 - **sync-dev 机械改名层透测试：** pisuan 工作树测试文件写 `from yuxi.services import ...`，sync-dev.ps1 落 pisuan-localized 运行栈时机械改名为 `pisuan.services`——容器内直接 cat 测试文件会看到 pisuan 前缀，非异常。容器内包根 = `/app/package/pisuan`（editable install 映射 pisuan→/app/package/pisuan，无 yuxi 目录）。
@@ -905,6 +964,8 @@
 - 容器内 `cp` 回工作树用臆测路径（/workspace 不存在）——回传用 `docker cp 容器名:/app/... 宿主相对路径`。
 
 ## Key Learnings + DNR（2026-10-13 P2/P3 原型复刻改造执行追加）
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
 ### Key Learnings
 - **真实后端数据形状三件套（改造期实证）：** ① `data_expectations.json` 的 `source_hint_vocabulary` 是 `{hint: 说明}` **对象**非数组（for...of 直接 TypeError），`fam.source_hint` 是 `"standards_index + user_planning"` 复合串需 split('+') 拆 chip；② `formulas.json` 的 `formula.slots` 已是 `{{SLOT:...}}` 全记法（仅 `derived_slots[].slot` 为裸名，复用前先 startsWith 守卫）；③ `formula.outputs` 是 `[{name, unit, desc?}]` 对象数组，join 前必须 map(o => o.name)。
@@ -931,6 +992,8 @@
 - **诚实数据映射边界（改造期沿用）：** 原型虚构指标不伪造——命中拦截无数据则删该格、P5/P50/P95 无字段则以 corpus_freq 计量条替代、导出 CSV 无端点则去掉按钮、添加人有 decided_by 无时间戳则只出人名；functional no-regression 优先于像素复刻（撤回列保留、样本下拉新增均属数据驱动必要）。
 
 ## Key Learnings + DNR（2026-10-13 词表页 s9 复刻追加）
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
 ### Key Learnings
 - **词表列表接口的隐性重扫：** `GET /eia/lexicon/entries` 每次调用都跑 `_scan_all()` 全语料现扫（报告数/值数「始终现扫」是设计语义），点击筛选后行数据滞后数十秒——筛选交互密集的页面要么接受在途提示（自绘表加 opacity :loading 等价物），要么后端加扫描缓存；旧 AntD 面板同样受累（a-table :loading 转圈），非前端改造引入。
@@ -1036,12 +1099,16 @@
 - 子代理模型解析顺序（agent_run_service.resolve_agent_run_model_spec）：请求 model_spec > Agent 自身 config_json.context.model > 系统默认 default_model；Agent 配置优先于线程模型——子代理卡死时先查其 agents 行的 context.model 是否指向不可达端点。
 
 ## Key Learnings (append 2026-10-15 Task7 范式页)
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - **Learning**: base.css 没有 --color-warning-bg / --color-border-secondary / --color-bg-layout / 裸 --color-error 这些 token（计划草稿易臆造）。房屋真实等价：warn 底=--color-warning-50、err 文本=--color-error-700（factory-ui .pill-* 惯用法）、弱底=--gray-50、发丝线=面板 scoped 根上定义 --hairline: var(--gray-200)（StandardsPanel/DatasetStatsPanel 惯用法）后引 var(--hairline)。
 - **Learning**: @lucide/vue 无裸 Alert（新版改名 TriangleAlert）；Info/NotebookPen 存在。图标名先 grep web/node_modules/@lucide/vue/dist/lucide-vue.d.ts 再 import。
 - **Learning**: 范式层响应形状：概览项 {kind,asset_id,has_draft,drift,updated_by,file_hash}（顶层 updated_by，无 draft 子对象无 updated_at）；详情 draft{content,base_hash,updated_by,updated_at}+file_text；preview {items:[{kind,asset_id,drift,ok,errors,diff}],all_ok}；导出 {results,paths,exported_at}。
 - **Learning**: chrome-devtools-mcp 的 profile（~/.cache/chrome-devtools-mcp/chrome-profile）被孤儿 chrome 占用时 MCP 全部工具报 "browser is already running"；勿杀进程（可能压着先前任务的 tab/登录态/在跑的兄弟 agent）。替代冒烟：curl http://localhost:5173/src/...vue 强制 vite 按需编译（200=可编译，500=坏），加 API 代理 401（非 404）验端点在位。
 
 ## Key Learnings + DNR（2026-10-15 bug-4015 定案批追加）
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
 **Key Learnings**
 - 审批模态真实 DOM：HumanApprovalModal 根节点是自定义 `div.approval-modal`（transition slide-up + v-if），内联在 AgentChatComponent 的 `.message-input-stage` 里；DOM 中从不存在 `.ant-modal`/`.ant-modal-wrap`。模态可见性判定：`querySelector('.approval-modal')` + getComputedStyle，或直接 a11y 快照找 role=dialog。
@@ -1055,3 +1122,72 @@
 
 **Decision Log**
 - （2026-10-15）bug-4015/4014 均定案为测试事故（错误选择器 / 误点附件移除），不改产品代码——遵循"行为正确勿乱修"；bug-4016（agent 模型配置漂移）才是真缺陷且已修复验证。
+
+## Key Learnings + 裁定（2026-10-15 改名对话框重排追加）
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
+
+- 用户裁定：表单备注字段（长句改名依据）用 textarea 自适应 2~6 行，不用单行 input——「备注（可选）不能是输入框，应该是 text area」
+- 原型先行流程再次跑通：docs/vibe/prototypes/*.html（令牌复制 base.css/base.dark.css）→ 用户评审 → 落地 Vue。本次改名对话框（bug-4026）从截图分析 P1-P8 到落地一个窗口完成，commit f081c2b6
+- 原型 HTML 暗色变体的 `.proto-dark` 类必须挂 `<body>` 而非内容容器：`body { color:var(--text) }` 在容器作用域外解析，挂容器会继承浅色文字
+- 暗色 mark 高亮反转对用 `--main-100`(底)/`--main-900`(字)，比 main-50/main-200 对比度足
+- DNR：CSS `transition: color .2s` 下，classList 切换后立即读 getComputedStyle().color 拿到的是过渡起点值（自定义属性不参与过渡所以 --text 立即正确）——等 350ms 再读，别误判主题没生效
+- DNR：容器 eslint 必须在 sync-dev.ps1 之后跑，容器绑定的是 pisuan-localized 树，之前跑的是旧文件假绿
+
+### Key Learnings（2026-10-15 抑制名单 Task1 执行追加）
+- 本机运行栈容器实名：`pisuan-localized-api-1` / `pisuan-localized-web-1` / `pisuan-localized-worker-1`（CLAUDE.md 里的 api-dev/worker-dev 已过时）；容器内模块路径是改名层 `pisuan.*`（非 `yuxi.*`），/app ≈ backend/ 但包名已被机械改名。容器内单测路径：`docker exec pisuan-localized-api-1 pytest /app/test/unit/...`。容器内**无 ruff**——ruff 只在宿主跑：`cd backend && python -m ruff format/check <file>`（0.15.12）。
+
+## Key Learnings（2026-10-16 抑制名单 UI 特性收官追加）
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
+
+- **subagent 派发环境事实**：compact 后的窗口可能没有 Task/Agent 创建工具，新审查者无法创建——SendMessage 只能发给已存在 agent。可行模式：复用语境负担最小的旧 reviewer（选只审过最小切片者，如 qual-rev-t1 仅审 22 行 repo），brief 中明确要求「搁置旧语境、旧任务部分也重读、不得引用自己旧报告作依据」，实测成立且报告质量与 fresh 无差。
+- **SendMessage 长报告截断缓解**：per-task/最终审查 brief 里预写「报告紧凑防传输截断——内容多则先发 Assessment 与 Issues 分级，细节后补」；截断发生时索尾消息只需点名缺的三段（Minor 余文/Recommendations/Assessment），勿要求重跑验证。
+- **controller 内联判定**：subagent-driven 流程中，QA/文档类收尾任务（无代码实现）可由 controller 内联执行——浏览器 QA 需要精细红线控制（GET-only、isolatedContext）时尤其如此；实现类任务仍必须走 subagent 双评审。
+- **changelog bug 号纪律**：功能新增条目不带 bug 号（范式层/Landing/抑制名单卡同款）；计划预设的 bug 引用落地前先查 buglog 是否已被其他 bug 消耗（本次计划 stale 引用 bug-4028→已被容器环境 bug 占用，落地时删除）。
+
+### antd-vue Select 字号覆写两层断链（2026-10-16）
+- 组件根节点 font-size 可继承生效，但 .ant-select-selection-item 被 antd 显式置 14px——scoped 下须 :deep(.ant-select-selection-item) 二段覆盖
+- 下拉面板 teleport 到 body，scoped/:deep 均触不到——用 popup-class-name 挂类 + scoped 块内 :global(.类名 .ant-select-item) 下探（项目先例 AgentEditModal.vue:1071）；antd-vue 4.2.6 起 dropdownClassName 已废弃，用 popupClassName
+
+### QA 瞬态骨架的确定性验证手法（2026-10-16）
+- 网络节流下骨架窗口只有几秒，wait_for 大快照/截图往返会错过——导航后立即 evaluate 装轮询哨兵(setInterval 50ms 记 .sup-sk/.lex-skeleton 首见)，数据落地后回读哨兵证「在场过+正确退场」
+- 视觉定格：dev 构建 el.__vueParentComponent.setupState 可直拨 ref(suppressions=[]/suppressionLoading=true)，Vue 异步刷新需 setTimeout 120ms 后断言；零 API 调用、复原后核验数据回归；new_page 必须带 isolatedContext，否则落默认 profile
+
+### v-if 分支优先级吞噬骨架（2026-10-16）
+- 抑制卡「table v-if=数据有值 / div v-else-if=骨架」顺序下，数据先到时骨架分支永不可达——init 骨架必须放在数据分支**前面**（v-if 骨架 / v-else-if 数据）
+- 只挂自身 loading 的骨架对小表接口无意义（毫秒级返回）：要与慢接口的 init 骨架同拍，把慢接口的 init 窗口条件并入骨架谓词；重扫场景（isFiltered、数据已有行）要显式排除防闪烁
+- 2026-10-16 [Learning] skills scripts 单测在宿主机 repo 内不可收集（Python 3.14+pytest 9 沿祖先包触发 __init__→langchain_core 仅 Docker 有）：用 repo 外临时目录字节同副本跑，或容器内跑。
+- 2026-10-16 [DNR] 正则可选前缀必须加括号：矿区? 只豁免「区」不豁免「矿」，正确写法 (?:矿区)?（Task1 SCALE_LINE_RE 计划稿踩坑，TDD 逼出修正）。
+- 2026-10-16 [DNR] 先归一后判界会杀死判据：SPACE_RE 收缩全部空白后再过 SEC_HEAD_RE（要求 \s+）永假——边界匹配必须用归一前 raw.strip()（Task1 C1，代码评审实证；正文值会以 cover 溯源写入 corpus_meta）。
+
+### 2026-10-16（Task2 语料元数据 cover 层）
+- samples_bank 编译真相：真实 slices 在 references/samples_bank/<stage>/slices/ch*/（git 已跟踪，31 rid 旧编号 010-r..041-2000）；.wolf/corpus-workdir 是每 rid 一个 source.md 的中间产物目录+大量 scratch，不是 slices-root——corpus_meta 默认参数（samples_bank）即正确编译入参，任务书 --slices-root .wolf/corpus-workdir 前提错误。
+- corpus/prepare 系 rid=make_rid(全量排序位) 对目录内一切 *.docx 计位：Office 锁文件 ~$*.docx（~ U+007E 排数字后 CJK 前）一入目录全体 +1 漂移，front_matter 键与 slices rid 错位 → cover 层静默失效。不可删用户文件时：临时副本法（拷 41 真件跳过 ~$*，--corpus-dir 指副本，sha1 溯源不变）。塔然高勒监测 docx 已损坏（非 zip）读失败，成员结果与体裁门一致。
+- 计划内嵌实现片段与逐字测试可能矛盾（本例：封面规模候选等值碰撞时 hunk 规定跳过、测试要求封面标签恰一次）——TDD 裁决以 verbatim 测试为准，实现最小适配（等值改挂封面标签）并在报告显式留痕；真实语料 9/31 rid 命中该碰撞路径。
+- Task2 工件链证据：AC1 零漂移 0 违例（stage/scale_mt_a/16 注释 year_hint+manual basis/27 组 scale_candidates 值全保）；省份 0 值漂移（22 regex→cover 同值迁移+9 留 regex）；编译双跑 sha1 91b17cf5 字节幂等。
+
+## Key Learnings (2026-10-16 Task3 corpus 入库)
+- 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
+- 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
+- ruff 0.15 E501 行宽按东亚宽度计（CJK=2 列），不是 codepoint 数——CJK 密集行 `len()<=120` 仍可爆 120；头内长注释行用独立注释行规避。
+- 任务书自带测试可能欠驱动：~$ 锁文件测试 fixture 若真文件名以数字/ASCII 开头（排序在 ~$ 之前），修复前也恒过——fixture 须复刻真实受害形态（中文名开头）才能先红后绿（bug-397 同源教训再证）。
+- scripts/tests 全目录跑 pytest 会连带 bank_compile 系测试 3 failed（临时 harness 未拷 references/stages/*.json，环境性）；管线测试计次以 test_corpus_meta(15)+test_front_extract(12)+test_prepare_corpus(12) 三文件为准=39。
+- merge_manifest（任务书原样函数）对全新条目不产 stage 键（空 stage 被过滤掉）——消费方 `e.get("stage") or ""` 等价，controller 裁决步骤会补键。
+- corpus_meta/bank_compile 重编译对未变输入字节级幂等：git status 的 " M" 多为 stat-dirty（`git diff` 空）；真改动用 `git diff --name-only` 认定。
+
+## Do-Not-Repeat
+- 2026-10-17 弹窗「空值守卫」QA 测试：MetaPanel 标注弹窗 openAnnotate 会预填 auto 层值（报告名/编制单位常非空），直接点保存会绕过全空守卫真实落库。测守卫必须先清空全部预填输入再提交；事前想清楚哪些字段有预填。
+- antd-vue 两字中文按钮文本带空格（「取 消」），按 textContent 匹配按钮时先 `replace(/\s/g,'')`。
+- 2026-10-17 浏览器 QA 暗色态：本应用暗色 = localStorage `theme=dark`（store 初始化读，JS 端切 antd darkAlgorithm）+ `html.dark` 类（CSS 变量/base.dark.css）两套机制。只 `classList.add('dark')` 不设 localStorage+reload 会得到半暗态（antd 弹窗白底、CSS 变量元素已翻暗），会误判组件暗色缺陷。正确做法：设 localStorage 后整页 reload 再验。
+
+## User Preferences
+- (2026-10-17) 按钮文案必须名实相符：弹框可编辑就别叫「查看」；标注可反复保存（覆盖式 upsert），操作按钮统一叫「标注」。用户对"同一弹框换名字装只读"这种设计零容忍。
+
+## Key Learnings
+- (2026-10-17) 元数据标注页领域规则：自动层 needs_review 信号（报告名/编制单位/规模 basis）在对应字段被 DB 标注层人工决策后必须隐藏——人工覆盖自动层不确定性；未标注时照旧显示提醒。signal 判定 = basis==='needs_review' && annotation.<field> == null。
+
+## Key Learnings (append 2026-10-17 文件库 P1)
+- 运行栈（pisuan-localized）DB 的迁移版本表名是 `pisuan_schema_migrations`（改名层连 SQL 字面量一起改），源仓代码里写 `yuxi_schema_migrations`。容器内 ad-hoc asyncpg 查版本/表名一律用 pisuan_ 前缀。
+- schema 迁移在 dev 运行栈不会随 api 启动自动执行：`storage_migration.py` 是独立脚本（`__main__` 入口），需 `docker exec pisuan-localized-api-1 python -m pisuan.storage_migration` 手动跑；其 `_require_supported_version(upgrade_from=...)` 元组每升一版要显式补允许来源（本次漏 17 已补）。
+- 容器内 yuxi 包路径是 `/app/package/pisuan/`（改名层），不是 /app/package/yuxi；pytest 等仍走 /app/test。
