@@ -125,7 +125,10 @@
                     >缺报告名</span
                   >
                   <span
-                    v-if="record.report_title_basis === 'needs_review'"
+                    v-if="
+                      record.report_title_basis === 'needs_review' &&
+                      record.annotation.report_title == null
+                    "
                     class="dot dot-warn"
                     style="margin-left: 6px"
                     title="报告名待复核（封面缺失/脏样本，建议人工确认）"
@@ -134,7 +137,9 @@
                 <div class="rep-rid">
                   {{ record.report_id }}
                   <span
-                    v-if="record.eia_org_basis === 'needs_review'"
+                    v-if="
+                      record.eia_org_basis === 'needs_review' && record.annotation.eia_org == null
+                    "
                     class="org-flag"
                     title="编制单位待复核（封面/委托句均未命中，建议人工确认）"
                     >编制单位待复核</span
@@ -164,7 +169,9 @@
                     effScale(record)
                   }}</span>
                   <span
-                    v-if="record.scale_basis === 'needs_review'"
+                    v-if="
+                      record.scale_basis === 'needs_review' && record.annotation.scale_mt_a == null
+                    "
                     class="dot dot-warn"
                     style="margin-left: 6px"
                     title="规模依据待复核（needs_review）"
@@ -231,7 +238,10 @@
             >缺报告名</span
           >
           <span
-            v-if="dlg.record.report_title_basis === 'needs_review'"
+            v-if="
+              dlg.record.report_title_basis === 'needs_review' &&
+              dlg.record.annotation.report_title == null
+            "
             class="dot dot-warn"
             title="报告名待复核（封面缺失/脏样本，建议人工确认）"
           ></span>
@@ -249,7 +259,11 @@
         <p v-if="dlg.record.scale_candidates.length" class="meta-sec-hd">
           规模候选<span class="cnt">自动抽取 · 点击快填</span>
           <span v-if="dlg.record.scale_basis === 'manual'" class="basis-badge">规模已核实</span>
-          <span v-else-if="dlg.record.scale_basis === 'needs_review'" class="basis-badge warn"
+          <span
+            v-else-if="
+              dlg.record.scale_basis === 'needs_review' && dlg.record.annotation.scale_mt_a == null
+            "
+            class="basis-badge warn"
             >规模依据待复核</span
           >
         </p>
@@ -297,7 +311,10 @@
             <label for="mf-org">
               编制单位
               <span
-                v-if="dlg.record.eia_org_basis === 'needs_review'"
+                v-if="
+                  dlg.record.eia_org_basis === 'needs_review' &&
+                  dlg.record.annotation.eia_org == null
+                "
                 class="basis-badge warn"
                 title="编制单位待复核（封面/委托句均未命中，建议人工确认）"
                 >依据待复核</span
