@@ -22,6 +22,8 @@
 
 ### 功能与修复
 
+- 环评文件库 P1（进料区）上线 `/domain-factory/eia-data/library`：`eia_library_folders`/`eia_library_files` 两表（迁移 v18，五阶段文件夹种子：现状评价/规划环评/项目环评/跟踪评价/其他）+ 6 端点（folders 列表 / 文件上传·列表·下载·移动·删除，读 required / 写 admin）+ 前端页（对齐已批准原型，明暗双主题）。上传即登记：落盘 `{sha1 前 12 位}__原文件名`，content_sha1 全库唯一去重（重复上传 409 并提示既有位置〈文件夹〉，超限 413 提示大小上限），前端走真实文件选择链路、逐文件 toast 反馈；左侧五阶段树 + 未归类视图（uncategorized 参数与全库语义分离），文件名全库搜索带「命中 N」计数与〈所在文件夹〉定位；行级下载（Content-Disposition 原名，sha1 校验一致）/移动/删除（确认弹窗，磁盘同步清理）。P2 加工入口（解析队列等）本版不开放。设计与验收见 `docs/superpowers/specs/2026-10-17-eia-file-library-design.md` 与 `docs/superpowers/plans/2026-10-17-eia-file-library.md`；服务层 9 例纯单测容器内通过，浏览器 QA AC1-9 全过。
+
 - 词表页词条列表分页调整：默认每页 10 条（原 20），新增 10/20/50 每页条数下拉切换，切换后回第 1 页防越界
 
 - 词表页新增抑制名单卡：列表（含改名自动登记行与手工行，空改名目标显示「—」）/ 手工添加（下拉仅列重扫会导入的扫描差集候选，服务端强校验拒绝语料外指纹与已入库词条）/ 撤回（确认弹窗明示重扫复活（A 类直接回已入选）与语境回落失效两条后果）；新增 `/eia/lexicon/suppressions`、`/eia/lexicon/suppressions/:id`、`/eia/lexicon/scan-candidates` 4 端点与 repo/service 对应方法及 6 例零 DB 单测；初始化加载骨架占位（与词条表骨架同拍显现/退场——抑制接口为小表直读，仅按自身 loading 会一闪而过；搜索重扫不闪骨架），骨架期卡头计数同步隐藏
