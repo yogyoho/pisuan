@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from yuxi.services import eia_stage_service as svc_mod
+from pisuan.services import eia_stage_service as svc_mod
 
 
 def _write_stage_file(root, stage: str, text: str) -> None:

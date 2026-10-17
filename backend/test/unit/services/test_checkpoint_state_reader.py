@@ -8,8 +8,8 @@ from langchain.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
-from yuxi.agents.buildin.chatbot.state import ChatBotState
-from yuxi.services import chat_service as svc
+from pisuan.agents.buildin.chatbot.state import ChatBotState
+from pisuan.services import chat_service as svc
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from yuxi.agents.context import BaseContext
+from pisuan.agents.context import BaseContext
 
 import asyncio
 from contextlib import aclosing
@@ -9,7 +9,7 @@ import pytest
 from langchain_core.messages import AIMessageChunk, ToolMessage
 from langgraph.types import Command
 
-from yuxi.agents.base import BaseAgent, _json_safe, _normalize_tool_event_data
+from pisuan.agents.base import BaseAgent, _json_safe, _normalize_tool_event_data
 
 
 @pytest.mark.asyncio

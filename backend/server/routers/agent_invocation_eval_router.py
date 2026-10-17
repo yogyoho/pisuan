@@ -7,13 +7,13 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from yuxi.services.agent_run_service import AgentRunWaitTimeout, await_agent_run_result
-from yuxi.services.input_message_service import build_chat_input_message
-from yuxi.services.run_queue_service import list_run_stream_events
-from yuxi.services.agent_request_service import RunOrigin, AgentRequestInput, submit_agent_request
-from yuxi.storage.postgres.models_business import User
-from yuxi.utils.hash_utils import hash_id
-from yuxi.utils.logging_config import logger
+from pisuan.services.agent_run_service import AgentRunWaitTimeout, await_agent_run_result
+from pisuan.services.input_message_service import build_chat_input_message
+from pisuan.services.run_queue_service import list_run_stream_events
+from pisuan.services.agent_request_service import RunOrigin, AgentRequestInput, submit_agent_request
+from pisuan.storage.postgres.models_business import User
+from pisuan.utils.hash_utils import hash_id
+from pisuan.utils.logging_config import logger
 
 from server.utils.auth_middleware import get_db, get_required_user
 

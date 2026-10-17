@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
-from yuxi.storage.postgres.models_business import Skill, User
+from pisuan.storage.postgres.models_business import Skill, User
 
 from server.routers.skill_router import skills, user_skills
 from server.utils.auth_middleware import get_admin_user, get_db, get_required_user
@@ -67,7 +67,7 @@ def test_list_visible_skills_route_returns_allowed_levels_and_can_manage(monkeyp
         return [_skill()]
 
     monkeypatch.setattr(
-        "yuxi.repositories.skill_repository.SkillRepository.list_visible_for_management",
+        "pisuan.repositories.skill_repository.SkillRepository.list_visible_for_management",
         fake_list_visible_skills_for_management,
     )
 
@@ -91,7 +91,7 @@ def test_list_visible_skills_route_allows_normal_user_readonly_items(monkeypatch
         ]
 
     monkeypatch.setattr(
-        "yuxi.repositories.skill_repository.SkillRepository.list_visible_for_management",
+        "pisuan.repositories.skill_repository.SkillRepository.list_visible_for_management",
         fake_list_visible_skills_for_management,
     )
 

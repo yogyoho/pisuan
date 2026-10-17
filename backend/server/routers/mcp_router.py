@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from yuxi.agents.mcp.service import (
+from pisuan.agents.mcp.service import (
     MCPServerNotFoundError,
     create_mcp_server,
     delete_mcp_server,
@@ -18,8 +18,8 @@ from yuxi.agents.mcp.service import (
     toggle_tool_enabled,
     update_mcp_server,
 )
-from yuxi.storage.postgres.models_business import User
-from yuxi.utils import logger
+from pisuan.storage.postgres.models_business import User
+from pisuan.utils import logger
 
 from server.utils.auth_middleware import get_admin_user, get_db, get_required_user
 

@@ -42,8 +42,8 @@ ENTITY_OVERRIDES = {
 
 async def migrate(dry_run: bool = True) -> int:
     """Return count of entities that would be / were migrated."""
-    from yuxi.storage.postgres.manager import pg_manager
-    from yuxi.repositories.domain_entity_repository import DomainEntityRepository
+    from pisuan.storage.postgres.manager import pg_manager
+    from pisuan.repositories.domain_entity_repository import DomainEntityRepository
 
     pg_manager.initialize()
     repo = DomainEntityRepository()

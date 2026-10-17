@@ -10,9 +10,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from yuxi.services import eia_paradigm_service as svc
-from yuxi.services.eia_paradigm_scan import GENERIC_TERMS
-from yuxi.services.eia_paradigm_service import EiaParadigmService
+from pisuan.services import eia_paradigm_service as svc
+from pisuan.services.eia_paradigm_scan import GENERIC_TERMS
+from pisuan.services.eia_paradigm_service import EiaParadigmService
 
 MD = """# 节角色范式：测试
 
@@ -225,7 +225,7 @@ def test_export_blocked_when_validation_fails(tmp_path, monkeypatch):
 def test_export_blocked_by_propernoun_scan(tmp_path, monkeypatch):
     monkeypatch.setattr(svc, "_PARADIGM_DIR", tmp_path)
     _write_assets(tmp_path)
-    from yuxi.services.eia_data_service import _SKILL_ROOT
+    from pisuan.services.eia_data_service import _SKILL_ROOT
 
     ent = _SKILL_ROOT / "references" / "sample_entities"
     if not ent.exists():

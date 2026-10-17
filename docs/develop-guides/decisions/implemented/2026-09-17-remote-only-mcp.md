@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：simplification
-Owner：backend/package/yuxi/agents/mcp/service.py
+Owner：backend/package/pisuan/agents/mcp/service.py
 
 ## 问题
 
@@ -24,8 +24,8 @@ Owner：backend/package/yuxi/agents/mcp/service.py
 
 ## 验证
 
-- `docker compose exec -e UV_CACHE_DIR=/tmp/yuxi-builtin-uv-cache api uv run --no-sync --group test pytest test/unit -m 'not slow' -q`：2179 passed、54 skipped。覆盖直接配置、缓存命中、内置 slug 豁免、模型序列化、未知 transport 和固定连接防篡改；跳过项不计为通过。使用容器既有依赖，绕过 uv 默认缓存目录写权限问题。
-- `docker compose exec -e UV_CACHE_DIR=/tmp/yuxi-builtin-uv-cache api uv run --no-sync --group test pytest test/integration/api/test_mcp_router.py test/e2e/test_mcp_stdio_security.py -q`：11 passed。包含真实 HTTP MCP 协议发现、拒绝 stdio 命令且无文件副作用、真实 PostgreSQL 重读证明历史 stdio 停用、旧系统图表删除与 DeepWiki 注册、重复同步幂等。
+- `docker compose exec -e UV_CACHE_DIR=/tmp/pisuan-builtin-uv-cache api uv run --no-sync --group test pytest test/unit -m 'not slow' -q`：2179 passed、54 skipped。覆盖直接配置、缓存命中、内置 slug 豁免、模型序列化、未知 transport 和固定连接防篡改；跳过项不计为通过。使用容器既有依赖，绕过 uv 默认缓存目录写权限问题。
+- `docker compose exec -e UV_CACHE_DIR=/tmp/pisuan-builtin-uv-cache api uv run --no-sync --group test pytest test/integration/api/test_mcp_router.py test/e2e/test_mcp_stdio_security.py -q`：11 passed。包含真实 HTTP MCP 协议发现、拒绝 stdio 命令且无文件副作用、真实 PostgreSQL 重读证明历史 stdio 停用、旧系统图表删除与 DeepWiki 注册、重复同步幂等。
 - API 容器直接执行 `inspect_mcp_server_tools` 连接真实 DeepWiki，返回 `ask_question`、`read_wiki_contents`、`read_wiki_structure`。数据库回读确认 DeepWiki 使用固定远程 URL、默认停用，系统图表已删除。仅验证连接和工具发现，没有执行远程工具业务。
 - `python3 scripts/verify_engineering_contracts.py` 与 `python3 -m unittest scripts.test_verify_engineering_contracts` 通过（62 项）；`pnpm --dir docs run build`、相关 Python Ruff 检查与 `git diff --check` 通过。
 - 再次独立审查发现初始 `deepwiki` 标识会覆盖用户同名配置，改为 `deepwiki-official` 后复审通过。相关 MCP unit 34 passed；HTTP integration 与安全 E2E 11 passed；新增 `test_official_builtin_preserves_user_deepwiki` PostgreSQL 回读测试单独运行 1 passed，确认旧连接、请求头、启用状态和归属不变。混合收集同名 unit/integration 模块曾失败，拆分命令后通过，未将收集失败计为验证成功。

@@ -1,6 +1,6 @@
 """Test formula detection and formula block merging in _post_process_paragraphs."""
 
-from yuxi.services.domain_factory_service import DomainFactoryService
+from pisuan.services.domain_factory_service import DomainFactoryService
 
 
 def _service():

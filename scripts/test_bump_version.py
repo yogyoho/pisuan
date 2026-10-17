@@ -18,12 +18,12 @@ class BumpVersionScriptTests(unittest.TestCase):
             "backend/package/pyproject.toml": 'version = "0.7.2.beta1"\n',
             "backend/pyproject.toml": 'version = "0.7.2.beta1"\n',
             "backend/uv.lock": (
-                'name = "yuxi"\nversion = "0.7.2b1"\n\n'
-                'name = "yuxi-workspace"\nversion = "0.7.2b1"\n'
+                'name = "pisuan"\nversion = "0.7.2b1"\n\n'
+                'name = "pisuan-workspace"\nversion = "0.7.2b1"\n'
             ),
             "web/package.json": '{\n  "version": "0.7.2.beta1"\n}\n',
             "docker-compose.yml": "\n".join(
-                f"image: ${{COMPOSE_PROJECT_NAME:-yuxi}}-{name}:${{YUXI_VERSION:-0.7.2.beta1}}"
+                f"image: ${{COMPOSE_PROJECT_NAME:-pisuan}}-{name}:${{PISUAN_VERSION:-0.7.2.beta1}}"
                 for name in (
                     "api",
                     "api",
@@ -34,7 +34,7 @@ class BumpVersionScriptTests(unittest.TestCase):
             )
             + "\n",
             "docker-compose.prod.yml": "\n".join(
-                f"image: ${{COMPOSE_PROJECT_NAME:-yuxi}}-{name}:${{YUXI_VERSION:-0.7.2.beta1}}"
+                f"image: ${{COMPOSE_PROJECT_NAME:-pisuan}}-{name}:${{PISUAN_VERSION:-0.7.2.beta1}}"
                 for name in ("api", "api", "api", "sandbox-provisioner", "web")
             )
             + "\n",
@@ -53,7 +53,7 @@ class BumpVersionScriptTests(unittest.TestCase):
                 "从 v0.7.1 升级到当前 `v0.7.2.beta1`。\n"
                 "git checkout v0.7.2.beta1\n"
             ),
-            "docs/.vitepress/theme/components/YuxiHome.vue": (
+            "docs/.vitepress/theme/components/PisuanHome.vue": (
                 "git clone --branch v0.7.2.beta1 --depth 1 https://github.com/xerrors/Yuxi.git\n"
             ),
             "docs/develop-guides/changelog.md": "## v0.7.2.beta1 (历史记录)\n",
@@ -88,7 +88,7 @@ class BumpVersionScriptTests(unittest.TestCase):
                 "README.en.md",
                 "docs/intro/quick-start.md",
                 "docs/advanced/deployment.md",
-                "docs/.vitepress/theme/components/YuxiHome.vue",
+                "docs/.vitepress/theme/components/PisuanHome.vue",
             ]
             for relative_path in current_paths:
                 content = (root / relative_path).read_text()
@@ -128,7 +128,7 @@ class BumpVersionScriptTests(unittest.TestCase):
                 "README.en.md",
                 "docs/intro/quick-start.md",
                 "docs/advanced/deployment.md",
-                "docs/.vitepress/theme/components/YuxiHome.vue",
+                "docs/.vitepress/theme/components/PisuanHome.vue",
             ):
                 self.assertIn("0.7.2.beta1", (root / relative_path).read_text())
                 self.assertNotIn("0.7.2.dev2", (root / relative_path).read_text())

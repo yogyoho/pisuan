@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import UploadFile
 
-from yuxi.services.eia_library_service import (
+from pisuan.services.eia_library_service import (
     EiaLibraryService,
     LibraryFileTooLarge,
     _safe_filename,

@@ -2,8 +2,8 @@
 
 from types import SimpleNamespace
 
-from yuxi.agents.backends.paths import VIRTUAL_PATH_PREFIX
-from yuxi.agents.base import _auto_present_artifacts
+from pisuan.agents.backends.paths import VIRTUAL_PATH_PREFIX
+from pisuan.agents.base import _auto_present_artifacts
 
 
 def _context(uid="u1", workdir="projects/w1"):
@@ -15,7 +15,7 @@ def _make_outputs(tmp_path, monkeypatch, uid="u1", workdir="projects/w1"):
     root = tmp_path / "user-data"
     outputs = root / "shared" / uid / "workspace" / workdir / "outputs"
     outputs.mkdir(parents=True)
-    monkeypatch.setattr("yuxi.workspace.paths.get_user_data_dir", lambda: root)
+    monkeypatch.setattr("pisuan.workspace.paths.get_user_data_dir", lambda: root)
     return outputs
 
 
@@ -64,6 +64,6 @@ def test_auto_present_artifacts_missing_workdir_dir(tmp_path, monkeypatch):
     """Workdir 未落盘时安全回退到 existing。"""
     root = tmp_path / "user-data"
     root.mkdir()
-    monkeypatch.setattr("yuxi.workspace.paths.get_user_data_dir", lambda: root)
+    monkeypatch.setattr("pisuan.workspace.paths.get_user_data_dir", lambda: root)
     existing = [f"{VIRTUAL_PATH_PREFIX}/projects/w1/outputs/old.md"]
     assert _auto_present_artifacts(_context(), existing) == existing

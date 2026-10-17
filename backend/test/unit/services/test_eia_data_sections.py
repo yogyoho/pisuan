@@ -9,7 +9,7 @@ import json
 
 import pytest
 
-from yuxi.services import eia_data_service as svc_mod
+from pisuan.services import eia_data_service as svc_mod
 
 
 def _write_sections_fixture(root):

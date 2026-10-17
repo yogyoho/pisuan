@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：architecture
-Owner：backend/package/yuxi/services/skills/shared.py
+Owner：backend/package/pisuan/services/skills/shared.py
 
 ## 问题
 
@@ -12,7 +12,7 @@ Skill 安装和管理用例曾散落在 `agents/skills` 与顶层 `services`；�
 
 ### 实现方案
 
-共享、个人、草稿、远程获取、编辑和投影用例位于 `yuxi.services.skills`；Skill 数据库访问位于 `yuxi.repositories.skill_repository`。包解析、快照复制及包内 slug 改写集中在 `services/skills/package.py`，来源描述位于同目录 `resolved.py`；用例、Agent 运行时和存储迁移直接导入这些实际模块。`yuxi.agents.skills` 保留运行时 Skill 解析和内置 Skill 资源。HTTP 路由、worker、存储迁移与测试都直接导入新的语义 Owner；旧模块路径不保留兼容转发。
+共享、个人、草稿、远程获取、编辑和投影用例位于 `pisuan.services.skills`；Skill 数据库访问位于 `pisuan.repositories.skill_repository`。包解析、快照复制及包内 slug 改写集中在 `services/skills/package.py`，来源描述位于同目录 `resolved.py`；用例、Agent 运行时和存储迁移直接导入这些实际模块。`pisuan.agents.skills` 保留运行时 Skill 解析和内置 Skill 资源。HTTP 路由、worker、存储迁移与测试都直接导入新的语义 Owner；旧模块路径不保留兼容转发。
 
 这次模块迁移不改变 HTTP 契约、持久数据、安装结果或运行时选择语义。远程获取的公开入口位于私有执行与解析细节之前；个人 Skill 的确认与文件操作由 `services/skills/personal.py` 集中持有，`workspace.paths` 只提供用户工作区根与校验原语。
 

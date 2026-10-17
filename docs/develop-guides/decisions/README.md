@@ -13,7 +13,7 @@
 
 正式发布时随版本归档：把发布日期前生效的 `implemented` 记录移动到 `archived/<版本>/`（如 `archived/0.7.3/`），状态改写为 `archived`，并在该目录的 `CHANGELOG.md` 中按主题汇总各记录的决策与后果；发布日期当天或之后的记录保留在 `implemented/`，进入下一个发布周期。归档记录自归档起冻结，其机制的当前行为由代码、机制文档和仍在 `implemented/` 的后续记录拥有。
 
-非平凡工作必须在实现前创建 `proposed`。小而完整、在同一变更中已经生效且没有待裁决替代或风险的修复可直接写 `implemented`，但 PR 必须解释为何不需要 proposal；不得用 diff 大小或文件数量自动判定 trivial。完整流程见 [Yuxi Spec Loop](../spec-loop.md)。
+非平凡工作必须在实现前创建 `proposed`。小而完整、在同一变更中已经生效且没有待裁决替代或风险的修复可直接写 `implemented`，但 PR 必须解释为何不需要 proposal；不得用 diff 大小或文件数量自动判定 trivial。完整流程见 [Pisuan Spec Loop](../spec-loop.md)。
 
 ## 何时需要
 

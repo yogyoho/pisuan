@@ -36,7 +36,7 @@
 复用导出物化先例的「DB 层 + 文件锚点」形态，一张通用表承载两类资产：
 
 ```python
-# backend/package/yuxi/storage/postgres/models_domain_factory.py 新增
+# backend/package/pisuan/storage/postgres/models_domain_factory.py 新增
 class EiaParadigmDraft(Base):
     __tablename__ = "eia_paradigm_drafts"
     id: int            # PK
@@ -52,7 +52,7 @@ class EiaParadigmDraft(Base):
 - `base_hash` 漂移语义：导出时重算文件哈希，≠ 草稿 `base_hash` 即「文件已漂移」（bank_compile 重算整文件重写 / 上游同步）→ 预览页示警并给出「以草稿为准恢复」的完整 diff，admin 确认后导出即恢复草稿为真。**skill 侧零改动**。
 - forms_catalog 的漂移场景正是 bank_compile 重算：草稿只存 desc/templates，重算带来的新 stats 在导出时按「仅写两键」保留，互不覆盖。
 
-## 5. API（挂 `server/routers`，薄层 + yuxi services）
+## 5. API（挂 `server/routers`，薄层 + pisuan services）
 
 前缀沿用数据工厂现有域路由命名（实现时对齐 `eia_formula` 路由形态），共 6 个：
 
@@ -65,7 +65,7 @@ class EiaParadigmDraft(Base):
 | 5 | `POST /eia-paradigms/export/preview` | 写前校验 + difflib 逐行 diff（**不写**）：返回每资产的校验结果与 diff 块 |
 | 6 | `POST /eia-paradigms/export` | **admin-only** 物化：validate-all-then-write——任一资产校验不过 → 全批不写 |
 
-服务层落 `yuxi/services`（新增 paradigm 服务模块），文件读写、哈希、diff、校验都在 service；路由只做解析/鉴权/装配。
+服务层落 `pisuan/services`（新增 paradigm 服务模块），文件读写、哈希、diff、校验都在 service；路由只做解析/鉴权/装配。
 
 ## 6. 导出管线（validate-all-then-write）
 

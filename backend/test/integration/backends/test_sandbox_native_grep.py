@@ -9,9 +9,9 @@ from agent_sandbox import Sandbox
 from deepagents.backends import CompositeBackend
 from langgraph.prebuilt.tool_node import ToolRuntime
 
-import yuxi.agents.backends.sandbox.backend as backend_module
-from yuxi.agents.backends.sandbox.backend import ProvisionerSandboxBackend
-from yuxi.agents.backends.composite import create_agent_filesystem_middleware
+import pisuan.agents.backends.sandbox.backend as backend_module
+from pisuan.agents.backends.sandbox.backend import ProvisionerSandboxBackend
+from pisuan.agents.backends.composite import create_agent_filesystem_middleware
 
 
 @pytest.mark.asyncio
@@ -21,7 +21,7 @@ async def test_native_grep_http_and_model_tool(monkeypatch):
     if not url:
         pytest.skip("TEST_SANDBOX_URL requires an isolated sandbox")
     client = Sandbox(base_url=url)
-    root = f"/tmp/yuxi-grep-{uuid.uuid4().hex}"
+    root = f"/tmp/pisuan-grep-{uuid.uuid4().hex}"
     user_root, skills_root = f"{root}/user-data", f"{root}/skills"
     client.shell.exec_command(command=f"mkdir -p {user_root}/nested {skills_root} {root}/outside")
     try:

@@ -11,13 +11,13 @@ import pytest
 import yaml
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from yuxi.repositories.skill_repository import SkillRepository
-from yuxi.services.skills.projection import get_user_skills_root_dir, sync_user_accessible_skills
-from yuxi.services.skills.shared import (
+from pisuan.repositories.skill_repository import SkillRepository
+from pisuan.services.skills.projection import get_user_skills_root_dir, sync_user_accessible_skills
+from pisuan.services.skills.shared import (
     get_skills_root_dir,
     lock_accessible_shared_skills_for_runtime,
 )
-from yuxi.storage.postgres.models_business import Skill, User
+from pisuan.storage.postgres.models_business import Skill, User
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 

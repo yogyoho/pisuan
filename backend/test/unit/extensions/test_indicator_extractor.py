@@ -1,6 +1,6 @@
 """指标提取器测试：LLM 响应解析（LLM 调用 mock）"""
 
-from yuxi.extensions.regulation_library.indicator_extractor import parse_indicator_response
+from pisuan.extensions.regulation_library.indicator_extractor import parse_indicator_response
 
 
 def test_parse_valid_response():

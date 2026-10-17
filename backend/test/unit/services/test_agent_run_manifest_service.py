@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from yuxi.services.agent_run_manifest_service import (
+from pisuan.services.agent_run_manifest_service import (
     build_skill_manifest_entries,
     build_manifest_payload,
     canonical_json,
@@ -199,8 +199,8 @@ async def test_manifest_uses_prepared_context_and_persisted_overrides(monkeypatc
     import hashlib
     from types import SimpleNamespace
     from unittest.mock import AsyncMock
-    from yuxi.agents.buildin.subagent.context import SubAgentContext
-    from yuxi.services import agent_run_manifest_service as service
+    from pisuan.agents.buildin.subagent.context import SubAgentContext
+    from pisuan.services import agent_run_manifest_service as service
 
     agent = SimpleNamespace(
         backend_id="backend",
@@ -222,12 +222,12 @@ async def test_manifest_uses_prepared_context_and_persisted_overrides(monkeypatc
         service, "AgentRepository", lambda db: SimpleNamespace(get_visible_by_slug=AsyncMock(return_value=agent))
     )
     monkeypatch.setattr(service, "get_agent_backend", lambda name: SimpleNamespace(context_schema=SubAgentContext))
-    monkeypatch.setattr("yuxi.agents.context._load_workspace_agent_context", lambda uid: "workspace policy")
+    monkeypatch.setattr("pisuan.agents.context._load_workspace_agent_context", lambda uid: "workspace policy")
     seen = []
 
     async def prepare(context):
         """模拟边界解析结果，manifest 只能读取这个对象。"""
-        from yuxi.agents.context import _append_workspace_agent_prompt
+        from pisuan.agents.context import _append_workspace_agent_prompt
 
         await _append_workspace_agent_prompt(context)
         seen.append(context)
@@ -279,7 +279,7 @@ async def test_manifest_uses_prepared_context_and_persisted_overrides(monkeypatc
         run=run, user=SimpleNamespace(uid="user"), db=object(), workdir_binding=binding, worker_id="different-owner"
     )
     assert same_config.manifest["config_digest"] == first_digest
-    monkeypatch.setattr("yuxi.agents.context._load_workspace_agent_context", lambda uid: "changed policy")
+    monkeypatch.setattr("pisuan.agents.context._load_workspace_agent_context", lambda uid: "changed policy")
     changed = await service.prepare_run_execution(
         run=run, user=SimpleNamespace(uid="user"), db=object(), workdir_binding=binding, worker_id="owner"
     )
@@ -293,8 +293,8 @@ async def test_execution_preparation_rejects_missing_dependencies(monkeypatch, m
     """缺少执行依赖必须失败，不能固化空配置并进入执行。"""
     from types import SimpleNamespace
     from unittest.mock import AsyncMock
-    from yuxi.agents.buildin.subagent.context import SubAgentContext
-    from yuxi.services import agent_run_manifest_service as service
+    from pisuan.agents.buildin.subagent.context import SubAgentContext
+    from pisuan.services import agent_run_manifest_service as service
 
     agent = None if missing == "agent" else SimpleNamespace(backend_id="backend", config_json={})
     backend = None if missing == "backend" else SimpleNamespace(context_schema=SubAgentContext)
@@ -304,14 +304,14 @@ async def test_execution_preparation_rejects_missing_dependencies(monkeypatch, m
 
     def get_backend(name):
         """模拟工厂的明确缺失错误，保留其他依赖测试。"""
-        from yuxi.agents.buildin import AgentBackendNotFoundError
+        from pisuan.agents.buildin import AgentBackendNotFoundError
 
         if backend is None:
             raise AgentBackendNotFoundError(f"智能体后端 {name} 不存在")
         return backend
 
     monkeypatch.setattr(service, "get_agent_backend", get_backend)
-    monkeypatch.setattr("yuxi.agents.context._load_workspace_agent_context", lambda uid: "")
+    monkeypatch.setattr("pisuan.agents.context._load_workspace_agent_context", lambda uid: "")
     monkeypatch.setattr(service, "prepare_agent_runtime_context", AsyncMock(side_effect=lambda context: context))
     run = SimpleNamespace(
         id="run",

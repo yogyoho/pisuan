@@ -10,7 +10,7 @@ import uuid
 import pytest
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from yuxi.storage.postgres.models_business import Conversation
+from pisuan.storage.postgres.models_business import Conversation
 
 from test.live_api_cleanup import make_test_conversation_metadata, make_test_conversation_title
 
@@ -201,7 +201,7 @@ async def test_admin_can_fetch_feedbacks(test_client, admin_headers):
 async def test_dashboard_http_reads_run_token_totals(test_client, admin_headers):
     """真实 HTTP 返回 PostgreSQL 同会话 Run 用量和缺失标记。"""
     from sqlalchemy import select
-    from yuxi.storage.postgres.models_business import AgentRun, ConversationStats
+    from pisuan.storage.postgres.models_business import AgentRun, ConversationStats
 
     default_agent = await test_client.get("/api/agent/default", headers=admin_headers)
     assert default_agent.status_code == 200

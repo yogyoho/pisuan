@@ -35,7 +35,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
                 push, r"(?m)^    tags: \['v\[0-9\]\*'\]$", f"{name}: 缺少版本 tag 触发"
             )
         cli_events = (
-            workflows["publish-yuxi-cli"].split("\non:\n", 1)[1].split("\n\n", 1)[0]
+            workflows["publish-pisuan-cli"].split("\non:\n", 1)[1].split("\n\n", 1)[0]
         )
         self.assertEqual(
             re.findall(r"^  (\w+):", cli_events, re.MULTILINE),
@@ -86,7 +86,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
     def test_application_release_cannot_publish_cli(self) -> None:
         """恢复应用 Release 触发时禁止重复上传独立 CLI 包。"""
         workflows = {path.stem: path.read_text() for path in WORKFLOWS.glob("*.yml")}
-        workflows["publish-yuxi-cli"] = workflows["publish-yuxi-cli"].replace(
+        workflows["publish-pisuan-cli"] = workflows["publish-pisuan-cli"].replace(
             "on:\n", "on:\n  release:\n    types: [published]\n", 1
         )
         with self.assertRaisesRegex(AssertionError, "CLI 必须独立手动发布"):

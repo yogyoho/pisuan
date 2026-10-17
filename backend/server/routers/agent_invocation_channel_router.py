@@ -12,14 +12,14 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from yuxi.repositories.agent_run_repository import AgentRunRepository
-from yuxi.services.agent_run_service import create_resume_run_view
-from yuxi.services.channel_command_service import parse_slash_command
-from yuxi.services.chat_service import get_agent_state_view
-from yuxi.services.input_message_service import build_chat_input_message
-from yuxi.services.agent_request_service import RunOrigin, AgentRequestInput, submit_agent_request
-from yuxi.storage.postgres.models_business import User
-from yuxi.utils.hash_utils import hash_id
+from pisuan.repositories.agent_run_repository import AgentRunRepository
+from pisuan.services.agent_run_service import create_resume_run_view
+from pisuan.services.channel_command_service import parse_slash_command
+from pisuan.services.chat_service import get_agent_state_view
+from pisuan.services.input_message_service import build_chat_input_message
+from pisuan.services.agent_request_service import RunOrigin, AgentRequestInput, submit_agent_request
+from pisuan.storage.postgres.models_business import User
+from pisuan.utils.hash_utils import hash_id
 
 from server.utils.auth_middleware import get_db, get_required_user
 
@@ -39,7 +39,7 @@ class ChannelMessageRequest(BaseModel):
     channel: str = Field("cli", max_length=32, description="通道名称")
     account_id: str = Field("default", description="通道账号标识")
     chat_id: str | None = Field(None, description="通道侧会话标识")
-    thread_id: str | None = Field(None, description="可选 Yuxi Thread ID")
+    thread_id: str | None = Field(None, description="可选 Pisuan Thread ID")
     sender_id: str | None = Field(None, description="通道侧发送者标识")
     message_id: str | None = Field(None, max_length=128, description="通道侧消息 ID")
     request_id: str | None = Field(None, description="请求幂等 ID")
@@ -223,7 +223,7 @@ def _resolve_thread_id(
     chat_id: str | None,
     requested_thread_id: str | None,
 ) -> str:
-    """根据显式 thread 或通道会话信息解析稳定 Yuxi Thread ID。"""
+    """根据显式 thread 或通道会话信息解析稳定 Pisuan Thread ID。"""
     if requested_thread_id and requested_thread_id.strip():
         return requested_thread_id.strip()
     if not chat_id or not chat_id.strip():

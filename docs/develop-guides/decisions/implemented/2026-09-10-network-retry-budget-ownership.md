@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：bug-fix
-Owner：backend/package/yuxi/agents/middlewares/network_retry.py
+Owner：backend/package/pisuan/agents/middlewares/network_retry.py
 
 ## 问题
 
@@ -19,7 +19,7 @@ Owner：backend/package/yuxi/agents/middlewares/network_retry.py
 
 网络类错误和非网络类错误的重试维度不同（前者预算、后者次数），必须分开处理，但**不拆成两个中间件**——拆分会因为装配顺序和外层重试网络错误而放大预算。改为让 `NetworkRetryMiddleware` 继承 `ModelRetryMiddleware`，用 **handler 包装**区分两类错误，不复制父类的重试逻辑：
 
-- 网络错误：`_wrap_network_retry`/`_awrap_network_retry` 用闭包包装 handler，在 `network_budget_seconds`（默认 600s，环境变量 `YUXI_NETWORK_RETRY_BUDGET_SECONDS`）预算内吞掉网络异常退避重试，耗尽后**显式抛出**（保留 `error_type`/`error_message` 归因，Run 以 `failed` 结束）；
+- 网络错误：`_wrap_network_retry`/`_awrap_network_retry` 用闭包包装 handler，在 `network_budget_seconds`（默认 600s，环境变量 `PISUAN_NETWORK_RETRY_BUDGET_SECONDS`）预算内吞掉网络异常退避重试，耗尽后**显式抛出**（保留 `error_type`/`error_message` 归因，Run 以 `failed` 结束）；
 - 非网络错误：wrapped handler 原样抛出，交给父类 `wrap_model_call`/`awrap_model_call` 按 `retry_on=_retry_non_network_errors`（排除网络异常、`ModelError.is_retryable` 判定）和 `max_retries` 处理，耗尽后通过显式配置的 `on_failure="error"` 抛出原异常。
 
 预算起点（`started`）和退避进度（`delay`）在闭包创建时固定，跨父类的非网络重试保持，不会因外层重试而放大成多份。`retry_on` 排除网络异常，保证预算耗尽后的网络错误直接抛出、不被父类再次重试或吞成错误消息。

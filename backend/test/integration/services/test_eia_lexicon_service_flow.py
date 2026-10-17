@@ -12,8 +12,8 @@ import json
 
 import pytest
 
-from yuxi.services.eia_data_service import _scan_all, _skill_root_exists
-from yuxi.services.eia_lexicon_service import OVERRIDES_PATH, get_eia_lexicon_service
+from pisuan.services.eia_data_service import _scan_all, _skill_root_exists
+from pisuan.services.eia_lexicon_service import OVERRIDES_PATH, get_eia_lexicon_service
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
@@ -22,8 +22,8 @@ pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 async def _clean_state():
     from sqlalchemy import delete
 
-    from yuxi.storage.postgres.manager import pg_manager
-    from yuxi.storage.postgres.models_domain_factory import EiaDatasetSwitch, EiaLexiconEntry
+    from pisuan.storage.postgres.manager import pg_manager
+    from pisuan.storage.postgres.models_domain_factory import EiaDatasetSwitch, EiaLexiconEntry
 
     pg_manager.initialize()  # 幂等；pytest-asyncio 函数级 loop 不容模块级 async fixture
 
@@ -138,7 +138,7 @@ async def test_rename_suppress_and_fallback_flow():
             await svc.update_entry(splitters[0]["id"], {"caliber": f"{splitters[0]['caliber']}改"}, "tester")
 
     # 3) 旧指纹已入抑制表，重扫不复活
-    from yuxi.repositories.eia_lexicon_repository import EiaLexiconRepository
+    from pisuan.repositories.eia_lexicon_repository import EiaLexiconRepository
 
     repo = EiaLexiconRepository()
     assert (target["stage"], old_name, target["unit"]) in await repo.suppressed_keys()
@@ -155,8 +155,8 @@ async def test_rename_suppress_and_fallback_flow():
     # 自清理：只删本用例登记的抑制行
     from sqlalchemy import delete
 
-    from yuxi.storage.postgres.manager import pg_manager
-    from yuxi.storage.postgres.models_domain_factory import EiaLexiconSuppression
+    from pisuan.storage.postgres.manager import pg_manager
+    from pisuan.storage.postgres.models_domain_factory import EiaLexiconSuppression
 
     async with pg_manager.get_async_session_context() as session:
         await session.execute(delete(EiaLexiconSuppression).where(EiaLexiconSuppression.created_by == "tester"))

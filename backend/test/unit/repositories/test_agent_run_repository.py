@@ -7,9 +7,9 @@ import pytest_asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from yuxi.repositories.agent_run_repository import AgentRunRepository
-from yuxi.storage.postgres.models_business import AgentRun, AgentRunAttempt, Base, Conversation, Message, SubagentThread
-from yuxi.utils.datetime_utils import utc_now_naive
+from pisuan.repositories.agent_run_repository import AgentRunRepository
+from pisuan.storage.postgres.models_business import AgentRun, AgentRunAttempt, Base, Conversation, Message, SubagentThread
+from pisuan.utils.datetime_utils import utc_now_naive
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.unit]
 

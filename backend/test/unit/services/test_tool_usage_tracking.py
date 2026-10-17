@@ -14,7 +14,7 @@ class _FakeSession:
 
 
 def _fake_pg(monkeypatch, sess):
-    from yuxi.repositories import domain_factory_repository as mod
+    from pisuan.repositories import domain_factory_repository as mod
 
     cm = MagicMock()
     cm.__aenter__ = AsyncMock(return_value=sess)
@@ -66,7 +66,7 @@ async def test_track_usage_failure_does_not_propagate(monkeypatch):
     """fire-and-forget 铁律：record_tool_usage 抛错也不外溢到工具调用方"""
     import asyncio
 
-    from yuxi.agents.toolkits.buildin import tools as tools_mod
+    from pisuan.agents.toolkits.buildin import tools as tools_mod
 
     async def _boom(*args, **kwargs):
         raise RuntimeError("db down")

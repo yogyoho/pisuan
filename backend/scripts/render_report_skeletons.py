@@ -18,7 +18,7 @@ from pathlib import Path
 LAYER_DIR = Path(__file__).resolve().parent.parent / "templates/coal_mining/report_skeletons"
 STAGES_DIR = (
     Path(__file__).resolve().parent.parent
-    / "package/yuxi/agents/skills/buildin/coal-eia-writer/references/stages"
+    / "package/pisuan/agents/skills/buildin/coal-eia-writer/references/stages"
 )
 FAMILIES = ("planning_eia", "project_eia", "post_eia", "tracking_eia")
 

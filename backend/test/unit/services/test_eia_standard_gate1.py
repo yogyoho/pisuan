@@ -9,7 +9,7 @@ import json
 
 import pytest
 
-from yuxi.services import eia_standard_service as std_mod
+from pisuan.services import eia_standard_service as std_mod
 
 
 def _index_fixture(tmp_path):

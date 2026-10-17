@@ -4,7 +4,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from yuxi.services.skills import remote as svc
+from pisuan.services.skills import remote as svc
 
 
 @pytest.fixture(autouse=True)

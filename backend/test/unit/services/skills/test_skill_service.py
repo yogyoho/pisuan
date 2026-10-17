@@ -12,18 +12,18 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from yuxi.agents.toolkits import service as tool_service
-from yuxi.repositories.skill_repository import SkillRepository as RealSkillRepository
-from yuxi.services.skills import catalog
-from yuxi.services.skills import draft as draft_service
-from yuxi.services.skills import draft as skill_draft
-from yuxi.services.skills import edit as edit_service
-from yuxi.services.skills import personal as personal_service
-from yuxi.services.skills import projection as projection_service
-from yuxi.services.skills import shared as svc
-from yuxi.services.skills.remote import DownloadedSkill
-from yuxi.storage.postgres.models_business import Skill, User
-from yuxi.workspace.paths import user_workspace_dir
+from pisuan.agents.toolkits import service as tool_service
+from pisuan.repositories.skill_repository import SkillRepository as RealSkillRepository
+from pisuan.services.skills import catalog
+from pisuan.services.skills import draft as draft_service
+from pisuan.services.skills import draft as skill_draft
+from pisuan.services.skills import edit as edit_service
+from pisuan.services.skills import personal as personal_service
+from pisuan.services.skills import projection as projection_service
+from pisuan.services.skills import shared as svc
+from pisuan.services.skills.remote import DownloadedSkill
+from pisuan.storage.postgres.models_business import Skill, User
+from pisuan.workspace.paths import user_workspace_dir
 
 _MULTIPROCESS_SKILL_SYNC_SCRIPT = """
 import json
@@ -33,7 +33,7 @@ import sys
 import time
 import traceback
 from pathlib import Path
-from yuxi.services.skills import projection as service
+from pisuan.services.skills import projection as service
 
 save_dir, uid, encoded_sources = sys.argv[1:]
 sources = json.loads(encoded_sources)
@@ -114,10 +114,10 @@ class _UnitOfWork:
 @pytest.fixture(autouse=True)
 def _isolated_skill_storage(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     """每个 Skill unit 使用独立的显式存储域。"""
-    monkeypatch.setenv("YUXI_LEGACY_STORAGE_DIR", str(tmp_path))
-    monkeypatch.setenv("YUXI_SKILL_DATA_DIR", str(tmp_path / "skill-sources"))
-    monkeypatch.setenv("YUXI_SKILL_PROJECTION_DIR", str(tmp_path / "skill-projections"))
-    monkeypatch.setenv("YUXI_RUNTIME_DIR", str(tmp_path / "runtime"))
+    monkeypatch.setenv("PISUAN_LEGACY_STORAGE_DIR", str(tmp_path))
+    monkeypatch.setenv("PISUAN_SKILL_DATA_DIR", str(tmp_path / "skill-sources"))
+    monkeypatch.setenv("PISUAN_SKILL_PROJECTION_DIR", str(tmp_path / "skill-projections"))
+    monkeypatch.setenv("PISUAN_RUNTIME_DIR", str(tmp_path / "runtime"))
 
 
 def test_allowed_skill_access_levels_by_role():
@@ -159,7 +159,7 @@ async def test_create_remote_skill_draft_stages_success_and_failure(
         return preparation
 
     monkeypatch.setattr(
-        "yuxi.services.skills.remote.download_remote_skills",
+        "pisuan.services.skills.remote.download_remote_skills",
         fake_download_remote_skills,
     )
     draft = await draft_service.create_remote_skill_draft(
@@ -873,7 +873,7 @@ def test_sync_user_accessible_skills_rejects_special_files(
 
 def test_personal_skill_root_is_inside_user_workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     """个人 Skill 的唯一持久路径必须位于对应用户的 UserWorkspace。"""
-    from yuxi.workspace import paths as sandbox_paths
+    from pisuan.workspace import paths as sandbox_paths
 
     monkeypatch.setattr(sandbox_paths, "get_user_data_dir", lambda: tmp_path / "user-data")
 
@@ -889,7 +889,7 @@ def test_personal_skill_root_rejects_symlinked_components(
     component: str,
 ):
     """个人 Skill 根不得通过可写路径组件越过当前 UserWorkspace。"""
-    from yuxi.workspace import paths as sandbox_paths
+    from pisuan.workspace import paths as sandbox_paths
 
     user_data = tmp_path / "user-data"
     user_root = user_data / "shared/user-1"
@@ -966,8 +966,8 @@ def test_sync_user_accessible_skills_updates_executable_mode(
 @pytest.mark.asyncio
 async def test_refresh_user_skill_projection_serializes_authorization_snapshots(monkeypatch: pytest.MonkeyPatch):
     """旧 Run 不得在较新的撤权同步完成后复活已撤销 Skill。"""
-    from yuxi.repositories import user_repository
-    from yuxi.storage.postgres import manager as postgres_manager
+    from pisuan.repositories import user_repository
+    from pisuan.storage.postgres import manager as postgres_manager
 
     advisory_lock = asyncio.Lock()
     first_sync_started = asyncio.Event()
@@ -1024,8 +1024,8 @@ async def test_refresh_user_skill_projection_serializes_authorization_snapshots(
 @pytest.mark.asyncio
 async def test_refresh_user_skill_projection_excludes_personal_skills(monkeypatch: pytest.MonkeyPatch):
     """共享只读投影不得复制 UserWorkspace 中的个人 Skill。"""
-    from yuxi.repositories import user_repository
-    from yuxi.storage.postgres import manager as postgres_manager
+    from pisuan.repositories import user_repository
+    from pisuan.storage.postgres import manager as postgres_manager
 
     synchronized_sources: list[dict[str, str]] = []
     shared = SimpleNamespace(slug="shared", enabled=True)
@@ -1862,7 +1862,7 @@ def _write_personal_skill(root: Path, slug: str, description: str) -> Path:
 
 def _personal_skill_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, uid: str = "user-1") -> Path:
     """把 UserWorkspace 根定向到测试临时目录。"""
-    from yuxi.workspace import paths as sandbox_paths
+    from pisuan.workspace import paths as sandbox_paths
 
     user_data = tmp_path / "user-data"
     monkeypatch.setattr(sandbox_paths, "get_user_data_dir", lambda: user_data)
@@ -2020,7 +2020,7 @@ async def test_confirm_personal_skill_draft_uses_package_slug_without_database(
         encoding="utf-8",
     )
 
-    monkeypatch.setenv("YUXI_RUNTIME_DIR", str(tmp_path / "runtime"))
+    monkeypatch.setenv("PISUAN_RUNTIME_DIR", str(tmp_path / "runtime"))
 
     results = await personal_service.confirm_personal_skill_install_draft(
         draft_id=draft_id,
