@@ -1192,3 +1192,8 @@ Quality 复审小项一并落地：ZipFile `with` 块、`BACK_JOIN_BLOCK_RE`/`PR
 ## 九龙川 rid 实测值勘误（2026-10-17，Task 6 收尾）
 
 计划 §2.4/§4 预测九龙川 rid 为 `011-800-2026-2`（单横线）；实跑（commit 774a14ba）为 `011-800--2026-2`（双横线）——文件名「九龙川矿井及选煤厂800万吨项目…」的 ASCII 残渣在 `800` 与年份段之间留下空段分隔，make_rid 按实测语义产出双横线。rid 冻结语义不受影响：切片文件名、bank_index、corpus_meta、DB 标注均已烙进实测值，展示层报告名主显、rid 退为技术主键（spec §2.4）。巴拉素预测值 `020-2023-4` 与实测一致。
+
+## 遗留事项（2026-10-17，Task 5 质量评审裁定，待用户裁决）
+
+1. **标注计数口径分裂**：服务端 `list_reports` 的 `annotated` 判据仍只看 year_hint/scale_mt_a，客户端 `hasAnnotation` 已扩到 report_title/eia_org → 指标带显示 已标注 18/待标注 15，实际 20 行带已标注 pill、待标注过滤得 13 行（文本-only 标注：028-r、011-800--2026-2）。修法：服务端 annotated 判据同步扩为四字段（或前端自派生计数）。
+2. **eia_org_basis needs_review 无 UI 信号**（spec §7.2 半落地，系计划层遗漏非实现走样）：33 份中 org basis 分布 cover 13 / needs_review 9 / body 11，9 份待复核无任何 UI 提示（表格无黄点、弹窗无编制单位状态行）。修法二选一：报告名黄点旁补 org 点 / 弹窗补「编制单位待复核」注记（对齐规模待复核惯例）；或明文 descope 修订 spec §7.2。
