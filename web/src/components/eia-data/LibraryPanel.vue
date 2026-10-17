@@ -457,6 +457,17 @@ onMounted(reload)
   min-width: 0;
 }
 
+/* 文件名是长句，auto 布局下 nowrap 最小内容宽会撑爆表格（bug-4039）——固定布局 + 折行：
+   文件名列吃剩余宽度，其余列保持表头固定宽（同 LexiconPanel 惯例） */
+.lib-tbl .tbl {
+  table-layout: fixed;
+  width: 100%;
+
+  td {
+    overflow-wrap: break-word;
+  }
+}
+
 .fname-cell {
   display: flex;
   align-items: center;
@@ -484,9 +495,6 @@ onMounted(reload)
   .fn {
     display: block;
     font-weight: 500;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .floc {

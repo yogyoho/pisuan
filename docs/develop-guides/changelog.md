@@ -22,7 +22,7 @@
 
 ### 功能与修复
 
-- 环评文件库 P1（进料区）上线 `/domain-factory/eia-data/library`：`eia_library_folders`/`eia_library_files` 两表（迁移 v18，五阶段文件夹种子：现状评价/规划环评/项目环评/跟踪评价/其他）+ 6 端点（folders 列表 / 文件上传·列表·下载·移动·删除，读 required / 写 admin）+ 前端页（对齐已批准原型，明暗双主题）。上传即登记：落盘 `{sha1 前 12 位}__原文件名`，content_sha1 全库唯一去重（重复上传 409 并提示既有位置〈文件夹〉，超限 413 提示大小上限），前端走真实文件选择链路、逐文件 toast 反馈；左侧五阶段树 + 未归类视图（uncategorized 参数与全库语义分离），文件名全库搜索带「命中 N」计数与〈所在文件夹〉定位；行级下载（Content-Disposition 原名，sha1 校验一致）/移动/删除（确认弹窗，磁盘同步清理）。P2 加工入口（解析队列等）本版不开放。设计与验收见 `docs/superpowers/specs/2026-10-17-eia-file-library-design.md` 与 `docs/superpowers/plans/2026-10-17-eia-file-library.md`；服务层 9 例纯单测容器内通过，浏览器 QA AC1-9 全过。
+- 环评文件库 P1（进料区）上线 `/domain-factory/eia-data/library`：`eia_library_folders`/`eia_library_files` 两表（迁移 v18，五阶段文件夹种子：现状评价/规划环评/项目环评/跟踪评价/其他）+ 6 端点（folders 列表 / 文件上传·列表·下载·移动·删除，读 required / 写 admin）+ 前端页（对齐已批准原型，明暗双主题）。上传即登记：落盘 `{sha1 前 12 位}__原文件名`，content_sha1 全库唯一去重（重复上传 409 并提示既有位置〈文件夹〉，超限 413 提示大小上限），前端走真实文件选择链路、逐文件 toast 反馈；左侧五阶段树 + 未归类视图（uncategorized 参数与全库语义分离），文件名全库搜索带「命中 N」计数与〈所在文件夹〉定位；行级下载（Content-Disposition 原名，sha1 校验一致）/移动/删除（确认弹窗，磁盘同步清理）。P2 加工入口（解析队列等）本版不开放。设计与验收见 `docs/superpowers/specs/2026-10-17-eia-file-library-design.md` 与 `docs/superpowers/plans/2026-10-17-eia-file-library.md`；服务层 9 例纯单测容器内通过，浏览器 QA AC1-9 全过。文件名列固定布局折行修复（bug-4039，真实数据实测：长文件名在 auto 布局下以 nowrap 最小内容宽把其余列挤出面板）——`table-layout: fixed` + `overflow-wrap: break-word`，文件名列吃剩余宽度自动折行、其余五列保持固定宽，同词表页既有惯例。
 
 - 词表页词条列表分页调整：默认每页 10 条（原 20），新增 10/20/50 每页条数下拉切换，切换后回第 1 页防越界
 
