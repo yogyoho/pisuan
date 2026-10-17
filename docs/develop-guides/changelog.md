@@ -96,6 +96,10 @@
 - 修复知识工厂段落泛化提示词单双括号自相矛盾导致泛化模板大面积混用花括号的问题：激活的 `prompt_templates.yaml` 段落泛化模板指令文字写「双层大括号」但全部示例均为单层 `{插槽名称}`，模型照示例输出单括号占位符（初报 217/224 段 2075 处系测量正则缺陷虚高，修正后为 22/224 段 49 处），与下游 `{{}}` 文法期望冲突。现统一示例与指令为 `{{双括号}}` 并显式禁止单层大括号；`_render_prompt` 为纯字符串替换，四个格式占位符（`{content}`/`{schema_text}`/`{chapter_hint}`/`{domain_label}`）保持单括号不受影响。生产复验 49→1（残留 1 处为模型畸形括号组，归 P1-1 结构化输出根治）。已 `sync-dev` 落运行栈；服务实例按任务新建，提示词缓存自然失效无需重启。
 - 知识工厂 D1-D6 缺陷清理批次（架构审计实战发现，详见 `docs/vibe/2026-10-04-d1-d6-cleanup.md`）：D1 `lookup_subsidence_params` 原实现声称查「MSPS 知识库」但实际调用不存在的方法（ImportError 恒走死分支、恒返回空），现改为遍历全部 milvus 知识库 `retrieve` 检索并逐条标注来源，放弃伪 MSPS 声明；D2 commit 管线图谱构建补降级契约——`GraphBuilder` 连接失败返回 `{"skipped": true}`、写异常折叠返回 `{"error": ...}` 时此前被当成功吞掉照落 `COMMITTED`，现均标记 `COMMIT_PARTIAL` 并留下可检索的 warning；D3 移除 LightRAG 结构化入库死代码（`StructuredChunk` 系 dataclass 与 `_build_structured_document` 约 230 行，v0.7.0 已退役仍在调用链上挂 hasattr 死分支），两处入库点改直调 `kb_manager.index_file`，前端 EtlWorkbench 变量同步改名 lightrag→milvus；D4 三个 writer 提示词的实体泄漏检测指引从不存在的 `references/sample_entities.md` 修正为 `references/sample_entities/` 注册表 `_index.json`；D5 `get_templates` 图谱降级时回退数据标注 `_source`/`_degraded_note`（对齐 `get_chapter_outline` 既有契约），图谱命中补 `_source: "graph"`；D6 commit 入口新增 `knowledge_base_id` 必填门——缺失时保持 `WAITING_REVIEW` 并写明 `error_message`，不再静默跳过入库却落 `COMMITTED` 空库（存量 6 个无 kb_id 的 WAITING_REVIEW 任务在提交时会被此门拒绝）。单测扩充：`test_commit_pipeline_status.py` +3 例（D6 门 + D2 两类降级）、`test_tools.py` +4 例（D1 空库/合并检索 + D5 两种来源标注）。
 
+- 语料元数据管线重构：新增 front_extract 封面抽取侧车（报告名/环评单位/年份/工程编号/封面总规模 + 省份标题命中法，体裁与重复副本双门排除），corpus_meta 升 schema 2 合入 cover 层（manual > cover > body > needs_review），范围 41→33 份（收九龙川/巴拉素，存量切片零接触）；标注层扩报告名/编制单位，标注页首列报告名主显（rid 退为技术主键）；rid 即目录排序位且已烙进切片/bank/corpus_meta/DB，增量入库走 prepare_corpus --only，全量重跑会整体重编号
+
+- 标注对话框 UI 对齐词表改名重设计原型（2026-10-15-lexicon-rename-redesign）：标识条（报告名主显 + 阶段/标注态 pill + 省份/rid 副显）、规模候选证据区头（计数副注 + 已核实/待复核徽标右锚）、.fld 表单配方（12px 次级 label + 帮助文字）、底部警告条一处说清留空清除/覆盖语义、antd 默认 footer（confirm-loading 确认态）；弹宽 560→680，移除年份必填星号残留（与「至少标注一项」守卫矛盾）
+
 ### 运行与维护
 
 - API 启动依赖补齐 Milvus 健康条件（`milvus: condition: service_healthy`）：Milvus 冷启动最慢，整机重启时 API 抢跑致 knowledge_base 启动组件失败且不重试，容器停留 unhealthy；现在 compose 先等 Milvus 健康再拉起 API。
