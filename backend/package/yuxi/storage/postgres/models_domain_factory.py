@@ -2,7 +2,19 @@
 
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
@@ -718,4 +730,50 @@ class EiaEntityAddition(Base):
             "note": self.note,
             "decided_by": self.decided_by,
             "updated_at": format_utc_datetime(self.updated_at),
+        }
+
+
+class EiaLibraryFolder(Base):
+    """Domain Factory - 环评文件库文件夹（P1；stage_key 对齐 samples_bank 五阶段分类法）"""
+
+    __tablename__ = "eia_library_folders"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False)
+    stage_key = Column(String(50), nullable=True)  # NULL = 自定义夹（预留）
+    sort = Column(Integer, nullable=False, default=0)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"id": self.id, "name": self.name, "stage_key": self.stage_key, "sort": self.sort}
+
+
+class EiaLibraryFile(Base):
+    """Domain Factory - 环评文件库文件（P1 进料区；content_sha1 全库唯一，P2 管线溯源锚点）"""
+
+    __tablename__ = "eia_library_files"
+    __table_args__ = (Index("ix_eia_library_files_folder", "folder_id"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    folder_id = Column(Integer, ForeignKey("eia_library_folders.id"), nullable=True)  # NULL = 未归类
+    original_filename = Column(String(500), nullable=False)
+    stored_path = Column(String(1000), nullable=False)  # volume 内相对路径（sha1 前缀防碰撞）
+    content_sha1 = Column(String(40), nullable=False, unique=True)
+    size_bytes = Column(BigInteger, nullable=False)
+    content_type = Column(String(100), nullable=True)
+    status = Column(String(20), nullable=False, default="stored")  # P1 恒 stored；P2 扩加工态
+    uploaded_by = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "folder_id": self.folder_id,
+            "original_filename": self.original_filename,
+            "stored_path": self.stored_path,
+            "content_sha1": self.content_sha1,
+            "size_bytes": self.size_bytes,
+            "content_type": self.content_type,
+            "status": self.status,
+            "uploaded_by": self.uploaded_by,
+            "created_at": format_utc_datetime(self.created_at),
         }

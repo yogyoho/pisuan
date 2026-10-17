@@ -27,6 +27,8 @@ from yuxi.storage.postgres.models_domain_factory import (
     EiaFormulaOverride,
     EiaLexiconEntry,
     EiaLexiconSuppression,
+    EiaLibraryFile,
+    EiaLibraryFolder,
     EiaMetaAnnotation,
     EiaParadigmDraft,
     EiaStageFieldEdit,
@@ -48,7 +50,8 @@ AGENT_RUN_TERMINAL_STATUS_SQL = ", ".join(f"'{status}'" for status in AGENT_RUN_
 # v13：词表改名抑制（eia_lexicon_suppressions，建表 + 播种 7 条裁决指纹）
 # v14：标准限值查找表人工录入行（eia_standard_limit_rows）
 # v15：环评 stages forms 口径字段人工裁决（eia_stage_field_edits）
-BUSINESS_SCHEMA_VERSION = 17
+# v18：环评文件库两表（eia_library_folders / eia_library_files，五阶段种子）；
+BUSINESS_SCHEMA_VERSION = 18
 KNOWLEDGE_SCHEMA_VERSION = 2
 SCHEMA_VERSION_TABLE = "yuxi_schema_migrations"
 AGENT_RUN_LEASE_SCHEMA_STATEMENTS = (
@@ -782,6 +785,48 @@ class PostgresManager(metaclass=SingletonMeta):
                     INSERT INTO {SCHEMA_VERSION_TABLE} (domain, version, applied_at)
                     VALUES ('business', 17, CURRENT_TIMESTAMP)
                     ON CONFLICT (domain) DO UPDATE SET version = 17, applied_at = EXCLUDED.applied_at
+                """)
+            )
+
+    async def upgrade_business_v17_to_v18(self) -> None:
+        """[pisuan-custom] v18：环评文件库两表 + 五阶段种子（eia_library_folders / eia_library_files）。
+
+        存量库 create_all 不补表，显式建表并记版本；幂等（version=18 直接返回），
+        create_all(tables=[...]) 仅补新表，不动其他；种子以 WHERE NOT EXISTS 防重，
+        全新库与升级库均收敛到同一五夹。
+        """
+        self._check_initialized()
+        async with self.async_engine.begin() as conn:
+            version = await conn.scalar(
+                text(f"SELECT version FROM {SCHEMA_VERSION_TABLE} WHERE domain = 'business' FOR UPDATE")
+            )
+            if version == 18:
+                return
+            if version not in (None, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17):
+                raise RuntimeError(f"Unsupported business schema version: {version}")
+            await conn.run_sync(
+                lambda sync_conn: DomainFactoryBase.metadata.create_all(
+                    sync_conn, tables=[EiaLibraryFolder.__table__, EiaLibraryFile.__table__]
+                )
+            )
+            await conn.execute(
+                text("""
+                    INSERT INTO eia_library_folders (name, stage_key, sort)
+                    SELECT v.name, v.stage_key, v.sort FROM (VALUES
+                        ('规划环评', 'planning_eia', 1),
+                        ('项目环评·井工', 'project_eia_underground', 2),
+                        ('项目环评·露天', 'project_eia_openpit', 3),
+                        ('后评价', 'post_eia', 4),
+                        ('跟踪评价', 'tracking_eia', 5)
+                    ) AS v(name, stage_key, sort)
+                    WHERE NOT EXISTS (SELECT 1 FROM eia_library_folders WHERE stage_key = v.stage_key)
+                """)
+            )
+            await conn.execute(
+                text(f"""
+                    INSERT INTO {SCHEMA_VERSION_TABLE} (domain, version, applied_at)
+                    VALUES ('business', 18, CURRENT_TIMESTAMP)
+                    ON CONFLICT (domain) DO UPDATE SET version = 18, applied_at = EXCLUDED.applied_at
                 """)
             )
 
