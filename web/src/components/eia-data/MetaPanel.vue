@@ -207,26 +207,47 @@
       >
     </div>
 
-    <!-- 标注对话框（原型 metaModal：rid + 阶段 pill，frm 行式表单；可标注字段：年份/规模/报告名/编制单位/备注） -->
-    <a-modal :open="dlg.open" :width="560" :footer="null" @cancel="dlg.open = false">
-      <template #title>
-        <span class="modal-title">标注 · {{ dlg.record?.report_id }}</span>
-        <span v-if="dlg.record" class="pill pill-gray pill-sm" style="margin-left: 8px">{{
-          stageLabel(dlg.record.stage)
-        }}</span>
-      </template>
-      <div v-if="dlg.record" class="modal-bd">
-        <p class="dlg-line">
-          {{ dlg.record.province || '未标识' }} · 自动年份 {{ dlg.record.auto_year_hint ?? '—' }} ·
-          自动规模 {{ dlg.record.auto_scale_mt_a ?? '—' }} · 封面报告名
-          {{ dlg.record.auto_report_title || '—' }}
-          <template v-if="dlg.record.scale_basis === 'manual'">（规模已核实）</template>
-          <template v-else-if="dlg.record.scale_basis === 'needs_review'"
-            >（规模依据待复核）</template
+    <!-- 标注对话框（对齐原型 2026-10-15-lexicon-rename-redesign，同词表改名弹窗配方：
+         标识条 / 证据区头+右锚徽标 / fld 表单 / 警告条；可标注字段：年份/规模/报告名/编制单位/备注） -->
+    <a-modal
+      v-model:open="dlg.open"
+      :title="`标注 · ${dlg.record ? dispTitle(dlg.record) || dlg.record.report_id : ''}`"
+      :confirm-loading="dlg.submitting"
+      width="680px"
+      ok-text="保存标注"
+      @ok="onSubmit"
+    >
+      <template v-if="dlg.record">
+        <!-- 标识条：报告名 + 阶段 pill + 标注态 pill + 省份/rid（原型 ident 区） -->
+        <div class="meta-ident">
+          <span v-if="dispTitle(dlg.record)" class="name">{{ dispTitle(dlg.record) }}</span>
+          <span v-else class="name miss" title="报告名缺失（封面未抽取，可在此补录）"
+            >缺报告名</span
+          >
+          <span
+            v-if="dlg.record.report_title_basis === 'needs_review'"
+            class="dot dot-warn"
+            title="报告名待复核（封面缺失/脏样本，建议人工确认）"
+          ></span>
+          <span class="pill-stage">{{ stageLabel(dlg.record.stage) }}</span>
+          <span class="pill-st" :class="hasAnnotation(dlg.record) ? 'ok' : 'todo'">{{
+            hasAnnotation(dlg.record) ? '已标注' : '待标注'
+          }}</span>
+          <span class="dim">
+            省份 {{ dlg.record.province || '未标识' }} ·
+            <span class="rid">{{ dlg.record.report_id }}</span>
+          </span>
+        </div>
+
+        <!-- 证据区头：规模候选计数 + 核实态徽标右锚（原型 sec-hd/badge） -->
+        <p v-if="dlg.record.scale_candidates.length" class="meta-sec-hd">
+          规模候选<span class="cnt">自动抽取 · 点击快填</span>
+          <span v-if="dlg.record.scale_basis === 'manual'" class="basis-badge">规模已核实</span>
+          <span v-else-if="dlg.record.scale_basis === 'needs_review'" class="basis-badge warn"
+            >规模依据待复核</span
           >
         </p>
-        <div v-if="dlg.record.scale_candidates.length" class="cand-box">
-          <span class="cand-title">规模候选簇（自动抽取，点击快填）：</span>
+        <div v-if="dlg.record.scale_candidates.length" class="cand-row">
           <button
             v-for="(c, i) in dlg.record.scale_candidates"
             :key="i"
@@ -236,56 +257,61 @@
             {{ c.label }} {{ c.value }}
           </button>
         </div>
-        <div class="frm-row">
-          <label>年份 year_hint<span class="must">*</span></label>
-          <input
-            v-model.number="dlg.form.year_hint"
-            class="inp mono"
-            type="number"
-            min="2000"
-            max="2100"
-            step="1"
-          />
-          <div class="frm-help">写手取值来源，2000–2100 整数；留空表示清除该项标注</div>
+
+        <!-- 编辑区：正式 label 不用 placeholder 代（同改名弹窗 P4 惯例） -->
+        <div class="meta-form">
+          <div class="fld">
+            <label for="mf-year">年份 year_hint</label>
+            <a-input-number
+              id="mf-year"
+              v-model:value="dlg.form.year_hint"
+              :min="2000"
+              :max="2100"
+              :precision="0"
+            />
+            <p class="fld-help">写手取值来源，2000–2100 整数</p>
+          </div>
+          <div class="fld">
+            <label for="mf-scale">规模标注（万吨/年）</label>
+            <a-input-number
+              id="mf-scale"
+              v-model:value="dlg.form.scale_mt_a"
+              :min="0.1"
+              :max="10000"
+              :step="0.1"
+            />
+            <p class="fld-help">供 PPS 项目参数对账，(0, 10000]</p>
+          </div>
+          <div class="fld">
+            <label for="mf-title">报告书名</label>
+            <a-input id="mf-title" v-model:value="dlg.form.report_title" :maxlength="200" />
+            <p class="fld-help">写手溯源引用主名；预填封面抽取值</p>
+          </div>
+          <div class="fld">
+            <label for="mf-org">编制单位</label>
+            <a-input id="mf-org" v-model:value="dlg.form.eia_org" :maxlength="200" />
+            <p class="fld-help">环评编制机构</p>
+          </div>
+          <div class="fld">
+            <label for="mf-note">备注 <em>（可选）</em></label>
+            <a-textarea
+              id="mf-note"
+              v-model:value="dlg.form.note"
+              placeholder="裁决依据，如「来自第 3 章建设规模」"
+              :auto-size="{ minRows: 2, maxRows: 6 }"
+            />
+          </div>
         </div>
-        <div class="frm-row">
-          <label>规模标注（万吨/年）</label>
-          <input
-            v-model.number="dlg.form.scale_mt_a"
-            class="inp mono"
-            type="number"
-            min="0.1"
-            max="10000"
-            step="0.1"
-          />
-          <div class="frm-help">供 PPS 项目参数对账；(0, 10000]，留空表示清除该项标注</div>
+
+        <!-- 警告条：清除/覆盖语义一处说清（原型 warn 区） -->
+        <div class="meta-warn">
+          <Info :size="14" style="flex: none; margin-top: 3px" />
+          <span
+            >留空保存即清除对应标注项；保存后 DB 标注层覆盖自动抽取值，导出物化时写入
+            corpus_meta.json 人工层。</span
+          >
         </div>
-        <div class="frm-row">
-          <label>报告书名</label>
-          <input v-model="dlg.form.report_title" class="inp" maxlength="200" />
-          <div class="frm-help">写手溯源引用主名；预填封面抽取值，留空表示清除该项标注</div>
-        </div>
-        <div class="frm-row">
-          <label>编制单位</label>
-          <input v-model="dlg.form.eia_org" class="inp" maxlength="200" />
-          <div class="frm-help">环评编制机构；留空表示清除该项标注</div>
-        </div>
-        <div class="frm-row" style="margin-bottom: 0">
-          <label>备注（可选）</label>
-          <textarea
-            v-model="dlg.form.note"
-            class="inp"
-            rows="2"
-            placeholder="裁决依据，如「来自第 3 章建设规模」"
-          ></textarea>
-        </div>
-      </div>
-      <div class="modal-ft">
-        <button class="btn btn-sec" @click="dlg.open = false">取消</button>
-        <button class="btn btn-pri" :disabled="dlg.submitting" @click="onSubmit">
-          {{ dlg.submitting ? '保存中…' : '保存标注' }}
-        </button>
-      </div>
+      </template>
     </a-modal>
   </div>
 </template>
@@ -540,46 +566,106 @@ onMounted(fetchList)
   text-align: center;
 }
 
-/* ── 标注对话框（原型 frm 行式表单，仅本页使用故 scoped 自绘） ── */
-.modal-title {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.modal-bd {
+/* ── 标注对话框（对齐原型 2026-10-15-lexicon-rename-redesign，配方同词表改名弹窗） ── */
+.meta-ident {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.dlg-line {
-  margin: 0 0 10px;
-  font-size: 13px;
-  color: var(--color-text-secondary);
-}
-
-.cand-box {
-  padding: 8px 10px;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
   margin-bottom: 12px;
   border: 1px solid var(--gray-200);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--gray-50);
 
-  .cand-title {
-    display: block;
-    margin-bottom: 6px;
+  .name {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .pill-stage,
+  .pill-st {
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 20px;
+  }
+
+  .pill-stage {
+    color: var(--gray-700);
+    background: var(--main-0);
+    border: 1px solid var(--gray-300);
+  }
+
+  .pill-st.ok {
+    color: #fff;
+    background: var(--main-600);
+    border: 1px solid var(--main-600);
+  }
+
+  .pill-st.todo {
+    color: var(--second-600);
+    background: var(--main-0);
+    border: 1px solid var(--second-600);
+  }
+
+  .dim {
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+    font-variant-numeric: tabular-nums;
+
+    .rid {
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+  }
+}
+
+.meta-sec-hd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+
+  .cnt {
+    font-weight: 400;
     font-size: 12px;
     color: var(--color-text-tertiary);
   }
 
+  .basis-badge {
+    margin-left: auto;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--main-700);
+    background: var(--main-100);
+
+    &.warn {
+      color: var(--color-warning-700);
+      background: var(--color-warning-50);
+    }
+  }
+}
+
+.cand-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+
   .cand-tag {
-    margin: 0 6px 4px 0;
     padding: 2px 8px;
     border: 1px solid var(--gray-200);
     border-radius: 4px;
     background: var(--gray-0);
     font-size: 12px;
-    font-family: ui-monospace, 'Cascadia Code', Consolas, 'Courier New', monospace;
+    font-family: var(--font-mono);
     cursor: pointer;
     transition: all 0.15s;
 
@@ -591,45 +677,49 @@ onMounted(fetchList)
   }
 }
 
-.frm-row {
+.meta-form {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-top: 12px;
 
-  label {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--color-text);
-  }
+  .fld {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 
-  .must {
-    margin-left: 2px;
-    color: var(--color-error-500);
-  }
+    label {
+      font-size: 12px;
+      color: var(--color-text-secondary);
 
-  .inp {
-    width: 100%;
-  }
+      em {
+        font-style: normal;
+        color: var(--color-text-tertiary);
+      }
+    }
 
-  textarea.inp {
-    height: auto;
-    padding: 6px 10px;
-    resize: vertical;
-    line-height: 1.5;
+    :deep(.ant-input-number) {
+      width: 100%;
+    }
+
+    .fld-help {
+      margin: 0;
+      font-size: 12px;
+      color: var(--color-text-tertiary);
+    }
   }
 }
 
-.frm-help {
-  font-size: 12px;
-  color: var(--color-text-tertiary);
-}
-
-.modal-ft {
+.meta-warn {
   display: flex;
-  justify-content: flex-end;
   gap: 8px;
-  margin-top: 16px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--second-50);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
 }
 
 /* 初始化骨架：本页形状（通用 .sk/.sk-line recipe 在 factory-ui；.sk-tbl-row 同词表页配方） */
