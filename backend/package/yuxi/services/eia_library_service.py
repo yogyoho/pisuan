@@ -41,8 +41,10 @@ class EiaLibraryService:
     async def count_files(self) -> int:
         return await self.repo.count_files()
 
-    async def list_files(self, folder_id: int | None = None, q: str | None = None) -> list[dict]:
-        return await self.repo.list_files(folder_id=folder_id, q=q)
+    async def list_files(
+        self, folder_id: int | None = None, q: str | None = None, uncategorized: bool = False
+    ) -> list[dict]:
+        return await self.repo.list_files(folder_id=folder_id, q=q, uncategorized=uncategorized)
 
     async def upload(self, file: UploadFile, folder_id: int | None, uploaded_by: str | None) -> dict:
         original = file.filename or ""
