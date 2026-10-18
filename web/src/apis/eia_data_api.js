@@ -64,5 +64,22 @@ export const eiaDataApi = {
   moveLibraryFile: (id, folderId) =>
     apiPatch(`/api/domain-factory/eia/library/files/${id}`, { folder_id: folderId }),
 
-  deleteLibraryFile: (id) => apiDelete(`/api/domain-factory/eia/library/files/${id}`)
+  deleteLibraryFile: (id) => apiDelete(`/api/domain-factory/eia/library/files/${id}`),
+
+  // —— P2 canonical md 正源（spec 2026-10-18 方案 B）——
+  getCorpusKbBinding: () => apiGet('/api/domain-factory/eia/library/kb/binding'),
+  bindCorpusKb: (kbId) => apiPost('/api/domain-factory/eia/library/kb/bind', { kb_id: kbId }),
+  getFileMd: (id) =>
+    apiRequest(`/api/domain-factory/eia/library/files/${id}/md`, { method: 'POST' }, true, 'text'),
+  regenerateMd: (id) => apiPost(`/api/domain-factory/eia/library/files/${id}/regenerate-md`),
+  updateFileMeta: (id, fields) =>
+    apiPatch(`/api/domain-factory/eia/library/files/${id}/meta`, fields),
+  pushToKb: (fileIds) => apiPost('/api/domain-factory/eia/library/push-kb', { file_ids: fileIds }),
+  processCorpus: (payload) => apiPost('/api/domain-factory/eia/library/process', payload),
+  bootstrapManifest: (file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return apiPost('/api/domain-factory/eia/library/admin/bootstrap-manifest', form)
+  },
+  migrateStorage: () => apiPost('/api/domain-factory/eia/library/admin/migrate-storage')
 }
