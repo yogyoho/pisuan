@@ -16,7 +16,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from yuxi.config.options import system_options, update_option_value
+from yuxi.config.options import invalidate_option_cache, system_options, update_option_value
 from yuxi.knowledge.runtime import knowledge_base
 from yuxi.knowledge.utils.kb_utils import calculate_content_hash
 from yuxi.repositories.eia_library_repository import EiaLibraryRepository
@@ -47,6 +47,7 @@ async def bind_corpus_kb(kb_id: str, operator: str | None) -> str:
     async with pg_manager.get_async_session_context() as session:
         await update_option_value(session, system_options.key, {"eia_corpus_kb_id": kb_id}, operator or "")
         await session.commit()
+    await invalidate_option_cache(system_options.key)  # Option.get 走 Redis 缓存，写后必须失效
     return kb_id
 
 
