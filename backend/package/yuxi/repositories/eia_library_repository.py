@@ -63,6 +63,36 @@ class EiaLibraryRepository:
             await session.commit()
             return row
 
+    async def update_file(self, file_id: int, fields: dict) -> EiaLibraryFile | None:
+        """白名单字段增量更新（md/kb/加工/rid 元数据，P2）。"""
+        allowed = {
+            "object_key",
+            "md_object_key",
+            "md_status",
+            "md_chars",
+            "md_sha1",
+            "md_failed_reason",
+            "front_meta",
+            "report_id",
+            "stage",
+            "mineral",
+            "kb_id",
+            "kb_file_id",
+            "kb_status",
+            "pushed_at",
+            "push_error",
+            "processed_at",
+        }
+        fields = {k: v for k, v in fields.items() if k in allowed}
+        async with pg_manager.get_async_session_context() as session:
+            row = await session.get(EiaLibraryFile, file_id)
+            if row is None:
+                return None
+            for k, v in fields.items():
+                setattr(row, k, v)
+            await session.commit()
+            return row
+
     async def move_file(self, file_id: int, folder_id: int | None) -> EiaLibraryFile | None:
         async with pg_manager.get_async_session_context() as session:
             row = await session.get(EiaLibraryFile, file_id)
