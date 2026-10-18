@@ -5,7 +5,7 @@ from __future__ import annotations
 from sqlalchemy import func, select
 
 from yuxi.storage.postgres.manager import pg_manager
-from yuxi.storage.postgres.models_domain_factory import EiaLibraryFile, EiaLibraryFolder
+from yuxi.storage.postgres.models_domain_factory import EiaCorpusProcessLog, EiaLibraryFile, EiaLibraryFolder
 
 
 class EiaLibraryRepository:
@@ -110,3 +110,15 @@ class EiaLibraryRepository:
             await session.delete(row)
             await session.commit()
             return True
+
+    async def insert_process_log(
+        self, *, file_id: int | None, content_sha1: str | None, action: str, detail: dict | None, operator: str | None
+    ) -> None:
+        """P2 加工台账（eia_corpus_process_log）。"""
+        async with pg_manager.get_async_session_context() as session:
+            session.add(
+                EiaCorpusProcessLog(
+                    file_id=file_id, content_sha1=content_sha1, action=action, detail=detail, operator=operator
+                )
+            )
+            await session.commit()

@@ -15,7 +15,6 @@ from pathlib import Path
 
 from fastapi import UploadFile
 from sqlalchemy.exc import IntegrityError
-
 from yuxi.repositories.eia_library_repository import EiaLibraryRepository
 from yuxi.services.eia_canonical_md import CanonicalMd, docx_bytes_to_canonical_md, extract_front, make_rid
 from yuxi.storage.minio import get_minio_client
@@ -170,6 +169,93 @@ class EiaLibraryService:
         if row is None:
             raise FileNotFoundError(file_id)
         return row.to_dict()
+
+    async def _log(self, *, file_id: int | None, action: str, detail: dict | None, operator: str | None) -> None:
+        await self.repo.insert_process_log(
+            file_id=file_id,
+            content_sha1=None,
+            action=action,
+            detail=detail,
+            operator=operator,
+        )
+
+    async def bootstrap_from_manifest(self, manifest: list[dict], operator: str | None) -> dict:
+        """既有 manifest.json（prepare_corpus 产物）按 file_name 回填 report_id/stage/mineral。
+
+        D6：rid 与 stage/mineral 人工裁决资产原样回填；匹配失败的文件列入异常消息
+        （部分成功已落库，补传后重跑幂等收敛）。
+        """
+        if not isinstance(manifest, list) or not manifest:
+            raise ValueError("manifest 须为非空数组")
+        files = {f["original_filename"]: f for f in await self.repo.list_files()}
+        matched, unmatched = [], []
+        for e in manifest:
+            row = files.get(e.get("file_name", ""))
+            if row is None:
+                unmatched.append(e.get("file_name"))
+                continue
+            await self.repo.update_file(
+                row["id"],
+                {
+                    "report_id": e["report_id"],
+                    "stage": e["stage"],
+                    "mineral": e.get("mineral") or "coal",
+                },
+            )
+            matched.append(e["report_id"])
+        await self._log(action="bootstrap", detail={"matched": matched, "unmatched": unmatched}, operator=operator)
+        if unmatched:
+            raise FileNotFoundError(f"以下文件未在文件库登记（请先上传后再引导）: {', '.join(map(str, unmatched))}")
+        return {"matched": len(matched)}
+
+    async def migrate_storage_to_minio(self, operator: str | None) -> dict:
+        """存量本地卷文件一次性迁移：流式 sha1 校验 → put MinIO → 回填 object_key → 逐份重产 md。
+
+        幂等：object_key 已置的行跳过；单行任何失败（缺失/sha1 不符/上传/解析）记入
+        failed 不阻断整体，重跑自动重试未完成行。
+        内存纪律：文件可达 80MB 级、docx DOM 膨胀数倍——逐份 del+gc，绝不跨迭代持留。
+        """
+        import gc
+
+        from yuxi.utils.logging_config import logger
+
+        client = get_minio_client()
+        migrated: list[dict] = []
+        failed: list[dict] = []
+        md_ready = 0
+        for row in await self.repo.list_files():
+            if row["object_key"]:
+                continue
+            local = self.storage_root / row["stored_path"]
+            if not local.is_file():
+                failed.append({"id": row["id"], "reason": f"本地文件缺失: {row['stored_path']}"})
+                continue
+            if _sha1_of(local) != row["content_sha1"]:
+                failed.append({"id": row["id"], "reason": "sha1 不符，拒绝迁移"})
+                continue
+            object_key = f"eia-library/{row['stored_path']}"
+            data = local.read_bytes()
+            try:
+                await client.aupload_file(MINIO_BUCKET, object_key, data, row["content_type"])
+                fields: dict = {"object_key": object_key, "md_status": "pending_backfill"}
+                if (row["original_filename"] or "").lower().endswith(".docx"):
+                    md_fields = self._produce_md_fields(data, row["stored_path"])
+                    md_bytes = md_fields.pop("_md_bytes", None)
+                    if md_bytes is not None:
+                        await self._put_md(md_fields["md_object_key"], md_bytes)
+                    fields.update(md_fields)
+                    if md_fields.get("md_status") == "ready":
+                        md_ready += 1
+                await self.repo.update_file(row["id"], fields)
+                migrated.append({"id": row["id"], "object_key": object_key})
+            except Exception as exc:  # noqa: BLE001 单行失败不阻断（重跑幂等重试）
+                logger.error(f"[eia-migrate] {row['original_filename']} 迁移失败: {exc}")
+                failed.append({"id": row["id"], "reason": str(exc)[:200]})
+            finally:
+                del data
+                gc.collect()
+        await self._log(action="migrate", detail={"migrated": migrated, "failed": failed}, operator=operator)
+        return {"migrated": len(migrated), "md_ready": md_ready, "failed": failed}
 
     async def move(self, file_id: int, folder_id: int | None) -> dict:
         if folder_id is not None and await self.repo.get_folder(folder_id) is None:

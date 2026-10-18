@@ -7,9 +7,8 @@ from typing import Any
 
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse
-
-from server.utils.auth_middleware import get_admin_user, get_required_user
+from fastapi.responses import FileResponse, Response
+from yuxi.services import eia_corpus_task_service as eia_corpus_tasks
 from yuxi.services.domain_factory_service import get_domain_factory_service
 from yuxi.services.eia_data_service import (
     get_data_expectations,
@@ -18,16 +17,19 @@ from yuxi.services.eia_data_service import (
     get_skill_stats,
     get_unmapped,
 )
+from yuxi.services.eia_entity_service import get_eia_entity_service
+from yuxi.services.eia_formula_service import get_eia_formula_service
 from yuxi.services.eia_lexicon_service import get_eia_lexicon_service
 from yuxi.services.eia_library_service import LibraryFileTooLarge, get_eia_library_service
 from yuxi.services.eia_meta_service import get_eia_meta_service
-from yuxi.services.eia_standard_service import get_eia_standard_service
-from yuxi.services.eia_entity_service import get_eia_entity_service
-from yuxi.services.eia_formula_service import get_eia_formula_service
 from yuxi.services.eia_paradigm_service import get_eia_paradigm_service
 from yuxi.services.eia_stage_service import get_eia_stage_service
+from yuxi.services.eia_standard_service import get_eia_standard_service
+from yuxi.services.task_service import tasker
 from yuxi.storage.postgres.models_business import User
 from yuxi.utils import logger
+
+from server.utils.auth_middleware import get_admin_user, get_required_user
 
 domain_factory = APIRouter(prefix="/domain-factory", tags=["Domain Factory"])
 
@@ -1302,7 +1304,7 @@ async def export_eia_meta_annotations(
 
 
 # =============================================================================
-# EIA Library（环评文件库 P1：上传即登记；加工属 P2 显式触发）
+# EIA Library（环评文件库：P1 进料区；P2 起 canonical md 正源 + KB 推送 + 语料加工）
 # =============================================================================
 
 
@@ -1349,14 +1351,17 @@ async def list_eia_library_files(
 async def download_eia_library_file(
     file_id: int,
     current_user: User = Depends(get_required_user),
-) -> FileResponse:
-    """下载（FileResponse 以 original_filename 恢复原名）。"""
+):
+    """下载（以 original_filename 恢复原名；MinIO 正源行走 bytes，存量本地卷行走 FileResponse）。"""
     try:
-        row, path = await get_eia_library_service().download(file_id)
+        row, payload = await get_eia_library_service().download(file_id)
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="文件不存在（或磁盘文件已丢失）")
+        raise HTTPException(status_code=404, detail="文件不存在（或源文件已丢失）")
+    headers = {"Content-Disposition": f'attachment; filename="{row.original_filename}"'}
+    if isinstance(payload, bytes):
+        return Response(content=payload, media_type=row.content_type or "application/octet-stream", headers=headers)
     return FileResponse(
-        path=path, filename=row.original_filename, media_type=row.content_type or "application/octet-stream"
+        path=payload, filename=row.original_filename, media_type=row.content_type or "application/octet-stream"
     )
 
 
@@ -1383,12 +1388,138 @@ async def delete_eia_library_file(
     file_id: int,
     current_user: User = Depends(get_admin_user),
 ) -> dict[str, Any]:
-    """删除（DB 记录与磁盘文件同删）。"""
+    """删除（DB 记录与 MinIO 两对象/存量本地卷文件同删）。"""
     try:
         await get_eia_library_service().delete(file_id)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="文件不存在")
     return {"success": True}
+
+
+@domain_factory.post("/eia/library/admin/migrate-storage")
+async def migrate_eia_library_storage(current_user: User = Depends(get_admin_user)) -> dict[str, Any]:
+    """存量本地卷 → MinIO 一次性迁移（幂等；docx 顺带回填 canonical md）。"""
+    result = await get_eia_library_service().migrate_storage_to_minio(current_user.username)
+    return {"success": True, **result}
+
+
+@domain_factory.post("/eia/library/files/{file_id}/md")
+async def get_eia_library_file_md(
+    file_id: int,
+    current_user: User = Depends(get_required_user),
+) -> Response:
+    """canonical md 预览（text/markdown）。"""
+    try:
+        _, data = await get_eia_library_service().get_canonical_md(file_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="canonical md 不存在")
+    return Response(content=data, media_type="text/markdown; charset=utf-8")
+
+
+@domain_factory.post("/eia/library/files/{file_id}/regenerate-md")
+async def regenerate_eia_library_md(
+    file_id: int,
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """重产 canonical md（failed 行手工修复）。"""
+    try:
+        return await get_eia_library_service().regenerate_md(file_id, current_user.username)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="文件不存在")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@domain_factory.patch("/eia/library/files/{file_id}/meta")
+async def update_eia_library_file_meta(
+    file_id: int,
+    body: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """stage/mineral 行内编辑（白名单 + 值域守卫）。"""
+    fields = {k: body[k] for k in ("stage", "mineral") if k in body}
+    if not fields:
+        raise HTTPException(status_code=400, detail="无可更新字段")
+    try:
+        return await get_eia_library_service().update_meta(file_id, fields)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="文件不存在")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@domain_factory.get("/eia/library/kb/binding")
+async def get_eia_corpus_kb_binding(current_user: User = Depends(get_required_user)) -> dict[str, Any]:
+    """当前绑定的环评语料知识库（未绑定为空串）。"""
+    return {"kb_id": await eia_corpus_tasks.get_bound_kb_id()}
+
+
+@domain_factory.post("/eia/library/kb/bind")
+async def bind_eia_corpus_kb(
+    body: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """绑定环评语料目标知识库（存在性校验 → system_options.eia_corpus_kb_id）。"""
+    try:
+        kb_id = await eia_corpus_tasks.bind_corpus_kb(body.get("kb_id") or "", current_user.username)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"success": True, "kb_id": kb_id}
+
+
+@domain_factory.post("/eia/library/push-kb")
+async def push_eia_library_to_kb(
+    body: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """推送 canonical md 到绑定 KB（后台任务；body: {file_ids: [int]}）。"""
+    file_ids = body.get("file_ids")
+    if not isinstance(file_ids, list) or not file_ids:
+        raise HTTPException(status_code=400, detail="file_ids 不能为空")
+    task = await tasker.enqueue(
+        name="环评语料推送知识库",
+        task_type="eia_corpus_push",
+        payload={"file_ids": file_ids, "operator_id": current_user.uid},
+    )
+    return {"status": "queued", "task_id": task.id}
+
+
+@domain_factory.post("/eia/library/process")
+async def process_eia_library(
+    body: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """P2 语料加工/全库重编译（后台任务；body: {file_ids?: [int], scope?: "all"}）。"""
+    payload: dict[str, Any] = {"operator_id": current_user.uid}
+    if body.get("scope") == "all":
+        payload["scope"] = "all"
+    elif isinstance(body.get("file_ids"), list) and body["file_ids"]:
+        payload["file_ids"] = body["file_ids"]
+    else:
+        raise HTTPException(status_code=400, detail="须提供 file_ids 或 scope=all")
+    task = await tasker.enqueue(name="环评语料加工", task_type="eia_corpus_process", payload=payload)
+    return {"status": "queued", "task_id": task.id}
+
+
+@domain_factory.post("/eia/library/admin/bootstrap-manifest")
+async def bootstrap_eia_library_manifest(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """既有 manifest.json 导入：按 file_name 匹配登记 → 回填 report_id/stage/mineral（D6 人工裁决保留）。"""
+    import json as _json
+
+    try:
+        manifest = _json.loads((await file.read()).decode("utf-8"))
+    except (UnicodeDecodeError, _json.JSONDecodeError) as e:
+        raise HTTPException(status_code=400, detail=f"manifest.json 非法: {e}")
+    try:
+        result = await get_eia_library_service().bootstrap_from_manifest(manifest, current_user.username)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"success": True, **result}
 
 
 # =============================================================================
