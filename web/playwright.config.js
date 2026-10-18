@@ -1,3 +1,4 @@
+/* global process */
 import { defineConfig, devices } from '@playwright/test'
 
 /**
@@ -24,9 +25,7 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     locale: 'zh-CN',
-    actionTimeout: 10000,
+    actionTimeout: 10000
   },
-  projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-  ],
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }]
 })
