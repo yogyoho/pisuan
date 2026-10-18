@@ -203,7 +203,7 @@ class EiaLibraryService:
                 },
             )
             matched.append(e["report_id"])
-        await self._log(action="bootstrap", detail={"matched": matched, "unmatched": unmatched}, operator=operator)
+        await self._log(file_id=None, action="bootstrap", detail={"matched": matched, "unmatched": unmatched}, operator=operator)
         if unmatched:
             raise FileNotFoundError(f"以下文件未在文件库登记（请先上传后再引导）: {', '.join(map(str, unmatched))}")
         return {"matched": len(matched)}
@@ -254,7 +254,7 @@ class EiaLibraryService:
             finally:
                 del data
                 gc.collect()
-        await self._log(action="migrate", detail={"migrated": migrated, "failed": failed}, operator=operator)
+        await self._log(file_id=None, action="migrate", detail={"migrated": migrated, "failed": failed}, operator=operator)
         return {"migrated": len(migrated), "md_ready": md_ready, "failed": failed}
 
     async def move(self, file_id: int, folder_id: int | None) -> dict:
