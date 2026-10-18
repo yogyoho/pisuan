@@ -9,20 +9,28 @@ index_file。对照样板：knowledge_task_service.run_knowledge_ingest。
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
+import importlib.util
+import json
+import tempfile
 from pathlib import Path
 
 from yuxi.config.options import system_options, update_option_value
 from yuxi.knowledge.runtime import knowledge_base
 from yuxi.knowledge.utils.kb_utils import calculate_content_hash
 from yuxi.repositories.eia_library_repository import EiaLibraryRepository
+from yuxi.services.eia_canonical_md import split_canonical_md
+from yuxi.services.eia_data_service import _SKILL_ROOT
 from yuxi.services.eia_library_service import MINIO_BUCKET
 from yuxi.services.task_service import TaskContext
 from yuxi.storage.minio import get_minio_client
 from yuxi.storage.postgres.manager import pg_manager
+from yuxi.utils.datetime_utils import utc_now_naive
 from yuxi.utils.logging_config import logger
 
 _repo = EiaLibraryRepository()
+_SKILL_REFS = _SKILL_ROOT / "references"  # 模块级便于单测打桩
 
 
 async def _ensure_kb_exists(kb_id: str) -> None:
@@ -118,3 +126,137 @@ async def run_eia_corpus_push(context: TaskContext) -> dict:
     await context.set_result(summary)
     await context.set_progress(100.0, f"推送完成，失败 {failed} 个" if failed else "推送完成")
     return summary
+
+
+# ---------------------------------------------------------------- 语料加工（P2）
+
+
+def _load_bank_compile():
+    """importlib 动态加载技能脚本（先例：eia_data_service._load_quantity_re）。"""
+    spec = importlib.util.spec_from_file_location("eia_p2_bank_compile", _SKILL_ROOT / "scripts" / "bank_compile.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+async def _materialize_workdir(tmp: Path, client, rows: list[dict]) -> list[dict]:
+    """DB manifest → temp workdir（<rid>/source.md + manifest.json）。"""
+    entries = []
+    for row in rows:
+        md_bytes = await client.adownload_file(MINIO_BUCKET, row["md_object_key"])
+        _, body = split_canonical_md(md_bytes.decode("utf-8"))
+        d = tmp / row["report_id"]
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "source.md").write_text(body, encoding="utf-8", newline="\n")
+        entries.append(
+            {
+                "report_id": row["report_id"],
+                "stage": row["stage"],
+                "mineral": row["mineral"] or "coal",
+                "file_name": row["original_filename"],
+            }
+        )
+    (tmp / "manifest.json").write_text(
+        json.dumps(entries, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    return entries
+
+
+def _merge_corpus_meta(entries: list[dict], front_by_rid: dict[str, dict]) -> None:
+    """DB 封面元数据 → 技能 corpus_meta.json reports 合并（新 rid 增量；既有条目不动）。
+
+    eia_meta_service 以 corpus_meta.reports 为 rid 全集权威（import_annotations 已知
+    rid 校验），新报告不合并即被 meta 面跳过——此步是加工闭环的必需动作。
+    """
+    meta_path = _SKILL_REFS / "samples_bank" / "corpus_meta.json"
+    doc = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.is_file() else {"reports": {}}
+    reports = doc.setdefault("reports", {})
+    for e in entries:
+        rid = e["report_id"]
+        if rid in reports:
+            continue
+        f = front_by_rid.get(rid, {})
+        reports[rid] = {
+            "report_title": f.get("report_title"),
+            "report_title_basis": "cover",
+            "eia_org": f.get("eia_org"),
+            "eia_org_basis": "cover",
+            "project_no": f.get("project_no"),
+            "province": f.get("province"),
+            "province_basis": "cover",
+            "year": f.get("year"),
+            "cover_scale_mt_a": f.get("cover_scale_mt_a"),
+            "scale_basis": "needs_review",
+            "scale_candidates": [],
+            "stage": e["stage"],
+            "mineral": e["mineral"],
+        }
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
+    meta_path.write_text(
+        json.dumps(doc, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
+async def run_eia_corpus_process(context: TaskContext) -> dict:
+    """P2 加工：前置校验 → 全库重编译（bank_compile --prune）→ corpus_meta 合并 → 台账。
+
+    payload: {file_ids?: [int], scope?: "all", operator_id}
+    校验失败（md 非 ready / stage 未填）→ fail fast 列缺项清单（绝不静默跳过）；
+    bank_compile 零可编译报告 rc=1 → 任务失败、产物保留原状（拒绝空 bank_index）。
+    """
+    payload = context.payload
+    operator_id = payload.get("operator_id")
+    if payload.get("scope") == "all":
+        targets = [r for r in await _repo.list_files() if r["md_status"] == "ready"]
+    else:
+        targets = []
+        for fid in payload["file_ids"]:
+            row = await _repo.get_file(fid)
+            if row is not None:
+                targets.append(row.to_dict())
+
+    missing = [
+        f"id={r['id']} {r['original_filename']}: md_status={r['md_status']}" + ("" if r["stage"] else "，stage 未填")
+        for r in targets
+        if r["md_status"] != "ready" or not r["stage"]
+    ]
+    if missing:
+        raise ValueError("加工前置不满足：" + "；".join(missing))
+
+    await context.set_progress(10.0, "物化临时 workdir")
+    # 全库重编译语义：以全库可编译集为输入重建全局衍生物（非仅本次触发子集）
+    compile_rows = [r for r in await _repo.list_files() if r["md_status"] == "ready" and r["report_id"] and r["stage"]]
+    bank = _load_bank_compile()
+    with tempfile.TemporaryDirectory(prefix="eia_compile_") as td:
+        tmp = Path(td)
+        client = get_minio_client()
+        entries = await _materialize_workdir(tmp, client, compile_rows)
+        await context.set_progress(40.0, f"bank_compile（{len(entries)} 份，--prune）")
+        rc = await asyncio.to_thread(
+            bank.main_with_args,
+            ["--workdir", str(tmp), "--references", str(_SKILL_REFS), "--prune"],
+        )
+        if rc != 0:
+            raise RuntimeError(f"bank_compile 失败（rc={rc}）：产物保留原状，详见 worker 日志")
+
+    _merge_corpus_meta(entries, {r["report_id"]: (r["front_meta"] or {}) for r in compile_rows})
+    now = utc_now_naive()
+    for r in targets:
+        await _repo.update_file(r["id"], {"processed_at": now})
+    await _repo_log(
+        action="recompile",
+        detail={"reports": len(entries), "rids": [e["report_id"] for e in entries]},
+        operator=operator_id,
+    )
+    summary = {"compiled": len(entries)}
+    await context.set_result(summary)
+    await context.set_progress(100.0, f"加工完成（{len(entries)} 份入编）")
+    return summary
+
+
+async def _repo_log(*, action: str, detail: dict | None, operator: str | None) -> None:
+    await _repo.insert_process_log(file_id=None, content_sha1=None, action=action, detail=detail, operator=operator)
