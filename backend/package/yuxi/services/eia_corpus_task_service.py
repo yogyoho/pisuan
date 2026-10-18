@@ -85,8 +85,9 @@ async def _push_one(row, kb_id: str, operator_id: str | None) -> str:
         "file_sizes": {item: len(md_bytes)},
         "source_path": f"{Path(row.original_filename).stem}.md",  # KB 显示名
     }
-    if row.kb_file_id and row.kb_status == "indexed" and md_sha1_now != row.md_sha1:
-        await knowledge_base.delete_file(kb_id, row.kb_file_id)  # md 已重产 → 替换（删旧登新）
+    if row.kb_file_id:
+        # 有旧 KB 登记一律替换（indexed+md 已变 → 删旧登新；failed 半途 → 清半途登记防重复）
+        await knowledge_base.delete_file(kb_id, row.kb_file_id)
 
     await _repo.update_file(row.id, {"kb_id": kb_id, "kb_status": "pushed", "push_error": None})
     file_meta = await knowledge_base.add_file_record(kb_id, item, params=params, operator_id=operator_id)

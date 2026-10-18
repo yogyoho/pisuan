@@ -80,7 +80,7 @@ def kb_spy(monkeypatch):
 
 @pytest.fixture()
 def minio_spy(monkeypatch):
-    md = "# 1 概述\n正文。\n".encode("utf-8")
+    md = "# 1 概述\n正文。\n".encode()
     fake = FakeMinIO(md)
     monkeypatch.setattr(svc, "get_minio_client", lambda: fake)
     monkeypatch.setattr(svc, "_md_minio_url", lambda key: f"http://minio:9000/knowledgebases/{key}")
@@ -116,6 +116,17 @@ def test_push_replace_when_md_changed(monkeypatch, kb_spy, minio_spy):
     status = asyncio.run(svc._push_one(row, "kb_test", "tester"))
     assert status == "indexed"
     assert kb_spy["delete"] == 1  # md 已重产 → 替换（删旧登新）
+    assert kb_spy["add"] == 1 and row.kb_file_id == "file_abc"
+
+
+def test_push_retry_after_failed_replaces_stale_kb_record(monkeypatch, kb_spy, minio_spy):
+    md_sha1 = hashlib.sha1(minio_spy.md_bytes).hexdigest()
+    row = make_row(kb_file_id="file_old", kb_status="failed", md_sha1=md_sha1)
+    repo = FakeRepo(row)
+    monkeypatch.setattr(svc, "_repo", repo)
+    status = asyncio.run(svc._push_one(row, "kb_test", "tester"))
+    assert status == "indexed"
+    assert kb_spy["delete"] == 1  # failed 半途登记须清理，否则 KB 侧重复文档
     assert kb_spy["add"] == 1 and row.kb_file_id == "file_abc"
 
 
