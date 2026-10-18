@@ -90,6 +90,15 @@
           <div class="tree-label">文件库</div>
           <button
             class="tree-item"
+            :class="{ on: folderId === ALL && !q }"
+            @click="pickFolder(ALL)"
+          >
+            <Files :size="14" />
+            <span>全部文件</span>
+            <span class="cnt num">{{ totalCount }}</span>
+          </button>
+          <button
+            class="tree-item"
             :class="{ on: folderId === null && !q }"
             @click="pickFolder(null)"
           >
@@ -135,7 +144,7 @@
                     </span>
                     <span class="fn-wrap">
                       <span class="fn" :title="f.original_filename">{{ f.original_filename }}</span>
-                      <span v-if="q" class="floc">位于〈{{ f.folder_name || '未归类' }}〉</span>
+                      <span v-if="q || (folderId === ALL && f.folder_name)" class="floc">位于〈{{ f.folder_name || '未归类' }}〉</span>
                     </span>
                   </div>
                 </td>
@@ -300,6 +309,7 @@ import {
   File,
   FileText,
   FileUp,
+  Files,
   Folder,
   FolderInput,
   FolderOpen,
@@ -315,7 +325,8 @@ import { eiaDataApi } from '@/apis/eia_data_api'
 
 const folders = ref([])
 const files = ref([])
-const folderId = ref(null) // null = 未归类（根）
+const ALL = 'all' // 视图哨兵：'all'=全部文件 / null=未归类 / 数字=文件夹
+const folderId = ref(ALL)
 const q = ref('')
 const totalCount = ref(0)
 const uploading = ref(false)
@@ -337,9 +348,10 @@ const STAGE_LABELS = {
 const rootCount = computed(
   () => totalCount.value - folders.value.reduce((sum, f) => sum + (f.file_count || 0), 0)
 )
-const scopeLabel = computed(
-  () => folders.value.find((f) => f.id === folderId.value)?.name || '未归类'
-)
+const scopeLabel = computed(() => {
+  if (folderId.value === ALL) return '全部文件'
+  return folders.value.find((f) => f.id === folderId.value)?.name || '未归类'
+})
 const moveOptions = computed(() => [
   { value: null, label: '未归类' },
   ...folders.value.map((f) => ({ value: f.id, label: f.name }))
@@ -365,8 +377,8 @@ const kbDotClass = (f) =>
   !f.kb_status ? 'dot-gray' : { indexed: 'dot-ok', failed: 'dot-err' }[f.kb_status] || 'dot-run'
 
 const reload = async () => {
-  // 搜索=全库；未归类（folderId null）走 uncategorized 参数，与全库语义区分
-  const queryFolder = q.value ? null : folderId.value
+  // 搜索/全部=全库；未归类（folderId null）走 uncategorized 参数，与全库语义区分
+  const queryFolder = q.value || folderId.value === ALL ? null : folderId.value
   const uncategorized = !q.value && folderId.value === null
   const [folderRes, fileRes] = await Promise.all([
     eiaDataApi.listLibraryFolders(),
@@ -391,7 +403,7 @@ const onPickFiles = async (e) => {
   try {
     for (const file of list) {
       try {
-        await eiaDataApi.uploadLibraryFile(file, folderId.value)
+        await eiaDataApi.uploadLibraryFile(file, folderId.value === ALL ? null : folderId.value)
         message.success(`「${file.name}」已登记`)
       } catch (err) {
         if (err?.status === 409) {
