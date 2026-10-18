@@ -121,6 +121,13 @@ system_options = Option(
                 "type": "ocr_engine",
                 "default": "rapid_ocr",
             },
+            {
+                "key": "eia_corpus_kb_id",
+                "label": "环评语料知识库 ID",
+                "type": "string",
+                "default": "",
+                "des": "环评文件库 canonical md 推送的目标知识库（kb_xxx）；留空=未绑定",
+            },
         ],
     },
 )
@@ -206,6 +213,32 @@ paddleocr_api_opts = Option(
     },
 )
 
+paddleocr_vl_local_opts = Option(
+    key="paddleocr_vl_local_opts",
+    name="PaddleOCR-VL 本地服务",
+    description="配置自部署 PaddleOCR-VL（llama.cpp OpenAI 兼容）服务地址与模型名。",
+    params={
+        "fields": [
+            {
+                "key": "base_url",
+                "label": "服务地址",
+                "type": "url",
+                "environment": "PADDLEOCR_VL_LOCAL_BASE_URL",
+                "placeholder": "http://host.docker.internal:8111/v1",
+                "help": "留空时读取 PADDLEOCR_VL_LOCAL_BASE_URL。容器内访问宿主服务用 host.docker.internal。",
+            },
+            {
+                "key": "model",
+                "label": "模型名",
+                "type": "str",
+                "environment": "PADDLEOCR_VL_LOCAL_MODEL",
+                "placeholder": "PaddleOCR-VL-1.6-GGUF.gguf",
+                "help": "留空时读取 PADDLEOCR_VL_LOCAL_MODEL。",
+            },
+        ]
+    },
+)
+
 remote_skill_source_policy = Option(
     key="remote_skill_source_policy",
     name="远程 Skill 来源",
@@ -249,6 +282,7 @@ OPTION_DEFINITIONS = {
         mineru_official_api_opts,
         pp_structure_v3_ocr_host_opts,
         paddleocr_api_opts,
+        paddleocr_vl_local_opts,
         remote_skill_source_policy,
         domain_factory_llm_opts,
         system_options,

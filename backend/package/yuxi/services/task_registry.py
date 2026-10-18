@@ -104,6 +104,17 @@ _TASK_DEFINITIONS = {
             "yuxi.services.domain_factory_service",
             "run_domain_factory_reingest",
         ),
+        # [pisuan-custom] 环评文件库 P2 任务：canonical md 推 KB / 语料加工（pisuan 领域扩展）
+        TaskDefinition(
+            "eia_corpus_push",
+            "yuxi.services.eia_corpus_task_service",
+            "run_eia_corpus_push",
+        ),
+        TaskDefinition(
+            "eia_corpus_process",
+            "yuxi.services.eia_corpus_task_service",
+            "run_eia_corpus_process",
+        ),
     )
 }
 
