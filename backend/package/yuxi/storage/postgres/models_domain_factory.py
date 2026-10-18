@@ -748,21 +748,41 @@ class EiaLibraryFolder(Base):
 
 
 class EiaLibraryFile(Base):
-    """Domain Factory - 环评文件库文件（P1 进料区；content_sha1 全库唯一，P2 管线溯源锚点）"""
+    """Domain Factory - 环评文件库文件（P1 进料区；P2 起 canonical md 正源，spec 2026-10-18 D1/D5/D6）"""
 
     __tablename__ = "eia_library_files"
-    __table_args__ = (Index("ix_eia_library_files_folder", "folder_id"),)
+    __table_args__ = (
+        Index("ix_eia_library_files_folder", "folder_id"),
+        Index("ux_eia_library_files_report_id", "report_id", unique=True),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     folder_id = Column(Integer, ForeignKey("eia_library_folders.id"), nullable=True)  # NULL = 未归类
     original_filename = Column(String(500), nullable=False)
-    stored_path = Column(String(1000), nullable=False)  # volume 内相对路径（sha1 前缀防碰撞）
+    stored_path = Column(String(1000), nullable=True)  # [遗留] P1 本地卷相对名；v19 起仅作展示安全名
     content_sha1 = Column(String(40), nullable=False, unique=True)
     size_bytes = Column(BigInteger, nullable=False)
     content_type = Column(String(100), nullable=True)
     status = Column(String(20), nullable=False, default="stored")  # P1 恒 stored；P2 扩加工态
     uploaded_by = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=utc_now_naive)
+    # ---- P2 canonical md 正源（v19）----
+    object_key = Column(String(500), nullable=True)  # MinIO 源文件对象（knowledgebases 桶内）；NULL=未迁移存量
+    md_object_key = Column(String(500), nullable=True)  # canonical md 对象；NULL=未产出
+    md_status = Column(String(20), nullable=False, default="pending_backfill")  # ready/failed/not_applicable/pending_backfill
+    md_chars = Column(Integer, nullable=True)
+    md_sha1 = Column(String(40), nullable=True)  # md 内容 sha1（KB 重推变更判定锚）
+    md_failed_reason = Column(String(500), nullable=True)
+    front_meta = Column(JSON, nullable=True)  # extract_front 七字段（上传抽取，加工时并入 corpus_meta.json）
+    report_id = Column(String(80), nullable=True)  # rid（D6：bootstrap 保留人工裁决；新上传 make_rid(id, stem)）
+    stage = Column(String(50), nullable=True)  # 加工前置（bank_compile manifest 语义）
+    mineral = Column(String(50), nullable=True)  # 缺省 coal
+    kb_id = Column(String(30), nullable=True)
+    kb_file_id = Column(String(100), nullable=True)
+    kb_status = Column(String(30), nullable=True)  # pushed/parsing/indexing/indexed/failed
+    pushed_at = Column(DateTime, nullable=True)
+    push_error = Column(String(1000), nullable=True)
+    processed_at = Column(DateTime, nullable=True)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -776,4 +796,29 @@ class EiaLibraryFile(Base):
             "status": self.status,
             "uploaded_by": self.uploaded_by,
             "created_at": format_utc_datetime(self.created_at),
+            "object_key": self.object_key,
+            "md_status": self.md_status,
+            "md_chars": self.md_chars,
+            "report_id": self.report_id,
+            "stage": self.stage,
+            "mineral": self.mineral,
+            "kb_id": self.kb_id,
+            "kb_status": self.kb_status,
+            "pushed_at": format_utc_datetime(self.pushed_at),
+            "push_error": self.push_error,
+            "processed_at": format_utc_datetime(self.processed_at),
         }
+
+
+class EiaCorpusProcessLog(Base):
+    """Domain Factory - P2 加工台账（slice/recompile/kb_push/bootstrap/migrate 产物留痕）"""
+
+    __tablename__ = "eia_corpus_process_log"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    file_id = Column(Integer, nullable=True)  # 批量/全库动作为 NULL
+    content_sha1 = Column(String(40), nullable=True)
+    action = Column(String(30), nullable=False)
+    detail = Column(JSON, nullable=True)  # 产物摘要（切片数/rid 清单/任务 id 等）
+    operator = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)

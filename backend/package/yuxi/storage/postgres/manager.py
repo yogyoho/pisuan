@@ -29,6 +29,7 @@ from yuxi.storage.postgres.models_domain_factory import (
     EiaLexiconSuppression,
     EiaLibraryFile,
     EiaLibraryFolder,
+    EiaCorpusProcessLog,
     EiaMetaAnnotation,
     EiaParadigmDraft,
     EiaStageFieldEdit,
@@ -51,7 +52,8 @@ AGENT_RUN_TERMINAL_STATUS_SQL = ", ".join(f"'{status}'" for status in AGENT_RUN_
 # v14：标准限值查找表人工录入行（eia_standard_limit_rows）
 # v15：环评 stages forms 口径字段人工裁决（eia_stage_field_edits）
 # v18：环评文件库两表（eia_library_folders / eia_library_files，五阶段种子）；
-BUSINESS_SCHEMA_VERSION = 18
+# v19：文件库 P2 扩列（canonical md 正源/KB 推送镜像/加工前置）+ 加工台账表（eia_corpus_process_log）
+BUSINESS_SCHEMA_VERSION = 19
 KNOWLEDGE_SCHEMA_VERSION = 2
 SCHEMA_VERSION_TABLE = "yuxi_schema_migrations"
 AGENT_RUN_LEASE_SCHEMA_STATEMENTS = (
@@ -827,6 +829,56 @@ class PostgresManager(metaclass=SingletonMeta):
                     INSERT INTO {SCHEMA_VERSION_TABLE} (domain, version, applied_at)
                     VALUES ('business', 18, CURRENT_TIMESTAMP)
                     ON CONFLICT (domain) DO UPDATE SET version = 18, applied_at = EXCLUDED.applied_at
+                """)
+            )
+
+    async def upgrade_business_v18_to_v19(self) -> None:
+        """[pisuan-custom] v19：文件库 P2 扩列 + 加工台账表（canonical md 正源，spec 2026-10-18）。
+
+        create_all 只补新表不补列，存量行逐列显式 ALTER（IF NOT EXISTS 幂等）；
+        stored_path 转 nullable（P1 本地卷语义退役，spec D1）；report_id 唯一索引（D6）。
+        """
+        self._check_initialized()
+        async with self.async_engine.begin() as conn:
+            version = await conn.scalar(
+                text(f"SELECT version FROM {SCHEMA_VERSION_TABLE} WHERE domain = 'business' FOR UPDATE")
+            )
+            if version == 19:
+                return
+            if version not in (None, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18):
+                raise RuntimeError(f"Unsupported business schema version: {version}")
+            statements = [
+                "ALTER TABLE eia_library_files ALTER COLUMN stored_path DROP NOT NULL",
+                "ALTER TABLE eia_library_files ADD COLUMN IF NOT EXISTS object_key VARCHAR(500)",
+                "ALTER TABLE eia_library_files ADD COLUMN IF NOT EXISTS md_object_key VARCHAR(500)",
+                "ALTER TABLE eia_library_files ADD COLUMN IF NOT EXISTS md_status VARCHAR(20) NOT NULL DEFAULT 'pending_backfill'",
+                "ALTER TABLE eia_library_files ADD COLUMN IF NOT EXISTS md_chars INTEGER",
+                "ALTER TABLE eia_library_files ADD COLUMN IF NOT EXISTS md_sha1 VARCHAR(40)",
+                "ALTER TABLE eia_library_files ADD COLUMN IF NOT EXISTS md_failed_reason VARCHAR(500)",
+                "ALTER TABLE eia_library_files ADD COLUMN IF NOT EXISTS front_meta JSON",
+                "ALTER TABLE eia_library_files ADD COLUMN IF NOT EXISTS report_id VARCHAR(80)",
+                "ALTER TABLE eia_library_files ADD COLUMN IF NOT EXISTS stage VARCHAR(50)",
+                "ALTER TABLE eia_library_files ADD COLUMN IF NOT EXISTS mineral VARCHAR(50)",
+                "ALTER TABLE eia_library_files ADD COLUMN IF NOT EXISTS kb_id VARCHAR(30)",
+                "ALTER TABLE eia_library_files ADD COLUMN IF NOT EXISTS kb_file_id VARCHAR(100)",
+                "ALTER TABLE eia_library_files ADD COLUMN IF NOT EXISTS kb_status VARCHAR(30)",
+                "ALTER TABLE eia_library_files ADD COLUMN IF NOT EXISTS pushed_at TIMESTAMP",
+                "ALTER TABLE eia_library_files ADD COLUMN IF NOT EXISTS push_error VARCHAR(1000)",
+                "ALTER TABLE eia_library_files ADD COLUMN IF NOT EXISTS processed_at TIMESTAMP",
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_eia_library_files_report_id ON eia_library_files (report_id)",
+            ]
+            for statement in statements:
+                await conn.execute(text(statement))
+            await conn.run_sync(
+                lambda sync_conn: DomainFactoryBase.metadata.create_all(
+                    sync_conn, tables=[EiaCorpusProcessLog.__table__]
+                )
+            )
+            await conn.execute(
+                text(f"""
+                    INSERT INTO {SCHEMA_VERSION_TABLE} (domain, version, applied_at)
+                    VALUES ('business', 19, CURRENT_TIMESTAMP)
+                    ON CONFLICT (domain) DO UPDATE SET version = 19, applied_at = EXCLUDED.applied_at
                 """)
             )
 
