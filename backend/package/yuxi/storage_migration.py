@@ -139,7 +139,8 @@ async def main() -> None:
                     16,
                     17,
                     18,
-                ),  # [pisuan-custom] v14~v19：允许从 v9~v18 升级
+                    19,
+                ),  # [pisuan-custom] v14~v20：允许从 v9~v19 升级
             )
             knowledge_version = versions.get("knowledge")
             _require_supported_version(
@@ -195,6 +196,9 @@ async def main() -> None:
             # [pisuan-custom] v19：文件库 P2 扩列 + 加工台账表（canonical md 正源，幂等）
             if business_version in {None, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18}:
                 await pg_manager.upgrade_business_v18_to_v19()
+            # [pisuan-custom] v20：限值提取暂存表 + 表注册表（spec 2026-10-19，幂等）
+            if business_version in {None, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19}:
+                await pg_manager.upgrade_business_v19_to_v20()
 
             if knowledge_version is None:
                 await pg_manager.create_knowledge_tables()

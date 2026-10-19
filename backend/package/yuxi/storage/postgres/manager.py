@@ -29,6 +29,8 @@ from yuxi.storage.postgres.models_domain_factory import (
     EiaLexiconSuppression,
     EiaLibraryFile,
     EiaLibraryFolder,
+    EiaLimitExtractRow,
+    EiaLimitTableRegistry,
     EiaCorpusProcessLog,
     EiaMetaAnnotation,
     EiaParadigmDraft,
@@ -52,8 +54,9 @@ AGENT_RUN_TERMINAL_STATUS_SQL = ", ".join(f"'{status}'" for status in AGENT_RUN_
 # v14：标准限值查找表人工录入行（eia_standard_limit_rows）
 # v15：环评 stages forms 口径字段人工裁决（eia_stage_field_edits）
 # v18：环评文件库两表（eia_library_folders / eia_library_files，五阶段种子）；
-# v19：文件库 P2 扩列（canonical md 正源/KB 推送镜像/加工前置）+ 加工台账表（eia_corpus_process_log）
-BUSINESS_SCHEMA_VERSION = 19
+# v19：文件库 P2 扩列（canonical md 正源/KB 推送镜像/加工前置）+ 加工台账表（eia_corpus_process_log）；
+# v20：限值提取暂存 + 表注册（eia_limit_extract_rows / eia_limit_table_registry，spec 2026-10-19）
+BUSINESS_SCHEMA_VERSION = 20
 KNOWLEDGE_SCHEMA_VERSION = 2
 SCHEMA_VERSION_TABLE = "yuxi_schema_migrations"
 AGENT_RUN_LEASE_SCHEMA_STATEMENTS = (
@@ -879,6 +882,34 @@ class PostgresManager(metaclass=SingletonMeta):
                     INSERT INTO {SCHEMA_VERSION_TABLE} (domain, version, applied_at)
                     VALUES ('business', 19, CURRENT_TIMESTAMP)
                     ON CONFLICT (domain) DO UPDATE SET version = 19, applied_at = EXCLUDED.applied_at
+                """)
+            )
+
+    async def upgrade_business_v19_to_v20(self) -> None:
+        """[pisuan-custom] v20：限值提取暂存表 + 表注册表（spec 2026-10-19）。
+
+        存量库 create_all 不补表，显式建表并记版本；幂等（version=20 直接返回），
+        create_all(tables=[...]) 仅补新表，不动其他。
+        """
+        self._check_initialized()
+        async with self.async_engine.begin() as conn:
+            version = await conn.scalar(
+                text(f"SELECT version FROM {SCHEMA_VERSION_TABLE} WHERE domain = 'business' FOR UPDATE")
+            )
+            if version == 20:
+                return
+            if version not in (None, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19):
+                raise RuntimeError(f"Unsupported business schema version: {version}")
+            await conn.run_sync(
+                lambda sync_conn: DomainFactoryBase.metadata.create_all(
+                    sync_conn, tables=[EiaLimitExtractRow.__table__, EiaLimitTableRegistry.__table__]
+                )
+            )
+            await conn.execute(
+                text(f"""
+                    INSERT INTO {SCHEMA_VERSION_TABLE} (domain, version, applied_at)
+                    VALUES ('business', 20, CURRENT_TIMESTAMP)
+                    ON CONFLICT (domain) DO UPDATE SET version = 20, applied_at = EXCLUDED.applied_at
                 """)
             )
 

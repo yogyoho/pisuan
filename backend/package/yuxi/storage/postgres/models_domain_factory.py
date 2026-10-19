@@ -826,3 +826,52 @@ class EiaCorpusProcessLog(Base):
     detail = Column(JSON, nullable=True)  # 产物摘要（切片数/rid 清单/任务 id 等）
     operator = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=utc_now_naive)
+
+
+class EiaLimitExtractRow(Base):
+    """Domain Factory - 语料限值提取暂存行（spec 2026-10-19；噪声隔离层，人工核实后转正）。"""
+
+    __tablename__ = "eia_limit_extract_rows"
+    __table_args__ = (Index("ix_eler_table_key", "table_key"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    table_key = Column(String(80), nullable=False)  # 已知表键，或 __candidate__:<归一码>
+    code = Column(String(50), nullable=False)  # 归一标准号（如 GB 3838-2002）
+    row_json = Column(JSON, nullable=False)  # 行数据；conflict 时附 conflict_values
+    confidence = Column(String(16), nullable=False)  # multi / single / conflict
+    sources = Column(JSON, nullable=False)  # [{report_id, anchor}] 溯源到语料切片
+    status = Column(String(16), nullable=False, default="pending")  # pending/confirmed/edited/discarded
+    decided_by = Column(String(64), nullable=True)
+    decided_at = Column(DateTime, nullable=True)
+    note = Column(Text, nullable=True)  # 仅 DB 留档，不物化
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, nullable=True)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id, "table_key": self.table_key, "code": self.code, "row": self.row_json,
+            "confidence": self.confidence, "sources": self.sources, "status": self.status,
+            "decided_by": self.decided_by,
+            "decided_at": format_utc_datetime(self.decided_at) if self.decided_at else None,
+            "note": self.note, "created_at": format_utc_datetime(self.created_at),
+        }
+
+
+class EiaLimitTableRegistry(Base):
+    """Domain Factory - 限值表注册元数据（新表入册通道；导出物化时并入 limit_tables）。"""
+
+    __tablename__ = "eia_limit_table_registry"
+
+    table_key = Column(String(64), primary_key=True)
+    code = Column(String(50), nullable=False)  # code_ref，如 GB 8978-1996
+    desc = Column(Text, nullable=False)
+    columns_schema = Column(JSON, nullable=False)  # {col: {label, type: str|number, required}}
+    created_by = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "table_key": self.table_key, "code": self.code, "desc": self.desc,
+            "columns_schema": self.columns_schema, "created_by": self.created_by,
+            "created_at": format_utc_datetime(self.created_at),
+        }
