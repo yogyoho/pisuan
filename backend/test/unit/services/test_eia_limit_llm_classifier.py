@@ -391,3 +391,140 @@ async def test_gate_stats_reset_per_run(svc_env, monkeypatch):
 async def test_default_classifier_is_llm_gate():
     s = EiaLimitExtractService()
     assert isinstance(s._classifier, EiaLimitLLMClassifier)  # 默认必须走判别门，无旁路
+
+
+# --------------------------------------------------------------- I3 试跑互斥 / I4 有界并发
+class ControlledGate:
+    """可控制时机的判别桩：judge 挂在 release 事件上，供重叠试跑串行化断言。"""
+
+    def __init__(self):
+        self.stats = GateStats()
+        self.active = 0
+        self.max_active = 0
+        self._release = asyncio.Event()
+
+    def release(self):
+        self._release.set()
+
+    async def judge(self, code, text, table_key=None):
+        self.active += 1
+        self.max_active = max(self.max_active, self.active)
+        try:
+            await self._release.wait()
+        finally:
+            self.active -= 1
+        self.stats.blocks += 1
+        self.stats.passed += 1
+        return JudgeResult(True, "passed", {"is_limit_statement": True})
+
+
+class PeakGate:
+    """并发峰值记录桩：judge 内挂一拍放大并发窗口，记录峰值与判别码集合。"""
+
+    def __init__(self):
+        self.stats = GateStats()
+        self.active = 0
+        self.max_active = 0
+        self.judged = []
+
+    async def judge(self, code, text, table_key=None):
+        self.active += 1
+        self.max_active = max(self.max_active, self.active)
+        try:
+            await asyncio.sleep(0.05)
+        finally:
+            self.active -= 1
+        self.stats.blocks += 1
+        self.stats.passed += 1
+        self.judged.append(code)
+        return JudgeResult(True, "passed", {"is_limit_statement": True})
+
+
+_EIGHT_CODES = (
+    "GB3095-2012",
+    "GB3096-2008",
+    "GB12348-2008",
+    "GB3838-2002",
+    "GB/T14848-2017",
+    "GB20426-2006",
+    "GB8978-1996",
+    "GB13201-2011",
+)
+
+
+@pytest.fixture
+def multi_env(tmp_path):
+    """8 个标准号区块的切片（每行一号，locate 产出 8 块）。"""
+    d = tmp_path / "planning_eia" / "slices" / "ch1"
+    d.mkdir(parents=True)
+    md = "\n".join(f"引用标准{i}：({code}) 污染物限值 PM10 0.07 mg/m³。" for i, code in enumerate(_EIGHT_CODES))
+    (d / "038-2024-7-9__1.md").write_text(md + "\n", encoding="utf-8")
+    return tmp_path, StubExtractRepo()
+
+
+@pytest.mark.asyncio
+async def test_overlapping_runs_serialized_and_counts_intact(svc_env, monkeypatch):
+    """I3：重叠试跑以锁串行化——第二跑等第一跑完成，双方 gate 计数互不污染。"""
+    tmp_path, repo = svc_env
+    gate = ControlledGate()
+    s = _make_service(tmp_path, repo, gate, monkeypatch)
+    t1 = asyncio.create_task(s.run_extraction("admin"))
+    await asyncio.sleep(0.05)  # t1 进入判别等待
+    t2 = asyncio.create_task(s.run_extraction("admin"))
+    await asyncio.sleep(0.05)
+    assert gate.active == 1 and gate.max_active == 1  # t2 仍在锁外等待，未进入判别
+    gate.release()
+    report1, report2 = await asyncio.gather(t1, t2)
+    assert gate.max_active == 1  # 全程判别无重叠
+    assert report1["gate"]["blocks"] == 1 and report2["gate"]["blocks"] == 1  # 双方计数完整
+
+
+@pytest.mark.asyncio
+async def test_judge_bounded_concurrency(multi_env, monkeypatch):
+    """I4：判别真并发且峰值 ≤6（保守防供应商限流）。"""
+    tmp_path, repo = multi_env
+    gate = PeakGate()
+    s = _make_service(tmp_path, repo, gate, monkeypatch)
+    report = await s.run_extraction("admin")
+    assert 1 < gate.max_active <= 6
+    assert report["gate"] == {"blocks": 8, "passed": 8, "rejected": 0, "failed": 0}  # 计数语义与串行版一致
+    assert set(gate.judged) == set(_EIGHT_CODES)  # 判别集完整（无块丢失）
+
+
+@pytest.mark.asyncio
+async def test_concurrent_verdicts_produce_serial_identical_rows(multi_env, monkeypatch):
+    """I4：全部放行桩下，并发判别的行产物与 gate 口径符合串行确定性不变量。"""
+    tmp_path, repo = multi_env
+    s = _make_service(tmp_path, repo, PeakGate(), monkeypatch)
+    report = await s.run_extraction("admin")
+    rows = await repo.list_rows()
+    assert report["gate"]["blocks"] == 8 and report["inserted"] >= 1
+    assert rows and all(r.row_json.get("extractor") == "llm" for r in rows)
+    assert {r.code for r in rows} <= set(_EIGHT_CODES)
+
+
+@pytest.mark.asyncio
+async def test_single_block_exception_does_not_abort_batch(multi_env, monkeypatch):
+    """I4 约束②：单块判别异常只影响该块（按 failed fail-closed），不炸整批。"""
+
+    class HalfBrokenGate(PeakGate):
+        async def judge(self, code, text, table_key=None):
+            self.stats.blocks += 1  # 与真判别器同口径：blocks 在入口计数，失败路径计入 failed
+            self.active += 1
+            self.max_active = max(self.max_active, self.active)
+            try:
+                await asyncio.sleep(0.01)
+                if code == "GB3096-2008":
+                    self.stats.failed += 1
+                    raise RuntimeError("单块炸")
+            finally:
+                self.active -= 1
+            self.stats.passed += 1
+            self.judged.append(code)
+            return JudgeResult(True, "passed", {"is_limit_statement": True})
+
+    tmp_path, repo = multi_env
+    s = _make_service(tmp_path, repo, HalfBrokenGate(), monkeypatch)
+    report = await s.run_extraction("admin")
+    assert report["gate"] == {"blocks": 8, "passed": 7, "rejected": 0, "failed": 1}
+    assert {r.code for r in await repo.list_rows()} != set()  # 其余 7 块照常产出

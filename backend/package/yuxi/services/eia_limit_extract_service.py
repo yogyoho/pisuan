@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
 from pathlib import Path
 from typing import Any
@@ -24,7 +25,7 @@ from yuxi.services.eia_limit_extract_core import (
     parse_block,
     table_key_for,
 )
-from yuxi.services.eia_limit_llm_classifier import EiaLimitLLMClassifier, GateStats, gate_report
+from yuxi.services.eia_limit_llm_classifier import EiaLimitLLMClassifier, GateStats, JudgeResult, gate_report
 from yuxi.services.eia_standard_service import LIMIT_TABLE_SCHEMAS
 from yuxi.storage.postgres.models_domain_factory import EiaLimitExtractRow, EiaLimitTableRegistry
 from yuxi.utils import logger
@@ -36,6 +37,7 @@ _CANDIDATE_PREFIX = "__candidate__:"
 _VALID_DECISIONS = {"confirm", "edited", "discarded"}
 _TABLE_KEY_RE = re.compile(r"^[a-z0-9_]+$")
 _NUMERIC_KEYS = ("limit_value", "day", "night", "a_value")
+_JUDGE_CONCURRENCY = 6  # 判别有界并发（I4）：防供应商限流；全库 7581 块实测串行为小时级
 
 
 def _normalize_row_json(row: dict) -> dict:
@@ -68,18 +70,23 @@ class EiaLimitExtractService:
         self._repo = repo or EiaLimitExtractRepository()
         self._std_repo = std_repo or EiaStandardRepository()
         self._classifier = classifier or EiaLimitLLMClassifier()  # 默认 LLM 判别门，无旁路
+        self._run_lock = asyncio.Lock()  # 进程内试跑互斥（I3）：单例共享判别器，防重叠试跑清对方计数
 
     def _bank_dirs(self) -> list[Path]:
         """samples_bank 根目录列表（阶段目录为其下含 slices/ 的子目录，threadpool 调用）。"""
         return [_BANK_ROOT] if _BANK_ROOT.is_dir() else []
 
     async def run_extraction(self, username: str) -> dict[str, Any]:
-        """全库试跑：切片 → 区块定位 → LLM 语义判别 → 解析/聚合 → 幂等过滤 → 暂存行 + 报告。
+        """全库试跑：切片 → 区块定位 → LLM 语义判别（有界并发）→ 解析/聚合 → 幂等过滤 → 暂存行 + 报告。
 
         判别门（Task 13 B 通道）：每个 locate 命中区块先经 LLM 判别是否限值陈述，
         监测陈述与判别失败（fail-closed）一律不进入解析。行数据带 extractor="llm" 标注。
+        进程内互斥（I3）：单例共享判别器，重叠试跑在锁上串行化，防 gate 计数互相清零。
         """
+        async with self._run_lock:
+            return await self._run_extraction_locked(username)
 
+    async def _run_extraction_locked(self, username: str) -> dict[str, Any]:
         def _scan() -> tuple[int, int, list[tuple]]:
             hits: list[tuple] = []
             scanned = skipped = 0
@@ -105,20 +112,36 @@ class EiaLimitExtractService:
         classifier = self._classifier
         classifier.stats = GateStats()  # 报告口径按单次试跑计，不跨次累计
         scanned, skipped, hits = await run_in_threadpool(_scan)
-        records: list[dict] = []
-        for b, tk, rid, anchor in hits:
-            verdict = await classifier.judge(b.code, "\n".join(b.lines), tk)
-            if not verdict.passed:
-                continue  # 监测陈述 / 判别失败（fail-closed）：不产出行
-            records.extend(
-                {
-                    "code": b.code,
-                    "table_key": tk,
-                    "row": {**row, "extractor": "llm"},
-                    "source": {"report_id": rid, "anchor": anchor},
-                }
-                for row in parse_block(b)
-            )
+        sem = asyncio.Semaphore(_JUDGE_CONCURRENCY)
+
+        async def _judge_one(hit: tuple) -> tuple[tuple, JudgeResult]:
+            """单块判别（I4 有界并发）；异常只影响该块——按判别器内部同款 failed 口径 fail-closed。"""
+            b, tk, rid, anchor = hit
+            async with sem:
+                try:
+                    return hit, await classifier.judge(b.code, "\n".join(b.lines), tk)
+                except Exception as exc:
+                    logger.warning(f"[eia-limit-extract] 判别异常按未通过处理（code={b.code}）: {exc}")
+                    return hit, JudgeResult(False, "failed", {}, f"判别异常: {exc}")
+
+        results = await asyncio.gather(*(_judge_one(h) for h in hits))
+        passed = [hit for hit, verdict in results if verdict.passed]
+
+        def _parse_passed() -> list[dict]:
+            records: list[dict] = []
+            for b, tk, rid, anchor in passed:
+                records.extend(
+                    {
+                        "code": b.code,
+                        "table_key": tk,
+                        "row": {**row, "extractor": "llm"},
+                        "source": {"report_id": rid, "anchor": anchor},
+                    }
+                    for row in parse_block(b)
+                )
+            return records
+
+        records = await run_in_threadpool(_parse_passed)
         aggregated = aggregate_records(records)
         # 立表后重映射（spec 2026-10-19）：注册表覆盖的候选键改写为正式表键，防重跑复生候选行
         remap = {f"{_CANDIDATE_PREFIX}{norm_code(reg.code)}": reg.table_key for reg in await self._repo.list_registry()}
