@@ -28,5 +28,27 @@ export const eiaStandardApi = {
   exportReviews: () => apiPost('/api/domain-factory/eia/standards/export'),
 
   /** 门 1 体检卡（只读）：规则规格（desc/allowed_patterns/rules）+ 注册表自检 { total, violations } */
-  getGate1: () => apiGet('/api/domain-factory/eia/standards/gate1')
+  getGate1: () => apiGet('/api/domain-factory/eia/standards/gate1'),
+
+  // ── 限值提取（spec 2026-10-19）──
+  /** 启动语料限值提取（同步，admin）→ 提取报告 {files_scanned, tables, ...} */
+  runExtract: () => apiPost('/api/domain-factory/eia/standards/extract'),
+  /** 暂存行清单：?table_key=&status=&confidence= */
+  listExtractRows: (params = {}) => {
+    const query = new URLSearchParams()
+    if (params.table_key) query.set('table_key', params.table_key)
+    if (params.status) query.set('status', params.status)
+    if (params.confidence !== undefined && params.confidence !== null && params.confidence !== '') query.set('confidence', String(params.confidence))
+    const qs = query.toString()
+    return apiGet(`/api/domain-factory/eia/standards/extract/rows${qs ? `?${qs}` : ''}`)
+  },
+  /** 暂存行裁决：{action: confirm|edited|discarded, row_json?, note?} */
+  decideExtractRow: (rowId, payload) =>
+    apiRequest(`/api/domain-factory/eia/standards/extract/rows/${rowId}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  /** 新表候选清单 */
+  listCandidates: () => apiGet('/api/domain-factory/eia/standards/extract/candidates'),
+  /** 候选立表（admin）：{code, table_key, desc, columns_schema} */
+  registerCandidate: (payload) => apiPost('/api/domain-factory/eia/standards/extract/candidates/register', payload),
+  /** W1 引用清单：?code=（编号含 / 必须走 query） */
+  listCitations: (code) => apiGet(`/api/domain-factory/eia/standards/citations?code=${encodeURIComponent(code)}`)
 }
