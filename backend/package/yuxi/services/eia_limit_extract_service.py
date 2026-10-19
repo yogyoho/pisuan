@@ -1,6 +1,7 @@
-"""语料限值提取服务（spec 2026-10-19 W2/W3 后端）。试跑→暂存；裁决→转正；候选→立表；引用→W1 辅助。
+"""语料限值提取服务（spec 2026-10-19 W2/W3 后端 + Task 13 B 通道）。试跑→暂存；裁决→转正；候选→立表；引用→W1 辅助。
 
-链路：samples_bank 各阶段 slices 切片 → 内核（locate/parse/aggregate）→ eia_limit_extract_rows 暂存；
+链路：samples_bank 各阶段 slices 切片 → 内核 locate 定位 → LLM 语义判别（仅限值陈述放行，fail-closed）
+→ 内核 parse_block/聚合 → eia_limit_extract_rows 暂存（行标 extractor="llm"）；
 人工裁决 confirm/edited 经 upsert_row 幂等转正到 eia_standard_limit_rows，discarded 留痕不转正；
 未知标准号行落 __candidate__:<归一码> 候选键，register_candidate 立表后批量迁移。
 """
@@ -23,6 +24,7 @@ from yuxi.services.eia_limit_extract_core import (
     parse_block,
     table_key_for,
 )
+from yuxi.services.eia_limit_llm_classifier import EiaLimitLLMClassifier, GateStats, gate_report
 from yuxi.services.eia_standard_service import LIMIT_TABLE_SCHEMAS
 from yuxi.storage.postgres.models_domain_factory import EiaLimitExtractRow, EiaLimitTableRegistry
 from yuxi.utils import logger
@@ -57,19 +59,29 @@ def _decided_key(code: str, table_key: str, row_json: dict | None) -> tuple:
 
 
 class EiaLimitExtractService:
-    def __init__(self, repo: EiaLimitExtractRepository | None = None, std_repo: EiaStandardRepository | None = None):
+    def __init__(
+        self,
+        repo: EiaLimitExtractRepository | None = None,
+        std_repo: EiaStandardRepository | None = None,
+        classifier: EiaLimitLLMClassifier | None = None,
+    ):
         self._repo = repo or EiaLimitExtractRepository()
         self._std_repo = std_repo or EiaStandardRepository()
+        self._classifier = classifier or EiaLimitLLMClassifier()  # 默认 LLM 判别门，无旁路
 
     def _bank_dirs(self) -> list[Path]:
         """samples_bank 根目录列表（阶段目录为其下含 slices/ 的子目录，threadpool 调用）。"""
         return [_BANK_ROOT] if _BANK_ROOT.is_dir() else []
 
     async def run_extraction(self, username: str) -> dict[str, Any]:
-        """全库试跑：切片 → 区块定位/解析/聚合 → 幂等过滤 → 暂存行 + 报告。"""
+        """全库试跑：切片 → 区块定位 → LLM 语义判别 → 解析/聚合 → 幂等过滤 → 暂存行 + 报告。
 
-        def _scan() -> tuple[int, int, list[dict]]:
-            records: list[dict] = []
+        判别门（Task 13 B 通道）：每个 locate 命中区块先经 LLM 判别是否限值陈述，
+        监测陈述与判别失败（fail-closed）一律不进入解析。行数据带 extractor="llm" 标注。
+        """
+
+        def _scan() -> tuple[int, int, list[tuple]]:
+            hits: list[tuple] = []
             scanned = skipped = 0
             for root in self._bank_dirs():
                 for stage in sorted(p for p in root.iterdir() if (p / "slices").is_dir()):
@@ -87,18 +99,26 @@ class EiaLimitExtractService:
                         rid, anchor = m.group("rid"), f"{stage.name}/{md.stem}"
                         for b in locate_standard_blocks(text):
                             tk = table_key_for(b.code) or f"{_CANDIDATE_PREFIX}{norm_code(b.code)}"
-                            records.extend(
-                                {
-                                    "code": b.code,
-                                    "table_key": tk,
-                                    "row": row,
-                                    "source": {"report_id": rid, "anchor": anchor},
-                                }
-                                for row in parse_block(b)
-                            )
-            return scanned, skipped, records
+                            hits.append((b, tk, rid, anchor))
+            return scanned, skipped, hits
 
-        scanned, skipped, records = await run_in_threadpool(_scan)
+        classifier = self._classifier
+        classifier.stats = GateStats()  # 报告口径按单次试跑计，不跨次累计
+        scanned, skipped, hits = await run_in_threadpool(_scan)
+        records: list[dict] = []
+        for b, tk, rid, anchor in hits:
+            verdict = await classifier.judge(b.code, "\n".join(b.lines), tk)
+            if not verdict.passed:
+                continue  # 监测陈述 / 判别失败（fail-closed）：不产出行
+            records.extend(
+                {
+                    "code": b.code,
+                    "table_key": tk,
+                    "row": {**row, "extractor": "llm"},
+                    "source": {"report_id": rid, "anchor": anchor},
+                }
+                for row in parse_block(b)
+            )
         aggregated = aggregate_records(records)
         # 立表后重映射（spec 2026-10-19）：注册表覆盖的候选键改写为正式表键，防重跑复生候选行
         remap = {f"{_CANDIDATE_PREFIX}{norm_code(reg.code)}": reg.table_key for reg in await self._repo.list_registry()}
@@ -139,6 +159,7 @@ class EiaLimitExtractService:
             "inserted": inserted,
             "skipped": skipped,
             "tables": tables,
+            "gate": gate_report(classifier.stats),
         }
 
     async def list_rows(

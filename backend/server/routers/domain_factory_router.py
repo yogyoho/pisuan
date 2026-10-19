@@ -1648,7 +1648,7 @@ class EiaCandidateRegisterPayload(BaseModel):
 async def run_eia_standard_extract(
     current_user: User = Depends(get_admin_user),
 ) -> dict[str, Any]:
-    """启动语料限值提取（同步纯 CPU，返回提取报告；admin）"""
+    """启动语料限值提取（切片扫描 + 逐区块 LLM 语义判别，同步返回提取报告；admin；大语料耗时分钟级）"""
     try:
         return await get_eia_limit_extract_service().run_extraction(current_user.username)
     except Exception as e:

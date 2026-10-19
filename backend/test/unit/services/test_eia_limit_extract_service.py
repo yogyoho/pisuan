@@ -3,6 +3,19 @@
 import pytest
 
 from yuxi.services.eia_limit_extract_service import EiaLimitExtractService
+from yuxi.services.eia_limit_llm_classifier import GateStats, JudgeResult
+
+
+class PassThroughGate:
+    """既有用例的判别门桩：全部放行（Task 13 前 regex 全收语义），行标注仍由服务层写入。"""
+
+    def __init__(self):
+        self.stats = GateStats()
+
+    async def judge(self, code, text, table_key=None):
+        self.stats.blocks += 1
+        self.stats.passed += 1
+        return JudgeResult(True, "passed", {"is_limit_statement": True})
 
 
 class StubExtractRepo:
@@ -42,7 +55,7 @@ class StubExtractRepo:
 @pytest.fixture
 def svc(monkeypatch, tmp_path):
     repo = StubExtractRepo()
-    s = EiaLimitExtractService(repo=repo)
+    s = EiaLimitExtractService(repo=repo, classifier=PassThroughGate())
     monkeypatch.setattr(s, "_bank_dirs", lambda: [tmp_path])
     d = tmp_path / "planning_eia" / "slices" / "ch1"
     d.mkdir(parents=True)
