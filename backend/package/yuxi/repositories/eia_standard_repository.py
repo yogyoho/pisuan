@@ -50,3 +50,26 @@ class EiaStandardRepository:
                 )
             await session.commit()
             return len(rows)
+
+    async def upsert_row(self, table_key: str, row: dict, username: str) -> None:
+        """逐行转正写入：同 table_key 下业务键完全一致的旧行先删（幂等），再插入。"""
+        import json as _json
+
+        biz = _json.dumps(row, ensure_ascii=False, sort_keys=True)
+        async with pg_manager.get_async_session_context() as session:
+            existing = (
+                await session.scalars(select(EiaStandardLimitRow).where(EiaStandardLimitRow.table_key == table_key))
+            ).all()
+            for e in existing:
+                if _json.dumps(e.row_json, ensure_ascii=False, sort_keys=True) == biz:
+                    await session.delete(e)
+            session.add(
+                EiaStandardLimitRow(
+                    table_key=table_key,
+                    row_json=row,
+                    decided_by=username,
+                    created_at=utc_now_naive(),
+                    updated_at=utc_now_naive(),
+                )
+            )
+            await session.commit()
