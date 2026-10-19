@@ -1,7 +1,9 @@
 """eia_limit_extract_core 单测：区块定位 / 表格+行内解析 / 归一 / 聚合置信。"""
 
 from yuxi.services.eia_limit_extract_core import (
+    Block,
     aggregate_records,
+    convert_limit,
     locate_standard_blocks,
     norm_code,
     parse_block,
@@ -67,3 +69,36 @@ def test_aggregate_confidence():
     assert len(out) == 1 and out[0]["confidence"] == "conflict"
     assert out[0]["row"]["conflict_values"] == [0.15, 0.5]
     assert len(out[0]["sources"]) == 3
+
+
+def test_inline_no_space_regression():
+    """无空格行内句式回归：因子贪婪量化会吞数值首位（昼间65 -> 5.0）。"""
+    noise = Block(code="GB 3096-2008", lines=["厂界噪声昼间65 dB(A)夜间55dB(A)。"], start=0)
+    rows = parse_block(noise)
+    day = next(r for r in rows if "day" in r)
+    night = next(r for r in rows if "night" in r)
+    assert day["day"] == 65.0 and day["unit"] == "dB(A)"
+    assert night["night"] == 55.0 and night["unit"] == "dB(A)"
+
+    water = Block(code="GB3838-2002", lines=["执行III类标准：氨氮1.0mg/L。"], start=0)
+    assert {"category": "III类", "pollutant": "氨氮", "limit_value": 1.0, "unit": "mg/L"} in parse_block(water)
+
+
+def test_convert_limit_ug_to_mg():
+    assert convert_limit(250.0, "μg/m3") == (0.25, "mg/m³")
+    assert convert_limit(250.0, "µg/m³") == (0.25, "mg/m³")
+    assert convert_limit(0.15, "mg/m3") == (0.15, "mg/m³")
+
+
+def test_aggregate_multi_and_single():
+    def rec(rid):
+        return {
+            "code": "GB3838-2002",
+            "table_key": "gb3838_category_limits",
+            "row": {"category": "III类", "pollutant": "COD", "limit_value": 20.0, "unit": "mg/L"},
+            "source": {"report_id": rid, "anchor": "ch2"},
+        }
+
+    out = aggregate_records([rec("001"), rec("002")])
+    assert len(out) == 1 and out[0]["confidence"] == "multi"
+    assert aggregate_records([rec("001")])[0]["confidence"] == "single"

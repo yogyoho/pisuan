@@ -8,7 +8,7 @@ import re
 from dataclasses import dataclass
 
 # --------------------------------------------------------------- 标准号归一
-# 去噪口径借鉴 eia_standard_service._norm_std（避免循环 import 故抄写改造），
+# 去噪口径借鉴 eia_standard_service._norm_std（内核保持零依赖，故本地实现不反向 import），
 # 但保留「号-年」连字符：全大写、剔除空白与斜杠、破折号变体归一为 ASCII 连字符，
 # 即 "GB 3096-2008" / "GB／3096—2008" / "GB3096-2008" -> "GB3096-2008"。
 _STD_NOISE_RE = re.compile(r"[\s/]+")
@@ -154,7 +154,7 @@ class Block:
     start: int
 
 
-_CODE_RE = re.compile(r"(?:GB|HJ)(?:/T)?\s?\d+(?:\.\d+)?[-—–]\d{4}")
+_CODE_RE = re.compile(r"(?:GB|HJ)(?:/T?)?\s?\d+(?:\.\d+)?[-—–]\d{4}")
 
 
 def locate_standard_blocks(text: str, max_window: int = 30) -> list[Block]:
@@ -183,17 +183,18 @@ def locate_standard_blocks(text: str, max_window: int = 30) -> list[Block]:
 
 
 # --------------------------------------------------------------- 区块解析
-_NUM_RE = re.compile(r"[≤<]?\s*([\d.]+)")
+_NUM_RE = re.compile(r"[≤<]?\s*(\d+(?:\.\d+)?)")
 _UNIT_SCAN_RE = re.compile(r"mg/m³|mg/m3|μg/m³|μg/m3|ug/m3|mg/L|mg/l|dB\(A\)", re.IGNORECASE)
 _SEP_RE = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$")
 _NUMERIC_HEADER_RE = re.compile(r"限值|标准|浓度|a\s*值")
 
 # 行内句式：因子(2-8 字，可带上标) + 可选时段 + 可选 浓度/标准值/限值/标准（可连用）
-# + 可选比较词 + 数值 + 单位。
+# + 可选比较词 + 数值 + 单位。因子必须惰性量词——贪婪会把无空格句式的数值首位
+# 吞进因子（实测 "昼间65 dB(A)" -> day=5.0、"氨氮1.0mg/L" -> 0.0）。
 _PERIOD = r"(日均|24小时|日平均|1小时|8小时|小时|年均|年)"
 _KEYWORD = r"(?:(?:浓度|标准值|限值|标准)\s*)*"
 _INLINE_RE = re.compile(
-    r"([一-龥A-Za-z0-9._₂₅ₓ]{2,8})\s*"
+    r"([一-龥A-Za-z0-9._₂₅ₓ]{2,8}?)\s*"
     rf"{_PERIOD}?\s*"
     rf"{_KEYWORD}"
     r"[≤<为]?\s*"
@@ -310,7 +311,8 @@ def _scan_inline(lines: list[str], table_key: str | None, ctx: str) -> list[dict
             if table_key in _NOISE_TABLES:
                 if unit != "dB(A)":  # 噪声表只收声级值，窗口重叠带入的水质行不收
                     continue
-                out.append({"category": norm_grade(ctx) or "", "day": value, "unit": unit})
+                key = "night" if "夜" in factor else "day"  # 昼/夜同行并现时按因子归属
+                out.append({"category": norm_grade(ctx) or "", key: value, "unit": unit})
             elif table_key == "gb3095_concentration_limits":
                 out.append(
                     {
@@ -336,7 +338,12 @@ def _scan_inline(lines: list[str], table_key: str | None, ctx: str) -> list[dict
 
 
 def parse_block(block: Block) -> list[dict]:
-    """解析区块为限值行：优先 GFM 表格（schema 列映射），无表格则行内句式扫描。"""
+    """解析区块为限值行：优先 GFM 表格（schema 列映射），无表格则行内句式扫描。
+
+    已知局限：等级/档位取块级 ctx 正则首处命中——同一区块一行并现多个档位
+    （如 007 语料一行同时引用 2类与1类）时，后续档位的行会误标首档位；
+    Task 9 试跑门观察项，不在内核层特判。
+    """
     table_key = table_key_for(block.code)
     ctx = "\n".join(block.lines)
     table = _extract_table(block.lines)
@@ -357,7 +364,8 @@ def _biz_key(row: dict) -> tuple:
 def aggregate_records(records: list[dict]) -> list[dict]:
     """按（标准, 表, 业务键）聚合限值记录并判定置信度。
 
-    数值列（limit_value，缺则 day）全一致 -> 不同 report_id >=2 为 multi，否则 single；
+    数值列（limit_value/day/night/a_value 取首个非空）全一致 ->
+    不同 report_id >=2 为 multi，否则 single；
     不一致 -> conflict，row 附 conflict_values（升序唯一值）。code 保留首见原样。
     """
     groups: dict[tuple, dict] = {}
@@ -367,7 +375,10 @@ def aggregate_records(records: list[dict]) -> list[dict]:
             key,
             {"code": rec["code"], "table_key": rec["table_key"], "row": dict(rec["row"]), "values": [], "sources": []},
         )
-        g["values"].append(rec["row"].get("limit_value", rec["row"].get("day")))
+        row = rec["row"]
+        g["values"].append(
+            next((row[k] for k in ("limit_value", "day", "night", "a_value") if row.get(k) is not None), None)
+        )
         g["sources"].append(rec["source"])
     out = []
     for g in groups.values():
