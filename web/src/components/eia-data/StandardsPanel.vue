@@ -262,6 +262,189 @@
           数组并翻转核验标记；空表拒绝导出
         </div>
       </div>
+
+      <!-- 提取草稿（原型 2026-10-19 Card 1：语料自动提取 · 暂存行逐行核实转正） -->
+      <div class="card">
+        <div class="card-hd">
+          <h3>提取草稿</h3>
+          <span class="hd-sub">语料自动提取 · 逐行核实后进入正式表 · 已裁决行不再复生</span>
+          <div class="hd-right">
+            <span v-if="extractReport" class="report-pill" title="上次提取报告">
+              上次：<b>{{ extractReport.files_scanned }}</b> 文件 · 聚合
+              <b>{{ extractReport.aggregated }}</b> · 插入 <b>{{ extractReport.inserted }}</b> ·
+              跳过 <b>{{ extractReport.skipped }}</b>
+            </span>
+            <button
+              v-if="userStore.isAdmin"
+              class="btn btn-sec btn-sm"
+              :disabled="extracting"
+              @click="onRunExtract"
+            >
+              <RefreshCw :size="13" :class="{ spin: extracting }" />
+              {{ extracting ? '提取中…' : '重新提取' }}
+            </button>
+          </div>
+        </div>
+        <div class="toolbar">
+          <button
+            v-for="g in extractGroups"
+            :key="g.key"
+            class="stage-chip"
+            :class="{ on: activeExtractTable === g.key }"
+            @click="activeExtractTable = g.key"
+          >
+            {{ g.label }} <span class="cnt">{{ g.rows.length }} 行待裁决</span>
+          </button>
+          <span style="flex: 1"></span>
+          <span class="pill pill-gray">仅 pending · 共 {{ extractRows.length }} 行</span>
+        </div>
+        <table v-if="activeExtractRows.length" class="tbl extract-tbl">
+          <thead>
+            <tr>
+              <th style="width: 30px"></th>
+              <th
+                v-for="col in extractColumns"
+                :key="col.key"
+                :class="{ r: col.type === 'number' }"
+              >
+                {{ col.label }}
+              </th>
+              <th>置信</th>
+              <th>状态</th>
+              <th style="width: 150px">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template v-for="r in activeExtractRows" :key="r.id">
+              <tr>
+                <td>
+                  <button
+                    class="expander"
+                    :aria-label="`展开来源 ${r.sources?.length || 0} 条`"
+                    @click="toggleExtractSub(r.id)"
+                  >
+                    <ChevronRight :size="14" :class="{ open: expandedExtractIds.includes(r.id) }" />
+                  </button>
+                </td>
+                <td
+                  v-for="col in extractColumns"
+                  :key="col.key"
+                  :class="{ r: col.type === 'number' }"
+                >
+                  <span :class="typeof extractCell(r, col.key) === 'number' ? 'mono num' : ''">{{
+                    extractCell(r, col.key)
+                  }}</span>
+                </td>
+                <td>
+                  <div class="cell-main">
+                    <span class="pill" :class="confPillClass(r.confidence)">
+                      {{ r.confidence
+                      }}<template v-if="r.confidence === 'multi'"> ·{{ sourceCount(r) }}</template>
+                    </span>
+                    <div v-if="conflictValues(r).length" class="conf-chips">
+                      <code v-for="v in conflictValues(r)" :key="v" class="k">{{ v }}</code>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="pill pill-warn">待裁决</span></td>
+                <td>
+                  <button
+                    class="btn btn-txt btn-sm"
+                    :disabled="isCandidateRow(r) || r.confidence === 'conflict'"
+                    :title="
+                      isCandidateRow(r) ? '候选表行须先立表迁移再裁决' : '存在冲突值，须先编辑消解'
+                    "
+                    @click="openConfirmRow(r)"
+                  >
+                    确认
+                  </button>
+                  <button
+                    class="btn btn-txt btn-sm"
+                    :disabled="isCandidateRow(r)"
+                    :title="isCandidateRow(r) ? '候选表行须先立表迁移再裁决' : ''"
+                    @click="openEditRow(r)"
+                  >
+                    编辑
+                  </button>
+                  <button class="btn btn-txt btn-sm danger" @click="onDiscardRow(r)">丢弃</button>
+                </td>
+              </tr>
+              <tr v-if="expandedExtractIds.includes(r.id)" class="sub-row">
+                <td :colspan="extractColumns.length + 4">
+                  <div class="src-list">
+                    <div v-for="(s, i) in r.sources || []" :key="i" class="src-item">
+                      <FileText :size="13" />
+                      <span class="mono">{{ s.report_id }}</span>
+                      <span v-if="sourceStage(s)" class="pill pill-gray s-stage">{{
+                        sourceStage(s)
+                      }}</span>
+                      <span class="s-anchor">{{ s.anchor }}</span>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+        <div v-else class="empty-state">
+          <a-empty
+            :description="
+              extractRows.length
+                ? '当前表暂无待裁决行'
+                : '暂无待裁决草稿 · 管理员点击「重新提取」扫描语料'
+            "
+          />
+        </div>
+        <div class="tbl-foot">
+          确认/编辑转正写入正式表，导出物化后写手可见；丢弃行打 discarded 标记，重跑提取不复生
+        </div>
+      </div>
+
+      <!-- 新表候选（原型 2026-10-19 Card 2：不在册标准号 → 立表迁移） -->
+      <div class="card">
+        <div class="card-hd">
+          <h3>新表候选</h3>
+          <span class="hd-sub">提取发现不在册的表 → 立表后自动迁入正式限值表清单</span>
+          <div class="hd-right">
+            <span v-if="candidates.length" class="pill pill-gray">
+              {{ candidates.length }} 个候选 · {{ candidatePendingCount }} 行 pending
+            </span>
+          </div>
+        </div>
+        <div v-if="candidates.length" class="cand-grid">
+          <div v-for="c in candidates" :key="c.candidate_key" class="cand-card">
+            <div class="cand-key">
+              <div class="cand-ic"><AlertTriangle :size="16" /></div>
+              <div class="cand-title-wrap">
+                <div class="cand-title" :title="candidateCode(c)">{{ candidateCode(c) }}</div>
+                <div class="cand-code mono">{{ c.candidate_key }}</div>
+              </div>
+            </div>
+            <div class="cand-meta">
+              <span class="pill pill-orange">{{ c.count }} 行待裁决</span>
+            </div>
+            <div class="fact-list">
+              <code v-for="f in candidateFactors(c).shown" :key="f" class="k">{{ f }}</code>
+              <code v-if="candidateFactors(c).overflow" class="k"
+                >+{{ candidateFactors(c).overflow }}</code
+              >
+            </div>
+            <div class="cand-ft">
+              <button class="btn btn-sec btn-sm" @click="onIgnoreCandidate(c)">忽略</button>
+              <button v-if="userStore.isAdmin" class="btn btn-pri btn-sm" @click="openRegister(c)">
+                立表
+              </button>
+            </div>
+          </div>
+        </div>
+        <div v-else class="empty-state">
+          <a-empty description="暂无新表候选 · 提取发现不在册标准号时在此出现" />
+        </div>
+        <div class="tbl-foot">
+          候选行在未立表前保持 pending；立表（admin）后按 (code, table_key)
+          迁入正式表并从候选消失；忽略不可恢复
+        </div>
+      </div>
     </template>
 
     <div class="note-bar">
@@ -341,13 +524,147 @@
       </table>
       <a-button size="small" @click="addBlankRow">＋ 添加一行</a-button>
     </a-modal>
+
+    <!-- 提取行编辑弹层（M1，schema 驱动；保存 = 以编辑后值转正） -->
+    <a-modal
+      v-model:open="editRowDlg.open"
+      :title="`编辑草稿行 · ${extractGroupLabel(editRowDlg.row?.table_key)}${extractFactor(editRowDlg.row) ? ' · ' + extractFactor(editRowDlg.row) : ''}`"
+      :confirm-loading="editRowDlg.submitting"
+      ok-text="保存并转正"
+      @ok="onSubmitEditRow"
+    >
+      <div class="frm-grid">
+        <div v-for="f in editRowFields" :key="f.key" class="frm-row">
+          <label>{{ f.label }}</label>
+          <a-input-number
+            v-if="f.type === 'number'"
+            v-model:value="editRowDlg.form[f.key]"
+            style="width: 100%"
+          />
+          <a-input v-else v-model:value="editRowDlg.form[f.key]" />
+        </div>
+      </div>
+      <div class="frm-row">
+        <label>裁决备注</label>
+        <a-textarea v-model:value="editRowDlg.note" :rows="2" placeholder="仅平台库留档（可选）" />
+      </div>
+      <div class="frm-help">
+        保存并转正 = 以编辑后值写入正式表 {{ editRowDlg.row?.table_key }}，原暂存行转
+        edited；冲突行编辑后冲突标记自动消解
+      </div>
+    </a-modal>
+
+    <!-- 确认转正弹层（M2：红线提示 + 行摘要 + 备注） -->
+    <a-modal
+      v-model:open="confirmRowDlg.open"
+      title="确认转正 · 写入正式表"
+      :confirm-loading="confirmRowDlg.submitting"
+      ok-text="确认转正"
+      @ok="onSubmitConfirmRow"
+    >
+      <div class="redline-box">
+        <span class="redline-title">转正语义（红线）</span>
+        该行将写入正式限值表 <strong>{{ confirmRowDlg.row?.table_key }}</strong
+        >，导出物化后写手可见；已裁决行重跑提取不再复生。
+      </div>
+      <div class="sum-box">
+        <div v-for="line in confirmRowLines" :key="line.label" class="sum-line">
+          <b>{{ line.label }}</b>
+          <span :class="typeof line.value === 'number' ? 'mono num' : ''">{{
+            line.value === null || line.value === undefined || line.value === '' ? '—' : line.value
+          }}</span>
+        </div>
+        <div class="sum-line">
+          <b>来源</b>
+          <span class="mono">{{ confirmRowSources || '—' }}</span>
+        </div>
+      </div>
+      <div class="frm-row">
+        <label>裁决备注</label>
+        <a-textarea
+          v-model:value="confirmRowDlg.note"
+          :rows="2"
+          placeholder="仅平台库留档（可选）"
+        />
+      </div>
+    </a-modal>
+
+    <!-- 候选立表弹层（M3：注册元数据 + 列结构编辑器） -->
+    <a-modal
+      v-model:open="regDlg.open"
+      :title="`立表 · ${regDlg.candidateKey}`"
+      :confirm-loading="regDlg.submitting"
+      :width="640"
+      ok-text="确认立表"
+      @ok="onRegisterSubmit"
+    >
+      <div class="frm-grid">
+        <div class="frm-row">
+          <label>关联标准编号</label>
+          <a-input v-model:value="regDlg.code" />
+        </div>
+        <div class="frm-row">
+          <label>table_key</label>
+          <a-input v-model:value="regDlg.tableKey" />
+          <div class="frm-help mono">^[a-z0-9_]+$ · 与注册表 / 既有表查重</div>
+        </div>
+      </div>
+      <div class="frm-row">
+        <label>描述</label>
+        <a-input v-model:value="regDlg.desc" />
+      </div>
+      <div class="frm-row">
+        <label>列结构（按候选行 col_* 键预填，可增删改）</label>
+        <table class="schema-tbl">
+          <thead>
+            <tr>
+              <th>列键</th>
+              <th>显示名</th>
+              <th style="width: 92px">类型</th>
+              <th style="width: 52px">必填</th>
+              <th style="width: 30px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(c, i) in regDlg.cols" :key="`${c.key}-${i}`">
+              <td>
+                <code v-if="!c.custom" class="k">{{ c.key }}</code>
+                <a-input v-else v-model:value="c.key" size="small" />
+              </td>
+              <td><a-input v-model:value="c.label" size="small" /></td>
+              <td>
+                <select v-model="c.type" class="inp reg-type-sel">
+                  <option value="number">number</option>
+                  <option value="str">str</option>
+                </select>
+              </td>
+              <td class="reg-req"><input v-model="c.required" type="checkbox" /></td>
+              <td class="reg-del">
+                <button
+                  class="btn btn-txt btn-sm danger"
+                  aria-label="删除列"
+                  @click="regDlg.cols.splice(i, 1)"
+                >
+                  ×
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <button class="btn btn-sec btn-sm reg-add-col" @click="addRegCol">＋ 添加列</button>
+      </div>
+      <div class="frm-help">
+        立表后该候选全部 pending 行按新 table_key
+        迁入正式表并从候选清单消失；首个因子列沿用行内「因子」键
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { message } from 'ant-design-vue'
-import { Info, ShieldCheck } from '@lucide/vue'
+import { message, Modal } from 'ant-design-vue'
+import { AlertTriangle, ChevronRight, FileText, Info, RefreshCw, ShieldCheck } from '@lucide/vue'
 import { eiaStandardApi } from '@/apis/eia_standard_api'
 import { useUserStore } from '@/stores/user'
 
@@ -573,7 +890,352 @@ const exportLimits = async () => {
   }
 }
 
-onMounted(fetchList)
+// ── 提取草稿与新表候选（spec 2026-10-19；加载失败静默降级，不阻塞面板主链）──
+
+const CANDIDATE_PREFIX = '__candidate__:'
+
+const extractRows = ref([])
+const extractReport = ref(null)
+const candidates = ref([])
+const activeExtractTable = ref('')
+const extracting = ref(false)
+const expandedExtractIds = ref([])
+
+const isCandidateRow = (r) => (r?.table_key || '').startsWith(CANDIDATE_PREFIX)
+// sources 锚点形如 `{stage}/{切片名}`，阶段 pill 取锚点首段
+const sourceStage = (s) => (s?.anchor || '').split('/')[0]
+const sourceCount = (r) => new Set((r.sources || []).map((s) => s.report_id)).size
+const conflictValues = (r) => (Array.isArray(r?.row?.conflict_values) ? r.row.conflict_values : [])
+const extractCell = (r, k) => {
+  const v = r?.row?.[k]
+  return v === null || v === undefined || v === '' ? '—' : v
+}
+const confPillClass = (c) =>
+  ({ multi: 'pill-ok', single: 'pill-gray', conflict: 'pill-err' })[c] || 'pill-gray'
+// 因子摘要：在册表取 pollutant，候选表取首个非空字符串列值
+const extractFactor = (r) =>
+  r?.row?.pollutant ||
+  Object.values(r?.row || {}).find((v) => typeof v === 'string' && v.trim()) ||
+  ''
+
+const extractGroupLabel = (tableKey) => {
+  if (!tableKey) return ''
+  if (tableKey.startsWith(CANDIDATE_PREFIX)) return tableKey.slice(CANDIDATE_PREFIX.length)
+  return limitTables.value[tableKey]?.desc || tableKey
+}
+
+const extractGroups = computed(() => {
+  const map = new Map()
+  for (const r of extractRows.value) {
+    if (!map.has(r.table_key)) map.set(r.table_key, [])
+    map.get(r.table_key).push(r)
+  }
+  return [...map.entries()].map(([key, rows]) => ({ key, rows, label: extractGroupLabel(key) }))
+})
+
+const ensureActiveExtractTable = () => {
+  if (!extractRows.value.some((r) => r.table_key === activeExtractTable.value))
+    activeExtractTable.value = extractGroups.value[0]?.key ?? ''
+}
+
+const activeExtractRows = computed(
+  () => extractGroups.value.find((g) => g.key === activeExtractTable.value)?.rows ?? []
+)
+
+// 列头 schema 驱动：在册表用 listLimits schemas；候选表按 row col_* 键平铺（全数值列推断为 number）
+const extractColumns = computed(() => {
+  const key = activeExtractTable.value
+  const schema = schemas.value[key]
+  if (schema)
+    return Object.entries(schema).map(([k, s]) => ({ key: k, label: s.label, type: s.type }))
+  const rows = activeExtractRows.value
+  const keys = []
+  for (const r of rows)
+    for (const k of Object.keys(r.row || {}))
+      if (k.startsWith('col_') && !keys.includes(k)) keys.push(k)
+  return keys.map((k) => {
+    const vals = rows
+      .map((r) => r.row?.[k])
+      .filter((v) => v !== undefined && v !== null && v !== '')
+    return {
+      key: k,
+      label: k.slice(4),
+      type: vals.length > 0 && vals.every((v) => typeof v === 'number') ? 'number' : 'str'
+    }
+  })
+})
+
+const loadExtract = async () => {
+  try {
+    const [rowsData, candData] = await Promise.all([
+      eiaStandardApi.listExtractRows({ status: 'pending' }),
+      eiaStandardApi.listCandidates()
+    ])
+    extractRows.value = rowsData.rows || []
+    candidates.value = candData.candidates || []
+    ensureActiveExtractTable()
+  } catch (e) {
+    console.warn('[StandardsPanel] 提取草稿/候选加载失败，区块降级为空:', e)
+  }
+}
+
+const onRunExtract = async () => {
+  extracting.value = true
+  message.loading({
+    content: '正在全库扫描提取限值（约 40 秒+）…',
+    key: 'limit-extract',
+    duration: 0
+  })
+  try {
+    const r = await eiaStandardApi.runExtract()
+    extractReport.value = r
+    message.success({ content: `提取完成：插入 ${r.inserted} 行`, key: 'limit-extract' })
+    await Promise.all([loadExtract(), fetchList()])
+  } catch (e) {
+    message.error({ content: e?.message || '提取失败', key: 'limit-extract' })
+  } finally {
+    extracting.value = false
+  }
+}
+
+const toggleExtractSub = (id) => {
+  expandedExtractIds.value = expandedExtractIds.value.includes(id)
+    ? expandedExtractIds.value.filter((x) => x !== id)
+    : [...expandedExtractIds.value, id]
+}
+
+const removeExtractRow = (id) => {
+  extractRows.value = extractRows.value.filter((r) => r.id !== id)
+  ensureActiveExtractTable()
+}
+
+// 编辑草稿行（M1）：在册表 schema 驱动字段（候选表行不可编辑，入口已禁用）
+const editRowDlg = reactive({ open: false, submitting: false, row: null, form: {}, note: '' })
+
+const editRowFields = computed(() => {
+  const schema = schemas.value[editRowDlg.row?.table_key] || {}
+  return Object.entries(schema).map(([k, s]) => ({ key: k, label: s.label, type: s.type }))
+})
+
+const openEditRow = (r) => {
+  const schema = schemas.value[r.table_key] || {}
+  editRowDlg.row = r
+  editRowDlg.form = Object.fromEntries(
+    Object.entries(schema).map(([k, s]) => [k, r.row?.[k] ?? (s.type === 'number' ? null : '')])
+  )
+  editRowDlg.note = ''
+  editRowDlg.open = true
+}
+
+const submitRowDecision = async (row, payload, successText) => {
+  await eiaStandardApi.decideExtractRow(row.id, payload)
+  message.success(successText)
+  removeExtractRow(row.id)
+}
+
+const onSubmitEditRow = async () => {
+  editRowDlg.submitting = true
+  try {
+    await submitRowDecision(
+      editRowDlg.row,
+      { action: 'edited', row_json: { ...editRowDlg.form }, note: editRowDlg.note || null },
+      '已保存并转正（导出物化后写手可见）'
+    )
+    editRowDlg.open = false
+    await fetchList()
+  } catch (e) {
+    message.error(e?.message || '编辑转正失败')
+  } finally {
+    editRowDlg.submitting = false
+  }
+}
+
+// 确认转正（M2）：红线提示 + 行摘要 + 备注
+const confirmRowDlg = reactive({ open: false, submitting: false, row: null, note: '' })
+
+const confirmRowLines = computed(() => {
+  const r = confirmRowDlg.row
+  if (!r) return []
+  const schema = schemas.value[r.table_key]
+  const entries = schema
+    ? Object.entries(schema)
+    : Object.keys(r.row || {})
+        .filter((k) => k !== 'conflict_values')
+        .map((k) => [k, { label: k }])
+  return entries.map(([k, s]) => ({ label: s.label || k, value: r.row?.[k] ?? null }))
+})
+
+const confirmRowSources = computed(() =>
+  [...new Set((confirmRowDlg.row?.sources || []).map((s) => s.report_id))].join(' · ')
+)
+
+const openConfirmRow = (r) => {
+  confirmRowDlg.row = r
+  confirmRowDlg.note = ''
+  confirmRowDlg.open = true
+}
+
+const onSubmitConfirmRow = async () => {
+  confirmRowDlg.submitting = true
+  try {
+    await submitRowDecision(
+      confirmRowDlg.row,
+      { action: 'confirm', note: confirmRowDlg.note || null },
+      `已转正写入 ${confirmRowDlg.row.table_key}（导出物化后写手可见）`
+    )
+    confirmRowDlg.open = false
+    await fetchList()
+  } catch (e) {
+    message.error(e?.message || '转正失败')
+  } finally {
+    confirmRowDlg.submitting = false
+  }
+}
+
+const onDiscardRow = (r) => {
+  Modal.confirm({
+    title: '丢弃该草稿行？',
+    content: '丢弃行打 discarded 标记，不可恢复；重跑提取不再复生。',
+    okText: '丢弃',
+    okType: 'danger',
+    cancelText: '取消',
+    onOk: () =>
+      submitRowDecision(r, { action: 'discarded' }, '已丢弃 1 行').catch((e) =>
+        message.error(e?.message || '丢弃失败')
+      )
+  })
+}
+
+// 新表候选（Card 2）：因子清单去重前 6 + 忽略 / 立表
+const candidatePendingCount = computed(() =>
+  candidates.value.reduce((sum, c) => sum + (c.count || 0), 0)
+)
+
+const candidateCode = (c) => c.rows?.[0]?.code || c.candidate_key.slice(CANDIDATE_PREFIX.length)
+
+const candidateFactors = (c) => {
+  const seen = []
+  for (const r of c.rows || []) {
+    const v = extractFactor(r)
+    if (v && !seen.includes(v)) seen.push(v)
+  }
+  return { shown: seen.slice(0, 6), overflow: Math.max(seen.length - 6, 0) }
+}
+
+const onIgnoreCandidate = (c) => {
+  Modal.confirm({
+    title: `忽略候选 ${c.candidate_key}？`,
+    content: `该候选 ${c.count} 行 pending 将全部转 discarded，不可恢复；重跑提取不再复生。`,
+    okText: '忽略',
+    okType: 'danger',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        await Promise.all(
+          (c.rows || []).map((r) => eiaStandardApi.decideExtractRow(r.id, { action: 'discarded' }))
+        )
+        message.success(`已忽略：${c.count} 行全部转 discarded`)
+        await loadExtract()
+      } catch (e) {
+        message.error(e?.message || '忽略失败')
+        await loadExtract()
+      }
+    }
+  })
+}
+
+// 候选立表（M3）：元数据 + 列结构编辑器（列键预填 readonly，新增列可编辑键名）
+const regDlg = reactive({
+  open: false,
+  submitting: false,
+  candidateKey: '',
+  code: '',
+  tableKey: '',
+  desc: '',
+  cols: []
+})
+
+const openRegister = (c) => {
+  const rows = c.rows || []
+  const keys = []
+  for (const r of rows)
+    for (const k of Object.keys(r.row || {}))
+      if (k.startsWith('col_') && !keys.includes(k)) keys.push(k)
+  const code = candidateCode(c)
+  regDlg.candidateKey = c.candidate_key
+  regDlg.code = code
+  regDlg.tableKey = code
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+  regDlg.desc = `${code} · ${keys.map((k) => k.slice(4)).join('/')}`
+  regDlg.cols = keys.map((k) => {
+    const vals = rows
+      .map((r) => r.row?.[k])
+      .filter((v) => v !== undefined && v !== null && v !== '')
+    return {
+      key: k,
+      label: k.slice(4),
+      type: vals.length > 0 && vals.every((v) => typeof v === 'number') ? 'number' : 'str',
+      required: true,
+      custom: false
+    }
+  })
+  regDlg.open = true
+}
+
+const addRegCol = () => {
+  let i = regDlg.cols.length + 1
+  while (regDlg.cols.some((c) => c.key === `col_extra_${i}`)) i += 1
+  regDlg.cols.push({ key: `col_extra_${i}`, label: '', type: 'str', required: true, custom: true })
+}
+
+const onRegisterSubmit = async () => {
+  if (!regDlg.code.trim()) {
+    message.warning('请填写关联标准编号')
+    return
+  }
+  const tableKey = regDlg.tableKey.trim()
+  if (!/^[a-z0-9_]+$/.test(tableKey)) {
+    message.warning('table_key 须匹配 ^[a-z0-9_]+$')
+    return
+  }
+  const cols = regDlg.cols.filter((c) => c.key.trim())
+  if (!cols.length) {
+    message.warning('至少保留一列')
+    return
+  }
+  if (new Set(cols.map((c) => c.key.trim())).size !== cols.length) {
+    message.warning('存在重复列键，请修正后再提交')
+    return
+  }
+  regDlg.submitting = true
+  try {
+    const r = await eiaStandardApi.registerCandidate({
+      code: regDlg.code.trim(),
+      table_key: tableKey,
+      desc: regDlg.desc.trim(),
+      columns_schema: Object.fromEntries(
+        cols.map((c) => [
+          c.key.trim(),
+          { label: c.label.trim() || c.key.slice(4), type: c.type, required: c.required }
+        ])
+      )
+    })
+    message.success(`已立表并迁移 ${r.migrated} 行`)
+    regDlg.open = false
+    await Promise.all([loadExtract(), fetchList()])
+  } catch (e) {
+    message.error(e?.message || '候选立表失败')
+  } finally {
+    regDlg.submitting = false
+  }
+}
+
+onMounted(() => {
+  fetchList()
+  loadExtract()
+})
 </script>
 
 <style lang="less" scoped>
@@ -590,7 +1252,8 @@ onMounted(fetchList)
   }
 }
 
-.limit-tbl {
+.limit-tbl,
+.extract-tbl {
   table-layout: auto;
 }
 
@@ -896,6 +1559,319 @@ code.k {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px dashed var(--hairline);
+}
+
+/* ── 提取草稿（原型 2026-10-19 Card 1）────────────────── */
+.report-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px dashed var(--gray-300);
+  color: var(--gray-500);
+  white-space: nowrap;
+
+  b {
+    color: var(--gray-600);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.expander {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  color: var(--gray-500);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--gray-100);
+    color: var(--gray-800);
+  }
+
+  svg {
+    transition: transform 0.15s;
+
+    &.open {
+      transform: rotate(90deg);
+    }
+  }
+}
+
+.sub-row > td {
+  padding: 10px 12px 12px 42px;
+  background: var(--gray-25, var(--gray-50));
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.src-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.src-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  background: var(--gray-0);
+  font-size: 12px;
+  color: var(--gray-600);
+
+  svg {
+    flex: none;
+    color: var(--gray-500);
+  }
+
+  .s-stage {
+    flex: none;
+  }
+
+  .s-anchor {
+    margin-left: auto;
+    font-family: ui-monospace, 'Cascadia Code', Consolas, 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--gray-500);
+  }
+}
+
+.conf-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+
+  code.k {
+    background: var(--color-error-50);
+    color: var(--color-error-700);
+  }
+}
+
+.cell-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.btn-txt.danger {
+  color: var(--second-600);
+
+  &:hover {
+    background: var(--second-50, var(--gray-100));
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── 新表候选（原型 2026-10-19 Card 2）────────────────── */
+.cand-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.cand-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  background: var(--gray-0);
+  transition: border-color 0.15s;
+
+  &:hover {
+    border-color: var(--main-300);
+  }
+}
+
+.cand-key {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+
+  .cand-ic {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex: none;
+    border-radius: 6px;
+    background: var(--second-50, var(--gray-100));
+    color: var(--second-600);
+  }
+}
+
+.cand-title-wrap {
+  min-width: 0;
+}
+
+.cand-title {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cand-code {
+  font-size: 12px;
+  color: var(--gray-500);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cand-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--gray-500);
+}
+
+.fact-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+
+  code.k {
+    font-size: 11px;
+  }
+}
+
+.cand-ft {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 9px;
+  border-top: 1px dashed var(--gray-200);
+  margin-top: auto;
+}
+
+/* ── 提取弹层表单（M1 编辑 / M2 转正 / M3 立表）───────── */
+.frm-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+
+.frm-row {
+  margin-bottom: 14px;
+
+  label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gray-600);
+  }
+}
+
+.frm-help {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--gray-500);
+}
+
+.sum-box {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  background: var(--gray-25, var(--gray-50));
+  font-size: 13px;
+
+  .sum-line {
+    display: flex;
+    gap: 8px;
+    padding: 2px 0;
+
+    b {
+      min-width: 52px;
+      flex: none;
+      font-weight: 600;
+      color: var(--gray-800);
+    }
+
+    span {
+      color: var(--gray-600);
+      word-break: break-all;
+    }
+  }
+}
+
+.schema-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+
+  th {
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--gray-500);
+    text-align: left;
+  }
+
+  td {
+    padding: 5px 6px;
+    border-bottom: 1px solid var(--gray-100);
+
+    code.k {
+      font-size: 11px;
+    }
+  }
+
+  .reg-type-sel {
+    width: 100%;
+    height: 26px;
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .reg-req {
+    text-align: center;
+
+    input[type='checkbox'] {
+      width: 15px;
+      height: 15px;
+      accent-color: var(--main-600);
+    }
+  }
+
+  .reg-del {
+    text-align: center;
+  }
+}
+
+.reg-add-col {
+  margin-top: 8px;
 }
 </style>
 
