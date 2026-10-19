@@ -74,6 +74,34 @@ def test_oversized_table_splits_within_milvus_varchar_limit():
         assert "|Table|Part" in chunk.splitlines()[0]
 
 
+def _make_chinese_bullet_list(rows: int, item_text: str) -> str:
+    return "\n".join(f"- {item_text}" for _ in range(rows))
+
+
+def test_chinese_dense_list_splits_by_byte_limit():
+    """中文密集列表：字符数低于旧字符上限但 UTF-8 字节超限，必须走 token 拆分防 Milvus varchar 溢出。"""
+    items = _make_chinese_bullet_list(rows=3000, item_text="项目甲乙丙丁某内容记录第十五号")
+    content = f"# 附件清单\n\n{items}"
+
+    # 回归条件本身：字符数在旧字符守卫之下，UTF-8 字节超 60000
+    assert len(content) < 60000
+    assert len(content.encode("utf-8")) > 60000
+
+    chunks = semantic.chunk_markdown(
+        content,
+        parser_config={"chunk_token_num": 512},
+        embed_fn=lambda texts: texts,
+    )
+
+    assert len(chunks) > 1
+    for chunk in chunks:
+        assert len(chunk.encode("utf-8")) < 65535
+    list_chunks = [c for c in chunks if "|bullet_list_open|" in c.splitlines()[0]]
+    assert len(list_chunks) > 1
+    for chunk in list_chunks:
+        assert "|bullet_list_open|Part" in chunk.splitlines()[0]
+
+
 def test_normal_table_keeps_single_chunk_without_part_header():
     """正常尺寸表格仍整块保留，header 为 `# 标题|Table` 且不带 Part 编号。"""
     content = f"# 附表说明\n\n{_make_markdown_table(rows=3, cell_text='短数据')}\n\n附表结束。"
