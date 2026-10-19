@@ -218,7 +218,20 @@ class EiaStandardService:
         for key, rows in by_table.items():  # DB 已录入而文件注册表漂移掉的表：仍须露出
             if key not in tables:
                 tables[key] = _db_fields(rows)
-        return {"limit_tables": tables, "schemas": LIMIT_TABLE_SCHEMAS}
+        # 新表入册（spec 2026-10-19）：DB 注册表露出新键 + schemas 合并
+        schemas = dict(LIMIT_TABLE_SCHEMAS)
+        for reg in await self.repo.list_registry():
+            if reg.table_key not in tables:
+                tables[reg.table_key] = {
+                    "desc": reg.desc,
+                    "code_ref": reg.code,
+                    "needs_verification": True,
+                    "verified": False,
+                    "rows": [],
+                    "source": "db_registry",
+                }
+            schemas[reg.table_key] = reg.columns_schema
+        return {"limit_tables": tables, "schemas": schemas}
 
     async def get_gate1_checks(self) -> dict[str, Any]:
         """门 1 体检卡（P2-3 只读）：规则规格原样 + 注册表自检。

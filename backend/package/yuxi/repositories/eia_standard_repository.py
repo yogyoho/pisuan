@@ -7,7 +7,11 @@ from typing import Any
 from sqlalchemy import delete, select
 
 from yuxi.storage.postgres.manager import pg_manager
-from yuxi.storage.postgres.models_domain_factory import EiaStandardLimitRow, EiaStandardReview
+from yuxi.storage.postgres.models_domain_factory import (
+    EiaLimitTableRegistry,
+    EiaStandardLimitRow,
+    EiaStandardReview,
+)
 from yuxi.utils.datetime_utils import utc_now_naive
 
 
@@ -50,6 +54,11 @@ class EiaStandardRepository:
                 )
             await session.commit()
             return len(rows)
+
+    async def list_registry(self) -> list[EiaLimitTableRegistry]:
+        """新表注册元数据（spec 2026-10-19 候选立表通道；list_limit_tables 合并露出）。"""
+        async with pg_manager.get_async_session_context() as session:
+            return list((await session.scalars(select(EiaLimitTableRegistry))).all())
 
     async def upsert_row(self, table_key: str, row: dict, username: str) -> None:
         """逐行转正写入：同 table_key 下业务键完全一致的旧行先删（幂等），再插入。"""
