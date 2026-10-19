@@ -224,3 +224,13 @@ class EiaLimitExtractService:
             if cited_as:
                 reports.append({"report_id": rid, "stage": m.get("stage", ""), "cited_as": cited_as})
         return {"code": code, "cited_count": len(reports), "reports": reports}
+
+
+_service: EiaLimitExtractService | None = None
+
+
+def get_eia_limit_extract_service() -> EiaLimitExtractService:
+    global _service
+    if _service is None:
+        _service = EiaLimitExtractService()
+    return _service

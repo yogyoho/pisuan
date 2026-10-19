@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, Response
+from pydantic import BaseModel
 from yuxi.services import eia_corpus_task_service as eia_corpus_tasks
 from yuxi.services.domain_factory_service import get_domain_factory_service
 from yuxi.services.eia_data_service import (
@@ -21,6 +22,7 @@ from yuxi.services.eia_entity_service import get_eia_entity_service
 from yuxi.services.eia_formula_service import get_eia_formula_service
 from yuxi.services.eia_lexicon_service import get_eia_lexicon_service
 from yuxi.services.eia_library_service import LibraryFileTooLarge, get_eia_library_service
+from yuxi.services.eia_limit_extract_service import get_eia_limit_extract_service
 from yuxi.services.eia_meta_service import get_eia_meta_service
 from yuxi.services.eia_paradigm_service import get_eia_paradigm_service
 from yuxi.services.eia_stage_service import get_eia_stage_service
@@ -1626,6 +1628,115 @@ async def export_eia_standard_reviews(
     except Exception as e:
         logger.error(f"Failed to export eia standard reviews: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"导出标准核实裁决失败: {str(e)}")
+
+
+# =============================================================================
+# EIA Standard Limit Extract (语料限值提取：试跑→暂存→逐行核实，spec 2026-10-19)
+# =============================================================================
+
+
+class EiaCandidateRegisterPayload(BaseModel):
+    """候选立表请求体（spec §5 表级新增通道）：形状错 422，坏 schema 进不了库"""
+
+    code: str
+    table_key: str
+    desc: str = ""
+    columns_schema: dict[str, Any]
+
+
+@domain_factory.post("/eia/standards/extract")
+async def run_eia_standard_extract(
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """启动语料限值提取（同步纯 CPU，返回提取报告；admin）"""
+    try:
+        return await get_eia_limit_extract_service().run_extraction(current_user.username)
+    except Exception as e:
+        logger.error(f"Failed eia standard extract: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"限值提取失败: {str(e)}")
+
+
+@domain_factory.get("/eia/standards/extract/rows")
+async def list_eia_extract_rows(
+    table_key: str | None = None,
+    status: str | None = None,
+    confidence: str | None = None,
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """暂存行清单（table_key/status/confidence 过滤）"""
+    try:
+        return {"rows": await get_eia_limit_extract_service().list_rows(table_key, status, confidence)}
+    except Exception as e:
+        logger.error(f"Failed to list eia extract rows: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取暂存行失败: {str(e)}")
+
+
+@domain_factory.put("/eia/standards/extract/rows/{row_id}")
+async def decide_eia_extract_row(
+    row_id: int,
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """暂存行裁决：{action: confirm|edited|discarded, row_json?, note?}；action 越界 400"""
+    try:
+        row = await get_eia_limit_extract_service().decide_row(
+            row_id,
+            payload.get("action"),
+            payload.get("row_json"),
+            current_user.username,
+            payload.get("note"),
+        )
+        return {"success": True, "row": row}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to decide eia extract row {row_id}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"暂存行裁决失败: {str(e)}")
+
+
+@domain_factory.get("/eia/standards/extract/candidates")
+async def list_eia_extract_candidates(
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """候选表行分组（__candidate__: 前缀），供立表评审"""
+    try:
+        return await get_eia_limit_extract_service().list_candidates()
+    except Exception as e:
+        logger.error(f"Failed to list eia extract candidates: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取候选表失败: {str(e)}")
+
+
+@domain_factory.post("/eia/standards/extract/candidates/register")
+async def register_eia_extract_candidate(
+    payload: EiaCandidateRegisterPayload,
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """候选立表：注册元数据入册 + pending 候选行迁移新键（spec §5 表级新增通道；admin）"""
+    try:
+        out = await get_eia_limit_extract_service().register_candidate(
+            payload.code, payload.table_key, payload.desc, payload.columns_schema, current_user.username
+        )
+        return {"success": True, **out}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to register eia extract candidate {payload.table_key}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"候选立表失败: {str(e)}")
+
+
+@domain_factory.get("/eia/standards/citations")
+async def list_eia_standard_citations(
+    code: str,
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """引用该标准的语料报告清单（W1 辅助；query param——编号含 / 不能走路径段）"""
+    try:
+        return await get_eia_limit_extract_service().list_citations(code)
+    except Exception as e:
+        logger.error(f"Failed to list eia standard citations {code}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取标准引用清单失败: {str(e)}")
 
 
 # =============================================================================
