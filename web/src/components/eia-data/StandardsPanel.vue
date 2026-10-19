@@ -202,10 +202,17 @@
                 </td>
               </tr>
               <tr v-if="expandedCiteCodes.includes(record.code)" class="sub-row">
-                <td :colspan="8">
+                <td :colspan="STANDARDS_TABLE_COLS">
                   <div v-if="citeLoading[record.code]" class="cite-line muted">
                     <RefreshCw :size="13" class="spin" />
                     <span>引用清单加载中…</span>
+                  </div>
+                  <div v-else-if="citationsOf(record.code)?.error" class="cite-line warn">
+                    <AlertTriangle :size="13" />
+                    <span>引用清单加载失败</span>
+                    <button class="btn btn-txt btn-sm" @click="retryCitations(record.code)">
+                      点击重试
+                    </button>
                   </div>
                   <div
                     v-else-if="!citationsOf(record.code)?.reports?.length"
@@ -1359,8 +1366,10 @@ const onRegisterSubmit = async () => {
 
 // ── 标准核实辅助（T8：引用清单展开 + KB 查询弹层）─────────
 const expandedCiteCodes = ref([])
-const citationCache = ref({}) // code → listCitations 响应（拉一次后缓存；失败也缓存空态避免反复打接口）
+const citationCache = ref({}) // code → listCitations 响应（拉一次后缓存；失败缓存 error 哨兵，由「点击重试」清除后重拉）
 const citeLoading = ref({})
+// 标准核实表列数（表头：展开/标准号/名称/分级/语料引用/核实状态/核实人/操作）——加列时与 thead 同步
+const STANDARDS_TABLE_COLS = 8
 
 const citationsOf = (code) => citationCache.value[code]
 
@@ -1372,10 +1381,16 @@ const loadCitations = async (code) => {
     citationCache.value = { ...citationCache.value, [code]: r }
   } catch (e) {
     message.error(e?.message || `引用清单加载失败：${code}`)
-    citationCache.value = { ...citationCache.value, [code]: { code, cited_count: 0, reports: [] } }
+    // 失败只缓存哨兵不缓存「空清单」——接口故障不得伪装成「语料 0 引用」业务事实
+    citationCache.value = { ...citationCache.value, [code]: { error: true } }
   } finally {
     citeLoading.value = { ...citeLoading.value, [code]: false }
   }
+}
+
+const retryCitations = (code) => {
+  delete citationCache.value[code]
+  loadCitations(code)
 }
 
 const toggleCitations = (record) => {
@@ -1395,7 +1410,8 @@ const kbDlg = reactive({
   title: '',
   kbId: '',
   query: '',
-  result: null
+  result: null,
+  seq: 0 // 请求序号令牌：关闭/换标准重开弹层后，旧查询的迟到回包一律丢弃
 })
 const databases = ref([])
 const kbLoading = ref(false)
@@ -1425,10 +1441,12 @@ const loadDatabases = async () => {
 }
 
 const openKbQuery = async (record) => {
+  kbDlg.seq += 1 // 作废可能在飞的旧查询回包
   kbDlg.code = record.code
   kbDlg.title = record.title
   kbDlg.query = `${record.title} ${record.code}`
   kbDlg.result = null
+  kbDlg.submitting = false // 重开时清掉旧查询遗留的「查询中…」
   kbDlg.open = true
   await loadDatabases()
   // 默认选名称含「环评」的首个库；用户手动选过则尊重其选择
@@ -1447,14 +1465,19 @@ const onKbSearch = async () => {
     message.warning('请输入查询词')
     return
   }
+  const seq = ++kbDlg.seq
   kbDlg.submitting = true
   kbDlg.result = null
   try {
-    kbDlg.result = await queryApi.queryTest(kbDlg.kbId, kbDlg.query.trim(), {})
+    const r = await queryApi.queryTest(kbDlg.kbId, kbDlg.query.trim(), {})
+    if (seq !== kbDlg.seq) return
+    kbDlg.result = r
   } catch (e) {
+    if (seq !== kbDlg.seq) return
     message.error(e?.message || 'KB 查询失败')
   } finally {
-    kbDlg.submitting = false
+    // 仅最新请求有权复位 submitting，否则会盖掉重开弹层后的新状态
+    if (seq === kbDlg.seq) kbDlg.submitting = false
   }
 }
 
@@ -2197,7 +2220,7 @@ code.k {
     .score {
       flex: none;
       margin-left: auto;
-      font-family: ui-monospace, 'Cascadia Code', Consolas, 'Courier New', monospace;
+      font-family: var(--font-mono);
       font-size: 11px;
       color: var(--main-600);
     }
