@@ -106,12 +106,17 @@ async def test_structured_channel_rejects_monitoring_statement():
 
 
 @pytest.mark.asyncio
-async def test_structured_channel_malformed_dict_fail_closed():
-    """provider 返回缺裁决位裸 dict 时不得炸穿 judge（KeyError），须按无效判定 fail-closed。"""
+async def test_structured_channel_malformed_dict_fail_closed_without_blacklist():
+    """provider 返回缺裁决位裸 dict：本块 fail-closed，但不拉黑探测缓存——下次仍尝试结构化通道。"""
     adapter = FakeAdapter(structured=FakeStructured(verdict={"pollutant": "SO₂"}))
     c = EiaLimitLLMClassifier(model=adapter)
-    r = await c.judge("GB 3095-2012", "SO₂ 24小时平均 0.15 mg/m³")
-    assert r.status == "failed" and not r.passed and c.stats.failed == 1
+    r1 = await c.judge("GB 3095-2012", "SO₂ 24小时平均 0.15 mg/m³")
+    assert r1.status == "failed" and not r1.passed and c.stats.failed == 1
+    assert EiaLimitLLMClassifier._structured_support == {}  # 输出校验失败不写探测缓存
+    assert adapter.calls == 0  # 本块无效直接 fail-closed，不降级 prompt 通道
+    r2 = await c.judge("GB 3095-2012", "SO₂ 24小时平均 0.15 mg/m³")
+    assert adapter.model.calls == 2  # 探测缓存未拉黑，第二次仍尝试结构化通道
+    assert r2.status == "failed"
 
 
 @pytest.mark.asyncio
@@ -170,15 +175,25 @@ async def test_prompt_channel_non_json_fail_closed():
 
 
 @pytest.mark.asyncio
-async def test_prompt_channel_coerces_string_limit_value():
-    payload = {"is_limit_statement": True, "pollutant": "PM10", "limit_value": "0.07", "unit": "mg/m³"}
-    adapter = FakeAdapter(
-        structured=FakeStructured(exc=RuntimeError("x")),
-        prompt_content=json.dumps(payload, ensure_ascii=False),
-    )
+async def test_limit_value_string_forms_pass_prompt_channel():
+    """limit_value 为辅助字段（正式值由 parse_block 重解析）：区间/符号/全角串原样保留，不因类型严格丢块。"""
+    for raw in ("≤60", "60~80", "６０", "0.07"):
+        payload = {"is_limit_statement": True, "pollutant": "昼间等效声级", "limit_value": raw}
+        adapter = FakeAdapter(
+            structured=FakeStructured(exc=RuntimeError("x")),
+            prompt_content=json.dumps(payload, ensure_ascii=False),
+        )
+        c = EiaLimitLLMClassifier(model=adapter)
+        r = await c.judge("GB12348-2008", "厂界昼间 60 dB(A)")
+        assert r.passed and r.verdict["limit_value"] == raw, raw
+
+
+@pytest.mark.asyncio
+async def test_limit_value_string_form_passes_structured_channel():
+    adapter = FakeAdapter(structured=FakeStructured(verdict={"is_limit_statement": True, "limit_value": "≤60"}))
     c = EiaLimitLLMClassifier(model=adapter)
-    r = await c.judge("GB3095-2012", "PM10 年均 0.07 mg/m³")
-    assert r.passed and r.verdict["limit_value"] == 0.07 and isinstance(r.verdict["limit_value"], float)
+    r = await c.judge("GB12348-2008", "厂界昼间 60 dB(A)")
+    assert r.passed and r.verdict["limit_value"] == "≤60"
 
 
 @pytest.mark.asyncio

@@ -20,7 +20,7 @@ import re
 from dataclasses import asdict, dataclass
 from typing import Any, ClassVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from yuxi.config.options import system_options
 from yuxi.models.chat import select_model
@@ -55,10 +55,18 @@ class LimitBlockVerdict(BaseModel):
     is_limit_statement: bool = Field(description="区块是否为标准限值陈述（限值表/限值行/行内限值句）")
     pollutant: str = Field(default="", description="限值对应的污染物/因子名；无法判断留空")
     grade: str = Field(default="", description="限值适用等级/档位（如 二级标准、III类、2类）；无法判断留空")
-    limit_value: float | None = Field(default=None, description="限值数值；无法判断留空")
+    # 辅助字段（正式值由 parse_block 重解析，本层无下游消费）：区间/符号/全角等写法原样保留字符串，
+    # 不做数值强制——类型过严会让整块 verdict 报废（静默召回损失）。
+    limit_value: float | str | None = Field(
+        default=None, description="限值数值；无法判断留空，区间/含符号写法可为原样字符串"
+    )
     unit: str = Field(default="", description="限值单位；无法判断留空")
     evidence_span: str = Field(default="", description="支撑判定的原文片段")
     reason: str = Field(default="", description="一句话判定理由")
+
+
+class _InvalidVerdict(Exception):
+    """结构化通道返回了无法校验的输出：本块 fail-closed，不写探测缓存（区别于通道级失败）。"""
 
 
 @dataclass
@@ -109,7 +117,12 @@ class EiaLimitLLMClassifier:
         prompt = self._build_prompt(code, text, table_key)
         data = None
         if self._structured_support.get(model.model_name, True):
-            data = await self._try_structured(model, prompt)
+            try:
+                data = await self._try_structured(model, prompt)
+            except _InvalidVerdict as exc:
+                self.stats.failed += 1
+                logger.warning(f"[eia-limit-llm] 结构化通道输出无效（model={model.model_name}），fail-closed: {exc}")
+                return JudgeResult(False, "failed", {}, f"结构化通道输出无效: {exc}")
         if data is None:
             data = await self._try_prompt_channel(model, prompt)
         if data is None:
@@ -140,17 +153,25 @@ class EiaLimitLLMClassifier:
         )
 
     async def _try_structured(self, model, prompt: str) -> dict[str, Any] | None:
-        """结构化输出通道（一次尝试）；不可用记探测缓存并交 prompt 通道（先例 spec-W1 P1-1a）。"""
+        """结构化输出通道（一次尝试）；通道级失败记探测缓存并交 prompt 通道（先例 spec-W1 P1-1a）。
+
+        能力探测只包调用本身（调用异常/超时才拉黑模型，与 ETL 先例结构同序）：
+        输出校验失败属「本块无效」，抛 _InvalidVerdict 交调用方 fail-closed，
+        不写探测缓存——一次坏响应不应永久关闭该模型的结构化通道。
+        """
         try:
             async with asyncio.timeout(self._timeout):
                 data = await model.model.with_structured_output(LimitBlockVerdict).ainvoke(prompt)
-            # provider 可能返回模型实例或缺字段裸 dict，一律过 pydantic 校验——无效判定交 fail-closed
-            verdict = data if isinstance(data, LimitBlockVerdict) else LimitBlockVerdict.model_validate(data)
-            return verdict.model_dump()
         except Exception as exc:
             self._structured_support[model.model_name] = False
             logger.warning(f"[eia-limit-llm] 结构化判别通道不可用（model={model.model_name}），降级 prompt 通道: {exc}")
             return None
+        try:
+            # provider 可能返回模型实例或缺字段裸 dict，一律过 pydantic 校验
+            verdict = data if isinstance(data, LimitBlockVerdict) else LimitBlockVerdict.model_validate(data)
+        except ValidationError as exc:
+            raise _InvalidVerdict(str(exc)) from exc
+        return verdict.model_dump()
 
     async def _try_prompt_channel(self, model, prompt: str) -> dict[str, Any] | None:
         """prompt+JSON 解析通道；解析失败返回 None（fail-closed，不重试）。"""
