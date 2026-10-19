@@ -104,3 +104,83 @@ async def test_register_candidate_migrates_rows(svc):
         "admin",
     )
     assert out["migrated"] == 1 and (await repo.get_registry("gb8978_emission_limits")) is not None
+
+
+@pytest.mark.asyncio
+async def test_decide_row_discarded_never_upserts(svc, monkeypatch):
+    s, repo = svc
+    await s.run_extraction("admin")
+    row = (await repo.list_rows(status="pending"))[0]
+    calls = []
+
+    async def fake_upsert(tk, r, u):
+        calls.append((tk, r, u))
+
+    monkeypatch.setattr(s._std_repo, "upsert_row", fake_upsert)
+    out = await s.decide_row(row.id, "discarded", None, "admin")
+    assert out["status"] == "discarded" and calls == []
+
+
+@pytest.mark.asyncio
+async def test_decide_row_edited_requires_row_json(svc):
+    s, repo = svc
+    await s.run_extraction("admin")
+    row = (await repo.list_rows(status="pending"))[0]
+    with pytest.raises(ValueError):
+        await s.decide_row(row.id, "edited", None, "admin")
+
+
+@pytest.mark.asyncio
+async def test_decide_row_rejects_candidate_key(svc):
+    s, repo = svc
+    await s.run_extraction("admin")
+    row = (await repo.list_rows(status="pending"))[0]
+    row.table_key = "__candidate__:GB3095-2012"
+    with pytest.raises(ValueError):
+        await s.decide_row(row.id, "confirm", None, "admin")
+
+
+@pytest.mark.asyncio
+async def test_decide_row_rejects_redecision(svc):
+    s, repo = svc
+    await s.run_extraction("admin")
+    row = (await repo.list_rows(status="pending"))[0]
+    await s.decide_row(row.id, "discarded", None, "admin")
+    with pytest.raises(ValueError):
+        await s.decide_row(row.id, "confirm", None, "admin")
+
+
+@pytest.mark.asyncio
+async def test_run_extraction_skips_unreadable_file(svc, tmp_path):
+    s, repo = svc
+    (tmp_path / "planning_eia" / "slices" / "ch1" / "038-2024-7-9__2.md").write_bytes(
+        b"\xff\xfe<\x00?\x00x\x00m\x00l\x00 \x00v\x00e\x00r\x00s\x00i\x00o\x00n\x00"
+    )
+    report = await s.run_extraction("admin")
+    assert report["files_scanned"] == 2 and report["skipped"] >= 1
+    assert len(await repo.list_rows(status="pending")) >= 1  # 好文件照常产出
+
+
+@pytest.mark.asyncio
+async def test_registered_table_no_candidate_rebirth_on_rerun(svc, tmp_path):
+    s, repo = svc
+    d = tmp_path / "planning_eia" / "slices" / "ch1"
+    (d / "038-2024-7-9__2.md").write_text(
+        "执行《污水综合排放标准》(GB8978-1996)二级标准：\n"
+        "| 污染物 | 时段 | 排放限值 | 单位 |\n| --- | --- | --- | --- |\n"
+        "| 悬浮物 | 1998年1月1日前建设 | 200 | mg/L |\n",
+        encoding="utf-8",
+    )
+    await s.run_extraction("admin")
+    cands = [r for r in await repo.list_rows() if r.table_key.startswith("__candidate__:")]
+    assert len(cands) == 1
+    await s.register_candidate(
+        "GB 8978-1996",
+        "gb8978_emission_limits",
+        "污水综合排放标准",
+        {"pollutant": {"label": "污染物", "type": "str", "required": True}},
+        "admin",
+    )
+    report = await s.run_extraction("admin")
+    assert report["inserted"] == 0  # 立表后重跑：重映射命中已迁移行，零新插
+    assert [r for r in await repo.list_rows() if r.table_key.startswith("__candidate__:")] == []

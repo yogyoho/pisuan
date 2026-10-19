@@ -37,8 +37,9 @@ _NUMERIC_KEYS = ("limit_value", "day", "night", "a_value")
 
 
 def _normalize_row_json(row: dict) -> dict:
-    """数值列类型归一（有值转 float，空值置 None），其余字段原样——upsert_row 以 JSON 全等判幂等。"""
+    """数值列类型归一（有值转 float，空值置 None）并剥离 conflict_values——upsert_row 以 JSON 全等判幂等。"""
     out = dict(row)
+    out.pop("conflict_values", None)  # 暂存诊断信息不进官方行，也不污染 upsert 幂等键
     for k in _NUMERIC_KEYS:
         if k in out:
             v = out[k]
@@ -67,9 +68,9 @@ class EiaLimitExtractService:
     async def run_extraction(self, username: str) -> dict[str, Any]:
         """全库试跑：切片 → 区块定位/解析/聚合 → 幂等过滤 → 暂存行 + 报告。"""
 
-        def _scan() -> tuple[int, list[dict]]:
+        def _scan() -> tuple[int, int, list[dict]]:
             records: list[dict] = []
-            scanned = 0
+            scanned = skipped = 0
             for root in self._bank_dirs():
                 for stage in sorted(p for p in root.iterdir() if (p / "slices").is_dir()):
                     for md in sorted((stage / "slices").rglob("*.md")):
@@ -77,8 +78,14 @@ class EiaLimitExtractService:
                         if not m:
                             continue
                         scanned += 1
+                        try:
+                            text = md.read_text(encoding="utf-8")
+                        except (UnicodeDecodeError, OSError) as exc:
+                            skipped += 1  # 单坏文件隔离：告警跳过，不炸整次试跑
+                            logger.warning(f"[eia-limit-extract] 切片读取失败跳过: {md} ({exc})")
+                            continue
                         rid, anchor = m.group("rid"), f"{stage.name}/{md.stem}"
-                        for b in locate_standard_blocks(md.read_text(encoding="utf-8")):
+                        for b in locate_standard_blocks(text):
                             tk = table_key_for(b.code) or f"{_CANDIDATE_PREFIX}{norm_code(b.code)}"
                             records.extend(
                                 {
@@ -89,10 +96,17 @@ class EiaLimitExtractService:
                                 }
                                 for row in parse_block(b)
                             )
-            return scanned, records
+            return scanned, skipped, records
 
-        scanned, records = await run_in_threadpool(_scan)
+        scanned, skipped, records = await run_in_threadpool(_scan)
         aggregated = aggregate_records(records)
+        # 立表后重映射（spec 2026-10-19）：注册表覆盖的候选键改写为正式表键，防重跑复生候选行
+        remap = {f"{_CANDIDATE_PREFIX}{norm_code(reg.code)}": reg.table_key for reg in await self._repo.list_registry()}
+        if remap:
+            for g in aggregated:
+                hit = remap.get(f"{_CANDIDATE_PREFIX}{norm_code(g['code'])}")
+                if hit:
+                    g["table_key"] = hit
         existing = {
             _decided_key(r.code, r.table_key, r.row_json)
             for r in await self._repo.list_rows()  # 已裁决（≠pending）命中信跳过；pending 命中信不重插
@@ -120,7 +134,13 @@ class EiaLimitExtractService:
         logger.info(
             f"[eia-limit-extract] 试跑 by {username}: 扫描 {scanned} 切片, 聚合 {len(aggregated)} 行, 新插 {inserted}"
         )
-        return {"files_scanned": scanned, "aggregated": len(aggregated), "inserted": inserted, "tables": tables}
+        return {
+            "files_scanned": scanned,
+            "aggregated": len(aggregated),
+            "inserted": inserted,
+            "skipped": skipped,
+            "tables": tables,
+        }
 
     async def list_rows(
         self, table_key: str | None = None, status: str | None = None, confidence: str | None = None
@@ -137,8 +157,12 @@ class EiaLimitExtractService:
             raise KeyError(f"暂存行不存在: {row_id}")
         if action not in _VALID_DECISIONS:
             raise ValueError(f"action 须为 {sorted(_VALID_DECISIONS)}")
+        if row.status != "pending":
+            raise ValueError("已裁决行不可再裁决")
         if action == "edited" and (not isinstance(row_json, dict) or not row_json):
             raise ValueError("edited 裁决必须携带非空 row_json")
+        if action in ("confirm", "edited") and row.table_key.startswith(_CANDIDATE_PREFIX):
+            raise ValueError("候选表行须先立表迁移再裁决")
         if action in ("confirm", "edited"):
             target = dict(row_json) if action == "edited" else dict(row.row_json or {})
             normalized = _normalize_row_json(target)
