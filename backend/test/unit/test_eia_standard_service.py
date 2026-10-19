@@ -56,9 +56,10 @@ def _noise_row():
 
 
 class _FakeLimitRepo:
-    def __init__(self, db_rows=None):
+    def __init__(self, db_rows=None, registry=None):
         self.saved = None
         self._db_rows = db_rows or []
+        self._registry = registry or []
 
     async def replace_rows(self, table_key, rows, username):
         self.saved = (table_key, rows, username)
@@ -66,6 +67,9 @@ class _FakeLimitRepo:
 
     async def list_rows(self):
         return self._db_rows
+
+    async def list_registry(self):
+        return self._registry
 
 
 def _svc_with(repo):
@@ -176,6 +180,24 @@ def test_list_limit_tables_falls_back_to_file_rows(monkeypatch, tmp_path):
     t = out["limit_tables"]["gb3096_zone_limits"]
     assert t["source"] == "file"
     assert t["rows"] == [anchor]
+
+
+def test_list_limit_tables_exposes_registry_new_table(monkeypatch, tmp_path):
+    """新表入册通道：DB 注册表条目露出为新键（source=db_registry）并并入 schemas。"""
+    monkeypatch.setattr(eia_standard_service, "STANDARDS_INDEX_PATH", _write_min_index(tmp_path, {}))
+    registry = [
+        SimpleNamespace(
+            table_key="gb8978_emission_limits",
+            code="GB 8978-1996",
+            desc="污水综合排放标准",
+            columns_schema={"pollutant": {"label": "污染物", "type": "str", "required": True}},
+        )
+    ]
+    out = asyncio.run(_svc_with(_FakeLimitRepo(registry=registry)).list_limit_tables())
+    t = out["limit_tables"]["gb8978_emission_limits"]
+    assert t["source"] == "db_registry" and t["code_ref"] == "GB 8978-1996"
+    assert t["needs_verification"] is True and t["rows"] == []
+    assert out["schemas"]["gb8978_emission_limits"]["pollutant"]["type"] == "str"
 
 
 def test_export_limit_rows_writes_and_flips(monkeypatch, tmp_path):

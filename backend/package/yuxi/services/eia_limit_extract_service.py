@@ -104,8 +104,7 @@ class EiaLimitExtractService:
         remap = {f"{_CANDIDATE_PREFIX}{norm_code(reg.code)}": reg.table_key for reg in await self._repo.list_registry()}
         if remap:
             for g in aggregated:
-                hit = remap.get(f"{_CANDIDATE_PREFIX}{norm_code(g['code'])}")
-                if hit:
+                if hit := remap.get(g["table_key"]):  # 仅候选键组可能命中，正式表键不受影响
                     g["table_key"] = hit
         existing = {
             _decided_key(r.code, r.table_key, r.row_json)
