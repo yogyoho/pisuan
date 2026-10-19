@@ -16,6 +16,9 @@ from ..utils.md_parser_utils import (
 )
 from ..utils.table_utils import html_table_to_key_value
 
+# Milvus collection varchar 字段上限 65535 字符；标题头另占少量字符，留出余量
+_SPECIAL_ELEMENT_CHAR_CAP = 60000
+
 
 def _flush_content(
     result: list,
@@ -37,7 +40,7 @@ def _flush_content(
     level = next((i + 1 for i in range(5, -1, -1) if title_stack[i]), 1)
     title_path = get_title_path(title_stack)
 
-    if special_element and not allow_split:
+    if special_element and not allow_split and len(content) <= _SPECIAL_ELEMENT_CHAR_CAP:
         header = f"{'#' * level} {title_path}|{special_element}" if title_path else f"{'#' * level} {special_element}"
         result.extend([header, content, "-" * 10])
     else:
