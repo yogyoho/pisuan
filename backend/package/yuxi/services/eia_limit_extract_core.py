@@ -78,6 +78,25 @@ def norm_factor(name: str) -> str:
     return FACTOR_ALIASES.get(name.strip().lower(), name)
 
 
+# 因子垃圾过滤——2026-10-19 试跑实证：惰性因子槽会吞进散文碎片与序号碎片。
+# 后缀垃圾词实证样例：「中要求的不得超过」「的含盐量不得超过」「II类标准要求的」「监测结果」
+# 「从2001年的」「均第95百分位数」「.5年均浓度分别」「点浓度差值不超过」「尘排放浓度均小于」。
+_GARBAGE_TAIL_RE = re.compile(
+    r"(?:的|要求|不超过|不得超过|小于|大于|以上|以下|监测|结果|标准|执行|满足|达到|分别|百分位数|差值|含盐量|浓度均)$"
+)
+# 前缀连接词实证样例：「即颗粒物」；纯数字/点号序号碎片实证样例：「4.」「60」「44.」。
+_GARBAGE_HEAD_RE = re.compile(r"^即")
+_GARBAGE_PURE_NUM_RE = re.compile(r"[\d.]+")
+
+
+def _factor_ok(name: str) -> bool:
+    """因子垃圾过滤：空名 / 纯数字点号碎片 / 垃圾前后缀命中均拒收。"""
+    s = name.strip()
+    if not s or _GARBAGE_PURE_NUM_RE.fullmatch(s) or _GARBAGE_HEAD_RE.match(s) or _GARBAGE_TAIL_RE.search(s):
+        return False
+    return True
+
+
 # 等级归一：罗马数字各写法统一为 ASCII 大写（三/3/Ⅲ/III -> III）。
 _ROMAN = {
     "一": "I",
@@ -103,20 +122,25 @@ _GRADE_DIGIT_SUFFIX_RE = re.compile(r"(\d)\s*类(?:标准|区)")
 _GRADE_DIGIT_RE = re.compile(r"([1-5])\s*类")
 
 
-def norm_grade(ctx: str) -> str | None:
-    """从上下文提取等级：N级标准 / 罗马数字类（三、3 -> III类）/ 声环境数字类（2类标准 -> 2类）。"""
-    m = _GRADE_LEVEL_RE.search(ctx)
-    if m:
-        return f"{m.group(1)}级标准"
-    m = _GRADE_ROMAN_RE.search(ctx)
-    if m:
-        return _ROMAN.get(m.group(1), m.group(1)) + "类"
+def norm_grade(ctx: str, digit_only: bool = False) -> str | None:
+    """从上下文提取等级：N级标准 / 罗马数字类（三、3 -> III类）/ 声环境数字类（2类标准 -> 2类）。
+
+    digit_only=True 仅供噪声表（GB 3096/GB 12348 只用 0-4 数字类档）：仅数字类正则命中且
+    保留数字写法（3类），窗口重叠带入的水/气罗马档（III类）视为未命中——2026-10-19 试跑实证。
+    """
+    if not digit_only:
+        m = _GRADE_LEVEL_RE.search(ctx)
+        if m:
+            return f"{m.group(1)}级标准"
+        m = _GRADE_ROMAN_RE.search(ctx)
+        if m:
+            return _ROMAN.get(m.group(1), m.group(1)) + "类"
     m = _GRADE_DIGIT_SUFFIX_RE.search(ctx)
     if m:
         return f"{m.group(1)}类"
     m = _GRADE_DIGIT_RE.search(ctx)
     if m:
-        return _ROMAN[m.group(1)] + "类"
+        return f"{m.group(1)}类" if digit_only else _ROMAN[m.group(1)] + "类"
     return None
 
 
@@ -250,7 +274,7 @@ def _map_table_rows(header: list[str], rows: list[dict[str, str]], table_key: st
                 continue
             out.append(
                 {
-                    "category": norm_grade(ctx) or "",
+                    "category": norm_grade(ctx, digit_only=True) or "",
                     "day": day,
                     "night": night,
                     "unit": norm_unit(row.get(unit_col, "")),
@@ -279,11 +303,14 @@ def _map_table_rows(header: list[str], rows: list[dict[str, str]], table_key: st
                 break
         if numeric is None:
             continue
+        pollutant = norm_factor(row.get(_factor_col(header), ""))
+        if not _factor_ok(pollutant):  # 垃圾因子行拒收（候选表分支已在上方 continue，不受影响）
+            continue
         if unit_cell == "" and unit_col:
             unit_cell = row.get(unit_col, "")
         value, unit = convert_limit(numeric, unit_cell)
         value_key = "a_value" if table_key == "gbt13201_a_value" else "limit_value"
-        base = {"pollutant": norm_factor(row.get(_factor_col(header), "")), "unit": unit}
+        base = {"pollutant": pollutant, "unit": unit}
         if table_key == "gb3095_concentration_limits":
             period_col = next((h for h in header if "取值时间" in h or "时段" in h), None)
             out.append(
@@ -308,12 +335,18 @@ def _scan_inline(lines: list[str], table_key: str | None, ctx: str) -> list[dict
         for m in _INLINE_RE.finditer(line):
             factor, period = m.group(1), m.group(2)
             value, unit = convert_limit(float(m.group(3)), m.group(4))
+            if unit == "dB(A)" and table_key not in _NOISE_TABLES:
+                # 非噪声表不收声级值——窗口重叠把 GB 12348 内容带进 GB3838 区块
+                # （2026-10-19 试跑实证），与噪声表只收 dB(A) 的过滤对称。
+                continue
             if table_key in _NOISE_TABLES:
                 if unit != "dB(A)":  # 噪声表只收声级值，窗口重叠带入的水质行不收
                     continue
                 key = "night" if "夜" in factor else "day"  # 昼/夜同行并现时按因子归属
-                out.append({"category": norm_grade(ctx) or "", key: value, "unit": unit})
+                out.append({"category": norm_grade(ctx, digit_only=True) or "", key: value, "unit": unit})
             elif table_key == "gb3095_concentration_limits":
+                if not _factor_ok(norm_factor(factor)):
+                    continue
                 out.append(
                     {
                         "pollutant": norm_factor(factor),
@@ -324,6 +357,8 @@ def _scan_inline(lines: list[str], table_key: str | None, ctx: str) -> list[dict
                     }
                 )
             elif table_key in _CATEGORY_TABLES:
+                if not _factor_ok(norm_factor(factor)):
+                    continue
                 out.append(
                     {
                         "category": norm_grade(ctx) or "III类",
@@ -332,7 +367,12 @@ def _scan_inline(lines: list[str], table_key: str | None, ctx: str) -> list[dict
                         "unit": unit,
                     }
                 )
-            else:
+            elif table_key is not None:  # 其余已知表（GB20426 排放表等）同样过垃圾过滤
+                pollutant = norm_factor(factor)
+                if not _factor_ok(pollutant):
+                    continue
+                out.append({"pollutant": pollutant, "limit_value": value, "unit": unit})
+            else:  # 候选表：保留原始因子，不过滤
                 out.append({"pollutant": norm_factor(factor), "limit_value": value, "unit": unit})
     return out
 

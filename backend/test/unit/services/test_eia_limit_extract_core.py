@@ -84,6 +84,57 @@ def test_inline_no_space_regression():
     assert {"category": "III类", "pollutant": "氨氮", "limit_value": 1.0, "unit": "mg/L"} in parse_block(water)
 
 
+def test_inline_prose_fragment_rejected():
+    """散文碎片因子拒收（2026-10-19 试跑实证样例：中要求的不得超过=1000.0 等）。"""
+    lines = [
+        "地表水III类标准，中要求的不得超过1000.0mg/L。",
+        "监测结果3484.0mg/L，从2001年的0.021mg/L，均第95百分位数2.0mg/L。",
+    ]
+    assert parse_block(Block(code="GB3838-2002", lines=lines, start=0)) == []
+
+
+def test_inline_pure_number_factor_rejected():
+    """序号/纯数字碎片因子拒收（2026-10-19 试跑实证样例：4.=9.0 / 60=6.0）。"""
+    lines = ["4.浓度9.0mg/L。", "60浓度6.0mg/L。"]
+    assert parse_block(Block(code="GB3838-2002", lines=lines, start=0)) == []
+
+
+def test_inline_dba_rejected_in_category_table():
+    """跨标准隔离（2026-10-19 试跑实证）：窗口重叠把噪声声级带进 GB3838 区块，非噪声表不收 dB(A)。"""
+    lines = ["声环境执行3类标准，昼间65 dB(A)夜间55dB(A)。"]
+    assert parse_block(Block(code="GB3838-2002", lines=lines, start=0)) == []
+    rows = parse_block(Block(code="GB 12348-2008", lines=lines, start=0))
+    day = next(r for r in rows if "day" in r)
+    night = next(r for r in rows if "night" in r)
+    assert day["day"] == 65.0 and day["unit"] == "dB(A)"
+    assert night["night"] == 55.0 and night["unit"] == "dB(A)"
+
+
+def test_noise_table_roman_grade_dropped():
+    """噪声表数字档隔离（2026-10-19 试跑实证）：窗口带入的水/气罗马档不收，数字档保留写法。"""
+    roman = Block(code="GB 3096-2008", lines=["执行III类标准", "昼间65 dB(A)，夜间55dB(A)。"], start=0)
+    rows = parse_block(roman)
+    assert len(rows) == 2 and all(r["category"] == "" for r in rows)
+    digit = Block(code="GB 3096-2008", lines=["执行3类标准", "昼间65 dB(A)，夜间55dB(A)。"], start=0)
+    rows = parse_block(digit)
+    assert len(rows) == 2 and all(r["category"] == "3类" for r in rows)
+
+
+def test_table_path_garbage_factor_filtered():
+    """已知表 GFM 路径垃圾因子行过滤；候选表保留原始列不过滤。"""
+    lines = [
+        "| 污染物 | 浓度限值 | 单位 |",
+        "| ------ | -------- | ---- |",
+        "| 的含盐量不得超过 | 1000.0 | mg/L |",
+        "| 氨氮 | 1.0 | mg/L |",
+    ]
+    rows = parse_block(Block(code="GB3838-2002", lines=lines, start=0))
+    assert {"category": "III类", "pollutant": "氨氮", "limit_value": 1.0, "unit": "mg/L"} in rows
+    assert len(rows) == 1
+    cand = parse_block(Block(code="GB 8978-1996", lines=lines, start=0))
+    assert len(cand) == 2 and cand[0]["col_污染物"] == "的含盐量不得超过"  # 候选表不过滤，保留原始列
+
+
 def test_convert_limit_ug_to_mg():
     assert convert_limit(250.0, "μg/m3") == (0.25, "mg/m³")
     assert convert_limit(250.0, "µg/m³") == (0.25, "mg/m³")
