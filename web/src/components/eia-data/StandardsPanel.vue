@@ -117,69 +117,118 @@
         <table class="tbl" :style="loading && items.length ? 'opacity: .55' : ''">
           <thead>
             <tr>
-              <th style="width: 17%">标准号</th>
-              <th style="width: 30%">名称</th>
-              <th style="width: 10%">分级</th>
-              <th style="width: 11%">核实状态</th>
-              <th style="width: 20%">核实人 / 备注</th>
-              <th class="r" style="width: 12%; padding-right: 20px">操作</th>
+              <th style="width: 30px"></th>
+              <th style="width: 15%">标准号</th>
+              <th style="width: 26%">名称</th>
+              <th style="width: 9%">分级</th>
+              <th style="width: 8%">语料引用</th>
+              <th style="width: 10%">核实状态</th>
+              <th style="width: 19%">核实人 / 备注</th>
+              <th class="r" style="width: 13%; padding-right: 20px">操作</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="record in filteredItems" :key="record.code">
-              <td class="mono">
-                {{ record.code }}
-                <span
-                  v-if="record.review.action && record.needs_verification"
-                  class="pill pill-orange pill-sm"
-                  style="margin-left: 4px"
-                  title="已裁决，导出物化后转「已核实」"
-                  >待导出</span
-                >
-              </td>
-              <td>
-                <div class="title-cell">
+            <template v-for="record in filteredItems" :key="record.code">
+              <tr>
+                <td>
+                  <button
+                    class="expander"
+                    aria-label="展开语料引用清单"
+                    @click="toggleCitations(record)"
+                  >
+                    <ChevronRight
+                      :size="14"
+                      :class="{ open: expandedCiteCodes.includes(record.code) }"
+                    />
+                  </button>
+                </td>
+                <td class="mono">
+                  {{ record.code }}
                   <span
-                    class="title-main"
-                    :title="`章节：${record.chapters || '—'} · 语料引用 ${record.cited_count} 份`"
-                    >{{ record.title }}</span
+                    v-if="record.review.action && record.needs_verification"
+                    class="pill pill-orange pill-sm"
+                    style="margin-left: 4px"
+                    title="已裁决，导出物化后转「已核实」"
+                    >待导出</span
                   >
-                  <span v-if="record.role" class="title-role" :title="record.role">{{
-                    record.role
-                  }}</span>
-                </div>
-              </td>
-              <td>
-                <span
-                  class="tier"
-                  :class="tierBadge(record.tier)"
-                  :title="tierLabel(record.tier)"
-                  >{{ tierLabel(record.tier) }}</span
-                >
-              </td>
-              <td>
-                <span v-if="!record.needs_verification" class="pill pill-ok">已核实</span>
-                <span v-else-if="record.review.action" class="pill pill-orange">已裁决·待导出</span>
-                <span v-else class="pill pill-warn">待核实</span>
-              </td>
-              <td>
-                <div v-if="record.review.action" class="review-cell">
-                  <span class="review-by">{{ record.review.decided_by }}</span>
-                  <small
-                    v-if="record.review.note"
-                    class="review-note"
-                    :title="record.review.note"
-                    >{{ record.review.note }}</small
+                </td>
+                <td>
+                  <div class="title-cell">
+                    <span
+                      class="title-main"
+                      :title="`章节：${record.chapters || '—'} · 语料引用 ${record.cited_count} 份`"
+                      >{{ record.title }}</span
+                    >
+                    <span v-if="record.role" class="title-role" :title="record.role">{{
+                      record.role
+                    }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span
+                    class="tier"
+                    :class="tierBadge(record.tier)"
+                    :title="tierLabel(record.tier)"
+                    >{{ tierLabel(record.tier) }}</span
                   >
-                </div>
-                <span v-else class="muted">—</span>
-              </td>
-              <td class="r" style="padding-right: 20px">
-                <button class="btn btn-txt btn-sm" @click="openReview(record)">
-                  {{ record.needs_verification || !record.review.action ? '核实' : '查看' }}
-                </button>
-              </td>
-            </tr>
+                </td>
+                <td class="num" :title="`语料引用 ${record.cited_count} 份`">
+                  {{ record.cited_count }} 份
+                </td>
+                <td>
+                  <span v-if="!record.needs_verification" class="pill pill-ok">已核实</span>
+                  <span v-else-if="record.review.action" class="pill pill-orange"
+                    >已裁决·待导出</span
+                  >
+                  <span v-else class="pill pill-warn">待核实</span>
+                </td>
+                <td>
+                  <div v-if="record.review.action" class="review-cell">
+                    <span class="review-by">{{ record.review.decided_by }}</span>
+                    <small
+                      v-if="record.review.note"
+                      class="review-note"
+                      :title="record.review.note"
+                      >{{ record.review.note }}</small
+                    >
+                  </div>
+                  <span v-else class="muted">—</span>
+                </td>
+                <td class="r" style="padding-right: 20px">
+                  <button class="btn btn-txt btn-sm" @click="openReview(record)">
+                    {{ record.needs_verification || !record.review.action ? '核实' : '查看' }}
+                  </button>
+                  <button class="btn btn-txt btn-sm" @click="openKbQuery(record)">KB 查询</button>
+                </td>
+              </tr>
+              <tr v-if="expandedCiteCodes.includes(record.code)" class="sub-row">
+                <td :colspan="8">
+                  <div v-if="citeLoading[record.code]" class="cite-line muted">
+                    <RefreshCw :size="13" class="spin" />
+                    <span>引用清单加载中…</span>
+                  </div>
+                  <div
+                    v-else-if="!citationsOf(record.code)?.reports?.length"
+                    class="cite-line warn"
+                  >
+                    <AlertTriangle :size="13" />
+                    <span>语料 0 引用——SKILL 手工登记标准，须人工 KB / 联网核实</span>
+                  </div>
+                  <div v-else class="src-list">
+                    <div
+                      v-for="c in citationsOf(record.code).reports"
+                      :key="c.report_id"
+                      class="cite-line"
+                    >
+                      <FileText :size="13" />
+                      <span class="mono">{{ c.report_id }}</span>
+                      <span class="cite-as" :title="`引用名：${c.cited_as}`">{{ c.cited_as }}</span>
+                      <span v-if="c.stage" class="pill pill-gray s-stage">{{ c.stage }}</span>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
         <div v-if="!filteredItems.length" class="empty-state">
@@ -658,14 +707,90 @@
         迁入正式表并从候选清单消失；首个因子列沿用行内「因子」键
       </div>
     </a-modal>
+
+    <!-- KB 查询弹层（原型 M4：片段仅作核实线索，非引用来源） -->
+    <a-modal
+      v-model:open="kbDlg.open"
+      :title="`KB 查询 · ${kbDlg.code} ${kbDlg.title}`"
+      :width="640"
+    >
+      <div class="kb-hint">
+        <AlertTriangle :size="14" />
+        <span
+          >web_search 与 KB 片段仅作核实线索，不可直接引用条款号 / 限值——核实以标准原文为准。</span
+        >
+      </div>
+      <div class="frm-row">
+        <label>知识库</label>
+        <a-select
+          v-model:value="kbDlg.kbId"
+          :loading="kbLoading"
+          :options="kbOptions"
+          placeholder="选择知识库"
+          show-search
+          option-filter-prop="label"
+        />
+        <div class="frm-help">默认选中名称含「环评」的首个库</div>
+      </div>
+      <div class="kb-row">
+        <a-input
+          v-model:value="kbDlg.query"
+          placeholder="查询词"
+          :disabled="kbDlg.submitting"
+          @press-enter="onKbSearch"
+        />
+        <button class="btn btn-pri btn-sm" :disabled="kbDlg.submitting" @click="onKbSearch">
+          <Search :size="14" />
+          {{ kbDlg.submitting ? '查询中…' : '查询' }}
+        </button>
+      </div>
+      <div class="kb-res">
+        <div v-if="kbDlg.submitting" class="kb-empty">
+          <RefreshCw :size="13" class="spin" />
+          <span>查询中…</span>
+        </div>
+        <template v-else-if="kbDlg.result !== null">
+          <div v-for="(c, i) in kbChunks" :key="i" class="kb-item">
+            <div class="kb-src">
+              <FileText :size="12" />
+              <span class="kb-src-name">{{
+                c.metadata?.source || c.metadata?.file_path || '未知来源'
+              }}</span>
+              <span v-if="c.score != null" class="score">
+                score {{ Number(c.score).toFixed(3) }}
+              </span>
+            </div>
+            <div class="kb-txt">{{ c.content }}</div>
+          </div>
+          <div v-if="kbTextResult" class="kb-item">
+            <div class="kb-txt">{{ kbTextResult }}</div>
+          </div>
+          <pre v-else-if="kbRawResult" class="kb-raw">{{ kbRawResult }}</pre>
+          <div v-else-if="!kbChunks.length" class="kb-empty">未找到相关片段</div>
+        </template>
+        <div v-else class="kb-empty">点击「查询」获取该库中与标准相关的片段线索</div>
+      </div>
+      <template #footer>
+        <button class="btn btn-sec btn-sm" @click="kbDlg.open = false">关闭</button>
+      </template>
+    </a-modal>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { AlertTriangle, ChevronRight, FileText, Info, RefreshCw, ShieldCheck } from '@lucide/vue'
+import {
+  AlertTriangle,
+  ChevronRight,
+  FileText,
+  Info,
+  RefreshCw,
+  Search,
+  ShieldCheck
+} from '@lucide/vue'
 import { eiaStandardApi } from '@/apis/eia_standard_api'
+import { databaseApi, queryApi } from '@/apis/knowledge_api'
 import { useUserStore } from '@/stores/user'
 
 const TIERS = [
@@ -1229,6 +1354,107 @@ const onRegisterSubmit = async () => {
     message.error(e?.message || '候选立表失败')
   } finally {
     regDlg.submitting = false
+  }
+}
+
+// ── 标准核实辅助（T8：引用清单展开 + KB 查询弹层）─────────
+const expandedCiteCodes = ref([])
+const citationCache = ref({}) // code → listCitations 响应（拉一次后缓存；失败也缓存空态避免反复打接口）
+const citeLoading = ref({})
+
+const citationsOf = (code) => citationCache.value[code]
+
+const loadCitations = async (code) => {
+  if (code in citationCache.value || citeLoading.value[code]) return
+  citeLoading.value = { ...citeLoading.value, [code]: true }
+  try {
+    const r = await eiaStandardApi.listCitations(code)
+    citationCache.value = { ...citationCache.value, [code]: r }
+  } catch (e) {
+    message.error(e?.message || `引用清单加载失败：${code}`)
+    citationCache.value = { ...citationCache.value, [code]: { code, cited_count: 0, reports: [] } }
+  } finally {
+    citeLoading.value = { ...citeLoading.value, [code]: false }
+  }
+}
+
+const toggleCitations = (record) => {
+  const code = record.code
+  if (expandedCiteCodes.value.includes(code)) {
+    expandedCiteCodes.value = expandedCiteCodes.value.filter((x) => x !== code)
+    return
+  }
+  expandedCiteCodes.value = [...expandedCiteCodes.value, code]
+  loadCitations(code)
+}
+
+const kbDlg = reactive({
+  open: false,
+  submitting: false,
+  code: '',
+  title: '',
+  kbId: '',
+  query: '',
+  result: null
+})
+const databases = ref([])
+const kbLoading = ref(false)
+
+const kbOptions = computed(() =>
+  databases.value.map((d) => ({ label: `${d.name}（${d.kb_id}）`, value: d.kb_id }))
+)
+const kbChunks = computed(() => (Array.isArray(kbDlg.result) ? kbDlg.result : []))
+const kbTextResult = computed(() => (typeof kbDlg.result === 'string' ? kbDlg.result : ''))
+const kbRawResult = computed(() =>
+  kbDlg.result !== null && !Array.isArray(kbDlg.result) && typeof kbDlg.result !== 'string'
+    ? JSON.stringify(kbDlg.result, null, 2)
+    : ''
+)
+
+const loadDatabases = async () => {
+  if (kbLoading.value) return
+  kbLoading.value = true
+  try {
+    const r = await databaseApi.getDatabases()
+    databases.value = r.databases || []
+  } catch (e) {
+    message.error(e?.message || '知识库列表加载失败')
+  } finally {
+    kbLoading.value = false
+  }
+}
+
+const openKbQuery = async (record) => {
+  kbDlg.code = record.code
+  kbDlg.title = record.title
+  kbDlg.query = `${record.title} ${record.code}`
+  kbDlg.result = null
+  kbDlg.open = true
+  await loadDatabases()
+  // 默认选名称含「环评」的首个库；用户手动选过则尊重其选择
+  if (!kbDlg.kbId) {
+    const preferred = databases.value.find((d) => (d.name || '').includes('环评'))
+    kbDlg.kbId = preferred?.kb_id || databases.value[0]?.kb_id || ''
+  }
+}
+
+const onKbSearch = async () => {
+  if (!kbDlg.kbId) {
+    message.warning('请先选择知识库')
+    return
+  }
+  if (!kbDlg.query.trim()) {
+    message.warning('请输入查询词')
+    return
+  }
+  kbDlg.submitting = true
+  kbDlg.result = null
+  try {
+    kbDlg.result = await queryApi.queryTest(kbDlg.kbId, kbDlg.query.trim(), {})
+  } catch (e) {
+    message.error(e?.message || 'KB 查询失败')
+  } finally {
+    kbDlg.submitting = false
   }
 }
 
@@ -1872,6 +2098,141 @@ code.k {
 
 .reg-add-col {
   margin-top: 8px;
+}
+
+/* ── 标准核实辅助（T8：引用清单展开 + KB 查询弹层）───────── */
+.cite-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 12px;
+  color: var(--gray-600);
+
+  svg {
+    flex: none;
+    color: var(--gray-500);
+  }
+
+  &.warn {
+    color: var(--second-700);
+  }
+
+  .cite-as {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .s-stage {
+    flex: none;
+  }
+}
+
+.kb-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 9px 12px;
+  border: 1px solid var(--second-200);
+  border-radius: 6px;
+  background: var(--second-50);
+  font-size: 12px;
+  color: var(--second-700);
+
+  svg {
+    flex: none;
+    margin-top: 2px;
+  }
+}
+
+.kb-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+
+  > :first-child {
+    flex: 1;
+  }
+
+  .btn {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.kb-res {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.kb-item {
+  padding: 9px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  font-size: 12px;
+
+  .kb-src {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    color: var(--gray-500);
+
+    .kb-src-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .score {
+      flex: none;
+      margin-left: auto;
+      font-family: ui-monospace, 'Cascadia Code', Consolas, 'Courier New', monospace;
+      font-size: 11px;
+      color: var(--main-600);
+    }
+  }
+
+  .kb-txt {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: var(--gray-600);
+    line-height: 1.7;
+  }
+}
+
+.kb-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed var(--gray-200);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--gray-500);
+}
+
+.kb-raw {
+  max-height: 260px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  overflow: auto;
+  font-size: 11px;
+  color: var(--gray-600);
 }
 </style>
 
