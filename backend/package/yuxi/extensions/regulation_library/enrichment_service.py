@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from typing import Any
 
@@ -22,6 +23,7 @@ from yuxi.storage.postgres.models_knowledge import KnowledgeChunk
 from yuxi.utils import logger
 
 _ALL_ROLES = ("limit", "method", "criteria", "param", "other")
+_CONTINUATION_RE = re.compile(r"[（(]续[)）]\s*$")  # 续表 unit_no 后缀（表N（续）），半/全角括号兼容
 
 
 async def enrich_regulation_file(
@@ -116,10 +118,16 @@ async def enrich_regulation_file(
     tag_updates: dict[str, dict[str, Any]] = {}  # 单表 chunk_id -> 追加 tags（所有表格都带 table_role）
     unit_tags_by_chunk: dict[str, list[dict[str, Any]]] = {}  # 多表 chunk_id -> table_units 清单
     all_indicators: list[dict] = []
+    role_memo: dict[str, str] = {}  # unit_no -> role；续表（表N（续））按主表序号继承角色，不重复走 LLM
     for chunk_id, unit_no, title, content in table_chunks:
         role = classify_table_role_by_title(title)
+        if role is None and unit_no:
+            base = _CONTINUATION_RE.sub("", unit_no).strip()
+            if base != unit_no:
+                role = role_memo.get(base)
         if role is None:
             role = await role_classifier.classify(doc_code, unit_no, title, content)
+        role_memo[unit_no] = role
         role_counts[role] += 1
         unit_tag: dict[str, Any] = {"table_role": role}
         if role == "limit":

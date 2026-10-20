@@ -344,10 +344,23 @@ async def test_extract_indicators_truncation_logged(monkeypatch):
     monkeypatch.setattr(ext_mod.logger, "info", lambda msg, *a, **k: logs.append(str(msg)))
     cap = ext_mod._PROMPT_TEXT_CAP
     await ext_mod.extract_indicators("GB 3838-2002", "表4", "x" * (cap + 1000))
-    assert any(
-        "GB 3838-2002" in m and "表4" in m and str(cap + 1000) in m and str(cap) in m for m in logs
-    )
+    assert any("GB 3838-2002" in m and "表4" in m and str(cap + 1000) in m and str(cap) in m for m in logs)
     assert "x" * (cap + 1) not in adapter.last_prompt  # 实际送入模型的内容已截断
+
+
+@pytest.mark.asyncio
+async def test_extract_indicators_timeout_passed_to_channel(monkeypatch):
+    # 大表 JSON 生成超 60s 默认上限会 fail-closed（容器实测 GB 3838 表1 双通道超时）：必须带提额 timeout
+    captured = {}
+
+    async def _spy(schema_type, prompt, *, timeout=None):
+        captured["timeout"] = timeout
+        return IndicatorExtraction(rows=[])
+
+    monkeypatch.setattr(ext_mod, "call_structured", _spy)
+    await ext_mod.extract_indicators("X", "表1", "c")
+    assert captured["timeout"] == ext_mod._EXTRACT_TIMEOUT_SECONDS
+    assert ext_mod._EXTRACT_TIMEOUT_SECONDS > 60
 
 
 # --------------------------------------------------------------- method 表映射抽取

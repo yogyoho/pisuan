@@ -18,6 +18,7 @@ from yuxi.extensions.regulation_library.structured_channel import call_structure
 from yuxi.utils import logger
 
 _PROMPT_TEXT_CAP = 24000  # 表格内容截断上限（对齐 4096-token 分块的上界），超限记日志（doc_code+unit_no+截断量）
+_EXTRACT_TIMEOUT_SECONDS = 300.0  # 大表 JSON 行数多（GB 3838 表1 单表 120 行），60s 默认上限会 fail-closed（容器实测）
 
 _PROMPT = """你是环保标准专家。提取标准文档《{doc_code}》中限值表（{unit_no}）的指标限值。
 
@@ -162,7 +163,7 @@ async def extract_indicators(doc_code: str, unit_no: str, table_content: str) ->
         table_content=_truncate_table_content(doc_code, unit_no, table_content),
     )
     try:
-        out = await call_structured(IndicatorExtraction, prompt)
+        out = await call_structured(IndicatorExtraction, prompt, timeout=_EXTRACT_TIMEOUT_SECONDS)
     except Exception as exc:
         logger.warning(f"指标提取失败 {doc_code} {unit_no}: {exc}")
         return []
@@ -191,7 +192,7 @@ async def extract_method_mappings(doc_code: str, unit_no: str, table_content: st
         table_content=_truncate_table_content(doc_code, unit_no, table_content),
     )
     try:
-        out = await call_structured(MethodMappingExtraction, prompt)
+        out = await call_structured(MethodMappingExtraction, prompt, timeout=_EXTRACT_TIMEOUT_SECONDS)
     except Exception as exc:
         logger.warning(f"方法映射提取失败 {doc_code} {unit_no}: {exc}")
         return []

@@ -301,6 +301,38 @@ async def test_multi_table_method_map_lands_in_unit_entry(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_continuation_unit_inherits_base_role(monkeypatch):
+    # 续表（表3（续））标题无关键词：按主表序号继承角色，不再走 LLM 判别（容器实测 6 连 validation error 教训）
+    content = f"表3 地表水环境质量标准特定项目标准限值\n{_tbl('3')}\n表3（续）\n{_tbl('3b')}"
+    chunks = [_mk_chunk("c0", content)]
+    clf = StubRoleClassifier(role="other")  # 若误走 LLM 会判成 other，断言即失败
+    ext = StubExtractor(rows=[dict(IND_ROW)])
+    writes = _wire(monkeypatch, chunks, clf, ext)
+
+    result = await enrich_regulation_file("kb1", "f1", "GB 3838-2002", "地表水", "technical_standard")
+
+    assert clf.calls == []  # 快路径（表3）+ 继承（表3（续）），LLM 零调用
+    assert ext.extract_calls == ["表3", "表3（续）"]  # 续表片段照常独立抽取
+    assert result["indicators"] == 2
+    assert [i["unit_no"] for i in writes[0]["indicators"]] == ["表3", "表3（续）"]
+    assert [u["table_role"] for u in chunks[0].tags["table_units"]] == ["limit", "limit"]
+
+
+@pytest.mark.asyncio
+async def test_orphan_continuation_without_base_falls_to_llm(monkeypatch):
+    # 孤立「续表」（无主表可继承）：仍走 LLM 慢路径，fail-closed 不抽取
+    chunks = [_mk_chunk("c0", f"续表\n{_tbl()}")]
+    clf = StubRoleClassifier(role="other")
+    ext = StubExtractor(rows=[dict(IND_ROW)])
+    _wire(monkeypatch, chunks, clf, ext)
+
+    result = await enrich_regulation_file("kb1", "f1", "GB X-2019", "标准", "technical_standard")
+
+    assert clf.calls == ["表?（续）"]  # memo 未命中（表? 无主表），落 LLM
+    assert ext.extract_calls == [] and result["indicators"] == 0
+
+
+@pytest.mark.asyncio
 async def test_head_clause_kept_alongside_multi_tables(monkeypatch):
     # chunk 头部非表格结构单元照旧保留（parse 的表识别被拆分结果取代）
     chunks = [_mk_chunk("c0", T_HEAD_CLAUSE_MULTI)]
