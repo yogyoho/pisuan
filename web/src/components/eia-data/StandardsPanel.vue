@@ -210,7 +210,7 @@
               <tr v-if="expandedTableCodes.includes(record.code)" class="sub-row">
                 <td :colspan="STANDARDS_TABLE_COLS">
                   <div v-if="!tablesOf(record.code).length" class="cite-line muted">
-                    该标准无关联限值表（code_ref 未挂表）——限值录入在下方「限值查找表」卡进行
+                    该标准无关联限值表（code_ref 未挂表）
                   </div>
                   <div v-else class="src-list">
                     <div v-for="[name, t] in tablesOf(record.code)" :key="name" class="cite-line">
@@ -271,263 +271,269 @@
         </div>
       </div>
 
-      <!-- 限值查找表（原型 s11：表 chips + 单表视图 + 整表替换编辑） -->
-      <div class="card">
-        <div class="card-hd">
-          <h3>限值查找表</h3>
-          <span class="hd-sub"
-            >{{ tableEntries.length }} 表 · schema 驱动 · 整表替换语义 ·
-            档位未录入达标判定输出「需人工对照」</span
-          >
-        </div>
-        <div class="toolbar">
-          <button
-            v-for="[name, t] in tableEntries"
-            :key="name"
-            class="stage-chip"
-            :class="{ on: activeTable === name }"
-            @click="activeTable = name"
-          >
-            {{ t.desc }} <span class="cnt">{{ (t.rows || []).length }} 行</span>
-          </button>
-          <span style="flex: 1"></span>
-          <span
-            v-if="activeMeta"
-            class="pill"
-            :class="activeMeta.source === 'db' ? 'pill-orange' : 'pill-gray'"
-            :title="
-              activeMeta.source === 'db'
-                ? 'DB 录入为导出真源，导出物化后写手可见'
-                : '文件锚点态，导出前请先录入核实'
-            "
-            >{{ activeMeta.source === 'db' ? 'DB · 待导出' : '文件态' }}</span
-          >
-          <button
-            v-if="userStore.isAdmin"
-            class="btn btn-sec btn-sm"
-            :disabled="!activeTable"
-            @click="openLimitEdit(activeTable, activeMeta)"
-          >
-            {{ (activeMeta?.rows || []).length ? '编辑限值行' : '添加限值行' }}
-          </button>
-        </div>
-        <table v-if="activeRows.length" class="tbl limit-tbl">
-          <thead>
-            <tr>
-              <th v-for="(spec, k) in activeSchema" :key="k" :class="{ r: spec.type === 'number' }">
-                {{ spec.label }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(row, i) in activeRows" :key="i">
-              <td v-for="(spec, k) in activeSchema" :key="k" :class="{ r: spec.type === 'number' }">
-                <span :class="spec.type === 'number' ? 'mono num' : ''">{{ row[k] }}</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <div v-else class="limit-empty">
-          <a-empty :description="`「${activeMeta?.desc || ''}」暂无限值行，录入后写手方可取值`" />
-        </div>
-        <p v-if="activeMeta?.note" class="limit-note" :title="activeMeta.note">
-          {{ activeMeta.note }}
-        </p>
-        <div class="tbl-foot">
-          整表替换语义：保存即以 DB 为导出真源全量替换；导出以 (table_key, id) 全序重写 rows
-          数组并翻转核验标记；空表拒绝导出
-        </div>
+      <!-- 两 tab 容器（原型 2026-10-20：已提取指标核验台 / 缺源候选漏斗） -->
+      <div class="tabbar">
+        <button
+          class="tab"
+          :class="{ on: activeTab === 'indicators' }"
+          @click="switchTab('indicators')"
+        >
+          <SquareCheckBig :size="15" />
+          已提取指标
+        </button>
+        <button
+          class="tab"
+          :class="{ on: activeTab === 'candidates' }"
+          @click="switchTab('candidates')"
+        >
+          <AlertTriangle :size="15" />
+          缺源候选
+          <span v-if="candidates.length" class="badge num">{{ candidates.length }}</span>
+        </button>
       </div>
 
-      <!-- 提取草稿（原型 2026-10-19 Card 1：语料自动提取 · 暂存行逐行核实转正） -->
-      <div class="card">
-        <div class="card-hd">
-          <h3>提取草稿</h3>
-          <span class="hd-sub">语料自动提取 · 逐行核实后进入正式表 · 已裁决行不再复生</span>
-          <div class="hd-right">
-            <span v-if="extractReport" class="report-pill" title="上次提取报告">
-              上次：<b>{{ extractReport.files_scanned }}</b> 文件 · 聚合
-              <b>{{ extractReport.aggregated }}</b> · 插入 <b>{{ extractReport.inserted }}</b> ·
-              跳过 <b>{{ extractReport.skipped }}</b>
-            </span>
-            <button
-              v-if="userStore.isAdmin"
-              class="btn btn-sec btn-sm"
-              :disabled="extracting"
-              @click="onRunExtract"
-            >
-              <RefreshCw :size="13" :class="{ spin: extracting }" />
-              {{ extracting ? '提取中…' : '重新提取' }}
-            </button>
-          </div>
-        </div>
-        <div class="toolbar">
-          <button
-            v-for="g in extractGroups"
-            :key="g.key"
-            class="stage-chip"
-            :class="{ on: activeExtractTable === g.key }"
-            @click="activeExtractTable = g.key"
-          >
-            {{ g.label }} <span class="cnt">{{ g.rows.length }} 行待裁决</span>
-          </button>
-          <span style="flex: 1"></span>
-          <span class="pill pill-gray">仅 pending · 共 {{ extractRows.length }} 行</span>
-        </div>
-        <table v-if="activeExtractRows.length" class="tbl extract-tbl">
-          <thead>
-            <tr>
-              <th style="width: 30px"></th>
-              <th
-                v-for="col in extractColumns"
-                :key="col.key"
-                :class="{ r: col.type === 'number' }"
+      <!-- tab1 已提取指标：KB enrich 行按 标准号 → 表单元 分组，表单元级人工核验 -->
+      <template v-if="activeTab === 'indicators'">
+        <a-spin
+          v-if="indicatorsLoading && !kbDocGroups.length"
+          style="display: block; margin: 48px auto"
+        />
+        <template v-else>
+          <div class="card">
+            <div class="card-hd">
+              <h3>已提取指标核验台</h3>
+              <span class="hd-sub"
+                >KB enrich 产出的权威限值行 · 按 标准号 → 表单元 分组 · 表单元级人工核验</span
               >
-                {{ col.label }}
-              </th>
-              <th>置信</th>
-              <th>状态</th>
-              <th style="width: 150px">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <template v-for="r in activeExtractRows" :key="r.id">
-              <tr>
-                <td>
-                  <button
-                    class="expander"
-                    :aria-label="`展开来源 ${r.sources?.length || 0} 条`"
-                    @click="toggleExtractSub(r.id)"
-                  >
-                    <ChevronRight :size="14" :class="{ open: expandedExtractIds.includes(r.id) }" />
-                  </button>
-                </td>
-                <td
-                  v-for="col in extractColumns"
-                  :key="col.key"
-                  :class="{ r: col.type === 'number' }"
-                >
-                  <span :class="typeof extractCell(r, col.key) === 'number' ? 'mono num' : ''">{{
-                    extractCell(r, col.key)
-                  }}</span>
-                </td>
-                <td>
-                  <div class="cell-main">
-                    <span class="pill" :class="confPillClass(r.confidence)">
-                      {{ r.confidence
-                      }}<template v-if="r.confidence === 'multi'"> ·{{ sourceCount(r) }}</template>
-                    </span>
-                    <div v-if="conflictValues(r).length" class="conf-chips">
-                      <code v-for="v in conflictValues(r)" :key="v" class="k">{{ v }}</code>
-                    </div>
-                  </div>
-                </td>
-                <td><span class="pill pill-warn">待裁决</span></td>
-                <td>
-                  <button
-                    class="btn btn-txt btn-sm"
-                    :disabled="isCandidateRow(r) || r.confidence === 'conflict'"
-                    :title="
-                      isCandidateRow(r) ? '候选表行须先立表迁移再裁决' : '存在冲突值，须先编辑消解'
-                    "
-                    @click="openConfirmRow(r)"
-                  >
-                    确认
-                  </button>
-                  <button
-                    class="btn btn-txt btn-sm"
-                    :disabled="isCandidateRow(r)"
-                    :title="isCandidateRow(r) ? '候选表行须先立表迁移再裁决' : ''"
-                    @click="openEditRow(r)"
-                  >
-                    编辑
-                  </button>
-                  <button class="btn btn-txt btn-sm danger" @click="onDiscardRow(r)">丢弃</button>
-                </td>
-              </tr>
-              <tr v-if="expandedExtractIds.includes(r.id)" class="sub-row">
-                <td :colspan="extractColumns.length + 4">
-                  <div class="src-list">
-                    <div v-for="(s, i) in r.sources || []" :key="i" class="src-item">
-                      <FileText :size="13" />
-                      <span class="mono">{{ s.report_id }}</span>
-                      <span v-if="sourceStage(s)" class="pill pill-gray s-stage">{{
-                        sourceStage(s)
-                      }}</span>
-                      <span class="s-anchor">{{ s.anchor }}</span>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
-        <div v-else class="empty-state">
-          <a-empty
-            :description="
-              extractRows.length
-                ? '当前表暂无待裁决行'
-                : '暂无待裁决草稿 · 管理员点击「重新提取」扫描语料'
-            "
-          />
-        </div>
-        <div class="tbl-foot">
-          确认/编辑转正写入正式表，导出物化后写手可见；丢弃行打 discarded 标记，重跑提取不复生
-        </div>
-      </div>
-
-      <!-- 新表候选（原型 2026-10-19 Card 2：不在册标准号 → 立表迁移） -->
-      <div class="card">
-        <div class="card-hd">
-          <h3>新表候选</h3>
-          <span class="hd-sub">提取发现不在册的表 → 立表后自动迁入正式限值表清单</span>
-          <div class="hd-right">
-            <span v-if="candidates.length" class="pill pill-gray">
-              {{ candidates.length }} 个候选 · {{ candidatePendingCount }} 行 pending
-            </span>
-          </div>
-        </div>
-        <div v-if="candidates.length" class="cand-grid">
-          <div v-for="c in candidates" :key="c.candidate_key" class="cand-card">
-            <div class="cand-key">
-              <div class="cand-ic"><AlertTriangle :size="16" /></div>
-              <div class="cand-title-wrap">
-                <div class="cand-title" :title="candidateCode(c)">{{ candidateCode(c) }}</div>
-                <div class="cand-code mono">{{ c.candidate_key }}</div>
+              <div class="hd-right">
+                <span class="pill pill-gray num">{{ indicatorsSummary }}</span>
+                <span class="pill pill-gray">重跑 enrich 后该标准核验态自动失效（重跑即重验）</span>
               </div>
             </div>
-            <div class="cand-meta">
-              <span class="pill pill-orange">{{ c.count }} 行待裁决</span>
+
+            <div
+              v-for="doc in kbDocGroups"
+              :key="doc.doc_code"
+              class="doc-card"
+              :class="{ open: expandedDocs.includes(doc.doc_code) }"
+            >
+              <div class="doc-hd" @click="toggleDoc(doc.doc_code)">
+                <span class="expander">
+                  <ChevronRight :size="14" :class="{ open: expandedDocs.includes(doc.doc_code) }" />
+                </span>
+                <span class="doc-ic"><FileText :size="15" /></span>
+                <div>
+                  <div class="doc-code">
+                    {{ doc.doc_code }} <span class="pill pill-main">KB 提取</span>
+                  </div>
+                  <div class="doc-name">{{ doc.doc_name || '—' }}</div>
+                </div>
+                <div class="doc-meta">
+                  <span class="pill pill-gray num"
+                    >{{ doc.totalRows }} 行 · {{ doc.units.length }} 表单元</span
+                  >
+                  <span v-if="doc.verifiedUnits" class="pill pill-ok"
+                    >已核验 {{ doc.verifiedUnits }}</span
+                  >
+                  <span v-else class="pill pill-warn">待核验 {{ doc.units.length }}</span>
+                </div>
+              </div>
+              <div class="doc-body">
+                <template
+                  v-for="unit in doc.units"
+                  :key="unitKey(doc.doc_code, unit.unit_no)"
+                >
+                  <div class="unit-row">
+                    <span class="u-no">{{ unit.unit_no }}</span>
+                    <span v-if="unit.category" class="pill pill-gray">{{ unit.category }}</span>
+                    <span class="u-cnt">{{ unit.rows.length }} 行</span>
+                    <div class="u-acts">
+                      <template v-if="unit.verified">
+                        <span class="pill pill-ok">✓ 已核验</span>
+                        <span class="vt"
+                          >{{ unit.verified_by || '—' }} · {{ shortDate(unit.verified_at) }}</span
+                        >
+                        <button
+                          v-if="userStore.isAdmin"
+                          class="btn btn-txt btn-sm"
+                          :disabled="verifyBusy"
+                          @click="onUnverify(doc.doc_code, unit.unit_no)"
+                        >
+                          撤销
+                        </button>
+                      </template>
+                      <button
+                        v-else-if="userStore.isAdmin"
+                        class="btn btn-sec btn-sm"
+                        :disabled="verifyBusy"
+                        @click="onVerify(doc.doc_code, unit.unit_no)"
+                      >
+                        {{ verifyBusy ? '提交中…' : '确认核验' }}
+                      </button>
+                      <button
+                        class="btn btn-txt btn-sm"
+                        @click="toggleUnit(doc.doc_code, unit.unit_no)"
+                      >
+                        行明细
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    v-if="expandedUnits.includes(unitKey(doc.doc_code, unit.unit_no))"
+                    class="rows-pop"
+                  >
+                    <table class="tbl unit-tbl">
+                      <thead>
+                        <tr>
+                          <th>因子</th>
+                          <th>档位</th>
+                          <th>指标</th>
+                          <th class="r">限值</th>
+                          <th>单位</th>
+                          <th>时段</th>
+                          <th>备注</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="(r, i) in unit.rows" :key="i">
+                          <td>{{ r.pollutant }}</td>
+                          <td>{{ r.category || '—' }}</td>
+                          <td>{{ r.metric || '—' }}</td>
+                          <td class="r mono num">{{ r.limit_value }}</td>
+                          <td>{{ r.unit || '—' }}</td>
+                          <td>{{ r.period || '—' }}</td>
+                          <td class="vt">{{ r.condition || '' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </template>
+              </div>
             </div>
-            <div class="fact-list">
-              <code v-for="f in candidateFactors(c).shown" :key="f" class="k">{{ f }}</code>
-              <code v-if="candidateFactors(c).overflow" class="k"
-                >+{{ candidateFactors(c).overflow }}</code
+
+            <div v-if="!kbDocGroups.length" class="empty-state">
+              <a-empty description="暂无已提取指标 · KB enrich 产出的权威限值行在此呈现" />
+            </div>
+            <div class="tbl-foot">
+              <Info :size="13" />
+              <span
+                >核验以表单元为单位；行值有误时改用「重跑 enrich」修数据，不做行级编辑（保证与 KB
+                分块可溯）。</span
               >
             </div>
-            <div class="cand-ft">
-              <button class="btn btn-sec btn-sm" @click="onIgnoreCandidate(c)">忽略</button>
-              <button v-if="userStore.isAdmin" class="btn btn-pri btn-sm" @click="openRegister(c)">
-                立表
-              </button>
+          </div>
+
+          <!-- KB 外标准手工录入（专家行 · 降位折叠区块，原型 dashed 卡形态） -->
+          <div class="expert-card">
+            <div class="card-hd" @click="expertOpen = !expertOpen">
+              <span class="expander">
+                <ChevronRight :size="14" :class="{ open: expertOpen }" />
+              </span>
+              <h3>KB 外标准手工录入</h3>
+              <span class="hd-sub">专家录入 · 即录即核验 · 与 KB 行同入权威表供写作侧查找</span>
+              <div class="hd-right">
+                <span class="pill pill-gray num">{{ expertSummary }}</span>
+                <button
+                  v-if="userStore.isAdmin"
+                  class="btn btn-pri btn-sm"
+                  @click.stop="openCreateDrawer()"
+                >
+                  <Plus :size="13" />
+                  新建手工录入
+                </button>
+              </div>
+            </div>
+            <div v-if="expertOpen" class="expert-body">
+              <div class="note-bar expert-note">
+                <Info :size="14" />
+                <span
+                  >适用场景：缺源或无法解析入库的标准（如 GB/T 13201-91）。手工行<b>保存即核验生效</b
+                  >并进入 lookup_standard_indicator 查找范围；后续若该标准补源入库，enrich
+                  会<b>检测到手工行并拒绝覆盖</b>，需先删除或迁移手工行。</span
+                >
+              </div>
+              <template v-if="expertGroups.length">
+                <div v-for="g in expertGroups" :key="g.doc_code" class="exp-item">
+                  <span class="e-code">{{ g.doc_code }}</span>
+                  <span class="e-name">{{ g.doc_name || '—' }}</span>
+                  <span class="pill pill-orange">手工</span>
+                  <span class="pill pill-ok">✓ 已核验</span>
+                  <span class="u-cnt num"
+                    >{{ g.totalRows }} 行 · 保存于 {{ shortDate(g.savedAt) }}</span
+                  >
+                  <div class="e-acts">
+                    <button class="btn btn-txt btn-sm" @click="openEditDrawer(g)">编辑</button>
+                    <button class="btn btn-txt btn-sm danger" @click="openDelete(g)">删除</button>
+                  </div>
+                </div>
+              </template>
+              <div v-else class="empty-state expert-empty">
+                <a-empty description="暂无手工标准 · 点击右上「新建手工录入」建档" />
+              </div>
             </div>
           </div>
+        </template>
+      </template>
+
+      <!-- tab2 缺源候选：写作引用了但权威指标库尚未覆盖的标准 -->
+      <template v-else>
+        <div class="card">
+          <div class="card-hd">
+            <h3>缺源候选</h3>
+            <span class="hd-sub"
+              >环评写作引用了但权威指标库尚未覆盖的标准 · 补源 → 上传解析 → enrich 的漏斗入口</span
+            >
+            <div class="hd-right">
+              <span class="pill pill-gray num">引用清单去重 − 已覆盖 = {{ candidates.length }}</span>
+            </div>
+          </div>
+          <a-spin v-if="candidatesLoading" style="display: block; margin: 48px auto" />
+          <div v-else-if="candidates.length" class="cand-grid">
+            <div v-for="c in candidates" :key="c.code" class="cand-card">
+              <div class="cand-key">
+                <div class="cand-ic"><Link :size="14" /></div>
+                <div class="cand-title-wrap">
+                  <div class="cand-title" :title="c.code">{{ c.code }}</div>
+                  <div class="cand-code mono">被引用 {{ c.ref_count }} 次</div>
+                </div>
+              </div>
+              <div class="cand-meta">
+                <span class="pill pill-err">缺源</span>
+                <span v-if="(c.sample_sources || []).length" class="cand-samples">
+                  <code v-for="s in c.sample_sources" :key="s" class="k">{{ s }}</code>
+                </span>
+              </div>
+              <div class="cand-ft">
+                <button
+                  v-if="userStore.isAdmin"
+                  class="btn btn-sec btn-sm"
+                  @click="openCreateDrawer(c.code)"
+                >
+                  手工录入
+                </button>
+                <button class="btn btn-pri btn-sm" @click="goSource(c)">去补源</button>
+              </div>
+            </div>
+          </div>
+          <div v-else class="empty-state">
+            <a-empty description="暂无缺源候选 · 写作引用的标准均已覆盖" />
+          </div>
+          <div class="tbl-foot">
+            <Info :size="13" />
+            <span
+              >确有原文的标准优先「去补源」走 KB enrich 管线（行与 KB 分块可溯）；确无来源的才落手工录入。</span
+            >
+          </div>
         </div>
-        <div v-else class="empty-state">
-          <a-empty description="暂无新表候选 · 提取发现不在册标准号时在此出现" />
-        </div>
-        <div class="tbl-foot">
-          候选行在未立表前保持 pending；立表（admin）后按 (code, table_key)
-          迁入正式表并从候选消失；忽略不可恢复
-        </div>
-      </div>
+      </template>
+
     </template>
 
     <div class="note-bar">
       <Info :size="14" />
       <span
-        >体检命不上模式的编号经核实通道人工登记修正；限值行按表 schema
-        分型校验（str/number、必填），写手按 (标准号, 参数) 取值。</span
+        >体检命不上模式的编号经核实通道人工登记修正；权威限值行由 KB enrich 与专家手工录入双通道写入
+        standard_indicators，写手按 (标准号, 参数) 取值。</span
       >
     </div>
 
@@ -563,176 +569,6 @@
           />
         </a-form-item>
       </a-form>
-    </a-modal>
-
-    <!-- 限值行编辑对话框（整表替换保存） -->
-    <a-modal
-      v-model:open="editDlg.open"
-      :title="`限值录入 · ${editDlg.tableMeta?.desc ?? ''}`"
-      :confirm-loading="editDlg.submitting"
-      :width="720"
-      ok-text="保存录入"
-      @ok="onSaveRows"
-    >
-      <p class="rows-editor-sub">
-        整表替换保存（DB 即导出真源）；数值字段对照标准原文录入纯数字，禁带区间或文字。
-      </p>
-      <table class="rows-edit-table">
-        <thead>
-          <tr>
-            <th v-for="(spec, k) in editFields" :key="k">{{ spec.label }}</th>
-            <th class="op-col">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(row, i) in editDlg.rows" :key="i">
-            <td v-for="(spec, k) in editFields" :key="k">
-              <a-input-number
-                v-if="spec.type === 'number'"
-                v-model:value="row[k]"
-                style="width: 100%"
-              />
-              <a-input v-else v-model:value="row[k]" />
-            </td>
-            <td class="op-col"><a class="danger" @click="editDlg.rows.splice(i, 1)">删除</a></td>
-          </tr>
-        </tbody>
-      </table>
-      <a-button size="small" @click="addBlankRow">＋ 添加一行</a-button>
-    </a-modal>
-
-    <!-- 提取行编辑弹层（M1，schema 驱动；保存 = 以编辑后值转正） -->
-    <a-modal
-      v-model:open="editRowDlg.open"
-      :title="`编辑草稿行 · ${extractGroupLabel(editRowDlg.row?.table_key)}${extractFactor(editRowDlg.row) ? ' · ' + extractFactor(editRowDlg.row) : ''}`"
-      :confirm-loading="editRowDlg.submitting"
-      ok-text="保存并转正"
-      @ok="onSubmitEditRow"
-    >
-      <div class="frm-grid">
-        <div v-for="f in editRowFields" :key="f.key" class="frm-row">
-          <label>{{ f.label }}</label>
-          <a-input-number
-            v-if="f.type === 'number'"
-            v-model:value="editRowDlg.form[f.key]"
-            style="width: 100%"
-          />
-          <a-input v-else v-model:value="editRowDlg.form[f.key]" />
-        </div>
-      </div>
-      <div class="frm-row">
-        <label>裁决备注</label>
-        <a-textarea v-model:value="editRowDlg.note" :rows="2" placeholder="仅平台库留档（可选）" />
-      </div>
-      <div class="frm-help">
-        保存并转正 = 以编辑后值写入正式表 {{ editRowDlg.row?.table_key }}，原暂存行转
-        edited；冲突行编辑后冲突标记自动消解
-      </div>
-    </a-modal>
-
-    <!-- 确认转正弹层（M2：红线提示 + 行摘要 + 备注） -->
-    <a-modal
-      v-model:open="confirmRowDlg.open"
-      title="确认转正 · 写入正式表"
-      :confirm-loading="confirmRowDlg.submitting"
-      ok-text="确认转正"
-      @ok="onSubmitConfirmRow"
-    >
-      <div class="redline-box">
-        <span class="redline-title">转正语义（红线）</span>
-        该行将写入正式限值表 <strong>{{ confirmRowDlg.row?.table_key }}</strong
-        >，导出物化后写手可见；已裁决行重跑提取不再复生。
-      </div>
-      <div class="sum-box">
-        <div v-for="line in confirmRowLines" :key="line.label" class="sum-line">
-          <b>{{ line.label }}</b>
-          <span :class="typeof line.value === 'number' ? 'mono num' : ''">{{
-            line.value === null || line.value === undefined || line.value === '' ? '—' : line.value
-          }}</span>
-        </div>
-        <div class="sum-line">
-          <b>来源</b>
-          <span class="mono">{{ confirmRowSources || '—' }}</span>
-        </div>
-      </div>
-      <div class="frm-row">
-        <label>裁决备注</label>
-        <a-textarea
-          v-model:value="confirmRowDlg.note"
-          :rows="2"
-          placeholder="仅平台库留档（可选）"
-        />
-      </div>
-    </a-modal>
-
-    <!-- 候选立表弹层（M3：注册元数据 + 列结构编辑器） -->
-    <a-modal
-      v-model:open="regDlg.open"
-      :title="`立表 · ${regDlg.candidateKey}`"
-      :confirm-loading="regDlg.submitting"
-      :width="640"
-      ok-text="确认立表"
-      @ok="onRegisterSubmit"
-    >
-      <div class="frm-grid">
-        <div class="frm-row">
-          <label>关联标准编号</label>
-          <a-input v-model:value="regDlg.code" />
-        </div>
-        <div class="frm-row">
-          <label>table_key</label>
-          <a-input v-model:value="regDlg.tableKey" />
-          <div class="frm-help mono">^[a-z0-9_]+$ · 与注册表 / 既有表查重</div>
-        </div>
-      </div>
-      <div class="frm-row">
-        <label>描述</label>
-        <a-input v-model:value="regDlg.desc" />
-      </div>
-      <div class="frm-row">
-        <label>列结构（按候选行 col_* 键预填，可增删改）</label>
-        <table class="schema-tbl">
-          <thead>
-            <tr>
-              <th>列键</th>
-              <th>显示名</th>
-              <th style="width: 92px">类型</th>
-              <th style="width: 52px">必填</th>
-              <th style="width: 30px"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(c, i) in regDlg.cols" :key="`${c.key}-${i}`">
-              <td>
-                <code v-if="!c.custom" class="k">{{ c.key }}</code>
-                <a-input v-else v-model:value="c.key" size="small" />
-              </td>
-              <td><a-input v-model:value="c.label" size="small" /></td>
-              <td>
-                <select v-model="c.type" class="inp reg-type-sel">
-                  <option value="number">number</option>
-                  <option value="str">str</option>
-                </select>
-              </td>
-              <td class="reg-req"><input v-model="c.required" type="checkbox" /></td>
-              <td class="reg-del">
-                <button
-                  class="btn btn-txt btn-sm danger"
-                  aria-label="删除列"
-                  @click="regDlg.cols.splice(i, 1)"
-                >
-                  ×
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <button class="btn btn-sec btn-sm reg-add-col" @click="addRegCol">＋ 添加列</button>
-      </div>
-      <div class="frm-help">
-        立表后该候选全部 pending 行按新 table_key
-        迁入正式表并从候选清单消失；首个因子列沿用行内「因子」键
-      </div>
     </a-modal>
 
     <!-- KB 查询弹层（原型 M4：片段仅作核实线索，非引用来源） -->
@@ -835,22 +671,140 @@
         </div>
       </div>
     </a-drawer>
+
+    <!-- 专家录入抽屉（原型两步：标准信息 → 限值行；新建走 POST，编辑走 PUT 整标准替换） -->
+    <a-drawer v-model:open="drawer.open" width="640">
+      <template #title>
+        <div class="drawer-title">
+          <PenLine :size="16" class="drawer-title-ic" />
+          <div>
+            <h3>手工录入标准限值</h3>
+            <div class="drawer-sub">保存即核验生效 · 进入写作侧指标查找范围</div>
+          </div>
+        </div>
+      </template>
+      <div class="step-tag"><span class="n">1</span>标准信息</div>
+      <div class="frm-grid">
+        <div class="frm-row">
+          <label>标准号 <span class="req">*</span></label>
+          <a-input
+            v-model:value="drawer.form.doc_code"
+            placeholder="如 GB 18596-2001"
+            :disabled="Boolean(drawer.editCode)"
+          />
+          <div class="frm-help">后续补源入库时以此号与 enrich 对账（冲突守护）</div>
+        </div>
+        <div class="frm-row">
+          <label>标准名称</label>
+          <a-input
+            v-model:value="drawer.form.doc_name"
+            placeholder="如 畜禽养殖业污染物排放标准"
+          />
+        </div>
+      </div>
+      <div class="frm-row">
+        <label>标准类型</label>
+        <select v-model="drawer.form.doc_type" class="inp drawer-type-sel">
+          <option value="technical_standard">技术标准（限值表）</option>
+          <option value="law_regulation">法规（无限值表，仅建档）</option>
+        </select>
+      </div>
+
+      <div class="step-tag step-gap">
+        <span class="n">2</span>限值行
+        <span class="pill pill-gray pill-sm">{{ drawer.rows.length }} 行</span>
+      </div>
+      <table class="edit-tbl">
+        <thead>
+          <tr>
+            <th>因子 *</th>
+            <th>档位</th>
+            <th>指标</th>
+            <th>限值 *</th>
+            <th>单位</th>
+            <th>时段</th>
+            <th>条件备注</th>
+            <th class="col-act"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(row, i) in drawer.rows" :key="i">
+            <td><input v-model="row.pollutant" class="inp" placeholder="因子" /></td>
+            <td><input v-model="row.category" class="inp" placeholder="档位" /></td>
+            <td><input v-model="row.metric" class="inp" placeholder="指标" /></td>
+            <td><input v-model="row.limit_value" class="inp" placeholder="限值" /></td>
+            <td><input v-model="row.unit" class="inp" placeholder="单位" /></td>
+            <td><input v-model="row.period" class="inp" placeholder="时段" /></td>
+            <td><input v-model="row.condition" class="inp" placeholder="条件" /></td>
+            <td class="col-act">
+              <button class="row-del" aria-label="删除行" @click="drawer.rows.splice(i, 1)">
+                <Trash2 :size="13" />
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <button class="add-row-btn" @click="drawer.rows.push(blankManualRow())">
+        <Plus :size="13" />
+        添加一行
+      </button>
+      <div class="note-bar">
+        <Info :size="14" />
+        <span
+          >行值务必对照标准原文录入，保存后即时核验生效；日后可整标准编辑或删除。若该标准号随后补源入库，enrich
+          将拒绝覆盖手工行并提示。</span
+        >
+      </div>
+      <template #footer>
+        <button class="btn btn-sec btn-sm" @click="drawer.open = false">取消</button>
+        <button class="btn btn-pri btn-sm" :disabled="drawer.submitting" @click="onSaveDrawer">
+          {{ drawer.submitting ? '保存中…' : `保存并核验（${drawer.rows.length} 行）` }}
+        </button>
+      </template>
+    </a-drawer>
+
+    <!-- 删除手工标准确认（lookup 立即失效 · 不可撤销，文案照原型） -->
+    <a-modal
+      v-model:open="delDlg.open"
+      title="删除手工标准"
+      :confirm-loading="delDlg.submitting"
+      ok-text="确认删除"
+      :ok-button-props="{ danger: true }"
+      @ok="onDelete"
+    >
+      <div class="del-warn">
+        <AlertTriangle :size="14" />
+        <span
+          >将删除 <b>{{ delDlg.group?.doc_code }}</b> 的全部
+          {{ delDlg.group?.totalRows }} 条手工限值行。写作侧
+          <code class="k">lookup_standard_indicator</code>
+          对该标准的查找将立即失效；KB 侧数据不受影响。此操作不可撤销。</span
+        >
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { message, Modal } from 'ant-design-vue'
+import { useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
 import {
   AlertTriangle,
   ChevronRight,
   FileText,
   Info,
+  Link,
+  PenLine,
+  Plus,
   RefreshCw,
   Search,
-  ShieldCheck
+  ShieldCheck,
+  SquareCheckBig,
+  Trash2
 } from '@lucide/vue'
 import { eiaStandardApi } from '@/apis/eia_standard_api'
+import { regulationLibraryApi } from '@/apis/regulation_library_api'
 import { databaseApi, queryApi } from '@/apis/knowledge_api'
 import { useUserStore } from '@/stores/user'
 
@@ -868,11 +822,8 @@ const loading = ref(false)
 const exporting = ref(false)
 const items = ref([])
 const limitTables = ref({})
-const schemas = ref({})
 const gate1 = ref(null)
 const filters = reactive({ state: '', q: '' })
-// 限值表单表视图：chips 切换当前表（原型 s11 单表视图）
-const activeTable = ref('')
 
 const tierLabel = (k) => TIER_LABELS[k] || k
 // 分级徽记按真实类别映射展示档位（非虚构 T1/T2 评级）：质量/排放为写手取值主力 → tier-1
@@ -884,13 +835,6 @@ const TIER_BADGES = {
   pending: 'tier-3'
 }
 const tierBadge = (k) => TIER_BADGES[k] || 'tier-3'
-
-// 限值行列头取服务端 schemas（字段顺序与中文标签权威）；schemas 缺席时回退首行键
-const rowKeys = (name, t) => {
-  const s = schemas.value[name]
-  if (s) return Object.keys(s)
-  return Object.keys(t.rows?.[0] || {}).filter((k) => k !== 'origin')
-}
 
 // seg/头标与过滤同源：待核实 = 文件标记且无裁决；已核实 = 其余（含免核实条目）。
 // 不用服务端 counts.confirmed——它只数 DB 裁决，与表格过滤口径脱节（会显示 0 却过滤出 21 行）
@@ -941,21 +885,11 @@ watch(filters, () => {
   page.value = 1
 })
 
-// ── 限值表单表视图 ──────────────────────────────────────
+// ── 限值表关联视图（标准核实清单行内展开用）──────────────
 
 const tableEntries = computed(() =>
   Object.entries(limitTables.value).filter(([, v]) => typeof v === 'object' && v !== null)
 )
-const activeMeta = computed(() => limitTables.value[activeTable.value] || null)
-const activeSchema = computed(() => schemas.value[activeTable.value] || {})
-const activeRows = computed(() => {
-  const t = activeMeta.value
-  if (!t) return []
-  // schema 缺席时回退首行键投影（与 rowKeys 同一兜底）
-  if (schemas.value[activeTable.value]) return t.rows || []
-  const keys = rowKeys(activeTable.value, t)
-  return (t.rows || []).map((r) => Object.fromEntries(keys.map((k) => [k, r[k]])))
-})
 
 const fetchList = async () => {
   loading.value = true
@@ -966,15 +900,10 @@ const fetchList = async () => {
       eiaStandardApi.getGate1().catch(() => null) // 体检卡独立降级：不阻塞标准表主链
     ])
     items.value = data.items
-    schemas.value = limits.schemas || {}
     limitTables.value = Object.fromEntries(
       Object.entries(limits.limit_tables).filter(([, v]) => typeof v === 'object' && v !== null)
     )
     gate1.value = gate1Data
-    // 首次装载缺省选中第一张表；刷新后当前选中表被裁剪则回落
-    if (!limitTables.value[activeTable.value]) {
-      activeTable.value = tableEntries.value[0]?.[0] ?? ''
-    }
   } catch (e) {
     message.error(e?.message || '标准库加载失败')
   } finally {
@@ -1026,57 +955,11 @@ const onSubmit = async () => {
   }
 }
 
-// ── 限值行编辑对话框（整表替换保存）──────────────────────
+// ── 页头 dbTableCount pill（DB 录入表 → 待导出计数）──────
 
 const dbTableCount = computed(
   () => Object.values(limitTables.value).filter((t) => t.source === 'db').length
 )
-
-const editDlg = reactive({
-  open: false,
-  submitting: false,
-  tableKey: '',
-  tableMeta: null,
-  rows: []
-})
-const editFields = computed(() => schemas.value[editDlg.tableKey] || {})
-
-const addBlankRow = () => {
-  const blank = {}
-  for (const [k, spec] of Object.entries(editFields.value))
-    blank[k] = spec.type === 'number' ? null : ''
-  editDlg.rows.push(blank)
-}
-
-const openLimitEdit = (name, t) => {
-  editDlg.tableKey = name
-  editDlg.tableMeta = t
-  // 按 schema 投影装载：文件锚点行携带的 origin 等溯源字段不进编辑器（服务端校验拒收）
-  const fields = schemas.value[name] || {}
-  editDlg.rows = (t.rows || []).map((r) =>
-    Object.fromEntries(
-      Object.entries(fields).map(([k, spec]) => [k, r[k] ?? (spec.type === 'number' ? null : '')])
-    )
-  )
-  if (!editDlg.rows.length) addBlankRow()
-  editDlg.open = true
-}
-
-const onSaveRows = async () => {
-  editDlg.submitting = true
-  try {
-    const r = await eiaStandardApi.saveLimitRows(editDlg.tableKey, editDlg.rows)
-    message.success(
-      `「${editDlg.tableMeta?.desc || editDlg.tableKey}」已保存 ${r.saved} 行（导出物化后生效）`
-    )
-    editDlg.open = false
-    await fetchList()
-  } catch (e) {
-    message.error(e?.message || '限值行保存失败')
-  } finally {
-    editDlg.submitting = false
-  }
-}
 
 const exportLimits = async () => {
   exporting.value = true
@@ -1092,348 +975,6 @@ const exportLimits = async () => {
     message.error({ content: e?.message || '限值行导出失败', key: 'limits-export' })
   } finally {
     exporting.value = false
-  }
-}
-
-// ── 提取草稿与新表候选（spec 2026-10-19；加载失败静默降级，不阻塞面板主链）──
-
-const CANDIDATE_PREFIX = '__candidate__:'
-
-const extractRows = ref([])
-const extractReport = ref(null)
-const candidates = ref([])
-const activeExtractTable = ref('')
-const extracting = ref(false)
-const expandedExtractIds = ref([])
-
-const isCandidateRow = (r) => (r?.table_key || '').startsWith(CANDIDATE_PREFIX)
-// sources 锚点形如 `{stage}/{切片名}`，阶段 pill 取锚点首段
-const sourceStage = (s) => (s?.anchor || '').split('/')[0]
-const sourceCount = (r) => new Set((r.sources || []).map((s) => s.report_id)).size
-const conflictValues = (r) => (Array.isArray(r?.row?.conflict_values) ? r.row.conflict_values : [])
-const extractCell = (r, k) => {
-  const v = r?.row?.[k]
-  return v === null || v === undefined || v === '' ? '—' : v
-}
-const confPillClass = (c) =>
-  ({ multi: 'pill-ok', single: 'pill-gray', conflict: 'pill-err' })[c] || 'pill-gray'
-// 因子摘要：在册表取 pollutant，候选表取首个非空字符串列值
-const extractFactor = (r) =>
-  r?.row?.pollutant ||
-  Object.values(r?.row || {}).find((v) => typeof v === 'string' && v.trim()) ||
-  ''
-
-const extractGroupLabel = (tableKey) => {
-  if (!tableKey) return ''
-  if (tableKey.startsWith(CANDIDATE_PREFIX)) return tableKey.slice(CANDIDATE_PREFIX.length)
-  return limitTables.value[tableKey]?.desc || tableKey
-}
-
-const extractGroups = computed(() => {
-  const map = new Map()
-  for (const r of extractRows.value) {
-    if (!map.has(r.table_key)) map.set(r.table_key, [])
-    map.get(r.table_key).push(r)
-  }
-  return [...map.entries()].map(([key, rows]) => ({ key, rows, label: extractGroupLabel(key) }))
-})
-
-const ensureActiveExtractTable = () => {
-  if (!extractRows.value.some((r) => r.table_key === activeExtractTable.value))
-    activeExtractTable.value = extractGroups.value[0]?.key ?? ''
-}
-
-const activeExtractRows = computed(
-  () => extractGroups.value.find((g) => g.key === activeExtractTable.value)?.rows ?? []
-)
-
-// 列头 schema 驱动：在册表用 listLimits schemas；候选表按 row col_* 键平铺（全数值列推断为 number）
-const extractColumns = computed(() => {
-  const key = activeExtractTable.value
-  const schema = schemas.value[key]
-  if (schema)
-    return Object.entries(schema).map(([k, s]) => ({ key: k, label: s.label, type: s.type }))
-  const rows = activeExtractRows.value
-  const keys = []
-  for (const r of rows)
-    for (const k of Object.keys(r.row || {}))
-      if (k.startsWith('col_') && !keys.includes(k)) keys.push(k)
-  return keys.map((k) => {
-    const vals = rows
-      .map((r) => r.row?.[k])
-      .filter((v) => v !== undefined && v !== null && v !== '')
-    return {
-      key: k,
-      label: k.slice(4),
-      type: vals.length > 0 && vals.every((v) => typeof v === 'number') ? 'number' : 'str'
-    }
-  })
-})
-
-const loadExtract = async () => {
-  try {
-    const [rowsData, candData] = await Promise.all([
-      eiaStandardApi.listExtractRows({ status: 'pending' }),
-      eiaStandardApi.listCandidates()
-    ])
-    extractRows.value = rowsData.rows || []
-    candidates.value = candData.candidates || []
-    ensureActiveExtractTable()
-  } catch (e) {
-    console.warn('[StandardsPanel] 提取草稿/候选加载失败，区块降级为空:', e)
-  }
-}
-
-const onRunExtract = async () => {
-  extracting.value = true
-  message.loading({
-    content: '正在全库扫描提取限值（约 40 秒+）…',
-    key: 'limit-extract',
-    duration: 0
-  })
-  try {
-    const r = await eiaStandardApi.runExtract()
-    extractReport.value = r
-    message.success({ content: `提取完成：插入 ${r.inserted} 行`, key: 'limit-extract' })
-    await Promise.all([loadExtract(), fetchList()])
-  } catch (e) {
-    message.error({ content: e?.message || '提取失败', key: 'limit-extract' })
-  } finally {
-    extracting.value = false
-  }
-}
-
-const toggleExtractSub = (id) => {
-  expandedExtractIds.value = expandedExtractIds.value.includes(id)
-    ? expandedExtractIds.value.filter((x) => x !== id)
-    : [...expandedExtractIds.value, id]
-}
-
-const removeExtractRow = (id) => {
-  extractRows.value = extractRows.value.filter((r) => r.id !== id)
-  ensureActiveExtractTable()
-}
-
-// 编辑草稿行（M1）：在册表 schema 驱动字段（候选表行不可编辑，入口已禁用）
-const editRowDlg = reactive({ open: false, submitting: false, row: null, form: {}, note: '' })
-
-const editRowFields = computed(() => {
-  const schema = schemas.value[editRowDlg.row?.table_key] || {}
-  return Object.entries(schema).map(([k, s]) => ({ key: k, label: s.label, type: s.type }))
-})
-
-const openEditRow = (r) => {
-  const schema = schemas.value[r.table_key] || {}
-  editRowDlg.row = r
-  editRowDlg.form = Object.fromEntries(
-    Object.entries(schema).map(([k, s]) => [k, r.row?.[k] ?? (s.type === 'number' ? null : '')])
-  )
-  editRowDlg.note = ''
-  editRowDlg.open = true
-}
-
-const submitRowDecision = async (row, payload, successText) => {
-  await eiaStandardApi.decideExtractRow(row.id, payload)
-  message.success(successText)
-  removeExtractRow(row.id)
-}
-
-const onSubmitEditRow = async () => {
-  editRowDlg.submitting = true
-  try {
-    await submitRowDecision(
-      editRowDlg.row,
-      { action: 'edited', row_json: { ...editRowDlg.form }, note: editRowDlg.note || null },
-      '已保存并转正（导出物化后写手可见）'
-    )
-    editRowDlg.open = false
-    await fetchList()
-  } catch (e) {
-    message.error(e?.message || '编辑转正失败')
-  } finally {
-    editRowDlg.submitting = false
-  }
-}
-
-// 确认转正（M2）：红线提示 + 行摘要 + 备注
-const confirmRowDlg = reactive({ open: false, submitting: false, row: null, note: '' })
-
-const confirmRowLines = computed(() => {
-  const r = confirmRowDlg.row
-  if (!r) return []
-  const schema = schemas.value[r.table_key]
-  const entries = schema
-    ? Object.entries(schema)
-    : Object.keys(r.row || {})
-        .filter((k) => k !== 'conflict_values')
-        .map((k) => [k, { label: k }])
-  return entries.map(([k, s]) => ({ label: s.label || k, value: r.row?.[k] ?? null }))
-})
-
-const confirmRowSources = computed(() =>
-  [...new Set((confirmRowDlg.row?.sources || []).map((s) => s.report_id))].join(' · ')
-)
-
-const openConfirmRow = (r) => {
-  confirmRowDlg.row = r
-  confirmRowDlg.note = ''
-  confirmRowDlg.open = true
-}
-
-const onSubmitConfirmRow = async () => {
-  confirmRowDlg.submitting = true
-  try {
-    await submitRowDecision(
-      confirmRowDlg.row,
-      { action: 'confirm', note: confirmRowDlg.note || null },
-      `已转正写入 ${confirmRowDlg.row.table_key}（导出物化后写手可见）`
-    )
-    confirmRowDlg.open = false
-    await fetchList()
-  } catch (e) {
-    message.error(e?.message || '转正失败')
-  } finally {
-    confirmRowDlg.submitting = false
-  }
-}
-
-const onDiscardRow = (r) => {
-  Modal.confirm({
-    title: '丢弃该草稿行？',
-    content: '丢弃行打 discarded 标记，不可恢复；重跑提取不再复生。',
-    okText: '丢弃',
-    okType: 'danger',
-    cancelText: '取消',
-    onOk: () =>
-      submitRowDecision(r, { action: 'discarded' }, '已丢弃 1 行').catch((e) =>
-        message.error(e?.message || '丢弃失败')
-      )
-  })
-}
-
-// 新表候选（Card 2）：因子清单去重前 6 + 忽略 / 立表
-const candidatePendingCount = computed(() =>
-  candidates.value.reduce((sum, c) => sum + (c.count || 0), 0)
-)
-
-const candidateCode = (c) => c.rows?.[0]?.code || c.candidate_key.slice(CANDIDATE_PREFIX.length)
-
-const candidateFactors = (c) => {
-  const seen = []
-  for (const r of c.rows || []) {
-    const v = extractFactor(r)
-    if (v && !seen.includes(v)) seen.push(v)
-  }
-  return { shown: seen.slice(0, 6), overflow: Math.max(seen.length - 6, 0) }
-}
-
-const onIgnoreCandidate = (c) => {
-  Modal.confirm({
-    title: `忽略候选 ${c.candidate_key}？`,
-    content: `该候选 ${c.count} 行 pending 将全部转 discarded，不可恢复；重跑提取不再复生。`,
-    okText: '忽略',
-    okType: 'danger',
-    cancelText: '取消',
-    onOk: async () => {
-      try {
-        await Promise.all(
-          (c.rows || []).map((r) => eiaStandardApi.decideExtractRow(r.id, { action: 'discarded' }))
-        )
-        message.success(`已忽略：${c.count} 行全部转 discarded`)
-        await loadExtract()
-      } catch (e) {
-        message.error(e?.message || '忽略失败')
-        await loadExtract()
-      }
-    }
-  })
-}
-
-// 候选立表（M3）：元数据 + 列结构编辑器（列键预填 readonly，新增列可编辑键名）
-const regDlg = reactive({
-  open: false,
-  submitting: false,
-  candidateKey: '',
-  code: '',
-  tableKey: '',
-  desc: '',
-  cols: []
-})
-
-const openRegister = (c) => {
-  const rows = c.rows || []
-  const keys = []
-  for (const r of rows)
-    for (const k of Object.keys(r.row || {}))
-      if (k.startsWith('col_') && !keys.includes(k)) keys.push(k)
-  const code = candidateCode(c)
-  regDlg.candidateKey = c.candidate_key
-  regDlg.code = code
-  regDlg.tableKey = code
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-  regDlg.desc = `${code} · ${keys.map((k) => k.slice(4)).join('/')}`
-  regDlg.cols = keys.map((k) => {
-    const vals = rows
-      .map((r) => r.row?.[k])
-      .filter((v) => v !== undefined && v !== null && v !== '')
-    return {
-      key: k,
-      label: k.slice(4),
-      type: vals.length > 0 && vals.every((v) => typeof v === 'number') ? 'number' : 'str',
-      required: true,
-      custom: false
-    }
-  })
-  regDlg.open = true
-}
-
-const addRegCol = () => {
-  let i = regDlg.cols.length + 1
-  while (regDlg.cols.some((c) => c.key === `col_extra_${i}`)) i += 1
-  regDlg.cols.push({ key: `col_extra_${i}`, label: '', type: 'str', required: true, custom: true })
-}
-
-const onRegisterSubmit = async () => {
-  if (!regDlg.code.trim()) {
-    message.warning('请填写关联标准编号')
-    return
-  }
-  const tableKey = regDlg.tableKey.trim()
-  if (!/^[a-z0-9_]+$/.test(tableKey)) {
-    message.warning('table_key 须匹配 ^[a-z0-9_]+$')
-    return
-  }
-  const cols = regDlg.cols.filter((c) => c.key.trim())
-  if (!cols.length) {
-    message.warning('至少保留一列')
-    return
-  }
-  if (new Set(cols.map((c) => c.key.trim())).size !== cols.length) {
-    message.warning('存在重复列键，请修正后再提交')
-    return
-  }
-  regDlg.submitting = true
-  try {
-    const r = await eiaStandardApi.registerCandidate({
-      code: regDlg.code.trim(),
-      table_key: tableKey,
-      desc: regDlg.desc.trim(),
-      columns_schema: Object.fromEntries(
-        cols.map((c) => [
-          c.key.trim(),
-          { label: c.label.trim() || c.key.slice(4), type: c.type, required: c.required }
-        ])
-      )
-    })
-    message.success(`已立表并迁移 ${r.migrated} 行`)
-    regDlg.open = false
-    await Promise.all([loadExtract(), fetchList()])
-  } catch (e) {
-    message.error(e?.message || '候选立表失败')
-  } finally {
-    regDlg.submitting = false
   }
 }
 
@@ -1566,9 +1107,277 @@ const onKbSearch = async () => {
   }
 }
 
+// ── 两 tab（原型 2026-10-20）：已提取指标核验台 / 缺源候选 ──────────────
+
+const router = useRouter()
+const activeTab = ref('indicators')
+const indicators = ref([])
+const indicatorsLoading = ref(false)
+const expandedDocs = ref([])
+const expandedUnits = ref([])
+const verifyBusy = ref(false)
+const expertOpen = ref(false)
+const candidates = ref([])
+const candidatesLoading = ref(false)
+const candidatesLoaded = ref(false)
+
+const unitKey = (docCode, unitNo) => `${docCode}|${unitNo}`
+// 核验时间仅展示月-日（原型口径）；ISO 串或 null
+const shortDate = (iso) => (iso ? String(iso).slice(5, 10) : '—')
+
+const toggleDoc = (code) => {
+  expandedDocs.value = expandedDocs.value.includes(code)
+    ? expandedDocs.value.filter((x) => x !== code)
+    : [...expandedDocs.value, code]
+}
+
+const toggleUnit = (docCode, unitNo) => {
+  const key = unitKey(docCode, unitNo)
+  expandedUnits.value = expandedUnits.value.includes(key)
+    ? expandedUnits.value.filter((x) => x !== key)
+    : [...expandedUnits.value, key]
+}
+
+// 客户端分组 doc_code → unit_no；source='expert' 不进 KB 分组（归 tab1 底部手工区块）
+const groupIndicators = (kind) => {
+  const docMap = new Map()
+  for (const r of indicators.value) {
+    const isExpert = r.source === 'expert'
+    if ((kind === 'expert') !== isExpert) continue
+    if (!docMap.has(r.doc_code)) {
+      docMap.set(r.doc_code, { doc_code: r.doc_code, doc_name: r.doc_name || '', units: new Map() })
+    }
+    const doc = docMap.get(r.doc_code)
+    if (!doc.doc_name && r.doc_name) doc.doc_name = r.doc_name
+    const uNo = r.unit_no || '—'
+    if (!doc.units.has(uNo)) {
+      doc.units.set(uNo, { unit_no: uNo, rows: [], category: '', verified: false, verified_by: '', verified_at: '' })
+    }
+    doc.units.get(uNo).rows.push(r)
+  }
+  return [...docMap.values()].map((doc) => {
+    const units = [...doc.units.values()].map((u) => {
+      // 表单元级核验态：所有行 verified_at 非空即视为已核验；档位 pill 仅当全单元同一 category
+      u.verified = u.rows.every((r) => Boolean(r.verified_at))
+      const cats = [...new Set(u.rows.map((r) => (r.category || '').trim()).filter(Boolean))]
+      u.category = cats.length === 1 ? cats[0] : ''
+      if (u.verified) {
+        u.verified_by = u.rows[0]?.verified_by || ''
+        u.verified_at = u.rows[0]?.verified_at || ''
+      }
+      return u
+    })
+    return {
+      doc_code: doc.doc_code,
+      doc_name: doc.doc_name,
+      units,
+      totalRows: units.reduce((sum, u) => sum + u.rows.length, 0),
+      verifiedUnits: units.filter((u) => u.verified).length
+    }
+  })
+}
+
+const kbDocGroups = computed(() => groupIndicators('kb'))
+
+const expertGroups = computed(() =>
+  groupIndicators('expert').map((g) => ({
+    ...g,
+    // 手工行 born-verified：保存时间取该标准最早 verified_at
+    savedAt:
+      g.units
+        .flatMap((u) => u.rows)
+        .map((r) => r.verified_at)
+        .filter(Boolean)
+        .sort()[0] || ''
+  }))
+)
+
+const indicatorsSummary = computed(() => {
+  const docs = kbDocGroups.value
+  const unitCount = docs.reduce((sum, d) => sum + d.units.length, 0)
+  const verifiedCount = docs.reduce((sum, d) => sum + d.verifiedUnits, 0)
+  return `${docs.length} 标准 · ${unitCount} 表单元 · ${verifiedCount} 已核验`
+})
+
+const expertSummary = computed(() => {
+  const groups = expertGroups.value
+  const rowCount = groups.reduce((sum, g) => sum + g.totalRows, 0)
+  return `${groups.length} 标准 · ${rowCount} 行`
+})
+
+const loadIndicators = async (silent = false) => {
+  if (!silent) indicatorsLoading.value = true
+  try {
+    const data = await regulationLibraryApi.getIndicators()
+    indicators.value = data.items || []
+  } catch (e) {
+    // 非管理员访问 admin 端点属预期：静默降级为空台；管理员遇到真实故障才提示
+    if (userStore.isAdmin) message.error(e?.message || '已提取指标加载失败')
+    else console.warn('[StandardsPanel] 指标加载跳过（非管理员）：', e?.message)
+  } finally {
+    if (!silent) indicatorsLoading.value = false
+  }
+}
+
+// 核验/撤销后静默重拉（无整页 spinner），服务端始终是核验态唯一事实
+const setUnitVerify = async (docCode, unitNo, verify) => {
+  verifyBusy.value = true
+  try {
+    if (verify) await regulationLibraryApi.verifyUnit(docCode, unitNo)
+    else await regulationLibraryApi.unverifyUnit(docCode, unitNo)
+    message.success(`${verify ? '已核验' : '已撤销核验'} ${docCode} · ${unitNo}`)
+    await loadIndicators(true)
+  } catch (e) {
+    message.error(e?.message || (verify ? '核验失败' : '撤销失败'))
+  } finally {
+    verifyBusy.value = false
+  }
+}
+
+const onVerify = (docCode, unitNo) => setUnitVerify(docCode, unitNo, true)
+const onUnverify = (docCode, unitNo) => setUnitVerify(docCode, unitNo, false)
+
+// tab2 缺源候选：进 tab 拉一次（引用清单去重 − 已覆盖，admin）
+const loadCandidates = async () => {
+  if (candidatesLoaded.value) return
+  candidatesLoading.value = true
+  try {
+    candidates.value = await eiaStandardApi.listSourceCandidates()
+    candidatesLoaded.value = true
+  } catch (e) {
+    if (userStore.isAdmin) message.error(e?.message || '缺源候选加载失败')
+    else console.warn('[StandardsPanel] 缺源候选加载跳过（非管理员）：', e?.message)
+  } finally {
+    candidatesLoading.value = false
+  }
+}
+
+const switchTab = (tab) => {
+  activeTab.value = tab
+  if (tab === 'candidates') loadCandidates()
+}
+
+// 「去补源」：无标准库专设路由，跳知识库列表页（tab=knowledge）并由 toast 指路
+const goSource = (c) => {
+  message.info(`请在知识库「标准规范库」补源上传「${c.code}」，解析后 enrich 自动提取指标`)
+  router.push({ path: '/extensions', query: { tab: 'knowledge' } })
+}
+
+// ── 专家录入抽屉（新建 POST / 编辑 PUT 整标准替换；手工行保存即核验）────────
+
+const MANUAL_ROW_FIELDS = [
+  'pollutant',
+  'category',
+  'metric',
+  'limit_value',
+  'unit',
+  'period',
+  'condition'
+]
+const blankManualRow = () => Object.fromEntries(MANUAL_ROW_FIELDS.map((k) => [k, '']))
+
+const drawer = reactive({
+  open: false,
+  submitting: false,
+  editCode: '', // 非空 = 编辑态（PUT 以 path 上的 doc_code 定位）
+  form: { doc_code: '', doc_name: '', doc_type: 'technical_standard' },
+  rows: []
+})
+
+const openCreateDrawer = (prefillCode = '') => {
+  drawer.editCode = ''
+  drawer.form = { doc_code: prefillCode, doc_name: '', doc_type: 'technical_standard' }
+  drawer.rows = [blankManualRow()]
+  drawer.open = true
+}
+
+const openEditDrawer = (group) => {
+  drawer.editCode = group.doc_code
+  drawer.form = {
+    doc_code: group.doc_code,
+    doc_name: group.doc_name,
+    doc_type: 'technical_standard' // doc_type 仅创建时传后端，不回显持久化
+  }
+  drawer.rows = group.units
+    .flatMap((u) => u.rows)
+    .map((r) => Object.fromEntries(MANUAL_ROW_FIELDS.map((k) => [k, r[k] ?? ''])))
+  if (!drawer.rows.length) drawer.rows = [blankManualRow()]
+  drawer.open = true
+}
+
+const onSaveDrawer = async () => {
+  const code = drawer.form.doc_code.trim()
+  if (!code) {
+    message.warning('请填写标准号')
+    return
+  }
+  if (drawer.rows.length > 500) {
+    message.warning('限值行不能超过 500 行')
+    return
+  }
+  const hasBlankRequired = drawer.rows.some(
+    (r) => !String(r.pollutant || '').trim() || !String(r.limit_value || '').trim()
+  )
+  if (hasBlankRequired) {
+    message.warning('存在缺少「因子」或「限值」的行，请补全或删除该行')
+    return
+  }
+  const payload = {
+    doc_code: code,
+    doc_name: drawer.form.doc_name.trim(),
+    doc_type: drawer.form.doc_type,
+    rows: drawer.rows.map((r) => ({
+      pollutant: String(r.pollutant).trim(),
+      category: String(r.category || '').trim(),
+      metric: String(r.metric || '').trim(),
+      limit_value: String(r.limit_value).trim(),
+      unit: String(r.unit || '').trim(),
+      period: String(r.period || '').trim(),
+      condition: String(r.condition || '').trim()
+    }))
+  }
+  drawer.submitting = true
+  try {
+    if (drawer.editCode) await regulationLibraryApi.updateManualStandard(drawer.editCode, payload)
+    else await regulationLibraryApi.createManualStandard(payload)
+    message.success(`「${code}」已保存并核验生效（${payload.rows.length} 行）`)
+    drawer.open = false
+    expertOpen.value = true
+    await loadIndicators(true)
+  } catch (e) {
+    // 409（编号已存在 / 非 expert 行）、400（校验失败）detail 由 api 层透出
+    message.error(e?.message || '手工标准保存失败')
+  } finally {
+    drawer.submitting = false
+  }
+}
+
+// ── 删除手工标准（确认弹窗：lookup 立即失效、不可撤销）──────────────────
+
+const delDlg = reactive({ open: false, submitting: false, group: null })
+
+const openDelete = (group) => {
+  delDlg.group = group
+  delDlg.open = true
+}
+
+const onDelete = async () => {
+  delDlg.submitting = true
+  try {
+    await regulationLibraryApi.deleteManualStandard(delDlg.group.doc_code)
+    message.success(`已删除 ${delDlg.group.doc_code}（${delDlg.group.totalRows} 行）`)
+    delDlg.open = false
+    await loadIndicators(true)
+  } catch (e) {
+    message.error(e?.message || '删除失败')
+  } finally {
+    delDlg.submitting = false
+  }
+}
+
 onMounted(() => {
   fetchList()
-  loadExtract()
+  loadIndicators()
 })
 </script>
 
@@ -1577,7 +1386,7 @@ onMounted(() => {
   --hairline: var(--gray-200);
 }
 
-/* 清单表列宽固定（标准名/备注为长文本），同 s9/s10 结论；限值表字段短改回自动 */
+/* 清单表列宽固定（标准名/备注为长文本），同 s9/s10 结论；单元行明细表字段短改回自动 */
 .standards-panel .tbl {
   table-layout: fixed;
 
@@ -1586,22 +1395,8 @@ onMounted(() => {
   }
 }
 
-.limit-tbl,
-.extract-tbl {
+.unit-tbl {
   table-layout: auto;
-}
-
-.limit-empty {
-  padding: 40px 0;
-}
-
-.limit-note {
-  margin: 8px 0 0;
-  font-size: 11px;
-  color: var(--gray-400);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .title-cell {
@@ -1697,47 +1492,6 @@ onMounted(() => {
 
 .dlg-form {
   margin-top: 4px;
-}
-
-/* ── 限值行编辑对话框 ───────────────────────────────── */
-.rows-editor-sub {
-  margin: 0 0 10px;
-  font-size: 12px;
-  color: var(--gray-500);
-}
-
-.rows-edit-table {
-  width: 100%;
-  margin-bottom: 10px;
-  border-collapse: collapse;
-
-  th,
-  td {
-    padding: 4px 6px;
-    border: 1px solid var(--hairline);
-  }
-
-  th {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--gray-600);
-    background: var(--gray-50);
-    text-align: left;
-  }
-
-  td {
-    color: var(--gray-800);
-  }
-
-  .op-col {
-    width: 48px;
-    text-align: center;
-  }
-
-  a.danger {
-    color: var(--second-600);
-    font-size: 12px;
-  }
 }
 
 /* ── 门 1 体检卡 ── */
@@ -1895,25 +1649,7 @@ code.k {
   border-top: 1px dashed var(--hairline);
 }
 
-/* ── 提取草稿（原型 2026-10-19 Card 1）────────────────── */
-.report-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 22px;
-  padding: 0 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  border: 1px dashed var(--gray-300);
-  color: var(--gray-500);
-  white-space: nowrap;
-
-  b {
-    color: var(--gray-600);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-  }
-}
+/* ── 提取弹层表单（专家录入抽屉沿用）───────────────────── */
 
 .expander {
   display: inline-flex;
@@ -1954,51 +1690,6 @@ code.k {
   gap: 6px;
 }
 
-.src-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border: 1px solid var(--gray-200);
-  border-radius: 6px;
-  background: var(--gray-0);
-  font-size: 12px;
-  color: var(--gray-600);
-
-  svg {
-    flex: none;
-    color: var(--gray-500);
-  }
-
-  .s-stage {
-    flex: none;
-  }
-
-  .s-anchor {
-    margin-left: auto;
-    font-family: ui-monospace, 'Cascadia Code', Consolas, 'Courier New', monospace;
-    font-size: 11px;
-    color: var(--gray-500);
-  }
-}
-
-.conf-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
-
-  code.k {
-    background: var(--color-error-50);
-    color: var(--color-error-700);
-  }
-}
-
-.cell-main {
-  display: flex;
-  flex-direction: column;
-}
-
 .btn-txt.danger {
   color: var(--second-600);
 
@@ -2017,7 +1708,7 @@ code.k {
   }
 }
 
-/* ── 新表候选（原型 2026-10-19 Card 2）────────────────── */
+/* ── 缺源候选（tab2 复用原候选卡形态）──────────────────── */
 .cand-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
@@ -2088,13 +1779,19 @@ code.k {
   color: var(--gray-500);
 }
 
-.fact-list {
+/* 引用别名样本（后端 sample_sources，≤3 条） */
+.cand-samples {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  min-width: 0;
 
   code.k {
     font-size: 11px;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -2132,80 +1829,393 @@ code.k {
   color: var(--gray-500);
 }
 
-.sum-box {
-  margin-bottom: 16px;
-  padding: 10px 12px;
-  border: 1px solid var(--gray-200);
-  border-radius: 6px;
-  background: var(--gray-25, var(--gray-50));
-  font-size: 13px;
+/* ── 两 tab 容器（原型 2026-10-20）────────────────────── */
+.tabbar {
+  display: flex;
+  gap: 4px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 12px;
 
-  .sum-line {
-    display: flex;
-    gap: 8px;
-    padding: 2px 0;
+  .tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 14px 8px;
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    cursor: pointer;
+    font-family: inherit;
 
-    b {
-      min-width: 52px;
-      flex: none;
-      font-weight: 600;
-      color: var(--gray-800);
+    &:hover {
+      color: var(--main-600);
     }
 
-    span {
+    &.on {
+      color: var(--main-600);
+      font-weight: 600;
+      border-bottom-color: var(--main-600);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 17px;
+      min-width: 17px;
+      padding: 0 5px;
+      border-radius: 999px;
+      font-size: 11px;
+      background: var(--gray-100);
       color: var(--gray-600);
-      word-break: break-all;
+      font-variant-numeric: tabular-nums;
+    }
+
+    &.on .badge {
+      background: var(--main-50);
+      color: var(--main-600);
     }
   }
 }
 
-.schema-tbl {
+/* ── tab1 核验台：标准折叠卡 → 表单元行 ────────────────── */
+.doc-card {
+  border-bottom: 1px solid var(--gray-100);
+
+  &:last-of-type {
+    border-bottom: none;
+  }
+}
+
+.doc-hd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    background: var(--gray-50);
+  }
+
+  .doc-ic {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex: none;
+    border-radius: 7px;
+    background: var(--main-50);
+    color: var(--main-600);
+  }
+
+  .doc-code {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .doc-name {
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+  }
+
+  .doc-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    flex: none;
+  }
+}
+
+.doc-body {
+  display: none;
+  border-top: 1px solid var(--gray-100);
+}
+
+.doc-card.open .doc-body {
+  display: block;
+}
+
+.unit-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px 8px 26px;
+  border-bottom: 1px solid var(--gray-100);
+  font-size: 13px;
+
+  &:hover {
+    background: var(--gray-50);
+  }
+
+  .u-no {
+    min-width: 72px;
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-text-secondary);
+  }
+
+  .u-cnt {
+    flex: none;
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .u-acts {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    flex: none;
+  }
+}
+
+.vt {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+/* 行明细展开：浅底衬块 + 横向滚动兜底（GB 8978 单元 276 行宽值） */
+.rows-pop {
+  padding: 10px 16px 12px 26px;
+  background: var(--gray-25, var(--gray-50));
+  border-bottom: 1px solid var(--gray-100);
+  overflow-x: auto;
+
+  .tbl td {
+    background: var(--gray-0);
+  }
+}
+
+/* ── KB 外标准手工录入（tab1 底部折叠区块，dashed 卡形态）── */
+.expert-card {
+  margin-top: 12px;
+  border: 1px dashed var(--main-300);
+  border-radius: 8px;
+  overflow: hidden;
+
+  .card-hd {
+    cursor: pointer;
+    user-select: none;
+    background: var(--main-10, var(--main-50));
+
+    &:hover {
+      background: var(--main-30, var(--main-50));
+    }
+  }
+}
+
+.expert-note {
+  margin: 12px 16px 0;
+}
+
+.expert-empty {
+  padding: 24px 0;
+}
+
+.exp-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--gray-100);
+  font-size: 13px;
+
+  &:hover {
+    background: var(--gray-50);
+  }
+
+  .e-code {
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .e-name {
+    min-width: 0;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .u-cnt {
+    margin-left: auto;
+    flex: none;
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .e-acts {
+    display: flex;
+    gap: 4px;
+    flex: none;
+  }
+}
+
+/* ── 专家录入抽屉（两步表单 + 限值行编辑）──────────────── */
+.drawer-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  .drawer-title-ic {
+    flex: none;
+    color: var(--main-600);
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .drawer-sub {
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+  }
+}
+
+.step-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--main-600);
+
+  .n {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: var(--main-50);
+    color: var(--main-600);
+    font-size: 11px;
+  }
+}
+
+.step-gap {
+  margin-top: 20px;
+}
+
+.req {
+  color: var(--color-error-500);
+}
+
+.drawer-type-sel {
+  width: 100%;
+}
+
+.edit-tbl {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
 
   th {
     padding: 4px 6px;
-    border-bottom: 1px solid var(--gray-200);
+    border-bottom: 1px solid var(--hairline);
     font-size: 11px;
     font-weight: 500;
-    color: var(--gray-500);
+    color: var(--color-text-tertiary);
     text-align: left;
+    white-space: nowrap;
   }
 
   td {
-    padding: 5px 6px;
+    padding: 4px 6px;
     border-bottom: 1px solid var(--gray-100);
-
-    code.k {
-      font-size: 11px;
-    }
   }
 
-  .reg-type-sel {
+  .inp {
     width: 100%;
+    min-width: 0;
     height: 26px;
-    padding: 0 4px;
+    padding: 0 7px;
     font-size: 12px;
   }
 
-  .reg-req {
-    text-align: center;
-
-    input[type='checkbox'] {
-      width: 15px;
-      height: 15px;
-      accent-color: var(--main-600);
-    }
+  .col-act {
+    width: 26px;
   }
 
-  .reg-del {
-    text-align: center;
+  .row-del {
+    display: inline-flex;
+    padding: 4px;
+    border: none;
+    border-radius: 4px;
+    background: none;
+    color: var(--color-text-tertiary);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-error-50);
+      color: var(--color-error-700);
+    }
   }
 }
 
-.reg-add-col {
+.add-row-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 30px;
   margin-top: 8px;
+  border: 1px dashed var(--gray-300);
+  border-radius: 6px;
+  background: none;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--main-400);
+    color: var(--main-600);
+    background: var(--main-10, var(--main-50));
+  }
+}
+
+/* 删除确认警示框（文案照原型：lookup 立即失效、不可撤销） */
+.del-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid color-mix(in srgb, var(--color-error-500) 30%, transparent);
+  border-radius: 6px;
+  background: var(--color-error-50);
+  font-size: 12px;
+  color: var(--color-error-700);
+
+  svg {
+    flex: none;
+    margin-top: 2px;
+  }
 }
 
 /* ── 标准核实辅助（T8：引用清单展开 + KB 查询弹层）───────── */
