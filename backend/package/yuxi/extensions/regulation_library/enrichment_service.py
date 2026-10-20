@@ -291,7 +291,7 @@ def _validated_manual_rows(rows: list[Any]) -> list[dict[str, Any]]:
         pollutant = str(r.get("pollutant") or "").strip()
         if not pollutant:
             raise ValueError(f"第 {i} 行 pollutant 必填")
-        value = indicator_extractor._normalize_limit_value(r.get("limit_value"))
+        value = indicator_extractor.normalize_limit_value(r.get("limit_value"))
         if value is None:
             raise ValueError(f"第 {i} 行 limit_value 无法解析为数值: {r.get('limit_value')!r}")
         out.append(

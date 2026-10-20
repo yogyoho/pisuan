@@ -133,11 +133,12 @@ def parse_indicator_response(text: str) -> list[dict[str, Any]]:
 _NUM_RE = re.compile(r"-?\d+(?:\.\d+)?")
 
 
-def _normalize_limit_value(value: Any) -> float | None:
+def normalize_limit_value(value: Any) -> float | None:
     """limit_value 归一为 float（standard_indicators.limit_value 为 NUMERIC 列）。
 
-    float 原样保留；字符串提取全部数字取最大值（房规：区间取上限，≤/≥ 方向语义由
-    prompt 约定记入 condition）；解析不出数字返回 None，调用方丢弃该行。
+    enrich 抽取与手工录入两条写路径共用此归一口径。float 原样保留；字符串提取全部数字
+    取最大值（房规：区间取上限，≤/≥ 方向语义由 prompt 约定记入 condition）；解析不出
+    数字返回 None，调用方丢弃该行。
     """
     if value is None:
         return None
@@ -172,7 +173,7 @@ async def extract_indicators(doc_code: str, unit_no: str, table_content: str) ->
         dump = r.model_dump()
         if not _is_complete_indicator_row(dump):
             continue
-        value = _normalize_limit_value(dump["limit_value"])
+        value = normalize_limit_value(dump["limit_value"])
         if value is None:
             logger.warning(
                 f"指标行 limit_value 无法解析为数值，丢弃该行: {doc_code} {unit_no} "
