@@ -23,6 +23,7 @@
 ### 功能与修复
 
 - feat(domain-factory): 标准限值提取管线一期落地 + 真实语料试跑结论（方向改向 A+B）。交付：`eia_limit_extract_rows` 暂存表（迁移 v20）+ 提取内核纯函数模块（GFM 表格/行内双路径、7 正式表注册、垃圾因子过滤/跨标准 dB(A) 隔离/噪声表数字档三项调参）+ 仓储/服务层（试跑/裁决/立表/引用清单）+ API 6 端点 + StandardsPanel 提取草稿与新表候选工作台 + 62 条总览引用清单与 KB 查询弹层。真实语料试跑（512 文件，4.5-5.4s/轮）：首轮 7276 行 → 调参后 7128 行；候选清单 GB 8978-1996(378)/GB 18599(25+55) 命中符合预期，GB/T 13201 A 值表语料零命中坐实（转乙通道用户 PDF 补源）。人工抽检门未过：严格精度约 10-15%（宽松口径约 30%），主导错误为监测值/水质值当限值、类别表档位系统性缺失、噪声表昼/夜取到实测值——正则启发式无法区分限值陈述与监测陈述，属结构性错配。经用户裁决改向 A+B：formal 表数据源改标准原文优先（乙通道提前，用户手头国标 PDF 优先、联网补缺），语料提取加 LLM 语义判别层（限值句 vs 监测句 + 四要素结构化抽取）后降级为佐证层；W3 工作台继续封存至新管线重过抽检门。
+- fix(web): Markdown 预览文档模式补表格网格边框 + LaTeX 定界符渲染归一。`MarkdownPreview` 新增 `bordered` 变体（表格完整网格边框、表头浅底、暗色主题独立配色），知识库文档预览弹层（FileDetailModal markdown 模式）启用，聊天气泡维持无边框扁平风格；deepseek_ocr 产物表格全 `<td>` 无 `<th>`、表头识别不可行，按用户裁决不做表头检测。渲染层新增 `\(...\)`→`$...$`、`\[...\]`→`$$...$$` 定界归一（markdown-it-katex 不识别圆括号/方括号定界，OCR 产物常用该写法），围栏/行内代码段经 split 捕获组保护不参与归一，存量文档免重导立即受益。
 - feat(domain-factory): 语料限值提取 LLM 语义判别层落地（Task 13 B 通道）。试跑链路在 locate 与 parse_block 之间加语义门：每个标准引用区块先经 LLM 结构化输出判别是否「标准限值陈述」（schema 含 pollutant/grade/limit_value/unit/evidence_span/reason），仅通过者进入既有解析/聚合/去重，监测陈述直接跳过。判别模型默认取系统配置「快速响应模型」（fast_model，沿用既有模型选择机制，不新增配置面）；结构化输出沿 ETL 泛化先例（spec-W1 P1-1a）做每模型一次能力探测缓存，不支持则显式降级 prompt+JSON 通道（能力探测只认通道级失败——调用异常/超时才拉黑该模型，输出校验失败仅作本块 fail-closed 不拉黑）。fail-closed 契约：模型不可用/超时/输出无效一律按「未通过」处理并计入报告 `gate.failed`，绝不静默放行；暂存行带 `row_json.extractor="llm"` 来源标注，试跑报告新增 `gate` 计数字段（blocks/passed/rejected/failed）。limit_value 为辅助字段，接受数值或原样字符串（≤60、60~80 等区间/符号写法保真，不做数值强制；正式值仍由 parse_block 重解析）。单测 24 例全 mock 零 DB（宿主 `cd backend && uv run --frozen --with pytest --with pytest-asyncio python -m pytest test/unit/services/test_eia_limit_llm_classifier.py -q --noconftest` 可复跑）。试跑互斥与有界并发：进程内试跑以 asyncio.Lock 串行化（单例共享判别器，防重叠试跑互清 gate 计数），逐块判别以 Semaphore(6)+gather 有界并发（容器实测全库 7581 块、串行需小时级，并发 6 保守防供应商限流），单块判别异常按 failed 判定 fail-closed 不炸整批，verdict 收齐后照旧顺序解析/聚合。注意：试跑端点仍为同步 HTTP，逐区块 LLM 判别耗时随区块数线性增长（每区块一次模型调用），大语料全库试跑需预期数十分钟级。
 - 新增本地 PaddleOCR-VL-1.6 OCR 引擎（`paddleocr_vl_local`）：对接本机 llama.cpp 部署的 PaddleOCR-VL GGUF 服务（OpenAI 兼容 API，默认 `http://host.docker.internal:8111/v1`，`PADDLEOCR_VL_LOCAL_BASE_URL` / `PADDLEOCR_VL_LOCAL_MODEL` 可覆盖）。PDF 逐页渲染 + 官方训练指令 `OCR:` 整页转写（自然语言提问在 temp 0 贪心解码下会死循环重复，部署实测铁律）；表格单元格标记流（`<fcel>/<ecel>/<lcel>/<ucel>/<nl>`）自动转为带 colspan/rowspan 的 HTML 表格，标记流外的正文原样保留。与云端 jobs 协议的 `paddleocr_vl_1_6` 并存，引擎下拉与健康检测自动收录，并在 设置 → OCR 配置 新增「PaddleOCR-VL 本地服务」卡（服务地址/模型名，留空回落环境变量与内置默认，注入链与其他引擎同款：DB Options → `_build_processor_kwargs` → 构造参数）。容器内实测：健康检查、真实图片整页转写（约 20s/页）、PDF 渲染链路均通过。注意：宿主推理服务须以 `0.0.0.0` 监听（`paddleocr_vl.cmd start`）容器才可达，`start_llama_server.cmd` 的 `127.0.0.1` 绑定仅限宿主本机使用。
 
@@ -33,6 +34,10 @@
 - 文件库左侧树新增「全部文件」视图并设为默认选中（原根视图=未归类，文件夹内文件不可见，用户上传 28 个只见 25 个）：全部视图走无参全库查询，行内标注〈所在文件夹〉定位（未归类行不标避免噪音）；全部视图下上传落未归类（根目录语义不变），未归类/文件夹/搜索视图行为不变
 
 - 词表页词条列表分页调整：默认每页 10 条（原 20），新增 10/20/50 每页条数下拉切换，切换后回第 1 页防越界
+
+- 标准与限值库页标准核实清单列表分页：默认每页 10 条，新增 10/20/50 每页条数下拉切换；筛选（状态段/搜索）与页大小变更回第 1 页防越界（复用词表页自绘表 pager 配方，纯前端整包切片）
+
+- 标准核实清单行内展开交互改版：展开区改为显示该标准关联的限值查找表（`limit_tables` 条目 `code_ref` 与标准编号精确关联，前端本地计算零请求；逐表露 table_key/desc/行数/来源徽标 DB·待导出｜文件态｜已入册）；语料引用清单迁至右侧 `a-drawer`，触发改为点击「语料引用」列数字，0 引用不进抽屉改为 toast 警示「语料 0 引用——SKILL 手工登记标准，须人工 KB / 联网核实」；抽屉内保留加载/失败重试/空清单兜底态，引用懒加载 + 按 code 缓存机制原样保留
 
 - 词表页新增抑制名单卡：列表（含改名自动登记行与手工行，空改名目标显示「—」）/ 手工添加（下拉仅列重扫会导入的扫描差集候选，服务端强校验拒绝语料外指纹与已入库词条）/ 撤回（确认弹窗明示重扫复活（A 类直接回已入选）与语境回落失效两条后果）；新增 `/eia/lexicon/suppressions`、`/eia/lexicon/suppressions/:id`、`/eia/lexicon/scan-candidates` 4 端点与 repo/service 对应方法及 6 例零 DB 单测；初始化加载骨架占位（与词条表骨架同拍显现/退场——抑制接口为小表直读，仅按自身 loading 会一闪而过；搜索重扫不闪骨架），骨架期卡头计数同步隐藏
 
