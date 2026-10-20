@@ -15,6 +15,7 @@ from yuxi.extensions.regulation_library.table_role_classifier import (
     TableRoleClassifier,
     classify_table_role_by_title,
 )
+from yuxi.extensions.regulation_library.table_splitter import split_table_units
 from yuxi.extensions.regulation_library.unit_parser import parse_chunk_unit
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_knowledge import KnowledgeChunk
@@ -40,9 +41,12 @@ async def enrich_regulation_file(
     """
     await ensure_schema()
 
-    # 1+2. 读取 chunks 并解析结构单元 → 回填 tags（同一会话内完成写回）
+    # 1+2. 读取 chunks 并解析结构单元 → 回填 tags（同一会话内完成写回）。
+    # 含闭合 HTML 表格的 chunk 一律按 <table> 边界拆成独立表格单元（大 chunk 埋多表时不再只认开头一表）；
+    # 纯文本/markdown 表格 chunk 仍走 parse_chunk_unit 老路。
     units: list[dict] = []
     table_chunks: list[tuple[str, str, str, str]] = []  # (chunk_id, unit_no, title, content)
+    multi_table_chunk_ids: set[str] = set()  # 埋多张表的 chunk：tags 走 table_units 清单，不写标量
     async with pg_manager.get_async_session_context() as session:
         result = await session.execute(
             select(KnowledgeChunk)
@@ -55,10 +59,45 @@ async def enrich_regulation_file(
 
         for chunk in chunks:
             unit = parse_chunk_unit(chunk.content, doc_type)
+            table_units = split_table_units(chunk.content or "")
+            if table_units:
+                head_unit = unit if unit and unit["unit_type"] != "table" else None
+                chunk.tags = {
+                    **(chunk.tags or {}),  # 保留入库期预置的既有键，富化键以本次为准
+                    "doc_code": doc_code,
+                    "doc_type": doc_type,
+                    **(head_unit or {}),
+                }
+                if head_unit:
+                    units.append({**head_unit, "chunk_id": chunk.chunk_id})
+                for tu in table_units:
+                    units.append(
+                        {
+                            "unit_no": tu["unit_no"],
+                            "unit_type": "table",
+                            "parent_unit": None,
+                            "title": tu["title"],
+                            "chunk_id": chunk.chunk_id,
+                        }
+                    )
+                    table_chunks.append((chunk.chunk_id, tu["unit_no"], tu["title"], tu["table_content"]))
+                if len(table_units) >= 2:
+                    multi_table_chunk_ids.add(chunk.chunk_id)
+                elif not head_unit:
+                    # 单表 chunk：tags 标量形态与现状一致（向后兼容）
+                    tu = table_units[0]
+                    chunk.tags.update(unit_no=tu["unit_no"], unit_type="table", parent_unit=None, title=tu["title"])
+                continue
+
+            if unit and unit["unit_type"] == "table" and "<table" in (chunk.content or ""):
+                # 表格被分块器拦腰切（无闭合 </table>）：整段丢弃不识别，宁可漏不可错
+                logger.debug(f"规范富化: chunk {chunk.chunk_id} 含未闭合表格残段，丢弃不识别")
+                continue
+
             if not unit:
                 continue
             chunk.tags = {
-                **(chunk.tags or {}),  # 保留入库期预置的既有键，富化键以本次为准
+                **(chunk.tags or {}),
                 "doc_code": doc_code,
                 "doc_type": doc_type,
                 **unit,
@@ -71,16 +110,18 @@ async def enrich_regulation_file(
 
     # 3. 表格打标分流：快路径标题规则 → 慢路径 LLM（判别失败/拿不准 → other，宁可漏抽不可错抽）。
     # limit → 指标抽取；method → 因子→方法名→标准号映射入 tags（本期不建新表）；其余仅打标建图。
+    # 多表 chunk 的角色/映射逐单元写 tags["table_units"] 清单；单表 chunk 保持标量键（向后兼容）。
     role_classifier = TableRoleClassifier()
     role_counts = dict.fromkeys(_ALL_ROLES, 0)
-    tag_updates: dict[str, dict[str, Any]] = {}  # chunk_id -> 追加 tags（所有表格都带 table_role）
+    tag_updates: dict[str, dict[str, Any]] = {}  # 单表 chunk_id -> 追加 tags（所有表格都带 table_role）
+    unit_tags_by_chunk: dict[str, list[dict[str, Any]]] = {}  # 多表 chunk_id -> table_units 清单
     all_indicators: list[dict] = []
     for chunk_id, unit_no, title, content in table_chunks:
         role = classify_table_role_by_title(title)
         if role is None:
             role = await role_classifier.classify(doc_code, unit_no, title, content)
         role_counts[role] += 1
-        tag_updates[chunk_id] = {"table_role": role}
+        unit_tag: dict[str, Any] = {"table_role": role}
         if role == "limit":
             rows = await indicator_extractor.extract_indicators(doc_code, unit_no, content)
             for r in rows:
@@ -88,17 +129,25 @@ async def enrich_regulation_file(
                 r["chunk_id"] = chunk_id
             all_indicators.extend(rows)
         elif role == "method":
-            tag_updates[chunk_id]["method_map"] = await indicator_extractor.extract_method_mappings(
-                doc_code, unit_no, content
-            )
+            unit_tag["method_map"] = await indicator_extractor.extract_method_mappings(doc_code, unit_no, content)
+        if chunk_id in multi_table_chunk_ids:
+            unit_tag.update(unit_no=unit_no, title=title)
+            unit_tags_by_chunk.setdefault(chunk_id, []).append(unit_tag)
+        else:
+            tag_updates[chunk_id] = unit_tag
 
     # 3.5 表格打标回写 chunk tags（含不抽取的 criteria/param/other 表）。
     # tags 先提交、指标事务在后属有意顺序：两段间中断只留下短暂不一致，幂等重跑可治愈。
-    if tag_updates:
+    if tag_updates or unit_tags_by_chunk:
         async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(select(KnowledgeChunk).where(KnowledgeChunk.chunk_id.in_(list(tag_updates))))
+            result = await session.execute(
+                select(KnowledgeChunk).where(KnowledgeChunk.chunk_id.in_([*tag_updates, *unit_tags_by_chunk]))
+            )
             for chunk in result.scalars().all():
-                chunk.tags = {**(chunk.tags or {}), **tag_updates[chunk.chunk_id]}
+                updates = tag_updates.get(chunk.chunk_id, {})
+                if chunk.chunk_id in unit_tags_by_chunk:
+                    updates = {**updates, "table_units": unit_tags_by_chunk[chunk.chunk_id]}
+                chunk.tags = {**(chunk.tags or {}), **updates}
 
     if all_indicators:
         async with pg_manager.get_async_session_context() as session:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from yuxi.knowledge.chunking.ragflow_like.parsers import book, general, laws, qa, semantic, separator
+from yuxi.knowledge.chunking.ragflow_like.parsers import book, general, laws, qa, semantic, separator, table
 from yuxi.knowledge.chunking.ragflow_like.presets import map_to_internal_parser_id, normalize_chunk_preset_id
 
 
@@ -63,6 +63,8 @@ def _dispatch_markdown_parser(
         return semantic.chunk_markdown(markdown_content, parser_config)
     if parser_id == "separator":
         return separator.chunk_markdown(markdown_content, parser_config)
+    if parser_id == "table":
+        return table.chunk_markdown(markdown_content, parser_config)
 
     return general.chunk_markdown(markdown_content, parser_config)
 

@@ -1,3 +1,3 @@
-from yuxi.knowledge.chunking.ragflow_like.parsers import book, general, laws, qa, separator
+from yuxi.knowledge.chunking.ragflow_like.parsers import book, general, laws, qa, separator, table
 
-__all__ = ["general", "qa", "book", "laws", "separator"]
+__all__ = ["general", "qa", "book", "laws", "separator", "table"]
