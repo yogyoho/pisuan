@@ -7875,5 +7875,765 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-17"
+  },
+  {
+    "id": "bug-4039",
+    "timestamp": "2026-10-17T23:05:00+08:00",
+    "error_message": "环评文件库文件列表中长文件名把其余列（状态/类型/大小/日期/操作）挤出面板",
+    "file": "web/src/components/eia-data/LibraryPanel.vue",
+    "root_cause": "HTML 表默认 table-layout:auto：.fn 的 white-space:nowrap 使列最小内容宽=完整文件名宽，列随内容无限扩张；overflow-hidden+ellipsis 在 auto 布局下永不生效（与 bug-4025 词表页同根因）",
+    "fix": "页面 scoped 覆写 .lib-tbl .tbl { table-layout: fixed; width: 100% } + td { overflow-wrap: break-word }，并删除 .fn 的 nowrap/ellipsis——文件名列吃剩余宽度自动折行，其余五列保持表头固定宽（LexiconPanel 既有惯例）",
+    "tags": [
+      "css",
+      "table-layout",
+      "eia-data",
+      "library",
+      "long-filename"
+    ],
+    "related_bugs": [
+      "bug-4025"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-17T23:05:00+08:00"
+  },
+  {
+    "id": "bug-4040",
+    "timestamp": "2026-10-18T01:05:00",
+    "error_message": "设置页已保存 paddleocr_vl_local 配置，但 OCR 选择下拉框中无该选项可用（引擎列表只有 7 个引擎）",
+    "file": "运行栈 pisuan-localized-api-1（uvicorn --reload）",
+    "root_cause": "uvicorn 的 WatchFiles 重载器在 10-17 22:40 抛出 WatchfilesRustInternalError: Cannot allocate memory (os error 12)（容器内 inotify 实例耗尽），reloader 线程此后死亡，后续所有文件变更静默不再触发重载；旧 worker 进程继续用旧代码服务（PARSER_CAPABILITIES 无新引擎）。容器文件系统已是新代码，故 docker exec 新进程表现正常，极具迷惑性。",
+    "fix": "docker restart pisuan-localized-api-1 强制重建进程；重启后 /api/system/ocr/options 返回 8 引擎，paddleocr_vl_local health=healthy，浏览器下拉框显示「PaddleOCR-VL-1.6 (本地) 可用」。",
+    "tags": [
+      "hot-reload",
+      "watchfiles",
+      "inotify-enomem",
+      "uvicorn",
+      "docker",
+      "stale-process",
+      "ocr-selector"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T01:05:00"
+  },
+  {
+    "id": "bug-4041",
+    "timestamp": "2026-10-18",
+    "error_message": "test_canonical_md_body_marker_and_toc_strip / test_canonical_md_front_paras_raw_and_table_cells 容器首跑 2 failed",
+    "file": "backend/test/unit/services/test_eia_canonical_md.py",
+    "root_cause": "夹具期望与内核实际不符：(1) 单段号标题升级前缀是 ## 而测试断言 #；(2) 表格放在目录行之后，目录行「1 概述\t1」本身匹配 SEC_LINE_RE 触发 RAW 前置段边界截断，表格单元进不了 front_paras——真实语料封面表格先于任何节号行",
+    "fix": "(1) 断言改 ## 1 概述；(2) 夹具表格移到目录行之前并加同构注释。内核无改动（金标准 33/33 未受影响）",
+    "tags": [
+      "canonical-md",
+      "test-fixture",
+      "sec-line-re",
+      "front-paras"
+    ],
+    "related_bugs": [
+      "bug-398",
+      "bug-355"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-18"
+  },
+  {
+    "id": "bug-4042",
+    "timestamp": "2026-10-18T10:45:00",
+    "error_message": "迁移端点 82s 后 HTTP 500：S3 InvalidPart（One or more of the specified parts could not be found）；同期 worker watchfiles ENOMEM 崩溃重启、milvus 重启、MinIO 连续 cannot allocate memory",
+    "file": "backend/package/yuxi/services/eia_library_service.py",
+    "root_cause": "migrate_storage_to_minio 循环仅对本地文件缺失/sha1 不符容错，上传(StorageError)/解析异常直接传播中断整轮迁移；深层原因：WSL2 7.7GB VM 在 80MB docx→DOM 峰值下内存耗尽，MinIO 服务端分配失败致 multipart 分片丢失；api 进程事后驻留 4.27GiB 不归还（uvicorn reload 也不释放）",
+    "fix": "循环体 except Exception → failed 列表继续（重跑幂等重试未完成行）；api 容器 docker restart 回收驻留内存（reload 无效）",
+    "tags": [
+      "migration",
+      "minio",
+      "InvalidPart",
+      "oom",
+      "wsl2",
+      "uvicorn-reload"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T10:45:00"
+  },
+  {
+    "id": "bug-4043",
+    "timestamp": "2026-10-18T12:10:00",
+    "error_message": "TypeError: EiaLibraryService._log() missing 1 required keyword-only argument: file_id —— 迁移全部成功后收尾台账 500（数据已迁完，仅账本失败）",
+    "file": "backend/package/yuxi/services/eia_library_service.py",
+    "root_cause": "_log 签名要求 file_id 关键字参数，migrate_storage_to_minio 与 bootstrap_from_manifest 两处调用均漏传 file_id=None（表列本身 nullable）",
+    "fix": "两处调用补 file_id=None",
+    "tags": [
+      "migration",
+      "kwargs",
+      "typeerror",
+      "audit-log"
+    ],
+    "related_bugs": [
+      "bug-4042"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T12:10:00"
+  },
+  {
+    "id": "bug-4044",
+    "timestamp": "2026-10-18T12:30:00+08:00",
+    "error_message": "绑定语料知识库后前端 binding GET 长时间返回空值，推送按钮 guard 拦截不发请求（QA E2E 发现）",
+    "file": "backend/package/yuxi/services/eia_corpus_task_service.py",
+    "root_cause": "bind_corpus_kb 用 update_option_value 写 system_options 后未调 invalidate_option_cache；Option.get() 无 db 时走 Redis 缓存（TTL 300s + version CAS），写后缓存不失效导致最长 5 分钟读到旧空值",
+    "fix": "bind_corpus_kb commit 后追加 await invalidate_option_cache(system_options.key)；验证 bind→立即 GET 返回新值",
+    "tags": [
+      "options-cache",
+      "bind-kb",
+      "cache-invalidation",
+      "eia-p2"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T12:30:00+08:00"
+  },
+  {
+    "id": "bug-4045",
+    "timestamp": "2026-10-18T13:12:00+08:00",
+    "error_message": "KB 推送大文档时 Embedding async request failed: ReadTimeout（华亭 62MB/200 chunks，bge-m3:latest input_count=40 重试 2 次均超时）",
+    "file": "runtime-config (ollama provider enabled_models)",
+    "root_cause": "宿主 Ollama CPU 推理 bge-m3 批 40 段耗时超 embed.py requests.post timeout=60s；非 P2 管线缺陷（failed 行落 push_error 明细，行为符合设计）",
+    "fix": "provider enabled_models 里 bge-m3 的 batch_size 40→8（PUT /api/system/model-providers/ollama 自动重建缓存）；实测新文件 bsz=8 且每 8 chunks 约 6-8s 无超时；failed 行待批量推送完成后行级重推即可",
+    "tags": [
+      "ollama",
+      "embedding",
+      "batch-size",
+      "read-timeout",
+      "kb-push"
+    ],
+    "related_bugs": [
+      "bug-4044"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T13:12:00+08:00"
+  },
+  {
+    "id": "bug-4047",
+    "timestamp": "2026-10-18T17:45:00+08:00",
+    "error_message": "推送华亭行报 MinIO 对象不存在（eia-library/.canonical/….docx.md），行 md_status=ready 但 canonical 对象 24/25 缺一",
+    "file": "数据修复（无代码改动）",
+    "root_cause": "v19 迁移在 WSL2 OOM/MinIO 内存不足窗口执行，_put_md 返回成功但对象未持久化（S3 假成功，bug-4042 同族）；md_status=ready 已写库造成不一致",
+    "fix": "行级 regenerate-md（从 MinIO 正源 object_key 重产）重新上传 canonical md；实测对象恢复、重推 indexed。治本需迁移/上传链对关键对象做 put 后 stat 回读校验",
+    "tags": [
+      "minio",
+      "silent-corruption",
+      "canonical-md",
+      "eia-p2"
+    ],
+    "related_bugs": [
+      "bug-4042",
+      "bug-4046"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T17:45:00+08:00"
+  },
+  {
+    "id": "bug-4048",
+    "timestamp": "2026-10-18T17:48:00+08:00",
+    "error_message": "id=1/3 两文件 md 恒失败：MinIO 对象与本地卷文件均只有 38/35 字节（PK 头+空内容）",
+    "file": "数据问题（源头输入损坏）",
+    "root_cause": "P1 上传链接收时即写坏（DB size_bytes=35/38 与 sha1 自洽，说明登记的就是坏文件）——上传中断/浏览器提交不完整；上传链无 docx 最小尺寸与 zip 有效性校验",
+    "fix": "待用户在本地找到完好 docx 副本后 UI 重新上传（新 sha1 正常登记）；代码侧可后续加 docx zip 头校验拒绝明显损坏文件",
+    "tags": [
+      "upload",
+      "corrupt-input",
+      "docx",
+      "eia-library"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T17:48:00+08:00"
+  },
+  {
+    "id": "bug-4046",
+    "timestamp": "2026-10-18T16:30:00+08:00",
+    "error_message": "failed 半途行重推后 KB 侧出现重复文档（华亭 error_indexing x2）",
+    "file": "backend/package/yuxi/services/eia_corpus_task_service.py",
+    "root_cause": "_push_one 仅在 kb_status=indexed 且 md_sha1 变化时替换旧登记；failed 半途行带旧 kb_file_id 重推时直接再登记，KB 侧重复",
+    "fix": "替换条件放宽为任何 kb_file_id 都先 delete_file 再重登记；补单测 test_push_retry_after_failed_replaces_stale_kb_record（f32ae7e3，8 passed）",
+    "tags": [
+      "eia-push",
+      "kb-duplicate",
+      "state-machine"
+    ],
+    "related_bugs": [
+      "bug-4047"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T16:30:00+08:00"
+  },
+  {
+    "id": "bug-4049",
+    "timestamp": "2026-10-18T19:10:00+08:00",
+    "error_message": "用户：环评文件库一共上传 28 个文件为何只显示 25 个（文件夹内文件在根视图不可见）",
+    "file": "web/src/components/eia-data/LibraryPanel.vue",
+    "root_cause": "根视图=未归类（uncategorized 参数），非全库；文件夹内文件只能点对应文件夹看到，无全库浏览入口",
+    "fix": "左树顶新增「全部文件」节点（无参全库查询）并设为默认视图；全部视图行内标注所在文件夹；视图哨兵 ALL 三态（all/null/folder id）；全部视图上传落未归类（12c43e74）",
+    "tags": [
+      "eia-library",
+      "ux",
+      "view-filter"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T19:10:00+08:00"
+  },
+  {
+    "id": "bug-4050",
+    "timestamp": "2026-10-18T23:56:00+08:00",
+    "error_message": "上传链 API NOT READY 503 + worker health 'lease missing or invalid'，9 份批量上传被跳过，推 KB 链等超时退出",
+    "file": "docker-compose (pisuan-localized-worker-1/api-1)",
+    "root_cause": "Docker Desktop 崩溃重启竞态：worker 在 postgres starting up 时建连失败（asyncpg CannotConnectNowError），连接池带毒启动、健康租约未建立；api 的 /api/system/ready 依赖 worker 租约持续 503。本次未自愈（上次同类竞态自愈了）",
+    "fix": "docker restart pisuan-localized-worker-1 → healthy + /api/system/ready 200；随后重注入 /tmp/eia_bulk 工件（restart 后 /tmp 被清空）并在 api 容器内跑 upload.py",
+    "tags": [
+      "docker-restart-race",
+      "worker-lease",
+      "readiness-503",
+      "self-heal-failed"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-18"
+  },
+  {
+    "id": "bug-4051",
+    "timestamp": "2026-10-19",
+    "error_message": "test_storage_migration.py 基线 14 failed：AttributeError SimpleNamespace 无 upgrade_business_v17_to_v18（v18/v19 落地时未同步补测试桩）",
+    "file": "backend/test/unit/services/test_storage_migration.py",
+    "root_cause": "v18/v19 两个版本落地时只改了 manager/storage_migration，未按房规同步给六处 fake 桩补 upgrade_v18/v19 两行并扩 parametrize 档位，测试在 stub 调用点 AttributeError",
+    "fix": "六处桩各补 upgrade_v17_to_v18/v18_to_v19/v19_to_v20 三行（判别力注释链），parametrize 扩 [18,19]，断言补 v18/v19/v20 条件式；v20 落地同 commit 4628d6f0 顺带还清",
+    "tags": [
+      "storage-migration",
+      "test-stub",
+      "schema-version",
+      "v20",
+      "遗漏同步"
+    ],
+    "related_bugs": [
+      "bug-446"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-19"
+  },
+  {
+    "id": "bug-4052",
+    "timestamp": "2026-10-19",
+    "error_message": "test_locate_blocks_finds_codes 失败：norm_code('GB3095-2012')=='GB30952012'，与断言口径 GB3095-2012 不符（号-年连字符被 _STD_NOISE_RE 一并剥离），另 2 个 parse 测试因 next() StopIteration 连带失败",
+    "file": "backend/package/yuxi/services/eia_limit_extract_core.py",
+    "root_cause": "任务书规格内部矛盾：规格给的 _STD_NOISE_RE=[\\s\\-—–/]+ sub('') 会剥掉连字符，而同规格测试断言归一码保留连字符（GB 15618—2018 归一为 GB15618-2018）；按「断言语义不放松、调实现」准则处置",
+    "fix": "norm_code 改为：破折号变体（—–）归一为 ASCII 连字符 + 剔除空白与斜杠 + 全大写；与 eia_standard_service._norm_std（全剥成 GB30952012）口径不同，注释中显式声明差异",
+    "tags": [
+      "eia-limit-extract",
+      "norm-code",
+      "spec-conflict",
+      "tdd"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-19"
+  },
+  {
+    "id": "bug-4053",
+    "timestamp": "2026-10-19",
+    "error_message": "行内正则因子组 {2,8} 贪婪吞掉数值首位：无空格句式（语料主流形态）产出错误限值——实测 \"昼间65 dB(A)\" -> day=5.0、\"氨氮1.0mg/L\" -> limit 0.0",
+    "file": "backend/package/yuxi/services/eia_limit_extract_core.py",
+    "root_cause": "_INLINE_RE 因子字符类含数字/小数点且量词贪婪，回溯时优先把数值首位留给因子；质量评审 C1 实证，语料无空格行内句式为高频形态",
+    "fix": "因子组 {2,8} -> {2,8}?（惰性），因子最短 2 字止于数值前；新增 test_inline_no_space_regression 回归（噪声昼/夜 + 水质氨氮两组实语料形态）",
+    "tags": [
+      "eia-limit-extract",
+      "regex-greedy",
+      "inline-parse",
+      "质量评审"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-19"
+  },
+  {
+    "id": "bug-4054",
+    "timestamp": "2026-10-19",
+    "error_message": "_CODE_RE (?:/T)? 消费不了无 T 的斜杠：search(\"GB/36600-2018\") 返回 None，语料命中 GB/36600 431 次 + GB/15618 171 次 + GB/3838 3 次，全部漏抽",
+    "file": "backend/package/yuxi/services/eia_limit_extract_core.py",
+    "root_cause": "(?:/T)? 是原子二选一——斜杠后无 T 时整组失配且无处回溯斜杠本身；质量评审 C2 实证（GB/ 号变体为真实语料形态）",
+    "fix": "(?:/T)? -> (?:/T?)?（T 独立可选，斜杠恒可消费）；已随回归套件容器复跑全绿",
+    "tags": [
+      "eia-limit-extract",
+      "regex",
+      "standard-code",
+      "漏抽",
+      "质量评审"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-19"
+  },
+  {
+    "id": "bug-4055",
+    "timestamp": "2026-10-19",
+    "error_message": "test_decide_row_confirm_upserts_official TypeError: object NoneType can not be used in await expression（任务书逐字测试用同步 lambda 桩 async upsert_row）",
+    "file": "backend/test/unit/services/test_eia_limit_extract_service.py",
+    "root_cause": "EiaStandardRepository.upsert_row 是 async，同步 lambda 返回 None，服务层 await None 抛 TypeError",
+    "fix": "桩改 async def fake_upsert 同形；断言语义不变",
+    "tags": [
+      "taskbook-verbatim-test",
+      "async-stub",
+      "eia-limit-extract"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-19"
+  },
+  {
+    "id": "bug-4056",
+    "timestamp": "2026-10-19",
+    "error_message": "AssertionError: confirm == confirmed（decide_row 把 action 原样写进 status）",
+    "file": "backend/package/yuxi/services/eia_limit_extract_service.py",
+    "root_cause": "动作词表 confirm 与状态词表 confirmed 不同（模型列注释 pending/confirmed/edited/discarded），直接 row.status=action 丢映射",
+    "fix": "row.status = confirmed if action == confirm else action",
+    "tags": [
+      "vocabulary-mapping",
+      "eia-limit-extract"
+    ],
+    "related_bugs": [
+      "bug-4055"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-19"
+  },
+  {
+    "id": "bug-4057",
+    "timestamp": "2026-10-19",
+    "error_message": "test_register_candidate_migrates_rows 假覆盖：行键 __candidate__:GB3095-2012 与注册码 GB 8978-1996（候选键 GB8978-1996）不同号，迁移分支实际未跑到，migrated >= 0 恒真",
+    "file": "backend/test/unit/services/test_eia_limit_extract_service.py",
+    "root_cause": "计划书自带测试的键号与注册码不同号（bug-4052 同类：断言/规格自相矛盾），弱断言掩盖未执行路径",
+    "fix": "行键改 __candidate__:GB8978-1996 与 norm_code(注册码) 同号；断言收紧 migrated == 1；fixture 仅 1 行，反证步（decided 行不迁移）按指示跳过未造数据",
+    "tags": [
+      "plan-test-false-coverage",
+      "eia-limit-extract",
+      "candidate-migration"
+    ],
+    "related_bugs": [
+      "bug-4052"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-19"
+  },
+  {
+    "id": "bug-4058",
+    "timestamp": "2026-10-19",
+    "error_message": "评审探针：decide_row 对 __candidate__: 键行 confirm 会把候选键写进官方表（实测落库 __candidate__:HJ14-1996）",
+    "file": "backend/package/yuxi/services/eia_limit_extract_service.py",
+    "root_cause": "decide_row 未区分候选键与正式表键，confirm/edited 直通 upsert_row",
+    "fix": "confirm/edited 路径加守卫 ValueError 候选表行须先立表迁移再裁决；discarded 放行（候选噪声可直接丢弃）+单测 test_decide_row_rejects_candidate_key",
+    "tags": [
+      "candidate-guard",
+      "quality-review",
+      "eia-limit-extract"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-19"
+  },
+  {
+    "id": "bug-4059",
+    "timestamp": "2026-10-19",
+    "error_message": "评审探针：立表迁移 378 行后重跑提取，候选键下复生 378 pending 且无法再迁移",
+    "file": "backend/package/yuxi/services/eia_limit_extract_service.py",
+    "root_cause": "run_extraction 不感知注册表，已立表标准的提取记录仍落候选键，幂等键错开导致重复插入",
+    "fix": "聚合后幂等过滤前按 list_registry() 建 {候选键:正式键} 重映射 +单测 test_registered_table_no_candidate_rebirth_on_rerun（inserted==0 且候选键零复生）",
+    "tags": [
+      "remap",
+      "idempotency",
+      "quality-review",
+      "eia-limit-extract"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-19"
+  },
+  {
+    "id": "bug-4060",
+    "timestamp": "2026-10-19",
+    "error_message": "非 UTF-8 切片 read_text 抛 UnicodeDecodeError 使整次试跑中断",
+    "file": "backend/package/yuxi/services/eia_limit_extract_service.py",
+    "root_cause": "扫描循环无单文件异常隔离，一个坏文件炸全库提取",
+    "fix": "逐文件 try/except (UnicodeDecodeError, OSError) 计入 report[skipped] 并 logger.warning 带文件名 +单测 test_run_extraction_skips_unreadable_file",
+    "tags": [
+      "fault-isolation",
+      "quality-review",
+      "eia-limit-extract"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-19"
+  },
+  {
+    "id": "bug-4061",
+    "timestamp": "2026-10-19",
+    "error_message": "test_list_limit_tables_merges_db_rows_and_exposes_schemas / falls_back_to_file_rows 红：AttributeError: _FakeLimitRepo object has no attribute list_registry（eia_standard_service.py 合并块）",
+    "file": "backend/test/unit/test_eia_standard_service.py",
+    "root_cause": "225c4adb 在 list_limit_tables 末尾新增 repo.list_registry() 调用，既有 _FakeLimitRepo 桩无该方法；回归漏网因当时误判 test_eia_standard_service.py 不存在（实位于 backend/test/unit/ 而非 unit/services/，当时只 ls 了子目录）",
+    "fix": "_FakeLimitRepo 补 async list_registry（registry 构造参数）；新增 test_list_limit_tables_exposes_registry_new_table 覆盖注册表合并露出（source=db_registry + schemas 并入）；重映射查找收紧为 remap.get(g[table_key])",
+    "tags": [
+      "regression",
+      "stub-gap",
+      "list-limit-tables",
+      "quality-review"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-19"
+  },
+  {
+    "id": "bug-4062",
+    "timestamp": "2026-10-19T12:45:00Z",
+    "error_message": "api 容器重启后 Application startup failed: RuntimeError: Database schema migration is incomplete or incompatible: business=19 (required 20)",
+    "file": "backend/package/yuxi/storage_migration.py",
+    "root_cause": "Task1 已交付 v20 迁移（限值提取两表）但运行栈 DB 未手动跑过迁移（dev 栈迁移不随 api 启动自动执行）；旧 api 进程从未重启故此前未暴露，本次因 watchfiles 静默死亡按预案 docker restart 后立即触发",
+    "fix": "docker exec pisuan-localized-api-1 python -m pisuan.storage_migration 手动升到 business=20，再 docker restart pisuan-localized-api-1 恢复",
+    "tags": [
+      "schema-migration",
+      "dev-stack",
+      "storage-migration",
+      "startup-failure"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-19"
+  },
+  {
+    "id": "bug-4063",
+    "timestamp": "2026-10-19T13:10:00+08:00",
+    "error_message": "KB 文件夹上传 32 份 PDF 后一直处于「等待」状态，无任何文件落库、任务队列零消费",
+    "file": "pisuan-localized-worker-1 (server/worker_main)",
+    "root_cause": "双重叠加：①sync-dev 推进 v20 代码后 worker_main 重启，schema 守卫发现 DB 仍 v19 抛 RuntimeError 崩溃（watchfiles 包装进程存活造成容器 Up 的假象，docker top 只有 watchfiles 无 worker_main 即内核已死）；②12:45 DB 手动升 v20 后 worker 无人重启，arq 队列积压无人消费。上传本身 200 成功（MinIO 已收件），但 knowledge_files 行由 worker 消费任务时才落库。",
+    "fix": "docker restart pisuan-localized-worker-1（DB 已 v20，重启过守卫）→ worker 复活，32 文件落库（1 parsing + 31 uploaded），paddleocr_vl_local 逐页解析中。判据固化：docker top 看 worker_main 子进程是否存在；『容器 Up』≠『worker 活着』。",
+    "tags": [
+      "worker-crash-loop",
+      "schema-guard",
+      "arq-queue",
+      "watchfiles",
+      "kb-upload-stuck"
+    ],
+    "related_bugs": [
+      "bug-4050",
+      "bug-4062"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-19"
+  },
+  {
+    "id": "bug-4064",
+    "timestamp": "2026-10-19T18:05:00+08:00",
+    "error_message": "KB44 批次已全部解析完成，但入库却失败了（Durable task failed: knowledge_ingest raise RuntimeError 文件处理完成，失败 N 个）",
+    "file": "backend/package/yuxi/services/knowledge_task_service.py",
+    "root_cause": "非系统缺陷，是批量任务语义：run_knowledge_ingest 逐项 try/except 收集失败，收尾时 failed_count>0 即 raise RuntimeError 把整个 durable task 标 failed（set_result 已先存了逐项报告）。本次失败 2 项正是 mid-batch 删除的 file_c26292/file_3ec5a8（解析失败: File not found），30/32 成功；土壤农用地 file_832b19 删前已 parsed 且本批 auto_index=false（纯解析批），故无第三个失败。parsed≠已入库：向量化入 Milvus 是独立 knowledge_index 任务（本批 auto_index 空）",
+    "fix": "无需改代码。定性后调 POST /api/knowledge/databases/{kb}/documents/index-pending 一键入库全部待处理（payload 去重防重复提交），27 份约 8-12 分钟跑完；诊断时 rich traceback 会把 logger 的 %s 参数拆行显示成未插值样子，勿误判为日志缺陷",
+    "tags": [
+      "knowledge_ingest",
+      "kb44",
+      "partial-failure-semantics",
+      "index-pending",
+      "auto_index",
+      "milvus"
+    ],
+    "related_bugs": [
+      "bug-4063"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-19T18:05:00+08:00"
+  },
+  {
+    "id": "bug-4065",
+    "timestamp": "2026-10-19T19:05:00+08:00",
+    "error_message": "MilvusException(code=1100): length of varchar field content exceeds max length, length: 106817/124319, max length: 65535（HJ 610-2016 / HJ 2.3-2018 入库 error_indexing）",
+    "file": "backend/package/yuxi/knowledge/chunking/ragflow_like/parsers/semantic.py",
+    "root_cause": "_flush_content 对 special_element（表格等）且 allow_split=False 时整块 content 不做长度检查直接发出；导则类 PDF 巨型附表成 10万+ 字符单块，超 Milvus varchar 65535",
+    "fix": "chunk-fix 子代理修复中：整发分支加 _SPECIAL_ELEMENT_CHAR_CAP=60000 字符守卫，超大附表落入既有 token 切分路径（|Part N 头），正常表格仍整块；修复合入后对 2 份 error_indexing 文件重跑入库",
+    "tags": [
+      "milvus",
+      "semantic-chunking",
+      "varchar-overflow",
+      "error_indexing",
+      "kb44"
+    ],
+    "related_bugs": [
+      "bug-4046",
+      "bug-4064"
+    ],
+    "occurrences": 2,
+    "last_seen": "2026-10-19T19:05:00+08:00"
+  },
+  {
+    "id": "bug-4066",
+    "timestamp": "2026-10-19T19:30:00+08:00",
+    "error_message": "重跑仍报 MilvusException length of varchar field content exceeds max length (124319 > 65535)，尽管 _SPECIAL_ELEMENT_CHAR_CAP 守卫已加载",
+    "file": "backend/package/yuxi/knowledge/chunking/ragflow_like/parsers/semantic.py",
+    "root_cause": "Milvus varchar 65535 上限按 UTF-8 字节计而非字符（铁证：53770 字符 → length 124319，2.31 字节/字符）。守卫按字符 60000 计量，中文密集的 ordered_list/bullet_list 块 53770 字符 < 60000 走整体发射，字节 124319 爆限额。Table 类因字符超限被正确拆分，列表块漏网。",
+    "fix": "已验证：9dcfdc45 守卫改字节计量；重索引后 file_68ebde=119 chunks、file_931081=157 chunks 均 indexed，KB44 29/29 全绿，error_indexing 清零",
+    "tags": [
+      "milvus",
+      "varchar",
+      "utf8-bytes",
+      "semantic-chunking",
+      "special-element"
+    ],
+    "related_bugs": [
+      "bug-4065"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-19T19:55:00+08:00"
+  },
+  {
+    "id": "bug-4067",
+    "timestamp": "2026-10-19T20:10:00+08:00",
+    "error_message": "文档以表格结尾时表格内容整体丢失只剩表头一行（4697 行末尾表格 → table_content 11 字符）",
+    "file": "backend/package/yuxi/knowledge/chunking/ragflow_like/utils/md_parser_utils.py",
+    "root_cause": "extract_table_block 中 markdown-it 的 table_close.map=None，走「下一个带 map token」分支；表格位于文档末尾时其后无带 map token，回退行扫描扫到 EOF 也没遇到非表格行，table_end 停留初值 table_start+1 → 表体被截断。现有测试与多数真实文档表格后有尾段故未暴露。",
+    "fix": "待用户裁决（上游核心文件）。候选：EOF 未 break 分支补 table_end = len(original_lines)（一行修）+ 文末表格回归用例。chunk-fix 与 chunk-quality-review 两处独立发现。",
+    "tags": [
+      "md-parser",
+      "table-block",
+      "eof-truncation",
+      "data-loss",
+      "upstream-core"
+    ],
+    "related_bugs": [
+      "bug-4065",
+      "bug-4066"
+    ],
+    "occurrences": 2,
+    "last_seen": "2026-10-19T20:10:00+08:00"
+  },
+  {
+    "id": "bug-4100",
+    "timestamp": "2026-10-19T20:52:00+08:00",
+    "error_message": "prettier --check web/src/components/eia-data/StandardsPanel.vue 报 Code style issues（Task8 spec 审查期间）",
+    "file": "web/src/components/eia-data/StandardsPanel.vue",
+    "root_cause": "Windows 检出工作树该文件为 CRLF 行尾，与 prettier endOfLine:lf 不符；commit blob 本身为 LF 且 prettier-clean（stdin-filepath 对照证明），纯本地检出噪音非代码缺陷",
+    "fix": "无需改代码。验证 commit 格式用 npx prettier --stdin-filepath <repo路径> < git show <rev>:<path> 对照；勿直接信工作树 --check 结果",
+    "tags": [
+      "prettier",
+      "crlf",
+      "windows-checkout",
+      "false-positive",
+      "lint"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-19T20:52:00+08:00"
+  },
+  {
+    "id": "bug-4068",
+    "timestamp": "2026-10-19T21:05:00+08:00",
+    "error_message": "Task 9 试跑门预检：限值提取草稿混入系统性噪声——P1 散文碎片因子（中要求的不得超过/监测结果/均第95百分位数）、P2 跨标准误配（GB 3838 表出现昼间70dB(A) 噪声数据）、P3 噪声表混入罗马档位（gb3096 category=III类，致全表 conflict）、P4 序号碎片（4./60/44. 当因子名）；各表 raw precision 约 85-92%，卡 90% 门边缘",
+    "file": "backend/package/yuxi/services/eia_limit_extract_core.py",
+    "root_cause": "_INLINE_RE 因子字符集 [一-龥A-Za-z0-9._]{2,8}? 无语义过滤（P1/P4）；行内扫描行归属取 block 码、非噪声表未拒 dB(A)（P2）；噪声表档位用 norm_grade 全序（罗马优先）而非数字档专用（P3）",
+    "fix": "commit 025ed74b：新增 _factor_ok 垃圾过滤（表格+行内双路径，候选表豁免）、非噪声表 continue dB(A)、norm_grade digit_only 参数；容器终验 14/14 + service 10/10",
+    "tags": [
+      "eia-limit-extract",
+      "precision",
+      "task9-gate",
+      "tuning",
+      "regex"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-19T21:05:00+08:00"
+  },
+  {
+    "id": "bug-4069",
+    "timestamp": "2026-10-19T21:18:40",
+    "error_message": "Task9 第二轮真实语料试跑：调参后精度仍约10-15%（宽松口径约25-30%），远低于90%验收门",
+    "file": "backend/package/yuxi/services/eia_limit_extract_core.py",
+    "root_cause": "结构性错配而非正则缺口：E1主导=监测值/水质值当限值（噪声表day/night取到实测45-54dB(A)而非标准60/50；gb20426混入水质硫酸盐250mg/L；gb3095把实测浓度5ug/m3当二级限值）；E2=类别表档位系统性为空（gb3838/gbt14848的III类等信息在prose远离表格处）；E3=词表残留碎片（百分位浓度范围在/p-/监测项目/车间排尘浓度低于）；E4=因子带单位后缀或单位缺失。正则+结构启发式无法区分限值句与监测陈述",
+    "fix": "未再调参——升级为方向决策上报用户：A标准原文PDF优先（formal表改源标准原文，语料降级为佐证）；B加LLM语义判别层；C第三轮正则调参（grade必填+词表扩充+跨域单位拒收，预估60-80%仍不达90%）。025ed74b调参本身有效：P3数字档实证正确（2类/3类忠实），全轮滤除148行垃圾",
+    "tags": [
+      "task9",
+      "extraction",
+      "precision-gate",
+      "monitoring-pollution",
+      "structural"
+    ],
+    "related_bugs": [
+      "bug-4068"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-19"
+  },
+  {
+    "id": "bug-4101",
+    "timestamp": "2026-10-20",
+    "error_message": "prettier --check 报 StandardsPanel.vue 格式不符（新加的下一页按钮被手工折成三行）",
+    "file": "web/src/components/eia-data/StandardsPanel.vue",
+    "root_cause": "手写模板折行与 prettier printWidth 判定不一致：按钮属性较短可并单行，手工换行反而违例",
+    "fix": "按 prettier diff 将下一页按钮合并为单行；宿主源树修复后单文件 cp 到 localized 树再复检通过",
+    "tags": [
+      "prettier",
+      "frontend",
+      "standards-panel",
+      "formatting"
+    ],
+    "related_bugs": [],
+    "occurrences": 2,
+    "last_seen": "2026-10-20"
+  },
+  {
+    "id": "bug-4102",
+    "timestamp": "2026-10-20T00:54:34",
+    "error_message": "GBT 14848 PDF 经 paddleocr_vl_local 解析后 0 个 <table>、0 个标题；Semantic 分块的 html_table_to_key_value KV 转换从未触发，表格退化为空格对齐纯文本",
+    "file": "backend/package/yuxi/knowledge/parser/paddleocr_vl_local.py",
+    "root_cause": "解析器整页渲染 PDF 直接以 'OCR:' 指令调 llama-server，无官方管线的版面检测+表格区域裁剪环节；<fcel>/<nl> 单元格标记流只在 'Table Recognition:' 区域提示下输出，整页转写模式下模型按阅读序输出纯文本。属部署链路能力边界而非模型能力缺陷（模型本身支持表格标记流）",
+    "fix": "短期：表格结构化国标文档改用 deepseek_ocr（SiliconFlow，实测输出 12 个 <table> HTML 块，Semantic KV 通路全通）；长期：如需 paddleocr_vl_local 出表格，须在解析器里加版面检测+按区域分别以 'Table Recognition:' 提示调用，或改接 PaddleOCR 3.7+ 官方 serving（parsing_res_list 含 table 块 HTML）",
+    "tags": [
+      "ocr",
+      "paddleocr_vl_local",
+      "table-structure",
+      "semantic-chunking",
+      "kv-conversion",
+      "gbt14848"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-20"
+  },
+  {
+    "id": "bug-4103",
+    "timestamp": "2026-10-20T06:41:13",
+    "error_message": "[eia-limit-llm] prompt 通道判别失败（model=gemma-4-E4B-it-UD-Q4_K_XL.gguf），fail-closed: （异常消息为空，每几秒刷一条）",
+    "file": "backend/package/yuxi/services/eia_limit_llm_classifier.py",
+    "root_cause": "fast_model(gemma GGUF) 走 openai 供应商 host.docker.internal:8080；宿主机 llama-server.exe 推理卡死：/health 与 /v1/models 秒回，但 /v1/completions 与 /v1/chat/completions 无限挂起（实测 30s 无响应），CPU 连续满负载。判别器 60s asyncio 超时取消 → TimeoutError 空消息。结构化通道先行失败被进程内拉黑后全部流量压到 prompt 通道持续超时。空消息异常即超时签名",
+    "fix": "用户已重启宿主机 llama-server（新 PID 24176）→ chat completions 恢复（实测正常返回）。遗留独立问题：判别器 60s 预算 < gemma CPU 推理实测 93s/次（2600 字符判别 prompt），每次判别仍 60s 超时空消息 fail-closed——属性能/配置错配非缺陷，候选处置：①系统 fast_model 换云端快模型（判别是轻量二分类，任意廉价云模型 1-3s）②调大 CALL_TIMEOUT_SECONDS（代码改动，提取会极慢）③llama-server 上 GPU offload。事件期间跑的提取区块需修好后重跑",
+    "tags": [
+      "eia-limit-llm",
+      "llama-server",
+      "fast-model",
+      "timeout",
+      "fail-closed",
+      "host-8080"
+    ],
+    "related_bugs": [
+      "bug-4102"
+    ],
+    "occurrences": 2,
+    "last_seen": "2026-10-20"
+  },
+  {
+    "id": "bug-4104",
+    "timestamp": "2026-10-20T00:43:04Z",
+    "error_message": "fast_model 配置切换后试跑仍用旧模型（402 Insufficient Balance, model=deepseek-v4-flash），重启 api 才生效",
+    "file": "backend/package/yuxi/services/eia_limit_llm_classifier.py",
+    "root_cause": "EiaLimitLLMClassifier 单例在 _resolve_model 成功后永久缓存 self._model，配置变更不失效；fail-closed 重试也不重解析",
+    "fix": "临时：重启 pisuan-localized-api-1 清单例。建议代码修复：按 spec 变更失效缓存，或调用级错误(401/402)时重置 self._model",
+    "tags": [
+      "eia-limit",
+      "fast_model",
+      "singleton-cache",
+      "config"
+    ],
+    "related_bugs": [
+      "bug-4103"
+    ],
+    "occurrences": 2,
+    "last_seen": "2026-10-20T00:43:04Z"
+  },
+  {
+    "id": "bug-4105",
+    "timestamp": "2026-10-20T00:43:04Z",
+    "error_message": "run_extraction 全失败：未找到模型: 'deepseek:deepseek-chat'（秒级完成，gate failed=7581）",
+    "file": "backend/package/yuxi/config/options.py",
+    "root_cause": "配置填了平台注册表之外的模型 spec；select_model 白名单不含 deepseek-chat（可用清单见报错：deepseek-v4-flash/pro、deepseek-flash、agnes-2.5-flash、glm-4.7-flash 等 11 个）",
+    "fix": "改用注册清单内的 deepseek:deepseek-v4-flash；先在容器内用 select_model 冒烟再触发全量试跑",
+    "tags": [
+      "select_model",
+      "model-registry",
+      "fail-fast"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-20T00:43:04Z"
+  },
+  {
+    "id": "bug-4106",
+    "timestamp": "2026-10-20T00:43:04Z",
+    "error_message": "试跑中段起全 402 Insufficient Balance（api.deepseek.com），1820 块 fail-closed",
+    "file": ".env (DEEPSEEK_API_KEY)",
+    "root_cause": "DeepSeek 账户余额耗尽；7581 块判别消耗把余额打穿，尾段全失败",
+    "fix": "用户切换 fast_model 到 openai2:agnes-2.5-flash 并重启 api；幂等重跑补缺",
+    "tags": [
+      "402",
+      "balance",
+      "deepseek",
+      "ops"
+    ],
+    "related_bugs": [
+      "bug-4104"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-20T00:43:04Z"
+  },
+  {
+    "id": "bug-4107",
+    "timestamp": "2026-10-20T02:38:29Z",
+    "error_message": "KB 文档 markdown 预览中 \\(...\\)/\\[...\\] 公式渲染为字面文本，不显示为数学式",
+    "file": "web/src/utils/markdown_preview.js",
+    "root_cause": "markdown-it-katex 仅支持美元符定界；deepseek_ocr 等 OCR 产物普遍用 KaTeX 原生圆括号/方括号定界写法",
+    "fix": "渲染层归一：normalizeLatexDelimiters（方括号定界转块级、圆括号定界转行内）+ transformOutsideCodeSegments（split 捕获组保护围栏/行内代码段），链入 renderMarkdown 归一管线首位；8 用例容器快测通过，sync-dev 交付运行栈，prettier/vite 验证通过",
+    "tags": [
+      "markdown",
+      "katex",
+      "latex",
+      "preview",
+      "ocr"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-20T02:38:29Z"
+  },
+  {
+    "id": "bug-453",
+    "timestamp": "2026-10-20T10:50:00+08:00",
+    "error_message": "git fetch upstream 失败：Failed to connect to github.com port 443 after 21117 ms（curl exit 28）；本次任务'对比上游并更新'被迫阻断",
+    "file": "网络环境（无仓库文件）",
+    "root_cause": "github.com 443 不可达且 git/env 均无代理配置——与历史 bug-274（2026-09-26）同模式：间歇性网络屏蔽，用户开启代理后即恢复",
+    "fix": "等待用户开启系统代理后重跑 git fetch + sync-upstream 脚本；教训：管道后取 $?? 会吞 git 退出码（本次 FETCH_EXIT=0 假象），bash 需 set -o pipefail 或不用管道取码",
+    "tags": [
+      "network",
+      "github",
+      "proxy",
+      "sync-blocked",
+      "pipefail"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-20T10:50:00+08:00"
+  },
+  {
+    "id": "bug-454",
+    "timestamp": "2026-10-20T12:15:15+08:00",
+    "error_message": "git rebase --continue 即时拒绝：'You must edit all merge conflicts and then mark them as resolved using git add'，但 git ls-files -u = 0、工作树干净、无阻塞 hook、GIT_TRACE 无子进程",
+    "file": "git 2.54.0.windows.1（工具层，非仓库文件）",
+    "root_cause": "git for Windows 2.54 在冲突已解决后误报未解决冲突；删除 stale .git/AUTO_MERGE 无效，根因未定位（疑似 windows 发行版缺陷）",
+    "fix": "绕过：source .git/rebase-merge/author-script 恢复作者环境后 git commit -F .git/rebase-merge/message 手动提交解决结果，再 git rebase --skip（pick 内容已手动提交时安全）；rebase 正常完成 598/598。勿反复重试 --continue 或纠缠 AUTO_MERGE",
+    "tags": ["git", "rebase", "windows", "false-refusal", "bypass"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-20T12:15:15+08:00"
+  },
+  {
+    "id": "bug-455",
+    "timestamp": "2026-10-20T12:15:15+08:00",
+    "error_message": "sync-upstream.sh step5 重建 pisuan-localized 失败：'Your local changes to the following files would be overwritten by checkout'——localized 树停在上次重建中间态（detached HEAD + 2108 条 staged renames）且累积 30+ 个 sync-dev 积垢文件",
+    "file": "C:/workspace/pisuan-localized（工作树状态，非代码文件）",
+    "root_cause": "sync-dev.ps1 把 pisuan 工作树未提交改动（含新增文件）持续拷进 bind-mount 的 localized 树，跨会话积垢；rebuild_localized 假设树干净，无自洁/报警步骤",
+    "fix": "两次 git stash push（第二次 -u 收 untracked 新文件副本）无破坏保全后，按脚本语义手动等价重建：switch --detach origin/pisuan-custom → apply_pisuan_rename.py --apply → uv lock ×2 → add -A → commit 'chore: 机械改名层' → branch -f pisuan-localized HEAD → push github --force-with-lease。改进方向：rebuild 前自动 stash 或脏树报警",
+    "tags": ["localized", "sync-dev", "rebuild", "dirty-worktree", "stash"],
+    "related_bugs": ["bug-454"],
+    "occurrences": 1,
+    "last_seen": "2026-10-20T12:15:15+08:00"
   }
 ]

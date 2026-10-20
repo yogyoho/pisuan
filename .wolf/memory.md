@@ -6025,3 +6025,608 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 22:29 | Session end: 1 writes across 1 files (changelog.md) | 1 reads | ~31774 tok |
 | 22:43 | 用户明示推送+再生：pisuan-custom 14 commits 推 origin；localized 清 detached 暂存→reset 48d2e28e→改名重生成（2069 改动/1485 R）→uv lock×2→f5763459 force-with-lease 推 github | pisuan-localized 仓库 | 双分支推送完成，栈热载无恙（api 401/web 200）；backend/package/pisuan 非忽略残留需路径级 clean -fd | ~6k |
 | 22:43 | Session end: 1 writes across 1 files (changelog.md) | 1 reads | ~31774 tok |
+| 22:57 | Session end: 1 writes across 1 files (changelog.md) | 1 reads | ~31774 tok |
+| 23:04 | Edited web/src/components/eia-data/LibraryPanel.vue | CSS: table-layout, width, overflow-wrap | ~74 |
+| 23:04 | Edited web/src/components/eia-data/LibraryPanel.vue | 7→4 lines | ~15 |
+| 23:11 | Edited docs/develop-guides/changelog.md | inline fix | ~50 |
+| 23:05 | bug-4039 长文件名挤出列修复（table-layout:fixed+break-word，sync-dev 后浏览器实测 2 行折行/零溢出，库内 25+3 真实数据完好） | LibraryPanel.vue, changelog.md | 已实测待提交；用户库已在真实使用（28 份） | ~5k |
+| 23:11 | Session end: 4 writes across 2 files (changelog.md, LibraryPanel.vue) | 1 reads | ~31922 tok |
+| 23:45 | Session end: 4 writes across 2 files (changelog.md, LibraryPanel.vue) | 1 reads | ~31922 tok |
+
+## Session: 2026-10-17 23:58
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:07 | Created backend/package/yuxi/knowledge/parser/paddleocr_vl_local.py | — | ~2476 |
+| 00:07 | Edited backend/package/yuxi/knowledge/parser/capabilities.py | expanded (+7 lines) | ~112 |
+| 00:07 | Edited backend/package/yuxi/knowledge/parser/factory.py | 2→3 lines | ~61 |
+| 00:08 | Created backend/test/unit/knowledge/test_paddleocr_vl_local.py | — | ~1287 |
+| 00:16 | Edited backend/package/yuxi/knowledge/parser/paddleocr_vl_local.py | 6→7 lines | ~58 |
+| 00:16 | Edited backend/test/unit/knowledge/test_parser_capabilities.py | 2→3 lines | ~25 |
+| 00:19 | Edited docs/develop-guides/changelog.md | 3→5 lines | ~168 |
+| 00:22 | Session end: 7 writes across 6 files (paddleocr_vl_local.py, capabilities.py, factory.py, test_paddleocr_vl_local.py, test_parser_capabilities.py) | 6 reads | ~6675 tok |
+| 00:33 | Edited backend/package/yuxi/config/options.py | expanded (+26 lines) | ~261 |
+| 00:33 | Edited backend/package/yuxi/config/options.py | 3→4 lines | ~39 |
+| 00:35 | Edited backend/package/yuxi/services/ocr_service.py | 7→8 lines | ~57 |
+| 00:35 | Edited backend/package/yuxi/services/ocr_service.py | 4→7 lines | ~102 |
+| 00:35 | Edited web/src/components/OCRSettingsSection.vue | 6→7 lines | ~48 |
+| 00:35 | Edited backend/test/unit/services/test_ocr_service.py | modified test_paddleocr_vl_local_uses_local_service_option() | ~184 |
+| 00:42 | Edited docs/develop-guides/changelog.md | inline fix | ~45 |
+| 00:42 | Session end: 14 writes across 10 files (paddleocr_vl_local.py, capabilities.py, factory.py, test_paddleocr_vl_local.py, test_parser_capabilities.py) | 9 reads | ~7418 tok |
+
+## Session: 2026-10-17 00:52
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 01:05 | 诊断 OCR 下拉缺 paddleocr_vl_local：API 容器 watchfiles inotify ENOMEM 后重载器死亡、旧进程静默服务旧代码；重启 api 容器恢复，浏览器验证「PaddleOCR-VL-1.6 (本地) 可用」| pisuan-localized-api-1 + buglog/cerebrum | 已修复并端到端验证 | ~30k |
+| 01:25 | 恢复 A/B 讨论语境（transcript 提取），核实 add_file_record/parse_file 链路与 P1 存储现状；用户裁定采用方案 A | cerebrum/ab_recover.txt | 待出完整方案 A 设计 | ~25k |
+| 01:40 | B 定案：读 prepare_corpus/bank_compile/front_extract 内核（均 repo 内），派 Explore 摸 P1 服务与 KB 锚点，准备 spec+plan | coal-eia-writer/scripts | 探索进行中 | ~35k |
+| 08:43 | Created docs/superpowers/specs/2026-10-18-eia-library-p2-canonical-md-design.md | — | ~2113 |
+| 08:43 | Edited docs/superpowers/specs/2026-10-18-eia-library-p2-canonical-md-design.md | inline fix | ~23 |
+| 08:43 | Edited docs/superpowers/specs/2026-10-18-eia-library-p2-canonical-md-design.md | inline fix | ~35 |
+| 02:00 | 写 P2 方案B spec（决策记录+A/B对比+canonical md契约+组件/测试/边界），自审修 md_status 枚举与 KB 重推语义 | docs/superpowers/specs/2026-10-18-eia-library-p2-canonical-md-design.md | spec 完成待写 plan | ~20k |
+| 08:45 | Session end: 3 writes across 1 files (2026-10-18-eia-library-p2-canonical-md-design.md) | 14 reads | ~38786 tok |
+
+## Session: 2026-10-18 08:47
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:05 | P2 探索报告接收（P1服务/KB推送契约/词表meta/资产/KB查建/既有测试 6 项）；六契约点精读（migration v18 模式、task_registry、knowledge_task_service 链、delete_file、params_for_uploaded_document、corpus_meta/front_matter schema）；宿主机金标准前置区等价性实证启动（33 份 docx，后台） | eia_library_service.py, manager.py, kb_utils.py, task_registry.py, bank_compile.py, prepare_corpus.py, front_extract.py | 进行中 | ~90k |
+| 09:13 | Created docs/superpowers/plans/2026-10-18-eia-library-p2-canonical-md.md | — | ~17343 |
+
+## Session: 2026-10-18 09:16
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:18 | Edited docs/superpowers/plans/2026-10-18-eia-library-p2-canonical-md.md | modified bootstrap_from_manifest() | ~201 |
+| 09:18 | Edited docs/superpowers/plans/2026-10-18-eia-library-p2-canonical-md.md | modified bind_eia_corpus_kb() | ~404 |
+| 09:18 | Edited docs/superpowers/plans/2026-10-18-eia-library-p2-canonical-md.md | modified _resolve_kb_id() | ~242 |
+| 09:18 | Edited docs/superpowers/plans/2026-10-18-eia-library-p2-canonical-md.md | 12→14 lines | ~199 |
+| 09:18 | Edited docs/superpowers/plans/2026-10-18-eia-library-p2-canonical-md.md | inline fix | ~76 |
+| 09:18 | Edited docs/superpowers/plans/2026-10-18-eia-library-p2-canonical-md.md | 2→3 lines | ~62 |
+| 09:20 | Created backend/package/yuxi/services/eia_canonical_md.py | — | ~3677 |
+| 09:20 | Edited backend/package/yuxi/services/eia_canonical_md.py | inline fix | ~16 |
+| 09:23 | Created backend/test/unit/services/test_eia_canonical_md.py | — | ~966 |
+| 09:24 | Created backend/test/unit/services/test_eia_canonical_md_goldens.py | — | ~1009 |
+| 09:25 | P2 canonical md 方案B：spec+plan 提交(bf8abb73)，内核模块/单测/金标准回归三文件落盘，33份金标准校验后台跑 | eia_canonical_md.py + 两测试文件 + plans/specs | 进行中 | ~45k |
+| 09:27 | Edited backend/test/unit/services/test_eia_canonical_md.py | 2→2 lines | ~38 |
+| 09:27 | Edited backend/test/unit/services/test_eia_canonical_md.py | modified _docx_bytes() | ~206 |
+| 09:29 | Edited backend/test/unit/services/test_eia_canonical_md_goldens.py | 3 → 4 | ~13 |
+| 09:35 | Edited backend/package/yuxi/storage/postgres/models_domain_factory.py | modified to_dict() | ~1077 |
+| 09:35 | Edited backend/package/yuxi/storage/postgres/manager.py | 3→4 lines | ~27 |
+| 09:35 | Edited backend/package/yuxi/storage/postgres/manager.py | 2→3 lines | ~48 |
+| 09:35 | Edited backend/package/yuxi/storage/postgres/manager.py | modified upgrade_business_v18_to_v19() | ~1017 |
+| 09:35 | Edited backend/package/yuxi/storage_migration.py | 14→15 lines | ~114 |
+| 09:35 | Edited backend/package/yuxi/storage_migration.py | 3→6 lines | ~125 |
+| 09:46 | Created backend/package/yuxi/services/eia_library_service.py | — | ~2849 |
+| 09:46 | Edited backend/package/yuxi/services/eia_library_service.py | 18→22 lines | ~311 |
+| 09:47 | Edited backend/package/yuxi/services/eia_library_service.py | reduced (-7 lines) | ~134 |
+| 09:47 | Edited backend/package/yuxi/repositories/eia_library_repository.py | modified insert_file() | ~338 |
+| 09:49 | Created backend/test/unit/test_eia_library_service.py | — | ~3015 |
+| 09:50 | Edited backend/package/yuxi/storage/postgres/models_domain_factory.py | 4→8 lines | ~100 |
+| 09:52 | Edited backend/package/yuxi/repositories/eia_library_repository.py | 2→2 lines | ~47 |
+| 09:52 | Edited backend/package/yuxi/repositories/eia_library_repository.py | modified delete_file() | ~248 |
+| 09:52 | Edited backend/package/yuxi/services/eia_library_service.py | added 1 condition(s) | ~782 |
+| 09:52 | Edited backend/server/routers/domain_factory_router.py | 3→3 lines | ~56 |
+| 09:52 | Edited backend/server/routers/domain_factory_router.py | 3→3 lines | ~64 |
+| 09:52 | Edited backend/server/routers/domain_factory_router.py | modified download_eia_library_file() | ~233 |
+| 09:53 | Edited backend/server/routers/domain_factory_router.py | modified delete_eia_library_file() | ~217 |
+| 10:00 | Edited backend/package/yuxi/services/eia_library_service.py | modified migrate_storage_to_minio() | ~602 |
+| 10:13 | Created backend/package/yuxi/services/eia_corpus_task_service.py | — | ~1463 |
+| 10:14 | Edited backend/package/yuxi/config/options.py | expanded (+7 lines) | ~128 |
+| 10:14 | Edited backend/package/yuxi/services/task_registry.py | expanded (+11 lines) | ~162 |
+| 10:15 | Created backend/test/unit/services/test_eia_corpus_push.py | — | ~1859 |
+| 10:15 | Edited backend/test/unit/services/test_eia_corpus_push.py | modified minio_spy() | ~84 |
+| 10:17 | Edited backend/test/unit/services/test_eia_corpus_push.py | modified __init__() | ~61 |
+| 10:19 | Edited backend/package/yuxi/services/eia_corpus_task_service.py | added 6 import(s) | ~245 |
+| 10:20 | Edited backend/package/yuxi/services/eia_corpus_task_service.py | modified _load_bank_compile() | ~1593 |
+| 10:21 | Edited backend/package/yuxi/services/eia_corpus_task_service.py | utcnow() → utc_now_naive() | ~60 |
+| 10:21 | Edited backend/package/yuxi/services/eia_corpus_task_service.py | added 1 import(s) | ~57 |
+| 10:23 | Created backend/test/unit/services/test_eia_corpus_process.py | — | ~1835 |
+| 10:23 | Edited backend/test/unit/services/test_eia_corpus_process.py | 5→4 lines | ~70 |
+| 10:23 | Edited backend/test/unit/services/test_eia_corpus_process.py | modified test_real_bank_compile_mini_corpus() | ~196 |
+| 10:25 | Edited backend/package/yuxi/services/eia_library_service.py | modified _log() | ~455 |
+| 10:26 | Edited backend/server/routers/domain_factory_router.py | modified migrate_eia_library_storage() | ~1370 |
+| 10:26 | Edited backend/server/routers/domain_factory_router.py | added 2 import(s) | ~79 |
+
+## Session: 2026-10-18 10:29
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:36 | Edited backend/package/yuxi/services/eia_library_service.py | modified migrate_storage_to_minio() | ~636 |
+| 10:44 | Edited backend/test/unit/services/test_eia_corpus_process.py | modified _seed_refs() | ~152 |
+| 10:51 | Edited backend/server/routers/domain_factory_router.py | modified get_eia_corpus_kb_binding() | ~84 |
+| 10:51 | Edited web/src/apis/eia_data_api.js | expanded (+17 lines) | ~316 |
+| 10:51 | Edited web/src/components/eia-data/LibraryPanel.vue | 8→11 lines | ~127 |
+| 10:52 | Edited web/src/components/eia-data/LibraryPanel.vue | expanded (+33 lines) | ~398 |
+| 10:52 | Edited web/src/components/eia-data/LibraryPanel.vue | 2→2 lines | ~25 |
+| 10:52 | Edited web/src/components/eia-data/LibraryPanel.vue | expanded (+14 lines) | ~347 |
+| 10:53 | Edited web/src/components/eia-data/LibraryPanel.vue | expanded (+30 lines) | ~402 |
+| 10:53 | Edited web/src/components/eia-data/LibraryPanel.vue | expanded (+9 lines) | ~103 |
+| 10:54 | Edited web/src/components/eia-data/LibraryPanel.vue | 8→7 lines | ~66 |
+| 10:54 | Edited web/src/components/eia-data/LibraryPanel.vue | expanded (+26 lines) | ~231 |
+| 10:54 | Edited web/src/components/eia-data/LibraryPanel.vue | expanded (+8 lines) | ~63 |
+| 10:54 | Edited web/src/components/eia-data/LibraryPanel.vue | expanded (+29 lines) | ~480 |
+| 10:55 | Edited web/src/components/eia-data/LibraryPanel.vue | added error handling | ~1036 |
+| 10:55 | Edited web/src/components/eia-data/LibraryPanel.vue | added error handling | ~56 |
+| 10:55 | Edited web/src/components/eia-data/LibraryPanel.vue | expanded (+34 lines) | ~235 |
+| 11:00 | Edited web/e2e/fixtures/auth.js | 1→2 lines | ~22 |
+| 11:00 | Edited web/playwright.config.js | 1→2 lines | ~22 |
+| 11:09 | Edited web/src/apis/eia_data_api.js | expanded (+17 lines) | ~316 |
+| 11:09 | Edited web/e2e/fixtures/auth.js | 1→2 lines | ~22 |
+| 11:09 | Edited web/playwright.config.js | 1→2 lines | ~22 |
+| 11:09 | Edited web/src/components/eia-data/LibraryPanel.vue | 8→11 lines | ~127 |
+| 11:09 | Edited web/src/components/eia-data/LibraryPanel.vue | expanded (+33 lines) | ~398 |
+| 11:09 | Edited web/src/components/eia-data/LibraryPanel.vue | 2→2 lines | ~25 |
+| 11:09 | Edited web/src/components/eia-data/LibraryPanel.vue | expanded (+14 lines) | ~347 |
+| 11:09 | Edited web/src/components/eia-data/LibraryPanel.vue | expanded (+35 lines) | ~456 |
+| 11:10 | Edited web/src/components/eia-data/LibraryPanel.vue | 8→7 lines | ~66 |
+| 11:10 | Edited web/src/components/eia-data/LibraryPanel.vue | expanded (+26 lines) | ~231 |
+| 11:10 | Edited web/src/components/eia-data/LibraryPanel.vue | expanded (+8 lines) | ~63 |
+| 11:10 | Edited web/src/components/eia-data/LibraryPanel.vue | expanded (+31 lines) | ~482 |
+| 11:11 | Edited web/src/components/eia-data/LibraryPanel.vue | added error handling | ~1036 |
+| 11:11 | Edited web/src/components/eia-data/LibraryPanel.vue | added error handling | ~56 |
+| 11:11 | Edited web/src/components/eia-data/LibraryPanel.vue | expanded (+34 lines) | ~235 |
+| 11:14 | Edited backend/test/unit/services/test_eia_corpus_process.py | 12→10 lines | ~192 |
+| 11:30 | 方案B执行：Task9路由+Task10前端完成；OOM抢修(api重启回收4.3GB)+迁移补丁(单行容错)；OCRSettings误滚恢复；单测修复 | eia_corpus_task_service.py, eia_library_service.py, domain_factory_router.py, LibraryPanel.vue, eia_data_api.js, test_eia_corpus_process.py | 迁移21行待重跑；单测1修后待验证 | ~90k |
+| 11:37 | Edited backend/package/yuxi/services/eia_library_service.py | inline fix | ~37 |
+| 11:37 | Edited backend/package/yuxi/services/eia_library_service.py | inline fix | ~36 |
+
+## Session: 2026-10-18 11:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:27 | Edited backend/package/yuxi/services/eia_corpus_task_service.py | inline fix | ~27 |
+| 12:27 | Edited backend/package/yuxi/services/eia_corpus_task_service.py | 4→5 lines | ~88 |
+| 12:20 | P2 E2E QA：KB 创建（ollama bge-m3 注册 provider+缓存重建）→ bootstrap manifest 23/28 回填 → 查看 md 36万字符 → bind 缓存失效 bug-4044 修复 | eia_corpus_task_service.py | 推送任务 running 1/24 | ~9k |
+| 13:15 | P2 E2E QA 收口：推送 indexed 终态验证（446 chunks/248k tokens）+ 全库加工 success（7723 节条目/352 切片/meta 幂等/processed_at 22 行）+ 提交 5563d4fc（缓存失效修复）+ b24fbe5d（changelog P2 hunk 拆分提交）+ batch_size 40→8 治 ReadTimeout | eia_corpus_task_service.py, changelog.md | QA 全链路通过；批量推送 bsz=8 续跑中 | ~11k |
+| 13:13 | Session end: 2 writes across 1 files (eia_corpus_task_service.py) | 3 reads | ~3176 tok |
+| 16:58 | Edited backend/package/yuxi/services/eia_corpus_task_service.py | 12→13 lines | ~166 |
+
+## Session: 2026-10-18 17:52
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:55 | 28文件失败查证收尾：bug-4046/4047/4048 入账；终版报告交付（id1/3上传即损、id9零节号标题、id22/24 stage待裁决） | .wolf/buglog.json,.wolf/memory.md | 完成 | ~3k |
+| 19:12 | 文件库加「全部文件」默认视图（bug-4049）：LibraryPanel 三态哨兵+行内文件夹标注，changelog 摘除法 staging，QA 28/25/2 视图全过 | LibraryPanel.vue,changelog.md | 12c43e74 | ~6k |
+| 19:40 | 复垦方案裁决执行：删库行 22/24（先清 KB 登记）+32；终态 23 行全 ready+indexed+staged，KB/MinIO 三处对齐 | eia_library_files,kb_jcwwz7h3pp | 完成 | ~2k |
+| 20:20 | 淖毛湖跟踪评价 503MB 剥图入库：slim 1.4MB→id34 md ready 48万字 391标题 stage=tracking_eia，推 KB 中 | eia_library_files | id=34 | ~4k |
+| 20:55 | 写作数据集路线图固化：七资产 DB 化决策+优先级入 specs/2026-10-18-writer-datasets-ops-roadmap.md，设计开发延后 | docs/superpowers/specs | 0b5f7cd1 | ~3k |
+
+## Session: 2026-10-18 23:39
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:56 | 修复 worker 重启竞态（lease missing）并重跑 9 份上传→id35-43 ready→后台链推KB+全库重编译 buh3q2hoa | worker/api 容器, /tmp/eia_bulk | push task f21d8ec9 轮询中 | ~35k |
+| 00:1x | 澄清标准与限值库实现程度：P1/P2/P3 通道+页面已交付（8 commit），DB 两表 0 行未运营；纠正上轮"无DB无UI"误判；剩余缺口=注册表本体CRUD | eia_standard_service/StandardsPanel | 已澄清 | ~30k |
+| 00:4x | 标准与限值库 brainstorming 收敛并提交 spec c1c75616：甲(语料提取+暂存逐行核实)+乙(原文enrich试跑门)+新表入册；62条核实辅助；验收=62条全裁决/7表多源档位confirmed/精度≥90% | docs/superpowers/specs/2026-10-19-*.md | 已提交 | ~40k |
+| 01:2x | 写限值数据管线实施计划（12 任务，836 行）落盘未提交；Bash 工具发现 ~8-10KB 命令长度上限，长内容须分块 heredoc | docs/superpowers/plans/2026-10-19-standards-limit-data-pipeline.md | 完整 12 任务 | ~55k |
+| 09:04 | Edited backend/package/yuxi/storage/postgres/models_domain_factory.py | modified to_dict() | ~728 |
+| 09:04 | Edited backend/package/yuxi/storage/postgres/manager.py | 3→5 lines | ~34 |
+| 09:04 | Edited backend/package/yuxi/storage/postgres/manager.py | 3→4 lines | ~73 |
+| 09:04 | Edited backend/package/yuxi/storage/postgres/manager.py | modified upgrade_business_v19_to_v20() | ~450 |
+| 09:05 | Edited backend/package/yuxi/storage_migration.py | 4→5 lines | ~45 |
+| 09:05 | Edited backend/package/yuxi/storage_migration.py | 3→6 lines | ~130 |
+| 09:05 | Edited backend/test/unit/services/test_storage_migration.py | 1→4 lines | ~125 |
+| 09:05 | Edited backend/test/unit/services/test_storage_migration.py | inline fix | ~28 |
+| 09:05 | Edited backend/test/unit/services/test_storage_migration.py | 8→11 lines | ~290 |
+| 09:05 | Edited backend/test/unit/services/test_storage_migration.py | modified test_v20_business_schema_version_and_limit_tables_registered() | ~198 |
+| 09:13 | Task1 限值库 v20：双模型+manager 迁移法+编排链+测试补桩（顺带还清 v18/v19 桩欠账，基线 14 红→27 绿） | models_domain_factory.py, manager.py, storage_migration.py, test_storage_migration.py | commit 4628d6f0 | ~40k |
+| 09:15 | Session end: 10 writes across 4 files (models_domain_factory.py, manager.py, storage_migration.py, test_storage_migration.py) | 3 reads | ~4803 tok |
+| 09:15 | Session end: 10 writes across 4 files (models_domain_factory.py, manager.py, storage_migration.py, test_storage_migration.py) | 3 reads | ~4803 tok |
+| 09:19 | Created ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/msys-pathconv-breaks-docker-exec-paths.md | — | ~164 |
+| 09:20 | Session end: 11 writes across 5 files (models_domain_factory.py, manager.py, storage_migration.py, test_storage_migration.py, msys-pathconv-breaks-docker-exec-paths.md) | 3 reads | ~4978 tok |
+| 09:21 | Session end: 11 writes across 5 files (models_domain_factory.py, manager.py, storage_migration.py, test_storage_migration.py, msys-pathconv-breaks-docker-exec-paths.md) | 3 reads | ~4978 tok |
+| 10:20 | 评审 4628d6f0（v20 限值暂存表+注册表迁移）：五触点齐/测试判别力足/27 passed/零新增 lint；3 minor（to_dict 冗余守卫、table_key 80vs64、updated_at 序列化缺）| manager.py/models_domain_factory.py/storage_migration.py/test_storage_migration.py | APPROVED | ~40k |
+| 09:30 | Session end: 11 writes across 5 files (models_domain_factory.py, manager.py, storage_migration.py, test_storage_migration.py, msys-pathconv-breaks-docker-exec-paths.md) | 3 reads | ~4978 tok |
+| 09:30 | Session end: 11 writes across 5 files (models_domain_factory.py, manager.py, storage_migration.py, test_storage_migration.py, msys-pathconv-breaks-docker-exec-paths.md) | 3 reads | ~4978 tok |
+| 09:31 | Created backend/test/unit/services/test_eia_limit_extract_core.py | — | ~725 |
+| 09:54 | Created backend/package/yuxi/services/eia_limit_extract_core.py | — | ~1210 |
+| 09:56 | Edited backend/package/yuxi/services/eia_limit_extract_core.py | added 1 condition(s) | ~2146 |
+| 09:58 | Edited backend/package/yuxi/services/eia_limit_extract_core.py | modified norm_code() | ~134 |
+| 10:04 | Task2 语料限值提取内核 TDD 落地（红→绿 6 passed，ruff check/format 双清） | eia_limit_extract_core.py + test_eia_limit_extract_core.py | commit d5d4aeca | ~45k |
+
+## Session: 2026-10-19 10:08
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:22 | Created ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/w4-standard-pdfs-user-collected.md | — | ~161 |
+| 10:15 | 用户手动下载国标 PDF 供 W4 乙通道（30+ 份），Task 10 优先用之，web-fetch 降级补缺 | (无代码) | 已录 memory+cerebrum 备忘 | ~1k |
+| 10:22 | Session end: 1 writes across 1 files (w4-standard-pdfs-user-collected.md) | 0 reads | ~172 tok |
+| 10:32 | reviewed d5d4aeca eia_limit_extract_core: 2 critical (_INLINE_RE greedy eats value digits; _CODE_RE misses GB/xxxx) + 4 important, repro via python -c, 6/6 tests pass in container | eia_limit_extract_core.py | NEEDS_FIX sent to team-lead | ~9k |
+| 10:25 | Task2 质量评审 NEEDS_FIX：C1 行内正则贪婪吞数值/C2 标准号 GB/ 变体漏抽 + I1-I4；另发现「表内引用」形态窗口截不到表头，记为 Task 9 试跑门检查项 | d5d4aeca | 返工中 | ~2k |
+| 10:35 | Session end: 1 writes across 1 files (w4-standard-pdfs-user-collected.md) | 0 reads | ~172 tok |
+| 10:36 | Session end: 1 writes across 1 files (w4-standard-pdfs-user-collected.md) | 1 reads | ~3541 tok |
+| 10:38 | Edited backend/package/yuxi/services/eia_limit_extract_core.py | 4→4 lines | ~73 |
+| 10:38 | Edited backend/package/yuxi/services/eia_limit_extract_core.py | "(?:GB|HJ)(?:/T)?\s?\d+(?:" → "(?:GB|HJ)(?:/T?)?\s?\d+(?" | ~20 |
+| 10:38 | Edited backend/package/yuxi/services/eia_limit_extract_core.py | "[≤<]?\s*([\d.]+)" → "[≤<]?\s*(\d+(?:\.\d+)?)" | ~14 |
+| 10:38 | Edited backend/package/yuxi/services/eia_limit_extract_core.py | 6→7 lines | ~85 |
+| 10:38 | Edited backend/package/yuxi/services/eia_limit_extract_core.py | 4→5 lines | ~85 |
+| 10:38 | Edited backend/package/yuxi/services/eia_limit_extract_core.py | modified parse_block() | ~62 |
+| 10:38 | Edited backend/package/yuxi/services/eia_limit_extract_core.py | 12→16 lines | ~198 |
+| 10:38 | Edited backend/test/unit/services/test_eia_limit_extract_core.py | 7→9 lines | ~53 |
+| 10:38 | Edited backend/test/unit/services/test_eia_limit_extract_core.py | modified test_inline_no_space_regression() | ~457 |
+| 10:42 | Task2 返工：行内正则惰性化+GB/ 变体+聚合数值列扩容+3 新用例（9 passed） | eia_limit_extract_core.py + test | commit 30b38ee9 | ~30k |
+| 10:43 | Session end: 10 writes across 3 files (w4-standard-pdfs-user-collected.md, eia_limit_extract_core.py, test_eia_limit_extract_core.py) | 1 reads | ~4588 tok |
+| 10:43 | Session end: 10 writes across 3 files (w4-standard-pdfs-user-collected.md, eia_limit_extract_core.py, test_eia_limit_extract_core.py) | 1 reads | ~4588 tok |
+| 10:47 | re-reviewed 30b38ee9 rework: all 8 items verified (C1 lazy/C2 slash/I1 night/I2 partial+doc/I3 tests/I4 docstring/M1/M2), scope clean, 9/9 in container, 1 minor residual (day+night rows compare day only) | eia_limit_extract_core.py, test_eia_limit_extract_core.py | APPROVED sent | ~6k |
+| 10:50 | Task2 关闭：返工 30b38ee9 复审 APPROVED（9/9），残留 Minor（聚合 first-non-empty）入 Task12 收敛清单 | 30b38ee9 | DONE | ~3k |
+| 10:50 | Session end: 10 writes across 3 files (w4-standard-pdfs-user-collected.md, eia_limit_extract_core.py, test_eia_limit_extract_core.py) | 2 reads | ~10388 tok |
+| 10:50 | Session end: 10 writes across 3 files (w4-standard-pdfs-user-collected.md, eia_limit_extract_core.py, test_eia_limit_extract_core.py) | 2 reads | ~10388 tok |
+| 10:51 | Created backend/package/yuxi/repositories/eia_limit_extract_repository.py | — | ~678 |
+| 10:52 | Edited backend/package/yuxi/repositories/eia_standard_repository.py | modified upsert_row() | ~279 |
+| 10:52 | Edited backend/package/yuxi/repositories/eia_standard_repository.py | 6→9 lines | ~88 |
+| 10:55 | Task3 仓储层：新建 EiaLimitExtractRepository（暂存行+注册表 CRUD），EiaStandardRepository 追加 upsert_row 逐行转正（同业务键先删后插）；ruff 双绿+容器冒烟 import OK（pisuan 包名） | backend/package/yuxi/repositories/eia_limit_extract_repository.py, eia_standard_repository.py | DONE commit 602e8583 | ~25k |
+| 10:57 | Session end: 13 writes across 5 files (w4-standard-pdfs-user-collected.md, eia_limit_extract_core.py, test_eia_limit_extract_core.py, eia_limit_extract_repository.py, eia_standard_repository.py) | 3 reads | ~11433 tok |
+| 10:57 | Session end: 13 writes across 5 files (w4-standard-pdfs-user-collected.md, eia_limit_extract_core.py, test_eia_limit_extract_core.py, eia_limit_extract_repository.py, eia_standard_repository.py) | 3 reads | ~11433 tok |
+| 11:01 | Task3 spec 合规评审 602e8583：2 文件纯追加/7 方法/upsert_row 幂等/无测试/无夹带，容器冒烟 OK，APPROVED | eia_limit_extract_repository.py, eia_standard_repository.py | pass | ~6k |
+| 11:01 | Session end: 13 writes across 5 files (w4-standard-pdfs-user-collected.md, eia_limit_extract_core.py, test_eia_limit_extract_core.py, eia_limit_extract_repository.py, eia_standard_repository.py) | 3 reads | ~11433 tok |
+| 11:01 | Session end: 13 writes across 5 files (w4-standard-pdfs-user-collected.md, eia_limit_extract_core.py, test_eia_limit_extract_core.py, eia_limit_extract_repository.py, eia_standard_repository.py) | 3 reads | ~11433 tok |
+| 11:05 | Task3 关闭：602e8583 双评审 APPROVED，3 Minor；跨任务项（upsert_row 值类型归一须 Task4 契约确认）带入 Task4 简报 | 602e8583 | DONE | ~2k |
+| 11:07 | Task3 质量评审 commit 602e8583（暂存仓储+upsert_row）：APPROVED，0 Critical/Important，3 Minor（函数内 import/merge 返回原对象/精确相等对值类型敏感） | eia_limit_extract_repository.py, eia_standard_repository.py | 报告已发 team-lead | ~6k |
+| 11:09 | Session end: 13 writes across 5 files (w4-standard-pdfs-user-collected.md, eia_limit_extract_core.py, test_eia_limit_extract_core.py, eia_limit_extract_repository.py, eia_standard_repository.py) | 3 reads | ~11433 tok |
+| 11:09 | Session end: 13 writes across 5 files (w4-standard-pdfs-user-collected.md, eia_limit_extract_core.py, test_eia_limit_extract_core.py, eia_limit_extract_repository.py, eia_standard_repository.py) | 3 reads | ~11433 tok |
+| 11:18 | Created backend/test/unit/services/test_eia_limit_extract_service.py | — | ~969 |
+| 11:20 | Created backend/package/yuxi/services/eia_limit_extract_service.py | — | ~2568 |
+| 11:20 | Edited backend/package/yuxi/repositories/eia_standard_repository.py | 1→5 lines | ~39 |
+| 11:21 | Edited backend/package/yuxi/repositories/eia_standard_repository.py | modified list_registry() | ~107 |
+| 11:21 | Edited backend/package/yuxi/services/eia_standard_service.py | modified items() | ~219 |
+| 11:23 | Edited backend/test/unit/services/test_eia_limit_extract_service.py | modified fake_upsert() | ~54 |
+| 11:25 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | inline fix | ~27 |
+
+## Session: 2026-10-19 11:25
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:27 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | 1→3 lines | ~39 |
+| 11:27 | Edited backend/test/unit/services/test_eia_limit_extract_service.py | modified svc() | ~34 |
+| 11:28 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | 3→3 lines | ~40 |
+| 11:31 | Task4 限值提取服务 TDD 落地（4 测试+服务+registry 合并），ruff 清，容器 15 passed，commit 6b666fbb | eia_limit_extract_service.py, eia_standard_service.py, eia_standard_repository.py, test_eia_limit_extract_service.py | DONE | ~9k |
+| 11:33 | Session end: 3 writes across 2 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py) | 4 reads | ~1393 tok |
+| 11:34 | Edited backend/test/unit/services/test_eia_limit_extract_service.py | 9→9 lines | ~121 |
+| 11:34 | Session end: 4 writes across 2 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py) | 5 reads | ~1514 tok |
+| 11:36 | Session end: 4 writes across 2 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py) | 6 reads | ~1514 tok |
+| 11:37 | Task4 预修正：候选迁移测试键号对齐+断言收紧（bug-4057），容器 4 passed，amend 入 225c4adb | test_eia_limit_extract_service.py | DONE | ~1.5k |
+| 11:38 | Session end: 4 writes across 2 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py) | 6 reads | ~1514 tok |
+| 11:38 | Session end: 4 writes across 2 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py) | 6 reads | ~1514 tok |
+| 11:45 | spec-rev-t4 评审 225c4adb（限值提取服务）：4 文件齐、service 仅 1 hunk 注册表合并、语义/偏差/测试全合规、容器 15 passed | eia_limit_extract_service.py 等 4 | APPROVED | ~9k |
+| 11:45 | Session end: 4 writes across 2 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py) | 6 reads | ~1514 tok |
+| 11:46 | Session end: 4 writes across 2 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py) | 6 reads | ~1514 tok |
+| 11:58 | T4质量评审 225c4adb：真实语料冒烟512切片/7276行幂等通过；探针证实3处Important（候选行可直转正/__candidate__键、立表后重跑复生378行、单坏文件UnicodeDecodeError炸全局） | eia_limit_extract_service.py | 报告NEEDS_FIX | ~30k |
+| 11:59 | Created ../../项目管理/环评引用的国标/待下载清单.md | — | ~546 |
+| 11:59 | Session end: 5 writes across 3 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py, 待下载清单.md) | 6 reads | ~2099 tok |
+| 12:00 | Session end: 5 writes across 3 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py, 待下载清单.md) | 6 reads | ~2099 tok |
+| 12:00 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | modified _normalize_row_json() | ~70 |
+| 12:00 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | modified _scan() | ~596 |
+| 12:00 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | modified startswith() | ~134 |
+| 12:00 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | expanded (+6 lines) | ~58 |
+| 12:01 | Edited backend/test/unit/services/test_eia_limit_extract_service.py | modified test_decide_row_discarded_never_upserts() | ~846 |
+| 12:04 | Session end: 10 writes across 3 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py, 待下载清单.md) | 9 reads | ~11564 tok |
+| 12:05 | Task4 质量返工：3I+2M 修复+6 测试补齐（10 用例），21 passed，新 commit 6ece977e | eia_limit_extract_service.py, test_eia_limit_extract_service.py | DONE | ~3k |
+| 12:06 | Session end: 10 writes across 3 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py, 待下载清单.md) | 9 reads | ~11564 tok |
+| 12:06 | Session end: 10 writes across 3 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py, 待下载清单.md) | 9 reads | ~11564 tok |
+| 12:25 | T4复审 6ece977e：5探针全过+19测试绿；但 test_eia_standard_service 2用例红（225c4adb注册表合并块调 list_registry，_FakeLimitRepo 无此方法）——容器21passed说法与实测不符 | eia_standard_service.py:223 | NEEDS_FIX(1项) | ~25k |
+| 12:23 | Session end: 10 writes across 3 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py, 待下载清单.md) | 9 reads | ~11564 tok |
+| 12:23 | Session end: 10 writes across 3 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py, 待下载清单.md) | 9 reads | ~11564 tok |
+| 12:23 | Edited backend/test/unit/test_eia_standard_service.py | modified __init__() | ~126 |
+| 12:23 | Edited backend/test/unit/test_eia_standard_service.py | modified test_list_limit_tables_exposes_registry_new_table() | ~302 |
+| 12:23 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | modified get() | ~48 |
+| 12:26 | Task4 二次返工：补 _FakeLimitRepo.list_registry 桩+注册表露出用例+remap 收紧（bug-4061），40 passed，commit 02c7b948 | test_eia_standard_service.py, eia_limit_extract_service.py | DONE | ~2k |
+| 12:27 | Session end: 13 writes across 4 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py, 待下载清单.md, test_eia_standard_service.py) | 9 reads | ~12040 tok |
+| 12:27 | Session end: 13 writes across 4 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py, 待下载清单.md, test_eia_standard_service.py) | 9 reads | ~12040 tok |
+| 12:40 | T4终审 02c7b948：桩补齐+合并块专测+重映射收紧；全量4文件40 passed实测复现；真实语料探针F证实零复生且已知表稳定 | 2 files | APPROVED | ~15k |
+| 12:35 | Task4 关闭：225c4adb+6ece977e+02c7b948 三提交链双评审 APPROVED，全量 40 passed（真实语料 7276 行幂等验证）；回归清单 ls 实证教训入 cerebrum DNR | 02c7b948 | DONE | ~3k |
+| 12:30 | Session end: 13 writes across 4 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py, 待下载清单.md, test_eia_standard_service.py) | 10 reads | ~17840 tok |
+| 12:31 | Session end: 13 writes across 4 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py, 待下载清单.md, test_eia_standard_service.py) | 10 reads | ~17840 tok |
+| 12:38 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | modified get_eia_limit_extract_service() | ~184 |
+| 12:38 | Edited backend/server/routers/domain_factory_router.py | added 1 import(s) | ~84 |
+| 12:38 | Edited backend/server/routers/domain_factory_router.py | added 1 import(s) | ~68 |
+| 12:38 | Edited backend/server/routers/domain_factory_router.py | modified run_eia_standard_extract() | ~1381 |
+| 12:39 | Created backend/test/integration/api/test_eia_standard_extract_flow.py | — | ~709 |
+| 12:52 | Task5 限值提取 API 六端点 + 集成测试落地；排雷 watchfiles 静默死亡(无ENOMEM 形态)与 business v19→v20 迁移滞后，手动迁移后恢复 | backend/server/routers/domain_factory_router.py, backend/package/yuxi/services/eia_limit_extract_service.py, backend/test/integration/api/test_eia_standard_extract_flow.py | commit 1e0ecb9a；集成 8 passed/33 skipped，unit 四件套 40 passed | ~28k |
+| 12:55 | Session end: 18 writes across 6 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py, 待下载清单.md, test_eia_standard_service.py, domain_factory_router.py) | 13 reads | ~23999 tok |
+| 12:55 | Session end: 18 writes across 6 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py, 待下载清单.md, test_eia_standard_service.py, domain_factory_router.py) | 13 reads | ~23999 tok |
+| 13:12 | 排查 KB44 上传卡「等待」：worker v19/v20 崩溃循环+队列积压，重启复活，32 文件落库开解析（bug-4063） | (运维) | 已恢复 | ~4k |
+| 13:13 | Session end: 18 writes across 6 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py, 待下载清单.md, test_eia_standard_service.py, domain_factory_router.py) | 13 reads | ~23999 tok |
+| 13:14 | Session end: 18 writes across 6 files (eia_limit_extract_service.py, test_eia_limit_extract_service.py, 待下载清单.md, test_eia_standard_service.py, domain_factory_router.py) | 13 reads | ~23999 tok |
+| 13:23 | Task5 quality review of 1e0ecb9a (six extract endpoints): style/exception-mapping/getter consistent with siblings; integration api dir 32p/228s/3 err (project_api errors pre-existing 09-02/09-26), unit four 40 passed; new file 1p/3s (no TEST_USERNAME in env) | domain_factory_router.py, eia_limit_extract_service.py, test_eia_standard_extract_flow.py | APPROVED | ~30k |
+
+## Session: 2026-10-19 13:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-19 13:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:37 | 按 user 指令从 KB44 删除 3 份大文件（土壤农用地17.7M/建筑防火63.2M/垃圾填埋11M），API DELETE 三连成功，DB 29 行余，worker 批次继续 | knowledge_router.py delete_document | ok | ~4k |
+| 13:47 | Created docs/vibe/prototypes/2026-10-19-standards-limit-workbench.html | — | ~11968 |
+| 13:48 | 产出 Task7-8 前端原型 HTML（提取草稿/新表候选/引用展开/KB查询弹层），沿用 2026-10-17 原型令牌与组件，待用户确认 | docs/vibe/prototypes/2026-10-19-standards-limit-workbench.html | created | ~12k |
+| 13:48 | Session end: 1 writes across 1 files (2026-10-19-standards-limit-workbench.html) | 1 reads | ~13273 tok |
+| 13:57 | Session end: 1 writes across 1 files (2026-10-19-standards-limit-workbench.html) | 1 reads | ~13273 tok |
+| 13:59 | Session end: 1 writes across 1 files (2026-10-19-standards-limit-workbench.html) | 2 reads | ~13723 tok |
+| 13:59 | Session end: 1 writes across 1 files (2026-10-19-standards-limit-workbench.html) | 2 reads | ~13723 tok |
+| 18:18 | Session end: 1 writes across 1 files (2026-10-19-standards-limit-workbench.html) | 2 reads | ~13723 tok |
+| 14:0x | Task6 c353c95d 质量审查：prettier --check 不过(3处换行)+listExtractRows 未复用 base.js buildQuery | web/src/apis/eia_standard_api.js | 报告已回报 team-lead | ~8k |
+| 18:24 | Edited web/src/apis/eia_standard_api.js | inline fix | ~19 |
+| 18:25 | Edited web/src/apis/eia_standard_api.js | 9→5 lines | ~61 |
+| 18:27 | 质量返工：listExtractRows 复用 buildQuery + prettier 门 | web/src/apis/eia_standard_api.js | af382333, LINT_OK | ~1k |
+| 18:30 | Session end: 3 writes across 2 files (2026-10-19-standards-limit-workbench.html, eia_standard_api.js) | 3 reads | ~16797 tok |
+| 18:32 | Task6 返工 af382333 落库(buildQuery+prettier)，送质量复核；KB44 index-pending 27份入库中 | eia_standard_api.js | ok | ~6k |
+| 18:32 | Session end: 3 writes across 2 files (2026-10-19-standards-limit-workbench.html, eia_standard_api.js) | 3 reads | ~16797 tok |
+| 18:4x | Task6 返工复核 af382333：buildQuery 复用到位+10用例语义等价+prettier PASS | web/src/apis/eia_standard_api.js | Approved | ~4k |
+| 18:34 | Task6 关闭：spec✅+质量复核✅(af382333 buildQuery+prettier)；cerebrum 记 buildQuery 约定 | eia_standard_api.js | done | ~3k |
+| 18:34 | Session end: 3 writes across 2 files (2026-10-19-standards-limit-workbench.html, eia_standard_api.js) | 3 reads | ~16797 tok |
+| 18:34 | Session end: 3 writes across 2 files (2026-10-19-standards-limit-workbench.html, eia_standard_api.js) | 3 reads | ~16797 tok |
+| 18:46 | 用户确认原型，Task7 实现者出发（提取草稿+新表候选，按原型实现） | StandardsPanel.vue | in-flight | ~5k |
+| 18:49 | KB44 入库 27/29 完成，2 份 varchar 溢出(HJ610/2.3 巨型附表)；定位 _flush_content 整发无守卫，派 chunk-fix 修复 | semantic.py | fix-in-flight | ~5k |
+| 18:50 | Session end: 3 writes across 2 files (2026-10-19-standards-limit-workbench.html, eia_standard_api.js) | 14 reads | ~69319 tok |
+| 18:51 | Edited .claude/worktrees/agent-ad806a5ba88b3016a/backend/package/yuxi/knowledge/chunking/ragflow_like/parsers/semantic.py | modified _flush_content() | ~49 |
+| 18:51 | Edited .claude/worktrees/agent-ad806a5ba88b3016a/backend/package/yuxi/knowledge/chunking/ragflow_like/parsers/semantic.py | inline fix | ~26 |
+| 18:51 | Edited .claude/worktrees/agent-ad806a5ba88b3016a/backend/test/unit/backends/test_semantic_chunking.py | modified test_truncated_heading_token_stream_is_ignored() | ~460 |
+| 18:55 | Edited .claude/worktrees/agent-a0d6fa8031673041d/web/src/components/eia-data/StandardsPanel.vue | 3→3 lines | ~54 |
+| 18:56 | Edited .claude/worktrees/agent-a0d6fa8031673041d/web/src/components/eia-data/StandardsPanel.vue | added optional chaining | ~1978 |
+| 18:56 | Edited .claude/worktrees/agent-a0d6fa8031673041d/web/src/components/eia-data/StandardsPanel.vue | added optional chaining | ~1237 |
+| 18:57 | Edited .claude/worktrees/agent-a0d6fa8031673041d/web/src/components/eia-data/StandardsPanel.vue | added nullish coalescing | ~2859 |
+| 18:57 | Edited .claude/worktrees/agent-a0d6fa8031673041d/web/src/components/eia-data/StandardsPanel.vue | 3→3 lines | ~35 |
+| 18:58 | Edited .claude/worktrees/agent-a0d6fa8031673041d/web/src/components/eia-data/StandardsPanel.vue | expanded (+313 lines) | ~1352 |
+| 18:58 | Edited .claude/worktrees/agent-ad806a5ba88b3016a/backend/test/unit/backends/test_semantic_chunking.py | modified test_oversized_table_splits_within_milvus_varchar_limit() | ~341 |
+| 18:59 | Edited .claude/worktrees/agent-ad806a5ba88b3016a/backend/test/unit/backends/test_semantic_chunking.py | 4→7 lines | ~79 |
+| 19:00 | Edited .claude/worktrees/agent-a0d6fa8031673041d/web/src/components/eia-data/StandardsPanel.vue | 3→4 lines | ~14 |
+| 19:07 | Task7(4c364aba)+切分修复(099beca7,cherry-pick)均落 pisuan-custom；sync-dev 37.1s；2份error_indexing重跑入库(task 3bccd39b)；双审查出发 | StandardsPanel.vue/semantic.py | in-flight | ~6k |
+| 19:07 | Session end: 15 writes across 5 files (2026-10-19-standards-limit-workbench.html, eia_standard_api.js, semantic.py, test_semantic_chunking.py, StandardsPanel.vue) | 16 reads | ~78341 tok |
+| 19:40 | Task7 spec 审查 4c364aba：单文件 980+/4-，4 删除均为 import/逗号/onMounted 级，申报偏差 a-f 全属实，判定合规 | web/src/components/eia-data/StandardsPanel.vue | ✅ 合规 | ~45k |
+| 19:15 | 审查 099beca7 语义切分 60000 守卫：5/5 单测过；实测 60000 边界整发/60001 走 Part 切分；发现残余风险=单行>65535 无句末标点时 token 路径整发不切（上游既有） | semantic.py, test_semantic_chunking.py | Approved | ~30k |
+
+## Session: 2026-10-19 19:18
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:23 | Task 7 quality review of 4c364aba StandardsPanel.vue: approved, 5 Minor (dead table-layout CSS, duplicated col-flatten, N+1 ignore, silent loadExtract, stale expandedIds/cand count) | web/src/components/eia-data/StandardsPanel.vue | report sent to team-lead | ~30k |
+| 19:30 | 诊断重跑仍失败：worker 已是新代码，根因是守卫按字符计而 Milvus 按 UTF-8 字节计；中文列表块 53770 字符=124319 字节漏网 | semantic.py / buglog.json | bug-4066 已记录，chunk-fix 补丁中 | ~12k |
+| 19:29 | Edited .claude/worktrees/agent-ad806a5ba88b3016a/backend/package/yuxi/knowledge/chunking/ragflow_like/parsers/semantic.py | 2→2 lines | ~33 |
+| 19:29 | Edited .claude/worktrees/agent-ad806a5ba88b3016a/backend/package/yuxi/knowledge/chunking/ragflow_like/parsers/semantic.py | inline fix | ~30 |
+| 19:29 | Edited .claude/worktrees/agent-ad806a5ba88b3016a/backend/test/unit/backends/test_semantic_chunking.py | modified _make_chinese_bullet_list() | ~290 |
+| 19:40 | Task 7 双评审通过正式关闭；chunk 099beca7 评审通过（其字符度量结论被 bug-4066 实测推翻，字节补丁在途）；Task 7 五 Minor 记入 .wolf/task12-converge-list.md | StandardsPanel.vue / task12-converge-list.md | Task 7 closed | ~8k |
+| 19:30 | Session end: 3 writes across 2 files (semantic.py, test_semantic_chunking.py) | 0 reads | ~353 tok |
+| 19:55 | 字节守卫补丁落地：ec488f08→9dcfdc45 cherry-pick，运行栈已加载（worker 19:29:46 重启），重索引 task 0be1bf23 排队，增量复审已派 chunk-quality-review | semantic.py / buglog.json | 等索引结果 | ~6k |
+| 19:34 | Session end: 3 writes across 2 files (semantic.py, test_semantic_chunking.py) | 0 reads | ~353 tok |
+| 20:00 | KB44 全绿：29/29 indexed（68ebde=119c、931081=157c），字节守卫运行时验证通过，varchar 事故闭环 | knowledge_files | bug-4066 verified | ~3k |
+| 19:36 | Session end: 3 writes across 2 files (semantic.py, test_semantic_chunking.py) | 1 reads | ~353 tok |
+| 19:38 | Edited .claude/worktrees/agent-aebd7b9bf4ee92274/web/src/components/eia-data/StandardsPanel.vue | CSS: ChevronRight, open | ~276 |
+| 19:38 | Edited .claude/worktrees/agent-aebd7b9bf4ee92274/web/src/components/eia-data/StandardsPanel.vue | added optional chaining | ~764 |
+| 19:38 | Edited .claude/worktrees/agent-aebd7b9bf4ee92274/web/src/components/eia-data/StandardsPanel.vue | 4→4 lines | ~57 |
+| 19:39 | Edited .claude/worktrees/agent-aebd7b9bf4ee92274/web/src/components/eia-data/StandardsPanel.vue | 1→4 lines | ~43 |
+| 19:39 | Edited .claude/worktrees/agent-aebd7b9bf4ee92274/web/src/components/eia-data/StandardsPanel.vue | added optional chaining | ~624 |
+| 19:39 | Edited .claude/worktrees/agent-aebd7b9bf4ee92274/web/src/components/eia-data/StandardsPanel.vue | added 1 import(s) | ~72 |
+| 19:39 | Edited .claude/worktrees/agent-aebd7b9bf4ee92274/web/src/components/eia-data/StandardsPanel.vue | added 6 condition(s) | ~836 |
+| 19:39 | Edited .claude/worktrees/agent-aebd7b9bf4ee92274/web/src/components/eia-data/StandardsPanel.vue | expanded (+135 lines) | ~592 |
+| 19:40 | Edited .claude/worktrees/agent-aebd7b9bf4ee92274/web/src/components/eia-data/StandardsPanel.vue | expanded (+8 lines) | ~32 |
+| 19:41 | 增量复审 9dcfdc45 字节守卫：6/6 过；mutation 实证新用例判别性（字符回退/删守卫均 FAILED）；修正上轮字符度量结论；新发现上游既有 bug：extract_table_block 文档末尾表格 map=None 时内容丢失只剩表头 | semantic.py, md_parser_utils.py | Approved | ~40k |
+| 20:10 | 9dcfdc45 增量复审 Approved（突变验证 2/2），chunk 修复链闭环；bug-4067 文末表格截断双独立发现入账待用户裁决 | task12-converge-list.md / buglog.json | chunk saga closed | ~6k |
+| 19:42 | Session end: 12 writes across 3 files (semantic.py, test_semantic_chunking.py, StandardsPanel.vue) | 2 reads | ~18659 tok |
+| 19:42 | Session end: 12 writes across 3 files (semantic.py, test_semantic_chunking.py, StandardsPanel.vue) | 2 reads | ~18659 tok |
+| 20:35 | Task 8 合并：7871514d→341c3869 cherry-pick（弃 wolf 记账提交），定向 eslint 0 问题，sync-dev 61.2s 完成；spec 评审 task8-spec-review-2 在途 | StandardsPanel.vue | 待双评审 | ~5k |
+| 19:49 | Session end: 12 writes across 3 files (semantic.py, test_semantic_chunking.py, StandardsPanel.vue) | 2 reads | ~20727 tok |
+| 19:51 | Session end: 12 writes across 3 files (semantic.py, test_semantic_chunking.py, StandardsPanel.vue) | 7 reads | ~20727 tok |
+| 20:52 | Task 8 spec 合规审查：341c3869 全要素过检（空态/提示条两处排版级偏差均与原型逐字一致），envelope 程序化校验 0 语义外改动，后端/前端申报事实全坐实，prettier CRLF 假阳性甄别 | StandardsPanel.vue | ✅ 合规 | ~25k |
+| 19:59 | Session end: 12 writes across 3 files (semantic.py, test_semantic_chunking.py, StandardsPanel.vue) | 7 reads | ~20727 tok |
+| 19:59 | Session end: 12 writes across 3 files (semantic.py, test_semantic_chunking.py, StandardsPanel.vue) | 7 reads | ~20727 tok |
+| 20:04 | T8 quality review of 341c3869 (StandardsPanel.vue 引用展开+KB弹层) | web/src/components/eia-data/StandardsPanel.vue | 需返工: 失败缓存空态无重试且误报0引用, KB弹层stale响应竞态; 另2 Minor | ~40k |
+| 20:05 | Session end: 12 writes across 3 files (semantic.py, test_semantic_chunking.py, StandardsPanel.vue) | 8 reads | ~20727 tok |
+| 20:05 | Session end: 12 writes across 3 files (semantic.py, test_semantic_chunking.py, StandardsPanel.vue) | 8 reads | ~20727 tok |
+| 20:08 | Edited web/src/components/eia-data/StandardsPanel.vue | CSS: error | ~259 |
+| 20:08 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+7 lines) | ~231 |
+| 20:08 | Edited web/src/components/eia-data/StandardsPanel.vue | CSS: seq | ~47 |
+| 20:08 | Edited web/src/components/eia-data/StandardsPanel.vue | 6→8 lines | ~72 |
+| 20:09 | Edited web/src/components/eia-data/StandardsPanel.vue | added 3 condition(s) | ~112 |
+| 20:09 | Edited web/src/components/eia-data/StandardsPanel.vue | 7→7 lines | ~41 |
+| 20:09 | Edited web/src/components/eia-data/StandardsPanel.vue | 2→2 lines | ~36 |
+| 20:11 | StandardsPanel rework: cite-cache error sentinel+retry, kbDlg seq race guard, --font-mono token, dynamic colspan; commit 10f3b901 (+30/-7) | StandardsPanel.vue, buglog.json | done |
+| 20:50 | Task 8 返工 10f3b901 已在 pisuan-custom（agent 直接移了分支引用致 cherry-pick 空，已改用 ff 验证）；eslint clean；增量复审派出 | StandardsPanel.vue | 待复审 | ~4k |
+| 20:15 | Session end: 19 writes across 3 files (semantic.py, test_semantic_chunking.py, StandardsPanel.vue) | 9 reads | ~27083 tok |
+| 20:15 | Session end: 19 writes across 3 files (semantic.py, test_semantic_chunking.py, StandardsPanel.vue) | 9 reads | ~27083 tok |
+| 20:16 | T8 rework re-review of 10f3b901 (StandardsPanel.vue) | web/src/components/eia-data/StandardsPanel.vue | Approved: 4 返工点全落实, seq+submitting 补充逻辑核验正确, colspan 常量折中可接受 | ~15k |
+| 21:00 | Task 8 增量复审 Approved，Task 8 正式关闭（341c3869+10f3b901）；进入 7+8 运行时 QA → Task 9 | StandardsPanel.vue | Task 8 closed | ~3k |
+
+## Session: 2026-10-19 20:22
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:49 | Edited .claude/worktrees/t9-tune/backend/test/unit/services/test_eia_limit_extract_core.py | modified test_inline_prose_fragment_rejected() | ~621 |
+| 20:50 | Edited .claude/worktrees/t9-tune/backend/package/yuxi/services/eia_limit_extract_core.py | modified norm_factor() | ~219 |
+| 20:50 | Edited .claude/worktrees/t9-tune/backend/package/yuxi/services/eia_limit_extract_core.py | inline fix | ~14 |
+| 20:50 | Edited .claude/worktrees/t9-tune/backend/package/yuxi/services/eia_limit_extract_core.py | modified norm_grade() | ~204 |
+| 20:51 | Edited .claude/worktrees/t9-tune/backend/package/yuxi/services/eia_limit_extract_core.py | 8→8 lines | ~79 |
+| 20:51 | Edited .claude/worktrees/t9-tune/backend/package/yuxi/services/eia_limit_extract_core.py | modified _factor_ok() | ~140 |
+| 20:51 | Edited .claude/worktrees/t9-tune/backend/package/yuxi/services/eia_limit_extract_core.py | modified _factor_ok() | ~566 |
+| 20:52 | Edited .claude/worktrees/t9-tune/backend/test/unit/services/test_eia_limit_extract_core.py | 2→2 lines | ~44 |
+| 10-19 | 限值提取内核调参：_factor_ok垃圾因子过滤/非噪声表拒收dB(A)/norm_grade digit_only数字档，新增5单测 | eia_limit_extract_core.py, test_eia_limit_extract_core.py | 14/14 pass(host), ruff OK, commit 025ed74b@t9-tune | ~9k |
+| 20:35 | Task7+8 浏览器 QA 完成：KB 查询弹层（默认库/预填/结果渲染）、引用展开数据/空态/重试三态全验证，console 零报错 | StandardsPanel.vue | PASS |
+| 20:29 | Task9 Step1 计时提取：4.5s（阈值 30s 内），7 表中 6 表命中 721 行 + 129 组候选（GB8978/18599 符合预期；gbt13201_a_value 零命中） | eia_limit_extract_service | DONE |
+| 20:40 | Task9 Step3 预检判负：四类系统性噪声（散文碎片/跨标准dB(A)/罗马档位/序号碎片），precision~85-92% 卡门 → bug-4068 立案回 Task 2 | /tmp/rows_*.json | FAIL→TUNE |
+| 21:25 | t9tune-impl 交付 025ed74b（_factor_ok 垃圾过滤+dB(A)隔离+digit_only），ff 合并，容器 14/14+10/10 过，spec 审查中 | eia_limit_extract_core.py | MERGED |
+| 21:00 | Session end: 8 writes across 2 files (test_eia_limit_extract_core.py, eia_limit_extract_core.py) | 4 reads | ~13308 tok |
+
+## Session: 2026-10-19 21:02
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:07 | spec-compliance review of 025ed74b (Task2 调参): 4/4 spec items verified, candidate path byte-identical, 13 empirical garbage samples rejected, 41 legal factors zero false-kill, 5 new tests non-vacuous | eia_limit_extract_core.py | PASS no missing/extra | ~9k |
+| 21:05 | Task9 抽检工具 sampler.py 搭建+冒烟通过（sample/fetch/join，78 anchor 全解析）；发现第五类噪声=监测数据误提，重跑后重点盯 | .wolf/sampling/sampler.py | DONE | ~3k |
+| 21:40 | Task9 第二轮抽检6表完成：精度10-15%结构性FAIL（监测值当限值主导）；bug-4069；方向决策上报用户 | .wolf/buglog.json | FAIL-GATE | ~5k |
+| 21:50 | t9tune 质量审查 APPROVED（025ed74b 两阶段齐，Minor 5条入 task12 清单）；方向决策待用户 | .wolf/task12-converge-list.md | CLOSED | ~2k |
+| 21:25 | Created docs/vibe/2026-10-19-extraction-ab-redirect.md | — | ~374 |
+| 22:00 | 用户裁决 A+B；changelog 试跑结论已记；vibe 需求文档+计划 Task 13 已落 | changelog/vibe/plan | DONE | ~4k |
+| 21:27 | Session end: 1 writes across 1 files (2026-10-19-extraction-ab-redirect.md) | 0 reads | ~401 tok |
+| 21:44 | Created .claude/worktrees/task13-llm-cls/backend/test/unit/services/test_eia_limit_llm_classifier.py | — | ~3868 |
+| 21:45 | Created .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_llm_classifier.py | — | ~1771 |
+| 21:46 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_llm_classifier.py | modified timeout() | ~72 |
+| 21:47 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_extract_service.py | 6→7 lines | ~106 |
+| 21:47 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_extract_service.py | added 1 import(s) | ~88 |
+| 21:47 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_extract_service.py | modified __init__() | ~829 |
+| 21:48 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_extract_service.py | 7→8 lines | ~73 |
+| 21:48 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_extract_service.py | 3→3 lines | ~58 |
+| 21:48 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_extract_service.py | 2→2 lines | ~28 |
+| 21:49 | Edited .claude/worktrees/task13-llm-cls/backend/test/unit/services/test_eia_limit_extract_service.py | modified __init__() | ~158 |
+| 21:49 | Edited .claude/worktrees/task13-llm-cls/backend/test/unit/services/test_eia_limit_extract_service.py | modified svc() | ~43 |
+| 21:52 | Edited .claude/worktrees/task13-llm-cls/backend/test/unit/services/test_eia_limit_llm_classifier.py | modified test_structured_channel_rejects_monitoring_statement() | ~261 |
+| 21:53 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_llm_classifier.py | modified _try_structured() | ~220 |
+| 21:55 | Edited .claude/worktrees/task13-llm-cls/docs/develop-guides/changelog.md | modified feat() | ~210 |
+| 21:55 | Edited .claude/worktrees/task13-llm-cls/backend/server/routers/domain_factory_router.py | "启动语料限值提取（同步纯 CPU，返回提取报告；a" → "启动语料限值提取（切片扫描 + 逐区块 LLM 语" | ~18 |
+| 22:40 | Created docs/vibe/2026-10-19-standards-source-pipeline-notes.md | — | ~485 |
+| 22:50 | A通道停车：Q8截断实证打烂表1；4数字版parsed停车、3扫描件待新OCR；notes文档落盘 | docs/vibe/2026-10-19-standards-source-pipeline-notes.md | PARKED | ~4k |
+| 22:41 | Session end: 17 writes across 8 files (2026-10-19-extraction-ab-redirect.md, test_eia_limit_llm_classifier.py, eia_limit_llm_classifier.py, eia_limit_extract_service.py, test_eia_limit_extract_service.py) | 8 reads | ~78778 tok |
+
+## Session: 2026-10-19 22:44
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:45 | Task13 t13-llm-impl DONE b5c7e9e9（判别器+接线+43测试绿）；控制器已派 spec 合规评审 | eia_limit_llm_classifier.py 等 6 文件 | IN_REVIEW | ~10k |
+| 23:04 | Task13 质量评审 APPROVED（I1缓存污染/I2过严丢块派回实现者修；I3/I4/M1-M4入跟进清单） | task12-converge-list.md | IN_PROGRESS | ~15k |
+| 23:06 | Edited .claude/worktrees/task13-llm-cls/backend/test/unit/services/test_eia_limit_llm_classifier.py | test_structured_channel_malformed_dict_fail_closed() → test_structured_channel_malformed_dict_fail_closed_without_blacklist() | ~210 |
+| 23:06 | Edited .claude/worktrees/task13-llm-cls/backend/test/unit/services/test_eia_limit_llm_classifier.py | modified test_limit_value_string_forms_pass_prompt_channel() | ~286 |
+| 23:07 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_llm_classifier.py | inline fix | ~16 |
+| 23:07 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_llm_classifier.py | modified _InvalidVerdict() | ~207 |
+| 23:07 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_llm_classifier.py | modified get() | ~166 |
+| 23:08 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_llm_classifier.py | modified _try_structured() | ~287 |
+| 23:08 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_llm_classifier.py | 1→3 lines | ~33 |
+| 23:09 | Edited .claude/worktrees/task13-llm-cls/docs/develop-guides/changelog.md | inline fix | ~88 |
+| 23:11 | Task13 I1/I2 修毕 ccda8352（44 passed，TDD红绿实证）；复审已派原质量评审员 | eia_limit_llm_classifier.py | IN_REVIEW | ~8k |
+| 23:11 | Session end: 8 writes across 3 files (test_eia_limit_llm_classifier.py, eia_limit_llm_classifier.py, changelog.md) | 1 reads | ~5284 tok |
+| 23:11 | Session end: 8 writes across 3 files (test_eia_limit_llm_classifier.py, eia_limit_llm_classifier.py, changelog.md) | 1 reads | ~5284 tok |
+| 23:31 | Task13 已合并 pisuan-custom(ccda8352)；fast_model=agnes-2.5-flash 实测1-4s；命中7581块→I3/I4改造派单 | MEMORY | PARTIAL | ~25k |
+| 23:31 | Session end: 8 writes across 3 files (test_eia_limit_llm_classifier.py, eia_limit_llm_classifier.py, changelog.md) | 4 reads | ~5284 tok |
+| 23:35 | Edited .claude/worktrees/task13-llm-cls/backend/test/unit/services/test_eia_limit_llm_classifier.py | modified test_default_classifier_is_llm_gate() | ~1296 |
+| 23:35 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_extract_service.py | added 1 import(s) | ~31 |
+| 23:36 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_extract_service.py | inline fix | ~32 |
+| 23:36 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_extract_service.py | 4→5 lines | ~73 |
+| 23:36 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_extract_service.py | 3→4 lines | ~79 |
+| 23:36 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_extract_service.py | modified run_extraction() | ~912 |
+| 23:38 | Edited .claude/worktrees/task13-llm-cls/backend/test/unit/services/test_eia_limit_llm_classifier.py | modified judge() | ~187 |
+| 23:38 | Edited .claude/worktrees/task13-llm-cls/docs/develop-guides/changelog.md | inline fix | ~114 |
+| 23:39 | Edited .claude/worktrees/task13-llm-cls/backend/package/yuxi/services/eia_limit_extract_service.py | modified _judge_one() | ~234 |
+| 23:41 | Task13 I3/I4 交付 e2e4a1d7（48 passed，Semaphore6+run锁）；复审已派原质量评审员 | eia_limit_extract_service.py | IN_REVIEW | ~8k |
+| 23:41 | Session end: 17 writes across 4 files (test_eia_limit_llm_classifier.py, eia_limit_llm_classifier.py, changelog.md, eia_limit_extract_service.py) | 4 reads | ~8469 tok |
+| 23:41 | Session end: 17 writes across 4 files (test_eia_limit_llm_classifier.py, eia_limit_llm_classifier.py, changelog.md, eia_limit_extract_service.py) | 4 reads | ~8469 tok |
+| 23:47 | Task13 I3/I4 复审APPROVED，e2e4a1d7 已合并 pisuan-custom + 同步栈，容器48/48绿；真实判别12块冒烟已发 | MEMORY | OK | ~12k |
+| 23:47 | Session end: 17 writes across 4 files (test_eia_limit_llm_classifier.py, eia_limit_llm_classifier.py, changelog.md, eia_limit_extract_service.py) | 4 reads | ~8469 tok |
+| 23:49 | Session end: 17 writes across 4 files (test_eia_limit_llm_classifier.py, eia_limit_llm_classifier.py, changelog.md, eia_limit_extract_service.py) | 5 reads | ~8469 tok |
+| 00:07 | Session end: 17 writes across 4 files (test_eia_limit_llm_classifier.py, eia_limit_llm_classifier.py, changelog.md, eia_limit_extract_service.py) | 6 reads | ~8469 tok |
+| 00:12 | Step4 全量重跑已启动（pending清7128行→0；fast_model=本地gemma-4-E4B 1.7s；容器内HTTP脱离会话）；监控已挂 | eia_limit_extract_rows /tmp/extract_run.log | RUNNING | ~15k |
+| 00:12 | Session end: 17 writes across 4 files (test_eia_limit_llm_classifier.py, eia_limit_llm_classifier.py, changelog.md, eia_limit_extract_service.py) | 8 reads | ~8469 tok |
+| 00:14 | Session end: 17 writes across 4 files (test_eia_limit_llm_classifier.py, eia_limit_llm_classifier.py, changelog.md, eia_limit_extract_service.py) | 9 reads | ~8469 tok |
+| 00:18 | Session end: 17 writes across 4 files (test_eia_limit_llm_classifier.py, eia_limit_llm_classifier.py, changelog.md, eia_limit_extract_service.py) | 9 reads | ~8469 tok |
+
+## Session: 2026-10-19 00:30
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:35 | Edited web/src/components/eia-data/StandardsPanel.vue | "record in filteredItems" → "record in pagedItems" | ~19 |
+| 00:35 | Edited web/src/components/eia-data/StandardsPanel.vue | CSS: a-select | ~207 |
+| 00:35 | Edited web/src/components/eia-data/StandardsPanel.vue | inline fix | ~17 |
+| 00:35 | Edited web/src/components/eia-data/StandardsPanel.vue | CSS: value, label | ~167 |
+| 00:35 | Edited web/src/components/eia-data/StandardsPanel.vue | modified deep() | ~211 |
+| 00:38 | Edited web/src/components/eia-data/StandardsPanel.vue | 3→1 lines | ~26 |
+| 00:39 | Edited docs/develop-guides/changelog.md | 1→3 lines | ~45 |
+| 00:39 | Created ../../Users/Lenovo/AppData/Local/Temp/append_buglog_4101.py | — | ~309 |
+| 00:40 | 标准与限值库核实清单列表分页（10/20/50，默认10）——LexiconPanel pager 配方复用；四环验证+容器 lint 清 | web/src/components/eia-data/StandardsPanel.vue, docs/develop-guides/changelog.md | done, vite 200 | ~6k |
+| 00:40 | Created ../../Users/Lenovo/AppData/Local/Temp/insert_cerebrum.py | — | ~292 |
+| 00:40 | Session end: 9 writes across 4 files (StandardsPanel.vue, changelog.md, append_buglog_4101.py, insert_cerebrum.py) | 7 reads | ~64752 tok |
+| 00:45 | Session end: 9 writes across 4 files (StandardsPanel.vue, changelog.md, append_buglog_4101.py, insert_cerebrum.py) | 7 reads | ~64744 tok |
+| 12:05 | GBT14848 实测：paddleocr_vl_local 整页 OCR: 无表格结构致 Semantic KV 失效；deepseek_ocr+Semantic 全链路验证通过；两临时 KB 已删 | parser/paddleocr_vl_local.py, .wolf/gbt_content_ds.md | bug-4102 | ~88000 |
+| 00:55 | Created ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/gbt14848-ocr-semantic-verification.md | — | ~319 |
+| 00:55 | Edited ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/MEMORY.md | 1→2 lines | ~70 |
+| 00:55 | Session end: 11 writes across 6 files (StandardsPanel.vue, changelog.md, append_buglog_4101.py, insert_cerebrum.py, gbt14848-ocr-semantic-verification.md) | 9 reads | ~65890 tok |
+| 00:57 | Edited web/src/components/eia-data/StandardsPanel.vue | toggleCitations() → toggleTables() | ~111 |
+| 00:57 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+6 lines) | ~84 |
+| 00:58 | Edited web/src/components/eia-data/StandardsPanel.vue | 34→37 lines | ~453 |
+| 00:58 | Edited web/src/components/eia-data/StandardsPanel.vue | added optional chaining | ~419 |
+| 00:58 | Edited web/src/components/eia-data/StandardsPanel.vue | CSS: open, code, title | ~479 |
+| 01:00 | Edited web/src/components/eia-data/StandardsPanel.vue | 5→1 lines | ~27 |
+| 01:01 | Edited docs/develop-guides/changelog.md | 1→3 lines | ~99 |
+| 01:20 | 标准核实清单交互改版：展开区改关联限值表（code_ref 本地关联）+ 引用清单迁右抽屉（点数字触发，0 引用 toast） | web/src/components/eia-data/StandardsPanel.vue, docs/develop-guides/changelog.md | done, lint+vite 200 | ~9k |
+| 01:01 | Session end: 18 writes across 6 files (StandardsPanel.vue, changelog.md, append_buglog_4101.py, insert_cerebrum.py, gbt14848-ocr-semantic-verification.md) | 10 reads | ~72106 tok |
+| 01:09 | Session end: 18 writes across 6 files (StandardsPanel.vue, changelog.md, append_buglog_4101.py, insert_cerebrum.py, gbt14848-ocr-semantic-verification.md) | 10 reads | ~72106 tok |
+| 01:52 | Session end: 18 writes across 6 files (StandardsPanel.vue, changelog.md, append_buglog_4101.py, insert_cerebrum.py, gbt14848-ocr-semantic-verification.md) | 10 reads | ~72106 tok |
+| 06:50 | 诊断 eia-limit-llm fail-closed 刷屏：宿主机 llama-server(8080) 推理卡死（completions 全挂/CPU 满载），判别器 60s 超时空消息；生产库重导入 31/31 解析完成 0 失败 | eia_limit_llm_classifier.py | bug-4103 | ~96000 |
+| 06:41 | Session end: 18 writes across 6 files (StandardsPanel.vue, changelog.md, append_buglog_4101.py, insert_cerebrum.py, gbt14848-ocr-semantic-verification.md) | 11 reads | ~72106 tok |
+| 07:05 | llama-server 重启验证通过；遗留 60s 预算<93s CPU 推理待裁决；生产库 31/31 indexed 3068 chunks 全部收尾核查通过 | eia_limit_llm_classifier.py, kb_yn2req38m2 | bug-4103 updated | ~108000 |
+| 06:57 | Edited ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/gbt14848-ocr-semantic-verification.md | inline fix | ~60 |
+| 06:58 | Session end: 19 writes across 6 files (StandardsPanel.vue, changelog.md, append_buglog_4101.py, insert_cerebrum.py, gbt14848-ocr-semantic-verification.md) | 11 reads | ~72170 tok |
+
+## Session: 2026-10-19 07:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:15 | 定位僵尸警告来源：Task13 语料限值提取试跑（00:12 启动）无 cancel 端点，7581 块×6并发×60s 超时全 failed | eia_limit_extract_service.py | 数据源=samples_bank 磁盘切片 512 个（非KB），与 KB 重导入无关；fail-closed 零行写入 | ~3k |
+| 07:36 | fast_model 切 deepseek-chat（未注册，run#1 秒败）；改 v4-flash 重跑成功 1654 行入暂存 | options.py / eia_limit_extract_service.py | gate 2041 passed/1820 failed(402 余额) | ~8k |
+| 08:25 | run#3 全败：单例缓存 v4-flash 402；重启 api 后 run#5 用 agnes 重跑中 | eia_limit_llm_classifier.py | bug-4104/4105/4106 已记档 | ~4k |
+| 08:20 | 数值护栏词表重建：95 候选新增 89 条 | eia_lexicon_service.py | 幂等导入成功 | ~1k |
+| 10:03 | Edited web/src/components/common/MarkdownPreview.vue | CSS: bordered | ~30 |
+| 10:03 | Edited web/src/components/common/MarkdownPreview.vue | inline fix | ~23 |
+| 10:03 | Edited web/src/components/common/MarkdownPreview.vue | expanded (+32 lines) | ~143 |
+| 10:04 | Edited web/src/components/FileDetailModal.vue | 5→6 lines | ~43 |
+| 10:05 | 知识库 markdown 预览完备度梳理 + 表格边框修复（bordered opt-in 变体） | MarkdownPreview.vue / FileDetailModal.vue | 实测 \(\)公式/mermaid/脚注不支持；KaTeX $ 定界与 HTML 表格 colspan 正常 | ~5k |
+| 10:05 | Session end: 4 writes across 2 files (MarkdownPreview.vue, FileDetailModal.vue) | 8 reads | ~41032 tok |
+| 10:12 | Edited web/src/components/common/MarkdownPreview.vue | CSS: padding | ~138 |
+| 10:12 | 表格边框加深 gray-200→gray-300（暗色 0.2）、bordered 变体加单元格横向内边距；OCR 表无 th 不做表头识别（用户决策） | MarkdownPreview.vue | prettier 通过 | ~1k |
+| 10:20 | 发现 web 改动未达运行栈（挂载=pisuan-localized 树）；跑 sync-dev.ps1 同步 43 文件，HMR 生效 | scripts/sync-dev.ps1 | 表格边框 gray-300+内边距最终到位 | ~6k |
+| 10:20 | Session end: 5 writes across 2 files (MarkdownPreview.vue, FileDetailModal.vue) | 8 reads | ~48812 tok |
+| 10:29 | Edited web/src/utils/markdown_preview.js | expanded (+14 lines) | ~211 |
+
+## Session: 2026-10-20 10:32
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:32 | Edited web/src/utils/markdown_preview.js | 1→3 lines | ~46 |
+| 10:35 | Edited web/src/utils/markdown_preview.js | 3→5 lines | ~51 |
+| 10:37 | Edited docs/develop-guides/changelog.md | modified fix() | ~110 |
+| 10:38 | Markdown 预览 LaTeX 定界归一（圆括号/方括号定界转美元符定界，围栏与行内代码段保护）+ changelog 条目 + bug-4107；8 用例容器快测过，sync-dev 交付运行栈，prettier 绿，vite 已下发 | web/src/utils/markdown_preview.js, docs/develop-guides/changelog.md | done | ~25k |
+| 10:39 | Session end: 3 writes across 2 files (markdown_preview.js, changelog.md) | 1 reads | ~33177 tok |
+
+## Session: 2026-10-20 10:48
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-20 10:48
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:53 | 同步阻断：github 443 不可达（bug-453，同 274 模式待用户开代理）；本地就绪=pisuan-custom@e2e4a1d7（40 提交待推）+ main@031e2c72 纯镜像完好 | buglog | 待网络恢复执行 | ~600 |
+
+## Session: 2026-10-20 12:00
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:15 | 上游同步收尾：bug-454 rebase误报绕过 + bug-455 localized积垢阻塞登记 | .wolf/buglog.json | done | 1.5k |
+| 12:17 | Created ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/localized-rebuild-needs-clean-tree.md | — | ~285 |
+| 12:18 | Session end: 1 writes across 1 files (localized-rebuild-needs-clean-tree.md) | 3 reads | ~305 tok |
+| 12:23 | Created docs/vibe/2026-10-20-table-merge-and-table-edit.md | — | ~561 |
+| 12:24 | Created backend/package/yuxi/knowledge/parser/table_merge.py | — | ~916 |
+| 12:25 | Created backend/test/unit/knowledge/test_table_merge.py | — | ~1201 |
+| 12:30 | localized 重建+推送 a02217e71；sync-dev 恢复用户未提交覆盖层（StandardsPanel分页/语料引用/MarkdownPreview表格）；上游测试17P | sync-dev.ps1, pisuan-localized | done | 8k |
+| 12:33 | Session end: 4 writes across 4 files (localized-rebuild-needs-clean-tree.md, 2026-10-20-table-merge-and-table-edit.md, table_merge.py, test_table_merge.py) | 6 reads | ~3023 tok |
+| 12:37 | Edited backend/package/yuxi/knowledge/parser/table_merge.py | modified not() | ~357 |
+| 12:38 | Edited backend/package/yuxi/knowledge/parser/table_merge.py | 3→3 lines | ~64 |
+| 12:39 | Edited backend/package/yuxi/knowledge/parser/deepseek_ocr.py | 4→7 lines | ~98 |
+| 12:40 | Edited backend/package/yuxi/knowledge/parser/deepseek_ocr.py | added 1 import(s) | ~63 |
+| 12:40 | Edited backend/package/yuxi/knowledge/parser/paddleocr_vl_local.py | 5→8 lines | ~120 |
+| 12:41 | Edited backend/package/yuxi/knowledge/parser/paddleocr_vl_local.py | added 1 import(s) | ~43 |
+| 12:43 | Session end: 10 writes across 6 files (localized-rebuild-needs-clean-tree.md, 2026-10-20-table-merge-and-table-edit.md, table_merge.py, test_table_merge.py, deepseek_ocr.py) | 6 reads | ~3768 tok |
+| 12:44 | Edited backend/package/yuxi/knowledge/parser/table_merge.py | 5→4 lines | ~33 |
+| 12:44 | Edited backend/package/yuxi/knowledge/parser/table_merge.py | modified not() | ~64 |
+| 12:44 | Edited backend/test/unit/knowledge/test_table_merge.py | modified test_realistic_gbt14848_fragment() | ~128 |
+| 12:45 | Edited backend/package/yuxi/knowledge/base.py | modified _read_markdown_from_minio() | ~269 |
+| 12:47 | Edited backend/server/routers/knowledge_router.py | inline fix | ~27 |
+| 12:47 | Edited backend/server/routers/knowledge_router.py | modified update_document_content() | ~273 |
+| 12:48 | Edited web/src/apis/knowledge_api.js | expanded (+11 lines) | ~144 |
+| 12:50 | Created web/src/components/TableEditModal.vue | — | ~1560 |
+| 12:54 | Edited web/src/components/FileTable.vue | expanded (+12 lines) | ~215 |
+| 12:54 | Edited web/src/components/FileTable.vue | 3→4 lines | ~16 |
+| 12:54 | Edited web/src/components/FileTable.vue | added 1 import(s) | ~31 |
+| 12:55 | Edited web/src/components/FileTable.vue | modified if() | ~106 |
+| 12:55 | Edited web/src/components/FileTable.vue | added optional chaining | ~64 |
+| 12:55 | Session end: 23 writes across 11 files (localized-rebuild-needs-clean-tree.md, 2026-10-20-table-merge-and-table-edit.md, table_merge.py, test_table_merge.py, deepseek_ocr.py) | 8 reads | ~6839 tok |
