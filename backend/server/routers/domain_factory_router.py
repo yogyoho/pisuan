@@ -1739,6 +1739,18 @@ async def list_eia_standard_citations(
         raise HTTPException(status_code=500, detail=f"获取标准引用清单失败: {str(e)}")
 
 
+@domain_factory.get("/eia/standards/source-candidates")
+async def list_eia_source_candidates(
+    current_user: User = Depends(get_admin_user),
+) -> list[dict[str, Any]]:
+    """缺源候选：语料引用标准号聚合减去 standard_indicators 已覆盖（归一化比对，引用数降序；admin）"""
+    try:
+        return await get_eia_limit_extract_service().list_source_candidates()
+    except Exception as e:
+        logger.error(f"Failed to list eia source candidates: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取缺源候选失败: {str(e)}")
+
+
 # =============================================================================
 # EIA Sections & Stage Forms (环评节级明细只读 + stages forms 口径字段人工裁决)
 # =============================================================================

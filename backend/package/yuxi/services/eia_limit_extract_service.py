@@ -19,7 +19,9 @@ from yuxi.repositories.eia_limit_extract_repository import EiaLimitExtractReposi
 from yuxi.repositories.eia_standard_repository import EiaStandardRepository
 from yuxi.services.eia_data_service import _SKILL_ROOT
 from yuxi.services.eia_limit_extract_core import (
+    aggregate_cited_codes,
     aggregate_records,
+    diff_source_candidates,
     locate_standard_blocks,
     norm_code,
     parse_block,
@@ -268,6 +270,23 @@ class EiaLimitExtractService:
             if cited_as:
                 reports.append({"report_id": rid, "stage": m.get("stage", ""), "cited_as": cited_as})
         return {"code": code, "cited_count": len(reports), "reports": reports}
+
+    async def list_source_candidates(self) -> list[dict[str, Any]]:
+        """缺源候选：语料引用标准号聚合，归一化后减去 standard_indicators 已覆盖（引用数降序）。
+
+        v1 简化：候选全部视为「缺源」；「已入 KB · 待提取」状态判定延后。
+        """
+        from yuxi.services.eia_meta_service import _load_corpus_meta
+
+        meta = await run_in_threadpool(_load_corpus_meta)
+        from yuxi.extensions.regulation_library.enrichment_service import distinct_doc_codes
+
+        covered = await distinct_doc_codes()
+        candidates = diff_source_candidates(aggregate_cited_codes(meta), covered)
+        logger.info(
+            f"[eia-limit-extract] 缺源候选 {len(candidates)} 个（standard_indicators 已覆盖 {len(covered)} 个）"
+        )
+        return candidates
 
 
 _service: EiaLimitExtractService | None = None

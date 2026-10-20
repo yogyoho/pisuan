@@ -9,10 +9,10 @@ from dataclasses import dataclass
 
 # --------------------------------------------------------------- 标准号归一
 # 去噪口径借鉴 eia_standard_service._norm_std（内核保持零依赖，故本地实现不反向 import），
-# 但保留「号-年」连字符：全大写、剔除空白与斜杠、破折号变体归一为 ASCII 连字符，
-# 即 "GB 3096-2008" / "GB／3096—2008" / "GB3096-2008" -> "GB3096-2008"。
+# 但保留「号-年」连字符：全大写、剔除空白与斜杠、破折号变体（含全角－）归一为 ASCII 连字符，
+# 即 "GB 3096-2008" / "GB3096－2008" / "GB3096-2008" -> "GB3096-2008"。
 _STD_NOISE_RE = re.compile(r"[\s/]+")
-_STD_DASH_RE = re.compile(r"[—–]")
+_STD_DASH_RE = re.compile(r"[—–－]")
 
 
 def norm_code(code: str) -> str:
@@ -35,6 +35,44 @@ def table_key_for(code: str) -> str | None:
     """按归一码前缀映射已知限值表；未命中返回 None（候选表）。"""
     std = norm_code(code)
     return next((key for prefix, key in _TABLE_BY_PREFIX.items() if std.startswith(prefix)), None)
+
+
+# --------------------------------------------------------------- 缺源候选（W1 标准面板 tab2）
+_SAMPLE_SOURCE_CAP = 3  # 候选卡样例来源展示条数
+
+
+def aggregate_cited_codes(meta: dict) -> dict[str, dict]:
+    """corpus_meta 聚合：标准号原文 → {ref_count, sample_sources}（每报告计一次引用）。"""
+    agg: dict[str, dict] = {}
+    for rid, m in meta.get("reports", {}).items():
+        for code in dict.fromkeys(m.get("standards_cited") or []):  # 同报告重复引用只计一次
+            entry = agg.setdefault(code, {"ref_count": 0, "sample_sources": []})
+            entry["ref_count"] += 1
+            if len(entry["sample_sources"]) < _SAMPLE_SOURCE_CAP:
+                entry["sample_sources"].append(rid)
+    return agg
+
+
+def diff_source_candidates(cited: dict[str, dict], covered_doc_codes: list[str]) -> list[dict]:
+    """缺源候选差集（纯函数）：语料引用码归一化去重后减去 standard_indicators 已覆盖 doc_code。
+
+    同归一码变体合并（ref_count 累加、样例来源并集去重截断），code 取先出现的原文写法；
+    已覆盖的归一码剔除，输出按 ref_count 降序。
+    """
+    merged: dict[str, dict] = {}
+    for code, info in cited.items():
+        key = norm_code(code)
+        entry = merged.setdefault(key, {"code": code, "ref_count": 0, "sample_sources": []})
+        entry["ref_count"] += info["ref_count"]
+        for src in info["sample_sources"]:
+            if src not in entry["sample_sources"]:
+                entry["sample_sources"].append(src)
+    covered = {norm_code(c) for c in covered_doc_codes}
+    out = [e for key, e in merged.items() if key not in covered]
+    for e in out:
+        e["sample_sources"] = e["sample_sources"][:_SAMPLE_SOURCE_CAP]
+    out.sort(key=lambda c: -c["ref_count"])
+    return out
 
 
 # --------------------------------------------------------------- 因子/等级/单位归一

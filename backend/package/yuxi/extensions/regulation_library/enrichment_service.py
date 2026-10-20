@@ -18,12 +18,20 @@ from yuxi.extensions.regulation_library.table_role_classifier import (
 )
 from yuxi.extensions.regulation_library.table_splitter import split_table_units
 from yuxi.extensions.regulation_library.unit_parser import parse_chunk_unit
+from yuxi.services.eia_limit_extract_core import norm_code
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_knowledge import KnowledgeChunk
 from yuxi.utils import logger
+from yuxi.utils.datetime_utils import format_utc_datetime
 
 _ALL_ROLES = ("limit", "method", "criteria", "param", "other")
 _CONTINUATION_RE = re.compile(r"[（(]续[)）]\s*$")  # 续表 unit_no 后缀（表N（续）），半/全角括号兼容
+_MANUAL_MAX_ROWS = 500  # 手工单次录入行数上限（防误传超大载荷）
+_MANUAL_UNIT_NO = "手录"  # 手工行统一表单元号
+
+
+class StandardConflictError(Exception):
+    """standard_indicators 写冲突（手工行挡道 / doc_code 已存在 / 非手工行），路由映射 409。"""
 
 
 async def enrich_regulation_file(
@@ -50,6 +58,16 @@ async def enrich_regulation_file(
     table_chunks: list[tuple[str, str, str, str]] = []  # (chunk_id, unit_no, title, content)
     multi_table_chunk_ids: set[str] = set()  # 埋多张表的 chunk：tags 走 table_units 清单，不写标量
     async with pg_manager.get_async_session_context() as session:
+        # 冲突守护（检测点唯一）：expert 手工行在场时整个 enrich 直接拒绝，防静默冲掉专家成果
+        expert_rows = (
+            await session.execute(
+                sql_text("SELECT count(*) FROM standard_indicators WHERE doc_code = :code AND source = 'expert'"),
+                {"code": doc_code},
+            )
+        ).scalar_one()
+        if expert_rows:
+            raise StandardConflictError(f"{doc_code} 检测到手工行，拒绝覆盖，请先删除或迁移手工行")
+
         result = await session.execute(
             select(KnowledgeChunk)
             .where(KnowledgeChunk.kb_id == kb_id, KnowledgeChunk.file_id == file_id)
@@ -218,9 +236,148 @@ async def query_indicators(doc_code: str | None = None, pollutant: str | None = 
     async with pg_manager.get_async_session_context() as session:
         result = await session.execute(
             sql_text(
-                f"SELECT doc_code, unit_no, pollutant, metric, limit_value, unit, condition, category, period "
+                f"SELECT doc_code, unit_no, pollutant, metric, limit_value, unit, condition, category, period, "
+                f"verified_at, verified_by, source "
                 f"FROM standard_indicators {where} ORDER BY doc_code, unit_no"
             ),
             params,
         )
-        return [dict(r._mapping) for r in result.all()]
+        rows = [dict(r._mapping) for r in result.all()]
+        for r in rows:  # TIMESTAMPTZ → ISO 串，保证 JSON/tool 输出可序列化
+            r["verified_at"] = format_utc_datetime(r["verified_at"])
+        return rows
+
+
+async def set_unit_verification(doc_code: str, unit_no: str, verified: bool, username: str) -> int:
+    """核验/撤销核验指定表单元（doc_code+unit_no）的全部指标行，返回受影响行数。
+
+    enrich 重跑按 doc_code 删旧插新，核验态随行消失——重跑即重验，无需额外失效代码（有意设计）。
+    """
+    await ensure_schema()
+    if verified:
+        sql = (
+            "UPDATE standard_indicators SET verified_at = now(), verified_by = :verified_by "
+            "WHERE doc_code = :code AND unit_no = :uno"
+        )
+        params: dict[str, Any] = {"verified_by": username, "code": doc_code, "uno": unit_no}
+    else:
+        sql = (
+            "UPDATE standard_indicators SET verified_at = NULL, verified_by = NULL "
+            "WHERE doc_code = :code AND unit_no = :uno"
+        )
+        params = {"code": doc_code, "uno": unit_no}
+    async with pg_manager.get_async_session_context() as session:
+        result = await session.execute(sql_text(sql), params)
+        return result.rowcount
+
+
+async def distinct_doc_codes() -> list[str]:
+    """全部去重 doc_code（缺源候选差集与手工查重的归一化比对面）。"""
+    await ensure_schema()
+    async with pg_manager.get_async_session_context() as session:
+        result = await session.execute(sql_text("SELECT DISTINCT doc_code FROM standard_indicators"))
+        return [r[0] for r in result.all()]
+
+
+def _validated_manual_rows(rows: list[Any]) -> list[dict[str, Any]]:
+    """手工行校验 + limit_value 数值归一（沿用指标抽取同款口径，保证 NUMERIC 列类型安全）。"""
+    if len(rows) > _MANUAL_MAX_ROWS:
+        raise ValueError(f"限值行数超上限 {_MANUAL_MAX_ROWS}（当前 {len(rows)}）")
+    out: list[dict[str, Any]] = []
+    for i, r in enumerate(rows, 1):
+        if not isinstance(r, dict):
+            raise ValueError(f"第 {i} 行须为对象")
+        pollutant = str(r.get("pollutant") or "").strip()
+        if not pollutant:
+            raise ValueError(f"第 {i} 行 pollutant 必填")
+        value = indicator_extractor._normalize_limit_value(r.get("limit_value"))
+        if value is None:
+            raise ValueError(f"第 {i} 行 limit_value 无法解析为数值: {r.get('limit_value')!r}")
+        out.append(
+            {
+                "pollutant": pollutant,
+                "metric": str(r.get("metric") or ""),
+                "limit_value": value,
+                "unit": str(r.get("unit") or ""),
+                "condition": str(r.get("condition") or ""),
+                "category": str(r.get("category") or ""),
+                "period": str(r.get("period") or ""),
+            }
+        )
+    return out
+
+
+async def _insert_manual_rows(session: Any, doc_code: str, rows: list[dict[str, Any]], username: str) -> None:
+    """手工行落库：born-verified（保存即核验生效），unit_no 固定「手录」，source='expert'。"""
+    for r in rows:
+        await session.execute(
+            sql_text(
+                "INSERT INTO standard_indicators "
+                "(id, doc_code, unit_no, chunk_id, pollutant, metric, limit_value,"
+                " unit, condition, category, period, verified_at, verified_by, source) "
+                "VALUES (:id, :code, :uno, NULL, :p, :m, :v, :u, :c, :cat, :prd, now(), :verified_by, 'expert')"
+            ),
+            {
+                "id": uuid.uuid4().hex[:32],
+                "code": doc_code,
+                "uno": _MANUAL_UNIT_NO,
+                "p": r["pollutant"],
+                "m": r["metric"],
+                "v": r["limit_value"],
+                "u": r["unit"],
+                "c": r["condition"],
+                "cat": r["category"],
+                "prd": r["period"],
+                "verified_by": username,
+            },
+        )
+
+
+async def create_manual_standard(doc_code: str, rows: list[dict[str, Any]], username: str) -> int:
+    """专家手工新建标准：doc_code 归一化查重（任何既有行都拒绝），行 born-verified 入权威表。
+
+    返回插入行数；doc_code 已存在 → StandardConflictError，行校验失败 → ValueError。
+    """
+    await ensure_schema()
+    doc_code = doc_code.strip()
+    rows = _validated_manual_rows(rows)
+    covered = {norm_code(c) for c in await distinct_doc_codes()}
+    if norm_code(doc_code) in covered:
+        raise StandardConflictError(f"doc_code 已存在指标行，拒绝重复创建: {doc_code}")
+    async with pg_manager.get_async_session_context() as session:
+        await _insert_manual_rows(session, doc_code, rows, username)
+    return len(rows)
+
+
+async def replace_manual_standard(doc_code: str, rows: list[dict[str, Any]], username: str) -> int:
+    """整标准替换手工行：事务内删该 doc_code 全部 expert 行再重插（重插行保持 born-verified）。
+
+    目标 doc_code 无 expert 行（不存在或 enrich 行）→ StandardConflictError。
+    """
+    await ensure_schema()
+    doc_code = doc_code.strip()
+    rows = _validated_manual_rows(rows)
+    async with pg_manager.get_async_session_context() as session:
+        result = await session.execute(
+            sql_text("DELETE FROM standard_indicators WHERE doc_code = :code AND source = 'expert'"),
+            {"code": doc_code},
+        )
+        if result.rowcount == 0:
+            raise StandardConflictError(f"doc_code 无手工行，拒绝替换: {doc_code}")
+        await _insert_manual_rows(session, doc_code, rows, username)
+    return len(rows)
+
+
+async def delete_manual_standard(doc_code: str) -> int:
+    """删除该 doc_code 全部手工行；enrich 行拒删（无 expert 行 → StandardConflictError）。"""
+    await ensure_schema()
+    doc_code = doc_code.strip()
+    async with pg_manager.get_async_session_context() as session:
+        result = await session.execute(
+            sql_text("DELETE FROM standard_indicators WHERE doc_code = :code AND source = 'expert'"),
+            {"code": doc_code},
+        )
+        deleted = result.rowcount
+    if deleted == 0:
+        raise StandardConflictError(f"doc_code 无手工行，拒绝删除: {doc_code}")
+    return deleted

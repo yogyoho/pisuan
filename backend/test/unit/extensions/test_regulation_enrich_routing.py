@@ -400,6 +400,13 @@ class FakeResult:
         return self._rows
 
 
+class FakeCount:
+    """scalar_one 结果桩（enrich 冲突守护探测：0 = 无 expert 手工行）。"""
+
+    def scalar_one(self):
+        return 0
+
+
 class FakeSession:
     """假会话：knowledge_chunks 查询返回预置 chunks，其余语句仅记录。"""
 
@@ -412,6 +419,8 @@ class FakeSession:
         self.statements.append((sql, dict(params or {})))
         if "from knowledge_chunks" in sql.lower():
             return FakeResult(self.chunks)
+        if "count(*)" in sql.lower():
+            return FakeCount()
         return FakeResult([])
 
     async def __aenter__(self):

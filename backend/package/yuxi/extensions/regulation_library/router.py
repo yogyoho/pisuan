@@ -35,6 +35,8 @@ async def enrich_file(
         return {"success": True, "result": result}
     except HTTPException:
         raise
+    except enrichment_service.StandardConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except Exception as e:
         logger.error(f"规范富化失败: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"富化失败: {str(e)}")
@@ -53,3 +55,101 @@ async def list_indicators(
     except Exception as e:
         logger.error(f"指标查询失败: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"查询失败: {str(e)}")
+
+
+async def _set_verification(payload: dict[str, Any], verified: bool, username: str) -> dict[str, Any]:
+    doc_code = str(payload.get("doc_code") or "").strip()
+    unit_no = str(payload.get("unit_no") or "").strip()
+    if not doc_code or not unit_no:
+        raise HTTPException(status_code=400, detail="doc_code/unit_no 必填")
+    try:
+        updated = await enrichment_service.set_unit_verification(doc_code, unit_no, verified, username)
+        return {"updated": updated}
+    except HTTPException:
+        raise
+    except Exception as e:
+        action = "核验" if verified else "撤销核验"
+        logger.error(f"指标{action}失败: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"{action}失败: {str(e)}")
+
+
+@regulation_library.post("/indicators/verify")
+async def verify_indicators(
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """核验指定表单元（doc_code+unit_no）的全部指标行（enrich 重跑会重置核验态）"""
+    return await _set_verification(payload, verified=True, username=current_user.username)
+
+
+@regulation_library.post("/indicators/unverify")
+async def unverify_indicators(
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """撤销指定表单元的核验态"""
+    return await _set_verification(payload, verified=False, username=current_user.username)
+
+
+def _manual_rows_payload(payload: dict[str, Any]) -> tuple[str, list[Any]]:
+    """手工标准载荷解析：返回 (doc_code, rows)，越界即 400。"""
+    doc_code = str(payload.get("doc_code") or "").strip()
+    rows = payload.get("rows")
+    if not doc_code or not isinstance(rows, list) or not rows:
+        raise HTTPException(status_code=400, detail="doc_code 与非空 rows 必填")
+    return doc_code, rows
+
+
+@regulation_library.post("/manual-standards")
+async def create_manual_standard(
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """专家手工新建标准（行 born-verified 直入权威表，保存即核验生效）"""
+    doc_code, rows = _manual_rows_payload(payload)
+    try:
+        inserted = await enrichment_service.create_manual_standard(doc_code, rows, current_user.username)
+        return {"success": True, "doc_code": doc_code, "inserted": inserted}
+    except enrichment_service.StandardConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"手工标准创建失败: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"创建失败: {str(e)}")
+
+
+@regulation_library.put("/manual-standards/{doc_code:path}")
+async def update_manual_standard(
+    doc_code: str,
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """整标准替换手工行（事务内删旧插新，重插行 born-verified；仅 expert 行可替换）"""
+    _, rows = _manual_rows_payload(payload)
+    try:
+        inserted = await enrichment_service.replace_manual_standard(doc_code, rows, current_user.username)
+        return {"success": True, "doc_code": doc_code, "inserted": inserted}
+    except enrichment_service.StandardConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"手工标准替换失败: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"替换失败: {str(e)}")
+
+
+@regulation_library.delete("/manual-standards/{doc_code:path}")
+async def delete_manual_standard(
+    doc_code: str,
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """删除该标准全部手工行（enrich 行拒删；删除后 lookup 立即失效且不可撤销）"""
+    try:
+        deleted = await enrichment_service.delete_manual_standard(doc_code)
+        return {"success": True, "doc_code": doc_code, "deleted": deleted}
+    except enrichment_service.StandardConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except Exception as e:
+        logger.error(f"手工标准删除失败: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"删除失败: {str(e)}")
