@@ -691,81 +691,96 @@
           </div>
         </div>
       </template>
-      <div class="step-tag"><span class="n">1</span>标准信息</div>
-      <div class="frm-grid">
-        <div class="frm-row">
-          <label>标准号 <span class="req">*</span></label>
-          <a-input
-            v-model:value="drawer.form.doc_code"
-            placeholder="如 GB 18596-2001"
-            :disabled="Boolean(drawer.editCode)"
-          />
-          <div class="frm-help">后续补源入库时以此号与 enrich 对账（冲突守护）</div>
-        </div>
-        <div class="frm-row">
-          <label>标准名称</label>
-          <a-input
-            v-model:value="drawer.form.doc_name"
-            placeholder="如 畜禽养殖业污染物排放标准"
-          />
-        </div>
+
+      <!-- 标识条（编辑态；原型 2026-10-15 ident 区配方） -->
+      <div v-if="drawer.editCode" class="mstd-ident">
+        <span class="name">{{ drawer.form.doc_code }}</span>
+        <span class="pill-st">手工 · 已核验</span>
+        <span class="dim"
+          >{{ drawer.form.doc_name || '未命名' }} · {{ drawer.rows.length }} 行</span
+        >
       </div>
-      <div class="frm-row">
-        <label>标准类型</label>
-        <select v-model="drawer.form.doc_type" class="inp drawer-type-sel">
-          <option value="technical_standard">技术标准（限值表）</option>
-          <option value="law_regulation">法规（无限值表，仅建档）</option>
-        </select>
+
+      <div class="step-tag"><span class="n">1</span>标准信息</div>
+      <div class="mstd-form">
+        <div class="fld-grid">
+          <div class="fld">
+            <label>标准号 <span class="req">*</span></label>
+            <a-input
+              v-model:value="drawer.form.doc_code"
+              placeholder="如 GB 18596-2001"
+              :disabled="Boolean(drawer.editCode)"
+            />
+            <p class="fld-help">后续补源入库时以此号与 enrich 对账（冲突守护）</p>
+          </div>
+          <div class="fld">
+            <label>标准名称 <em>（可选）</em></label>
+            <a-input
+              v-model:value="drawer.form.doc_name"
+              placeholder="如 畜禽养殖业污染物排放标准"
+            />
+          </div>
+        </div>
+        <div class="fld">
+          <label>标准类型</label>
+          <a-select v-model:value="drawer.form.doc_type" :options="DOC_TYPE_OPTIONS" />
+        </div>
       </div>
 
       <div class="step-tag step-gap">
         <span class="n">2</span>限值行
-        <span class="pill pill-gray pill-sm">{{ drawer.rows.length }} 行</span>
+        <span class="rows-badge">{{ drawer.rows.length }} 行</span>
       </div>
-      <table class="edit-tbl">
-        <thead>
-          <tr>
-            <th>因子 *</th>
-            <th>档位</th>
-            <th>指标</th>
-            <th>限值 *</th>
-            <th>单位</th>
-            <th>时段</th>
-            <th>条件备注</th>
-            <th class="col-act"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(row, i) in drawer.rows" :key="i">
-            <td><input v-model="row.pollutant" class="inp" placeholder="因子" /></td>
-            <td><input v-model="row.category" class="inp" placeholder="档位" /></td>
-            <td><input v-model="row.metric" class="inp" placeholder="指标" /></td>
-            <td><input v-model="row.limit_value" class="inp" placeholder="限值" /></td>
-            <td><input v-model="row.unit" class="inp" placeholder="单位" /></td>
-            <td><input v-model="row.period" class="inp" placeholder="时段" /></td>
-            <td><input v-model="row.condition" class="inp" placeholder="条件" /></td>
-            <td class="col-act">
-              <button class="row-del" aria-label="删除行" @click="drawer.rows.splice(i, 1)">
-                <Trash2 :size="13" />
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="rows-card">
+        <table class="edit-tbl">
+          <thead>
+            <tr>
+              <th>因子 *</th>
+              <th>档位</th>
+              <th>指标</th>
+              <th>限值 *</th>
+              <th>单位</th>
+              <th>时段</th>
+              <th>条件备注</th>
+              <th class="col-act"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, i) in drawer.rows" :key="i">
+              <td><input v-model="row.pollutant" class="inp" placeholder="因子" /></td>
+              <td><input v-model="row.category" class="inp" placeholder="档位" /></td>
+              <td><input v-model="row.metric" class="inp" placeholder="指标" /></td>
+              <td><input v-model="row.limit_value" class="inp" placeholder="限值" /></td>
+              <td><input v-model="row.unit" class="inp" placeholder="单位" /></td>
+              <td><input v-model="row.period" class="inp" placeholder="时段" /></td>
+              <td><input v-model="row.condition" class="inp" placeholder="条件" /></td>
+              <td class="col-act">
+                <button class="row-del" aria-label="删除行" @click="drawer.rows.splice(i, 1)">
+                  <Trash2 :size="13" />
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <button class="add-row-btn" @click="drawer.rows.push(blankManualRow())">
         <Plus :size="13" />
         添加一行
       </button>
-      <div class="note-bar">
-        <Info :size="14" />
+      <div class="mstd-warn">
+        <AlertTriangle :size="13" />
         <span
           >行值务必对照标准原文录入，保存后即时核验生效；日后可整标准编辑或删除。若该标准号随后补源入库，enrich
           将拒绝覆盖手工行并提示。</span
         >
       </div>
       <template #footer>
-        <button class="btn btn-sec btn-sm" @click="drawer.open = false">取消</button>
-        <button class="btn btn-pri btn-sm" :disabled="drawer.submitting" @click="onSaveDrawer">
+        <button class="btn btn-sec btn-sm drawer-ft-btn" @click="drawer.open = false">取消</button>
+        <button
+          class="btn btn-pri btn-sm drawer-ft-btn"
+          :disabled="drawer.submitting"
+          @click="onSaveDrawer"
+        >
           {{ drawer.submitting ? '保存中…' : `保存并核验（${drawer.rows.length} 行）` }}
         </button>
       </template>
@@ -1297,6 +1312,11 @@ const MANUAL_ROW_FIELDS = [
   'condition'
 ]
 const blankManualRow = () => Object.fromEntries(MANUAL_ROW_FIELDS.map((k) => [k, '']))
+
+const DOC_TYPE_OPTIONS = [
+  { value: 'technical_standard', label: '技术标准（限值表）' },
+  { value: 'law_regulation', label: '法规（无限值表，仅建档）' }
+]
 
 const drawer = reactive({
   open: false,
@@ -2118,7 +2138,7 @@ code.k {
 
   h3 {
     margin: 0;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
     line-height: 1.3;
   }
@@ -2129,14 +2149,49 @@ code.k {
   }
 }
 
+/* 标识条（编辑态；原型 ident 区：名 + pill + dim 摘要） */
+.mstd-ident {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--gray-50);
+
+  .name {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .pill-st {
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 20px;
+    color: #fff;
+    background: var(--main-600);
+  }
+
+  .dim {
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* 步骤区头（原型 sec-hd 语言：13px/600 次级文字 + 右锚计数徽标） */
 .step-tag {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 6px;
   margin-bottom: 10px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--main-600);
+  color: var(--color-text-secondary);
 
   .n {
     display: inline-flex;
@@ -2145,22 +2200,75 @@ code.k {
     width: 18px;
     height: 18px;
     border-radius: 999px;
-    background: var(--main-50);
-    color: var(--main-600);
+    background: var(--main-100);
+    color: var(--main-700);
     font-size: 11px;
   }
+}
+
+.rows-badge {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--main-700);
+  background: var(--main-100);
 }
 
 .step-gap {
   margin-top: 20px;
 }
 
+/* 表单区（原型 fld 配方：正式 label + 控件 + 帮助文字；同 MetaPanel meta-form） */
+.mstd-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .fld-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .fld {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    label {
+      font-size: 12px;
+      color: var(--color-text-secondary);
+
+      em {
+        font-style: normal;
+        color: var(--color-text-tertiary);
+      }
+    }
+
+    :deep(.ant-select) {
+      width: 100%;
+    }
+
+    .fld-help {
+      margin: 0;
+      font-size: 12px;
+      color: var(--color-text-tertiary);
+    }
+  }
+}
+
 .req {
   color: var(--color-error-500);
 }
 
-.drawer-type-sel {
-  width: 100%;
+/* 限值行编辑卡（原型 ctx-card 有界容器语言：hairline 圆角卡 + 灰底表头） */
+.rows-card {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--main-0);
+  overflow: hidden;
 }
 
 .edit-tbl {
@@ -2169,7 +2277,8 @@ code.k {
   font-size: 12px;
 
   th {
-    padding: 4px 6px;
+    padding: 7px 8px;
+    background: var(--gray-50);
     border-bottom: 1px solid var(--hairline);
     font-size: 11px;
     font-weight: 500;
@@ -2179,15 +2288,19 @@ code.k {
   }
 
   td {
-    padding: 4px 6px;
+    padding: 5px 6px;
     border-bottom: 1px solid var(--gray-100);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
   }
 
   .inp {
     width: 100%;
     min-width: 0;
-    height: 26px;
-    padding: 0 7px;
+    height: 28px;
+    padding: 0 8px;
     font-size: 12px;
   }
 
@@ -2218,7 +2331,7 @@ code.k {
   gap: 6px;
   width: 100%;
   height: 30px;
-  margin-top: 8px;
+  margin-top: 10px;
   border: 1px dashed var(--gray-300);
   border-radius: 6px;
   background: none;
@@ -2232,6 +2345,73 @@ code.k {
     color: var(--main-600);
     background: var(--main-10, var(--main-50));
   }
+}
+
+/* 警告条（原型 warn：second-50 底 + second-700 字） */
+.mstd-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--second-50);
+  font-size: 12px;
+  color: var(--second-700);
+  line-height: 1.6;
+
+  svg {
+    flex: none;
+    margin-top: 3px;
+  }
+}
+
+/* 抽屉 teleport 到 body，不在 .ewp 命名空间内——.btn 配方（factory-ui §按钮）在此复刻，
+   修复 footer 按钮一直吃 UA 裸样式、暗色下白底白字的问题 */
+.drawer-ft-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 9px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--color-text);
+  font-size: 12px;
+  font-family: inherit;
+  transition: all 0.15s;
+  cursor: pointer;
+
+  &.btn-pri {
+    background: var(--main-color);
+    color: #fff;
+
+    &:hover {
+      filter: brightness(1.08);
+    }
+  }
+
+  &.btn-sec {
+    border: 1px solid var(--gray-200);
+    background: var(--gray-0);
+    color: var(--color-text-secondary);
+
+    &:hover {
+      border-color: var(--main-400);
+      color: var(--main-600);
+      background: var(--main-10, var(--main-50));
+    }
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+:root.dark .drawer-ft-btn.btn-pri {
+  color: #0a0a0a;
 }
 
 /* 删除确认警示框（文案照原型：lookup 立即失效、不可撤销） */
