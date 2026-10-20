@@ -11,6 +11,7 @@ from yuxi.config.options import (
     mineru_ocr_host_opts,
     mineru_official_api_opts,
     paddleocr_api_opts,
+    paddleocr_vl_local_opts,
     pp_structure_v3_ocr_host_opts,
     system_options,
 )
@@ -163,5 +164,8 @@ async def _build_processor_kwargs(db: AsyncSession, engine_id: str) -> dict[str,
         }
     if engine_id in {"paddleocr_vl_1_6", "paddleocr_pp_ocrv6"}:
         opts = await paddleocr_api_opts.get(db)
+        return {key: value for key, value in opts.items() if value}
+    if engine_id == "paddleocr_vl_local":
+        opts = await paddleocr_vl_local_opts.get(db)
         return {key: value for key, value in opts.items() if value}
     return {}

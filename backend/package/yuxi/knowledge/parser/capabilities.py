@@ -83,6 +83,13 @@ PARSER_CAPABILITIES = {
         module_path="yuxi.knowledge.parser.paddleocr_api",
         class_name="PaddleOCRVLParser",
     ),
+    "paddleocr_vl_local": ParserCapability(
+        service_name="paddleocr_vl_local",
+        display_name="PaddleOCR-VL-1.6 (本地)",
+        supported_extensions=_STANDARD_OCR_EXTENSIONS,
+        module_path="yuxi.knowledge.parser.paddleocr_vl_local",
+        class_name="PaddleOCRVLLocalParser",
+    ),
     "paddleocr_pp_ocrv6": ParserCapability(
         service_name="paddleocr_pp_ocrv6",
         display_name="PP-OCRv6",

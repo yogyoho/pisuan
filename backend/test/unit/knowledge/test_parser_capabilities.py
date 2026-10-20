@@ -90,6 +90,7 @@ def test_capability_registry_declares_shipping_processors() -> None:
         "pp_structure_v3_ocr",
         "deepseek_ocr",
         "paddleocr_vl_1_6",
+        "paddleocr_vl_local",
         "paddleocr_pp_ocrv6",
     )
 

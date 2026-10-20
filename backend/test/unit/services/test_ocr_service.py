@@ -59,6 +59,23 @@ async def test_ocr_options_use_parser_metadata(db_session, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_paddleocr_vl_local_uses_local_service_option(db_session):
+    await update_option_value(
+        db_session,
+        "paddleocr_vl_local_opts",
+        {"base_url": "http://127.0.0.1:8111/v1", "model": "custom.gguf"},
+        "tester",
+    )
+
+    resolved = await ocr_service.resolve_ocr_task_params({"ocr_engine": "paddleocr_vl_local"}, db_session)
+
+    assert resolved["_ocr_processor_kwargs"] == {
+        "base_url": "http://127.0.0.1:8111/v1",
+        "model": "custom.gguf",
+    }
+
+
+@pytest.mark.asyncio
 async def test_deepseek_uses_provider_credentials_without_chat_models(db_session):
     provider = ModelProvider(
         provider_id="siliconflow-cn",

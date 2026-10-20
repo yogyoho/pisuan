@@ -92,7 +92,8 @@ const OCR_OPTION_KEYS = new Set([
   'mineru_ocr_host_opts',
   'mineru_official_api_opts',
   'pp_structure_v3_ocr_host_opts',
-  'paddleocr_api_opts'
+  'paddleocr_api_opts',
+  'paddleocr_vl_local_opts'
 ])
 const items = computed(() => configStore.config?._config_items || {})
 const configOptions = ref([])
