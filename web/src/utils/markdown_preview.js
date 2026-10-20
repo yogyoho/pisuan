@@ -37,6 +37,20 @@ const normalizeHtmlTagQuotes = (content) => {
 export const normalizeLegacyMinioPublicUrls = (content) =>
   String(content || '').replace(LEGACY_MINIO_PUBLIC_URL_RE, '/minio/public/')
 
+// \(...\)/\[...\] LaTeX 定界符归一为 KaTeX 的 $/$$（markdown-it-katex 不识别圆括号/方括号定界，OCR 产物常用）
+const normalizeLatexDelimiters = (content) =>
+  String(content || '')
+    .replace(/\\\[([\s\S]*?)\\\]/g, (_, body) => `$$${body}$$`)
+    .replace(/\\\(([\s\S]*?)\\\)/g, (_, body) => `$${body}$`)
+
+// 围栏/行内代码段不参与文本归一（split 捕获组：奇数下标为代码段）
+const transformOutsideCodeSegments = (content, transform) => {
+  const segments = String(content || '').split(
+    /(```[\s\S]*?(?:```|$)|~~~[\s\S]*?(?:~~~|$)|`[^`\n]*`)/
+  )
+  return segments.map((segment, index) => (index % 2 === 1 ? segment : transform(segment))).join('')
+}
+
 const renderFrontmatterValue = (value) => {
   if (Array.isArray(value)) {
     return value.map((item) => `<span class="fm-tag">${escapeHtml(item)}</span>`).join('')
@@ -219,7 +233,11 @@ const getRenderer = async (theme, needsHighlight) => {
 
 export const renderMarkdown = async (content, { theme = 'github-light' } = {}) => {
   try {
-    const normalizedContent = normalizeHtmlTagQuotes(normalizeLegacyMinioPublicUrls(content))
+    const normalizedContent = normalizeHtmlTagQuotes(
+      normalizeLegacyMinioPublicUrls(
+        transformOutsideCodeSegments(content, normalizeLatexDelimiters)
+      )
+    )
     const htmlPreviewContent = renderHtmlPreviewBlocks(normalizedContent, {
       sanitizeHtml: sanitizeHtmlPreviewSrcdoc
     })

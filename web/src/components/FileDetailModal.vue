@@ -84,6 +84,7 @@
           v-else-if="mergedContent"
           :content="mergedContent"
           class="markdown-content"
+          bordered
         />
         <div v-else class="empty-content">
           <p>{{ contentState.error || '暂无文件内容' }}</p>

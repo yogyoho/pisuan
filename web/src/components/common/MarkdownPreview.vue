@@ -4,7 +4,7 @@
     :class="[
       'yk-markdown-preview',
       'flat-md-preview',
-      { 'is-dark': themeStore.isDark, 'is-compact': compact }
+      { 'is-dark': themeStore.isDark, 'is-compact': compact, 'is-bordered': bordered }
     ]"
     @click="handleMarkdownAction"
   ></div>
@@ -23,6 +23,10 @@ const props = defineProps({
     default: ''
   },
   compact: {
+    type: Boolean,
+    default: false
+  },
+  bordered: {
     type: Boolean,
     default: false
   },
@@ -828,6 +832,39 @@ const showCopiedFeedback = (btn) => {
 
   tr {
     background-color: var(--gray-0);
+  }
+
+  // 文档预览变体：完整网格边框（聊天气泡保持无边框扁平风格）
+  &.is-bordered {
+    table {
+      border: 1px solid var(--gray-300);
+    }
+
+    th,
+    td {
+      border: 1px solid var(--gray-300);
+      padding: 0.5rem 0.5rem;
+    }
+
+    th {
+      background: var(--gray-25);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 1px solid var(--gray-300);
+    }
+  }
+
+  &.is-dark.is-bordered {
+    table,
+    th,
+    td {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    th {
+      background: rgba(255, 255, 255, 0.04);
+    }
   }
 
   img {
