@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from yuxi.extensions.regulation_library.structured_channel import call_structured
 from yuxi.utils import logger
 
-_PROMPT_TEXT_CAP = 6000  # 表格内容截断上限，超限记日志（doc_code+unit_no+截断量）
+_PROMPT_TEXT_CAP = 24000  # 表格内容截断上限（对齐 4096-token 分块的上界），超限记日志（doc_code+unit_no+截断量）
 
 _PROMPT = """你是环保标准专家。提取标准文档《{doc_code}》中限值表（{unit_no}）的指标限值。
 

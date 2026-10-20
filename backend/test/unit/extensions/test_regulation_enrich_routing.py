@@ -342,9 +342,12 @@ async def test_extract_indicators_truncation_logged(monkeypatch):
     _patch_channel_model(monkeypatch, adapter)
     logs = []
     monkeypatch.setattr(ext_mod.logger, "info", lambda msg, *a, **k: logs.append(str(msg)))
-    await ext_mod.extract_indicators("GB 3838-2002", "表4", "x" * 7000)
-    assert any("GB 3838-2002" in m and "表4" in m and "7000" in m and "6000" in m for m in logs)
-    assert "x" * 6001 not in adapter.last_prompt  # 实际送入模型的内容已截断
+    cap = ext_mod._PROMPT_TEXT_CAP
+    await ext_mod.extract_indicators("GB 3838-2002", "表4", "x" * (cap + 1000))
+    assert any(
+        "GB 3838-2002" in m and "表4" in m and str(cap + 1000) in m and str(cap) in m for m in logs
+    )
+    assert "x" * (cap + 1) not in adapter.last_prompt  # 实际送入模型的内容已截断
 
 
 # --------------------------------------------------------------- method 表映射抽取
