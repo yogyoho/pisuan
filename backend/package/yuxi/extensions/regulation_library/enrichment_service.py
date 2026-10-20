@@ -186,13 +186,14 @@ async def enrich_regulation_file(
                 await session.execute(
                     sql_text(
                         "INSERT INTO standard_indicators "
-                        "(id, doc_code, unit_no, chunk_id, pollutant, metric, limit_value,"
+                        "(id, doc_code, doc_name, unit_no, chunk_id, pollutant, metric, limit_value,"
                         " unit, condition, category, period) "
-                        "VALUES (:id, :code, :uno, :cid, :p, :m, :v, :u, :c, :cat, :prd)"
+                        "VALUES (:id, :code, :doc_name, :uno, :cid, :p, :m, :v, :u, :c, :cat, :prd)"
                     ),
                     {
                         "id": uuid.uuid4().hex[:32],
                         "code": doc_code,
+                        "doc_name": doc_name,
                         "uno": ind.get("unit_no"),
                         "cid": ind.get("chunk_id"),
                         "p": ind["pollutant"],
@@ -236,8 +237,8 @@ async def query_indicators(doc_code: str | None = None, pollutant: str | None = 
     async with pg_manager.get_async_session_context() as session:
         result = await session.execute(
             sql_text(
-                f"SELECT doc_code, unit_no, pollutant, metric, limit_value, unit, condition, category, period, "
-                f"verified_at, verified_by, source "
+                f"SELECT doc_code, doc_name, unit_no, pollutant, metric, limit_value, "
+                f"unit, condition, category, period, verified_at, verified_by, source "
                 f"FROM standard_indicators {where} ORDER BY doc_code, unit_no"
             ),
             params,
@@ -307,19 +308,23 @@ def _validated_manual_rows(rows: list[Any]) -> list[dict[str, Any]]:
     return out
 
 
-async def _insert_manual_rows(session: Any, doc_code: str, rows: list[dict[str, Any]], username: str) -> None:
+async def _insert_manual_rows(
+    session: Any, doc_code: str, doc_name: str | None, rows: list[dict[str, Any]], username: str
+) -> None:
     """手工行落库：born-verified（保存即核验生效），unit_no 固定「手录」，source='expert'。"""
     for r in rows:
         await session.execute(
             sql_text(
                 "INSERT INTO standard_indicators "
-                "(id, doc_code, unit_no, chunk_id, pollutant, metric, limit_value,"
+                "(id, doc_code, doc_name, unit_no, chunk_id, pollutant, metric, limit_value,"
                 " unit, condition, category, period, verified_at, verified_by, source) "
-                "VALUES (:id, :code, :uno, NULL, :p, :m, :v, :u, :c, :cat, :prd, now(), :verified_by, 'expert')"
+                "VALUES (:id, :code, :doc_name, :uno, NULL, :p, :m, :v, :u, :c, :cat, :prd,"
+                " now(), :verified_by, 'expert')"
             ),
             {
                 "id": uuid.uuid4().hex[:32],
                 "code": doc_code,
+                "doc_name": doc_name,
                 "uno": _MANUAL_UNIT_NO,
                 "p": r["pollutant"],
                 "m": r["metric"],
@@ -333,7 +338,7 @@ async def _insert_manual_rows(session: Any, doc_code: str, rows: list[dict[str, 
         )
 
 
-async def create_manual_standard(doc_code: str, rows: list[dict[str, Any]], username: str) -> int:
+async def create_manual_standard(doc_code: str, doc_name: str | None, rows: list[dict[str, Any]], username: str) -> int:
     """专家手工新建标准：doc_code 归一化查重（任何既有行都拒绝），行 born-verified 入权威表。
 
     返回插入行数；doc_code 已存在 → StandardConflictError，行校验失败 → ValueError。
@@ -345,11 +350,13 @@ async def create_manual_standard(doc_code: str, rows: list[dict[str, Any]], user
     if norm_code(doc_code) in covered:
         raise StandardConflictError(f"doc_code 已存在指标行，拒绝重复创建: {doc_code}")
     async with pg_manager.get_async_session_context() as session:
-        await _insert_manual_rows(session, doc_code, rows, username)
+        await _insert_manual_rows(session, doc_code, doc_name, rows, username)
     return len(rows)
 
 
-async def replace_manual_standard(doc_code: str, rows: list[dict[str, Any]], username: str) -> int:
+async def replace_manual_standard(
+    doc_code: str, doc_name: str | None, rows: list[dict[str, Any]], username: str
+) -> int:
     """整标准替换手工行：事务内删该 doc_code 全部 expert 行再重插（重插行保持 born-verified）。
 
     目标 doc_code 无 expert 行（不存在或 enrich 行）→ StandardConflictError。
@@ -364,7 +371,7 @@ async def replace_manual_standard(doc_code: str, rows: list[dict[str, Any]], use
         )
         if result.rowcount == 0:
             raise StandardConflictError(f"doc_code 无手工行，拒绝替换: {doc_code}")
-        await _insert_manual_rows(session, doc_code, rows, username)
+        await _insert_manual_rows(session, doc_code, doc_name, rows, username)
     return len(rows)
 
 

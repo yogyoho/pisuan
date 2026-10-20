@@ -91,13 +91,17 @@ async def unverify_indicators(
     return await _set_verification(payload, verified=False, username=current_user.username)
 
 
-def _manual_rows_payload(payload: dict[str, Any]) -> tuple[str, list[Any]]:
-    """手工标准载荷解析：返回 (doc_code, rows)，越界即 400。"""
+def _manual_meta_and_rows(payload: dict[str, Any]) -> tuple[str, str | None, list[Any]]:
+    """手工标准载荷解析：返回 (doc_code, doc_name, rows)，越界即 400。
+
+    doc_type 接收即忽略：无消费场景（YAGNI），不持久化。
+    """
     doc_code = str(payload.get("doc_code") or "").strip()
+    doc_name = str(payload.get("doc_name") or "").strip() or None
     rows = payload.get("rows")
     if not doc_code or not isinstance(rows, list) or not rows:
         raise HTTPException(status_code=400, detail="doc_code 与非空 rows 必填")
-    return doc_code, rows
+    return doc_code, doc_name, rows
 
 
 @regulation_library.post("/manual-standards")
@@ -106,9 +110,9 @@ async def create_manual_standard(
     current_user: User = Depends(get_admin_user),
 ) -> dict[str, Any]:
     """专家手工新建标准（行 born-verified 直入权威表，保存即核验生效）"""
-    doc_code, rows = _manual_rows_payload(payload)
+    doc_code, doc_name, rows = _manual_meta_and_rows(payload)
     try:
-        inserted = await enrichment_service.create_manual_standard(doc_code, rows, current_user.username)
+        inserted = await enrichment_service.create_manual_standard(doc_code, doc_name, rows, current_user.username)
         return {"success": True, "doc_code": doc_code, "inserted": inserted}
     except enrichment_service.StandardConflictError as e:
         raise HTTPException(status_code=409, detail=str(e))
@@ -126,9 +130,9 @@ async def update_manual_standard(
     current_user: User = Depends(get_admin_user),
 ) -> dict[str, Any]:
     """整标准替换手工行（事务内删旧插新，重插行 born-verified；仅 expert 行可替换）"""
-    _, rows = _manual_rows_payload(payload)
+    _, doc_name, rows = _manual_meta_and_rows(payload)
     try:
-        inserted = await enrichment_service.replace_manual_standard(doc_code, rows, current_user.username)
+        inserted = await enrichment_service.replace_manual_standard(doc_code, doc_name, rows, current_user.username)
         return {"success": True, "doc_code": doc_code, "inserted": inserted}
     except enrichment_service.StandardConflictError as e:
         raise HTTPException(status_code=409, detail=str(e))

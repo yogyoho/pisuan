@@ -25,6 +25,7 @@ ALTER TABLE standard_indicators ADD COLUMN IF NOT EXISTS period VARCHAR(64);
 ALTER TABLE standard_indicators ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
 ALTER TABLE standard_indicators ADD COLUMN IF NOT EXISTS verified_by TEXT;
 ALTER TABLE standard_indicators ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'enrich';
+ALTER TABLE standard_indicators ADD COLUMN IF NOT EXISTS doc_name TEXT;
 """
 
 _schema_ready = False

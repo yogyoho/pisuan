@@ -136,6 +136,7 @@ def test_ddl_adds_verification_columns_idempotent():
     assert any("ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ" in s for s in stmts)
     assert any("ADD COLUMN IF NOT EXISTS verified_by TEXT" in s for s in stmts)
     assert any("ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'enrich'" in s for s in stmts)
+    assert any("ADD COLUMN IF NOT EXISTS doc_name TEXT" in s for s in stmts)
 
 
 @pytest.mark.asyncio
@@ -157,6 +158,7 @@ async def test_ensure_schema_executes_verification_alter(monkeypatch):
 async def test_query_indicators_selects_verification_columns(monkeypatch):
     row = {
         "doc_code": "GB X-2019",
+        "doc_name": "某环境质量标准",
         "unit_no": "表1",
         "pollutant": "SO2",
         "metric": "年均",
@@ -174,6 +176,7 @@ async def test_query_indicators_selects_verification_columns(monkeypatch):
 
     rows = await query_indicators("GB X-2019")
 
+    assert rows[0]["doc_name"] == "某环境质量标准"
     assert rows[0]["verified_by"] == "bob" and rows[0]["source"] == "enrich"
     assert rows[0]["verified_at"] == "2026-10-20T01:02:03Z"  # TIMESTAMPTZ → ISO 串
 
@@ -184,6 +187,7 @@ async def test_query_indicators_sql_contains_new_columns(monkeypatch):
     monkeypatch.setattr(enrich_mod, "ensure_schema", _noop)
     await query_indicators("GB X-2019", "SO2")
     sql = holder[0].statements[0][0]
+    assert "doc_name" in sql
     assert "verified_at" in sql and "verified_by" in sql and "source" in sql
 
 
@@ -235,7 +239,7 @@ async def test_create_manual_standard_conflict_on_any_existing_rows(monkeypatch)
     monkeypatch.setattr(enrich_mod, "ensure_schema", _noop)
 
     with pytest.raises(StandardConflictError, match="拒绝重复创建"):
-        await create_manual_standard("gb 3838-2002", _manual_rows(), "alice")
+        await create_manual_standard("gb 3838-2002", None, _manual_rows(), "alice")
 
     # 归一化查重命中（原文小写带空格 vs 既有 GB 3838-2002），拒绝后不得有 INSERT
     assert len(holder) == 1  # 仅查重会话，未进入插入会话
@@ -248,7 +252,7 @@ async def test_create_manual_standard_row_limit(monkeypatch):
     monkeypatch.setattr(enrich_mod, "ensure_schema", _noop)
     rows = [{"pollutant": "X", "limit_value": 1}] * 501
     with pytest.raises(ValueError, match="500"):
-        await create_manual_standard("GB NEW-2024", rows, "alice")
+        await create_manual_standard("GB NEW-2024", None, rows, "alice")
 
 
 @pytest.mark.asyncio
@@ -256,11 +260,11 @@ async def test_create_manual_standard_row_validation(monkeypatch):
     _patch_pg(monkeypatch)
     monkeypatch.setattr(enrich_mod, "ensure_schema", _noop)
     with pytest.raises(ValueError, match="pollutant"):
-        await create_manual_standard("GB NEW-2024", [{"limit_value": 1}], "alice")
+        await create_manual_standard("GB NEW-2024", None, [{"limit_value": 1}], "alice")
     with pytest.raises(ValueError, match="limit_value"):
-        await create_manual_standard("GB NEW-2024", [{"pollutant": "坏行", "limit_value": "无法检出"}], "alice")
+        await create_manual_standard("GB NEW-2024", None, [{"pollutant": "坏行", "limit_value": "无法检出"}], "alice")
     with pytest.raises(ValueError, match="对象"):
-        await create_manual_standard("GB NEW-2024", ["不是对象"], "alice")
+        await create_manual_standard("GB NEW-2024", None, ["不是对象"], "alice")
 
 
 @pytest.mark.asyncio
@@ -268,7 +272,7 @@ async def test_create_manual_standard_inserts_born_verified(monkeypatch):
     holder = _patch_pg(monkeypatch)
     monkeypatch.setattr(enrich_mod, "ensure_schema", _noop)
 
-    inserted = await create_manual_standard("GB NEW-2024", _manual_rows(), "alice")
+    inserted = await create_manual_standard("GB NEW-2024", "手工环境质量标准", _manual_rows(), "alice")
 
     assert inserted == 2
     inserts = [(sql, p) for s in holder for sql, p in s.statements if "INSERT INTO standard_indicators" in sql]
@@ -277,6 +281,7 @@ async def test_create_manual_standard_inserts_born_verified(monkeypatch):
     assert "now()" in sql and "'expert'" in sql  # born-verified：verified_at=now() + source='expert'
     by_p = {p["p"]: p for _, p in inserts}
     assert by_p["SO2"]["v"] == 60.0 and by_p["SO2"]["verified_by"] == "alice" and by_p["SO2"]["uno"] == "手录"
+    assert all(p["doc_name"] == "手工环境质量标准" for _, p in inserts)  # 标准名随行落库
     assert by_p["总汞"]["v"] == 0.5  # 字符串限值沿用抽取口径归一（方向符号取原值）
 
 
@@ -286,7 +291,7 @@ async def test_replace_manual_standard_requires_expert_rows(monkeypatch):
     monkeypatch.setattr(enrich_mod, "ensure_schema", _noop)
 
     with pytest.raises(StandardConflictError, match="无手工行"):
-        await replace_manual_standard("GB X-2019", _manual_rows(), "alice")
+        await replace_manual_standard("GB X-2019", None, _manual_rows(), "alice")
 
     stmts = holder[0].statements
     assert any("DELETE FROM standard_indicators" in sql and "source = 'expert'" in sql for sql, _ in stmts)
@@ -298,7 +303,7 @@ async def test_replace_manual_standard_deletes_expert_then_reinserts(monkeypatch
     holder = _patch_pg(monkeypatch, delete_rowcount=3)
     monkeypatch.setattr(enrich_mod, "ensure_schema", _noop)
 
-    inserted = await replace_manual_standard("GB X-2019", _manual_rows(), "alice")
+    inserted = await replace_manual_standard("GB X-2019", "替换后标准名", _manual_rows(), "alice")
 
     assert inserted == 2
     stmts = holder[0].statements
@@ -397,6 +402,8 @@ async def test_enrich_proceeds_when_no_expert_rows(monkeypatch):
     assert result["indicators"] == 1
     assert ext.extract_calls == ["表1"]
     assert any("DELETE FROM standard_indicators" in sql for s in holder for sql, _ in s.statements)
+    ins = [p for s in holder for sql, p in s.statements if "INSERT INTO standard_indicators" in sql]
+    assert ins and ins[0]["doc_name"] == "标准"  # enrich 行透传标准名
 
 
 # --------------------------------------------------------------- 缺源候选纯函数
