@@ -128,17 +128,17 @@
             </tr>
           </thead>
           <tbody>
-            <template v-for="record in filteredItems" :key="record.code">
+            <template v-for="record in pagedItems" :key="record.code">
               <tr>
                 <td>
                   <button
                     class="expander"
-                    aria-label="展开语料引用清单"
-                    @click="toggleCitations(record)"
+                    aria-label="展开关联限值表"
+                    @click="toggleTables(record)"
                   >
                     <ChevronRight
                       :size="14"
-                      :class="{ open: expandedCiteCodes.includes(record.code) }"
+                      :class="{ open: expandedTableCodes.includes(record.code) }"
                     />
                   </button>
                 </td>
@@ -172,8 +172,14 @@
                     >{{ tierLabel(record.tier) }}</span
                   >
                 </td>
-                <td class="num" :title="`语料引用 ${record.cited_count} 份`">
-                  {{ record.cited_count }} 份
+                <td class="num">
+                  <button
+                    class="btn btn-txt btn-sm"
+                    title="点击查看语料引用清单"
+                    @click="openCitations(record)"
+                  >
+                    {{ record.cited_count }} 份
+                  </button>
                 </td>
                 <td>
                   <span v-if="!record.needs_verification" class="pill pill-ok">已核实</span>
@@ -201,36 +207,35 @@
                   <button class="btn btn-txt btn-sm" @click="openKbQuery(record)">KB 查询</button>
                 </td>
               </tr>
-              <tr v-if="expandedCiteCodes.includes(record.code)" class="sub-row">
+              <tr v-if="expandedTableCodes.includes(record.code)" class="sub-row">
                 <td :colspan="STANDARDS_TABLE_COLS">
-                  <div v-if="citeLoading[record.code]" class="cite-line muted">
-                    <RefreshCw :size="13" class="spin" />
-                    <span>引用清单加载中…</span>
-                  </div>
-                  <div v-else-if="citationsOf(record.code)?.error" class="cite-line warn">
-                    <AlertTriangle :size="13" />
-                    <span>引用清单加载失败</span>
-                    <button class="btn btn-txt btn-sm" @click="retryCitations(record.code)">
-                      点击重试
-                    </button>
-                  </div>
-                  <div
-                    v-else-if="!citationsOf(record.code)?.reports?.length"
-                    class="cite-line warn"
-                  >
-                    <AlertTriangle :size="13" />
-                    <span>语料 0 引用——SKILL 手工登记标准，须人工 KB / 联网核实</span>
+                  <div v-if="!tablesOf(record.code).length" class="cite-line muted">
+                    该标准无关联限值表（code_ref 未挂表）——限值录入在下方「限值查找表」卡进行
                   </div>
                   <div v-else class="src-list">
-                    <div
-                      v-for="c in citationsOf(record.code).reports"
-                      :key="c.report_id"
-                      class="cite-line"
-                    >
+                    <div v-for="[name, t] in tablesOf(record.code)" :key="name" class="cite-line">
                       <FileText :size="13" />
-                      <span class="mono">{{ c.report_id }}</span>
-                      <span class="cite-as" :title="`引用名：${c.cited_as}`">{{ c.cited_as }}</span>
-                      <span v-if="c.stage" class="pill pill-gray s-stage">{{ c.stage }}</span>
+                      <span class="mono">{{ name }}</span>
+                      <span class="cite-as" :title="t.note || t.desc">{{ t.desc }}</span>
+                      <span class="pill pill-gray s-stage num">{{ (t.rows || []).length }} 行</span>
+                      <span
+                        class="pill s-stage"
+                        :class="t.source === 'db' ? 'pill-orange' : 'pill-gray'"
+                        :title="
+                          t.source === 'db'
+                            ? 'DB 录入为导出真源，导出物化后写手可见'
+                            : t.source === 'db_registry'
+                              ? '新表已入册，待录入限值行'
+                              : '文件锚点态，导出前须先录入核实'
+                        "
+                        >{{
+                          t.source === 'db'
+                            ? 'DB · 待导出'
+                            : t.source === 'db_registry'
+                              ? '已入册'
+                              : '文件态'
+                        }}</span
+                      >
                     </div>
                   </div>
                 </td>
@@ -246,8 +251,23 @@
           </a-empty>
         </div>
         <div class="tbl-foot">
-          共 {{ filteredItems.length }} 条 · 核实 =
-          已对照标准原文确认编号/年份/名称；导出物化翻转注册表两标志
+          <span
+            >共 {{ filteredItems.length }} 条 · 核实 =
+            已对照标准原文确认编号/年份/名称；导出物化翻转注册表两标志</span
+          >
+          <span v-if="pageCount > 1" class="pager">
+            <a-select
+              :value="pageSize"
+              size="small"
+              class="size-select"
+              popup-class-name="pager-size-dd"
+              :options="sizeOptions"
+              @change="setPageSize"
+            />
+            <button class="btn btn-sm" :disabled="page <= 1" @click="page--">上一页</button>
+            <span class="num">{{ page }} / {{ pageCount }}</span>
+            <button class="btn btn-sm" :disabled="page >= pageCount" @click="page++">下一页</button>
+          </span>
         </div>
       </div>
 
@@ -781,11 +801,45 @@
         <button class="btn btn-sec btn-sm" @click="kbDlg.open = false">关闭</button>
       </template>
     </a-modal>
+
+    <!-- 语料引用抽屉（2026-10-20 交互改版：由行内展开迁出，点「语料引用」列数字触发；0 引用只 toast 不进抽屉） -->
+    <a-drawer
+      v-model:open="citeDrawer.open"
+      :title="`${citeDrawer.code} · 语料引用清单`"
+      width="480"
+    >
+      <div v-if="citeDrawer.title" class="cite-line muted" style="margin-bottom: 8px">
+        {{ citeDrawer.title }}
+      </div>
+      <div v-if="citeLoading[citeDrawer.code]" class="cite-line muted">
+        <RefreshCw :size="13" class="spin" />
+        <span>引用清单加载中…</span>
+      </div>
+      <div v-else-if="citationsOf(citeDrawer.code)?.error" class="cite-line warn">
+        <AlertTriangle :size="13" />
+        <span>引用清单加载失败</span>
+        <button class="btn btn-txt btn-sm" @click="retryCitations(citeDrawer.code)">
+          点击重试
+        </button>
+      </div>
+      <div v-else-if="!citationsOf(citeDrawer.code)?.reports?.length" class="cite-line warn">
+        <AlertTriangle :size="13" />
+        <span>语料 0 引用——SKILL 手工登记标准，须人工 KB / 联网核实</span>
+      </div>
+      <div v-else class="src-list">
+        <div v-for="c in citationsOf(citeDrawer.code).reports" :key="c.report_id" class="cite-line">
+          <FileText :size="13" />
+          <span class="mono">{{ c.report_id }}</span>
+          <span class="cite-as" :title="`引用名：${c.cited_as}`">{{ c.cited_as }}</span>
+          <span v-if="c.stage" class="pill pill-gray s-stage">{{ c.stage }}</span>
+        </div>
+      </div>
+    </a-drawer>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import {
   AlertTriangle,
@@ -867,6 +921,25 @@ const clearFilters = () => {
   filters.state = ''
   filters.q = ''
 }
+
+// 前端整包分页（同 LexiconPanel 惯例）：筛选/页大小变更回第 1 页
+const page = ref(1)
+const PAGE_SIZE_OPTIONS = [10, 20, 50]
+const pageSize = ref(10)
+const sizeOptions = PAGE_SIZE_OPTIONS.map((n) => ({ value: n, label: `${n} 条/页` }))
+const pageCount = computed(() =>
+  Math.max(1, Math.ceil(filteredItems.value.length / pageSize.value))
+)
+const pagedItems = computed(() =>
+  filteredItems.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value)
+)
+const setPageSize = (n) => {
+  pageSize.value = n
+  page.value = 1
+}
+watch(filters, () => {
+  page.value = 1
+})
 
 // ── 限值表单表视图 ──────────────────────────────────────
 
@@ -1364,8 +1437,17 @@ const onRegisterSubmit = async () => {
   }
 }
 
-// ── 标准核实辅助（T8：引用清单展开 + KB 查询弹层）─────────
-const expandedCiteCodes = ref([])
+// ── 标准核实辅助（T8：关联限值表行内展开 + 引用清单抽屉 + KB 查询弹层）─────────
+const expandedTableCodes = ref([])
+// 标准 → 关联限值表：limit_tables 条目的 code_ref 与注册表 code 精确相等（文件态/DB 入册两通道均露出）
+const tablesOf = (code) => tableEntries.value.filter(([, t]) => t.code_ref === code)
+const toggleTables = (record) => {
+  const code = record.code
+  expandedTableCodes.value = expandedTableCodes.value.includes(code)
+    ? expandedTableCodes.value.filter((x) => x !== code)
+    : [...expandedTableCodes.value, code]
+}
+
 const citationCache = ref({}) // code → listCitations 响应（拉一次后缓存；失败缓存 error 哨兵，由「点击重试」清除后重拉）
 const citeLoading = ref({})
 // 标准核实表列数（表头：展开/标准号/名称/分级/语料引用/核实状态/核实人/操作）——加列时与 thead 同步
@@ -1393,14 +1475,17 @@ const retryCitations = (code) => {
   loadCitations(code)
 }
 
-const toggleCitations = (record) => {
-  const code = record.code
-  if (expandedCiteCodes.value.includes(code)) {
-    expandedCiteCodes.value = expandedCiteCodes.value.filter((x) => x !== code)
+// 引用抽屉：0 引用是业务信号（SKILL 手工登记）只警示不进抽屉；>0 打开抽屉懒加载清单
+const citeDrawer = reactive({ open: false, code: '', title: '' })
+const openCitations = (record) => {
+  if (!record.cited_count) {
+    message.warning('语料 0 引用——SKILL 手工登记标准，须人工 KB / 联网核实')
     return
   }
-  expandedCiteCodes.value = [...expandedCiteCodes.value, code]
-  loadCitations(code)
+  citeDrawer.code = record.code
+  citeDrawer.title = record.title
+  citeDrawer.open = true
+  loadCitations(record.code)
 }
 
 const kbDlg = reactive({
@@ -2256,6 +2341,34 @@ code.k {
   overflow: auto;
   font-size: 11px;
   color: var(--gray-600);
+}
+
+.pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+/* 统计文案居左、页大小下拉与翻页控件居右（共享 .tbl-foot 无 justify，本页覆写） */
+.standards-panel .tbl-foot {
+  justify-content: space-between;
+}
+
+/* 页大小下拉：约束 min-width 防 flex 拉伸；antd selection-item 显式 14px，须 :deep 二段覆盖 */
+.size-select {
+  min-width: 88px;
+  font-size: 12px;
+
+  :deep(.ant-select-selection-item) {
+    font-size: 12px;
+  }
+}
+
+/* 下拉面板 teleport 到 body，scoped 触不到——popupClassName + :global 下探（同 LexiconPanel） */
+:global(.pager-size-dd .ant-select-item) {
+  font-size: 12px;
 }
 </style>
 
