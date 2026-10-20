@@ -58,6 +58,7 @@ async def enrich_regulation_file(
             if not unit:
                 continue
             chunk.tags = {
+                **(chunk.tags or {}),  # 保留入库期预置的既有键，富化键以本次为准
                 "doc_code": doc_code,
                 "doc_type": doc_type,
                 **unit,
@@ -91,12 +92,13 @@ async def enrich_regulation_file(
                 doc_code, unit_no, content
             )
 
-    # 3.5 表格打标回写 chunk tags（含不抽取的 criteria/param/other 表）
+    # 3.5 表格打标回写 chunk tags（含不抽取的 criteria/param/other 表）。
+    # tags 先提交、指标事务在后属有意顺序：两段间中断只留下短暂不一致，幂等重跑可治愈。
     if tag_updates:
         async with pg_manager.get_async_session_context() as session:
             result = await session.execute(select(KnowledgeChunk).where(KnowledgeChunk.chunk_id.in_(list(tag_updates))))
             for chunk in result.scalars().all():
-                chunk.tags = {**(chunk.tags or {}), **tag_updates.get(chunk.chunk_id, {})}
+                chunk.tags = {**(chunk.tags or {}), **tag_updates[chunk.chunk_id]}
 
     if all_indicators:
         async with pg_manager.get_async_session_context() as session:

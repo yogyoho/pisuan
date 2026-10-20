@@ -261,13 +261,37 @@ async def test_extract_indicators_filters_incomplete_rows(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_extract_indicators_string_limit_value_kept_faithful(monkeypatch):
+async def test_extract_indicators_string_limit_value_normalized(monkeypatch):
     adapter = FakeAdapter(
-        structured_result=_ext_result([{"pollutant": "硫酸盐", "metric": "日均", "limit_value": "0.07~0.09"}])
+        structured_result=_ext_result(
+            [
+                {"pollutant": "总汞", "metric": "日均", "limit_value": "≤0.5"},
+                {"pollutant": "硫酸盐", "metric": "日均", "limit_value": "0.07~0.09"},
+            ]
+        )
     )
     _patch_channel_model(monkeypatch, adapter)
     rows = await ext_mod.extract_indicators("X", "表2", "c")
-    assert rows[0]["limit_value"] == "0.07~0.09"  # 字符串原样保留，不强制数值化
+    # 字符串归一为数值：方向符号取原值、区间取上限（NUMERIC 列类型安全）
+    assert [r["limit_value"] for r in rows] == [0.5, 0.09]
+
+
+@pytest.mark.asyncio
+async def test_extract_indicators_unparseable_limit_value_drops_row(monkeypatch):
+    adapter = FakeAdapter(
+        structured_result=_ext_result(
+            [
+                {"pollutant": "坏行", "metric": "日均", "limit_value": "无法检出"},
+                {"pollutant": "NO2", "metric": "年均", "limit_value": 40},
+            ]
+        )
+    )
+    _patch_channel_model(monkeypatch, adapter)
+    logs = []
+    monkeypatch.setattr(ext_mod.logger, "warning", lambda msg, *a, **k: logs.append(str(msg)))
+    rows = await ext_mod.extract_indicators("GB X-2019", "表2", "c")
+    assert [r["pollutant"] for r in rows] == ["NO2"]  # 垃圾串行丢弃，其余行保留
+    assert any("GB X-2019" in m and "表2" in m and "无法检出" in m for m in logs)  # warning 带 doc_code/unit_no/原文
 
 
 @pytest.mark.asyncio
@@ -381,8 +405,8 @@ class FakeSession:
         return False
 
 
-def _mk_chunk(cid, content):
-    return SimpleNamespace(chunk_id=cid, content=content, tags={})
+def _mk_chunk(cid, content, tags=None):
+    return SimpleNamespace(chunk_id=cid, content=content, tags=dict(tags or {}))
 
 
 def _patch_pg(monkeypatch, chunks):
@@ -565,6 +589,37 @@ async def test_reenrich_idempotent_delete_before_insert(monkeypatch):
         assert i_del < i_ins
 
 
+@pytest.mark.asyncio
+async def test_insert_path_limit_value_all_numeric(monkeypatch):
+    # INSERT 路径类型守护：抽取出口归一后，DB 桩收到的 limit_value 全部为 float/None
+    adapter = FakeAdapter(
+        structured_result=_ext_result(
+            [
+                {"pollutant": "总汞", "metric": "日均", "limit_value": "≤0.5"},
+                {"pollutant": "硫酸盐", "metric": "日均", "limit_value": "0.07~0.09"},
+                {"pollutant": "坏行", "metric": "日均", "limit_value": "垃圾串"},
+            ]
+        )
+    )
+    _patch_channel_model(monkeypatch, adapter)
+    rows = await ext_mod.extract_indicators("GB X", "表1", "c")
+    assert len(rows) == 2  # 垃圾串行已在抽取出口丢弃
+
+    chunks = [_mk_chunk("c1", T_LIMIT)]
+    holder = _patch_pg(monkeypatch, chunks)
+    _patch_graph(monkeypatch)
+    monkeypatch.setattr(enrich_mod, "ensure_schema", _noop)
+    _patch_role_classifier(monkeypatch, StubRoleClassifier())
+    _patch_extractor(monkeypatch, StubExtractor(rows=rows))
+
+    await enrich_regulation_file("kb1", "f1", "GB X", "标准", "technical_standard")
+
+    inserts = [p for s in holder for sql, p in s.statements if "INSERT INTO standard_indicators" in sql]
+    assert len(inserts) == 2
+    assert all(p["v"] is None or isinstance(p["v"], float) for p in inserts)
+    assert sorted(p["v"] for p in inserts) == [0.09, 0.5]
+
+
 # --------------------------------------------------------------- R2：DDL 迁移幂等 + 查询
 def test_ddl_statements_all_idempotent():
     stmts = [s.strip() for s in _DDL.strip().split(";") if s.strip()]
@@ -605,3 +660,27 @@ def test_parse_indicator_response_keeps_category_period():
     text = '[{"pollutant": "SO2", "metric": "24小时", "limit_value": 150, "category": "二级", "period": "24小时"}]'
     rows = parse_indicator_response(text)
     assert rows[0]["category"] == "二级" and rows[0]["period"] == "24小时"
+
+
+@pytest.mark.asyncio
+async def test_enrich_preserves_existing_chunk_tags(monkeypatch):
+    # 入库期预置的既有 tags 在 enrich 后保留，富化新键（table_role/method_map/unit）并存
+    chunks = [
+        _mk_chunk("c1", T_LIMIT, tags={"doc_code": "GB X-2019", "source": "ingest"}),
+        _mk_chunk("c2", T_METHOD, tags={"source": "ingest"}),
+    ]
+    _patch_pg(monkeypatch, chunks)
+    _patch_graph(monkeypatch)
+    monkeypatch.setattr(enrich_mod, "ensure_schema", _noop)
+    _patch_role_classifier(monkeypatch, StubRoleClassifier())
+    _patch_extractor(monkeypatch, StubExtractor(mappings=[dict(METHOD_MAP[0])]))
+
+    await enrich_regulation_file("kb1", "f1", "GB X-2019", "标准", "technical_standard")
+
+    by_id = {c.chunk_id: c for c in chunks}
+    assert by_id["c1"].tags["source"] == "ingest"  # 既有键保留
+    assert by_id["c1"].tags["doc_code"] == "GB X-2019"
+    assert by_id["c1"].tags["table_role"] == "limit"  # 新键并存
+    assert by_id["c1"].tags["unit_no"] == "表1"
+    assert by_id["c2"].tags["source"] == "ingest"
+    assert by_id["c2"].tags["method_map"] == METHOD_MAP

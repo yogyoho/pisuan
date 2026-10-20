@@ -35,7 +35,8 @@ _PROMPT = """你是环保标准专家。提取标准文档《{doc_code}》中限
   "period": "时间周期(如 年平均/24小时/1小时/昼间)，无则空串"}}
 
 要求:
-- 区间取上限并在 condition 注明；limit_value 允许原样保留 "≤0.5" 等带符号写法
+- limit_value 只输出纯数值（如 0.5），禁止 "≤0.5" 等带符号写法
+- 区间取上限，≤/≥ 等方向符号语义在 condition 注明
 - 严格 JSON 输出，无注释无代码块标记
 """
 
@@ -56,8 +57,9 @@ _METHOD_PROMPT = """你是环保标准专家。提取标准文档《{doc_code}�
 class IndicatorRow(BaseModel):
     """指标行 schema（结构化通道与 prompt 通道 JSON 契约同形）。
 
-    limit_value 允许原样字符串（"≤0.5"/"0.07~0.09"/全角），不做数值强制——类型过严
-    会让整表输出报废（Task 13 I2 教训）；缺值/空行由 extract 层过滤。
+    limit_value schema 层仍宽松接受字符串（"≤0.5"/"0.07~0.09"）——类型过严会让整表
+    输出报废（Task 13 I2 教训）；数值归一（提取数字取最大值/解析失败丢行）在
+    extract_indicators 出口完成，保证入库 NUMERIC 列类型安全。
     """
 
     pollutant: str = Field(default="", description="污染物/指标名")
@@ -96,6 +98,8 @@ def _is_complete_indicator_row(r: dict[str, Any]) -> bool:
     )
 
 
+# legacy-only：生产路径已由 structured_channel 的 prompt+JSON 降级（内部自解析）取代，
+# 当前仅测试消费；保留作降级解析参考，勿在新代码直接调用。
 def parse_indicator_response(text: str) -> list[dict[str, Any]]:
     """解析 LLM 返回的指标 JSON 数组（降级通道），过滤缺少必填字段的行并补齐新字段默认值"""
     m = re.search(r"\[[\s\S]*\]", text or "")
@@ -125,6 +129,23 @@ def parse_indicator_response(text: str) -> list[dict[str, Any]]:
     return valid
 
 
+_NUM_RE = re.compile(r"-?\d+(?:\.\d+)?")
+
+
+def _normalize_limit_value(value: Any) -> float | None:
+    """limit_value 归一为 float（standard_indicators.limit_value 为 NUMERIC 列）。
+
+    float 原样保留；字符串提取全部数字取最大值（房规：区间取上限，≤/≥ 方向语义由
+    prompt 约定记入 condition）；解析不出数字返回 None，调用方丢弃该行。
+    """
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    found = _NUM_RE.findall(str(value))
+    return max((float(x) for x in found), default=None)
+
+
 def _truncate_table_content(doc_code: str, unit_no: str, table_content: str) -> str:
     content = table_content or ""
     if len(content) > _PROMPT_TEXT_CAP:
@@ -145,7 +166,21 @@ async def extract_indicators(doc_code: str, unit_no: str, table_content: str) ->
     except Exception as exc:
         logger.warning(f"指标提取失败 {doc_code} {unit_no}: {exc}")
         return []
-    return [r.model_dump() for r in out.rows if _is_complete_indicator_row(r.model_dump())]
+    rows: list[dict[str, Any]] = []
+    for r in out.rows:
+        dump = r.model_dump()
+        if not _is_complete_indicator_row(dump):
+            continue
+        value = _normalize_limit_value(dump["limit_value"])
+        if value is None:
+            logger.warning(
+                f"指标行 limit_value 无法解析为数值，丢弃该行: {doc_code} {unit_no} "
+                f"pollutant={dump['pollutant']!r} limit_value={dump['limit_value']!r}"
+            )
+            continue
+        dump["limit_value"] = value
+        rows.append(dump)
+    return rows
 
 
 async def extract_method_mappings(doc_code: str, unit_no: str, table_content: str) -> list[dict[str, Any]]:

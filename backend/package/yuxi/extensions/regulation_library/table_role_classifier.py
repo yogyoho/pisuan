@@ -54,7 +54,7 @@ class TableRoleVerdict(BaseModel):
     table_role: TableRole = Field(description="表类型：limit/method/criteria/param/other")
 
 
-def classify_table_role_by_title(title: str) -> str | None:
+def classify_table_role_by_title(title: str) -> TableRole | None:
     """标题关键词快路径；返回 None 表示标题缺失/歧义，交 LLM 慢路径。"""
     t = (title or "").strip()
     if not t:
@@ -73,7 +73,7 @@ class TableRoleClassifier:
         self._model_spec = model_spec
         self._timeout = timeout
 
-    async def classify(self, doc_code: str, unit_no: str, title: str, content_excerpt: str) -> str:
+    async def classify(self, doc_code: str, unit_no: str, title: str, content_excerpt: str) -> TableRole:
         try:
             verdict = await call_structured(
                 TableRoleVerdict,
