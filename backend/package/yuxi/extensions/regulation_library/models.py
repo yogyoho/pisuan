@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS standard_indicators (
 );
 CREATE INDEX IF NOT EXISTS idx_std_ind_doc_code ON standard_indicators(doc_code);
 CREATE INDEX IF NOT EXISTS idx_std_ind_pollutant ON standard_indicators(pollutant);
+ALTER TABLE standard_indicators ADD COLUMN IF NOT EXISTS category VARCHAR(64);
+ALTER TABLE standard_indicators ADD COLUMN IF NOT EXISTS period VARCHAR(64);
 """
 
 _schema_ready = False

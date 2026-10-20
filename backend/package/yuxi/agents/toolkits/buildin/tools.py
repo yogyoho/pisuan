@@ -1217,7 +1217,8 @@ async def lookup_subsidence_params(depth: str, coal_seam: str, angle: str) -> di
 LOOKUP_STANDARD_INDICATOR_DESCRIPTION = """
 查标准规范库的限值指标（standard_indicators，由"标准规范库加工"富化产出）。
 给定污染物名（如 SO2/NO2/TSP/颗粒物）+ 可选文档编号（如 GB 3095-2012），返回匹配的限值行：
-[{doc_code, unit_no, pollutant, metric, limit_value, unit, condition}]。
+[{doc_code, unit_no, pollutant, metric, limit_value, unit, condition, category, period}]。
+其中 category 为适用档位（如 III类/2类区/现有企业），period 为时间周期（如 年平均/24小时/昼间），无则为空串。
 写污染物浓度/排放标准相关章节时用此工具拿权威限值，不要凭记忆编造。
 """
 

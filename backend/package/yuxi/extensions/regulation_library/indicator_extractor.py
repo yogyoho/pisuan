@@ -1,4 +1,10 @@
-"""限值表 → LLM → 结构化指标行"""
+"""限值表 → LLM → 结构化指标行（含 category/period）；方法表 → 因子→方法名→标准号 映射。
+
+限值表四要素判据：每行可归约为 {因子（污染物/项目），适用条件，限值（带方向 ≤/</≥
+或区间），单位}，数值用于合规判定（允许多高），而非测量记录、方法性能（检出浓度）
+或工艺参数。通道：fast_model + with_structured_output（Task 13 判别器同款：能力探测
+缓存 + prompt+JSON 降级，见 structured_channel），取代旧的 default_model+自由文本 JSON。
+"""
 
 from __future__ import annotations
 
@@ -6,25 +12,92 @@ import json
 import re
 from typing import Any
 
+from pydantic import BaseModel, Field
+
+from yuxi.extensions.regulation_library.structured_channel import call_structured
 from yuxi.utils import logger
 
-_PROMPT = """你是环保标准专家。以下是标准文档《{doc_code}》中的一张限值表（{unit_no}），请提取所有指标限值。
+_PROMPT_TEXT_CAP = 6000  # 表格内容截断上限，超限记日志（doc_code+unit_no+截断量）
+
+_PROMPT = """你是环保标准专家。提取标准文档《{doc_code}》中限值表（{unit_no}）的指标限值。
+
+限值表判据：每一行可归约为 {{因子, 适用条件, 限值(带比较方向 ≤/</≥ 或区间), 单位}}，
+数值用于合规判定（允许多高）；测量记录、方法性能（最低检出浓度）、工艺参数不是限值。
 
 表格内容:
 {table_content}
 
-输出 JSON 数组，每行一个指标:
-[{{"pollutant": "污染物/指标名", "metric": "指标含义(如 年平均浓度限值)",
-  "limit_value": 数值, "unit": "单位", "condition": "适用条件(如 二类区/一级，无则空串)"}}]
+输出 JSON 对象 {{"rows": [...]}}，每个指标一行:
+{{"pollutant": "污染物/指标名", "metric": "指标含义(如 年平均浓度限值)",
+  "limit_value": 限值数值, "unit": "单位",
+  "condition": "其他适用条件(自由文本)，无则空串",
+  "category": "适用档位(如 III类/2类区/现有企业)，无则空串",
+  "period": "时间周期(如 年平均/24小时/1小时/昼间)，无则空串"}}
 
 要求:
-- limit_value 必须是纯数值（区间取上限并在 condition 注明）
-- 严格 JSON 数组输出，无注释无代码块标记
+- 区间取上限并在 condition 注明；limit_value 允许原样保留 "≤0.5" 等带符号写法
+- 严格 JSON 输出，无注释无代码块标记
+"""
+
+_METHOD_PROMPT = """你是环保标准专家。提取标准文档《{doc_code}》中分析方法表（{unit_no}）的
+「因子→方法名→方法标准号」映射。
+
+表格内容:
+{table_content}
+
+输出 JSON 对象 {{"mappings": [...]}}，每个因子一行:
+{{"pollutant": "污染物/因子名", "method_name": "分析方法名",
+  "method_code": "方法标准号(如 HJ 828-2017)，无则空串"}}
+
+严格 JSON 输出，无注释无代码块标记。
 """
 
 
+class IndicatorRow(BaseModel):
+    """指标行 schema（结构化通道与 prompt 通道 JSON 契约同形）。
+
+    limit_value 允许原样字符串（"≤0.5"/"0.07~0.09"/全角），不做数值强制——类型过严
+    会让整表输出报废（Task 13 I2 教训）；缺值/空行由 extract 层过滤。
+    """
+
+    pollutant: str = Field(default="", description="污染物/指标名")
+    metric: str = Field(default="", description="指标含义，如 年平均浓度限值")
+    limit_value: float | str | None = Field(default=None, description="限值；区间/带符号写法可原样字符串")
+    unit: str = Field(default="", description="限值单位")
+    condition: str = Field(default="", description="其他适用条件（自由文本），无则空串")
+    category: str = Field(default="", description="适用档位(如 III类/2类区/现有企业)，无则空串")
+    period: str = Field(default="", description="时间周期(如 年平均/24小时/1小时/昼间)，无则空串")
+
+
+class IndicatorExtraction(BaseModel):
+    """整表抽取结果（单列表字段包装，便于结构化通道与降级通道同形解析）。"""
+
+    rows: list[IndicatorRow] = Field(default_factory=list, description="指标行")
+
+
+class MethodMapping(BaseModel):
+    """方法表映射行：因子 → 方法名 → 方法标准号。"""
+
+    pollutant: str = Field(default="", description="污染物/因子名")
+    method_name: str = Field(default="", description="分析方法名")
+    method_code: str = Field(default="", description="方法标准号，如 HJ 828-2017，无则空串")
+
+
+class MethodMappingExtraction(BaseModel):
+    mappings: list[MethodMapping] = Field(default_factory=list, description="因子→方法映射")
+
+
+def _is_complete_indicator_row(r: dict[str, Any]) -> bool:
+    """行级过滤口径：pollutant/metric 非空且 limit_value 非空才算指标行。"""
+    return (
+        bool(str(r.get("pollutant") or "").strip())
+        and bool(str(r.get("metric") or "").strip())
+        and r.get("limit_value") is not None
+    )
+
+
 def parse_indicator_response(text: str) -> list[dict[str, Any]]:
-    """解析 LLM 返回的指标 JSON 数组，过滤缺少必填字段的行"""
+    """解析 LLM 返回的指标 JSON 数组（降级通道），过滤缺少必填字段的行并补齐新字段默认值"""
     m = re.search(r"\[[\s\S]*\]", text or "")
     if not m:
         return []
@@ -32,25 +105,59 @@ def parse_indicator_response(text: str) -> list[dict[str, Any]]:
         rows = json.loads(m.group())
     except (json.JSONDecodeError, ValueError):
         return []
+    if not isinstance(rows, list):
+        return []
     valid = []
     for r in rows:
         if not isinstance(r, dict):
             continue
-        if r.get("pollutant") and r.get("metric") and r.get("limit_value") is not None:
-            valid.append(r)
+        row = {
+            "pollutant": str(r.get("pollutant") or ""),
+            "metric": str(r.get("metric") or ""),
+            "limit_value": r.get("limit_value"),
+            "unit": str(r.get("unit") or ""),
+            "condition": str(r.get("condition") or ""),
+            "category": str(r.get("category") or ""),
+            "period": str(r.get("period") or ""),
+        }
+        if _is_complete_indicator_row(row):
+            valid.append(row)
     return valid
 
 
+def _truncate_table_content(doc_code: str, unit_no: str, table_content: str) -> str:
+    content = table_content or ""
+    if len(content) > _PROMPT_TEXT_CAP:
+        logger.info(f"表内容截断: {doc_code} {unit_no} {len(content)}→{_PROMPT_TEXT_CAP} 字符")
+        content = content[:_PROMPT_TEXT_CAP]
+    return content
+
+
 async def extract_indicators(doc_code: str, unit_no: str, table_content: str) -> list[dict[str, Any]]:
-    """对单张限值表调用 LLM 提取指标"""
-    from yuxi.models.chat import select_model
-    from yuxi.config.options import system_options
-    prompt = _PROMPT.format(doc_code=doc_code, unit_no=unit_no or "未编号表", table_content=table_content[:6000])
+    """对单张限值表调用 LLM 提取指标（含 category/period 结构化字段；失败 fail-closed 返回 []）"""
+    prompt = _PROMPT.format(
+        doc_code=doc_code,
+        unit_no=unit_no or "未编号表",
+        table_content=_truncate_table_content(doc_code, unit_no, table_content),
+    )
     try:
-        model = select_model(model_spec=(await system_options.get())["default_model"])
-        response = await model.call(prompt)
-        text = response.content if hasattr(response, "content") else str(response)
-        return parse_indicator_response(text)
-    except Exception as e:
-        logger.warning(f"指标提取失败 {doc_code} {unit_no}: {e}")
+        out = await call_structured(IndicatorExtraction, prompt)
+    except Exception as exc:
+        logger.warning(f"指标提取失败 {doc_code} {unit_no}: {exc}")
         return []
+    return [r.model_dump() for r in out.rows if _is_complete_indicator_row(r.model_dump())]
+
+
+async def extract_method_mappings(doc_code: str, unit_no: str, table_content: str) -> list[dict[str, Any]]:
+    """对方法表抽取 因子→方法名→方法标准号 映射（入 chunk tags，不建新表；失败返回 []）"""
+    prompt = _METHOD_PROMPT.format(
+        doc_code=doc_code,
+        unit_no=unit_no or "未编号表",
+        table_content=_truncate_table_content(doc_code, unit_no, table_content),
+    )
+    try:
+        out = await call_structured(MethodMappingExtraction, prompt)
+    except Exception as exc:
+        logger.warning(f"方法映射提取失败 {doc_code} {unit_no}: {exc}")
+        return []
+    return [m.model_dump() for m in out.mappings if m.pollutant.strip() and m.method_name.strip()]
