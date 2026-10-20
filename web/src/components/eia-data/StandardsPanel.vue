@@ -344,7 +344,7 @@
                   :key="unitKey(doc.doc_code, unit.unit_no)"
                 >
                   <div class="unit-row">
-                    <span class="u-no">{{ unit.unit_no }}</span>
+                    <span class="u-no">{{ unit.unit_no || '—' }}</span>
                     <span v-if="unit.category" class="pill pill-gray">{{ unit.category }}</span>
                     <span class="u-cnt">{{ unit.rows.length }} 行</span>
                     <div class="u-acts">
@@ -356,7 +356,7 @@
                         <button
                           v-if="userStore.isAdmin"
                           class="btn btn-txt btn-sm"
-                          :disabled="verifyBusy"
+                          :disabled="unitBusy(doc.doc_code, unit.unit_no)"
                           @click="onUnverify(doc.doc_code, unit.unit_no)"
                         >
                           撤销
@@ -365,10 +365,10 @@
                       <button
                         v-else-if="userStore.isAdmin"
                         class="btn btn-sec btn-sm"
-                        :disabled="verifyBusy"
+                        :disabled="unitBusy(doc.doc_code, unit.unit_no)"
                         @click="onVerify(doc.doc_code, unit.unit_no)"
                       >
-                        {{ verifyBusy ? '提交中…' : '确认核验' }}
+                        {{ unitBusy(doc.doc_code, unit.unit_no) ? '提交中…' : '确认核验' }}
                       </button>
                       <button
                         class="btn btn-txt btn-sm"
@@ -1115,13 +1115,15 @@ const indicators = ref([])
 const indicatorsLoading = ref(false)
 const expandedDocs = ref([])
 const expandedUnits = ref([])
-const verifyBusy = ref(false)
+const verifyBusyKey = ref('')
 const expertOpen = ref(false)
 const candidates = ref([])
 const candidatesLoading = ref(false)
 const candidatesLoaded = ref(false)
 
 const unitKey = (docCode, unitNo) => `${docCode}|${unitNo}`
+// 核验请求按单元粒度上锁：仅对应单元的按钮进入提交态
+const unitBusy = (docCode, unitNo) => verifyBusyKey.value === unitKey(docCode, unitNo)
 // 核验时间仅展示月-日（原型口径）；ISO 串或 null
 const shortDate = (iso) => (iso ? String(iso).slice(5, 10) : '—')
 
@@ -1149,7 +1151,7 @@ const groupIndicators = (kind) => {
     }
     const doc = docMap.get(r.doc_code)
     if (!doc.doc_name && r.doc_name) doc.doc_name = r.doc_name
-    const uNo = r.unit_no || '—'
+    const uNo = r.unit_no ?? '' // 分组保留原始 unit_no（可能为空），「—」仅作展示 fallback
     if (!doc.units.has(uNo)) {
       doc.units.set(uNo, { unit_no: uNo, rows: [], category: '', verified: false, verified_by: '', verified_at: '' })
     }
@@ -1221,16 +1223,22 @@ const loadIndicators = async (silent = false) => {
 
 // 核验/撤销后静默重拉（无整页 spinner），服务端始终是核验态唯一事实
 const setUnitVerify = async (docCode, unitNo, verify) => {
-  verifyBusy.value = true
+  verifyBusyKey.value = unitKey(docCode, unitNo)
   try {
-    if (verify) await regulationLibraryApi.verifyUnit(docCode, unitNo)
-    else await regulationLibraryApi.unverifyUnit(docCode, unitNo)
-    message.success(`${verify ? '已核验' : '已撤销核验'} ${docCode} · ${unitNo}`)
+    const data = verify
+      ? await regulationLibraryApi.verifyUnit(docCode, unitNo)
+      : await regulationLibraryApi.unverifyUnit(docCode, unitNo)
+    if ((data?.updated ?? 0) === 0) {
+      // updated=0：该单元无可核验行，服务端未变更，不置核验态
+      message.warning('该单元无可核验行')
+      return
+    }
+    message.success(`${verify ? '已核验' : '已撤销核验'} ${docCode} · ${unitNo || '—'}`)
     await loadIndicators(true)
   } catch (e) {
     message.error(e?.message || (verify ? '核验失败' : '撤销失败'))
   } finally {
-    verifyBusy.value = false
+    verifyBusyKey.value = ''
   }
 }
 
@@ -1311,6 +1319,10 @@ const onSaveDrawer = async () => {
     message.warning('请填写标准号')
     return
   }
+  if (!drawer.rows.length) {
+    message.warning('请至少录入一行限值')
+    return
+  }
   if (drawer.rows.length > 500) {
     message.warning('限值行不能超过 500 行')
     return
@@ -1343,6 +1355,7 @@ const onSaveDrawer = async () => {
     message.success(`「${code}」已保存并核验生效（${payload.rows.length} 行）`)
     drawer.open = false
     expertOpen.value = true
+    candidatesLoaded.value = false // 手工标准增删后缺源候选缓存失效，下次进 tab2 重拉
     await loadIndicators(true)
   } catch (e) {
     // 409（编号已存在 / 非 expert 行）、400（校验失败）detail 由 api 层透出
@@ -1367,6 +1380,7 @@ const onDelete = async () => {
     await regulationLibraryApi.deleteManualStandard(delDlg.group.doc_code)
     message.success(`已删除 ${delDlg.group.doc_code}（${delDlg.group.totalRows} 行）`)
     delDlg.open = false
+    candidatesLoaded.value = false // 手工标准增删后缺源候选缓存失效，下次进 tab2 重拉
     await loadIndicators(true)
   } catch (e) {
     message.error(e?.message || '删除失败')
