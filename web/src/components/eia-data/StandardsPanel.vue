@@ -489,7 +489,7 @@
           </div>
           <a-spin v-if="candidatesLoading" style="display: block; margin: 48px auto" />
           <div v-else-if="candidates.length" class="cand-grid">
-            <div v-for="c in candidates" :key="c.code" class="cand-card">
+            <div v-for="c in pagedCandidates" :key="c.code" class="cand-card">
               <div class="cand-key">
                 <div class="cand-ic"><Link :size="14" /></div>
                 <div class="cand-title-wrap">
@@ -515,6 +515,14 @@
               </div>
             </div>
           </div>
+          <a-pagination
+            v-if="candidates.length > CAND_PAGE_SIZE"
+            v-model:current="candPage"
+            class="cand-pager"
+            :total="candidates.length"
+            :page-size="CAND_PAGE_SIZE"
+            :show-size-changer="false"
+          />
           <div v-else class="empty-state">
             <a-empty description="暂无缺源候选 · 写作引用的标准均已覆盖" />
           </div>
@@ -1119,6 +1127,11 @@ const verifyBusyKey = ref('')
 const expertOpen = ref(false)
 const candidates = ref([])
 const candidatesLoading = ref(false)
+const CAND_PAGE_SIZE = 9
+const candPage = ref(1)
+const pagedCandidates = computed(() =>
+  candidates.value.slice((candPage.value - 1) * CAND_PAGE_SIZE, candPage.value * CAND_PAGE_SIZE)
+)
 const candidatesLoaded = ref(false)
 
 const unitKey = (docCode, unitNo) => `${docCode}|${unitNo}`
@@ -1252,6 +1265,7 @@ const loadCandidates = async () => {
   try {
     candidates.value = await eiaStandardApi.listSourceCandidates()
     candidatesLoaded.value = true
+    candPage.value = 1
   } catch (e) {
     if (userStore.isAdmin) message.error(e?.message || '缺源候选加载失败')
     else console.warn('[StandardsPanel] 缺源候选加载跳过（非管理员）：', e?.message)
@@ -1728,6 +1742,12 @@ code.k {
   grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
   gap: 10px;
   padding: 14px 16px;
+}
+
+.cand-pager {
+  display: flex;
+  justify-content: center;
+  padding: 4px 16px 16px;
 }
 
 .cand-card {
