@@ -747,13 +747,13 @@
           </thead>
           <tbody>
             <tr v-for="(row, i) in drawer.rows" :key="i">
-              <td><input v-model="row.pollutant" class="inp" placeholder="因子" /></td>
-              <td><input v-model="row.category" class="inp" placeholder="档位" /></td>
-              <td><input v-model="row.metric" class="inp" placeholder="指标" /></td>
-              <td><input v-model="row.limit_value" class="inp" placeholder="限值" /></td>
-              <td><input v-model="row.unit" class="inp" placeholder="单位" /></td>
-              <td><input v-model="row.period" class="inp" placeholder="时段" /></td>
-              <td><input v-model="row.condition" class="inp" placeholder="条件" /></td>
+              <td><input v-model="row.pollutant" class="cell-inp" /></td>
+              <td><input v-model="row.category" class="cell-inp" /></td>
+              <td><input v-model="row.metric" class="cell-inp" /></td>
+              <td><input v-model="row.limit_value" class="cell-inp" /></td>
+              <td><input v-model="row.unit" class="cell-inp" /></td>
+              <td><input v-model="row.period" class="cell-inp" /></td>
+              <td><input v-model="row.condition" class="cell-inp" /></td>
               <td class="col-act">
                 <button class="row-del" aria-label="删除行" @click="drawer.rows.splice(i, 1)">
                   <Trash2 :size="13" />
@@ -2277,7 +2277,7 @@ code.k {
   font-size: 12px;
 
   th {
-    padding: 7px 8px;
+    padding: 7px 6px;
     background: var(--gray-50);
     border-bottom: 1px solid var(--hairline);
     font-size: 11px;
@@ -2288,20 +2288,47 @@ code.k {
   }
 
   td {
-    padding: 5px 6px;
+    padding: 6px 5px;
     border-bottom: 1px solid var(--gray-100);
+  }
+
+  tbody tr {
+    transition: background 0.15s;
+
+    &:hover {
+      background: var(--gray-25);
+    }
   }
 
   tbody tr:last-child td {
     border-bottom: none;
   }
 
-  .inp {
+  /* 行内单元格输入框（原型 fld input 配方收窄版：轻 hairline + 大圆角 + focus ring；
+     底透明以透出行 hover 底色） */
+  .cell-inp {
     width: 100%;
     min-width: 0;
-    height: 28px;
-    padding: 0 8px;
+    height: 32px;
+    padding: 0 9px;
+    border: 1px solid var(--gray-150, var(--gray-200));
+    border-radius: 8px;
+    background: transparent;
+    outline: none;
+    color: var(--color-text);
     font-size: 12px;
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
+    transition: border-color 0.15s, box-shadow 0.15s;
+
+    &:hover {
+      border-color: var(--gray-300);
+    }
+
+    &:focus {
+      border-color: var(--main-500);
+      box-shadow: 0 0 0 2px var(--main-100);
+    }
   }
 
   .col-act {
@@ -2310,12 +2337,13 @@ code.k {
 
   .row-del {
     display: inline-flex;
-    padding: 4px;
+    padding: 5px;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     background: none;
     color: var(--color-text-tertiary);
     cursor: pointer;
+    transition: all 0.15s;
 
     &:hover {
       background: var(--color-error-50);
@@ -2367,18 +2395,18 @@ code.k {
 }
 
 /* 抽屉 teleport 到 body，不在 .ewp 命名空间内——.btn 配方（factory-ui §按钮）在此复刻，
-   修复 footer 按钮一直吃 UA 裸样式、暗色下白底白字的问题 */
+   修复 footer 按钮一直吃 UA 裸样式的问题；字号 13px 对齐原型 .btn 主配方 */
 .drawer-ft-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 26px;
-  padding: 0 9px;
+  height: 30px;
+  padding: 0 16px;
   border: none;
   border-radius: 6px;
   background: none;
   color: var(--color-text);
-  font-size: 12px;
+  font-size: 13px;
   font-family: inherit;
   transition: all 0.15s;
   cursor: pointer;
