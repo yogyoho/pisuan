@@ -2220,7 +2220,8 @@ code.k {
   margin-top: 20px;
 }
 
-/* 表单区（原型 fld 配方：正式 label + 控件 + 帮助文字；同 MetaPanel meta-form） */
+/* 表单区（原型 fld 配方：正式 label + 控件 + 帮助文字；同 MetaPanel meta-form）。
+   控件圆角统一 6px、控件字号 13px（antd token 10px/14px 的抽屉内覆盖），label/help 不变 */
 .mstd-form {
   display: flex;
   flex-direction: column;
@@ -2249,6 +2250,12 @@ code.k {
 
     :deep(.ant-select) {
       width: 100%;
+    }
+
+    :deep(.ant-input),
+    :deep(.ant-select .ant-select-selector) {
+      border-radius: 6px;
+      font-size: 13px;
     }
 
     .fld-help {
@@ -2304,25 +2311,25 @@ code.k {
     border-bottom: none;
   }
 
-  /* 行内单元格输入框（原型 fld input 配方收窄版：轻 hairline + 大圆角 + focus ring；
-     底透明以透出行 hover 底色） */
+  /* 行内单元格输入框：边框/圆角/字号对齐表单区 antd 控件（colorBorder #d9d9d9、6px、13px），
+     hover/focus 同走主色系；底透明以透出行 hover 底色 */
   .cell-inp {
     width: 100%;
     min-width: 0;
     height: 32px;
     padding: 0 9px;
-    border: 1px solid var(--gray-150, var(--gray-200));
-    border-radius: 8px;
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
     background: transparent;
     outline: none;
     color: var(--color-text);
-    font-size: 12px;
+    font-size: 13px;
     font-family: inherit;
     font-variant-numeric: tabular-nums;
     transition: border-color 0.15s, box-shadow 0.15s;
 
     &:hover {
-      border-color: var(--gray-300);
+      border-color: var(--main-400);
     }
 
     &:focus {
@@ -2436,10 +2443,24 @@ code.k {
     opacity: 0.45;
     cursor: not-allowed;
   }
+
+  /* antd footer 容器无间隔（block 布局），按钮间距在相邻兄弟上补 */
+  + .drawer-ft-btn {
+    margin-left: 8px;
+  }
 }
 
 :root.dark .drawer-ft-btn.btn-pri {
   color: #0a0a0a;
+}
+
+/* cell-inp 默认边框 #d9d9d9 对齐 antd light colorBorder；暗色对齐 darkAlgorithm 的深灰 */
+:root.dark .cell-inp {
+  border-color: var(--gray-300);
+
+  &:hover {
+    border-color: var(--main-400);
+  }
 }
 
 /* 删除确认警示框（文案照原型：lookup 立即失效、不可撤销） */
