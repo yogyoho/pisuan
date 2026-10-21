@@ -331,11 +331,12 @@ onMounted(fetchAll)
   outline: none;
 }
 
-/* 预览容器只管盒子（边框/内边距/最小高），排版由 MarkdownPreview 自带（0.9rem/1.75） */
+/* 预览容器只管盒子（与 edt-area 同高，内部纵向滚动，编辑/预览切换不跳变），排版交 MarkdownPreview 自带 */
 .md-preview {
+  height: 320px;
+  overflow-y: auto;
   border-top: 1px solid var(--hairline);
   padding: 16px 20px;
-  min-height: 320px;
 }
 
 .edt-meta {
