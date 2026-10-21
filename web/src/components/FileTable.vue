@@ -353,10 +353,12 @@
         </a-tooltip>
       </template>
 
-      <template #cell-created_at="{ row, text }">
-        <span class="file-time-cell">
-          {{ row.is_virtual_folder ? '-' : formatFileTableTime(text) }}
-        </span>
+      <template #cell-updated_at="{ row, text }">
+        <a-tooltip :title="row.is_virtual_folder ? '' : `上传时间 ${formatFileTableTime(row.created_at)}`">
+          <span class="file-time-cell">
+            {{ row.is_virtual_folder ? '-' : formatFileTableTime(text) }}
+          </span>
+        </a-tooltip>
       </template>
 
       <template #row-actions="{ row }">
@@ -951,11 +953,11 @@ const columnsCompact = [
     sortDirections: ['ascend', 'descend']
   },
   {
-    title: '时间',
-    dataIndex: 'created_at',
-    key: 'created_at',
+    title: '更新时间',
+    dataIndex: 'updated_at',
+    key: 'updated_at',
     width: 180,
-    sorter: (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0),
+    sorter: (a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0),
     sortDirections: ['ascend', 'descend']
   },
   { title: '操作', key: 'action', dataIndex: 'file_id', width: 64, align: 'center' }
