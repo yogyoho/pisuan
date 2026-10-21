@@ -144,11 +144,13 @@ class OtherEmbedding(BaseEmbeddingModel):
     async def aencode(self, message: list[str] | str) -> list[list[float]]:
         payload = self.build_payload(message)
         self._log_long_inputs(message)
+        # 300s：分块饱满后（如 book/1024）单批 8 条长块在本地 ollama 上处理可达分钟级，
+        # 且多文档并发入库时请求在服务端排队，60s 会以空串 ReadTimeout 形态失败。
         async with httpx.AsyncClient() as client:
             retry_index = 0
             while True:
                 try:
-                    response = await client.post(self.base_url, json=payload, headers=self.headers, timeout=60)
+                    response = await client.post(self.base_url, json=payload, headers=self.headers, timeout=300)
                     response.raise_for_status()
                     return self._extract_embeddings(response.json())
                 except httpx.HTTPStatusError as e:
