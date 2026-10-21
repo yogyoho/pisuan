@@ -80,7 +80,7 @@
               class="edt-area"
               spellcheck="false"
             ></textarea>
-            <div v-show="mode === 'view'" class="md-preview">{{ mdText }}</div>
+            <MarkdownPreview v-if="mode === 'view'" :content="mdText" class="md-preview" />
             <div class="edt-meta">
               <span v-if="draftContent !== null" class="field-src db">
                 草稿 · {{ draftMeta?.updated_by }} · {{ shortTime(draftMeta?.updated_at) }}
@@ -167,6 +167,7 @@ import { Info, NotebookPen } from '@lucide/vue'
 import { eiaParadigmApi } from '@/apis/eia_paradigm_api'
 import { useUserStore } from '@/stores/user'
 import ParadigmExportModal from './ParadigmExportModal.vue'
+import MarkdownPreview from '@/components/common/MarkdownPreview.vue'
 
 const KIND = 'paradigm_md'
 const ROLE_LABELS = {
@@ -330,14 +331,11 @@ onMounted(fetchAll)
   outline: none;
 }
 
+/* 预览容器只管盒子（边框/内边距/最小高），排版由 MarkdownPreview 自带（0.9rem/1.75） */
 .md-preview {
   border-top: 1px solid var(--hairline);
   padding: 16px 20px;
   min-height: 320px;
-  font-size: 13px;
-  line-height: 1.9;
-  white-space: pre-wrap;
-  color: var(--color-text);
 }
 
 .edt-meta {
