@@ -38,6 +38,43 @@ def _ensure_chunk_token_limit(chunks: list[str], chunk_token_num: int) -> list[s
     return protected
 
 
+def _merge_groups_to_chunks(groups: list[list[str]], chunk_token_num: int) -> list[str]:
+    # hierarchical_merge 每组头部都带完整祖先标题链，直接拼接会让同一面包屑在块内反复出现
+    # （bug-4116 所见“分片重复”）。与前一组合共享的头部行只保留一次；预算打满新起块时恢复
+    # 完整面包屑置于块首，块首保持标题对齐且块内无重复。overlapped_percent 与标题对齐冲突，
+    # 层级路径不生效（该预设默认及现网配置均为 0）。
+    chunks: list[str] = []
+    buf: list[str] = []
+    prev: list[str] = []
+    for group in groups:
+        common = 0
+        for x, y in zip(prev, group):
+            if x != y:
+                break
+            common += 1
+        delta = group[common:]
+        prev = group
+        if not delta:
+            continue
+
+        if not buf:
+            buf = list(group)
+        elif nlp.count_tokens("\n".join(buf + delta)) <= chunk_token_num:
+            buf += delta
+            continue
+        else:
+            chunks.append("\n".join(buf))
+            buf = list(group)
+
+        if nlp.count_tokens("\n".join(buf)) > chunk_token_num:
+            # 单组自身超预算：硬切后各段直接成块
+            chunks.extend(nlp.hard_split_by_token_limit("\n".join(buf), chunk_token_num))
+            buf = []
+    if buf:
+        chunks.append("\n".join(buf))
+    return chunks
+
+
 def chunk_markdown(markdown_content: str, parser_config: dict[str, Any] | None = None) -> list[str]:
     parser_config = parser_config or {}
 
@@ -56,7 +93,10 @@ def chunk_markdown(markdown_content: str, parser_config: dict[str, Any] | None =
     bull = nlp.bullets_category([t for t in nlp.random_choices([t for t, _ in sections], k=100)])
 
     if bull >= 0:
-        chunks = ["\n".join(ck) for ck in nlp.hierarchical_merge(bull, sections, depth=5)]
+        # hierarchical_merge 组内合并预算硬编码且标题组强制新块，chunk_token_num 不参与合并，
+        # 产物碎成标题面包屑小块（预算只被末端 _ensure_chunk_token_limit 当裁剪上限）。
+        # 层级产物按原序回填合并到预算：块起点仍对齐标题，chunk_token_num 成为实际目标尺寸。
+        chunks = _merge_groups_to_chunks(nlp.hierarchical_merge(bull, sections, depth=5), chunk_token_num)
     else:
         chunks = nlp.naive_merge(
             sections,
