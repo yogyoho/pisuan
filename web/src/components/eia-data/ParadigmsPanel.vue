@@ -80,7 +80,7 @@
               class="edt-area"
               spellcheck="false"
             ></textarea>
-            <MarkdownPreview v-if="mode === 'view'" :content="mdText" class="md-preview" />
+            <MarkdownPreview v-if="mode === 'view'" :content="mdText" bordered class="md-preview" />
             <div class="edt-meta">
               <span v-if="draftContent !== null" class="field-src db">
                 草稿 · {{ draftMeta?.updated_by }} · {{ shortTime(draftMeta?.updated_at) }}
