@@ -14,6 +14,46 @@
       "examples": [
         {
           "report_id": "001-wps",
+          "text": "首采区为1采区("
+        },
+        {
+          "report_id": "001-wps",
+          "text": "设计可采储量为1386万吨"
+        },
+        {
+          "report_id": "001-wps",
+          "text": "服务年限为5.5年"
+        },
+        {
+          "report_id": "001-wps",
+          "text": "首采区设计可采储量为1287万吨"
+        },
+        {
+          "report_id": "001-wps",
+          "text": "服务年限为5.1年"
+        },
+        {
+          "report_id": "001-wps",
+          "text": "程投资占项目总投资的比例为2.83%"
+        },
+        {
+          "report_id": "001-wps",
+          "text": "矿井及选煤厂建设规模为180万吨/年"
+        },
+        {
+          "report_id": "001-wps",
+          "text": "重度破坏面积分别为394.14hm"
+        },
+        {
+          "report_id": "001-wps",
+          "text": "重度破坏面积分别为92.41hm"
+        },
+        {
+          "report_id": "001-wps",
+          "text": "禁采区面积为0.136km"
+        },
+        {
+          "report_id": "001-wps",
           "text": "儿湾矿井及选煤厂工程占地为36.9582hm"
         },
         {
@@ -131,46 +171,6 @@
         {
           "report_id": "001-wps",
           "text": "南部煤层倾角一般为35°以上"
-        },
-        {
-          "report_id": "001-wps",
-          "text": "各可采煤层分别平均为6.63%"
-        },
-        {
-          "report_id": "001-wps",
-          "text": "浮煤空气干燥基水分为3.40%"
-        },
-        {
-          "report_id": "001-wps",
-          "text": "各可采煤层分别平均为6.69%"
-        },
-        {
-          "report_id": "001-wps",
-          "text": "各可采煤层分别平均为8.34%"
-        },
-        {
-          "report_id": "001-wps",
-          "text": "灰分为2.16%"
-        },
-        {
-          "report_id": "001-wps",
-          "text": "各可采煤层分别平均为4.34%"
-        },
-        {
-          "report_id": "001-wps",
-          "text": "脱灰率为43.63%"
-        },
-        {
-          "report_id": "001-wps",
-          "text": "各可采煤层分别平均为31.02%"
-        },
-        {
-          "report_id": "001-wps",
-          "text": "本区浮煤挥发分产率为24.64%"
-        },
-        {
-          "report_id": "001-wps",
-          "text": "各可采煤层分别平均为31.21%"
         }
       ],
       "stats": {
@@ -322,6 +322,16 @@
         {
           "form": "dangling",
           "report_id": "004-2-2021-1",
+          "text": "审定、审查人员名单"
+        },
+        {
+          "form": "dangling",
+          "report_id": "004-2-2021-1",
+          "text": "编制人员名单"
+        },
+        {
+          "form": "dangling",
+          "report_id": "004-2-2021-1",
           "text": "宁东基地现代化煤化工产业示范区环境空气质量补充监测数据(日均浓度)                                      表4.3-4   "
         },
         {
@@ -373,21 +383,11 @@
           "form": "dangling",
           "report_id": "010-r",
           "text": "(2)石头梅一号露天矿施工期对《石头梅一号露天煤矿一期工程(500万吨/年)环境影响报告书的批复》落实情况"
-        },
-        {
-          "form": "dangling",
-          "report_id": "011-800--2026-2",
-          "text": "项目所在水功能区划分表"
-        },
-        {
-          "form": "dangling",
-          "report_id": "012-r",
-          "text": "续表6.7-3"
         }
       ],
       "stats": {
         "colon_lead": 0.0,
-        "complete_sentence": 0.056,
+        "complete_sentence": 0.055,
         "dangling": 0.02,
         "standalone_caption": 0.924
       },
