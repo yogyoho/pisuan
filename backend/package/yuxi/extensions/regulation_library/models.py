@@ -26,6 +26,9 @@ ALTER TABLE standard_indicators ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ
 ALTER TABLE standard_indicators ADD COLUMN IF NOT EXISTS verified_by TEXT;
 ALTER TABLE standard_indicators ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'enrich';
 ALTER TABLE standard_indicators ADD COLUMN IF NOT EXISTS doc_name TEXT;
+ALTER TABLE standard_indicators ADD COLUMN IF NOT EXISTS table_key VARCHAR(64);
+ALTER TABLE standard_indicators ADD COLUMN IF NOT EXISTS page_row_id VARCHAR(32);
+CREATE INDEX IF NOT EXISTS ix_si_table_key ON standard_indicators (table_key);
 """
 
 _schema_ready = False
