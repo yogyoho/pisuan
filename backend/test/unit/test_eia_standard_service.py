@@ -49,11 +49,12 @@ def test_norm_std_absorbs_citation_noise():
     assert base == _norm_std("GB–15618–2018")
 
 
-# ── 新表入册（tmp 文件，零真库写）─────────────────
+# ── 限值行载荷校验 / 新表入册（tmp 文件，零真库写）─────────────────
 
 
 def _noise_row():
     return {"category": "2 类", "day": 50, "night": 40, "unit": "dB(A)"}
+
 
 def _write_min_index(tmp_path, limit_tables):
     doc = {

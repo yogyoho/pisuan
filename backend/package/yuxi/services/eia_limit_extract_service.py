@@ -18,7 +18,6 @@ from sqlalchemy import text as sql_text
 
 from yuxi.extensions.regulation_library.models import ensure_schema
 from yuxi.repositories.eia_limit_extract_repository import EiaLimitExtractRepository
-from yuxi.repositories.eia_standard_repository import EiaStandardRepository
 from yuxi.services.eia_data_service import _SKILL_ROOT
 from yuxi.services.eia_limit_extract_core import (
     aggregate_cited_codes,
@@ -31,7 +30,7 @@ from yuxi.services.eia_limit_extract_core import (
 )
 from yuxi.services.eia_limit_llm_classifier import EiaLimitLLMClassifier, GateStats, JudgeResult, gate_report
 from yuxi.services.eia_limit_row_mapping import page_row_id_for
-from yuxi.services.eia_standard_service import EiaStandardService, LIMIT_TABLE_SCHEMAS, _load_standards_index
+from yuxi.services.eia_standard_service import LIMIT_TABLE_SCHEMAS, _load_standards_index, get_eia_standard_service
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_domain_factory import EiaLimitExtractRow, EiaLimitTableRegistry
 from yuxi.utils import logger
@@ -70,7 +69,6 @@ class EiaLimitExtractService:
     def __init__(
         self,
         repo: EiaLimitExtractRepository | None = None,
-        std_repo: EiaStandardRepository | None = None,  # 转正已改道 _insert_expert_row，参数仅为既有构造点兼容保留
         classifier: EiaLimitLLMClassifier | None = None,
     ):
         self._repo = repo or EiaLimitExtractRepository()
@@ -226,7 +224,9 @@ class EiaLimitExtractService:
                     ),
                     {"tk": row.table_key, "prid": page_row_id_for(row.table_key, normalized)},
                 )
-                await EiaStandardService()._insert_expert_row(session, row.table_key, code_ref, normalized, username)
+                await get_eia_standard_service()._insert_expert_row(
+                    session, row.table_key, code_ref, normalized, username
+                )
             if action == "edited":
                 row.row_json = normalized
         row.status = "confirmed" if action == "confirm" else action  # 状态词表 confirmed（模型列注释）

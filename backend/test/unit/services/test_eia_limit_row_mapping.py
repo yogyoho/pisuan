@@ -14,6 +14,8 @@ def test_page_row_id_for_deterministic_and_table_scoped():
     row = {"category": "0类", "day": 50, "night": 40, "unit": "dB(A)"}
     assert page_row_id_for("gb3096_zone_limits", row) == page_row_id_for("gb3096_zone_limits", dict(row))
     assert page_row_id_for("gb3096_zone_limits", row) != page_row_id_for("gb12348_boundary_limits", row)
+    # 金值钉扎：映射算法被改即红（page_row_id 漂移会使转正幂等删除键失配）
+    assert page_row_id_for("gb3096_zone_limits", row) == "f57ba7f1684dad2ff8a752093524852d"
 
 
 def test_flat_rows_direct_map():

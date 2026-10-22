@@ -8,6 +8,7 @@ import pytest
 from yuxi.services import eia_limit_extract_service as lex_svc
 from yuxi.services.eia_limit_extract_service import EiaLimitExtractService
 from yuxi.services.eia_limit_llm_classifier import GateStats, JudgeResult
+from yuxi.services.eia_limit_row_mapping import page_row_id_for
 from yuxi.services.eia_standard_service import EiaStandardService as _ESS
 
 
@@ -146,6 +147,7 @@ async def test_decide_row_confirm_writes_expert_row(svc, write_env, monkeypatch)
     delete_sql, delete_params = write_env.executes[0]  # 幂等：先按 page_row_id 删旧行
     assert "DELETE FROM standard_indicators" in delete_sql
     assert delete_params["tk"] == row.table_key and delete_params["prid"]
+    assert delete_params["prid"] == page_row_id_for(row.table_key, calls[0][2])
 
 
 @pytest.mark.asyncio

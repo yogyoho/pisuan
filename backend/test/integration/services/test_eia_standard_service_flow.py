@@ -47,10 +47,13 @@ async def test_standard_full_flow():
     svc = get_eia_standard_service()
     # 期望值从注册表文件自算（与 needs_verification 断言同构），避免钉死数据指纹——
     # 合法新增标准/限值表/样例行不应使测试误红
+    # exp_pending 与 list_standards.limit_tables_pending 同源：list_limit_tables 按 source != 'expert' 自算（bug-4129）
     file_doc = json.loads(STANDARDS_INDEX_PATH.read_text(encoding="utf-8"))
     exp_total = len(file_doc["standards"])
     exp_pending = sum(
-        1 for t in file_doc["limit_tables"].values() if isinstance(t, dict) and t.get("needs_verification")
+        1
+        for t in (await svc.list_limit_tables())["limit_tables"].values()
+        if isinstance(t, dict) and t.get("source") != "expert"
     )
     exp_rows = sum(len(t["rows"]) for t in file_doc["limit_tables"].values() if isinstance(t, dict))
     assert exp_total > 0 and exp_pending > 0

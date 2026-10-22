@@ -542,7 +542,10 @@ class EiaMetaAnnotation(Base):
 
 
 class EiaStandardLimitRow(Base):
-    """Domain Factory - 环评限值查找表人工录入行（P1；运营唯一真相，显式导出物化至 standards_index.json）"""
+    """Domain Factory - 环评限值查找表人工录入行（P1；运营唯一真相，显式导出物化至 standards_index.json）。
+
+    已退役：权威层=standard_indicators（P1 合流，export/list 通道已废）。
+    """
 
     __tablename__ = "eia_standard_limit_rows"
     __table_args__ = (Index("ix_eslr_table_key", "table_key"),)

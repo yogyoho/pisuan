@@ -386,7 +386,6 @@ class EiaStandardService:
         return {"table_key": table_key, "saved": saved}
 
 
-
 _service: EiaStandardService | None = None
 
 

@@ -1547,7 +1547,7 @@ async def list_eia_standards(
 async def list_eia_standard_limits(
     current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
-    """limit_tables：文件态 + DB 录入行合并（source: db|file）+ 行结构 schemas（供前端渲染编辑表格）"""
+    """limit_tables：文件态 + DB 录入行合并（source: expert|file|db_registry）+ 行结构 schemas（供前端渲染编辑表格）"""
     try:
         return await get_eia_standard_service().list_limit_tables()
     except FileNotFoundError as e:

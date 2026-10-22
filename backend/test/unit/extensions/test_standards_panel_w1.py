@@ -477,7 +477,7 @@ async def test_list_source_candidates_composes_aggregation_and_diff(monkeypatch)
 
     monkeypatch.setattr(enrich_ns, "distinct_doc_codes", fake_distinct)
 
-    svc = EiaLimitExtractService(repo=object(), std_repo=object(), classifier=object())
+    svc = EiaLimitExtractService(repo=object(), classifier=object())
     out = await svc.list_source_candidates()
 
     assert out == [{"code": "GB/T 13201-91", "ref_count": 1, "sample_sources": ["r1"]}]
