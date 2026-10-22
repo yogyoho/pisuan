@@ -9,7 +9,7 @@ description: >
   project_eia_underground=井工矿建设项目环评（openpit / post_eia 二期立项）。依据 HJ 130、
   HJ 463、HJ 2.1–2.4 系列；数字永不经过 LLM，正文只写 {{SLOT:key}}/{{TABLE:族}} 由脚本注入。
 version: "2026.09.30"
-tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query_kb", "list_report_types", "get_templates"]
+tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query_kb"]
 # pisuan 移植（2026-09-30）：运行时映射与改编范围见
 # docs/superpowers/specs/2026-09-30-coal-eia-writer-v2-port-design.md §4。
 # 原 allowed-tools NOTE 不适用本平台，删除；license: MIT 移除（平台 frontmatter 不使用）。
@@ -65,10 +65,10 @@ tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query
 
 ### 步骤 1 · 数据收集 → 门 1
 
-1. **开题首动作三件套（bug-2231/3066 页面实测纪律全套移植：开题第一轮一轮做完，不可拆分、不可只说不做）**——按序完成：① **真实调用** `list_report_types`（辅以 `get_templates`）查询本机知识工厂是否已有可用报告模板（与用户是否已给阶段无关），必须在本回复留下实际工具调用记录——口头声称"已解析 / found=false"而未调用 = 未做（工具不可用或调用失败视同 `found=false`，进 ②）；② `found=false` 时向用户声明：
-   > 知识工厂未命中模板，本次使用技能内置 `references/` 兜底（stages/<stage>.json 章节清单 + standards_index）。
-   ③ **数据预告必须用户可见**：读 `references/data_expectations.json`（per_chapter 13 章），把按章数据清单（每章所需数据族 + 条目 + source_hint）向用户预告，引导一次备齐；只在内部读了规划用、用户看不到 = 未做（bug-2231 实测踩过两次）；用户明确缺的族照常落 `[待确认]`，缺数不编造。
-   **②声明+③预告的载体 = 首张表单的 `question` 文本开头**——不另发独立消息，独立消息会被"只说不做"跳过。三件齐备前不做其他事。
+1. **开题首动作两件事（bug-2231/3066 页面实测纪律全套移植：开题第一轮一轮做完，不可拆分、不可只说不做）**——按序完成：① **结构真源声明**：向用户声明本次写作结构一律以技能内置 `references/` 为准，不查询知识工厂模板/大纲（原文如下）——
+   > 本次写作结构以技能内置章节框架为准（stages/<stage>.json 章节清单 + standards_index）；知识工厂模板为 stage JSON 的派生工件，不在写作运行时。
+   ② **数据预告必须用户可见**：读 `references/data_expectations.json`（per_chapter 13 章），把按章数据清单（每章所需数据族 + 条目 + source_hint）向用户预告，引导一次备齐；只在内部读了规划用、用户看不到 = 未做（bug-2231 实测踩过两次）；用户明确缺的族照常落 `[待确认]`，缺数不编造。
+   **①声明+②预告的载体 = 首张表单的 `question` 文本开头**——不另发独立消息，独立消息会被「只说不做」跳过。两件齐备前不做其他事。
 2. **stage 选择**：矿区总体规划环评 → `planning_eia`（一期唯一验收 stage）；井工矿建设项目环评 → `project_eia_underground`（stage 文件已随包就绪，一期未验收、暂不启用）；露天/后评价 stage 二期启用——未启用 stage 的场景**管线不可跑**（禁拿其他 stage 凑数、禁即兴自创章集），向用户如实声明。
 3. **章树绑定（项目路径专属，D6/D12；pisuan 一期缓行——本平台为独立路径交付，无项目树，本步整条跳过；以下为二期启用时的原文）**：门 1 前 `project_list_chapters` 拉树导出 JSON → `mapping.py bind --tree tree.json --stage S --output state/mapping.json`（核对=节序+标题一致性，非语义匹配；rc=0 才落盘）。**rc=2 不一致（树过期/被人工改动）→ 升用户确认，禁静默错写、禁带病续跑**；独立路径无项目树，跳过绑定（交付走单文件）。
 4. `ingest.py forms` 生成空白表单（data/ 下按 stage forms schema）。
@@ -260,9 +260,9 @@ run 级预算硬顶（按 run 计）：recursion_limit 1000 步、LoopDetection 
 
 ## KF 契约
 
-- **resolve 优先 + references 兜底**（步骤 1 三件套）：`list_report_types`（辅以 `get_templates`）必须真实调用；`found=false` 必须向用户声明兜底后才用 `references/`。工具不可用/超时视同 found=false。
+- **结构真源恒为内置 references/（2026-10-22 模板依赖剥离）**：写作链路不查询知识工厂模板/大纲（`list_report_types`/`get_templates`/`get_chapter_outline` 不在工具面）；KF 模板与大纲库均为 stage JSON 的派生/参照工件（seed_gen 导出 + 线下治理维护），不进写作运行时。
 - **模板 = 派生工件（D12 双源归一）**：stage JSON 是唯一结构真源；项目章树唯一生产者 = 建项目时 KF 模板导入。`seed_gen.py gen` 从 stages/*.json 生成 KF 模板 seed（root_sections_json 树：章=level1、节=level2，content_contract.min_word_count=章地板按节分摊），经 KF 模板导入通道落库——**underground 节级模板从 seed 导入（从无到有），planning 模板可重生成对齐节粒度**。模板与 stage 不一致时以 stage 为准，禁语义匹配承压。
-- **KF 三偏差回写（D3）**：既有 published「煤炭_环评报告_模板」①风险应为第 6 章内小节非独立章 ②缺回顾性评价/清洁生产与循环经济/跟踪评价三个高频章 ③13 章单模板仅适用规划环评——resolve 命中该模板时**结构一律以 stage JSON 校正**（模板 generation_hint/compliance_rules 仅作辅助语境）；偏差数据修订走 KF 版本机制（一期末回写），不改 published 语义供其他消费方。
+- **KF 三偏差回写（D3）**：既有 published「煤炭_环评报告_模板」①风险应为第 6 章内小节非独立章 ②缺回顾性评价/清洁生产与循环经济/跟踪评价三个高频章 ③13 章单模板仅适用规划环评——偏差数据修订走 KF 版本机制（一期末回写），不改 published 语义供其他消费方；写作链不 resolve 模板，该 published 模板对管线无影响。
 
 ## 能力边界（写叙述时用）
 
@@ -277,7 +277,7 @@ run 级预算硬顶（按 run 计）：recursion_limit 1000 步、LoopDetection 
 - `references/stages/planning_eia.json` — **唯一结构真源**（13 章章集级收敛；回顾/识别互换与 ch10–12 排布=槽位不锁编号；sections[].uses 结构化引用供 chapter_planner deps 编译）。`project_eia_underground.json` 已随包就绪（一期未验收、暂不启用）；openpit/post_eia 二期启用。
 - `references/standards_index.json` — 标准注册表（tier 五档分级 + limit_tables 限值表 + 门 1 标准号体检 gate1_code_checks）。
 - `references/consistency_contracts.json` — 合约注册表（XS1–XS12 + EO1–EO3 + caliber_labels 口径标签 + 条件激活语义）。
-- `references/data_expectations.json` — 按章数据预告（开题三件套③，per_chapter 13 章）。
+- `references/data_expectations.json` — 按章数据预告（开题首动作②，per_chapter 13 章）。
 - `references/section_expectations/<stage>.json` — 节级应引数值清单（31 份语料统计的 per 节 expected_quantities，corpus_freq 报告覆盖率定 tier；写手开节前对账，unmapped 池为 label 扩充素材。v1.1 条目可带 range={p5,p50,p95,n_values,n_reports}，仅 dB(A)/mg/L/μg/m3/% 强度类且 distinct-rid≥5 才发布——extensive 量随产能走不做原始分布。v1.2 起若存在词表覆盖层 references/overrides/curated_lexicon.json（运营确认导出），确认口径发布跨节聚合区间并挂到该口径出现的每个节）。
 - `references/depth_targets/<stage>.json` — 深度基线（章地板 floor_chars；一期绝对地板，二期 calibrate 样例校准）。
 - `references/paradigms/forms_catalog.json` — 行文形态正样本库（表引导句三形态 + 数值引用统计与 templates，31 份语料统计；写手行文形态以此为准，例句只学句法）。
