@@ -11,14 +11,18 @@ from __future__ import annotations
 
 import json
 import re
+import uuid
 from collections import Counter
 from datetime import UTC, datetime
 from typing import Any
 
 from fastapi.concurrency import run_in_threadpool
+from sqlalchemy import text as sql_text
 
 from yuxi.repositories.eia_standard_repository import EiaStandardRepository
 from yuxi.services.eia_data_service import _SKILL_ROOT
+from yuxi.services.eia_limit_row_mapping import flatten_limit_row
+from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_domain_factory import EiaStandardReview
 from yuxi.utils import logger
 from yuxi.utils.datetime_utils import format_utc_datetime, utc_now_naive
@@ -300,11 +304,55 @@ class EiaStandardService:
             "exported_at": datetime.now(UTC).isoformat(timespec="seconds"),
         }
 
+    async def _insert_expert_row(
+        self, session: Any, table_key: str, doc_code: str, page_row: dict[str, Any], username: str
+    ) -> int:
+        """页面行形 → born-verified 权威行（source='expert'，verified_at=now）；返回落库行数。"""
+        flats = flatten_limit_row(table_key, page_row)
+        for f in flats:
+            await session.execute(
+                sql_text(
+                    "INSERT INTO standard_indicators "
+                    "(id, doc_code, doc_name, unit_no, chunk_id, pollutant, metric, limit_value,"
+                    " unit, condition, category, period, verified_at, verified_by, source,"
+                    " table_key, page_row_id) "
+                    "VALUES (:id, :doc_code, :doc_name, '手录', NULL, :pollutant, :metric, :limit_value,"
+                    " :unit, :condition, :category, :period, now(), :verified_by, :source,"
+                    " :table_key, :page_row_id)"
+                ),
+                {
+                    "id": uuid.uuid4().hex[:32],
+                    "doc_code": doc_code,
+                    "doc_name": doc_code,  # 手录行 doc_name 暂以编号代（页面详情不依赖）
+                    "pollutant": f["pollutant"],
+                    "metric": f["metric"],
+                    "limit_value": f["limit_value"],
+                    "unit": f["unit"],
+                    "condition": f["condition"],
+                    "category": f["category"],
+                    "period": f["period"],
+                    "verified_by": username,
+                    "source": "expert",
+                    "table_key": table_key,
+                    "page_row_id": f["page_row_id"],
+                },
+            )
+        return len(flats)
+
     async def save_limit_rows(self, table_key: str, rows: Any, username: str) -> dict[str, Any]:
-        """限值行整表替换落库（先校验后写：未知表 KeyError→404，载荷问题 ValueError→400）。"""
+        """限值行整表替换落 standard_indicators（born-verified 权威行；事务内删旧插新）。"""
         validated = _validate_limit_rows(table_key, rows)
-        saved = await self.repo.replace_rows(table_key, validated, username)
-        logger.info(f"[eia-standard] 限值表 {table_key} 录入 {saved} 行（by {username}）")
+        doc = await run_in_threadpool(_load_standards_index)
+        code_ref = (doc.get("limit_tables", {}).get(table_key) or {}).get("code_ref") or table_key
+        saved = 0
+        async with pg_manager.get_async_session_context() as session:
+            await session.execute(
+                sql_text("DELETE FROM standard_indicators WHERE table_key = :tk AND source = 'expert'"),
+                {"tk": table_key},
+            )
+            for page_row in validated:
+                saved += await self._insert_expert_row(session, table_key, code_ref, page_row, username)
+        logger.info(f"[eia-standard] 限值表 {table_key} 权威行落库 {saved} 行（by {username}）")
         return {"table_key": table_key, "saved": saved}
 
     async def export_limit_rows(self, username: str) -> dict[str, Any]:
