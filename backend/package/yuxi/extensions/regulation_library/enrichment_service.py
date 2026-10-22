@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import uuid
 from typing import Any
@@ -18,6 +19,7 @@ from yuxi.extensions.regulation_library.table_role_classifier import (
 )
 from yuxi.extensions.regulation_library.table_splitter import split_table_units
 from yuxi.extensions.regulation_library.unit_parser import parse_chunk_unit
+from yuxi.services.eia_data_service import _SKILL_ROOT
 from yuxi.services.eia_limit_extract_core import norm_code
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_knowledge import KnowledgeChunk
@@ -226,8 +228,23 @@ async def enrich_regulation_file(
     }
 
 
+def _layer_of(source: str, verified_at: Any) -> str:
+    """行级分层：expert 权威 / enrich+verified 已核验候选 / enrich 裸候选（spec §2）。"""
+    if source == "expert":
+        return "authority"
+    return "reviewed" if verified_at else "candidate"
+
+
+def _anchor_maps(doc: dict[str, Any]) -> tuple[dict[str, str], dict[str, bool]]:
+    """standards_index.json 锚点：{code: tier} + {table_key: needs_verification}。"""
+    tier_by_code = {s["code"]: s.get("tier") for s in doc.get("standards", []) if s.get("code")}
+    tables = doc.get("limit_tables", {})
+    nv_by_ref = {k: bool(t.get("needs_verification")) for k, t in tables.items() if isinstance(t, dict)}
+    return tier_by_code, nv_by_ref
+
+
 async def query_indicators(doc_code: str | None = None, pollutant: str | None = None) -> list[dict]:
-    """精确查询指标（供 API 与 writer 工具使用）"""
+    """精确查询指标（分层：authority > reviewed > candidate；供 API 与 writer 工具使用）"""
     await ensure_schema()
     conditions, params = [], {}
     if doc_code:
@@ -241,15 +258,21 @@ async def query_indicators(doc_code: str | None = None, pollutant: str | None = 
         result = await session.execute(
             sql_text(
                 f"SELECT doc_code, doc_name, unit_no, pollutant, metric, limit_value, "
-                f"unit, condition, category, period, verified_at, verified_by, source "
-                f"FROM standard_indicators {where} ORDER BY doc_code, unit_no"
+                f"unit, condition, category, period, verified_at, verified_by, source, "
+                f"table_key FROM standard_indicators {where} "
+                f"ORDER BY CASE WHEN source = 'expert' THEN 0 ELSE 1 END, doc_code, unit_no"
             ),
             params,
         )
         rows = [dict(r._mapping) for r in result.all()]
-        for r in rows:  # TIMESTAMPTZ → ISO 串，保证 JSON/tool 输出可序列化
-            r["verified_at"] = format_utc_datetime(r["verified_at"])
-        return rows
+    doc = json.loads((_SKILL_ROOT / "references" / "standards_index.json").read_text(encoding="utf-8"))
+    tier_by_code, nv_by_ref = _anchor_maps(doc)
+    for r in rows:  # TIMESTAMPTZ → ISO 串 + 派生分层/锚点标注
+        r["verified_at"] = format_utc_datetime(r["verified_at"])
+        r["layer"] = _layer_of(r["source"], r["verified_at"])
+        r["tier"] = tier_by_code.get(r["doc_code"])
+        r["table_nv"] = nv_by_ref.get(r["table_key"]) if r["table_key"] else None
+    return rows
 
 
 async def set_unit_verification(doc_code: str, unit_no: str, verified: bool, username: str) -> int:
