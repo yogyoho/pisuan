@@ -37,7 +37,9 @@ pytestmark = [
 
 
 def _manifest() -> list[dict]:
-    return json.loads((WORKDIR / "manifest.json").read_text(encoding="utf-8"))
+    # 集合期求值：manifest 缺失（如容器内无 .wolf workdir）必须返回空参数集而非抛错（bug-4128）
+    path = WORKDIR / "manifest.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else []
 
 
 def _bank_slices_for(bank_index: dict, rid: str, stage: str | None) -> set[str]:
