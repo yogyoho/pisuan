@@ -944,6 +944,16 @@ git commit -m "refactor(domain-factory): 废除限值行 DB→文件物化导出
 - Modify: `docs/develop-guides/changelog.md`（**只编辑不暂存**——并行工作流脏文件）
 - Test: 端到端冒烟
 
+> **T7 评审折入（本任务顺手清扫）**：
+> 1. `_FakeLimitRepo` 死设施：`test_eia_standard_service.py:60-68` 删 `registry` 形参、`self._registry`、`list_registry` 方法（T7 重写用例改类级 patch 后无消费者）。
+> 2. `std_repo` 死形参：`eia_limit_extract_service.py:73` 删形参 + `test_standards_panel_w1.py:480` 删 `std_repo=object()` 实参 + 该服务文件 `EiaStandardRepository` import（若成孤儿）。
+> 3. 转正测试钉扎：`test_eia_limit_extract_service.py:148` 补 `assert delete_params["prid"] == page_row_id_for(row.table_key, calls[0][2])`；`test_eia_limit_row_mapping.py` 补一行金值断言（算法变更显式化）。
+> 4. （可选）`EiaStandardService()` 裸构造换 `get_eia_standard_service()` 单例，无行为差异。
+>
+> **命令修正（原稿两坑）**：①`MSYS_NO_PATHCONV=1` 必须前缀整个 docker 命令（Step 3/4 原稿位置错误）；②冒烟脚本不得裸 `asyncio.run`——psycopg 池后台任务令退出永久挂死（bug-4125），`main` 内 try/finally `await pg_manager.close()`（清理段已在 session ctx 内，close 放 finally）。
+>
+> **回归期望（bug-4128 已修）**：`/app/test/unit/services/` = **1167 passed, 4 skipped, 0 errors**（无需 `--continue-on-collection-errors`）；`/app/test/unit/extensions/` = 107 passed。
+
 - [ ] **Step 1: SKILL.md 门 1 纪律接线**
 
 Line 32 现文（「**标准编号/年份/限值只从 `references/standards_index.json` 枚举**…」）其后追加一句：
