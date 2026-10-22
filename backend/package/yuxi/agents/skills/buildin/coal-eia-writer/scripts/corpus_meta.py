@@ -223,19 +223,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--front-matter",
         default=None,
-        help="默认 references/samples_bank 下 front_matter.json；rid 为目录排序位，跨库复用需防 rid 碰撞",
+        help="显式传入封面侧车 JSON（无隐式默认：真相在 DB front_meta；samples_bank 下同名 json 仅为金样资产）",
     )
     ap.add_argument("--out-dir", default=None)
     args = ap.parse_args(argv)
     root = Path(args.slices_root)
     ann_path = Path(args.annotations) if args.annotations else root / "corpus_meta_annotations.json"
     annotations = json.loads(ann_path.read_text(encoding="utf-8")) if ann_path.exists() else {}
-    front_path = (
-        Path(args.front_matter)
-        if args.front_matter
-        else SCRIPTS_DIR.parent / "references" / "samples_bank" / "front_matter.json"  # 勘误：指向提交物位置
-    )
-    front = json.loads(front_path.read_text(encoding="utf-8")) if front_path.exists() else {}
+    front_path = Path(args.front_matter) if args.front_matter else None
+    if front_path and not front_path.exists():
+        raise SystemExit(f"--front-matter 文件不存在: {front_path}")  # 显式传入缺文件即报错，绝不静默
+    front = json.loads(front_path.read_text(encoding="utf-8")) if front_path else {}
     out_dir = Path(args.out_dir) if args.out_dir else root
     docs = {
         "corpus_meta.json": build_corpus_meta(root, annotations, front),
