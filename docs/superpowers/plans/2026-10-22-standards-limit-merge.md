@@ -944,11 +944,15 @@ git commit -m "refactor(domain-factory): 废除限值行 DB→文件物化导出
 - Modify: `docs/develop-guides/changelog.md`（**只编辑不暂存**——并行工作流脏文件）
 - Test: 端到端冒烟
 
-> **T7 评审折入（本任务顺手清扫）**：
-> 1. `_FakeLimitRepo` 死设施：`test_eia_standard_service.py:60-68` 删 `registry` 形参、`self._registry`、`list_registry` 方法（T7 重写用例改类级 patch 后无消费者）。
-> 2. `std_repo` 死形参：`eia_limit_extract_service.py:73` 删形参 + `test_standards_panel_w1.py:480` 删 `std_repo=object()` 实参 + 该服务文件 `EiaStandardRepository` import（若成孤儿）。
-> 3. 转正测试钉扎：`test_eia_limit_extract_service.py:148` 补 `assert delete_params["prid"] == page_row_id_for(row.table_key, calls[0][2])`；`test_eia_limit_row_mapping.py` 补一行金值断言（算法变更显式化）。
-> 4. （可选）`EiaStandardService()` 裸构造换 `get_eia_standard_service()` 单例，无行为差异。
+> **T7/T8 评审折入（本任务顺手清扫）**：
+> 1. `std_repo` 死形参：`eia_limit_extract_service.py:73` 删形参 + `test_standards_panel_w1.py:480` 删 `std_repo=object()` 实参 + 该服务文件 `EiaStandardRepository` import（若成孤儿）。
+> 2. 转正测试钉扎：`test_eia_limit_extract_service.py:148` 补 `assert delete_params["prid"] == page_row_id_for(row.table_key, calls[0][2])`；`test_eia_limit_row_mapping.py` 补一行金值断言（算法变更显式化）。
+> 3. （可选）`EiaStandardService()` 裸构造换 `get_eia_standard_service()` 单例，无行为差异。
+> 4. **bug-4129**：`test/integration/services/test_eia_standard_service_flow.py:45-48` 的 `exp_pending` 改按 `list_limit_tables()` 输出自算（`source != 'expert'`，与其 exp_total/exp_rows 自算风格同构）。**该测试对运行栈绝对禁跑**（fixture 无备份清 `eia_standard_review`，见 cerebrum DNR）——修后验证 = 相关单测全绿 + 只读探针。
+> 5. 路由 `list_eia_standard_limits` docstring「source: db|file」→ 现行词表（expert|file|db_registry）。
+> 6. `EiaStandardLimitRow`（models_domain_factory.py:544）docstring 加一行「已退役：权威层=standard_indicators（P1 合流）」防误认；模型与表本身不动。
+> 7. ruff format 两处（T8 引入）：`eia_standard_service.py:387-389` 3 连空行、`test_eia_standard_service.py:57-58` 空 1 行——Step 5 `make format` 自动修，提交前 `ruff format --check` 归零确认。
+> 8. （可选）`test_eia_standard_service.py:52` 分区注释改「限值行载荷校验 / 新表入册」。
 >
 > **命令修正（原稿两坑）**：①`MSYS_NO_PATHCONV=1` 必须前缀整个 docker 命令（Step 3/4 原稿位置错误）；②冒烟脚本不得裸 `asyncio.run`——psycopg 池后台任务令退出永久挂死（bug-4125），`main` 内 try/finally `await pg_manager.close()`（清理段已在 session ctx 内，close 放 finally）。
 >
