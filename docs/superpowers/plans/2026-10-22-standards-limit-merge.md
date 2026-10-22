@@ -820,6 +820,11 @@ git commit -m "feat(domain-factory): 统一分层限值查询（layer/tier/table
 - Modify: `backend/package/yuxi/repositories/eia_standard_repository.py`（删死方法）
 - Test: 修改 `backend/test/unit/services/test_eia_limit_extract_service.py`（两处桩）
 
+> **前序评审折入（原稿缺失，本任务必做）**：
+> 1. **转正路径 ensure_schema**：打开 session 前 `await ensure_schema()`（fresh DB 首次转正防 500；与 Task 3 写路径同款，bug-244 语境）。
+> 2. **`_page_row_id` 公有化**（Task 2 质量评审裁决）：`eia_limit_row_mapping.py` 改名 `_page_row_id` → `page_row_id_for`（跨模块消费不该是私有）；`eia_standard_service.py` 与本任务的引用点同步改，grep 确认零残留。
+> 3. **stale 危险测试清理（bug-4016）**：`backend/test/unit/test_eia_standard_service.py` 逐用例审计——`test_save_limit_rows_happy_path`（断言已死的 repo 契约，跑起来会经新写路径**污染真库**）与 3 个旧 `list_limit_tables` 用例（挂死）删除或按现行契约重写（Task 3/4 新测试文件已覆盖的契约不重复）；仍有效用例（如 gate1/list_standards）修复保留。收尾该文件容器全绿且零真库写，`source='expert'` 计数回 0。
+
 - [ ] **Step 1: 改测试桩**
 
 `test_eia_limit_extract_service.py:98` 与 `:132` 两处 `monkeypatch.setattr(s._std_repo, "upsert_row", fake_upsert)` 改为 patch 服务层函数：
