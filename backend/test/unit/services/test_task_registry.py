@@ -1,6 +1,6 @@
 import pytest
 
-from yuxi.services.task_registry import get_failure_task_definition, get_task_definition
+from pisuan.services.task_registry import get_failure_task_definition, get_task_definition
 
 
 def test_failure_hook_fallback_is_limited_to_migrated_legacy_version() -> None:
@@ -18,6 +18,6 @@ def test_domain_factory_handlers_resolve_to_module_functions() -> None:
         ("domain_factory_reingest", "run_domain_factory_reingest"),
     ):
         definition = get_task_definition(task_type)
-        assert definition.module == "yuxi.services.domain_factory_service"
+        assert definition.module == "pisuan.services.domain_factory_service"
         assert definition.function == function
         assert callable(definition.load_handler())

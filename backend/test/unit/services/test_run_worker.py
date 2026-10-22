@@ -10,10 +10,10 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-import yuxi.services.run_worker as run_worker
+import pisuan.services.run_worker as run_worker
 from arq.worker import RetryJob
-from yuxi.config import options as config_options
-from yuxi.services import task_service
+from pisuan.config import options as config_options
+from pisuan.services import task_service
 
 
 @pytest.fixture(autouse=True)
@@ -164,8 +164,8 @@ def test_durable_task_shipping_worker_accepts_default_above_24_hours():
     env = os.environ.copy()
     env["TASKER_DEFAULT_TIMEOUT_SECONDS"] = "172800"
     script = """
-from yuxi.services.run_worker import WorkerSettings
-from yuxi.services.task_service import tasker
+from pisuan.services.run_worker import WorkerSettings
+from pisuan.services.task_service import tasker
 
 durable = next(
     function
@@ -412,7 +412,7 @@ def _patch_common(monkeypatch: pytest.MonkeyPatch, run_obj: SimpleNamespace):
         )
         if run.run_type == "subagent":
             from dataclasses import asdict, replace
-            from yuxi.agents.buildin.subagent.context import SubAgentContext
+            from pisuan.agents.buildin.subagent.context import SubAgentContext
 
             execution = replace(
                 execution,
@@ -1172,7 +1172,7 @@ async def test_process_subagent_run_restores_runtime_context(monkeypatch: pytest
     _patch_common(monkeypatch, run_obj)
 
     from test.unit.agent_context_fixtures import prepared_execution
-    from yuxi.agents.buildin.subagent.context import SubAgentContext
+    from pisuan.agents.buildin.subagent.context import SubAgentContext
     from dataclasses import asdict, replace
 
     prepared = prepared_execution(
@@ -1526,7 +1526,7 @@ async def test_worker_startup_ensures_builtin_mcp_servers(monkeypatch: pytest.Mo
     monkeypatch.setattr(run_worker, "_reconcile_durable_tasks_forever", fake_task_reconciliation_loop)
     monkeypatch.setattr(run_worker, "recover_scheduled_dispatches", fake_recover_scheduled_dispatches)
     monkeypatch.setattr(run_worker, "claim_and_dispatch_due_jobs", fake_claim_and_dispatch_due_jobs)
-    options_module = importlib.import_module("yuxi.config.options")
+    options_module = importlib.import_module("pisuan.config.options")
     monkeypatch.setattr(options_module, "ensure_options_in_db", fake_ensure_options_in_db)
 
     ctx = {}
@@ -1584,7 +1584,7 @@ async def test_durable_task_publication_failure_does_not_refresh_health(monkeypa
 
 def test_worker_settings_publish_short_ttl_versioned_health_contract():
     assert run_worker.WorkerSettings.max_jobs == run_worker.worker_max_jobs()
-    assert run_worker.WorkerSettings.health_check_key == "yuxi:worker:health:agent-run-v1"
+    assert run_worker.WorkerSettings.health_check_key == "pisuan:worker:health:agent-run-v1"
     assert 0 < run_worker.WorkerSettings.health_check_interval <= 10
 
 
@@ -1608,7 +1608,7 @@ def test_worker_settings_reject_invalid_redis_dsn_instead_of_using_arq_default()
     env["REDIS_URL"] = "http://configured-redis.invalid:6379/0"
 
     completed = subprocess.run(
-        [sys.executable, "-c", "import yuxi.services.run_worker"],
+        [sys.executable, "-c", "import pisuan.services.run_worker"],
         env=env,
         capture_output=True,
         text=True,
@@ -1677,7 +1677,7 @@ async def test_worker_shutdown_closes_queue_clients_before_postgres(monkeypatch:
     async def fake_close_postgres():
         calls.append("postgres")
 
-    monkeypatch.setattr("yuxi.services.run_queue_service.close_queue_clients", fake_close_queue_clients)
+    monkeypatch.setattr("pisuan.services.run_queue_service.close_queue_clients", fake_close_queue_clients)
     monkeypatch.setattr(run_worker.pg_manager, "close", fake_close_postgres)
 
     await run_worker._worker_shutdown({run_worker._RECONCILIATION_TASK_KEY: reconciliation_task})

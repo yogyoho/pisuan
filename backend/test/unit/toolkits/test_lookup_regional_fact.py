@@ -7,8 +7,8 @@ region_key 必填（一地区一 KB，不跨区混供）、仅 confirmed、q 子
 
 import pytest
 
-import yuxi.agents.toolkits.buildin.tools as tools_mod
-from yuxi.agents.toolkits.registry import get_all_tool_instances
+import pisuan.agents.toolkits.buildin.tools as tools_mod
+from pisuan.agents.toolkits.registry import get_all_tool_instances
 
 
 def _fake_repo(monkeypatch, rows, capture=None):

@@ -13,7 +13,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import UploadFile
 
-from yuxi.services.eia_library_service import (
+from pisuan.services.eia_library_service import (
     EiaLibraryService,
     LibraryFileTooLarge,
     _safe_filename,
@@ -87,7 +87,7 @@ class FakeUploadResult:
 
 
 class FakeMinIO:
-    """内存桶替身：接口对齐 yuxi.storage.minio.MinIOClient 异步面。"""
+    """内存桶替身：接口对齐 pisuan.storage.minio.MinIOClient 异步面。"""
 
     def __init__(self):
         self.store: dict[str, bytes] = {}
@@ -128,7 +128,7 @@ GOOD_DOCX = _docx_bytes(["某矿项目环境影响报告书", "工程编号：H1
 @pytest.fixture(autouse=True)
 def fake_minio(monkeypatch):
     store = FakeMinIO()
-    monkeypatch.setattr("yuxi.services.eia_library_service.get_minio_client", lambda: store)
+    monkeypatch.setattr("pisuan.services.eia_library_service.get_minio_client", lambda: store)
     return store
 
 

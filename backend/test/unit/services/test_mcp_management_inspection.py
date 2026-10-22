@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from yuxi.agents.mcp import service
-from yuxi.storage.postgres.models_business import MCPServer
+from pisuan.agents.mcp import service
+from pisuan.storage.postgres.models_business import MCPServer
 
 
 @pytest.mark.asyncio

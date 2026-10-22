@@ -6,7 +6,7 @@ Owner：docker-compose.yml
 
 ## 问题
 
-Yuxi 同时维护完整模式与 `LITE_MODE`。这个部署选择贯穿 Compose、Schema 迁移、API/worker 启动、路由注册、Durable Task、Agent Skill 与工具、能力发现、前端导航和 CI，使同一版本存在两套装配路径。产品决定只交付完整知识能力路径，需要删除轻量模式及其兼容表面，同时保持知识库、图谱、评估、聊天、Agent、工作区和既有权限语义。
+Pisuan 同时维护完整模式与 `LITE_MODE`。这个部署选择贯穿 Compose、Schema 迁移、API/worker 启动、路由注册、Durable Task、Agent Skill 与工具、能力发现、前端导航和 CI，使同一版本存在两套装配路径。产品决定只交付完整知识能力路径，需要删除轻量模式及其兼容表面，同时保持知识库、图谱、评估、聊天、Agent、工作区和既有权限语义。
 
 ## 决策
 

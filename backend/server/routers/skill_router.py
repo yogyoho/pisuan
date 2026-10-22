@@ -8,15 +8,15 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Qu
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from yuxi.permissions import resolve_skill_permission
-from yuxi.repositories.skill_repository import SkillRepository
-from yuxi.services.skills.catalog import list_accessible_skills, list_skill_cards_for_user
-from yuxi.services.skills.draft import (
+from pisuan.permissions import resolve_skill_permission
+from pisuan.repositories.skill_repository import SkillRepository
+from pisuan.services.skills.catalog import list_accessible_skills, list_skill_cards_for_user
+from pisuan.services.skills.draft import (
     create_remote_skill_draft,
     create_uploaded_skill_draft,
     discard_skill_install_draft,
 )
-from yuxi.services.skills.edit import (
+from pisuan.services.skills.edit import (
     SkillEditConflict,
     create_skill_node,
     delete_skill_node,
@@ -26,13 +26,13 @@ from yuxi.services.skills.edit import (
     get_skill_tree,
     read_skill_file,
 )
-from yuxi.services.skills.personal import (
+from pisuan.services.skills.personal import (
     confirm_personal_skill_install_draft,
     delete_personal_skill,
     read_personal_skill_file,
 )
-from yuxi.services.skills.remote import list_remote_skills, search_remote_skills
-from yuxi.services.skills.shared import (
+from pisuan.services.skills.remote import list_remote_skills, search_remote_skills
+from pisuan.services.skills.shared import (
     confirm_skill_install_draft,
     delete_skill,
     delete_skills_batch,
@@ -46,8 +46,8 @@ from yuxi.services.skills.shared import (
     update_skill_share_config,
     user_can_manage_skill,
 )
-from yuxi.storage.postgres.models_business import User
-from yuxi.utils.logging_config import logger
+from pisuan.storage.postgres.models_business import User
+from pisuan.utils.logging_config import logger
 
 from server.utils.auth_middleware import get_admin_user, get_db, get_required_user
 

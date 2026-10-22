@@ -1,6 +1,6 @@
 # 快速开始
 
-这份教程带你在本机启动一套 Yuxi，并完成第一次登录。走完流程后，你会有一个可以打开的 Web 界面和 API 文档；模型配置、知识库和生产部署分别在后续页面说明。
+这份教程带你在本机启动一套 Pisuan，并完成第一次登录。走完流程后，你会有一个可以打开的 Web 界面和 API 文档；模型配置、知识库和生产部署分别在后续页面说明。
 
 ## 你需要准备什么
 
@@ -16,7 +16,7 @@
 
 ```bash
 git clone --branch v0.7.3 --depth 1 https://github.com/xerrors/Yuxi.git
-cd Yuxi
+cd Pisuan
 ```
 
 如果你要参与开发，可以改为克隆 `main`；开发分支的行为可能先于发布版本变化。
@@ -40,7 +40,7 @@ Windows PowerShell：
 - 必填的 `SILICONFLOW_API_KEY`。
 - 可选的网页搜索供应商和对应密钥（豆包或 Tavily）。
 - `JWT_SECRET_KEY`、`API_KEY_DERIVATION_SECRET` 和 `SANDBOX_PROVISIONER_TOKEN` 三个相互独立的随机密钥，每个至少 32 个字符。
-- `YUXI_INSTANCE_ID`，用于标识这套部署。
+- `PISUAN_INSTANCE_ID`，用于标识这套部署。
 
 脚本还会拉取开发环境需要的基础镜像。它不会把密钥打印到终端，Linux/macOS 下会把 `.env` 权限设为 `600`。已有 `.env` 时，脚本只补齐缺失项；升级时请保留原有密钥，尤其是 `JWT_SECRET_KEY` 和 `API_KEY_DERIVATION_SECRET`。
 
@@ -73,7 +73,7 @@ curl --fail http://localhost:5050/api/system/ready
 
 返回 JSON 且 `status` 为 `ready`，表示 API、PostgreSQL、Redis 和兼容 worker 已达到接流量条件。它只证明启动条件满足，不代替一次真实登录或对话验证。
 
-## 4. 打开 Yuxi
+## 4. 打开 Pisuan
 
 | 入口 | 地址 |
 | --- | --- |

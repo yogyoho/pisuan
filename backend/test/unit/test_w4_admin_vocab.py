@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "package"))
 
-from yuxi.services.domain_factory_region import (  # noqa: E402
+from pisuan.services.domain_factory_region import (  # noqa: E402
     ADMIN_REGION_VOCAB,
     extract_region_signal,
     l1_task_attribution,

@@ -11,7 +11,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['close', 'edited'])
 
-// 与 backend/package/yuxi/services/domain_factory_region.py 的 REGION_VOCAB 同源（17 slug，人工同步）
+// 与 backend/package/pisuan/services/domain_factory_region.py 的 REGION_VOCAB 同源（17 slug，人工同步）
 const REGION_KEY_OPTIONS = [
   'hengcheng',
   'yining-beiqu',

@@ -1,13 +1,13 @@
 # 工具系统
 
-Yuxi 的工具分成三层：内置工具、知识库工具和 MCP 工具。Graph 创建时准备可执行工具，运行时再根据用户权限、Agent 配置和 Skill 激活状态决定模型能看到什么。
+Pisuan 的工具分成三层：内置工具、知识库工具和 MCP 工具。Graph 创建时准备可执行工具，运行时再根据用户权限、Agent 配置和 Skill 激活状态决定模型能看到什么。
 
 ## 注册一个内置工具
 
 普通内置工具使用 `@tool` 注册：
 
 ```python
-from yuxi.agents.toolkits.registry import tool
+from pisuan.agents.toolkits.registry import tool
 
 
 @tool(category="buildin", tags=["示例"], display_name="示例工具")
@@ -58,7 +58,7 @@ def example_tool(text: str) -> str:
 需要在 Python 中直接取得知识库工具时：
 
 ```python
-from yuxi.agents.toolkits.kbs import get_common_kb_tools
+from pisuan.agents.toolkits.kbs import get_common_kb_tools
 
 kb_tools = get_common_kb_tools()
 ```
@@ -80,7 +80,7 @@ DOUBAO_SEARCH_API_KEY=<your-doubao-key>
 
 工具在 API 和 worker 进程加载时注册，修改环境变量后需要 `docker compose up -d --force-recreate api worker`。验证方式：在智能体详情确认工具列表出现「网页搜索」，用一个需要最新信息的问题发起真实对话，并检查工具调用返回的 URL、标题和摘要。没有该工具时检查 `WEB_SEARCH_PROVIDER` 拼写、对应 Key 是否存在以及容器是否已重建。
 
-实现入口：[网页搜索工具](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/agents/toolkits/buildin/tools.py)。
+实现入口：[网页搜索工具](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/agents/toolkits/buildin/tools.py)。
 
 ## 工具组装流程
 

@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from server.main import app
 from server.routers import model_provider_router
 from server.utils.auth_middleware import get_admin_user, get_db
-from yuxi.storage.postgres.manager import PostgresManager
+from pisuan.storage.postgres.manager import PostgresManager
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
@@ -80,12 +80,12 @@ async def test_provider_uid_header_http_round_trip_and_rejections(monkeypatch):
 
     try:
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            monkeypatch.delenv("YUXI_UID_SIGNATURE_SECRET", raising=False)
+            monkeypatch.delenv("PISUAN_UID_SIGNATURE_SECRET", raising=False)
             missing_secret = await client.post(path, json={**provider, "include_user_uid": True})
             assert missing_secret.status_code == 400
-            assert "YUXI_UID_SIGNATURE_SECRET" in missing_secret.json()["detail"]
+            assert "PISUAN_UID_SIGNATURE_SECRET" in missing_secret.json()["detail"]
 
-            monkeypatch.setenv("YUXI_UID_SIGNATURE_SECRET", "integration-test-signing-secret")
+            monkeypatch.setenv("PISUAN_UID_SIGNATURE_SECRET", "integration-test-signing-secret")
             invalid_type = await client.post(path, json={**provider, "provider_id": f"pytest-invalid-{uid}", "include_user_uid": "true"})
             assert invalid_type.status_code == 422
 

@@ -5,7 +5,7 @@ text_pattern（段落侧无写入方）改为真实产物字段 generalized；na
 """
 
 import pytest
-from yuxi.services.pre_commit_validator import PreCommitValidator
+from pisuan.services.pre_commit_validator import PreCommitValidator
 
 
 @pytest.mark.asyncio

@@ -2,8 +2,8 @@
 
 import pytest
 
-from yuxi.services.eia_limit_extract_service import EiaLimitExtractService
-from yuxi.services.eia_limit_llm_classifier import GateStats, JudgeResult
+from pisuan.services.eia_limit_extract_service import EiaLimitExtractService
+from pisuan.services.eia_limit_llm_classifier import GateStats, JudgeResult
 
 
 class PassThroughGate:

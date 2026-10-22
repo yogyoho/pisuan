@@ -7,9 +7,9 @@ from datetime import datetime
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from yuxi.services.conversation_service import get_thread_history_view
-from yuxi.services.input_message_service import build_chat_input_message
-from yuxi.storage.postgres.models_business import AgentRun, Base, Conversation, Message, Project
+from pisuan.services.conversation_service import get_thread_history_view
+from pisuan.services.input_message_service import build_chat_input_message
+from pisuan.storage.postgres.models_business import AgentRun, Base, Conversation, Message, Project
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 

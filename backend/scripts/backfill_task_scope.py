@@ -2,7 +2,7 @@
 
 用法（api 容器内）: python /app/scripts/backfill_task_scope.py
 打印逐任务对照表；文档身份词表命中才写（region_label/region_key/scope='regional'）。
-yuxi/pisuan 双轨 import：worktree 语境为 yuxi.*，pisuan-localized 运行栈为 pisuan.*。
+pisuan/pisuan 双轨 import：worktree 语境为 pisuan.*，pisuan-localized 运行栈为 pisuan.*。
 """
 
 import asyncio
@@ -15,7 +15,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 try:
-    from yuxi.services.domain_factory_region import l1_task_attribution
+    from pisuan.services.domain_factory_region import l1_task_attribution
 except ModuleNotFoundError:  # pisuan-localized 改名层运行栈
     from pisuan.services.domain_factory_region import l1_task_attribution
 

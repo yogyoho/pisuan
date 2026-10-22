@@ -5,7 +5,7 @@
 # 工作模式（三分支策略）：
 #   main             → 始终跟踪 upstream/main（纯净的上游代码）
 #   pisuan-custom    → 领域知识库工厂定制 + 上游基础（rebase 在 main 之上）
-#   pisuan-localized → pisuan-custom + 机械改名层（yuxi→pisuan, 脚本重建, 可丢弃）
+#   pisuan-localized → pisuan-custom + 机械改名层（pisuan→pisuan, 脚本重建, 可丢弃）
 #
 # 每次上游发新版后执行本脚本即可：
 #   bash scripts/sync-upstream.sh
@@ -77,7 +77,7 @@ rebuild_localized() {
   if git -C "$LOCALIZED_DIR" diff --cached --quiet; then
     echo "   无变化, 跳过提交与推送"
   else
-    git -C "$LOCALIZED_DIR" commit -m "chore: 机械改名层 yuxi→pisuan（脚本重新生成）" || return 1
+    git -C "$LOCALIZED_DIR" commit -m "chore: 机械改名层 pisuan→pisuan（脚本重新生成）" || return 1
     git -C "$LOCALIZED_DIR" push github pisuan-localized --force-with-lease || return 1
     echo "   ✅ pisuan-localized 已重建并推送"
   fi

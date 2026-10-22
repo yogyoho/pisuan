@@ -3,7 +3,7 @@
 numbered-line 路径也需清洗双编号 + 过滤纯编号。
 """
 
-from yuxi.services.domain_factory_service import DomainFactoryService
+from pisuan.services.domain_factory_service import DomainFactoryService
 
 
 def test_clean_dual_numbering_markdown_path():

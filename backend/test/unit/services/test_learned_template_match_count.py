@@ -12,7 +12,7 @@ import pytest
 
 def test_extract_learned_match_ids():
     """只取 learned_ 前缀 id；静态标题模板 id / 缺失 / 非数字全部跳过；去重排序"""
-    from yuxi.services.domain_factory_service import DomainFactoryService
+    from pisuan.services.domain_factory_service import DomainFactoryService
 
     paras = [
         {"template_match": {"template_id": "learned_7"}},
@@ -31,7 +31,7 @@ def test_extract_learned_match_ids():
 
 @pytest.mark.asyncio
 async def test_service_increment_forwards_ids_to_repo():
-    from yuxi.services.domain_factory_service import DomainFactoryService
+    from pisuan.services.domain_factory_service import DomainFactoryService
 
     svc = DomainFactoryService()
     called = {}
@@ -49,7 +49,7 @@ async def test_service_increment_forwards_ids_to_repo():
 @pytest.mark.asyncio
 async def test_increment_noop_when_no_learned_match():
     """无 learned_ 命中时不触 repo（纯静态模板命中的文档不该写库）"""
-    from yuxi.services.domain_factory_service import DomainFactoryService
+    from pisuan.services.domain_factory_service import DomainFactoryService
 
     svc = DomainFactoryService()
     svc.repo = MagicMock()
@@ -76,7 +76,7 @@ class _FakeSession:
 
 @pytest.mark.asyncio
 async def test_repo_increment_builds_update(monkeypatch):
-    from yuxi.repositories import domain_factory_repository as mod
+    from pisuan.repositories import domain_factory_repository as mod
 
     sess = _FakeSession()
     cm = MagicMock()
@@ -97,7 +97,7 @@ async def test_repo_increment_builds_update(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_repo_increment_empty_ids_no_db(monkeypatch):
-    from yuxi.repositories import domain_factory_repository as mod
+    from pisuan.repositories import domain_factory_repository as mod
 
     fake_pg = MagicMock()
     monkeypatch.setattr(mod, "pg_manager", fake_pg)

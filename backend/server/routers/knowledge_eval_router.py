@@ -10,15 +10,15 @@ from server.utils.knowledge_permissions import (
     require_knowledge_base_manage,
     require_knowledge_base_read,
 )
-from yuxi.knowledge.eval.benchmark_generation import (
+from pisuan.knowledge.eval.benchmark_generation import (
     DEFAULT_BENCHMARK_GENERATION_CONCURRENCY,
     MAX_BENCHMARK_GENERATION_CONCURRENCY,
 )
-from yuxi.knowledge.eval.service import EvaluationService
-from yuxi.permissions import ResourcePermission
-from yuxi.repositories.evaluation_repository import EvaluationRepository
-from yuxi.storage.postgres.models_business import User
-from yuxi.utils import logger
+from pisuan.knowledge.eval.service import EvaluationService
+from pisuan.permissions import ResourcePermission
+from pisuan.repositories.evaluation_repository import EvaluationRepository
+from pisuan.storage.postgres.models_business import User
+from pisuan.utils import logger
 
 
 evaluation = APIRouter(prefix="/evaluation", tags=["evaluation"])

@@ -11,8 +11,8 @@ import json
 
 import pytest
 
-from yuxi.services.eia_data_service import _scan_all, _skill_root_exists
-from yuxi.services.eia_lexicon_service import OVERRIDES_PATH
+from pisuan.services.eia_data_service import _scan_all, _skill_root_exists
+from pisuan.services.eia_lexicon_service import OVERRIDES_PATH
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
@@ -27,8 +27,8 @@ async def _clean_lexicon_state():
     """前后清理：词表行、开关行、物化文件。"""
     from sqlalchemy import delete
 
-    from yuxi.storage.postgres.manager import pg_manager
-    from yuxi.storage.postgres.models_domain_factory import EiaDatasetSwitch, EiaLexiconEntry
+    from pisuan.storage.postgres.manager import pg_manager
+    from pisuan.storage.postgres.models_domain_factory import EiaDatasetSwitch, EiaLexiconEntry
 
     async def _wipe():
         async with pg_manager.get_async_session_context() as session:

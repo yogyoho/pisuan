@@ -1,8 +1,8 @@
 import pytest
 
-from yuxi.agents.presets.subagents.chapter_writer import PRESET as CHAPTER_WRITER_PRESET
-from yuxi.repositories.agent_repository import AgentRepository
-from yuxi.storage.postgres.manager import pg_manager
+from pisuan.agents.presets.subagents.chapter_writer import PRESET as CHAPTER_WRITER_PRESET
+from pisuan.repositories.agent_repository import AgentRepository
+from pisuan.storage.postgres.manager import pg_manager
 
 
 @pytest.fixture(autouse=True)

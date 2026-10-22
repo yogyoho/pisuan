@@ -13,10 +13,10 @@ import asyncpg
 import httpx
 import pytest
 from e2e_helpers import cancel_run, consume_events, delete_agent, postgres_dsn, wait_for_run
-from yuxi.agents.backends.sandbox import ProvisionerSandboxBackend, get_sandbox_provider
-from yuxi.models.utils import parse_assistant_message_body
-from yuxi.config import get_skill_projection_dir
-from yuxi.workspace.paths import user_workspace_dir, workspace_uid_dirname
+from pisuan.agents.backends.sandbox import ProvisionerSandboxBackend, get_sandbox_provider
+from pisuan.models.utils import parse_assistant_message_body
+from pisuan.config import get_skill_projection_dir
+from pisuan.workspace.paths import user_workspace_dir, workspace_uid_dirname
 
 from test.live_api_cleanup import make_test_conversation_metadata, make_test_conversation_title
 

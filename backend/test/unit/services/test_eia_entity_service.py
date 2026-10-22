@@ -11,8 +11,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from yuxi.services import eia_entity_service as svc_mod
-from yuxi.services.eia_entity_service import EiaEntityService
+from pisuan.services import eia_entity_service as svc_mod
+from pisuan.services.eia_entity_service import EiaEntityService
 
 # 实况同构最小夹具（CRLF、2 空格缩进、无尾换行——与 baiyinhua2.json 实测一致）
 _REGISTRY_TEXT = (

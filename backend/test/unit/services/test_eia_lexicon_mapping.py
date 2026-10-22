@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from yuxi.services import eia_lexicon_service as svc
+from pisuan.services import eia_lexicon_service as svc
 
 
 class FakeEntry:

@@ -13,9 +13,9 @@ from types import SimpleNamespace
 
 import pytest
 
-import yuxi.extensions.regulation_library.enrichment_service as enrich_mod
-import yuxi.extensions.regulation_library.models as models_mod
-from yuxi.extensions.regulation_library.enrichment_service import (
+import pisuan.extensions.regulation_library.enrichment_service as enrich_mod
+import pisuan.extensions.regulation_library.models as models_mod
+from pisuan.extensions.regulation_library.enrichment_service import (
     StandardConflictError,
     create_manual_standard,
     delete_manual_standard,
@@ -24,8 +24,8 @@ from yuxi.extensions.regulation_library.enrichment_service import (
     replace_manual_standard,
     set_unit_verification,
 )
-from yuxi.extensions.regulation_library.models import _DDL
-from yuxi.services.eia_limit_extract_core import (
+from pisuan.extensions.regulation_library.models import _DDL
+from pisuan.services.eia_limit_extract_core import (
     aggregate_cited_codes,
     diff_source_candidates,
     norm_code,
@@ -459,9 +459,9 @@ def test_diff_source_candidates_sorts_by_ref_count_desc():
 
 @pytest.mark.asyncio
 async def test_list_source_candidates_composes_aggregation_and_diff(monkeypatch):
-    import yuxi.extensions.regulation_library.enrichment_service as enrich_ns
-    import yuxi.services.eia_meta_service as meta_mod
-    from yuxi.services.eia_limit_extract_service import EiaLimitExtractService
+    import pisuan.extensions.regulation_library.enrichment_service as enrich_ns
+    import pisuan.services.eia_meta_service as meta_mod
+    from pisuan.services.eia_limit_extract_service import EiaLimitExtractService
 
     fake_meta = {
         "reports": {

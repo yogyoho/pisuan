@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from yuxi.services.eia_canonical_md import (
+from pisuan.services.eia_canonical_md import (
     docx_bytes_to_canonical_md,
     extract_front,
     slice_report,
@@ -28,7 +28,7 @@ from yuxi.services.eia_canonical_md import (
 _REPO = Path(__file__).resolve().parents[4]
 WORKDIR = Path(os.environ.get("EIA_GOLDENS_WORKDIR", _REPO / ".wolf" / "corpus-workdir"))
 CORPUS = Path(os.environ.get("EIA_GOLDENS_CORPUS", r"C:\项目管理\样例文件"))
-SKILL_REFS = _REPO / "backend" / "package" / "yuxi" / "agents" / "skills" / "buildin" / "coal-eia-writer" / "references"
+SKILL_REFS = _REPO / "backend" / "package" / "pisuan" / "agents" / "skills" / "buildin" / "coal-eia-writer" / "references"
 
 pytestmark = [
     pytest.mark.skipif(not (WORKDIR / "manifest.json").is_file(), reason=f"金标准 workdir 缺失: {WORKDIR}"),

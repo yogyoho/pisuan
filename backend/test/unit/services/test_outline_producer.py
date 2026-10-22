@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from yuxi.services.domain_factory_service import DomainFactoryService
+from pisuan.services.domain_factory_service import DomainFactoryService
 
 
 def test_group_assets_by_chapter_buckets_by_chapter():
@@ -73,12 +73,12 @@ def test_llm_chapter_meta_parses_json_and_reuses_seed_key():
         },
     )()
     with patch(
-        "yuxi.services.domain_factory_service.select_model_lazy",
+        "pisuan.services.domain_factory_service.select_model_lazy",
         AsyncMock(return_value=type("M", (), {"call": AsyncMock(return_value=fake_resp)})()),
         create=True,
     ):
         # select_model 是函数导入；按实际导入路径 mock（见 Step 3 实现）
-        import yuxi.services.domain_factory_service as mod
+        import pisuan.services.domain_factory_service as mod
 
         with patch.object(
             mod, "select_model", return_value=type("M", (), {"call": AsyncMock(return_value=fake_resp)})()

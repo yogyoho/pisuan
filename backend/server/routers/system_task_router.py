@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from yuxi.storage.postgres.models_business import User
-from yuxi.services.task_service import tasker
+from pisuan.storage.postgres.models_business import User
+from pisuan.services.task_service import tasker
 from server.utils.auth_middleware import get_admin_user
 
 tasks = APIRouter(prefix="/tasks", tags=["tasks"])

@@ -12,8 +12,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from yuxi.services import eia_standard_service
-from yuxi.services.eia_standard_service import _norm_std, _validate_limit_rows, _validate_review
+from pisuan.services import eia_standard_service
+from pisuan.services.eia_standard_service import _norm_std, _validate_limit_rows, _validate_review
 
 
 def test_validate_review_accepts_confirm():

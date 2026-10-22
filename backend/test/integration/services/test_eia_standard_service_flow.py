@@ -13,7 +13,7 @@ import json
 
 import pytest
 
-from yuxi.services.eia_standard_service import (
+from pisuan.services.eia_standard_service import (
     STANDARDS_INDEX_PATH,
     get_eia_standard_service,
 )
@@ -26,8 +26,8 @@ async def _clean_state():
     """DB 行自清理 + 注册表文件字节级快照恢复（pg_manager.initialize 幂等）。"""
     from sqlalchemy import delete
 
-    from yuxi.storage.postgres.manager import pg_manager
-    from yuxi.storage.postgres.models_domain_factory import EiaStandardReview
+    from pisuan.storage.postgres.manager import pg_manager
+    from pisuan.storage.postgres.models_domain_factory import EiaStandardReview
 
     pg_manager.initialize()
     snapshot = STANDARDS_INDEX_PATH.read_bytes()

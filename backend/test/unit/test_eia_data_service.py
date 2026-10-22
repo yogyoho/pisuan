@@ -7,7 +7,7 @@
 import json
 import pytest
 
-from yuxi.services.eia_data_service import (
+from pisuan.services.eia_data_service import (
     STAGES,
     _classify_caliber,
     _clean_caliber,

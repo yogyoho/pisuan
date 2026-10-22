@@ -9,27 +9,27 @@ from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, 
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
-from yuxi.services import eia_corpus_task_service as eia_corpus_tasks
-from yuxi.services.domain_factory_service import get_domain_factory_service
-from yuxi.services.eia_data_service import (
+from pisuan.services import eia_corpus_task_service as eia_corpus_tasks
+from pisuan.services.domain_factory_service import get_domain_factory_service
+from pisuan.services.eia_data_service import (
     get_data_expectations,
     get_dataset_view,
     get_sections,
     get_skill_stats,
     get_unmapped,
 )
-from yuxi.services.eia_entity_service import get_eia_entity_service
-from yuxi.services.eia_formula_service import get_eia_formula_service
-from yuxi.services.eia_lexicon_service import get_eia_lexicon_service
-from yuxi.services.eia_library_service import LibraryFileTooLarge, get_eia_library_service
-from yuxi.services.eia_limit_extract_service import get_eia_limit_extract_service
-from yuxi.services.eia_meta_service import get_eia_meta_service
-from yuxi.services.eia_paradigm_service import get_eia_paradigm_service
-from yuxi.services.eia_stage_service import get_eia_stage_service
-from yuxi.services.eia_standard_service import get_eia_standard_service
-from yuxi.services.task_service import tasker
-from yuxi.storage.postgres.models_business import User
-from yuxi.utils import logger
+from pisuan.services.eia_entity_service import get_eia_entity_service
+from pisuan.services.eia_formula_service import get_eia_formula_service
+from pisuan.services.eia_lexicon_service import get_eia_lexicon_service
+from pisuan.services.eia_library_service import LibraryFileTooLarge, get_eia_library_service
+from pisuan.services.eia_limit_extract_service import get_eia_limit_extract_service
+from pisuan.services.eia_meta_service import get_eia_meta_service
+from pisuan.services.eia_paradigm_service import get_eia_paradigm_service
+from pisuan.services.eia_stage_service import get_eia_stage_service
+from pisuan.services.eia_standard_service import get_eia_standard_service
+from pisuan.services.task_service import tasker
+from pisuan.storage.postgres.models_business import User
+from pisuan.utils import logger
 
 from server.utils.auth_middleware import get_admin_user, get_required_user
 
@@ -665,7 +665,7 @@ async def get_tasks_for_task_center(
     直接从任务中心获取 domain_factory 类型任务，并关联知识工厂的详细状态
     """
     try:
-        from yuxi.services.task_service import tasker as global_tasker
+        from pisuan.services.task_service import tasker as global_tasker
 
         # 从任务中心获取所有任务
         all_tasks = await global_tasker.list_tasks(limit=limit)
@@ -731,7 +731,7 @@ async def sync_task_to_task_center(
         if not detail:
             raise HTTPException(status_code=404, detail="任务不存在")
 
-        from yuxi.services.task_service import tasker as global_tasker
+        from pisuan.services.task_service import tasker as global_tasker
 
         tasks_data = await global_tasker.list_tasks(limit=200)
 
@@ -830,7 +830,7 @@ async def list_outline_templates(
 ) -> dict[str, Any]:
     """列出13章大纲模板概要"""
     try:
-        from yuxi.services.graph_query_service import GraphQueryService
+        from pisuan.services.graph_query_service import GraphQueryService
 
         svc = GraphQueryService()
         try:
@@ -852,7 +852,7 @@ async def get_outline_template(
 ) -> dict[str, Any]:
     """获取单章大纲模板详情"""
     try:
-        from yuxi.services.graph_query_service import GraphQueryService
+        from pisuan.services.graph_query_service import GraphQueryService
 
         svc = GraphQueryService()
         try:
@@ -879,7 +879,7 @@ async def update_outline_template(
 ) -> dict[str, Any]:
     """更新单章大纲模板"""
     try:
-        from yuxi.services.graph_query_service import GraphQueryService
+        from pisuan.services.graph_query_service import GraphQueryService
 
         svc = GraphQueryService()
         try:

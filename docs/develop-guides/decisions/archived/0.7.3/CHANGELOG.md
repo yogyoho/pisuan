@@ -9,7 +9,7 @@
 这一组建立 0.7.x 开发流程的基座：以语义 Owner 与 verifier 派生工程契约、以 Spec Loop 约束非平凡变更、以 Diátaxis 四类页面与证据强度词约束文档写作；首页品牌刷新是该信息架构的视觉落地，四份流程记录共享同一工程信任机制。
 
 - [2026-08-16-agent-first-engineering-trust](01-engineering-trust-and-docs/2026-08-16-agent-first-engineering-trust.md) — 以语义 Owner 为权威，`verify_engineering_contracts.py` 从代码、测试、workflow 与决策记录派生审计投影，每项检查配负向测试，trust.yml 在 main 与 PR 上无路径过滤阻塞。
-- [2026-08-16-yuxi-spec-loop](01-engineering-trust-and-docs/2026-08-16-yuxi-spec-loop.md) — Spec Loop 统一 Scope、权威重建、Propose、实现、Verify、独立 Review、Converge 与 Learn；非平凡变更实现前先建 tracked proposed，与 PR 共用同一组验收字段。
+- [2026-08-16-pisuan-spec-loop](01-engineering-trust-and-docs/2026-08-16-pisuan-spec-loop.md) — Spec Loop 统一 Scope、权威重建、Propose、实现、Verify、独立 Review、Converge 与 Learn；非平凡变更实现前先建 tracked proposed，与 PR 共用同一组验收字段。
 - [2026-08-17-documentation-information-architecture](01-engineering-trust-and-docs/2026-08-17-documentation-information-architecture.md) — 文档按教程、参考、机制、治理、决策与事故分层，机制页从真实装配链说明状态、权限与失败语义；公开路径保持不变。
 - [2026-08-26-human-centered-documentation](01-engineering-trust-and-docs/2026-08-26-human-centered-documentation.md) — 采用面向读者的四类文档与 `Passed`/`Inspected`/`Not run`/`Inferred` 证据强度词，站点启用严格站内链接检查。
 - [2026-09-04-docs-home-brand-refresh](01-engineering-trust-and-docs/2026-09-04-docs-home-brand-refresh.md) — 文档首页以 `#f3ba32` 品牌色重构为七类任务入口；大图与 OG 图由项目 OSS 交付，交互尊重 reduced motion。
@@ -34,7 +34,7 @@
 
 清理基础设施先行，随后一轮审计先精简测试、再复核证据边界；确立「删除测试须先指出语义 Owner、现存独立 oracle 与负向覆盖」的规则，测试运行器改用 readiness gate。
 
-- [2026-08-19-test-conversation-cleanup](04-testing/2026-08-19-test-conversation-cleanup.md) — 真实 HTTP 测试创建的 Conversation 统一 `YUXI_TEST_CONVERSATION_` 前缀，E2E 与 integration 共享两阶段 SHARE 锁 teardown，删除前阻止非终态 Run。
+- [2026-08-19-test-conversation-cleanup](04-testing/2026-08-19-test-conversation-cleanup.md) — 真实 HTTP 测试创建的 Conversation 统一 `PISUAN_TEST_CONVERSATION_` 前缀，E2E 与 integration 共享两阶段 SHARE 锁 teardown，删除前阻止非终态 Run。
 - [2026-09-07-test-suite-simplification](04-testing/2026-09-07-test-suite-simplification.md) — 保留语义 Owner 或观察边界不同的 unit、provider 探针与 E2E 三层，只删除无独立断言的实例与低信息量单测；readiness 检查 `/api/system/ready` 而非 liveness。
 - [2026-09-07-test-suite-audit-follow-up](04-testing/2026-09-07-test-suite-audit-follow-up.md) — 精简后的证据边界收敛：prompt 负向断言、benchmark 事件同步、512 token 分块精确 oracle，Web 测试按实际观察边界取舍。
 
@@ -47,11 +47,11 @@
 - [2026-08-19-explicit-storage-domains-and-kubernetes-pvc](05-storage-workdir/2026-08-19-explicit-storage-domains-and-kubernetes-pvc.md) — 前置：显式存储域与 Kubernetes PVC 的早期设计；同被上述记录取代。
 - [2026-08-17-api-worker-file-storage-decoupling](05-storage-workdir/2026-08-17-api-worker-file-storage-decoupling.md) — API/worker 不再挂载 Docker socket 或模型目录，只有 provisioner 持有 Docker 权限；日志与 Office 预览缓存留在各自容器本地运行目录。
 - [2026-08-19-workdir-in-user-workspace](05-storage-workdir/2026-08-19-workdir-in-user-workspace.md) — Workdir 不再是独立存储域，而是 UserWorkspace 下 `projects/<opaque-id>` 相对路径；Sandbox 挂载收敛为 `user-data` 与只读 Skill 投影，同一用户 Thread 之间不提供文件隔离。
-- [2026-08-19-shared-no-follow-directory-walker](05-storage-workdir/2026-08-19-shared-no-follow-directory-walker.md) — `yuxi.utils.paths.open_directory_fd` 统一逐层 no-follow 打开、`0o700` 创建与 symlink/非目录错误分类，Workdir、Workspace、Skills 只留薄 wrapper。
+- [2026-08-19-shared-no-follow-directory-walker](05-storage-workdir/2026-08-19-shared-no-follow-directory-walker.md) — `pisuan.utils.paths.open_directory_fd` 统一逐层 no-follow 打开、`0o700` 创建与 symlink/非目录错误分类，Workdir、Workspace、Skills 只留薄 wrapper。
 - [2026-08-20-unified-workspace-runtime-identity](05-storage-workdir/2026-08-20-unified-workspace-runtime-identity.md) — 数据面固定 `1000:1000`，新目录 `0o700`、新文件 `0o600`；root migrator 启动前一次性收敛旧目录身份，删除运行时权限补丁。
 - [2026-08-20-v071-storage-migration-boundary](05-storage-workdir/2026-08-20-v071-storage-migration-boundary.md) — 一次性 `storage-migrator` 只兼容 v0.7.1 发布状态，检测到未发布中间 schema 明确拒绝；文件移动与 schema 切换不可逆，必须停机迁移。
-- [2026-08-21-workspace-owner-convergence](05-storage-workdir/2026-08-21-workspace-owner-convergence.md) — 顶层 `yuxi.workspace` 由 paths、filesystem、workdir、preview 四模块分工；删除 0.7.2.dev0 开发期 Thread 文件浏览 API 与 Mention Redis 文件索引，不为开发快照保留兼容层。
-- [2026-08-21-preview-owner-separation](05-storage-workdir/2026-08-21-preview-owner-separation.md) — 通用预览原语下沉 `yuxi.utils.filepreview`，Workspace 与 Knowledge 预览分离，Knowledge 获得独立的 MinIO 原始对象读取与持久 PDF 缓存。
+- [2026-08-21-workspace-owner-convergence](05-storage-workdir/2026-08-21-workspace-owner-convergence.md) — 顶层 `pisuan.workspace` 由 paths、filesystem、workdir、preview 四模块分工；删除 0.7.2.dev0 开发期 Thread 文件浏览 API 与 Mention Redis 文件索引，不为开发快照保留兼容层。
+- [2026-08-21-preview-owner-separation](05-storage-workdir/2026-08-21-preview-owner-separation.md) — 通用预览原语下沉 `pisuan.utils.filepreview`，Workspace 与 Knowledge 预览分离，Knowledge 获得独立的 MinIO 原始对象读取与持久 PDF 缓存。
 - [2026-08-24-versioned-schema-migration-owner](05-storage-workdir/2026-08-24-versioned-schema-migration-owner.md) — `storage-migrator` 成为唯一 Schema 修改者，双域版本记录；API 与 worker 只在版本精确匹配时启动，裸进程启动前必须先运行迁移器，不承诺回滚。
 
 ## Project 资源与生命周期
@@ -91,11 +91,11 @@ Project 先成为持久化业务资源，随后补齐 Project 内写审批豁免
 
 先定共享/个人 Skill 的存储与授权 Owner，再收敛运行时解析 Owner；预加载与共享智能体资源选择在两者之上建立首轮可见性与写边界。完整资源选择协议由仍在 `implemented/` 的[统一资源选择决策](../../implemented/2026-09-27-explicit-resource-selection.md)继续拥有。
 
-- [2026-08-18-skill-source-convergence](09-skill-cli/2026-08-18-skill-source-convergence.md) — 共享 Skill 只存 `YUXI_SKILL_DATA_DIR/shared/<slug>`，个人 Skill 始终由 UserWorkspace 拥有；投影只读，同 slug 个人版本逻辑覆盖共享版本。
+- [2026-08-18-skill-source-convergence](09-skill-cli/2026-08-18-skill-source-convergence.md) — 共享 Skill 只存 `PISUAN_SKILL_DATA_DIR/shared/<slug>`，个人 Skill 始终由 UserWorkspace 拥有；投影只读，同 slug 个人版本逻辑覆盖共享版本。
 - [2026-08-20-skill-runtime-module-boundary](09-skill-cli/2026-08-20-skill-runtime-module-boundary.md) — `agents/skills/runtime.py` 统一拥有 Skill 解析与激活包派生，Middleware 只保留请求包装与注入；删除无消费者 Python API 且不留 re-export。
 - [2026-08-17-skill-preload](09-skill-cli/2026-08-17-skill-preload.md) — `preload_skills` 允许智能体预加载少量 Skill，首轮注入完整说明；预加载文件不可读时 Graph 创建显式失败。
 - [2026-09-05-shared-agent-resource-selection](09-skill-cli/2026-09-05-shared-agent-resource-selection.md) — 共享智能体保存把 `config_json.context` 作为字段补丁，行锁内合并并保留不可见引用；运行期只使用操作者可访问资源的交集。
-- [2026-08-27-cli-agent-inspection](09-skill-cli/2026-08-27-cli-agent-inspection.md) — CLI 新增 `yuxi agent list` 与 `yuxi agent show`，经 discovery 能力声明拒绝不支持契约的旧服务端。
+- [2026-08-27-cli-agent-inspection](09-skill-cli/2026-08-27-cli-agent-inspection.md) — CLI 新增 `pisuan agent list` 与 `pisuan agent show`，经 discovery 能力声明拒绝不支持契约的旧服务端。
 
 ## 增量审计与调试可观测
 

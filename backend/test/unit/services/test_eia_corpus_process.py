@@ -14,7 +14,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from yuxi.services import eia_corpus_task_service as svc
+from pisuan.services import eia_corpus_task_service as svc
 
 MINI_CANONICAL_MD = (
     "某矿项目环境影响报告书\n\n"

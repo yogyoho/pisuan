@@ -10,7 +10,7 @@ Owner：docker-compose.yml
 
 ## 决策
 
-两份 Compose 删除无效的 `MILVUS_LOG_LEVEL`，对 `milvus` 与 `etcd` 启用 json-file 日志轮转（`max-size=50m`、`max-file=3`，单容器封顶约 150MB；dev etcd 已累计约 70MB、18.9 万行，另两栈 10.7MB/1.7MB，属预防性同批封顶）。对 `milvus` 只设 `cpus`（默认 2，`YUXI_MILVUS_CPUS` 可覆盖），让镜像内置 maxprocs 按 cgroup quota 收敛 GOMAXPROCS。**不设 `mem_limit`**：内存随知识库数据量线性增长，任何硬上界终将被合法增长击穿，而击穿模式是 OOM kill → 重启 → 重新加载同样数据 → 再 OOM 的重启循环，比渐进降级更糟；确需上界时应先建工作集监控与告警。日志级别本身只由镜像内 `milvus.yaml` 拥有。
+两份 Compose 删除无效的 `MILVUS_LOG_LEVEL`，对 `milvus` 与 `etcd` 启用 json-file 日志轮转（`max-size=50m`、`max-file=3`，单容器封顶约 150MB；dev etcd 已累计约 70MB、18.9 万行，另两栈 10.7MB/1.7MB，属预防性同批封顶）。对 `milvus` 只设 `cpus`（默认 2，`PISUAN_MILVUS_CPUS` 可覆盖），让镜像内置 maxprocs 按 cgroup quota 收敛 GOMAXPROCS。**不设 `mem_limit`**：内存随知识库数据量线性增长，任何硬上界终将被合法增长击穿，而击穿模式是 OOM kill → 重启 → 重新加载同样数据 → 再 OOM 的重启循环，比渐进降级更糟；确需上界时应先建工作集监控与告警。日志级别本身只由镜像内 `milvus.yaml` 拥有。
 
 ## 替代方案
 
@@ -20,7 +20,7 @@ Owner：docker-compose.yml
 
 ## 后果
 
-轮转与 cpus 都要重建容器才生效，既有 4.49GB json.log 不自动回收，需合并后 `docker compose up -d milvus etcd` 并手工清理旧日志。不设内存上界意味着 milvus 只受宿主可用内存约束（宿主 62.6GiB、可用 29.9GiB、swap 已满；宿主级 OOM 的首选受害者恰是 RSS 最大的 milvus），可控手段是 unload 冷 collection 与三套并行栈去重。`YUXI_MILVUS_CPUS` 会限制索引构建吞吐，可调。
+轮转与 cpus 都要重建容器才生效，既有 4.49GB json.log 不自动回收，需合并后 `docker compose up -d milvus etcd` 并手工清理旧日志。不设内存上界意味着 milvus 只受宿主可用内存约束（宿主 62.6GiB、可用 29.9GiB、swap 已满；宿主级 OOM 的首选受害者恰是 RSS 最大的 milvus），可控手段是 unload 冷 collection 与三套并行栈去重。`PISUAN_MILVUS_CPUS` 会限制索引构建吞吐，可调。
 
 ## 验证
 

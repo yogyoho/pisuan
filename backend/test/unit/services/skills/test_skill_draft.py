@@ -7,9 +7,9 @@ import time
 from pathlib import Path
 
 import pytest
-from yuxi.services.skills import draft as skill_draft
-from yuxi.services.skills.package import copy_skill_tree_no_symlinks
-from yuxi.storage.postgres.models_business import User
+from pisuan.services.skills import draft as skill_draft
+from pisuan.services.skills.package import copy_skill_tree_no_symlinks
+from pisuan.storage.postgres.models_business import User
 
 
 def _write_draft(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, items: list[dict]) -> str:
@@ -93,7 +93,7 @@ def test_symlinked_source_root_cannot_be_staged(tmp_path: Path):
 @pytest.mark.asyncio
 async def test_partial_install_preserves_failed_and_unselected_snapshots(tmp_path, monkeypatch):
     """部分成功后重读磁盘，失败和未选条目仍可确认且成功项不再出现。"""
-    from yuxi.services.skills import personal
+    from pisuan.services.skills import personal
 
     items = [
         {"slug": slug, "source_dir": f"items/{letter * 32}"}
@@ -105,7 +105,7 @@ async def test_partial_install_preserves_failed_and_unselected_snapshots(tmp_pat
         (directory / "SKILL.md").write_text(
             f"---\nname: {item['slug']}\ndescription: example\n---\nBody", encoding="utf-8"
         )
-    from yuxi.workspace import paths
+    from pisuan.workspace import paths
 
     monkeypatch.setattr(paths, "get_user_data_dir", lambda: tmp_path / "users")
     operator = User(uid="owner", role="user")

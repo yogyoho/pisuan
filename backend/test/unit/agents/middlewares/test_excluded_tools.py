@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from yuxi.agents.middlewares.excluded_tools import ExcludedToolsMiddleware
+from pisuan.agents.middlewares.excluded_tools import ExcludedToolsMiddleware
 
 
 class _Request:

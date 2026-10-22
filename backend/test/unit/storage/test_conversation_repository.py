@@ -7,13 +7,13 @@ import pytest_asyncio
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from yuxi.repositories.conversation_repository import (
+from pisuan.repositories.conversation_repository import (
     ConversationRepository,
     INVOCATION_CONVERSATION_SOURCES,
     MAX_CONVERSATION_TITLE_LENGTH,
 )
-from yuxi.storage.postgres.models_business import AgentRun, Base, Conversation, ConversationStats, Message, ToolCall
-from yuxi.utils.datetime_utils import utc_now_naive
+from pisuan.storage.postgres.models_business import AgentRun, Base, Conversation, ConversationStats, Message, ToolCall
+from pisuan.utils.datetime_utils import utc_now_naive
 
 pytestmark = pytest.mark.unit
 

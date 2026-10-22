@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：feature
-Owner：backend/package/yuxi/agents/buildin/chatbot/prompt.py
+Owner：backend/package/pisuan/agents/buildin/chatbot/prompt.py
 
 ## 问题
 

@@ -1,6 +1,6 @@
 """eia_limit_extract_core 单测：区块定位 / 表格+行内解析 / 归一 / 聚合置信。"""
 
-from yuxi.services.eia_limit_extract_core import (
+from pisuan.services.eia_limit_extract_core import (
     Block,
     aggregate_records,
     convert_limit,

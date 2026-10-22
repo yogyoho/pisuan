@@ -10,15 +10,15 @@ from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Upload
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from starlette.responses import StreamingResponse
-from yuxi.config.options import system_options
-from yuxi.knowledge.base import KBNameConflictError, KBNotFoundError
-from yuxi.knowledge.chunking.ragflow_like.presets import get_chunk_preset_options
-from yuxi.knowledge.graphs.milvus_graph_service import GRAPH_TASK_TYPE, MilvusGraphService
-from yuxi.knowledge.read_models import KnowledgeBaseDetail
-from yuxi.knowledge.parser.capabilities import SUPPORTED_FILE_EXTENSIONS, is_supported_file_extension
-from yuxi.knowledge.runtime import knowledge_base
-from yuxi.knowledge.utils import calculate_content_hash, is_minio_url, params_for_uploaded_document, parse_minio_url
-from yuxi.knowledge.utils.mindmap_utils import (
+from pisuan.config.options import system_options
+from pisuan.knowledge.base import KBNameConflictError, KBNotFoundError
+from pisuan.knowledge.chunking.ragflow_like.presets import get_chunk_preset_options
+from pisuan.knowledge.graphs.milvus_graph_service import GRAPH_TASK_TYPE, MilvusGraphService
+from pisuan.knowledge.read_models import KnowledgeBaseDetail
+from pisuan.knowledge.parser.capabilities import SUPPORTED_FILE_EXTENSIONS, is_supported_file_extension
+from pisuan.knowledge.runtime import knowledge_base
+from pisuan.knowledge.utils import calculate_content_hash, is_minio_url, params_for_uploaded_document, parse_minio_url
+from pisuan.knowledge.utils.mindmap_utils import (
     batch_remove_files_from_mindmap,
     generate_database_mindmap,
     get_database_mindmap_data,
@@ -27,23 +27,23 @@ from yuxi.knowledge.utils.mindmap_utils import (
     get_mindmap_diff,
     remove_file_from_mindmap,
 )
-from yuxi.knowledge.utils.sample_question_utils import (
+from pisuan.knowledge.utils.sample_question_utils import (
     generate_database_sample_questions,
     get_database_sample_questions,
 )
-from yuxi.knowledge.utils.url_fetcher import fetch_url_content
-from yuxi.permissions import (
+from pisuan.knowledge.utils.url_fetcher import fetch_url_content
+from pisuan.permissions import (
     ResourcePermission,
     resolve_knowledge_base_permission,
 )
-from yuxi.services.knowledge_folder_service import knowledge_folder_service
-from yuxi.services.ocr_service import parse_document
-from yuxi.services.task_service import tasker
-from yuxi.services.workspace_service import read_workspace_file_bytes
-from yuxi.storage.minio.client import MinIOClient, StorageError, aupload_file_to_minio, get_minio_client
-from yuxi.storage.postgres.models_business import User
-from yuxi.utils import logger
-from yuxi.utils.upload_utils import MAX_UPLOAD_SIZE_BYTES, read_upload_with_limit, write_upload_to_path
+from pisuan.services.knowledge_folder_service import knowledge_folder_service
+from pisuan.services.ocr_service import parse_document
+from pisuan.services.task_service import tasker
+from pisuan.services.workspace_service import read_workspace_file_bytes
+from pisuan.storage.minio.client import MinIOClient, StorageError, aupload_file_to_minio, get_minio_client
+from pisuan.storage.postgres.models_business import User
+from pisuan.utils import logger
+from pisuan.utils.upload_utils import MAX_UPLOAD_SIZE_BYTES, read_upload_with_limit, write_upload_to_path
 
 from server.utils.auth_middleware import get_admin_user, get_db, get_required_user
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -1809,7 +1809,7 @@ async def generate_description(
 
     根据知识库名称和现有描述，使用 LLM 生成适合作为智能体工具描述的内容。
     """
-    from yuxi.models import select_model
+    from pisuan.models import select_model
 
     file_list = file_list or []
     logger.debug(f"Generating description for knowledge base: {name}, files: {len(file_list)}")

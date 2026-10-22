@@ -1,6 +1,6 @@
 # 配置系统
 
-Yuxi 的配置分成两类：启动进程时读取的环境变量，以及运行中由管理员在页面维护的系统配置。区分这两类，可以判断修改后需要保存、清缓存还是重启服务。本页拥有配置的生效规则；各主题的具体配置见对应 Owner 页面。
+Pisuan 的配置分成两类：启动进程时读取的环境变量，以及运行中由管理员在页面维护的系统配置。区分这两类，可以判断修改后需要保存、清缓存还是重启服务。本页拥有配置的生效规则；各主题的具体配置见对应 Owner 页面。
 
 ## 配置来源和优先级
 
@@ -22,7 +22,7 @@ docker compose up -d --force-recreate api worker
 
 ## 管理员系统配置
 
-管理员在“设置 → 基本设置”中修改系统配置。当前配置项由 [`options.py`](https://github.com/xerrors/Yuxi/blob/main/backend/package/yuxi/config/options.py) 定义，包含默认对话模型、快速响应模型、嵌入模型、重排模型和默认 OCR 解析引擎。
+管理员在“设置 → 基本设置”中修改系统配置。当前配置项由 [`options.py`](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/config/options.py) 定义，包含默认对话模型、快速响应模型、嵌入模型、重排模型和默认 OCR 解析引擎。
 
 系统配置保存到 PostgreSQL 的 `config_options` 表。API 和 worker 通过 Redis 保存短期缓存；保存成功后缓存会失效，下一次读取从数据库取得新值。Redis 不可用时，读取路径回源 PostgreSQL，不把缓存当作最终事实。
 

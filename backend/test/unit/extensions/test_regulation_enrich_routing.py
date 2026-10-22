@@ -11,20 +11,20 @@ from types import SimpleNamespace
 
 import pytest
 
-import yuxi.extensions.regulation_library.enrichment_service as enrich_mod
-import yuxi.extensions.regulation_library.indicator_extractor as ext_mod
-import yuxi.extensions.regulation_library.models as models_mod
-import yuxi.extensions.regulation_library.structured_channel as chan_mod
-from yuxi.extensions.regulation_library.enrichment_service import enrich_regulation_file, query_indicators
-from yuxi.extensions.regulation_library.indicator_extractor import (
+import pisuan.extensions.regulation_library.enrichment_service as enrich_mod
+import pisuan.extensions.regulation_library.indicator_extractor as ext_mod
+import pisuan.extensions.regulation_library.models as models_mod
+import pisuan.extensions.regulation_library.structured_channel as chan_mod
+from pisuan.extensions.regulation_library.enrichment_service import enrich_regulation_file, query_indicators
+from pisuan.extensions.regulation_library.indicator_extractor import (
     IndicatorExtraction,
     IndicatorRow,
     MethodMapping,
     MethodMappingExtraction,
     parse_indicator_response,
 )
-from yuxi.extensions.regulation_library.models import _DDL
-from yuxi.extensions.regulation_library.table_role_classifier import (
+from pisuan.extensions.regulation_library.models import _DDL
+from pisuan.extensions.regulation_library.table_role_classifier import (
     TableRoleClassifier,
     TableRoleVerdict,
     classify_table_role_by_title,

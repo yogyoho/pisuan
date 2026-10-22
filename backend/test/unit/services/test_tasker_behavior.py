@@ -10,9 +10,9 @@ from typing import Any
 
 import pytest
 
-from yuxi.services import task_queue_service, task_service
-from yuxi.services.task_service import TaskContext, Tasker, process_task
-from yuxi.utils.datetime_utils import format_utc_datetime, utc_now_naive
+from pisuan.services import task_queue_service, task_service
+from pisuan.services.task_service import TaskContext, Tasker, process_task
+from pisuan.utils.datetime_utils import format_utc_datetime, utc_now_naive
 
 
 @pytest.fixture(autouse=True)
