@@ -34,6 +34,7 @@ def session_env(monkeypatch):
             return False
 
     monkeypatch.setattr(svc.pg_manager, "get_async_session_context", lambda: _CM())
+    monkeypatch.setattr(svc, "ensure_schema", lambda: asyncio.sleep(0))  # 写路径默认桩 DDL（Task 4 守卫）
     return ses
 
 
@@ -79,3 +80,25 @@ def test_save_rows_day_night_saves_two_rows(session_env, monkeypatch):
     p1, p2 = session_env.executes[1][1], session_env.executes[2][1]
     assert {p1["metric"], p2["metric"]} == {"昼间", "夜间"}
     assert p1["page_row_id"] == p2["page_row_id"]
+
+
+def test_save_rows_calls_ensure_schema_first(session_env, monkeypatch):
+    calls: list[str] = []
+    monkeypatch.setattr(svc, "ensure_schema", lambda: calls.append("schema") or asyncio.sleep(0))
+    monkeypatch.setattr(svc, "_load_standards_index", lambda: {"limit_tables": {}})
+    asyncio.run(
+        svc.EiaStandardService().save_limit_rows(
+            "gbt14848_category_limits",
+            [{"category": "III类", "pollutant": "总硬度", "limit_value": 450, "unit": "mg/L"}],
+            "qa",
+        )
+    )
+    assert calls == ["schema"]  # fresh DB 首写守卫在 IO 前执行
+
+
+def test_save_rows_invalid_payload_aborts_before_session(session_env, monkeypatch):
+    monkeypatch.setattr(svc, "ensure_schema", lambda: asyncio.sleep(0))
+    monkeypatch.setattr(svc, "_load_standards_index", lambda: {"limit_tables": {}})
+    with pytest.raises(KeyError):
+        asyncio.run(svc.EiaStandardService().save_limit_rows("no_such_table", [{"x": 1}], "qa"))
+    assert session_env.executes == []  # 校验失败不得开库

@@ -19,9 +19,10 @@ from typing import Any
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import text as sql_text
 
+from yuxi.extensions.regulation_library.models import ensure_schema
 from yuxi.repositories.eia_standard_repository import EiaStandardRepository
 from yuxi.services.eia_data_service import _SKILL_ROOT
-from yuxi.services.eia_limit_row_mapping import flatten_limit_row
+from yuxi.services.eia_limit_row_mapping import flatten_limit_row, regroup_limit_rows
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_domain_factory import EiaStandardReview
 from yuxi.utils import logger
@@ -194,35 +195,62 @@ class EiaStandardService:
                 counts["limit_tables_pending"] += 1
         return {"items": items, "total": counts["total"], "counts": counts}
 
+    async def list_expert_rows(self) -> list[dict[str, Any]]:
+        """standard_indicators 全量专家行（regroup 的原材料；稳定序 table_key→page_row_id→id）。"""
+        async with pg_manager.get_async_session_context() as session:
+            result = await session.execute(
+                sql_text(
+                    "SELECT table_key, page_row_id, doc_code, pollutant, metric, limit_value,"
+                    " unit, condition, category, period, verified_by, verified_at"
+                    " FROM standard_indicators WHERE source = 'expert' AND table_key IS NOT NULL"
+                    " ORDER BY table_key, page_row_id, id"
+                )
+            )
+            return [dict(r._mapping) for r in result.all()]
+
     async def list_limit_tables(self) -> dict[str, Any]:
-        """limit_tables：文件态 + DB 录入行合并（DB 已录入的表整体覆盖文件锚点行）+ 行结构 schemas。"""
+        """limit_tables：文件锚点（source='file'，seed 展示）+ 专家行重组（source='expert'，覆盖锚点）。
+
+        表级 verified 派生：该 table_key 存在专家行即 true（DB 唯一真相，不再依赖文件 flag 翻转）。
+        """
         doc = await run_in_threadpool(_load_standards_index)
         by_table: dict[str, list] = {}
-        for r in await self.repo.list_rows():
-            by_table.setdefault(r.table_key, []).append(r)
+        for r in await self.list_expert_rows():
+            by_table.setdefault(r["table_key"], []).append(r)
 
-        def _db_fields(rows: list) -> dict[str, Any]:
-            first = rows[0]
-            return {
-                "rows": [r.row_json for r in rows],
-                "source": "db",
-                "decided_by": first.decided_by,
-                "updated_at": format_utc_datetime(first.updated_at) if first.updated_at else None,
-            }
-
+        flat_keys = ("page_row_id", "pollutant", "metric", "limit_value", "unit", "condition", "category", "period")
         tables: dict[str, Any] = {}
         for name, t in doc.get("limit_tables", {}).items():
             if not isinstance(t, dict):  # _comment 等说明项原样透传
                 tables[name] = t
                 continue
             merged = dict(t)
-            rows = by_table.get(name)
-            merged.update(_db_fields(rows) if rows else {"source": "file"})
+            flat = by_table.get(name)
+            if flat:
+                first = flat[0]
+                merged.update(
+                    {
+                        "rows": regroup_limit_rows(name, [{k: r[k] for k in flat_keys} for r in flat]),
+                        "source": "expert",
+                        "decided_by": first.get("verified_by"),
+                        "updated_at": format_utc_datetime(first["verified_at"]) if first.get("verified_at") else None,
+                        "verified": True,
+                        "needs_verification": False,
+                    }
+                )
+            else:
+                merged.update({"source": "file"})
             tables[name] = merged
-        for key, rows in by_table.items():  # DB 已录入而文件注册表漂移掉的表：仍须露出
+        for key, flat in by_table.items():  # 注册表漂移防护：有专家行但文件锚点消失的表仍须露出
             if key not in tables:
-                tables[key] = _db_fields(rows)
-        # 新表入册（spec 2026-10-19）：DB 注册表露出新键 + schemas 合并
+                tables[key] = {
+                    "code_ref": flat[0]["doc_code"],
+                    "rows": regroup_limit_rows(key, [{k: r[k] for k in flat_keys} for r in flat]),
+                    "source": "expert",
+                    "verified": True,
+                    "needs_verification": False,
+                }
+        # 新表入册（spec 2026-10-19）：DB 注册表露出新键 + schemas 合并（不变）
         schemas = dict(LIMIT_TABLE_SCHEMAS)
         for reg in await self.repo.list_registry():
             if reg.table_key not in tables:
@@ -341,6 +369,7 @@ class EiaStandardService:
 
     async def save_limit_rows(self, table_key: str, rows: Any, username: str) -> dict[str, Any]:
         """限值行整表替换落 standard_indicators（born-verified 权威行；事务内删旧插新）。"""
+        await ensure_schema()  # fresh DB 首写守卫（评审折入：与 enrichment 各写入口同纪律）
         validated = _validate_limit_rows(table_key, rows)
         doc = await run_in_threadpool(_load_standards_index)
         code_ref = (doc.get("limit_tables", {}).get(table_key) or {}).get("code_ref") or table_key

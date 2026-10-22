@@ -72,7 +72,7 @@ def regroup_limit_rows(table_key: str, flat_rows: list[dict[str, Any]]) -> list[
     for r in flat_rows:
         groups.setdefault(r["page_row_id"], []).append(r)
     out: list[dict[str, Any]] = []
-    for prid in groups:  # dict 保序：按 flat_rows 首现序（= 调用方 DB id 序）还原页面行序
+    for prid in groups:  # dict 保序：按 flat_rows 首现序（= 调用方 SELECT 序）还原页面行序
         rows = sorted(groups[prid], key=lambda r: 0 if r["metric"] == "昼间" else 1)
         head = rows[0]
         if head["metric"] == "昼间":  # 噪声行形重组
