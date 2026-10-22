@@ -1,4 +1,4 @@
-const ICON_BASE = 'https://registry.npmmirror.com/@lobehub/icons-static-svg/latest/files/icons'
+const ICON_BASE = '/providers-logo' /* [pisuan-custom] 工程内置 logo，见 web/public/providers-logo */
 const WHITE_ICON_FILTER = 'brightness(0) invert(1)'
 
 const avatar = (icon, background, scale = 0.75, filter = WHITE_ICON_FILTER) => ({
@@ -19,7 +19,7 @@ export const modelAvatars = {
   dashscope: avatar('bailian-color', '#fff', 0.75, 'none'), /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
   deepseek: avatar('deepseek', '#4d6bfe'), /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
   fluxionai: {
-    icon: 'https://xerrors.oss-cn-shanghai.aliyuncs.com/github/%E4%B8%8B%E8%BD%BD.jpeg',
+    icon: '/providers-logo/fluxionai.jpeg',
     background: '#fff', /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
     scale: 1,
     filter: 'none'
@@ -32,7 +32,8 @@ export const modelAvatars = {
   'moonshotai-cn': avatar('moonshot', '#16191e'), /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
   opencode: avatar('opencode', '#000'), /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
   'opencode-go': avatar('opencode', '#000'), /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
-  openai: avatar('openai', '#000'), /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
+  openai: avatar('openai-completions', '#000'), /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
+  ollama: avatar('ollama', '#000', 0.7), /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
   openrouter: avatar(
     'openrouter',
     '#000', /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
@@ -47,7 +48,7 @@ export const modelAvatars = {
   'xiaomi-token-plan-cn': avatar('xiaomimimo', '#000', 0.7), /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
   zai: avatar('zai', '#000', 0.6), /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
   'zai-coding-plan': avatar('zai', '#000', 0.6), /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
-  zhipu: avatar('zhipu', '#3859ff'), /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
-  zhipuai: avatar('zhipu', '#3859ff'), /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
-  'zhipuai-coding-plan': avatar('zhipu', '#3859ff') /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
+  zhipu: avatar('zhipu-code-plan', '#3859ff'), /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
+  zhipuai: avatar('zhipu-code-plan', '#3859ff'), /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
+  'zhipuai-coding-plan': avatar('zhipu-code-plan', '#3859ff') /* [pisuan-custom] 青云素雅：品牌色，不随主题 */
 }
