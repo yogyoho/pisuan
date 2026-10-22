@@ -34,6 +34,7 @@ from yuxi.utils import logger
 from yuxi.utils.datetime_utils import format_utc_datetime, utc_now_naive
 
 OVERRIDES_PATH = _SKILL_ROOT / "references" / "overrides" / "curated_lexicon.json"
+_SKILL_REFS = _SKILL_ROOT / "references"
 CURATED_LEXICON_KEY = "curated_lexicon"
 
 # 导入预置状态（2026-10-09 用户裁决）：A 类直接入选 / B 类候选待业务确认 / C 类留档；
@@ -162,9 +163,11 @@ class EiaLexiconService:
         status: str | None = None,
         q: str | None = None,
     ) -> dict[str, Any]:
-        """全量条目 + 语料实时计数合并（DB 存决策态，报告数/值数始终现扫）。"""
+        """全量条目 + 语料实时计数 + 范式字段可映射性（forms_field，与编译器同判）。"""
         entries = await self.repo.list_entries()
         scan_index = {(c["stage"], c["caliber"], c["unit"]): c for c in await run_in_threadpool(_scan_all)}
+        bank = _load_bank_compile()
+        label_map = bank.build_label_map(_SKILL_REFS)
         counts = Counter(e.status for e in entries)
         items: list[dict[str, Any]] = []
         for e in entries:
@@ -181,6 +184,8 @@ class EiaLexiconService:
             d["n_reports"] = c.get("n_reports", 0)
             d["n_values"] = c.get("n_values", 0)
             d["range_ready"] = bool(c.get("range_ready"))
+            mapped = bank._map_caliber(e.caliber, label_map)
+            d["forms_field"] = mapped[1] if mapped else None
             items.append(d)
         return {
             "items": items,
@@ -378,7 +383,10 @@ class EiaLexiconService:
         return {**switch.to_dict(), "overrides_file": OVERRIDES_PATH.is_file()}
 
     async def export_overrides(self, username: str) -> dict[str, Any]:
-        """物化 approved 条目 → overrides 文件 + 开关置位。range 一律现算（不信任 DB 快照）。"""
+        """物化 approved 条目 → overrides 文件 + 开关置位。range 一律现算（不信任 DB 快照）。
+
+        未映射范式表单字段的条目一并跳过（与 bank_compile 的 curated 消费同判）——否则条目
+        入了覆盖层也会在编译时被静默丢弃，页面却显示正常。"""
         entries = sorted(
             (e for e in await self.repo.list_entries() if e.status == "approved"),
             key=lambda x: (x.stage, x.caliber, x.unit),
@@ -389,7 +397,19 @@ class EiaLexiconService:
 
         doc_entries: list[dict[str, Any]] = []
         skipped: list[dict[str, Any]] = []
+        bank = _load_bank_compile()
+        label_map = bank.build_label_map(_SKILL_REFS)
         for e in entries:
+            if bank._map_caliber(e.caliber, label_map) is None:
+                skipped.append(
+                    {
+                        "stage": e.stage,
+                        "caliber": e.caliber,
+                        "unit": e.unit,
+                        "reason": "未映射范式表单字段（编译时会跳过）",
+                    }
+                )
+                continue
             reason: str | None = None
             vals: list[float] = []
             rids: set[str] = set()

@@ -128,6 +128,15 @@
                   <td>
                     <div class="caliber-cell">
                       <span class="caliber-name" :title="record.caliber">{{ record.caliber }}</span>
+                      <span v-if="record.forms_field" class="pill pill-ok pill-sm" :title="`归并到范式字段 ${record.forms_field}`">
+                        → {{ record.forms_field }}
+                      </span>
+                      <span
+                        v-else-if="record.status !== 'rejected'"
+                        class="pill pill-orange pill-sm"
+                        title="未命中范式表单字段：导出后编译时期望与值域会跳过该条，先到「范式字段」补字段"
+                        >未映射字段</span
+                      >
                       <span v-if="record.note" class="caliber-note" :title="record.note">{{
                         record.note
                       }}</span>
@@ -361,7 +370,7 @@
       <Info :size="14" />
       <span>
         导出物化仅合并已入选条目到 references/overrides/curated_lexicon.json（range
-        一律现算）；改名旧口径自动进抑制清单，重扫语料不再复活；覆盖层开关关闭即删文件，管线回内置词表。
+        一律现算）；未映射范式字段的条目会跳过（先行内「未映射字段」标记）；导出后需「立即重编译」值域才挂到章节期望。
       </span>
     </div>
 
@@ -543,6 +552,13 @@
           <span class="skip-reason">{{ s.reason }}</span>
         </div>
       </div>
+      <div class="export-actions">
+        <span class="export-hint">值域落章节期望需重编译（任务中心跟踪）</span>
+        <button class="btn btn-sm" @click="exportResult.open = false">稍后</button>
+        <button class="btn btn-pri btn-sm" :disabled="recompiling" @click="onRecompileExpectations">
+          <RefreshCw :size="13" />{{ recompiling ? "提交中…" : "立即重编译期望" }}
+        </button>
+      </div>
     </a-modal>
   </div>
 </template>
@@ -551,6 +567,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { Ban, BookOpen, Download, Info, Pencil, RefreshCw } from '@lucide/vue'
+import { eiaDataApi } from '@/apis/eia_data_api'
 import { eiaLexiconApi } from '@/apis/eia_lexicon_api'
 import { useUserStore } from '@/stores/user'
 import FilterSelect from './FilterSelect.vue'
@@ -1011,6 +1028,22 @@ const onWithdraw = (row) => {
 // ── 导出物化与开关（admin） ─────────────────────────────
 
 const exportResult = reactive({ open: false, materialized: 0, skipped: [] })
+const recompiling = ref(false)
+
+// 导出物化只更新覆盖层文件；值域要挂到章节期望必须重编译（P1 闭环：导出 → 一键重编译）
+const onRecompileExpectations = () => {
+  recompiling.value = true
+  eiaDataApi
+    .recompileExpectations()
+    .then(() => {
+      exportResult.open = false
+      message.success('已提交重编译任务，完成后词表值域即挂到章节期望')
+    })
+    .catch((e) => message.error(e?.message || '任务提交失败'))
+    .finally(() => {
+      recompiling.value = false
+    })
+}
 
 const onExport = () => {
   message.loading({ content: '正在物化…', key: 'lexicon-export', duration: 0 })
@@ -1589,6 +1622,22 @@ onMounted(() => {
       font-size: 12px;
       color: var(--color-text-tertiary);
     }
+  }
+}
+
+.export-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-secondary);
+
+  .export-hint {
+    flex: 1;
+    font-size: 12px;
+    color: var(--color-text-tertiary);
   }
 }
 

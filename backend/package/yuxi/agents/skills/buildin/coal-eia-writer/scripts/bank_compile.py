@@ -254,6 +254,20 @@ def _map_caliber(label: str, forms_label_map: dict) -> tuple[str, str] | None:
     return None
 
 
+def build_label_map(refs: Path) -> dict[str, str]:
+    """范式表单字段词汇表 {label: fam.name}（跨 stage 重名先到先得）。
+
+    期望归并（_map_caliber 查此表）与词表层「口径可映射性」标注共用同一构建，
+    保证词表页所见 = 编译器所查。"""
+    label_map: dict[str, str] = {}
+    for st in SECTION_EXPECTATION_STAGES:
+        stage_doc = json.loads((refs / "stages" / f"{st}.json").read_text(encoding="utf-8"))
+        for fam, fam_spec in stage_doc["forms"].items():
+            for f in fam_spec.get("fields", []):
+                label_map.setdefault(f["label"], f"{fam}.{f['name']}")  # 跨 stage 重名先到先得
+    return label_map
+
+
 def _pctl(vals: list[float], q: float) -> float:
     """线性插值分位数（numpy 默认法）：pos=(n-1)q，相邻秩插值；输入无序、返回 4 位舍入。"""
     s = sorted(vals)
@@ -568,12 +582,7 @@ def main_with_args(argv: list[str]) -> int:
     )
     # 7) section_expectations：节级数值-口径清单（spec §4.2，per stage 文件——
     #    sections 键 chN_Snn 跨 stage 碰撞，不能单文件合并）
-    label_map: dict[str, str] = {}
-    for st in SECTION_EXPECTATION_STAGES:
-        stage_doc = json.loads((refs / "stages" / f"{st}.json").read_text(encoding="utf-8"))
-        for fam, fam_spec in stage_doc["forms"].items():
-            for f in fam_spec.get("fields", []):
-                label_map.setdefault(f["label"], f"{fam}.{f['name']}")  # 跨 stage 重名先到先得
+    label_map = build_label_map(refs)
     # v1.2 词表覆盖层：文件存在即消费（缺失 → 纯 builtin，v1.1 字节级一致）
     curated_by_stage = _load_curated(refs)
     if curated_by_stage:
