@@ -188,10 +188,12 @@ async def _materialize_workdir(tmp: Path, kb_id: str, rows: list[dict]) -> list[
 
 
 def _merge_corpus_meta(entries: list[dict], front_by_rid: dict[str, dict]) -> None:
-    """DB 封面元数据 → 技能 corpus_meta.json reports 合并（新 rid 增量；既有条目不动）。
+    """DB 封面元数据 → 技能 corpus_meta.json reports 合并（随 KB 编译集收敛）。
 
     eia_meta_service 以 corpus_meta.reports 为 rid 全集权威（import_annotations 已知
     rid 校验），新报告不合并即被 meta 面跳过——此步是加工闭环的必需动作。
+    编译集 = KB 全量文档（权威口径）：新 rid 增量合并，编译集外残条删除——否则 rid
+    目录重编/文档删除后旧条目永留（add-only 已两次产出幻影，2026-10-21/22）。
     """
     meta_path = _SKILL_REFS / "samples_bank" / "corpus_meta.json"
     doc = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.is_file() else {"reports": {}}
@@ -216,6 +218,12 @@ def _merge_corpus_meta(entries: list[dict], front_by_rid: dict[str, dict]) -> No
             "stage": e["stage"],
             "mineral": e["mineral"],
         }
+    compile_rids = {e["report_id"] for e in entries}
+    phantoms = sorted(set(reports) - compile_rids)
+    for rid in phantoms:
+        del reports[rid]
+    if phantoms:
+        logger.warning(f"[eia-corpus] corpus_meta 剔除编译集外残条 {len(phantoms)}：{phantoms}")
     meta_path.parent.mkdir(parents=True, exist_ok=True)
     meta_path.write_text(
         json.dumps(doc, ensure_ascii=False, indent=2, sort_keys=True) + "\n",

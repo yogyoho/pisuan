@@ -160,27 +160,39 @@ def test_real_bank_compile_mini_corpus(tmp_path, monkeypatch):
     assert {it["report_id"] for it in items} == {"001-demo"}
 
 
-def test_merge_corpus_meta_adds_new_rid_only(tmp_path, monkeypatch):
+def test_merge_corpus_meta_converges_to_compile_set(tmp_path, monkeypatch):
+    """corpus_meta 随 KB 编译集收敛：新增合并、编译集外残条剔除、集内既有条目不动、幂等。"""
     refs = _seed_refs(tmp_path)
     (refs / "samples_bank").mkdir()
     meta_path = refs / "samples_bank" / "corpus_meta.json"
     meta_path.write_text(
-        json.dumps({"reports": {"001-old": {"report_title": "既有报告", "stage": "post_eia"}}}, ensure_ascii=False),
+        json.dumps(
+            {
+                "reports": {
+                    "001-demo": {"report_title": "既有报告", "stage": "post_eia"},
+                    "999-phantom": {"report_title": "换代残留"},
+                }
+            },
+            ensure_ascii=False,
+        ),
         encoding="utf-8",
     )
     monkeypatch.setattr(svc, "_SKILL_REFS", refs)
-    svc._merge_corpus_meta(
-        [{"report_id": "001-demo", "stage": "post_eia", "mineral": "coal"}], {"001-demo": FRONT_META}
-    )
+    entries = [
+        {"report_id": "001-demo", "stage": "post_eia", "mineral": "coal"},
+        {"report_id": "002-new", "stage": "post_eia", "mineral": "coal"},
+    ]
+    svc._merge_corpus_meta(entries, {"001-demo": {}, "002-new": FRONT_META})
     doc = json.loads(meta_path.read_text(encoding="utf-8"))
-    assert doc["reports"]["001-old"]["report_title"] == "既有报告"  # 既有条目不动
-    new = doc["reports"]["001-demo"]
-    assert new["report_title"] == FRONT_META["report_title"]
-    assert new["scale_basis"] == "needs_review" and new["stage"] == "post_eia"
+    assert doc["reports"]["001-demo"]["report_title"] == "既有报告"  # 集内既有条目不动
+    assert doc["reports"]["002-new"]["report_title"] == FRONT_META["report_title"]  # 新增合并
+    assert doc["reports"]["002-new"]["stage"] == "post_eia"
+    assert "999-phantom" not in doc["reports"]  # 编译集外残条剔除（rid 换代/文档删除）
+    assert set(doc["reports"]) == {"001-demo", "002-new"}  # 收敛 = 编译集
     # 幂等：重跑不重复改写
-    svc._merge_corpus_meta([{"report_id": "001-demo", "stage": "post_eia", "mineral": "coal"}], {"001-demo": {}})
+    svc._merge_corpus_meta(entries, {"001-demo": {}, "002-new": {}})
     assert (
-        json.loads(meta_path.read_text(encoding="utf-8"))["reports"]["001-demo"]["report_title"]
+        json.loads(meta_path.read_text(encoding="utf-8"))["reports"]["002-new"]["report_title"]
         == FRONT_META["report_title"]
     )
 

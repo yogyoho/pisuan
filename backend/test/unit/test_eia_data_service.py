@@ -4,12 +4,14 @@
 宿主环境无技能目录时自动跳过。
 """
 
+import json
 import pytest
 
 from yuxi.services.eia_data_service import (
     STAGES,
     _classify_caliber,
     _clean_caliber,
+    _SKILL_ROOT,
     _skill_root_exists,
     get_skill_stats,
     get_unmapped,
@@ -40,21 +42,20 @@ def test_get_skill_stats_structure():
     assert stats["skill"] == "coal-eia-writer"
 
     corpus = stats["corpus"]
-    assert corpus["reports_total"] == 31
-    assert corpus["slices_total"] == corpus["samples_total"] == 477
-    assert sum(v["reports"] for v in corpus["per_stage"].values()) == 31
-    assert sum(corpus["by_province"].values()) == 31
+    # 语料规模以 corpus_meta（KB 编译集权威）现读为锚——随代际演进自动对齐，不硬编码
+    meta = json.loads((_SKILL_ROOT / "references" / "samples_bank" / "corpus_meta.json").read_text(encoding="utf-8"))
+    n_reports = len(meta["reports"])
+    assert corpus["reports_total"] == n_reports > 0
+    assert corpus["slices_total"] == corpus["samples_total"] > 0  # 内部一致：切片=样例片段
+    assert sum(v["reports"] for v in corpus["per_stage"].values()) == n_reports
+    assert sum(corpus["by_province"].values()) == n_reports
 
-    # 词表候选：口径与语料普查对齐（单位白名单 + n≥2 报告门槛 + 强清洗，
-    # 比普查 99 少的 7 项为平均值/分别等整词垃圾）
-    # P2 拉丁前缀窗后：裸「控制效率」（splitting 不计数）三分成三子口径 +3、「产生量」精化
-    # 为「TSP产生量」（切片源未达 n≥2 门槛未成键）-1，total 90→92；控制效率入 measure 枚举
+    # 词表候选：计数随语料代际演进（编译器切片粒度/语料增删都会移动快照），
+    # 只断内部一致性与门槛语义；三分类逻辑由 test_classify_caliber_three_way 纯函数覆盖
     cand = stats["candidates"]
-    assert cand["total"] == 92
-    assert cand["measure"] + cand["site"] + cand["junk"] == cand["total"]
-    assert cand["measure"] == 34
-    assert cand["per_stage"]["planning_eia"]["measure"] == 13
-    assert cand["range_ready"] == 9
+    assert cand["total"] == cand["measure"] + cand["site"] + cand["junk"] > 0
+    assert 0 < cand["range_ready"] <= cand["total"]  # distinct 报告数 ≥5 门槛下的可挂值域子集
+    assert sum(v["measure"] for v in cand["per_stage"].values()) == cand["measure"]
 
     # 事实槽位：5 阶段齐全，planning unmapped 池触顶 200 cap
     assert set(stats["expectations"]) == set(STAGES)
