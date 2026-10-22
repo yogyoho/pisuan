@@ -1325,7 +1325,7 @@ async def upload_eia_library_file(
     folder_id: int | None = Form(None),
     current_user: User = Depends(get_admin_user),
 ) -> dict[str, Any]:
-    """上传即登记：sha1 全库去重（409 携既有位置），超限 413。"""
+    """上传即登记：sha1 全库去重 + 文件名主名唯一（均 409 携结构化 detail），超限 413。"""
     try:
         return await get_eia_library_service().upload(file, folder_id, current_user.username if current_user else None)
     except FileExistsError as e:
@@ -1390,7 +1390,7 @@ async def delete_eia_library_file(
     file_id: int,
     current_user: User = Depends(get_admin_user),
 ) -> dict[str, Any]:
-    """删除（DB 记录与 MinIO 两对象/存量本地卷文件同删）。"""
+    """删除（已推送的 KB 文档级联同删；DB 记录与 MinIO 两对象/存量本地卷文件同删）。"""
     try:
         await get_eia_library_service().delete(file_id)
     except FileNotFoundError:

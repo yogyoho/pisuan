@@ -15,6 +15,7 @@ from pathlib import Path
 
 from fastapi import UploadFile
 from sqlalchemy.exc import IntegrityError
+from yuxi.knowledge.runtime import knowledge_base
 from yuxi.repositories.eia_library_repository import EiaLibraryRepository
 from yuxi.services.eia_canonical_md import CanonicalMd, docx_bytes_to_canonical_md, extract_front, make_rid
 from yuxi.storage.minio import get_minio_client
@@ -81,6 +82,11 @@ class EiaLibraryService:
                 )
                 where = existing_folder.name if existing_folder else "未归类"
                 raise FileExistsError(f"{existing.original_filename}（位于〈{where}〉）")
+            stem = Path(original).stem
+            for f in await self.repo.list_files():
+                if Path(f["original_filename"]).stem == stem:
+                    # 同名 stem 会让编译期 rows_by_stem 无法唯一定位（KB 文档名 = <stem>.md）——上传即拦（bug-4013）
+                    raise FileExistsError(f"文件库已存在同名报告《{f['original_filename']}》，文件名主名须全库唯一")
             data = tmp_path.read_bytes()
             stored_name = f"{sha1[:12]}__{_safe_filename(original)}"
             object_key = f"eia-library/{stored_name}"
@@ -275,6 +281,10 @@ class EiaLibraryService:
         row = await self.repo.get_file(file_id)
         if row is None:
             raise FileNotFoundError(file_id)
+        if row.kb_file_id and row.kb_id:
+            # 级联删 KB 文档（先于本地删除）：孤儿文档会让下次编译 fail fast 全局阻断（bug-4012）；
+            # KB 删除失败即中止——DB/MinIO 保持原状，重试语义干净
+            await knowledge_base.delete_file(row.kb_id, row.kb_file_id)
         await self.repo.delete_file(file_id)
         client = get_minio_client()
         if row.object_key:
