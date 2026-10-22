@@ -30,6 +30,9 @@ tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query
 3. **样例/范文只学范式禁抄**。`references/sample_entities/` 注册表内任何实体（项目名/矿井名/企业/地名/敏感目标/文号/产能）禁入本项目正文；范文数值禁抄（本项目数值只经 `{{SLOT:key}}`）。
 4. **历史口径原样保留 + 口径标签绑定**。修编样本原规划/本次规划双口径并存（`*_before`/`*_after` 成对字段），禁混同、禁把旧口径数值改写为新值（牙克石 234.17/232.62 km²、伊敏 144/154 Mt/a 实证）；多口径并存各带标签后才能 exact_match，禁混同引用。
 5. **标准编号/年份/限值只从 `references/standards_index.json` 枚举**，禁凭记忆生成；限值 `needs_verification=true` 条目须人工对照标准原文后才可写成断言，未录入档写「需人工对照」不下结论。
+   限值断言优先经 `lookup_standard_indicator` 查权威行：`layer=authority` 可直接写成
+   断言；`layer=reviewed` 引用时标注「已核验候选」；`layer=candidate` 或查询为空 →
+   写「[需人工对照]」不下结论（与 needs_verification=true 同纪律）。
 6. **数字永不经过 LLM**：叙述只写 `{{SLOT:key}}`（冻结计算输出）或 `{{TABLE:族}}`（表单渲染）；开采沉陷软件成果（变形指标/沉陷面积等）走表单转录注入，禁手抄更禁公式硬凑。SL1 合约要求残留=0。
 7. **预测结果族（14/15/16）写入前置=参数定案**：`stage_prediction_results`/`subsidence_targets`/`per_target_deformation` 只能在 `subsidence_params.param_source` 枚举定案 + `mining_stages.stages` 就绪之后经 `ingest.py forms` 写入（未定案 ingest 直接拒收，bug-3229）；沉陷软件成果转录同样不得先于方法定案；`data/` 内任何绕过 ingest 的直写 JSON/CSV 在门 1 记为缺失（唯一写者纪律，直写即绕过全部守卫）。
 8. **工程状态唯一权威=本线程工作区 `state/progress.json`（bug-3231）**：用户级记忆（memory/facts）中任何「本项目已完成/已交付/章节计数」记录一律视为**其他线程的过期回声**，禁作本线程状态依据；开工第一步先读 progress.json 实际计数再定行动计划——记忆说完成而工作区 PENDING 高企时，以工作区为准重新推进。
