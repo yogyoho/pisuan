@@ -1,6 +1,6 @@
 """eia_standard_service 纯函数单测：核实载荷校验（action 白名单、note 类型、未知字段拒收）+ 引用码归一。
 
-P1 合流后本文件收敛为纯函数校验 + 导出/注册表服务方法（fake repo + tmp 最小 standards_index，
+P1 合流后本文件收敛为纯函数校验 + 注册表露出服务方法（tmp 最小 standards_index，
 不触真实文件、零真库写）；save/list_limit_tables 的 born-verified 权威层契约见
 test/unit/services/test_eia_standard_save_rows.py 与 test_eia_standard_list_limits.py。
 """
@@ -49,30 +49,11 @@ def test_norm_std_absorbs_citation_noise():
     assert base == _norm_std("GB–15618–2018")
 
 
-# ── 限值行导出 / 新表入册（fake repo + tmp 文件，零真库写）─────────────────
+# ── 新表入册（tmp 文件，零真库写）─────────────────
 
 
 def _noise_row():
     return {"category": "2 类", "day": 50, "night": 40, "unit": "dB(A)"}
-
-
-class _FakeLimitRepo:
-    def __init__(self, db_rows=None, registry=None):
-        self._db_rows = db_rows or []
-        self._registry = registry or []
-
-    async def list_rows(self):
-        return self._db_rows
-
-    async def list_registry(self):
-        return self._registry
-
-
-def _svc_with(repo):
-    svc = eia_standard_service.EiaStandardService.__new__(eia_standard_service.EiaStandardService)
-    svc.repo = repo
-    return svc
-
 
 def _write_min_index(tmp_path, limit_tables):
     doc = {
@@ -148,56 +129,3 @@ def test_list_limit_tables_exposes_registry_new_table(monkeypatch, tmp_path):
     assert t["source"] == "db_registry" and t["code_ref"] == "GB 8978-1996"
     assert t["needs_verification"] is True and t["rows"] == []
     assert out["schemas"]["gb8978_emission_limits"]["pollutant"]["type"] == "str"
-
-
-def test_export_limit_rows_writes_and_flips(monkeypatch, tmp_path):
-    path = _write_min_index(
-        tmp_path,
-        {
-            "gb3096_zone_limits": {
-                "desc": "d",
-                "code_ref": "GB 3096-2008",
-                "needs_verification": True,
-                "verified": False,
-                "rows": [{"category": "3 类", "origin": "anchor"}],
-            },
-            "gb3095_concentration_limits": {
-                "desc": "d2",
-                "code_ref": "GB 3095-2012",
-                "needs_verification": True,
-                "verified": False,
-                "rows": [],
-            },
-        },
-    )
-    monkeypatch.setattr(eia_standard_service, "STANDARDS_INDEX_PATH", path)
-    db_rows = [
-        SimpleNamespace(
-            id=2,
-            table_key="gb3096_zone_limits",
-            row_json={"category": "1 类", "day": 55, "night": 45, "unit": "dB(A)"},
-            decided_by="bob",
-            updated_at=None,
-        ),
-        SimpleNamespace(
-            id=1, table_key="gb3096_zone_limits", row_json=_noise_row(), decided_by="alice", updated_at=None
-        ),
-    ]
-    out = asyncio.run(_svc_with(_FakeLimitRepo(db_rows)).export_limit_rows("admin"))
-    doc = json.loads(path.read_text(encoding="utf-8"))
-    t1 = doc["limit_tables"]["gb3096_zone_limits"]
-    # id 序落盘，样例锚点行被人工核对行整体替换
-    assert t1["rows"] == [_noise_row(), {"category": "1 类", "day": 55, "night": 45, "unit": "dB(A)"}]
-    assert t1["needs_verification"] is False
-    assert t1["verified"] is True
-    t2 = doc["limit_tables"]["gb3095_concentration_limits"]
-    assert t2["needs_verification"] is True  # 无裁决表不动
-    assert t2["rows"] == []
-    assert doc["standards"][0]["code"] == "GB 3096-2008"  # 其余结构 round-trip
-    assert out["materialized"] == 1
-    assert out["rows"] == 2
-
-
-def test_export_limit_rows_without_rows_rejected():
-    with pytest.raises(ValueError):
-        asyncio.run(_svc_with(_FakeLimitRepo()).export_limit_rows("admin"))

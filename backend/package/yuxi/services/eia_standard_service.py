@@ -190,9 +190,10 @@ class EiaStandardService:
                     },
                 }
             )
-        for name, t in doc.get("limit_tables", {}).items():
-            if isinstance(t, dict) and t.get("needs_verification"):
-                counts["limit_tables_pending"] += 1
+        limits = await self.list_limit_tables()
+        counts["limit_tables_pending"] = sum(
+            1 for t in limits["limit_tables"].values() if isinstance(t, dict) and t.get("source") != "expert"
+        )
         return {"items": items, "total": counts["total"], "counts": counts}
 
     async def list_expert_rows(self) -> list[dict[str, Any]]:
@@ -384,42 +385,6 @@ class EiaStandardService:
         logger.info(f"[eia-standard] 限值表 {table_key} 权威行落库 {saved} 行（by {username}）")
         return {"table_key": table_key, "saved": saved}
 
-    async def export_limit_rows(self, username: str) -> dict[str, Any]:
-        """DB → 注册表文件：已录入表整表替换 rows（样例锚点行被人工核对行取代）并翻转 nv/verified。"""
-        rows = await self.repo.list_rows()
-        if not rows:
-            raise ValueError("无限值录入行可导出：请先在各限值表完成录入")
-
-        def _write() -> tuple[int, int]:
-            doc = _load_standards_index()
-            tables = doc.get("limit_tables", {})
-            n_tables = 0
-            n_rows = 0
-            for key in sorted({r.table_key for r in rows}):
-                t = tables.get(key)
-                if not isinstance(t, dict):
-                    # 注册表漂移（表被删）时跳过计数上浮，绝不动文件其余结构
-                    logger.warning(f"[eia-standard] 导出跳过已消失的限值表：{key}")
-                    continue
-                items = sorted((r for r in rows if r.table_key == key), key=lambda x: x.id)
-                t["rows"] = [dict(r.row_json) for r in items]
-                t["needs_verification"] = False
-                t["verified"] = True
-                n_tables += 1
-                n_rows += len(items)
-            STANDARDS_INDEX_PATH.write_text(
-                json.dumps(doc, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n"
-            )
-            return n_tables, n_rows
-
-        n_tables, n_rows = await run_in_threadpool(_write)
-        logger.info(f"[eia-standard] 导出物化 {n_tables} 张限值表 {n_rows} 行 → standards_index.json（by {username}）")
-        return {
-            "materialized": n_tables,
-            "rows": n_rows,
-            "path": "references/standards_index.json",
-            "exported_at": datetime.now(UTC).isoformat(timespec="seconds"),
-        }
 
 
 _service: EiaStandardService | None = None

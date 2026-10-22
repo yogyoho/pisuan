@@ -7,7 +7,6 @@ from sqlalchemy import select
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_domain_factory import (
     EiaLimitTableRegistry,
-    EiaStandardLimitRow,
     EiaStandardReview,
 )
 
@@ -29,14 +28,6 @@ class EiaStandardRepository:
             await session.merge(row)
             await session.commit()
             return row
-
-    # ── 限值查找表（P1 合流后仅存读取面：export_limit_rows 物化导出的行源）──
-
-    async def list_rows(self) -> list[EiaStandardLimitRow]:
-        """全量录入行（7 表 × 数十行量级，全量内存足够；id 序保证导出确定性）。"""
-        async with pg_manager.get_async_session_context() as session:
-            rows = (await session.scalars(select(EiaStandardLimitRow).order_by(EiaStandardLimitRow.id))).all()
-            return list(rows)
 
     async def list_registry(self) -> list[EiaLimitTableRegistry]:
         """新表注册元数据（spec 2026-10-19 候选立表通道；list_limit_tables 合并露出）。"""

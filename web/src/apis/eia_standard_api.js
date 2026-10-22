@@ -8,10 +8,8 @@ import { apiGet, apiPost, apiRequest } from './base'
 export const eiaStandardApi = {
   /** 62 条标准总览（文件态只读 + DB 裁决合并 + 语料引用数 + counts 汇总） */
   listStandards: () => apiGet('/api/domain-factory/eia/standards'),
-  /** limit_tables：文件态 + DB 录入行合并（source: db|file）——页头待导出计数与标准关联表展开的数据源 */
+  /** limit_tables：文件锚点 + 专家行重组合并（source: expert|file|db_registry）——标准关联表展开的数据源 */
   listLimits: () => apiGet('/api/domain-factory/eia/standards/limits'),
-  /** 限值行整表导出物化（DB → standards_index.json；admin）→ { materialized, rows, path } */
-  exportLimits: () => apiPost('/api/domain-factory/eia/standards/limits/export'),
   /** 核实裁决落库（upsert）：{ code, action: 'confirm', note? }——code 走 body（注册表编号含 `/`，路径参数跨不过 %2F 解码） */
   setReview: (code, payload) =>
     apiRequest('/api/domain-factory/eia/standards/review', {

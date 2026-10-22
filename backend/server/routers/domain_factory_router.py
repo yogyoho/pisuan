@@ -1563,7 +1563,7 @@ async def save_eia_standard_limit_rows(
     payload: dict[str, Any] = Body(...),
     current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
-    """限值行整表替换落库（DB 即导出真源）：{rows: [...]}；未知表 404，载荷越界 400"""
+    """限值行整表替换落库（DB 即唯一真相）：{rows: [...]}；未知表 404，载荷越界 400"""
     try:
         result = await get_eia_standard_service().save_limit_rows(table_key, payload.get("rows"), current_user.username)
         return {"success": True, **result}
@@ -1574,21 +1574,6 @@ async def save_eia_standard_limit_rows(
     except Exception as e:
         logger.error(f"Failed to save eia limit rows {table_key}: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"保存限值行失败: {str(e)}")
-
-
-@domain_factory.post("/eia/standards/limits/export")
-async def export_eia_standard_limit_rows(
-    current_user: User = Depends(get_admin_user),
-) -> dict[str, Any]:
-    """DB → standards_index.json（已录入表整表替换 rows + 翻转 nv/verified，round-trip 纪律；admin）"""
-    try:
-        result = await get_eia_standard_service().export_limit_rows(current_user.username)
-        return {"success": True, **result}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Failed to export eia limit rows: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"导出限值行失败: {str(e)}")
 
 
 @domain_factory.put("/eia/standards/review")

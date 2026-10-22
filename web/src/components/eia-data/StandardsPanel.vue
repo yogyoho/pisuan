@@ -1,6 +1,6 @@
 <template>
   <div class="ewp standards-panel">
-    <!-- 页头（原型 s11：盾形图标 + 待导出 pill + 双通道导出） -->
+    <!-- 页头（原型 s11：盾形图标 + 导出核实结果） -->
     <div class="page-head">
       <div class="ph-icon">
         <ShieldCheck :size="18" />
@@ -12,19 +12,9 @@
         </div>
       </div>
       <div class="ph-actions">
-        <span v-if="dbTableCount" class="pill pill-orange"
-          ><span class="dot dot-warn"></span>{{ dbTableCount }} 表待导出</span
-        >
         <template v-if="userStore.isAdmin">
           <button class="btn btn-sec btn-sm" :disabled="exporting" @click="onExport">
             {{ exporting ? '导出中…' : '导出核实结果' }}
-          </button>
-          <button
-            class="btn btn-pri btn-sm"
-            :disabled="exporting || !dbTableCount"
-            @click="exportLimits"
-          >
-            {{ exporting ? '导出中…' : '导出限值行' }}
           </button>
         </template>
       </div>
@@ -220,17 +210,17 @@
                       <span class="pill pill-gray s-stage num">{{ (t.rows || []).length }} 行</span>
                       <span
                         class="pill s-stage"
-                        :class="t.source === 'db' ? 'pill-orange' : 'pill-gray'"
+                        :class="t.source === 'expert' ? 'pill-ok' : 'pill-gray'"
                         :title="
-                          t.source === 'db'
-                            ? 'DB 录入为导出真源，导出物化后写手可见'
+                          t.source === 'expert'
+                            ? '权威行已核实，可直接引用'
                             : t.source === 'db_registry'
                               ? '新表已入册，待录入限值行'
-                              : '文件锚点态，导出前须先录入核实'
+                              : '文件锚点态，以专家录入行为准'
                         "
                         >{{
-                          t.source === 'db'
-                            ? 'DB · 待导出'
+                          t.source === 'expert'
+                            ? '已核实'
                             : t.source === 'db_registry'
                               ? '已入册'
                               : '文件态'
@@ -975,29 +965,6 @@ const onSubmit = async () => {
     message.error(e?.message || '核实保存失败')
   } finally {
     dlg.submitting = false
-  }
-}
-
-// ── 页头 dbTableCount pill（DB 录入表 → 待导出计数）──────
-
-const dbTableCount = computed(
-  () => Object.values(limitTables.value).filter((t) => t.source === 'db').length
-)
-
-const exportLimits = async () => {
-  exporting.value = true
-  message.loading({ content: '正在物化限值行…', key: 'limits-export', duration: 0 })
-  try {
-    const r = await eiaStandardApi.exportLimits()
-    message.success({
-      content: `已物化 ${r.materialized} 张限值表 ${r.rows} 行 → standards_index.json（落运行栈技能目录，需人工回流 pisuan-custom）`,
-      key: 'limits-export'
-    })
-    await fetchList()
-  } catch (e) {
-    message.error({ content: e?.message || '限值行导出失败', key: 'limits-export' })
-  } finally {
-    exporting.value = false
   }
 }
 
