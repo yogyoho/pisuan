@@ -170,6 +170,7 @@ async def test_query_indicators_selects_verification_columns(monkeypatch):
         "verified_at": datetime(2026, 10, 20, 1, 2, 3),
         "verified_by": "bob",
         "source": "enrich",
+        "table_key": None,  # query_indicators 严格键访问（T6 评审 bug-4127）
     }
     _patch_pg(monkeypatch, indicator_rows=[row])
     monkeypatch.setattr(enrich_mod, "ensure_schema", _noop)

@@ -16,8 +16,12 @@ def test_anchor_maps_from_standards_index():
                 {"code": "GB 3838-2002", "tier": "national"},
                 {"code": "GB/T 14848-2017", "tier": "national"},
             ],
-            "limit_tables": {"gbt14848_category_limits": {"code_ref": "GB/T 14848-2017", "needs_verification": True}},
+            "limit_tables": {
+                "gbt14848_category_limits": {"code_ref": "GB/T 14848-2017", "needs_verification": True},
+                "_comment": "metadata key, not a limit table",
+            },
         }
     )
     assert tier_by_code.get("GB/T 14848-2017") == "national"
     assert nv_by_ref.get("gbt14848_category_limits") is True
+    assert "_comment" not in nv_by_ref  # 字符串项被 isinstance 守卫排除

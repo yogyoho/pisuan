@@ -239,6 +239,7 @@ def _anchor_maps(doc: dict[str, Any]) -> tuple[dict[str, str], dict[str, bool]]:
     """standards_index.json 锚点：{code: tier} + {table_key: needs_verification}。"""
     tier_by_code = {s["code"]: s.get("tier") for s in doc.get("standards", []) if s.get("code")}
     tables = doc.get("limit_tables", {})
+    # isinstance 守卫承重：实库 limit_tables 含字符串项 _comment，无守卫实测崩溃
     nv_by_ref = {k: bool(t.get("needs_verification")) for k, t in tables.items() if isinstance(t, dict)}
     return tier_by_code, nv_by_ref
 
