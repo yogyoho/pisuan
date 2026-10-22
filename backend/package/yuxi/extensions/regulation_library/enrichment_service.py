@@ -29,6 +29,9 @@ _CONTINUATION_RE = re.compile(r"[（(]续[)）]\s*$")  # 续表 unit_no 后缀�
 _MANUAL_MAX_ROWS = 500  # 手工单次录入行数上限（防误传超大载荷）
 _MANUAL_UNIT_NO = "手录"  # 手工行统一表单元号
 
+# enrich 幂等删旧：仅清自身候选行——expert 权威行对重跑免疫（P1 合流，spec §5）
+ENRICH_DELETE_SQL = "DELETE FROM standard_indicators WHERE doc_code = :code AND source = 'enrich'"
+
 
 class StandardConflictError(Exception):
     """standard_indicators 写冲突（手工行挡道 / doc_code 已存在 / 非手工行），路由映射 409。"""
@@ -179,7 +182,7 @@ async def enrich_regulation_file(
         async with pg_manager.get_async_session_context() as session:
             # 幂等：先删该文档旧指标再插入
             await session.execute(
-                sql_text("DELETE FROM standard_indicators WHERE doc_code = :code"),
+                sql_text(ENRICH_DELETE_SQL),
                 {"code": doc_code},
             )
             for ind in all_indicators:
