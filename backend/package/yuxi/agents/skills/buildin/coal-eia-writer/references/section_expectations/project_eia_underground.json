@@ -22,7 +22,7 @@
     },
     "ch10_S06": {
       "expected_quantities": [],
-      "title": "声环境影响评价自查表"
+      "title": "声环境影响评价结论"
     },
     "ch10_S07": {
       "expected_quantities": [],
@@ -488,6 +488,13 @@
     "ch2_S04": {
       "expected_quantities": [
         {
+          "caliber": "除尘效率",
+          "corpus_freq": 0.14,
+          "field": "air.dust_removal_efficiency",
+          "tier": "contextual",
+          "unit": "%"
+        },
+        {
           "caliber": "孔隙率",
           "corpus_freq": 0.14,
           "field": "backfill.void_ratio",
@@ -498,13 +505,6 @@
           "caliber": "充填率",
           "corpus_freq": 0.14,
           "field": "backfill.fill_rate",
-          "tier": "contextual",
-          "unit": "%"
-        },
-        {
-          "caliber": "除尘效率",
-          "corpus_freq": 0.14,
-          "field": "air.dust_removal_efficiency",
           "tier": "contextual",
           "unit": "%"
         }

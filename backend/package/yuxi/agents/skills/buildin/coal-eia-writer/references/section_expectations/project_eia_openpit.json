@@ -18,11 +18,11 @@
     },
     "ch10_S05": {
       "expected_quantities": [],
-      "title": "保护措施及对策"
+      "title": "土壤环境影响预测与分析"
     },
     "ch10_S06": {
       "expected_quantities": [],
-      "title": "小结"
+      "title": "保护措施及对策"
     },
     "ch10_S07": {
       "expected_quantities": [],
@@ -50,11 +50,11 @@
     },
     "ch11_S03": {
       "expected_quantities": [],
-      "title": "爆破冲击波的环境影响分析"
+      "title": "土壤环境质量现状监测与评价"
     },
     "ch11_S04": {
       "expected_quantities": [],
-      "title": "爆破噪声对环境的影响分析"
+      "title": "土壤环境影响预测与评价"
     },
     "ch11_S05": {
       "expected_quantities": [],
@@ -82,15 +82,15 @@
           "unit": "m"
         }
       ],
-      "title": "首采区及初始拉沟位置选择的环境可行性分析"
+      "title": "爆破源分析"
     },
     "ch12_S02": {
       "expected_quantities": [],
-      "title": "外排土场选址的环境可行性分析"
+      "title": "爆破的振动环境影响分析"
     },
     "ch12_S03": {
       "expected_quantities": [],
-      "title": "项目选址可行性综合评价"
+      "title": "爆破冲击波的环境影响分析"
     },
     "ch12_S04": {
       "expected_quantities": [],
@@ -118,7 +118,7 @@
     },
     "ch13_S05": {
       "expected_quantities": [],
-      "title": "风险管理措施"
+      "title": "改扩建后风险事故影响分析"
     },
     "ch13_S06": {
       "expected_quantities": [],
@@ -157,7 +157,7 @@
     },
     "ch14_S03": {
       "expected_quantities": [],
-      "title": "项目选址环境可行性综合分析"
+      "title": "环境管理的优化调整"
     },
     "ch14_S04": {
       "expected_quantities": [
@@ -330,7 +330,7 @@
           "unit": "m"
         }
       ],
-      "title": "项目概况及主要建设内容"
+      "title": "首采区及初始拉沟位置选择的环境可行性分析"
     },
     "ch17_S02": {
       "expected_quantities": [
@@ -354,11 +354,11 @@
           "unit": "km2"
         }
       ],
-      "title": "项目环境影响"
+      "title": "选煤厂选址的环境可行性分析"
     },
     "ch17_S04": {
       "expected_quantities": [],
-      "title": "结论与建议"
+      "title": "原煤储存区选址的环境可行性分析"
     },
     "ch17_S05": {
       "expected_quantities": [],
@@ -553,7 +553,7 @@
     },
     "ch2_S07": {
       "expected_quantities": [],
-      "title": "项目与规划及规划环评的符合性分析"
+      "title": "矿田内存在的历史环境问题及环境整改措施"
     },
     "ch2_S08": {
       "expected_quantities": [
@@ -671,11 +671,11 @@
     },
     "ch5_S07": {
       "expected_quantities": [],
-      "title": "地下水环境敏感点及污染源调查"
+      "title": "生态环境管理与监控"
     },
     "ch5_S08": {
       "expected_quantities": [],
-      "title": "地下水环境质量现状监测与评价"
+      "title": "生态环境影响评价自查表"
     },
     "ch5_S09": {
       "expected_quantities": [],
@@ -743,7 +743,7 @@
     },
     "ch7_S03": {
       "expected_quantities": [],
-      "title": "环境空气影响回顾性评价"
+      "title": "建设期水污染影响及防治措施"
     },
     "ch7_S04": {
       "expected_quantities": [
@@ -811,7 +811,7 @@
           "unit": "%"
         }
       ],
-      "title": "建设期环境空气影响及防治措施"
+      "title": "运营期水环境影响及防治措施"
     },
     "ch7_S05": {
       "expected_quantities": [
@@ -884,13 +884,6 @@
     "ch7_S06": {
       "expected_quantities": [
         {
-          "caliber": "抑尘效率",
-          "corpus_freq": 0.33,
-          "field": "measures.dust_suppression_efficiency",
-          "tier": "optional",
-          "unit": "%"
-        },
-        {
           "caliber": "除尘效率",
           "corpus_freq": 0.33,
           "field": "air.dust_removal_efficiency",
@@ -952,9 +945,16 @@
           },
           "tier": "optional",
           "unit": "%"
+        },
+        {
+          "caliber": "抑尘效率",
+          "corpus_freq": 0.33,
+          "field": "measures.dust_suppression_efficiency",
+          "tier": "optional",
+          "unit": "%"
         }
       ],
-      "title": "环境空气污染防治措施"
+      "title": "污染物排放量核算及大气环境影响评价自查表"
     },
     "ch7_S07": {
       "expected_quantities": [],
@@ -962,7 +962,7 @@
     },
     "ch7_S08": {
       "expected_quantities": [],
-      "title": "碳排放核算"
+      "title": "环境空气评价小结"
     },
     "ch8_S01": {
       "expected_quantities": [],
@@ -974,7 +974,7 @@
     },
     "ch8_S03": {
       "expected_quantities": [],
-      "title": "运营期噪声影响预测及评价"
+      "title": "环境空气影响回顾性评价"
     },
     "ch8_S04": {
       "expected_quantities": [
@@ -1028,7 +1028,7 @@
           "unit": "%"
         }
       ],
-      "title": "噪声控制效果分析"
+      "title": "建设期环境空气影响及防治措施"
     },
     "ch8_S05": {
       "expected_quantities": [
@@ -1199,7 +1199,7 @@
     },
     "ch9_S04": {
       "expected_quantities": [],
-      "title": "结论"
+      "title": "运营期噪声影响预测及评价"
     },
     "ch9_S05": {
       "expected_quantities": [],
@@ -2467,150 +2467,150 @@
     },
     {
       "caliber": "边长",
-      "sample": "016-2021-12",
+      "sample": "018-_5-900-2023-8",
       "section": "ch1",
       "unit": "km",
       "value": "50"
     },
     {
-      "caliber": "评价范围分别",
-      "sample": "016-2021-12",
-      "section": "ch1",
-      "unit": "km2",
-      "value": "1.23"
-    },
-    {
-      "caliber": "评价面积约",
-      "sample": "016-2021-12",
-      "section": "ch1",
-      "unit": "km2",
-      "value": "12.5"
-    },
-    {
       "caliber": "生态评价范围",
-      "sample": "016-2021-12",
+      "sample": "018-_5-900-2023-8",
       "section": "ch1",
       "unit": "km2",
       "value": "125.82"
     },
     {
-      "caliber": "最终拟占地面积",
-      "sample": "016-2021-12",
-      "section": "ch1",
-      "unit": "hm2",
-      "value": "305"
-    },
-    {
-      "caliber": "面积约",
-      "sample": "016-2021-12",
-      "section": "ch1",
-      "unit": "hm2",
-      "value": "472.36"
-    },
-    {
-      "caliber": "面积约",
-      "sample": "016-2021-12",
-      "section": "ch1",
-      "unit": "hm2",
-      "value": "77.16"
-    },
-    {
-      "caliber": "矿田东西长约",
-      "sample": "016-2021-12",
-      "section": "ch2",
-      "unit": "km",
-      "value": "9.94"
-    },
-    {
       "caliber": "经济合理剥采比约",
-      "sample": "016-2021-12",
+      "sample": "018-_5-900-2023-8",
       "section": "ch2",
       "unit": "m",
       "value": "7.97"
     },
     {
       "caliber": "储量",
-      "sample": "016-2021-12",
+      "sample": "018-_5-900-2023-8",
       "section": "ch2",
       "unit": "万t",
-      "value": "85745"
+      "value": "78051.32"
     },
     {
       "caliber": "断距",
-      "sample": "016-2021-12",
+      "sample": "018-_5-900-2023-8",
       "section": "ch2",
       "unit": "m",
       "value": "300"
     },
     {
       "caliber": "号煤的间距",
-      "sample": "016-2021-12",
+      "sample": "018-_5-900-2023-8",
       "section": "ch2",
       "unit": "m",
       "value": "5.15"
     },
     {
       "caliber": "号煤的间距",
-      "sample": "016-2021-12",
+      "sample": "018-_5-900-2023-8",
       "section": "ch2",
       "unit": "m",
       "value": "0.90"
     },
     {
       "caliber": "号煤的间距",
-      "sample": "016-2021-12",
+      "sample": "018-_5-900-2023-8",
       "section": "ch2",
       "unit": "m",
       "value": "3.80"
     },
     {
       "caliber": "号煤的间距",
-      "sample": "016-2021-12",
+      "sample": "018-_5-900-2023-8",
       "section": "ch2",
       "unit": "m",
       "value": "7.95"
     },
     {
       "caliber": "煤层的间距",
-      "sample": "016-2021-12",
+      "sample": "018-_5-900-2023-8",
       "section": "ch2",
       "unit": "m",
       "value": "39.05"
     },
     {
-      "caliber": "时采掘场占地面积",
-      "sample": "016-2021-12",
-      "section": "ch2",
-      "unit": "hm2",
-      "value": "102.00"
-    },
-    {
-      "caliber": "时排土场占地面积",
-      "sample": "016-2021-12",
-      "section": "ch2",
-      "unit": "hm2",
-      "value": "126.0"
-    },
-    {
-      "caliber": "排土场总占地面积",
-      "sample": "016-2021-12",
-      "section": "ch2",
-      "unit": "hm2",
-      "value": "305"
-    },
-    {
-      "caliber": "场平均排弃总高度",
-      "sample": "016-2021-12",
+      "caliber": "煤平均厚度",
+      "sample": "018-_5-900-2023-8",
       "section": "ch2",
       "unit": "m",
-      "value": "90.00"
+      "value": "21.18"
     },
     {
-      "caliber": "破碎站占地面积",
-      "sample": "016-2021-12",
+      "caliber": "工作线平均长度",
+      "sample": "018-_5-900-2023-8",
       "section": "ch2",
-      "unit": "hm2",
-      "value": "0.8000"
+      "unit": "m",
+      "value": "1000"
+    },
+    {
+      "caliber": "推进速度",
+      "sample": "018-_5-900-2023-8",
+      "section": "ch2",
+      "unit": "m",
+      "value": "160"
+    },
+    {
+      "caliber": "煤平均厚度",
+      "sample": "018-_5-900-2023-8",
+      "section": "ch2",
+      "unit": "m",
+      "value": "21.18"
+    },
+    {
+      "caliber": "煤平均厚度",
+      "sample": "018-_5-900-2023-8",
+      "section": "ch2",
+      "unit": "m",
+      "value": "2.55"
+    },
+    {
+      "caliber": "累计厚度",
+      "sample": "018-_5-900-2023-8",
+      "section": "ch2",
+      "unit": "m",
+      "value": "23.73"
+    },
+    {
+      "caliber": "工作线长度",
+      "sample": "018-_5-900-2023-8",
+      "section": "ch2",
+      "unit": "m",
+      "value": "1500"
+    },
+    {
+      "caliber": "推进速度",
+      "sample": "018-_5-900-2023-8",
+      "section": "ch2",
+      "unit": "m",
+      "value": "95"
+    },
+    {
+      "caliber": "煤平均厚度",
+      "sample": "018-_5-900-2023-8",
+      "section": "ch2",
+      "unit": "m",
+      "value": "21.18"
+    },
+    {
+      "caliber": "工作线平均长度",
+      "sample": "018-_5-900-2023-8",
+      "section": "ch2",
+      "unit": "m",
+      "value": "1000"
+    },
+    {
+      "caliber": "推进速度",
+      "sample": "018-_5-900-2023-8",
+      "section": "ch2",
+      "unit": "m",
+      "value": "322"
     }
   ],
   "version": "1.2"
