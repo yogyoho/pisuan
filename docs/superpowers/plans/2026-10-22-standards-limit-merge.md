@@ -893,7 +893,7 @@ git commit -m "refactor(domain-factory): 语料限值转正改 born-verified 直
 - 删 `domain_factory_router.py` 的 `@domain_factory.post("/eia/standards/limits/export")` 端点整段
 - `grep -rn "export_limit_rows\|limits/export" backend/ --include="*.py"` 确认零残留（`export_reviews` 不受影响）
 
-- [ ] **Step 2: 前端删除**
+- [ ] **Step 2: 前端删除与徽章词表跟进（T4 评审折入）**
 
 - `eia_standard_api.js`：删 `/** 限值行整表导出物化... */` 注释 + `exportLimits: () => apiPost(...)` 行
 - `StandardsPanel.vue`：
@@ -901,6 +901,12 @@ git commit -m "refactor(domain-factory): 语料限值转正改 born-verified 直
   - 删页头 pill `<span v-if="dbTableCount" class="pill pill-orange">...表待导出</span>` 块
   - 删 `const exportLimits = async () => {...}` 整函数
   - grep `dbTableCount` 定位其 computed 定义并整块删除（该 computed 仅剩此 pill 与按钮两处消费，均已删）
+  - **行内徽章词表跟进（T4 评审折入，source 语义已从 'db' 改 'expert'）**：限值表行内徽章的
+    `t.source === 'db'` 分支改为 `'expert'`（文案「DB · 已核实」、pill-ok 类样式），'file' 分支
+    保留「文件态」；徽章 title 的导出时代文案（「导出前须先录入核实」等）同步改写为无导出语义
+  - **`limit_tables_pending` 口径收口（T4 评审折入）**：`list_standards` 的 counts 里
+    `limit_tables_pending` 仍读文件 flag，与派生 verified 分叉——改为按重写后 `list_limit_tables`
+    结果重算（`source != 'expert'` 的注册表计数），前端虽暂不消费，口径必须单一
 - 确认 `exporting` ref 仍被「导出核实结果」（onExport）使用——保留
 
 - [ ] **Step 3: 验证**
