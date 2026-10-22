@@ -701,6 +701,12 @@ git commit -m "fix(domain-factory): enrich 删旧收窄 source='enrich'，专家
 - Modify: `backend/package/yuxi/extensions/regulation_library/enrichment_service.py`（query_indicators + 锚点 helper）
 - Test: `backend/test/unit/extensions/test_query_indicators_layer.py`（目录不存在则建）
 
+> **T5 质量评审 rider（bug-4125 语境）**：本任务单测是纯函数（无 pg_manager）；冒烟脚本若用
+> `asyncio.run` 跑 `query_indicators`，必须把 `await pg_manager.close()` 放进 loop 存续期内
+> （try/finally），否则 psycopg 池后台任务令退出永久挂死。若后续出现第二个消费 pg_manager 的
+> async 测试，把 `test_enrich_delete_scope.py` 的 `_run` **提升**（非复制）入 conftest——复制
+> 即稀碎。
+
 - [ ] **Step 1: 写失败测试**
 
 ```python
