@@ -26,6 +26,7 @@ export const eiaDataApi = {
    */
   getSections: (stage) =>
     apiGet(`/api/domain-factory/eia/expectations/sections?stage=${encodeURIComponent(stage)}`),
+  recompileExpectations: () => apiPost('/api/domain-factory/eia/stages/expectations/recompile'),
 
   /**
    * 备料清单只读视图（P2-4）：per_chapter 分章数据族 + source_hint 词表。

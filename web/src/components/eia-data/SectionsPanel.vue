@@ -39,6 +39,14 @@
             <TrendingUp :size="13" />
             仅看未归并 <b>{{ unmapped.length }}</b>
           </span>
+          <button
+            v-if="userStore.isAdmin"
+            class="btn btn-txt btn-sm"
+            :disabled="recompiling"
+            @click="confirmRecompile"
+          >
+            <RefreshCw :size="13" /> 重编译
+          </button>
         </div>
 
         <div
@@ -364,7 +372,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { AlignLeft, Check, Download, Info, Plus, TrendingUp } from '@lucide/vue'
+import { AlignLeft, Check, Download, Info, Plus, RefreshCw, TrendingUp } from '@lucide/vue'
 import { eiaDataApi } from '@/apis/eia_data_api'
 import { eiaStageApi } from '@/apis/eia_stage_api'
 import { useUserStore } from '@/stores/user'
@@ -385,6 +393,7 @@ const userStore = useUserStore()
 const activeTab = ref('detail')
 const loading = ref(false)
 const exporting = ref(false)
+const recompiling = ref(false)
 
 // 模板里写字面 `}}` 会提前闭合插值，SLOT 记法只能走 script 常量
 const slotNotation = '{{SLOT:family.field}}'
@@ -566,6 +575,27 @@ const setFieldsStage = (key) => {
 const switchToFields = () => {
   activeTab.value = 'fields'
   if (!families.value.length) fetchForms()
+}
+
+// ── 重编译（admin，后台任务）──
+const confirmRecompile = () => {
+  Modal.confirm({
+    title: '重编译章节口径',
+    content:
+      '以语料知识库全量文档重建技能语料衍生物（section_expectations / 切片库 / bank_index 等），后台任务执行，进度见任务中心。继续？',
+    okText: '重编译',
+    cancelText: '取消',
+    onOk: () => {
+      recompiling.value = true
+      return eiaDataApi
+        .recompileExpectations()
+        .then(() => message.success('已提交重编译任务，完成后刷新本页查看最新口径'))
+        .catch((err) => message.error(err?.message || '任务提交失败'))
+        .finally(() => {
+          recompiling.value = false
+        })
+    }
+  })
 }
 
 // ── 裁决动作 ──

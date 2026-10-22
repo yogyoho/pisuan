@@ -141,12 +141,33 @@ def _load_bank_compile():
     return module
 
 
-async def _materialize_workdir(tmp: Path, client, rows: list[dict]) -> list[dict]:
-    """DB manifest → temp workdir（<rid>/source.md + manifest.json）。"""
+async def _list_corpus_docs(kb_id: str) -> list[dict]:
+    """绑定 KB 的全量文档（分页取全）。
+
+    编译输入以 KB 为准：语料知识库是样例报告的权威集合（上线后持续新增也以它为口径），
+    文件库是加工/推送暂存面。
+    """
+    docs: list[dict] = []
+    page = 1
+    while True:
+        res = await knowledge_base.list_document_files(
+            kb_id, files_only=True, page=page, page_size=500, include_stats=False
+        )
+        docs.extend(res["items"])
+        if not res["has_more"]:
+            return docs
+        page += 1
+
+
+async def _materialize_workdir(tmp: Path, kb_id: str, rows: list[dict]) -> list[dict]:
+    """KB 解析 md（canonical 全文）→ temp workdir（<rid>/source.md + manifest.json）。"""
     entries = []
     for row in rows:
-        md_bytes = await client.adownload_file(MINIO_BUCKET, row["md_object_key"])
-        _, body = split_canonical_md(md_bytes.decode("utf-8"))
+        try:
+            dl = await knowledge_base.get_file_download(kb_id, row["kb_file_id"], variant="parsed")
+        except ValueError as exc:
+            raise ValueError(f"{row['original_filename']}: {exc}") from exc
+        _, body = split_canonical_md(dl["content"].decode("utf-8"))
         d = tmp / row["report_id"]
         d.mkdir(parents=True, exist_ok=True)
         (d / "source.md").write_text(body, encoding="utf-8", newline="\n")
@@ -204,39 +225,51 @@ def _merge_corpus_meta(entries: list[dict], front_by_rid: dict[str, dict]) -> No
 
 
 async def run_eia_corpus_process(context: TaskContext) -> dict:
-    """P2 加工：前置校验 → 全库重编译（bank_compile --prune）→ corpus_meta 合并 → 台账。
+    """P2 加工/重编译：编译输入 = 绑定语料 KB 全量文档（KB 为准）→ bank_compile --prune → corpus_meta 合并 → 台账。
 
-    payload: {file_ids?: [int], scope?: "all", operator_id}
-    校验失败（md 非 ready / stage 未填）→ fail fast 列缺项清单（绝不静默跳过）；
-    bank_compile 零可编译报告 rc=1 → 任务失败、产物保留原状（拒绝空 bank_index）。
+    payload: {file_ids?: [int], scope?: "all", operator_id}；file_ids 仅圈定 processed_at 登记
+    对象，编译输入恒为 KB 全集（全库重编译语义）。KB 文档缺文件库登记（无法定位
+    rid/stage）或 report_id/stage 未填 → fail fast 列缺项清单（绝不静默跳过）；库中就绪但
+    未推送 KB 的文件不入编（台账 detail.library_not_in_kb 可见）；bank_compile 零可编译
+    报告 rc=1 → 任务失败、产物保留原状（拒绝空 bank_index）。
     """
     payload = context.payload
     operator_id = payload.get("operator_id")
-    if payload.get("scope") == "all":
-        targets = [r for r in await _repo.list_files() if r["md_status"] == "ready"]
-    else:
-        targets = []
-        for fid in payload["file_ids"]:
-            row = await _repo.get_file(fid)
-            if row is not None:
-                targets.append(row.to_dict())
+    kb_id = await _resolve_kb_id()
+    all_rows = await _repo.list_files()
+    rows_by_stem: dict[str, dict] = {}
+    for r in all_rows:
+        stem = Path(r["original_filename"]).stem
+        if stem in rows_by_stem:
+            raise ValueError(f"文件库存在同名文件（无法唯一定位 KB 文档）: {stem}")
+        rows_by_stem[stem] = r
 
-    missing = [
-        f"id={r['id']} {r['original_filename']}: md_status={r['md_status']}" + ("" if r["stage"] else "，stage 未填")
-        for r in targets
-        if r["md_status"] != "ready" or not r["stage"]
-    ]
-    if missing:
-        raise ValueError("加工前置不满足：" + "；".join(missing))
+    kb_docs = await _list_corpus_docs(kb_id)
+    unmatched = [d["filename"] for d in kb_docs if Path(d["filename"]).stem not in rows_by_stem]
+    if unmatched:
+        raise ValueError("KB 文档缺文件库登记（无法定位 rid/stage）：" + "；".join(unmatched))
+    compile_rows = []
+    for d in kb_docs:
+        row = rows_by_stem[Path(d["filename"]).stem]
+        if not row["report_id"] or not row["stage"]:
+            raise ValueError(f"加工前置不满足：{row['original_filename']}: report_id/stage 未填")
+        compile_rows.append({**row, "kb_file_id": d["file_id"]})
+    compile_rows.sort(key=lambda r: r["report_id"])  # manifest 顺序确定性
+
+    if payload.get("scope") == "all":
+        targets = compile_rows
+    else:
+        by_id = {r["id"]: r for r in compile_rows}
+        not_in_corpus = [fid for fid in payload["file_ids"] if fid not in by_id]
+        if not_in_corpus:
+            raise ValueError(f"目标文件不在语料知识库编译集内: ids={not_in_corpus}")
+        targets = [by_id[fid] for fid in payload["file_ids"]]
 
     await context.set_progress(10.0, "物化临时 workdir")
-    # 全库重编译语义：以全库可编译集为输入重建全局衍生物（非仅本次触发子集）
-    compile_rows = [r for r in await _repo.list_files() if r["md_status"] == "ready" and r["report_id"] and r["stage"]]
     bank = _load_bank_compile()
     with tempfile.TemporaryDirectory(prefix="eia_compile_") as td:
         tmp = Path(td)
-        client = get_minio_client()
-        entries = await _materialize_workdir(tmp, client, compile_rows)
+        entries = await _materialize_workdir(tmp, kb_id, compile_rows)
         await context.set_progress(40.0, f"bank_compile（{len(entries)} 份，--prune）")
         rc = await asyncio.to_thread(
             bank.main_with_args,
@@ -249,9 +282,15 @@ async def run_eia_corpus_process(context: TaskContext) -> dict:
     now = utc_now_naive()
     for r in targets:
         await _repo.update_file(r["id"], {"processed_at": now})
+    library_rids = {r["report_id"] for r in all_rows if r["report_id"] and r["stage"] and r["md_status"] == "ready"}
     await _repo_log(
         action="recompile",
-        detail={"reports": len(entries), "rids": [e["report_id"] for e in entries]},
+        detail={
+            "kb_id": kb_id,
+            "reports": len(entries),
+            "rids": [e["report_id"] for e in entries],
+            "library_not_in_kb": sorted(library_rids - {e["report_id"] for e in entries}),
+        },
         operator=operator_id,
     )
     summary = {"compiled": len(entries)}

@@ -80,3 +80,17 @@ async def test_task_detail_404_for_unknown(test_client, admin_headers):
     """不存在的 task_id 返回 404（而非 500）。"""
     res = await test_client.get("/api/domain-factory/tasks/nonexistent-task-id", headers=admin_headers)
     assert res.status_code in (404, 400, 422), f"expected not-found, got {res.status_code}: {res.text[:200]}"
+
+
+async def test_expectations_recompile_unauthenticated_denied(test_client):
+    """章节口径重编译未认证应被拒（admin 写端点）。"""
+    res = await test_client.post("/api/domain-factory/eia/stages/expectations/recompile")
+    assert res.status_code in (401, 403), f"expected auth denial, got {res.status_code}"
+
+
+async def test_expectations_recompile_standard_user_denied(test_client, standard_user):
+    """普通用户重编译应被拒（admin 专用）。"""
+    res = await test_client.post(
+        "/api/domain-factory/eia/stages/expectations/recompile", headers=standard_user["headers"]
+    )
+    assert res.status_code in (401, 403), f"expected auth denial, got {res.status_code}: {res.text[:200]}"

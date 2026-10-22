@@ -1783,6 +1783,24 @@ async def get_eia_data_expectations(
         raise HTTPException(status_code=500, detail=f"获取备料清单失败: {str(e)}")
 
 
+@domain_factory.post("/eia/stages/expectations/recompile")
+async def recompile_eia_stage_expectations(
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """章节口径重编译（admin，后台任务）：以绑定语料 KB 全量文档（KB 为准）重建 section_expectations 等全部衍生物。
+
+    与 /eia/library/process scope=all 同链（eia_corpus_process），本端点是期望视图的重编译入口；
+    不做仅 section_expectations 的局部重编译——切片库/bank_index/深度基线与口径产物同源血缘，
+    局部重建会造成口径与切片漂移。
+    """
+    task = await tasker.enqueue(
+        name="章节口径重编译",
+        task_type="eia_corpus_process",
+        payload={"scope": "all", "operator_id": current_user.uid},
+    )
+    return {"status": "queued", "task_id": task.id}
+
+
 @domain_factory.get("/eia/standards/gate1")
 async def get_eia_gate1_checks(
     current_user: User = Depends(get_required_user),
