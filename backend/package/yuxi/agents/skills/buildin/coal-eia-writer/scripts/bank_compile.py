@@ -445,16 +445,18 @@ def _aggregate_depth_targets(refs: Path, stage: str) -> int | None:
     return len(chapters)
 
 
-def _prune_stale_slices(refs: Path, keep_rids: set[str]) -> int:
-    """删除命名合规但 rid 已不在当前 manifest 的残留切片（samples_bank + SL3 指纹池）。
+def _prune_stale_slices(refs: Path, keep_pairs: set[tuple[str, str]]) -> int:
+    """删除命名合规但 (stage, rid) 已不在当前 manifest 的残留切片（samples_bank + SL3 指纹池）。
 
+    按 (stage, rid) 二元组全等匹配：rid 改判 stage 后旧位文件同样清除（防指纹池双计，bug-4011）。
     手写 chN_sample.md 无 __ 分隔、不匹配命名正则，绝不动；返回删除文件数。
     """
     removed = 0
     candidates = list(refs.glob("samples_bank/*/slices/*/*.md")) + list(refs.glob("samples/*/*.md"))
     for p in candidates:
+        stage = p.relative_to(refs).parts[1]
         m = SLICE_NAME_RE.match(p.name) or SL3_NAME_RE.match(p.name)
-        if m and m.group("rid") not in keep_rids:
+        if m and (stage, m.group("rid")) not in keep_pairs:
             p.unlink()
             removed += 1
     return removed
@@ -468,7 +470,7 @@ def main_with_args(argv: list[str]) -> int:
     ap.add_argument(
         "--prune",
         action="store_true",
-        help="删除 rid 已不在当前 manifest 的残留切片（含 SL3 指纹池）；手写 chN_sample.md 不受影响",
+        help="删除 (stage, rid) 已不在 manifest 的残留切片（含 SL3 池；改判旧位同清）；手写 chN_sample.md 不受影响",
     )
     args = ap.parse_args(argv)
 
@@ -489,6 +491,7 @@ def main_with_args(argv: list[str]) -> int:
     # 按 report_id 去重（首次出现胜出）——manifest 重复行不产生重复切片/索引条目
     seen: set[str] = set()
     manifest_rids: set[str] = set()
+    manifest_pairs: set[tuple[str, str]] = set()  # (stage, rid)——prune 判定键（bug-4011）
     reports = []
     for e in entries:
         rid = e.get("report_id") if isinstance(e, dict) else None
@@ -496,6 +499,7 @@ def main_with_args(argv: list[str]) -> int:
             continue
         seen.add(rid)
         manifest_rids.add(rid)
+        manifest_pairs.add((e.get("stage") or "", rid))
         reports.append(e)
 
     index: dict = {}  # stage -> chN -> [节条目]
@@ -568,7 +572,7 @@ def main_with_args(argv: list[str]) -> int:
 
     _json_write(refs / "samples_bank" / "bank_index.json", index)
     if args.prune:
-        pruned = _prune_stale_slices(refs, manifest_rids)
+        pruned = _prune_stale_slices(refs, manifest_pairs)
         print(f"PRUNED: {pruned} stale slice(s)")
     # 6) forms_catalog：切片文本三形态统计（表引导句 + 数值引用），给写手正样本
     catalog = build_forms_catalog(

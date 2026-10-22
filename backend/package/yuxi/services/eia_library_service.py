@@ -145,7 +145,12 @@ class EiaLibraryService:
         return row, await get_minio_client().adownload_file(MINIO_BUCKET, row.md_object_key)
 
     async def regenerate_md(self, file_id: int, operator: str | None) -> dict:
-        """重产 canonical md（md_status=failed 行的手工修复动作）。"""
+        """重产 canonical md（md_status=failed 行的手工修复动作）。
+
+        不更新 md_sha1：该字段语义=「最近一次推送确认的 KB 内容指纹」（上传初值、
+        推送成功时刷新）；重产只换 MinIO 现态、不动 KB——若在此覆写，_push_one 的
+        md_sha1 相同 no-op 捷径会被新指纹误命中，KB 永久陈旧（bug-4010）。
+        """
         row = await self.repo.get_file(file_id)
         if row is None:
             raise FileNotFoundError(file_id)
@@ -156,6 +161,7 @@ class EiaLibraryService:
         md_bytes = fields.pop("_md_bytes", None)
         if md_bytes is not None:
             await self._put_md(fields["md_object_key"], md_bytes)
+        fields.pop("md_sha1", None)  # bug-4010：指纹只在推送成功时刷新（见 docstring）
         await self.repo.update_file(file_id, fields)
         return (await self.repo.get_file(file_id)).to_dict()
 
