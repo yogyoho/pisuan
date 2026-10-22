@@ -6,7 +6,14 @@
 
 from __future__ import annotations
 
-from yuxi.services.eia_limit_row_mapping import flatten_limit_row, regroup_limit_rows
+from yuxi.services.eia_limit_row_mapping import flatten_limit_row, page_row_id_for, regroup_limit_rows
+
+
+def test_page_row_id_for_deterministic_and_table_scoped():
+    """公有化后的派生函数直测：同输入同键（转正幂等契约），不同 table_key 键隔离。"""
+    row = {"category": "0类", "day": 50, "night": 40, "unit": "dB(A)"}
+    assert page_row_id_for("gb3096_zone_limits", row) == page_row_id_for("gb3096_zone_limits", dict(row))
+    assert page_row_id_for("gb3096_zone_limits", row) != page_row_id_for("gb12348_boundary_limits", row)
 
 
 def test_flat_rows_direct_map():

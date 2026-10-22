@@ -2,8 +2,8 @@
 
 链路：samples_bank 各阶段 slices 切片 → 内核 locate 定位 → LLM 语义判别（仅限值陈述放行，fail-closed）
 → 内核 parse_block/聚合 → eia_limit_extract_rows 暂存（行标 extractor="llm"）；
-人工裁决 confirm/edited 经 upsert_row 幂等转正到 eia_standard_limit_rows，discarded 留痕不转正；
-未知标准号行落 __candidate__:<归一码> 候选键，register_candidate 立表后批量迁移。
+人工裁决 confirm/edited 经 _insert_expert_row born-verified 幂等转正到 standard_indicators 权威层，
+discarded 留痕不转正；未知标准号行落 __candidate__:<归一码> 候选键，register_candidate 立表后批量迁移。
 """
 
 from __future__ import annotations
@@ -14,7 +14,9 @@ from pathlib import Path
 from typing import Any
 
 from fastapi.concurrency import run_in_threadpool
+from sqlalchemy import text as sql_text
 
+from yuxi.extensions.regulation_library.models import ensure_schema
 from yuxi.repositories.eia_limit_extract_repository import EiaLimitExtractRepository
 from yuxi.repositories.eia_standard_repository import EiaStandardRepository
 from yuxi.services.eia_data_service import _SKILL_ROOT
@@ -28,7 +30,9 @@ from yuxi.services.eia_limit_extract_core import (
     table_key_for,
 )
 from yuxi.services.eia_limit_llm_classifier import EiaLimitLLMClassifier, GateStats, JudgeResult, gate_report
-from yuxi.services.eia_standard_service import LIMIT_TABLE_SCHEMAS
+from yuxi.services.eia_limit_row_mapping import page_row_id_for
+from yuxi.services.eia_standard_service import EiaStandardService, LIMIT_TABLE_SCHEMAS, _load_standards_index
+from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_domain_factory import EiaLimitExtractRow, EiaLimitTableRegistry
 from yuxi.utils import logger
 from yuxi.utils.datetime_utils import utc_now_naive
@@ -43,7 +47,7 @@ _JUDGE_CONCURRENCY = 6  # 判别有界并发（I4）：防供应商限流；全�
 
 
 def _normalize_row_json(row: dict) -> dict:
-    """数值列类型归一（有值转 float，空值置 None）并剥离 conflict_values——upsert_row 以 JSON 全等判幂等。"""
+    """数值列类型归一（有值转 float，空值置 None）并剥离 conflict_values——转正幂等键 page_row_id 由行形 JSON 派生。"""
     out = dict(row)
     out.pop("conflict_values", None)  # 暂存诊断信息不进官方行，也不污染 upsert 幂等键
     for k in _NUMERIC_KEYS:
@@ -66,11 +70,10 @@ class EiaLimitExtractService:
     def __init__(
         self,
         repo: EiaLimitExtractRepository | None = None,
-        std_repo: EiaStandardRepository | None = None,
+        std_repo: EiaStandardRepository | None = None,  # 转正已改道 _insert_expert_row，参数仅为既有构造点兼容保留
         classifier: EiaLimitLLMClassifier | None = None,
     ):
         self._repo = repo or EiaLimitExtractRepository()
-        self._std_repo = std_repo or EiaStandardRepository()
         self._classifier = classifier or EiaLimitLLMClassifier()  # 默认 LLM 判别门，无旁路
         self._run_lock = asyncio.Lock()  # 进程内试跑互斥（I3）：单例共享判别器，防重叠试跑清对方计数
 
@@ -196,7 +199,7 @@ class EiaLimitExtractService:
     async def decide_row(
         self, row_id: int, action: str, row_json: dict | None, username: str, note: str | None = None
     ) -> dict[str, Any]:
-        """行裁决：confirm/edited 经 upsert_row 转正（edited 须带非空 row_json），discarded 仅留痕。"""
+        """行裁决：confirm/edited 经 _insert_expert_row born-verified 转正（edited 须带 row_json），其余仅留痕。"""
         row = await self._repo.get_row(row_id)
         if row is None:
             raise KeyError(f"暂存行不存在: {row_id}")
@@ -211,7 +214,19 @@ class EiaLimitExtractService:
         if action in ("confirm", "edited"):
             target = dict(row_json) if action == "edited" else dict(row.row_json or {})
             normalized = _normalize_row_json(target)
-            await self._std_repo.upsert_row(row.table_key, normalized, username)
+            # 转正 = born-verified 权威行按 page_row_id 幂等追加（裁决逐行触发，不能整表替换）
+            await ensure_schema()
+            async with pg_manager.get_async_session_context() as session:
+                doc = await run_in_threadpool(_load_standards_index)
+                code_ref = (doc.get("limit_tables", {}).get(row.table_key) or {}).get("code_ref") or row.table_key
+                await session.execute(
+                    sql_text(
+                        "DELETE FROM standard_indicators"
+                        " WHERE table_key = :tk AND source = 'expert' AND page_row_id = :prid"
+                    ),
+                    {"tk": row.table_key, "prid": page_row_id_for(row.table_key, normalized)},
+                )
+                await EiaStandardService()._insert_expert_row(session, row.table_key, code_ref, normalized, username)
             if action == "edited":
                 row.row_json = normalized
         row.status = "confirmed" if action == "confirm" else action  # 状态词表 confirmed（模型列注释）

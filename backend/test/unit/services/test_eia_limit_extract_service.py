@@ -1,9 +1,14 @@
 """eia_limit_extract_service 单测：试跑幂等 / 行裁决转正 / 候选立表。"""
 
+import asyncio
+from types import SimpleNamespace
+
 import pytest
 
+from yuxi.services import eia_limit_extract_service as lex_svc
 from yuxi.services.eia_limit_extract_service import EiaLimitExtractService
 from yuxi.services.eia_limit_llm_classifier import GateStats, JudgeResult
+from yuxi.services.eia_standard_service import EiaStandardService as _ESS
 
 
 class PassThroughGate:
@@ -68,6 +73,34 @@ def svc(monkeypatch, tmp_path):
     return s, repo
 
 
+class FakeSession:
+    """记录 executes 的最小会话桩（同 test_eia_standard_save_rows.py 的 session_env 模式）。"""
+
+    def __init__(self):
+        self.executes: list[tuple[str, dict]] = []
+
+    async def execute(self, sql, params=None):
+        self.executes.append((str(sql), dict(params or {})))
+        return SimpleNamespace(rowcount=0)
+
+
+@pytest.fixture
+def write_env(monkeypatch):
+    """转正写路径桩：session / ensure_schema / 锚点加载全走模块级名字，防真库写与真 DDL 漏入。"""
+    ses = FakeSession()
+
+    class _CM:
+        async def __aenter__(self):
+            return ses
+
+        async def __aexit__(self, *a):
+            return False
+
+    monkeypatch.setattr(lex_svc, "pg_manager", SimpleNamespace(get_async_session_context=lambda: _CM()))
+    monkeypatch.setattr(lex_svc, "ensure_schema", lambda: asyncio.sleep(0))  # 真 DDL 会经共享单例漏进 FakeSession
+    return ses
+
+
 @pytest.mark.asyncio
 async def test_run_extraction_inserts_and_report(svc):
     s, repo = svc
@@ -89,19 +122,30 @@ async def test_run_extraction_idempotent_preserves_decided(svc):
 
 
 @pytest.mark.asyncio
-async def test_decide_row_confirm_upserts_official(svc, monkeypatch):
+async def test_decide_row_confirm_writes_expert_row(svc, write_env, monkeypatch):
     s, repo = svc
     await s.run_extraction("admin")
     row = (await repo.list_rows(status="pending"))[0]
-    upserted = []
+    calls = []
 
-    async def fake_upsert(tk, r, u):  # 真仓储 upsert_row 为 async，桩须同形
-        upserted.append((tk, r, u))
+    async def fake_insert(self, session, tk, doc_code, page_row, u):  # 真方法为 async，桩须同形
+        calls.append((tk, doc_code, page_row, u))
 
-    monkeypatch.setattr(s._std_repo, "upsert_row", fake_upsert)
+    monkeypatch.setattr(_ESS, "_insert_expert_row", fake_insert)
+    monkeypatch.setattr(
+        lex_svc,
+        "_load_standards_index",
+        lambda: {"limit_tables": {row.table_key: {"code_ref": "GB 3095-2012"}}},
+    )
     out = await s.decide_row(row.id, "confirm", None, "admin", note="对照原文无误")
-    assert out["status"] == "confirmed" and upserted[0][0] == row.table_key
-    assert upserted[0][1]["limit_value"] == 0.15 and isinstance(upserted[0][1]["limit_value"], float)
+    assert out["status"] == "confirmed"
+    assert calls[0][0] == row.table_key
+    assert calls[0][1] == "GB 3095-2012"  # doc_code = 测试锚点里配的 code_ref
+    assert calls[0][2]["limit_value"] == 0.15 and isinstance(calls[0][2]["limit_value"], float)
+    assert calls[0][3] == "admin"
+    delete_sql, delete_params = write_env.executes[0]  # 幂等：先按 page_row_id 删旧行
+    assert "DELETE FROM standard_indicators" in delete_sql
+    assert delete_params["tk"] == row.table_key and delete_params["prid"]
 
 
 @pytest.mark.asyncio
@@ -120,16 +164,16 @@ async def test_register_candidate_migrates_rows(svc):
 
 
 @pytest.mark.asyncio
-async def test_decide_row_discarded_never_upserts(svc, monkeypatch):
+async def test_decide_row_discarded_never_finalizes(svc, write_env, monkeypatch):
     s, repo = svc
     await s.run_extraction("admin")
     row = (await repo.list_rows(status="pending"))[0]
     calls = []
 
-    async def fake_upsert(tk, r, u):
-        calls.append((tk, r, u))
+    async def fake_insert(self, session, tk, doc_code, page_row, u):
+        calls.append((tk, doc_code, page_row, u))
 
-    monkeypatch.setattr(s._std_repo, "upsert_row", fake_upsert)
+    monkeypatch.setattr(_ESS, "_insert_expert_row", fake_insert)
     out = await s.decide_row(row.id, "discarded", None, "admin")
     assert out["status"] == "discarded" and calls == []
 

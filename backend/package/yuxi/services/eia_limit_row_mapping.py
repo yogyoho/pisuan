@@ -12,7 +12,7 @@ import json
 from typing import Any
 
 
-def _page_row_id(table_key: str, page_row: dict[str, Any]) -> str:
+def page_row_id_for(table_key: str, page_row: dict[str, Any]) -> str:
     """行形业务键确定性派生 32 位重组键（同输入同键——转正幂等删除依赖）。"""
     biz = json.dumps(page_row, ensure_ascii=False, sort_keys=True)
     return hashlib.md5(f"{table_key}|{biz}".encode()).hexdigest()
@@ -20,7 +20,7 @@ def _page_row_id(table_key: str, page_row: dict[str, Any]) -> str:
 
 def flatten_limit_row(table_key: str, page_row: dict[str, Any]) -> list[dict[str, Any]]:
     """页面行形 → 扁平指标行列表（共享同一 page_row_id；DB 行 id 由调用方补）。"""
-    prid = _page_row_id(table_key, page_row)
+    prid = page_row_id_for(table_key, page_row)
 
     def _row(**kw: Any) -> dict[str, Any]:
         return {
