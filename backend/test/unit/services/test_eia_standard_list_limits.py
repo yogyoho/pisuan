@@ -14,6 +14,7 @@ def _flat(tk, prid, **kw):
     base = {
         "table_key": tk,
         "page_row_id": prid,
+        "doc_code": "GB/T 14848-2017",
         "pollutant": "",
         "metric": "",
         "limit_value": 1,
@@ -76,6 +77,7 @@ def test_expert_rows_regroup_and_override_seed(list_env, monkeypatch):
     assert t["rows"] == [{"pollutant": "总硬度", "category": "III类", "limit_value": 450, "unit": "mg/L"}]
     t2 = out["limit_tables"]["gb3096_zone_limits"]
     assert t2["source"] == "expert" and t2["rows"] == [{"category": "0类", "day": 50, "night": 40, "unit": "dB(A)"}]
+    assert t["decided_by"] == "qa" and t["updated_at"]  # 首行专家信息派生
     assert out["limit_tables"]["_comment"] == "说明项"  # 说明项透传不变
     assert "gbt14848_category_limits" in out["schemas"]
 
@@ -89,3 +91,17 @@ def test_file_seed_kept_when_no_expert_rows(list_env, monkeypatch):
     t = out["limit_tables"]["gb3096_zone_limits"]
     assert t["source"] == "file" and t["verified"] is False and t["needs_verification"] is True
     assert t["rows"] == [{"category": "0类", "day": 50, "night": 40, "unit": "dB(A)"}]  # 锚点样例行原样
+
+
+def test_drifted_table_surfaced_via_expert_rows(list_env, monkeypatch):
+    rows = [_flat("ghost_table_limits", "c1", pollutant="X", limit_value=9, unit="mg/L")]
+
+    async def _fake_rows(self):
+        return rows
+
+    monkeypatch.setattr(svc.EiaStandardService, "list_expert_rows", _fake_rows)
+    out = asyncio.run(svc.EiaStandardService().list_limit_tables())
+    t = out["limit_tables"]["ghost_table_limits"]
+    assert t["source"] == "expert" and t["verified"] is True and t["needs_verification"] is False
+    assert t["code_ref"] == "GB/T 14848-2017"  # code_ref 以 doc_code 重建
+    assert t["rows"] == [{"pollutant": "X", "limit_value": 9, "unit": "mg/L"}]
