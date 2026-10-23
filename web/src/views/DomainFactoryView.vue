@@ -49,66 +49,24 @@
         </div>
       </section>
 
-      <!-- 2) 装配线主轴：实体传送带 + 流动加工件 + 四工位卡上下交错 -->
-      <section class="dfp-floor">
-        <div class="dfp-container dfp-floor-inner">
-          <div class="dfp-rail" aria-hidden="true"></div>
-          <span
-            v-for="i in 3"
-            :key="i"
-            class="dfp-flow"
-            :class="`dfp-flow-f${i}`"
-            aria-hidden="true"
-          ></span>
-          <div class="dfp-stations">
-            <div
-              v-for="(s, i) in stations"
-              :key="s.no"
-              class="dfp-station reveal"
-              :style="{ '--stagger': i }"
-            >
-              <div class="s-card">
-                <span class="s-wm" aria-hidden="true">{{ s.wm }}</span>
-                <span class="s-ico" aria-hidden="true">
-                  <component :is="s.icon" :size="18" />
-                </span>
-                <span class="s-no">{{ s.no }}</span>
-                <h3>{{ s.title }}</h3>
-                <p>{{ s.desc }}</p>
-                <div class="s-meter">
-                  <span v-for="m in s.meters" :key="m">{{ m }}</span>
-                </div>
-                <button type="button" class="s-go" @click="router.push(s.to)">
-                  直达 {{ s.screen }}
-                  <ArrowRight :size="12" class="s-go-arr" />
-                </button>
-              </div>
-              <div class="s-stem" aria-hidden="true"></div>
-              <div class="s-dot" aria-hidden="true"></div>
-            </div>
+      <!-- 2) 管线全景：语料加工管线 × 写手技能流程（archify 图整页嵌入，含流动动效与代码锚点） -->
+      <section class="dfp-flowmap">
+        <div class="dfp-container">
+          <div class="dfp-flowmap-cap reveal">
+            <b>管线全景 · 生产与消费</b>
+            <span>语料提取加工管线与 coal-eia-writer 技能流程，节点锚定真实代码</span>
+          </div>
+          <div class="dfp-flowmap-frame reveal">
+            <iframe
+              src="/diagrams/corpus-writer-flow.html"
+              title="语料提取加工管线与 coal-eia-writer 技能流程图"
+              loading="lazy"
+            ></iframe>
           </div>
         </div>
       </section>
 
-      <!-- 3) 工位铭牌带（机制口径，仿设备铭牌） -->
-      <section class="dfp-plates">
-        <div class="dfp-container dfp-plates-grid">
-          <div
-            v-for="(p, i) in plates"
-            :key="p.label"
-            class="dfp-plate reveal"
-            :style="{ '--stagger': i }"
-          >
-            <i class="p-screw p-screw-l" aria-hidden="true"></i>
-            <i class="p-screw p-screw-r" aria-hidden="true"></i>
-            <b>{{ p.label }}</b>
-            <span class="p-value">{{ p.value }}</span>
-            <p class="p-desc">{{ p.desc }}</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- 4) 工位名录：模块横带 + 屏级 chip 直达 -->
+      <!-- 3) 工位名录：模块横带 + 屏级 chip 直达 -->
       <section class="dfp-mods">
         <div class="dfp-container">
           <div class="dfp-mods-cap reveal">
@@ -153,7 +111,7 @@
         </div>
       </section>
 
-      <!-- 5) 收工带 -->
+      <!-- 4) 收工带 -->
       <section class="dfp-closing">
         <span class="c-wm" aria-hidden="true">PIPELINE READY</span>
         <div class="dfp-container dfp-closing-inner reveal">
@@ -194,10 +152,6 @@ import { useInfoStore } from '@/stores/info'
 import {
   Sparkles,
   ArrowRight,
-  Inbox,
-  Workflow,
-  Database,
-  PenLine,
   Factory,
   Sprout,
   Mountain
@@ -212,57 +166,6 @@ const footerCopyright = computed(() => {
   return c ? ` · ${c}` : ''
 })
 
-// 装配线工位：即四大工作屏入口
-const stations = [
-  {
-    no: 'STATION 01',
-    wm: '01',
-    icon: Inbox,
-    title: '语料进料',
-    desc: '领域文档批量上传，选择领域与报告类型，自动建任务入队解析。',
-    meters: ['批量上传', '自动入队'],
-    screen: '数据源管理',
-    to: '/domain-factory/general/data-sources'
-  },
-  {
-    no: 'STATION 02',
-    wm: '02',
-    icon: Workflow,
-    title: 'ETL 清洗',
-    desc: '解析、提取、泛化流水线，双屏人机校验把守质量关。',
-    meters: ['5 步加工', '双屏校验'],
-    screen: 'ETL 工作台',
-    to: '/domain-factory/general/workbench'
-  },
-  {
-    no: 'STATION 03',
-    wm: '03',
-    icon: Database,
-    title: '归属入库',
-    desc: '归属改判与退役聚合，结构化入库 Milvus / SQL / 图谱。',
-    meters: ['3 层入库', '改判 · 退役'],
-    screen: '归属管理',
-    to: '/domain-factory/general/attribution'
-  },
-  {
-    no: 'STATION 04',
-    wm: '04',
-    icon: PenLine,
-    title: '写手消费',
-    desc: '报告写手按章节模板与护栏取用资产，成稿即成品。',
-    meters: ['模板复用', '入库即精品'],
-    screen: '环评域总览',
-    to: '/domain-factory/eia-data'
-  }
-]
-
-// 设备铭牌：机制口径而非运营统计
-const plates = [
-  { label: 'PIPELINE', value: '5 步加工', desc: '解析、提取、泛化、校验、入库，全程可复核' },
-  { label: 'REVIEW', value: '双屏校验', desc: '机器粗加工，专家双屏逐段终审' },
-  { label: 'STORAGE', value: '3 层入库', desc: 'Milvus 向量 · SQL 结构 · 图谱关联' },
-  { label: 'REUSE', value: '模板复用', desc: '章节模板与实体资产，跨报告沉淀复用' }
-]
 
 const modules = [
   {
@@ -543,397 +446,45 @@ onUnmounted(() => {
   padding-bottom: 4px;
 }
 
-/* ============ 2) 装配线主轴 ============ */
-.dfp-floor-inner {
-  position: relative;
-  padding-top: 14px;
-  padding-bottom: 6px;
+/* ============ 2) 管线全景（archify 图 iframe 整页嵌入） ============ */
+.dfp-flowmap-cap {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 30px 0 12px;
+
+  b {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--gray-1000);
+  }
+
+  span {
+    font-size: 12px;
+    color: var(--gray-400);
+  }
 }
 
-/* 传送带：实体带体 + 滚动刻度 + 进料箭头 */
-.dfp-rail {
-  position: absolute;
-  left: -40px;
-  right: -40px;
-  top: 227px;
-  height: 6px;
+.dfp-flowmap-frame {
+  position: relative;
+  aspect-ratio: 910 / 528;
+  min-height: 420px;
   border: 1px solid var(--gray-200);
-  border-radius: 999px;
-  background: var(--gray-100);
-  box-shadow: 0 5px 16px rgba(var(--main-color-rgb), 0.08);
-
-  /* 带面滚动的加工刻度 */
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 1px;
-    border-radius: inherit;
-    background: repeating-linear-gradient(90deg, var(--gray-300) 0 7px, transparent 7px 13px);
-    animation: dfp-belt 0.9s linear infinite;
-  }
-
-  /* 进料口箭头 */
-  &::after {
-    content: '';
-    position: absolute;
-    left: -12px;
-    top: 50%;
-    transform: translateY(-50%);
-    border: 6px solid transparent;
-    border-left: 10px solid var(--main-500);
-  }
-}
-
-@keyframes dfp-belt {
-  to {
-    background-position-x: 13px;
-  }
-}
-
-/* 流动加工件：沿带移动的胶囊 */
-.dfp-flow {
-  position: absolute;
-  top: 225px;
-  z-index: 1;
-  width: 16px;
-  height: 9px;
-  border-radius: 5px;
-  background: linear-gradient(90deg, var(--main-400), var(--main-600));
-  box-shadow: 0 0 10px rgba(var(--main-color-rgb), 0.45);
-  opacity: 0.9;
-  animation: dfp-travel 8s linear infinite;
-}
-
-.dfp-flow-f2 {
-  animation-delay: 2.6s;
-}
-
-.dfp-flow-f3 {
-  animation-delay: 5.2s;
-}
-
-@keyframes dfp-travel {
-  from {
-    left: -40px;
-  }
-
-  to {
-    left: 100%;
-  }
-}
-
-.dfp-stations {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 20px;
-}
-
-.dfp-station {
-  position: relative;
-  height: 430px;
-}
-
-.s-card {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 196px;
-  padding: 17px 18px 13px;
-  border: 1px solid var(--gray-200);
-  border-radius: 10px;
-  background: var(--gray-0);
-  box-shadow: 0 1px 2px var(--shadow-2);
+  border-radius: 12px;
   overflow: hidden;
-  transition:
-    box-shadow 0.25s ease,
-    transform 0.25s ease,
-    border-color 0.25s ease;
+  background: var(--gray-0);
 
-  /* 顶部流光条：hover 时从左展开 */
-  &::after {
-    content: '';
+  iframe {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 2;
-    height: 3px;
-    background: linear-gradient(90deg, var(--main-500), var(--second-400));
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform 0.3s ease;
-  }
-
-  /* 文字内容抬到水印之上 */
-  > * {
-    position: relative;
-    z-index: 1;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
   }
 }
 
-.dfp-station:nth-child(odd) .s-card {
-  top: 0;
-}
-
-.dfp-station:nth-child(even) .s-card {
-  bottom: 0;
-}
-
-.dfp-station:hover .s-card {
-  transform: translateY(-3px);
-  border-color: var(--main-400);
-  box-shadow: 0 14px 30px var(--shadow-3);
-
-  &::after {
-    transform: scaleX(1);
-  }
-}
-
-.s-go {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  margin-top: 10px;
-  padding: 0;
-  border: none;
-  background: none;
-  font-size: 12.5px;
-  font-weight: 600;
-  font-family: inherit;
-  color: var(--main-600);
-  cursor: pointer;
-  transition: color 0.2s ease;
-
-  &:hover {
-    color: var(--main-700);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--main-600);
-    outline-offset: 2px;
-    border-radius: 2px;
-  }
-}
-
-.s-go-arr {
-  transition: transform 0.2s ease;
-
-  .s-go:hover & {
-    transform: translateX(2px);
-  }
-}
-
-.s-stem {
-  position: absolute;
-  left: 50%;
-  width: 2px;
-  background: var(--gray-300);
-}
-
-.dfp-station:nth-child(odd) .s-stem {
-  top: 196px;
-  height: 14px;
-}
-
-.dfp-station:nth-child(even) .s-stem {
-  top: 222px;
-  height: 14px;
-}
-
-/* 工位节点：呼吸灯 */
-.s-dot {
-  position: absolute;
-  left: 50%;
-  top: 217px;
-  z-index: 2;
-  width: 12px;
-  height: 12px;
-  transform: translate(-50%, -50%);
-  border: 3px solid var(--main-100);
-  border-radius: 50%;
-  background: var(--main-600);
-  box-shadow: 0 0 0 4px var(--gray-0);
-  animation: dfp-ping-dot 2.8s ease-out infinite;
-}
-
-.dfp-station:nth-child(2) .s-dot {
-  animation-delay: 0.7s;
-}
-
-.dfp-station:nth-child(3) .s-dot {
-  animation-delay: 1.4s;
-}
-
-.dfp-station:nth-child(4) .s-dot {
-  animation-delay: 2.1s;
-}
-
-@keyframes dfp-ping-dot {
-  0% {
-    box-shadow:
-      0 0 0 4px var(--gray-0),
-      0 0 0 5px rgba(var(--main-color-rgb), 0.4);
-  }
-
-  70%,
-  100% {
-    box-shadow:
-      0 0 0 4px var(--gray-0),
-      0 0 0 13px rgba(var(--main-color-rgb), 0);
-  }
-}
-
-.s-ico {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  background: var(--main-50);
-  color: var(--main-600);
-  transition:
-    background 0.25s ease,
-    color 0.25s ease;
-
-  .dfp-station:hover & {
-    background: var(--main-100);
-    color: var(--main-700);
-  }
-}
-
-/* 卡角大序号水印 */
-.s-wm {
-  position: absolute;
-  right: 10px;
-  bottom: -12px;
-  z-index: 0;
-  font-size: 58px;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: 2px;
-  color: var(--gray-100);
-  user-select: none;
-  pointer-events: none;
-}
-
-.s-no {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: var(--main-600);
-}
-
-.s-card h3 {
-  margin: 7px 0;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--gray-1000);
-}
-
-.s-card p {
-  font-size: 12.5px;
-  line-height: 1.7;
-  color: var(--gray-500);
-}
-
-.s-meter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 10px;
-}
-
-.s-meter span {
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: var(--gray-100);
-  color: var(--gray-600);
-  font-size: 11px;
-}
-
-/* ============ 3) 工位铭牌带 ============ */
-.dfp-plates-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-  padding-top: 30px;
-  padding-bottom: 8px;
-}
-
-.dfp-plate {
-  position: relative;
-  padding: 16px 18px 14px;
-  border: 1px solid var(--gray-200);
-  border-radius: 8px;
-  background: linear-gradient(180deg, var(--gray-0) 0%, var(--gray-25) 100%);
-  box-shadow:
-    inset 0 1px 0 var(--gray-0),
-    0 1px 2px var(--shadow-2);
-
-  /* 铭牌顶部双刻线 */
-  &::before {
-    content: '';
-    position: absolute;
-    top: 6px;
-    left: 18px;
-    right: 18px;
-    height: 1px;
-    background: var(--gray-150);
-    box-shadow: 0 3px 0 var(--gray-150);
-  }
-}
-
-/* 铆钉 */
-.p-screw {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--gray-300);
-  box-shadow:
-    inset 0 1px 1px var(--gray-0),
-    0 1px 0 var(--gray-0);
-}
-
-.p-screw-l {
-  top: 9px;
-  left: 9px;
-}
-
-.p-screw-r {
-  top: 9px;
-  right: 9px;
-}
-
-.dfp-plate b {
-  display: block;
-  margin: 8px 0 6px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: var(--gray-400);
-}
-
-.p-value {
-  font-size: 19px;
-  font-weight: 800;
-  color: var(--main-700);
-  font-variant-numeric: tabular-nums;
-}
-
-.p-desc {
-  margin-top: 4px;
-  font-size: 11.5px;
-  line-height: 1.6;
-  color: var(--gray-500);
-}
-
-/* ============ 4) 工位名录 ============ */
+/* ============ 3) 工位名录 ============ */
 .dfp-mods-cap {
   display: flex;
   align-items: baseline;
@@ -1118,7 +669,7 @@ onUnmounted(() => {
   }
 }
 
-/* ============ 5) 收工带 ============ */
+/* ============ 4) 收工带 ============ */
 .dfp-closing {
   position: relative;
   margin-top: 34px;
@@ -1241,14 +792,11 @@ onUnmounted(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dfp-flow,
-  .dfp-rail::before,
   .dfp-btn-primary::after {
     display: none;
   }
 
-  .run-dot,
-  .s-dot {
+  .run-dot {
     animation: none;
   }
 
@@ -1266,32 +814,6 @@ onUnmounted(() => {
     align-items: flex-start;
   }
 
-  /* 窄屏收起交错轨道，工位卡改常规网格 */
-  .dfp-rail,
-  .dfp-flow,
-  .s-stem,
-  .s-dot {
-    display: none;
-  }
-
-  .dfp-stations {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-  }
-
-  .dfp-station {
-    height: auto;
-  }
-
-  .s-card {
-    position: static;
-    height: auto;
-  }
-
-  .dfp-plates-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .c-wm {
     display: none;
   }
@@ -1303,11 +825,6 @@ onUnmounted(() => {
 }
 
 @media (max-width: 767px) {
-  .dfp-stations,
-  .dfp-plates-grid {
-    grid-template-columns: 1fr;
-  }
-
   .dfp-mod-row {
     flex-wrap: wrap;
   }
