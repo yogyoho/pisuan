@@ -7,6 +7,16 @@
         <h1>通用域</h1>
         <p>语料加工通用管线</p>
       </div>
+      <div class="chrome-overview">
+        <button
+          class="nav-item"
+          :class="{ on: route.path === '/domain-factory/general/overview' }"
+          @click="router.push('/domain-factory/general/overview')"
+        >
+          <LayoutDashboard :size="16" />
+          <span>总览</span>
+        </button>
+      </div>
       <div v-for="g in visibleGroups" :key="g.label" class="chrome-group">
         <div class="g-label">
           {{ g.label }} <span v-if="g.tag" class="g-tag">{{ g.tag }}</span>
@@ -30,8 +40,9 @@
       </div>
     </aside>
     <main class="chrome-main">
-      <!-- 容器屏（数据源/工作台/归属/admin 工具页）不自带外边距（原首页父级提供 24/28），画布统一补上 -->
-      <div class="chrome-canvas">
+      <!-- 容器屏（数据源/工作台/归属/admin 工具页）不自带外边距（原首页父级提供 24/28），画布统一补上；
+           总览屏直出 Landing 全幅背景，画布零内边距 -->
+      <div class="chrome-canvas" :class="{ 'chrome-canvas-bleed': isOverview }">
         <router-view />
       </div>
     </main>
@@ -49,6 +60,7 @@ import {
   ClipboardList,
   CornerDownLeft,
   Inbox,
+  LayoutDashboard,
   Rows3,
   ShieldCheck,
   Zap
@@ -103,6 +115,9 @@ const onNav = (it) => {
 
 // 平台配置组仅管理员可见
 const visibleGroups = computed(() => (userStore.isAdmin ? [...groups, ...adminGroups] : groups))
+
+// 总览屏直出知识工厂 Landing：画布零内边距，保留其全幅背景配方
+const isOverview = computed(() => route.name === 'GeneralOverview')
 </script>
 
 <style lang="less" scoped>
@@ -139,6 +154,10 @@ const visibleGroups = computed(() => (userStore.isAdmin ? [...groups, ...adminGr
     font-size: 11px;
     color: var(--color-text-tertiary);
   }
+}
+
+.chrome-overview {
+  padding: 12px 8px 0;
 }
 
 .chrome-group {
@@ -230,6 +249,11 @@ const visibleGroups = computed(() => (userStore.isAdmin ? [...groups, ...adminGr
 /* 通用域屏多为表格/双屏工作台，不锁 1180 画布宽（区别于 eia 表单屏） */
 .chrome-canvas {
   padding: 20px 24px 32px;
+}
+
+/* 总览屏：Landing 自带全幅背景与节奏，画布让位直出 */
+.chrome-canvas-bleed {
+  padding: 0;
 }
 
 /* 暗色：选中底/组标签底提亮一档（EiaDataLayout 同款） */

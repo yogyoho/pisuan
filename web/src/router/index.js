@@ -255,6 +255,13 @@ const router = createRouter({
           component: () => import('../components/factory-core/GeneralLayout.vue'),
           children: [
             {
+              // [pisuan-custom] 总览：一比一复用知识工厂 Landing，作通用域侧栏首项
+              path: 'overview',
+              name: 'GeneralOverview',
+              component: () => import('../views/GeneralOverviewView.vue'),
+              meta: { keepAlive: false, requiresAuth: true }
+            },
+            {
               path: '',
               name: 'GeneralData',
               component: () => import('../views/GeneralDataView.vue'),
