@@ -1,5 +1,6 @@
-<!-- [pisuan-custom] 通用域「总览」屏：知识工厂 Landing 的一比一独立复刻（2026-10-23 自 DomainFactoryView
-     整文件拷贝，非组件复用）——后续两侧各自演化：改知识工厂 hero 页不影响本屏，反之亦然。
+<!-- [pisuan-custom] 通用域「总览」屏：知识工厂 Landing 的独立复刻（2026-10-23 自 DomainFactoryView
+     整文件拷贝，非组件复用）——两侧各自演化：本屏较原页已去掉「工位名录 · 领域模块」横带，
+     改知识工厂 hero 页不影响本屏，反之亦然。
      拷贝时含当时的状态修正（无数据统计 chip、数据源管理指向 data-sources）。样式 scoped 与原页互不泄漏；
      reveal 观察器按 .dfp 全局查询，两屏不同路由不并存，无串扰 -->
 <template>
@@ -107,52 +108,7 @@
         </div>
       </section>
 
-      <!-- 4) 工位名录：模块横带 + 屏级 chip 直达 -->
-      <section class="dfp-mods">
-        <div class="dfp-container">
-          <div class="dfp-mods-cap reveal">
-            <b>工位名录 · 领域模块</b>
-            <span>从横带进入模块，或点 chip 直达工作屏</span>
-          </div>
-          <div class="dfp-mods-list">
-            <div
-              v-for="(mod, i) in modules"
-              :key="mod.name"
-              class="dfp-mod-row reveal"
-              :class="{ 'is-ph': mod.placeholder }"
-              :style="{ '--stagger': i }"
-              :role="mod.to ? 'link' : undefined"
-              :tabindex="mod.to ? 0 : -1"
-              @click="mod.to && router.push(mod.to)"
-              @keydown.enter.prevent="mod.to && router.push(mod.to)"
-            >
-              <span class="m-bar" :class="mod.tone" aria-hidden="true"></span>
-              <span class="m-glyph" :class="mod.tone" aria-hidden="true">
-                <component :is="mod.icon" :size="15" />
-              </span>
-              <span class="m-name"
-                >{{ mod.name }}<span class="m-en">{{ mod.en }}</span></span
-              >
-              <span class="m-desc">{{ mod.desc }}</span>
-              <span v-if="mod.chips?.length" class="m-chips">
-                <button
-                  v-for="chip in mod.chips"
-                  :key="chip.label"
-                  v-show="!chip.admin || userStore.isAdmin"
-                  class="dfp-chip"
-                  :class="{ 'is-admin': chip.admin }"
-                  @click.stop="router.push(chip.to)"
-                >
-                  {{ chip.label }}
-                </button>
-              </span>
-              <ArrowRight v-if="mod.to" :size="16" class="m-arrow" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 5) 收工带 -->
+      <!-- 4) 收工带 -->
       <section class="dfp-closing">
         <span class="c-wm" aria-hidden="true">PIPELINE READY</span>
         <div class="dfp-container dfp-closing-inner reveal">
@@ -188,7 +144,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '@/stores/user'
 import { useInfoStore } from '@/stores/info'
 import {
   Sparkles,
@@ -196,14 +151,10 @@ import {
   Inbox,
   Workflow,
   Database,
-  PenLine,
-  Factory,
-  Sprout,
-  Mountain
+  PenLine
 } from '@lucide/vue'
 
 const router = useRouter()
-const userStore = useUserStore()
 const infoStore = useInfoStore()
 
 const footerCopyright = computed(() => {
@@ -261,53 +212,6 @@ const plates = [
   { label: 'REVIEW', value: '双屏校验', desc: '机器粗加工，专家双屏逐段终审' },
   { label: 'STORAGE', value: '3 层入库', desc: 'Milvus 向量 · SQL 结构 · 图谱关联' },
   { label: 'REUSE', value: '模板复用', desc: '章节模板与实体资产，跨报告沉淀复用' }
-]
-
-const modules = [
-  {
-    name: '通用域',
-    en: 'GENERAL',
-    icon: Factory,
-    tone: '',
-    desc: '语料加工通用管线，领域无关动作与平台工具汇集于此',
-    to: '/domain-factory/general',
-    placeholder: false,
-    chips: [
-      { label: '数据源管理', to: '/domain-factory/general/data-sources' },
-      { label: 'ETL 工作台', to: '/domain-factory/general/workbench' },
-      { label: '归属管理', to: '/domain-factory/general/attribution' },
-      { label: '平台工具', to: '/domain-factory/general/prompt-config', admin: true }
-    ]
-  },
-  {
-    name: '环评域',
-    en: 'EIA',
-    icon: Sprout,
-    tone: 'is-eia',
-    desc: '环评数据资产工厂，coal-eia-writer 技能资产加工与维护',
-    to: '/domain-factory/eia-data',
-    placeholder: false,
-    chips: [
-      { label: '总览', to: '/domain-factory/eia-data' },
-      { label: '护栏词表', to: '/domain-factory/eia-data/lexicon' },
-      { label: '元数据', to: '/domain-factory/eia-data/meta' },
-      { label: '标准限值', to: '/domain-factory/eia-data/standards' },
-      { label: '章节口径', to: '/domain-factory/eia-data/sections' },
-      { label: '备料清单', to: '/domain-factory/eia-data/expectations' },
-      { label: '公式参数', to: '/domain-factory/eia-data/formulas' },
-      { label: '实体注册', to: '/domain-factory/eia-data/entities' }
-    ]
-  },
-  {
-    name: '矿井域',
-    en: 'MINING',
-    icon: Mountain,
-    tone: 'is-gray',
-    desc: '规划建设中，敬请期待',
-    to: '',
-    placeholder: true,
-    chips: []
-  }
 ]
 
 // Only show sections when scrolled into view; skip animation entirely for reduced motion
@@ -932,192 +836,7 @@ onUnmounted(() => {
   color: var(--gray-500);
 }
 
-/* ============ 4) 工位名录 ============ */
-.dfp-mods-cap {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  padding: 30px 0 12px;
-
-  b {
-    font-size: 17px;
-    font-weight: 800;
-    color: var(--gray-1000);
-  }
-
-  span {
-    font-size: 12px;
-    color: var(--gray-400);
-  }
-}
-
-.dfp-mods-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-bottom: 8px;
-}
-
-.dfp-mod-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 15px 20px;
-  border: 1px solid var(--gray-200);
-  border-radius: 10px;
-  background: var(--gray-0);
-  cursor: pointer;
-  transition:
-    box-shadow 0.2s ease,
-    transform 0.2s ease,
-    border-color 0.2s ease,
-    background 0.2s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-    border-color: var(--main-400);
-    background: rgba(var(--main-color-rgb), 0.03);
-    box-shadow: 0 8px 22px var(--shadow-3);
-  }
-
-  &:focus-visible {
-    outline: none;
-    border-color: var(--main-500);
-    box-shadow: 0 0 0 2px var(--main-100);
-  }
-
-  &.is-ph {
-    border-style: dashed;
-    opacity: 0.55;
-    cursor: default;
-
-    &:hover {
-      transform: none;
-      border-color: var(--gray-200);
-      background: var(--gray-0);
-      box-shadow: none;
-    }
-  }
-}
-
-.m-bar {
-  flex: none;
-  width: 4px;
-  height: 28px;
-  border-radius: 2px;
-  background: var(--main-500);
-
-  &.is-eia {
-    background: var(--second-500);
-  }
-
-  &.is-gray {
-    background: var(--gray-300);
-  }
-}
-
-/* 模块图标块 */
-.m-glyph {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  background: var(--main-50);
-  color: var(--main-600);
-
-  &.is-eia {
-    background: var(--second-50);
-    color: var(--second-700);
-  }
-
-  &.is-gray {
-    background: var(--gray-100);
-    color: var(--gray-400);
-  }
-}
-
-.m-name {
-  font-size: 15.5px;
-  font-weight: 700;
-  white-space: nowrap;
-  color: var(--gray-1000);
-}
-
-.m-en {
-  margin-left: 6px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  color: var(--gray-400);
-}
-
-.m-desc {
-  flex: 1;
-  font-size: 12.5px;
-  color: var(--gray-500);
-}
-
-.m-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  justify-content: flex-end;
-  max-width: 420px;
-}
-
-.dfp-chip {
-  padding: 3px 10px;
-  border: 1px solid var(--gray-200);
-  border-radius: 999px;
-  background: var(--gray-0);
-  color: var(--gray-600);
-  font-size: 11.5px;
-  font-family: inherit;
-  cursor: pointer;
-  transition:
-    color 0.15s ease,
-    border-color 0.15s ease,
-    background 0.15s ease,
-    transform 0.15s ease;
-
-  &:hover {
-    border-color: var(--main-400);
-    color: var(--main-700);
-    background: var(--main-50);
-    transform: translateY(-1px);
-  }
-
-  &.is-admin {
-    border-style: dashed;
-    border-color: var(--second-200);
-    color: var(--second-700);
-    background: var(--second-50);
-
-    &:hover {
-      border-color: var(--second-400);
-      color: var(--second-700);
-      background: var(--second-100);
-    }
-  }
-}
-
-.m-arrow {
-  flex: none;
-  color: var(--gray-400);
-  transition:
-    color 0.2s ease,
-    transform 0.2s ease;
-
-  .dfp-mod-row:hover & {
-    color: var(--main-500);
-    transform: translateX(2px);
-  }
-}
-
-/* ============ 5) 收工带 ============ */
+/* ============ 4) 收工带 ============ */
 .dfp-closing {
   position: relative;
   margin-top: 34px;
@@ -1295,29 +1014,12 @@ onUnmounted(() => {
     display: none;
   }
 
-  .m-chips {
-    max-width: none;
-    justify-content: flex-start;
-  }
 }
 
 @media (max-width: 767px) {
   .dfp-stations,
   .dfp-plates-grid {
     grid-template-columns: 1fr;
-  }
-
-  .dfp-mod-row {
-    flex-wrap: wrap;
-  }
-
-  .m-desc {
-    flex-basis: 100%;
-    order: 3;
-  }
-
-  .m-chips {
-    order: 4;
   }
 
   .dfp-top-cta .dfp-btn {
