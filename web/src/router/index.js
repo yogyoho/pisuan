@@ -255,14 +255,19 @@ const router = createRouter({
           component: () => import('../components/factory-core/GeneralLayout.vue'),
           children: [
             {
-              // [pisuan-custom] 总览：一比一复用知识工厂 Landing，作通用域侧栏首项
+              // [pisuan-custom] 总览：知识工厂 Landing 的一比一独立复刻（后续两侧各自演化），作通用域侧栏首项
               path: 'overview',
               name: 'GeneralOverview',
               component: () => import('../views/GeneralOverviewView.vue'),
               meta: { keepAlive: false, requiresAuth: true }
             },
             {
+              // 进通用域默认打开总览
               path: '',
+              redirect: { name: 'GeneralOverview' }
+            },
+            {
+              path: 'data-sources',
               name: 'GeneralData',
               component: () => import('../views/GeneralDataView.vue'),
               meta: { keepAlive: false, requiresAuth: true }
@@ -277,12 +282,6 @@ const router = createRouter({
               path: 'attribution',
               name: 'GeneralAttribution',
               component: () => import('../views/GeneralAttributionView.vue'),
-              meta: { keepAlive: false, requiresAuth: true }
-            },
-            {
-              path: 'stats',
-              name: 'GeneralStats',
-              component: () => import('../views/GeneralStatsView.vue'),
               meta: { keepAlive: false, requiresAuth: true }
             },
             {

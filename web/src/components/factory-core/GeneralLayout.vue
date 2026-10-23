@@ -56,7 +56,6 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   BookOpen,
   Box,
-  ChartColumn,
   ClipboardList,
   CornerDownLeft,
   Inbox,
@@ -78,7 +77,7 @@ const groups = [
     label: '加工管线',
     tag: '3 页',
     items: [
-      { to: '/domain-factory/general', label: '数据源管理', icon: Inbox },
+      { to: '/domain-factory/general/data-sources', label: '数据源管理', icon: Inbox },
       { to: '/domain-factory/general/workbench', label: 'ETL 清洗工作台', icon: ClipboardList },
       { to: '/domain-factory/general/attribution', label: '归属管理', icon: Rows3 }
     ]
@@ -87,7 +86,6 @@ const groups = [
     label: '数据与工具',
     tag: '',
     items: [
-      { to: '/domain-factory/general/stats', label: '数据统计', icon: ChartColumn },
       { label: '规范库加工', icon: ShieldCheck, drawer: true }
     ]
   }

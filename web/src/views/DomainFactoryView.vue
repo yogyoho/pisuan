@@ -90,7 +90,7 @@
         </div>
       </section>
 
-      <!-- 3) 工位铭牌带（机制口径，仿设备铭牌；运营统计在通用域「数据统计」屏） -->
+      <!-- 3) 工位铭牌带（机制口径，仿设备铭牌） -->
       <section class="dfp-plates">
         <div class="dfp-container dfp-plates-grid">
           <div
@@ -222,7 +222,7 @@ const stations = [
     desc: '领域文档批量上传，选择领域与报告类型，自动建任务入队解析。',
     meters: ['批量上传', '自动入队'],
     screen: '数据源管理',
-    to: '/domain-factory/general'
+    to: '/domain-factory/general/data-sources'
   },
   {
     no: 'STATION 02',
@@ -274,10 +274,9 @@ const modules = [
     to: '/domain-factory/general',
     placeholder: false,
     chips: [
-      { label: '数据源管理', to: '/domain-factory/general' },
+      { label: '数据源管理', to: '/domain-factory/general/data-sources' },
       { label: 'ETL 工作台', to: '/domain-factory/general/workbench' },
       { label: '归属管理', to: '/domain-factory/general/attribution' },
-      { label: '数据统计', to: '/domain-factory/general/stats' },
       { label: '平台工具', to: '/domain-factory/general/prompt-config', admin: true }
     ]
   },

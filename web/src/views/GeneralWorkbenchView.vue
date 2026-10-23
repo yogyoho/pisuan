@@ -4,7 +4,7 @@
     :task="task"
     @task-completed="handleTaskCompleted"
     @task-updated="handleTaskUpdated"
-    @navigate-to-data-sources="router.push('/domain-factory/general')"
+    @navigate-to-data-sources="router.push('/domain-factory/general/data-sources')"
   />
 </template>
 
@@ -28,7 +28,7 @@ const task = computed(() => (route.query.task ? { id: route.query.task } : null)
 const handleTaskCompleted = () => {
   message.success('任务处理完成')
   taskerStore.loadTasks()
-  router.push('/domain-factory/general')
+  router.push('/domain-factory/general/data-sources')
 }
 
 const handleTaskUpdated = () => {
