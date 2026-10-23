@@ -61,6 +61,7 @@
               src="/diagrams/corpus-writer-flow.html"
               title="语料提取加工管线与 coal-eia-writer 技能流程图"
               loading="lazy"
+              @load="fitFlowmap"
             ></iframe>
           </div>
         </div>
@@ -165,6 +166,47 @@ const footerCopyright = computed(() => {
   const c = infoStore.footer?.copyright
   return c ? ` · ${c}` : ''
 })
+
+// 图页为同源整页 viewer：仅藏其滚动条（工具栏等操作全保留），iframe 高度按内容实高校准；
+// 另把导出按钮对齐宿主主按钮配色（变量取宿主实值注入，随宿主明暗主题走）
+const fitFlowmap = (evt) => {
+  const frame = evt.target
+  const doc = frame.contentDocument
+  const root = doc?.documentElement
+  if (!root) return
+  root.style.overflow = 'hidden'
+  if (doc.body) doc.body.style.overflow = 'hidden'
+  const cs = getComputedStyle(document.documentElement)
+  const v = (name) => cs.getPropertyValue(name).trim()
+  const style = doc.createElement('style')
+  style.textContent = `
+    .toolbar #btn-export::before { display: none; }
+    .toolbar #btn-export {
+      background: ${v('--main-600')};
+      color: ${v('--gray-0')};
+      border-radius: 8px;
+      font-weight: 600;
+      /* 与左侧控件药丸视觉同高（36px），在 44px 行内居中 */
+      min-height: 2.25rem;
+    }
+    .toolbar #btn-export:hover,
+    .toolbar #btn-export[aria-expanded='true'] {
+      background: ${v('--main-500')};
+      color: ${v('--gray-0')};
+      box-shadow: 0 6px 16px ${v('--shadow-3')};
+    }
+    .toolbar #btn-export:active {
+      background: ${v('--main-700')};
+    }
+  `
+  doc.head.appendChild(style)
+  const sync = () => {
+    const h = Math.max(root.scrollHeight, doc.body?.scrollHeight || 0)
+    if (h > 0) frame.style.height = `${h}px`
+  }
+  sync()
+  new ResizeObserver(sync).observe(root)
+}
 
 
 const modules = [
@@ -466,20 +508,16 @@ onUnmounted(() => {
 }
 
 .dfp-flowmap-frame {
-  position: relative;
-  aspect-ratio: 910 / 528;
-  min-height: 420px;
   border: 1px solid var(--gray-200);
   border-radius: 12px;
   overflow: hidden;
   background: var(--gray-0);
 
   iframe {
-    position: absolute;
-    inset: 0;
     display: block;
     width: 100%;
-    height: 100%;
+    /* 初始估值，onLoad 后按图页内容实高校准 */
+    height: 1200px;
     border: 0;
   }
 }
