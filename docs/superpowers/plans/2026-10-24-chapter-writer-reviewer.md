@@ -43,7 +43,7 @@
 - Create: `references/style_targets/planning_eia.json`（运行产物，横城 bank 播种）
 - Create: `scripts/tests/test_style_targets.py`
 
-- [ ] **Step 2.1 (TDD 红)**：测试用 mini-bank fixture（两章各 2 切片）断言生成的 JSON 结构与数值（密度计算口径：正文剥表格/剥标记/剥空白）。
+- [ ] **Step 2.1 (TDD 红)**：测试用 mini-bank fixture（两章各 2 切片）断言生成的 JSON 结构与数值（密度计算口径：正文剥表格/剥标记/剥空白）。**章目录对齐警告**：bank slices 章目录含碎片段（ch0/ch0101/ch1200/ch1600 等瑕疵目录名），生成时必须按 `references/stages/<stage>.json` 章清单对齐，不盲信目录名。
 - [ ] **Step 2.2**：实现生成脚本；CLI：`python style_targets.py --stage planning_eia --bank <bank_dir> --out <out_json>`。
 - [ ] **Step 2.3 (绿)**：测试绿后对真实 bank 生成 planning_eia 基准落盘；spot-check ch4 表密度下限 ≈ 85（实测 106×0.8）、ch13 表上限 ≈ 10（原文结论章近 0 表）。
 
@@ -74,18 +74,21 @@
 
 **Verify:** 容器 pytest 全绿。
 
-### Task 5: data_expectations global_families 派生
+### Task 5: data_expectations global_families 派生 + corpus_meta variant 字段
 
 **Files:**
 - Modify: `references/data_expectations.json`（顶层增 `global_families`：由 build 逻辑派生——跨 ≥2 章 per_chapter 出现的族 ∪ 冻结依赖族；不手拍）
 - Modify: `scripts/progress.py` 或新 `scripts/derive_globals.py`（派生函数 + `ingest.py check --global-only` 语义：门1 全局包模式只校 global_families）
+- Modify: `references/samples_bank/corpus_meta.json`（增 `variant` 字段：planning 17 份即标 13 修编/3 新编；标题空缺的 11 份 project/post 记 `needs_review`；带 `variant_basis`）
 - Create: `scripts/tests/test_global_families.py`
 
 - [ ] **Step 5.1 (TDD 红)**：fixture expectations（3 章小样）断言派生：族出现在 ≥2 章 → global；单章族不进。
 - [ ] **Step 5.2**：实现派生 + 门1 全局模式开关；对真实 planning_eia 派生并落盘（预期 4~5 族，与 spec 预估比对，偏差记 `_comment`）。
 - [ ] **Step 5.3 (绿)**：测试绿。
+- [ ] **Step 5.4**：corpus_meta variant 落盘（脚本改写保持 JSON 其余字段零扰动；planning 标题即判：含「修编」→revision，不含→new）。
+- [ ] **Step 5.5**：needs_review 的 11 份标注补齐——LLM 读各报告 ch1/ch2 切片首段判「新建/改扩建（含调整规模）/不适用」初值 + 呈用户确认后回写；确认前不落终值。
 
-**Verify:** 单测绿 + `data_expectations.json` global_families 在场。
+**Verify:** 单测绿 + `data_expectations.json` global_families 在场 + corpus_meta 全部 33 份带 variant（或 needs_review）。
 
 ### Task 6: progress.py CONFIRMED 态机 + 分章编排
 
@@ -107,7 +110,7 @@
 - Create: `backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/`、`references/`（同步产物）
 - Create: `backend/test/unit/skills/test_chapter_skill_assets_sync.py`（宿主可收集路径——放 backend/test 下，勿放技能包内）
 
-- [ ] **Step 7.1**：写 SKILL.md（骨架照 coal-eia-writer 分节：角色/红线/工作区/管线步骤/预算停车/命令速查/能力边界；交互纪律全套继承；3a-2 与 3e 两处发卡即停显式写明）。
+- [ ] **Step 7.1**：写 SKILL.md（骨架照 coal-eia-writer 分节：角色/红线/工作区/管线步骤/预算停车/命令速查/能力边界；交互纪律全套继承；3a-2 与 3e 两处发卡即停显式写明；**开题两级路由选择卡**（stage 拒未启用 + 变体问法按 stage 分派，spec §3.2））。
 - [ ] **Step 7.2**：写同步脚本并执行生成 chapter-writer 包资产。
 - [ ] **Step 7.3 (TDD)**：守卫测试断言两包共用文件字节一致（hash 清单比对）；人为改一处跑红再恢复。
 - [ ] **Step 7.4**：`python -c "import ast; ast.parse(...)"` 语法过 + ruff 过 + 提交。
@@ -133,7 +136,7 @@
 **Files:** 无新增（验收执行 + 缺陷记录）
 
 - [ ] **Step 9.1**：预配置智能体（管理端）挂载三技能（coal-eia-writer/chapter-writer/reviewer）——手动配置步骤，留截图/说明。
-- [ ] **Step 9.2**：分章冒烟：横城 5 份资料走 chapter-writer——验收 1（ch2 文件卡片）/2（门1 只查全局包）/3（确认卡三选项+返工）/4（增量冻结 scope 日志）/5（文风门判定输出）/10（模板推荐链路含跳过路径）。
+- [ ] **Step 9.2**：分章冒烟：横城 5 份资料走 chapter-writer——验收 1（ch2 文件卡片）/2（门1 只查全局包）/3（确认卡三选项+返工）/4（增量冻结 scope 日志）/5（文风门判定输出）/10（模板推荐链路含跳过路径）/11（stage 拒未启用+修编变体过滤）。
 - [ ] **Step 9.3**：reviewer 独立冒烟：对横城原文 `--full` 产出发现单——验收 7。
 - [ ] **Step 9.4**：缺陷即发现即记 buglog；验收结果汇总回填本计划 checkbox 并汇报。
 
