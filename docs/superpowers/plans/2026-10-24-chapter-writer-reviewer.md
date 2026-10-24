@@ -68,9 +68,9 @@
 - Modify: `scripts/formula_runner.py`（`execute` 增 `--chapters ch2,ch6`：按 `state/dependency_manifest.json` 取目标章节消费的公式子集冻结；跨章公式已冻结的不重算；不带参数=全量，行为不变）
 - Create: `scripts/tests/test_formula_runner_scope.py`
 
-- [ ] **Step 4.1 (TDD 红)**：fixture manifest + 公式集：`--chapters ch2` 只冻结 ch2 消费公式，ch6 专属公式 formula_state 不出现；重复执行幂等；不带 `--chapters` 全量路径回归不破。
-- [ ] **Step 4.2**：实现 scope 过滤（消费=该章 sections 的 uses 并集；切片不准回退全量并在 stdout 报 SCOPE_FALLBACK——正确性优先）。
-- [ ] **Step 4.3 (绿)**：测试绿 + 既有 formula_runner 测试零回归。
+- [x] **Step 4.1 (TDD 红)**：fixture manifest + 公式集：`--chapters ch2` 只冻结 ch2 消费公式，ch6 专属公式 formula_state 不出现；重复执行幂等；不带 `--chapters` 全量路径回归不破。
+- [x] **Step 4.2**：实现 scope 过滤（消费=该章 sections 的 uses 并集；切片不准回退全量并在 stdout 报 SCOPE_FALLBACK——正确性优先）。
+- [x] **Step 4.3 (绿)**：测试绿 + 既有 formula_runner 测试零回归。
 
 **Verify:** 容器 pytest 全绿。
 

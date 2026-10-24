@@ -532,10 +532,13 @@ def override_data(data: Data, field: str, value: str) -> Data:
 
 # ── 计算编排（5 域 → 槽位注册表）────────────────────────────────────────────
 
-def compute(data: Data) -> tuple[dict, list[str]]:
+def compute(data: Data, only: frozenset[str] | None = None) -> tuple[dict, list[str]]:
     """全量计算 → (values: 槽位注册表, anomalies)。槽位 key 与 stages/planning_eia.json 的
     formulas 声明/{{SLOT:}} 引用逐一对齐（subsidence/fracture_zone/capacity:water/capacity:air/
-    noise/air_screen/water_balance——不自创键名）。"""
+    noise/air_screen/water_balance——不自创键名）。
+
+    only：章级 scope（resolve_scope 产物）。None=全量；给定时仅计算 scope 内公式族，
+    派生值块例外（常算，成本低且 stage {{SLOT}} 引用）。"""
     V: dict[str, dict] = {}
     anomalies: list[str] = []
 
@@ -546,6 +549,10 @@ def compute(data: Data) -> tuple[dict, list[str]]:
             raise ValueError(f"emit 拒绝非有限值 {key}={val}（dp={dp}）——检查上游输入缺参/除零")
         V[key] = {"value": float(d), "display": f"{d}", "unit": unit, "source": source, **(extra or {})}
 
+    def _in(*fams: str) -> bool:
+        """scope guard：only=None 全量；否则任一族在 only 内即放行（water 域转录槽同判）。"""
+        return only is None or any(f in only for f in fams)
+
     # ── 13 表单守卫（bug-2223 同构：空白表单=缺失）──
     sp = data.form("subsidence_params")
     if sp and not (dec(sp.get("q")).is_finite() and dec(sp.get("b")).is_finite() and dec(sp.get("tan_beta")).is_finite()):
@@ -553,7 +560,7 @@ def compute(data: Data) -> tuple[dict, list[str]]:
     per_mine = (sp or {}).get("per_mine") or []
 
     # ── D1 subsidence 概率积分法（W_max 层间叠加；变形/面积=软件转录，能力边界）──
-    if sp:
+    if sp and _in("subsidence"):
         if not per_mine:
             anomalies.append("13_subsidence_params.per_mine 缺失/空——subsidence 链未计算（缺参不编造）")
         mine_tot: dict[str, Decimal] = {}
@@ -600,11 +607,11 @@ def compute(data: Data) -> tuple[dict, list[str]]:
         if per_mine and not sw:
             anomalies.append("subsidence_params.software_results 未转录——subsidence.i_max/eps_max/K_max/U_max/"
                              "subsidence_area_km2 槽位未冻结（倾斜/曲率/水平变形/沉陷面积=软件成果走表单，禁公式硬凑——能力边界）")
-    else:
+    elif not sp and _in("subsidence", "fracture_zone"):
         anomalies.append("13_subsidence_params 缺失/空白——subsidence/fracture_zone 链未计算（缺参不编造）")
 
     # ── D2 fracture_zone 导水裂隙带/垮落带（三下规范套用公式；XS5）──
-    if sp and per_mine:
+    if sp and per_mine and _in("fracture_zone"):
         lith_form = sp.get("overburden_lithology")
         hf_max = hc_max = None
         for i, row in enumerate(per_mine):
@@ -637,7 +644,7 @@ def compute(data: Data) -> tuple[dict, list[str]]:
     # ── D4 water 域：capacity:water + water_balance + mine_inflow（XS12）──
     wf = data.form("water")
     inflow_total = D0
-    if wf.get("mine_inflow"):
+    if wf.get("mine_inflow") and _in("capacity:water", "water_balance"):
         for i, r0 in enumerate(wf["mine_inflow"]):
             v = dec(r0.get("inflow_m3_d"))
             if not v.is_finite():
@@ -655,7 +662,7 @@ def compute(data: Data) -> tuple[dict, list[str]]:
     cw_q, cw_cs, cw_cb = dec(_get(rw, "river_flow_m3s")), dec(_get(rw, "target_conc_mgL")), dec(_get(rw, "background_conc_mgL"))
     cw_k = dec(rw.get("decay_coefficient"))
     cw_k = cw_k if cw_k.is_finite() else D0  # 原脚本默认 0
-    if cw_q.is_finite() and cw_q > 0 and cw_cs.is_finite() and cw_cb.is_finite():
+    if cw_q.is_finite() and cw_q > 0 and cw_cs.is_finite() and cw_cb.is_finite() and _in("capacity:water"):
         core = _capacity_core({"type": "water", "river_flow_m3s": cw_q, "target_conc_mgL": cw_cs,
                                "background_conc_mgL": cw_cb, "decay_coefficient": cw_k})
         emit("capacity:water.capacity", core["capacity_tons_per_day"], "0.0001", "吨/天", "formula:capacity:water",
@@ -664,7 +671,7 @@ def compute(data: Data) -> tuple[dict, list[str]]:
         emit("capacity:water.capacity_t_y", core["capacity_tons_per_year"], "0.01", "吨/年", "formula:capacity:water")
         emit("capacity:water.dilution_tpd", core["dilution_tpd"], "0.0001", "吨/天", "formula:capacity:water")
         emit("capacity:water.selfpurify_tpd", core["selfpurify_tpd"], "0.0001", "吨/天", "formula:capacity:water")
-    else:
+    elif _in("capacity:water"):
         anomalies.append("14_water.receiving_water 不完整（river_flow/target_conc/background）——capacity:water 槽位未计算（缺参不编造）")
 
     bal = wf.get("balance") or {}
@@ -673,7 +680,7 @@ def compute(data: Data) -> tuple[dict, list[str]]:
     demand_items = bal.get("demand") or [{"name": k, "volume_m3d": dec(dm.get(k))}
                                          for k in ("production", "domestic", "ecological") if dec(dm.get(k)).is_finite()]
     reuse_items, discharge_items = bal.get("reuse") or [], bal.get("discharge") or []
-    if supply_items and demand_items:
+    if supply_items and demand_items and _in("water_balance"):
         core = _water_balance_core({"supply": supply_items, "demand": demand_items,
                                     "reuse": reuse_items, "discharge": discharge_items})
         emit("water_balance.supply", core["total_supply"], "0.01", "m3/d", "formula:water_balance",
@@ -691,14 +698,15 @@ def compute(data: Data) -> tuple[dict, list[str]]:
         ev = dec(bal.get("evaporation"))
         if ev.is_finite():
             emit("water_balance.evaporation", ev, "0.01", "m3/d", "form:14_water(水平衡表转录)")
-    else:
+    elif _in("water_balance"):
         anomalies.append("14_water 需水/供水输入不完整——water_balance.supply/demand/deficit 槽位未计算（差额禁手填，缺参不编造）")
 
     # ── D3a capacity:air A 值法（GB/T 13201-91 待核实纪律）──
     af = data.form("air")
     cap_in = af.get("capacity_inputs") or {}
     ca_s, ca_cs, ca_cb, ca_a = dec(_get(cap_in, "area")), dec(_get(cap_in, "target_conc")), dec(_get(cap_in, "background")), dec(_get(cap_in, "a_value"))
-    if ca_s.is_finite() and ca_s > 0 and ca_cs.is_finite() and ca_cb.is_finite() and ca_a.is_finite():
+    if (ca_s.is_finite() and ca_s > 0 and ca_cs.is_finite() and ca_cb.is_finite() and ca_a.is_finite()
+            and _in("capacity:air")):
         core = _capacity_core({"type": "air", "area_km2": ca_s, "target_conc_ugm3": ca_cs,
                                "background_conc_ugm3": ca_cb, "A_value": ca_a})
         emit("capacity:air.capacity", core["capacity_10kt_per_year"], "0.0001", "万吨/年", "formula:capacity:air",
@@ -706,13 +714,13 @@ def compute(data: Data) -> tuple[dict, list[str]]:
                          "background_conc_ugm3": float(ca_cb), "A_value": float(ca_a),
                          "note": "A 值 GB/T 13201-91【待核实】纪律；目标浓度查 GB 3095 limit_tables"}})
         emit("capacity:air.capacity_t_a", core["capacity_tons_per_year"], "0.01", "吨/年", "formula:capacity:air")
-    else:
+    elif _in("capacity:air"):
         anomalies.append("15_air.capacity_inputs 不完整（area/target_conc/background/a_value）——capacity:air 槽位未计算"
                          "（A 值 GB/T 13201-91 待核实，缺参不编造）")
 
     # ── D5 noise 多源叠加（单源衰减对齐 calc_noise + 能量合成）──
     nf = data.form("noise")
-    if nf.get("sources"):
+    if nf.get("sources") and _in("noise"):
         lim = nf.get("limits") or {}
         day_lim = dec(lim.get("day"))
         if not day_lim.is_finite():
@@ -775,12 +783,12 @@ def compute(data: Data) -> tuple[dict, list[str]]:
             if r is not None:
                 emit("noise.compliance_distance", r, "0.1", "m", "formula:noise",
                      {"limit_dBA": float(main_lim), "口径": f"点源组 vs {main_tag} 限值（GB 12348 厂界）"})
-    else:
+    elif _in("noise"):
         anomalies.append("16_noise.sources 缺失/空——noise 槽位未计算（缺参不编造）")
 
     # ── D3b air_screen 锅炉点源（仅点源适用——XS7/能力边界：扬尘面源禁硬套）──
     boilers = af.get("boilers") or []
-    if boilers:
+    if boilers and _in("air_screen"):
         met = af.get("meteorology") or {}
         u_def = dec(met.get("wind_speed"))
         u_def = u_def if u_def.is_finite() else Decimal("3.0")  # 原脚本筛选默认风
@@ -835,7 +843,7 @@ def compute(data: Data) -> tuple[dict, list[str]]:
         if g_max is not None:
             emit("air_screen.max_ground_conc", g_max, "0.0001", "ug/m3", "formula:air_screen", {"口径": f"全锅炉×污染物最大（{g_label}）"})
             emit("air_screen.max_conc_distance", g_dist, "0.1", "m", "formula:air_screen", {"口径": "对应最大落地距离"})
-    else:
+    elif _in("air_screen"):
         anomalies.append("15_air.boilers 缺失/空——air_screen 槽位未计算（仅锅炉点源适用；扬尘面源走源强取值禁硬套点源模型——XS7/能力边界）")
 
     # ── 派生值（禁手填——stage {{SLOT:}} 引用，source=derived）──
@@ -858,6 +866,34 @@ def compute(data: Data) -> tuple[dict, list[str]]:
         anomalies.append("investment.total_investment 未列——env_investment_ratio 派生槽位 skip 非 fail（XS9，横城实证）")
 
     return V, anomalies
+
+
+# ── 章级 scope（--chapters：消费 = 目标章 sections uses.formulas 并集；族集与 compute 块一一对应）──
+
+KNOWN_FAMILIES = frozenset({"subsidence", "fracture_zone", "capacity:water", "water_balance",
+                            "capacity:air", "noise", "air_screen"})
+
+
+def resolve_scope(chapters_arg: str | None, stage: dict) -> frozenset[str] | None:
+    """章清单 → 公式族 scope。None=全量（未指定，或切片不准回退——正确性优先）。空集合法（章无公式消费）。"""
+    if chapters_arg is None:
+        return None
+    chapters = stage.get("chapters", {})
+    fams: set[str] = set()
+    for cid in (c.strip() for c in chapters_arg.split(",")):
+        if not cid:
+            continue
+        ch = chapters.get(cid)
+        if ch is None:
+            print(f"SCOPE_FALLBACK: 未知章 {cid}——回退全量冻结")
+            return None
+        for sec in ch.get("sections", []):
+            for f in (sec.get("uses") or {}).get("formulas") or []:
+                if f not in KNOWN_FAMILIES:
+                    print(f"SCOPE_FALLBACK: 章 {cid} 未知公式族 {f}——回退全量冻结")
+                    return None
+                fams.add(f)
+    return frozenset(fams)
 
 
 # ── 状态落盘/差分 ────────────────────────────────────────────────────────────
@@ -925,7 +961,19 @@ def cmd_execute(args) -> int:
         print("[formula] 错误: execute 需要 --output <文件> 或 --state-dir <目录> 之一", file=sys.stderr)
         return EXIT_ERROR
     try:
-        values, anomalies = compute(_load(args))
+        data = _load(args)
+        only = resolve_scope(args.chapters, data.stage)
+        if only is not None:
+            print(f"SCOPE: --chapters {args.chapters} → 公式族 {sorted(only) if only else '（空——目标章无公式消费）'}")
+        values, anomalies = compute(data, only=only)
+        if only is not None:
+            # 章级切片增量冻结：已冻结槽位原样保留（跨章公式不重算覆盖），anomalies 并集
+            old = json.loads(out.read_text(encoding="utf-8")) if out.exists() else {}
+            merged = dict(old.get("values", {}))
+            for k, v in values.items():
+                merged.setdefault(k, v)
+            values = merged
+            anomalies = sorted(set(old.get("anomalies", [])) | set(anomalies))
         write_state(out, values, anomalies)
     except KeyError as e:
         print(f"[formula] 错误: {e}", file=sys.stderr)
@@ -1070,6 +1118,7 @@ def main() -> int:
     eg = e.add_mutually_exclusive_group()
     eg.add_argument("--output", help="状态文件完整路径（与 --state-dir 二选一）")
     eg.add_argument("--state-dir", help="状态目录（写 {state-dir}/formula_state.json，与 --output 二选一；bug-2223）")
+    e.add_argument("--chapters", help="章级切片：逗号分隔章 id（如 ch2,ch6）——只冻结目标章消费公式族；缺省=全量")
     e.set_defaults(func=cmd_execute)
 
     c = sub.add_parser("check", help="自洽重算 + 锚点回归")
