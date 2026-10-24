@@ -1,0 +1,344 @@
+{
+  "_comment": "文风基准（chapter-writer Task 2 生成）：各值来自 samples_bank 实测（下限=实测×0.8，上限=实测×1.25）；数字密度/均句长的分母是正文（剥表格行）有效字，表密度分母是全文有效字；fig_table_ref_min 为该章单份报告正文文表引用（由表/见表/详见表/如表）的最低次数（单份平均×0.5，地板 1）；status=ABSENT 表示 bank 无该章切片，chapgate 对 ABSENT 章跳过对应规则并如实上报。",
+  "stage": "planning_eia",
+  "banned_phrases": [
+    "总体而言",
+    "值得注意",
+    "至关重要",
+    "旨在",
+    "重要意义",
+    "换言之",
+    "毋庸置疑",
+    "不言而喻",
+    "众所周知",
+    "不难发现",
+    "进一步凸显"
+  ],
+  "chapters": {
+    "ch1": {
+      "status": "OK",
+      "effective_chars": 365249,
+      "table_rows": 2325,
+      "table_blocks": 143,
+      "fig_refs": 133,
+      "fig_table_ref_min": 4,
+      "avg_sent_len": {
+        "obs": 131.3,
+        "min": 105.0,
+        "max": 164.1
+      },
+      "num_per_k": {
+        "obs": 63.6,
+        "min": 50.8,
+        "max": 79.4
+      },
+      "tbl_per_10k": {
+        "obs": 63.7,
+        "min": 50.9,
+        "max": 79.6
+      }
+    },
+    "ch2": {
+      "status": "OK",
+      "effective_chars": 1284716,
+      "table_rows": 11450,
+      "table_blocks": 561,
+      "fig_refs": 444,
+      "fig_table_ref_min": 13,
+      "avg_sent_len": {
+        "obs": 58.1,
+        "min": 46.5,
+        "max": 72.7
+      },
+      "num_per_k": {
+        "obs": 45.2,
+        "min": 36.2,
+        "max": 56.5
+      },
+      "tbl_per_10k": {
+        "obs": 89.1,
+        "min": 71.3,
+        "max": 111.4
+      }
+    },
+    "ch3": {
+      "status": "OK",
+      "effective_chars": 1420453,
+      "table_rows": 20553,
+      "table_blocks": 980,
+      "fig_refs": 520,
+      "fig_table_ref_min": 15,
+      "avg_sent_len": {
+        "obs": 63.7,
+        "min": 51.0,
+        "max": 79.6
+      },
+      "num_per_k": {
+        "obs": 49.1,
+        "min": 39.3,
+        "max": 61.4
+      },
+      "tbl_per_10k": {
+        "obs": 144.7,
+        "min": 115.8,
+        "max": 180.9
+      }
+    },
+    "ch4": {
+      "status": "OK",
+      "effective_chars": 1359324,
+      "table_rows": 16668,
+      "table_blocks": 998,
+      "fig_refs": 586,
+      "fig_table_ref_min": 17,
+      "avg_sent_len": {
+        "obs": 72.0,
+        "min": 57.6,
+        "max": 90.0
+      },
+      "num_per_k": {
+        "obs": 46.2,
+        "min": 37.0,
+        "max": 57.7
+      },
+      "tbl_per_10k": {
+        "obs": 122.6,
+        "min": 98.1,
+        "max": 153.3
+      }
+    },
+    "ch5": {
+      "status": "OK",
+      "effective_chars": 539500,
+      "table_rows": 4431,
+      "table_blocks": 223,
+      "fig_refs": 166,
+      "fig_table_ref_min": 5,
+      "avg_sent_len": {
+        "obs": 68.9,
+        "min": 55.1,
+        "max": 86.1
+      },
+      "num_per_k": {
+        "obs": 30.1,
+        "min": 24.1,
+        "max": 37.7
+      },
+      "tbl_per_10k": {
+        "obs": 82.1,
+        "min": 65.7,
+        "max": 102.7
+      }
+    },
+    "ch6": {
+      "status": "OK",
+      "effective_chars": 1997014,
+      "table_rows": 17761,
+      "table_blocks": 644,
+      "fig_refs": 479,
+      "fig_table_ref_min": 14,
+      "avg_sent_len": {
+        "obs": 69.7,
+        "min": 55.8,
+        "max": 87.1
+      },
+      "num_per_k": {
+        "obs": 30.0,
+        "min": 24.0,
+        "max": 37.4
+      },
+      "tbl_per_10k": {
+        "obs": 88.9,
+        "min": 71.2,
+        "max": 111.2
+      }
+    },
+    "ch7": {
+      "status": "OK",
+      "effective_chars": 257198,
+      "table_rows": 2790,
+      "table_blocks": 260,
+      "fig_refs": 217,
+      "fig_table_ref_min": 7,
+      "avg_sent_len": {
+        "obs": 74.0,
+        "min": 59.2,
+        "max": 92.5
+      },
+      "num_per_k": {
+        "obs": 50.0,
+        "min": 40.0,
+        "max": 62.6
+      },
+      "tbl_per_10k": {
+        "obs": 108.5,
+        "min": 86.8,
+        "max": 135.6
+      }
+    },
+    "ch8": {
+      "status": "OK",
+      "effective_chars": 381580,
+      "table_rows": 1254,
+      "table_blocks": 73,
+      "fig_refs": 62,
+      "fig_table_ref_min": 2,
+      "avg_sent_len": {
+        "obs": 74.0,
+        "min": 59.2,
+        "max": 92.5
+      },
+      "num_per_k": {
+        "obs": 23.6,
+        "min": 18.9,
+        "max": 29.5
+      },
+      "tbl_per_10k": {
+        "obs": 32.9,
+        "min": 26.3,
+        "max": 41.1
+      }
+    },
+    "ch9": {
+      "status": "OK",
+      "effective_chars": 326334,
+      "table_rows": 817,
+      "table_blocks": 78,
+      "fig_refs": 61,
+      "fig_table_ref_min": 2,
+      "avg_sent_len": {
+        "obs": 67.3,
+        "min": 53.9,
+        "max": 84.2
+      },
+      "num_per_k": {
+        "obs": 18.9,
+        "min": 15.1,
+        "max": 23.6
+      },
+      "tbl_per_10k": {
+        "obs": 25.0,
+        "min": 20.0,
+        "max": 31.3
+      }
+    },
+    "ch10": {
+      "status": "OK",
+      "effective_chars": 93072,
+      "table_rows": 558,
+      "table_blocks": 41,
+      "fig_refs": 39,
+      "fig_table_ref_min": 1,
+      "avg_sent_len": {
+        "obs": 88.2,
+        "min": 70.5,
+        "max": 110.2
+      },
+      "num_per_k": {
+        "obs": 22.7,
+        "min": 18.2,
+        "max": 28.4
+      },
+      "tbl_per_10k": {
+        "obs": 60.0,
+        "min": 48.0,
+        "max": 74.9
+      }
+    },
+    "ch11": {
+      "status": "OK",
+      "effective_chars": 119387,
+      "table_rows": 674,
+      "table_blocks": 33,
+      "fig_refs": 35,
+      "fig_table_ref_min": 1,
+      "avg_sent_len": {
+        "obs": 75.0,
+        "min": 60.0,
+        "max": 93.7
+      },
+      "num_per_k": {
+        "obs": 30.1,
+        "min": 24.1,
+        "max": 37.7
+      },
+      "tbl_per_10k": {
+        "obs": 56.5,
+        "min": 45.2,
+        "max": 70.6
+      }
+    },
+    "ch12": {
+      "status": "OK",
+      "effective_chars": 186813,
+      "table_rows": 1068,
+      "table_blocks": 78,
+      "fig_refs": 60,
+      "fig_table_ref_min": 2,
+      "avg_sent_len": {
+        "obs": 82.5,
+        "min": 66.0,
+        "max": 103.1
+      },
+      "num_per_k": {
+        "obs": 33.7,
+        "min": 27.0,
+        "max": 42.1
+      },
+      "tbl_per_10k": {
+        "obs": 57.2,
+        "min": 45.7,
+        "max": 71.5
+      }
+    },
+    "ch13": {
+      "status": "OK",
+      "effective_chars": 266517,
+      "table_rows": 0,
+      "table_blocks": 0,
+      "fig_refs": 2,
+      "fig_table_ref_min": 1,
+      "avg_sent_len": {
+        "obs": 73.9,
+        "min": 59.1,
+        "max": 92.3
+      },
+      "num_per_k": {
+        "obs": 24.4,
+        "min": 19.5,
+        "max": 30.5
+      },
+      "tbl_per_10k": {
+        "obs": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    }
+  },
+  "ignored_dirs": [
+    "ch0",
+    "ch0101",
+    "ch1200",
+    "ch14",
+    "ch140",
+    "ch1600",
+    "ch16531",
+    "ch20",
+    "ch200",
+    "ch201",
+    "ch2015",
+    "ch2017",
+    "ch2018",
+    "ch2019",
+    "ch2020",
+    "ch2500",
+    "ch40",
+    "ch41",
+    "ch42",
+    "ch43",
+    "ch45",
+    "ch565",
+    "ch8760",
+    "ch96"
+  ]
+}
