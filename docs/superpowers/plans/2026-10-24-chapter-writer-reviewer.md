@@ -96,9 +96,9 @@
 - Modify: `scripts/progress.py`（章状态增 `CONFIRMED`：`confirm-chapter chN` 命令；`next` 分章模式输出序：COLLECTING→模板推荐→派发→gate→review→确认卡→下一章；key_points 增量：`confirm-chapter` 时把本章 highlights 并入 `state/key_points.json`；恢复检测认 CONFIRMED 跳过前序）
 - Create: `scripts/tests/test_chapter_state_machine.py`
 
-- [ ] **Step 6.1 (TDD 红)**：状态机测试：PENDING→…→VERIFIED→REVIEWED→CONFIRMED 全链；CONFIRMED 章 next 跳过；BLOCKED 不阻后续章；key_points 增量合并幂等。
-- [ ] **Step 6.2**：实现（`init --mode chapter` 区分分章模式，默认 full 保持现行为零变化）。
-- [ ] **Step 6.3 (绿)**：测试绿 + writer 现有 progress 测试零回归。
+- [x] **Step 6.1 (TDD 红)**：状态机测试：PENDING→…→VERIFIED→REVIEWED→CONFIRMED 全链；CONFIRMED 章 next 跳过；BLOCKED 不阻后续章；key_points 增量合并幂等。
+- [x] **Step 6.2**：实现（`init --mode chapter` 区分分章模式，默认 full 保持现行为零变化）。
+- [x] **Step 6.3 (绿)**：测试绿 + writer 现有 progress 测试零回归。
 
 **Verify:** 容器 pytest 全绿（重点：`--mode full` 默认路径字节级不变）。
 
