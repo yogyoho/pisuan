@@ -12,7 +12,7 @@
 
 **执行约定（全程适用）：**
 - 分支 `pisuan-custom` 直接开发；改动后 `powershell.exe -NoProfile -File scripts/sync-dev.ps1` 热同步（须先 `docker stop pisuan-localized-web-1`，跑完 `docker start`，瞬态锁用 `-Revert` 恢复）。
-- 技能脚本测试在容器内跑：`MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 pytest /app/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests -q`；宿主跑需 temp-dir 拷贝模式（bug-4030 前车）。
+- 技能脚本测试在容器内跑：`MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 pytest /app/skill-sources/shared/coal-eia-writer/scripts/tests -q`（容器布局是 skill-sources/skill-projections，**无** /app/package 路径）；宿主跑需 temp-dir 拷贝模式（bug-4030 前车）。
 - ruff：宿主 `python -m ruff check backend/package/yuxi/agents/skills/`；每 Task 提交前过。
 - 提交信息中文 Conventional Commits，结尾 `Co-Authored-By: Claude Code <noreply@anthropic.com>`。
 - 严禁运行 `backend/test/integration/services/test_eia_lexicon_service_flow.py`（清空词表）。
@@ -29,10 +29,10 @@
 - Modify: `SKILL.md` 步骤 4.1 契约中 `references/paradigms/_roles.json` 路径 → `references/paradigms/roles/<stage>.json`（仅路径与查表说明，其余契约不动）
 - Create: `scripts/tests/test_paradigm_roles.py`
 
-- [ ] **Step 1.1 (TDD 红)**：写 `test_paradigm_roles.py`——① `roles/<stage>.json` schema：`roles` 键值六合法值（opener/baseline/analysis/measures/conclusion/process）；② planning_eia 映射覆盖 stage sections 清单全部 77 节（读 `references/stages/planning_eia.json` 对账，多节少节都红）；③ ch13 全部节 ∈ {conclusion, measures}；④ 未知角色值断言抛错（查表函数对非法值拒派语义）。容器内跑确认红。
-- [ ] **Step 1.2**：迁映射——现 `_roles.json` 内容为基，ch13 按结论章语义重归（S01 总体结论/S03 环保措施结论→conclusion；S09 措施汇总类→measures；其余逐节语义判型并在 JSON `_comment` 记归型理由）。
-- [ ] **Step 1.3**：写 `conclusion.md`（结论先行/逐条溯源前章/禁新增实体与数值——EO3 语义化；范文从 samples_bank/planning_eia/slices/ch13/ 去实体化提取）与 `process.md`（程序合规叙事：公参过程/两轮公示/意见处理）。
-- [ ] **Step 1.4 (绿)**：容器内测试全绿；`grep -rn "_roles.json" backend/package/yuxi/agents/skills/` 仅剩新路径引用（或零引用）。
+- [x] **Step 1.1 (TDD 红)**：写 `test_paradigm_roles.py`——① `roles/<stage>.json` schema：`roles` 键值六合法值（opener/baseline/analysis/measures/conclusion/process）；② planning_eia 映射覆盖 stage sections 清单全部 77 节（读 `references/stages/planning_eia.json` 对账，多节少节都红）；③ ch13 全部节 ∈ {conclusion, measures}；④ 未知角色值断言抛错（查表函数对非法值拒派语义）。容器内跑确认红。
+- [x] **Step 1.2**：迁映射——现 `_roles.json` 内容为基，ch13 按结论章语义重归（S01 总体结论/S03 环保措施结论→conclusion；S09 措施汇总类→measures；其余逐节语义判型并在 JSON `_comment` 记归型理由）。
+- [x] **Step 1.3**：写 `conclusion.md`（结论先行/逐条溯源前章/禁新增实体与数值——EO3 语义化；范文从 samples_bank/planning_eia/slices/ch13/ 去实体化提取）与 `process.md`（程序合规叙事：公参过程/两轮公示/意见处理）。
+- [x] **Step 1.4 (绿)**：容器内测试全绿；`grep -rn "_roles.json" backend/package/yuxi/agents/skills/` 仅剩新路径引用（或零引用）。
 
 **Verify:** 容器 pytest 绿 + SKILL.md 路径更新 + `git grep _roles` 无残留。
 
