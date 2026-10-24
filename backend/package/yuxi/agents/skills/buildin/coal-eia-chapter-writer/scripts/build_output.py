@@ -55,7 +55,9 @@ EXIT_OK, EXIT_ERROR = 0, 1
 SLOT_RE = re.compile(r"\{\{SLOT:([^}]+)\}\}")
 TABLE_RE = re.compile(r"\{\{TABLE:([^}]+)\}\}")
 TBLNO = "⟦TBLNO⟧"  # 机位表题占位：render_family 发射，inject _assign_table_numbers 落号（bug-394）
-WRITER_CAP_RE = re.compile(r"^表\s*\d+(?:[-.]\d+)?\s+([^，。；！？]+)$")  # 写手表题行「表 X-N 名称」（bug-394）
+WRITER_CAP_RE = re.compile(
+    r"^表\s*\d+(?:(?:[-.]\d+)+)?\s+([^，。；！？]+)$"
+)  # 写手表题行「表 X-N 名称」，编号允许多级后缀 X.Y-N（bug-4138）
 # N19 畸形 SLOT 修复（geo T4 页面实测 93 处穿透全门进终稿）：降级写手系统性产出
 # 「{{SLOT:key}单位}」错配收形与「{SLOT:key}」单开括号形——SLOT_RE 不匹配 → 不注入
 # 也不报 FAIL，静默进交付稿。注入前先归一化为 {{SLOT:key}}（单位等尾缀移到槽外），
@@ -106,7 +108,7 @@ def render_front_matter(stage: dict, data_dir: Path) -> str:
     if "forms" not in stage or "project" not in stage.get("forms", {}):
         # interface_skeleton（T1 接口骨架）：无表单注册 → 最小前置（题名+章目录），不编造数据。
         # 真实 stage（T3+）带 forms 后走 geo 完整路径（外封面/签署页/附图附表目录）。
-        lines = ["# 前置部分", "", f"## 报告题名", "", f"**{stage.get('stage', '环评报告')}报告**", "", "## 目录", ""]
+        lines = ["# 前置部分", "", "## 报告题名", "", f"**{stage.get('stage', '环评报告')}报告**", "", "## 目录", ""]
         lines.append("<!-- 页码列留空：Word 排版阶段由引用自动填充（设计决策 D11），Markdown 禁写页码 -->")
         lines.append("")
         for ch_id in chapter_order(stage.get("chapters", {})):
@@ -803,13 +805,16 @@ def make_inject(
 
 
 TBLNO_CAP_RE = re.compile(r"^\*\*⟦TBLNO⟧\s*(.+?)\*\*$")
+SECTION_HEAD_RE = re.compile(r"^#{2,4}\s*(\d+(?:\.\d+)+)")  # 节标题号（bug-4139 表题落号取前两段）
 
 
 def _assign_table_numbers(text: str, ctx: dict) -> str:
     """表题落号（bug-394）：render_family 的 ⟦TBLNO⟧ 占位与写手自带表题行统一为
-    「**表 {ch}-{seq} 名称**」，序号章内连续（ctx 由调用方逐章重置）。
+    「**表 {ch}.{sec}-{seq} 名称**」，序号节内连续（bug-4139：节号从 #### 标题前两段
+    推导，如 2.2——真实报告与写手正文引用均为此形；节前定位的表落章级「表 {ch}-{seq}」；
+    ctx 由调用方逐章重置）。
 
-    - 机表占位 `**⟦TBLNO⟧ 名称**`：占位换章内机发序号
+    - 机表占位 `**⟦TBLNO⟧ 名称**`：占位换机发序号
     - 写手表题行 `表 X-N 名称`：紧邻字面表行 → 表号改机发、名称保留；紧邻机表占位
       → 并入机表表题（写手名优先，自编号行删除）——写手自编号与全书序号体系冲突
       （第一章自发的「表 1-1」与后文无号并存，bug-394）
@@ -818,9 +823,25 @@ def _assign_table_numbers(text: str, ctx: dict) -> str:
     lines = text.split("\n")
     out: list[str] = []
     ch = ctx.get("ch_no", "")
+    sec = ""
+    sec_seq: dict[str, int] = {}
+    ch_seq = 0
+
+    def _next_no() -> str:
+        nonlocal ch_seq
+        if sec:
+            sec_seq[sec] = sec_seq.get(sec, 0) + 1
+            return f"{sec}-{sec_seq[sec]}"  # sec 已含章号（如 2.2），不重拼
+        ch_seq += 1
+        return f"{ch}-{ch_seq}" if ch else str(ch_seq)
+
     i = 0
     while i < len(lines):
         ln = lines[i]
+        m_sec = SECTION_HEAD_RE.match(ln)
+        if m_sec:
+            parts = m_sec.group(1).split(".")
+            sec = ".".join(parts[:2]) if len(parts) >= 2 else ""
         m_no = TBLNO_CAP_RE.match(ln)
         if m_no:
             j = i + 1
@@ -836,7 +857,7 @@ def _assign_table_numbers(text: str, ctx: dict) -> str:
                     name = m_prev.group(1).strip()
                     del out[k:]
             if ch and j < len(lines) and lines[j].startswith("|"):
-                out.append(f"**表 {ch}-{next(ctx['seq'])} {name}**")
+                out.append(f"**表 {_next_no()} {name}**")
             else:
                 out.append(f"**{name}**")
             i += 1
@@ -847,7 +868,7 @@ def _assign_table_numbers(text: str, ctx: dict) -> str:
             while j < len(lines) and not lines[j].strip():
                 j += 1
             if j < len(lines) and lines[j].startswith("|"):
-                out.append(f"**表 {ch}-{next(ctx['seq'])} {m_w.group(1).strip()}**")
+                out.append(f"**表 {_next_no()} {m_w.group(1).strip()}**")
                 i += 1
                 continue
         out.append(ln)
@@ -1114,7 +1135,7 @@ def assemble(
         errors.append(f"未知槽位 key（不在 formula_state.values，FAIL 阻断）: {sorted(unknown_keys)}")
     if slot_errors:
         errors.append(
-            f"槽位 display 非法（空/非标量，bug-3036 空槽静默渲染根治）:\n  " + "\n  ".join(sorted(slot_errors))
+            "槽位 display 非法（空/非标量，bug-3036 空槽静默渲染根治）:\n  " + "\n  ".join(sorted(slot_errors))
         )
     if errors:
         raise ValueError(f"{len(errors)} 项未过门（一次报齐，逐项修完再重跑——勿修一章跑一轮）:\n" + "\n".join(errors))

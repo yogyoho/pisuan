@@ -221,8 +221,8 @@ def next_action(doc: dict, state_dir: Path) -> str:
         ps = pending_sections(c)
         lines += [
             f"[NEXT] 按波派发: {c}（PENDING，wave1 独立章；节级派发，D9 粒度分层）",
-            f"动作: 按 SKILL.md 步骤4 派发契约组装 prompt（stage sections 要素链+范文索引+节级深度目标），batch_task 分波派子代理直写 state/sections/<节id>.md（每波 5–10 节）",
-            f"约束: 每轮 ≤3 个并发 task()（超发被运行时静默丢弃）；子代理只回 ≤10 行摘要（含本节要点）",
+            "动作: 按 SKILL.md 步骤4 派发契约组装 prompt（stage sections 要素链+范文索引+节级深度目标），batch_task 分波派子代理直写 state/sections/<节id>.md（每波 5–10 节）",
+            "约束: 每轮 ≤3 个并发 task()（超发被运行时静默丢弃）；子代理只回 ≤10 行摘要（含本节要点）",
             f"记账（批量原语，节粒度禁逐节单发——bug-3048）: progress.py mark --sections {','.join(ps[:5])}{'…' if len(ps) > 5 else ''} DRAFTED --state-dir {sd}",
             f"收口: 波内节稿拼章稿 state/chapters/{c}.md → mark {c} DRAFTED → gate（PASS 章与其全部节自动转 VERIFIED）",
         ]
@@ -266,7 +266,9 @@ def next_action(doc: dict, state_dir: Path) -> str:
 
     # FINAL
     blocked = sorted(c for c, s in chs.items() if s["status"] == "BLOCKED")
-    gate_cmd = _self_cmd("run-stage", "finalize", "--state-dir", sd, "--outputs-dir", '"<OUTPUTS>"', "--task", '"<本轮用户指令一句话>"')
+    gate_cmd = _self_cmd(
+        "run-stage", "finalize", "--state-dir", sd, "--outputs-dir", '"<OUTPUTS>"', "--task", '"<本轮用户指令一句话>"'
+    )
     if blocked:
         lines += [
             f"[NEXT] 终验（分级交付）: 已批准降档 {blocked}",
@@ -300,25 +302,42 @@ def next_action_chapter(doc: dict, state_dir: Path) -> str:
     if current is None:
         if blocked:
             un = sorted(set(blocked) - approved_set(doc))
-            return "\n".join([
-                "PHASE: NEGOTIATE",
-                f"[NEXT] 协商: 未批准 BLOCKED: {', '.join(un)}",
-                "动作: 组差距表（章/实际 eff/目标/缺口——取各章 gate_detail）单表单 ask_clarification 三选项:",
-                "  ① 补数据（回 ingest → formula_runner → mark DRAFTED 重派重跑门）",
-                f"  ② 批准降档（progress.py approve-downgrade --state-dir {sd} --chapters {','.join(un)} --note \"<用户批准依据>\"）",
-                "  ③ [待确认] 收尾（分级交付，终验 --allow-partial）",
-                "期望: 用户答复后才推进（挂起即停，不推进）",
-            ])
-        return "\n".join([
-            "PHASE: FINAL",
-            f"[NEXT] 终验: 全部章 CONFIRMED（{len(done)}/{len(act)}）",
-            f"命令: {_self_cmd('run-stage', 'finalize', '--state-dir', sd, '--outputs-dir', '\"<OUTPUTS>\"', '--task', '\"<本轮用户指令一句话>\"')}",
-            "说明: run-stage finalize 一次 bash 完成 build_output → consistency.py → snapshot.py save",
-            "期望 rc: 0 → stdout 含 BUILD_READY/MANIFEST_READY（整行+退出码原样粘贴进回复）→ 交付",
-            "        consistency rc=3（WARN/MANUAL 透传）→ 逐条汇报用户后交付；rc=1/2 → stderr 原样呈现，修章重跑",
-        ])
+            return "\n".join(
+                [
+                    "PHASE: NEGOTIATE",
+                    f"[NEXT] 协商: 未批准 BLOCKED: {', '.join(un)}",
+                    "动作: 组差距表（章/实际 eff/目标/缺口——取各章 gate_detail）单表单 ask_clarification 三选项:",
+                    "  ① 补数据（回 ingest → formula_runner → mark DRAFTED 重派重跑门）",
+                    f'  ② 批准降档（progress.py approve-downgrade --state-dir {sd} --chapters {",".join(un)} --note "<用户批准依据>"）',
+                    "  ③ [待确认] 收尾（分级交付，终验 --allow-partial）",
+                    "期望: 用户答复后才推进（挂起即停，不推进）",
+                ]
+            )
+        finalize_cmd = _self_cmd(
+            "run-stage",
+            "finalize",
+            "--state-dir",
+            sd,
+            "--outputs-dir",
+            '"<OUTPUTS>"',
+            "--task",
+            '"<本轮用户指令一句话>"',
+        )
+        return "\n".join(
+            [
+                "PHASE: FINAL",
+                f"[NEXT] 终验: 全部章 CONFIRMED（{len(done)}/{len(act)}）",
+                f"命令: {finalize_cmd}",
+                "说明: run-stage finalize 一次 bash 完成 build_output → consistency.py → snapshot.py save",
+                "期望 rc: 0 → stdout 含 BUILD_READY/MANIFEST_READY（整行+退出码原样粘贴进回复）→ 交付",
+                "        consistency rc=3（WARN/MANUAL 透传）→ 逐条汇报用户后交付；rc=1/2 → stderr 原样呈现，修章重跑",
+            ]
+        )
     phase = CHAPTER_PHASE_BY_STATUS[chs[current]["status"]]
-    lines = [f"PHASE: {phase}", f"[NEXT] 当前章: {current}（{chs[current]['status']}，进度 {len(done)}/{len(act)} 章已确认）"]
+    lines = [
+        f"PHASE: {phase}",
+        f"[NEXT] 当前章: {current}（{chs[current]['status']}，进度 {len(done)}/{len(act)} 章已确认）",
+    ]
     if done:
         lines.append(f"恢复: 前序已确认 {len(done)} 章（跳过）：{', '.join(done)}")
     if blocked:
@@ -341,7 +360,7 @@ def next_action_chapter(doc: dict, state_dir: Path) -> str:
     else:  # CONFIRM——发卡即停
         lines += [
             "动作: 单表单呈用户确认卡——章稿全文 + 审查发现单 + 本章要点；三选项 ① 确认进下一章 ② 修改意见（返工重写）③ 停车",
-            f"确认: progress.py confirm-chapter {current} --highlights \"要点1|要点2\" --state-dir {sd}（highlights 并入 state/key_points.json）",
+            f'确认: progress.py confirm-chapter {current} --highlights "要点1|要点2" --state-dir {sd}（highlights 并入 state/key_points.json）',
             "返工: progress.py mark " + current + " DRAFTED --state-dir " + sd + "（确认卡意见进重写 prompt）",
         ]
     return "\n".join(lines)
@@ -404,7 +423,9 @@ def cmd_init(args: argparse.Namespace) -> int:
     save(state_dir, doc)
     n = len(doc["chapters"])
     extra = "（分章模式：逐章 COLLECTING→gate→review→确认卡）" if args.mode == "chapter" else ""
-    print(f"PROGRESS_INIT: {n} 章 {n_sections} 节全部 PENDING（{', '.join(doc['chapters'])}）→ 下一步 progress.py next{extra}")
+    print(
+        f"PROGRESS_INIT: {n} 章 {n_sections} 节全部 PENDING（{', '.join(doc['chapters'])}）→ 下一步 progress.py next{extra}"
+    )
     return EXIT_OK
 
 
@@ -439,17 +460,26 @@ def cmd_mark(args: argparse.Namespace) -> int:
     doc = load(state_dir)
     status = args.status
     if bool(args.sections) == bool(args.chapter):
-        print("[progress] 用法: mark <chN> <status>（章）或 mark --sections <csv> <status>（节批量）——二选一", file=sys.stderr)
+        print(
+            "[progress] 用法: mark <chN> <status>（章）或 mark --sections <csv> <status>（节批量）——二选一",
+            file=sys.stderr,
+        )
         return EXIT_ERROR
     if status == "VERIFIED":
         # bug-3049 定案（节级同构，两层模型改造点②）：--gate PASS 是调用方自证（自申报），
         # 非官方凭据——VERIFIED 一律拒绝手动 mark。唯一合法通道 = progress.py gate
         # （内部真跑 build_output.run_chapter_gate，PASS 章自动回写 VERIFIED 并随章回写全部节）。
         who = f"--sections {args.sections}" if args.sections else args.chapter
-        print(f"[progress] {who} 手动 mark VERIFIED 已禁用（--gate PASS 是自证，bug-3049）——节 VERIFIED 唯一通道 = 所属章 `progress.py gate` 真跑章门 rc=0 自动回写", file=sys.stderr)
+        print(
+            f"[progress] {who} 手动 mark VERIFIED 已禁用（--gate PASS 是自证，bug-3049）——节 VERIFIED 唯一通道 = 所属章 `progress.py gate` 真跑章门 rc=0 自动回写",
+            file=sys.stderr,
+        )
         return EXIT_ERROR
     if status == "CONFIRMED":
-        print("[progress] CONFIRMED 唯一通道 = confirm-chapter <chN>（确认卡契约——highlights 并入 state/key_points.json）", file=sys.stderr)
+        print(
+            "[progress] CONFIRMED 唯一通道 = confirm-chapter <chN>（确认卡契约——highlights 并入 state/key_points.json）",
+            file=sys.stderr,
+        )
         return EXIT_ERROR
     if status == "REVIEWED" and args.sections:
         print("[progress] REVIEWED 是章级状态（审查步）——节无独立审查，节批量不接受 REVIEWED", file=sys.stderr)
@@ -460,7 +490,9 @@ def cmd_mark(args: argparse.Namespace) -> int:
 
     # ── 节批量记账（两层模型改造点④：原子批量——任一未知/非法全批拒绝，bug-3048）──
     if args.sections:
-        wanted = list(dict.fromkeys(x.strip() for x in args.sections.split(",") if x.strip()))  # 去重保序——重复 id 不重复记账
+        wanted = list(
+            dict.fromkeys(x.strip() for x in args.sections.split(",") if x.strip())
+        )  # 去重保序——重复 id 不重复记账
         if not wanted:
             print("[progress] --sections 为空", file=sys.stderr)
             return EXIT_ERROR
@@ -506,7 +538,10 @@ def cmd_mark(args: argparse.Namespace) -> int:
         return EXIT_ERROR
     cur = doc["chapters"][ch_id]["status"]
     if status not in TRANSITIONS[cur]:
-        print(f"[progress] 非法转移 {ch_id}: {cur} → {status}（合法: {cur} → {sorted(TRANSITIONS[cur])}）", file=sys.stderr)
+        print(
+            f"[progress] 非法转移 {ch_id}: {cur} → {status}（合法: {cur} → {sorted(TRANSITIONS[cur])}）",
+            file=sys.stderr,
+        )
         return EXIT_ERROR
     ent = doc["chapters"][ch_id]
     ent["status"] = status
@@ -522,7 +557,7 @@ def cmd_mark(args: argparse.Namespace) -> int:
         ent["blocked_reason"] = args.detail or ("门 FAIL 且重派耗尽" if args.gate != "PASS" else "派发额度耗尽")
     elif status == "ABSENT":
         # stage 条件开关驱动（双模式互换/可选章缺席）：章 ABSENT 级联其全部节 ABSENT
-        #（门/组装/记账跳过同语义，两层状态模型）；开关回翻逐节 PENDING 复位（章内节状态按节回翻）。
+        # （门/组装/记账跳过同语义，两层状态模型）；开关回翻逐节 PENDING 复位（章内节状态按节回翻）。
         cascaded = 0
         for s in ent.get("sections", []):
             if s.get("status") != "ABSENT":
@@ -578,7 +613,10 @@ def cmd_gate(args: argparse.Namespace) -> int:
     state_dir = Path(args.state_dir)
     doc = load(state_dir)
     if not doc.get("stage_path") or not doc.get("data_dir"):
-        print("[progress] progress.json 缺 stage_path/data_dir（init 须带 --stage 与 --data-dir 才能批量跑门）", file=sys.stderr)
+        print(
+            "[progress] progress.json 缺 stage_path/data_dir（init 须带 --stage 与 --data-dir 才能批量跑门）",
+            file=sys.stderr,
+        )
         return EXIT_ERROR
     if args.chapters:
         wanted = [c.strip() for c in args.chapters.split(",") if c.strip()]
@@ -594,7 +632,9 @@ def cmd_gate(args: argparse.Namespace) -> int:
     stage = json.loads(Path(doc["stage_path"]).read_text(encoding="utf-8"))
     import build_output  # 同目录脚本；targets 语义与 build_output CLI 一致（--targets 仅调试）
 
-    targets, _src = build_output.resolve_targets(args.targets, Path(doc["stage_path"]), data_dir=Path(doc["data_dir"]))  # EAI-CUSTOM (geo-sample-bank Phase 2 T4)
+    targets, _src = build_output.resolve_targets(
+        args.targets, Path(doc["stage_path"]), data_dir=Path(doc["data_dir"])
+    )  # EAI-CUSTOM (geo-sample-bank Phase 2 T4)
     passed: list[str] = []
     failed: list[str] = []
     for ch in wanted:
@@ -608,7 +648,10 @@ def cmd_gate(args: argparse.Namespace) -> int:
             # coal-eia T1：冻结层缺失（formula_state.json 不存在）等文件级错误按该章门 FAIL 处理，
             # 不让 OSError 逃出批量门砸掉整批（geo 同路径会裸崩——两层模型下步骤2 先于步骤4 不再是隐含前提）。
             failed.append(ch)
-            print(f"CHAPTER_GATE_FAIL: {ch}\n文件级错误（冻结层/章稿缺失？先跑 run-stage freeze 或补齐产物）: {e}", file=sys.stderr)
+            print(
+                f"CHAPTER_GATE_FAIL: {ch}\n文件级错误（冻结层/章稿缺失？先跑 run-stage freeze 或补齐产物）: {e}",
+                file=sys.stderr,
+            )
     skipped: list[str] = []
     for ch in passed:
         ent = doc["chapters"][ch]
@@ -622,12 +665,19 @@ def cmd_gate(args: argparse.Namespace) -> int:
         # 章门 PASS → 随章回写节 VERIFIED（唯一通道，改造点②）
         sec_skipped = _writeback_sections(doc, ch)
         if sec_skipped:
-            print(f"[progress] {ch} 门过但节未推进（BLOCKED 节须先 mark --sections … DRAFTED 复活）: {sec_skipped}", file=sys.stderr)
+            print(
+                f"[progress] {ch} 门过但节未推进（BLOCKED 节须先 mark --sections … DRAFTED 复活）: {sec_skipped}",
+                file=sys.stderr,
+            )
     doc["phase"] = derive_phase_any(doc)
     save(state_dir, doc)
-    print(f"GATE_BATCH_DONE: passed={len(passed) - len(skipped)} failed={len(failed)}（failed: {', '.join(failed) or '无'}；skipped: {', '.join(skipped) or '无'}——stderr 逐条差距，原 prompt 重派 ≤1 次）")
+    print(
+        f"GATE_BATCH_DONE: passed={len(passed) - len(skipped)} failed={len(failed)}（failed: {', '.join(failed) or '无'}；skipped: {', '.join(skipped) or '无'}——stderr 逐条差距，原 prompt 重派 ≤1 次）"
+    )
     if skipped:
-        print(f"[progress] 门过但未推进（状态机不允许直接 {skipped}；先 mark DRAFTED 复活）: {skipped}", file=sys.stderr)
+        print(
+            f"[progress] 门过但未推进（状态机不允许直接 {skipped}；先 mark DRAFTED 复活）: {skipped}", file=sys.stderr
+        )
     return EXIT_ERROR if failed else EXIT_OK
 
 
@@ -652,9 +702,13 @@ def cmd_delivered(args: argparse.Namespace) -> int:
     if unknown:
         print(f"[progress] 未知节 {unknown}", file=sys.stderr)
         return EXIT_ERROR
-    not_verified = [f"{sid}({ent['status']})" for sid, (ch, ent) in zip(wanted, resolved) if ent["status"] != "VERIFIED"]
+    not_verified = [
+        f"{sid}({ent['status']})" for sid, (ch, ent) in zip(wanted, resolved) if ent["status"] != "VERIFIED"
+    ]
     if not_verified:
-        print(f"[progress] 交付回执拒绝（仅 VERIFIED 节可交付，原子全批拒绝）: {'; '.join(not_verified)}", file=sys.stderr)
+        print(
+            f"[progress] 交付回执拒绝（仅 VERIFIED 节可交付，原子全批拒绝）: {'; '.join(not_verified)}", file=sys.stderr
+        )
         return EXIT_ERROR
     fresh = 0
     for sid, (ch, ent) in zip(wanted, resolved):
@@ -670,7 +724,9 @@ def cmd_delivered(args: argparse.Namespace) -> int:
 
 def _run_py(script: str, *cmd_args: str) -> int:
     """子进程跑同目录脚本，stdout/stderr 原样透传（BUILD_READY/CHAPTER_GATE_PASS 等交付粘贴行不丢失）。"""
-    return subprocess.run([sys.executable, "-X", "utf8", str(Path(__file__).resolve().parent / script), *cmd_args]).returncode
+    return subprocess.run(
+        [sys.executable, "-X", "utf8", str(Path(__file__).resolve().parent / script), *cmd_args]
+    ).returncode
 
 
 def cmd_run_stage(args: argparse.Namespace) -> int:
@@ -687,11 +743,18 @@ def cmd_run_stage(args: argparse.Namespace) -> int:
         print("[progress] run-stage finalize 需要 --outputs-dir（交付目录）", file=sys.stderr)
         return EXIT_ERROR
     if args.stage_name == "freeze":
-        rc = _run_py("chapter_planner.py", "manifest", "--stage", stage, "--output", str(state_dir / "chapter_manifest.json"))
+        rc = _run_py(
+            "chapter_planner.py", "manifest", "--stage", stage, "--output", str(state_dir / "chapter_manifest.json")
+        )
         if rc:
             return rc
-        print("[run-stage] manifest OK → formula_runner execute（rc=3=有 anomalies，必须发卡逐条呈现用户确认）", file=sys.stderr)
-        return _run_py("formula_runner.py", "execute", "--stage", stage, "--data-dir", data, "--state-dir", str(state_dir))
+        print(
+            "[run-stage] manifest OK → formula_runner execute（rc=3=有 anomalies，必须发卡逐条呈现用户确认）",
+            file=sys.stderr,
+        )
+        return _run_py(
+            "formula_runner.py", "execute", "--stage", stage, "--data-dir", data, "--state-dir", str(state_dir)
+        )
     # finalize：交付名唯一来源 = data/ 表单（expected_deliverable_name，与 build_output 交付名门同源）
     import build_output
 
@@ -701,7 +764,10 @@ def cmd_run_stage(args: argparse.Namespace) -> int:
     build_args = ["--stage", stage, "--data-dir", data, "--state-dir", str(state_dir), "--output", str(report)]
     if blocked_approved or args.allow_partial:
         build_args.append("--allow-partial")
-        print(f"[run-stage] 分级交付模式（已批准降档 {sorted(blocked_approved)}——交付时如实汇报降档章节与差距）", file=sys.stderr)
+        print(
+            f"[run-stage] 分级交付模式（已批准降档 {sorted(blocked_approved)}——交付时如实汇报降档章节与差距）",
+            file=sys.stderr,
+        )
     rc = _run_py("build_output.py", *build_args)
     if rc:
         return rc
@@ -709,7 +775,18 @@ def cmd_run_stage(args: argparse.Namespace) -> int:
     # consistency_check.json；此处再以完整报告重跑会以不同 scope 覆盖同一 JSON（附录文本/全文字数
     # 差异 → 汇总漂移、rc 语义漂移）。统一 scope：优先复用 body 文件（build 成功时必在），CLI rc 语义不变。
     _body = state_dir / "consistency_body.md"
-    cons_args = ["--report", str(_body if _body.exists() else report), "--data-dir", data, "--stage", stage, "--state", str(state_dir / "formula_state.json"), "--output", str(state_dir / "consistency_check.json")]
+    cons_args = [
+        "--report",
+        str(_body if _body.exists() else report),
+        "--data-dir",
+        data,
+        "--stage",
+        stage,
+        "--state",
+        str(state_dir / "formula_state.json"),
+        "--output",
+        str(state_dir / "consistency_check.json"),
+    ]
     if STANDARDS_INDEX.exists():
         cons_args += ["--standards", str(STANDARDS_INDEX)]
     if CONTRACTS_INDEX.exists():
@@ -718,7 +795,10 @@ def cmd_run_stage(args: argparse.Namespace) -> int:
     if rc in (1, 2):
         return rc
     if rc == 3:
-        print("[run-stage] CONSISTENCY_RC3: 校验完成带 WARN/MANUAL——逐条汇报用户后再交付（state/consistency_check.json）", file=sys.stderr)
+        print(
+            "[run-stage] CONSISTENCY_RC3: 校验完成带 WARN/MANUAL——逐条汇报用户后再交付（state/consistency_check.json）",
+            file=sys.stderr,
+        )
     return _run_py(
         "snapshot.py",
         "save",
@@ -760,7 +840,9 @@ def cmd_confirm_chapter(args: argparse.Namespace) -> int:
     state_dir = Path(args.state_dir)
     doc = load(state_dir)
     if doc.get("mode") != "chapter":
-        print("[progress] confirm-chapter 仅分章模式（init --mode chapter）——full 批量管线无逐章确认卡", file=sys.stderr)
+        print(
+            "[progress] confirm-chapter 仅分章模式（init --mode chapter）——full 批量管线无逐章确认卡", file=sys.stderr
+        )
         return EXIT_ERROR
     ch_id = args.chapter
     if ch_id not in doc["chapters"]:
@@ -772,10 +854,16 @@ def cmd_confirm_chapter(args: argparse.Namespace) -> int:
         if ent.get("highlights") == highlights:
             print(f"CONFIRMED_ALREADY: {ch_id}（幂等重放，未变更）")
             return EXIT_OK
-        print(f"[progress] 非法转移 {ch_id}: CONFIRMED 已终态且要点变更——改确认卡先 mark {ch_id} DRAFTED 返工", file=sys.stderr)
+        print(
+            f"[progress] 非法转移 {ch_id}: CONFIRMED 已终态且要点变更——改确认卡先 mark {ch_id} DRAFTED 返工",
+            file=sys.stderr,
+        )
         return EXIT_ERROR
     if ent["status"] != "REVIEWED":
-        print(f"[progress] 非法转移 {ch_id}: {ent['status']} → CONFIRMED（合法: REVIEWED → CONFIRMED——章门 PASS 且审查收口后确认）", file=sys.stderr)
+        print(
+            f"[progress] 非法转移 {ch_id}: {ent['status']} → CONFIRMED（合法: REVIEWED → CONFIRMED——章门 PASS 且审查收口后确认）",
+            file=sys.stderr,
+        )
         return EXIT_ERROR
     ent["status"] = "CONFIRMED"
     ent["highlights"] = highlights
@@ -786,7 +874,9 @@ def cmd_confirm_chapter(args: argparse.Namespace) -> int:
     kp_path.write_text(json.dumps(kp, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     doc["phase"] = derive_phase_any(doc)
     save(state_dir, doc)
-    print(f"CONFIRMED_CHAPTER: {ch_id}（highlights {len(highlights)} 条并入 state/key_points.json；phase={doc['phase']}）")
+    print(
+        f"CONFIRMED_CHAPTER: {ch_id}（highlights {len(highlights)} 条并入 state/key_points.json；phase={doc['phase']}）"
+    )
     return EXIT_OK
 
 
@@ -798,7 +888,13 @@ def cmd_approve(args: argparse.Namespace) -> int:
     if unknown:
         print(f"[progress] 未知章节 {unknown}（在册: {chapter_order(doc['chapters'])}）", file=sys.stderr)
         return EXIT_ERROR
-    doc.setdefault("downgrade_approvals", []).append({"chapters": chs, "note": args.note or "", "approved_at": datetime.now().astimezone().isoformat(timespec="seconds")})
+    doc.setdefault("downgrade_approvals", []).append(
+        {
+            "chapters": chs,
+            "note": args.note or "",
+            "approved_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        }
+    )
     doc["phase"] = derive_phase_any(doc)
     save(state_dir, doc)
     print(f"APPROVED: 降档批准 {chs}（累计批准集 {sorted(approved_set(doc))}，phase={doc['phase']}）")
@@ -812,7 +908,12 @@ def main() -> int:
     sp.add_argument("--stage", required=True)
     sp.add_argument("--state-dir", required=True)
     sp.add_argument("--data-dir", help="记录数据目录（next 渲染精确命令用；缺省输出 <DATA> 占位）")
-    sp.add_argument("--mode", choices=["full", "chapter"], default="full", help="full=批量编排（缺省，行为零变化）；chapter=分章逐章管线（COLLECTING→gate→review→确认卡→下一章）")
+    sp.add_argument(
+        "--mode",
+        choices=["full", "chapter"],
+        default="full",
+        help="full=批量编排（缺省，行为零变化）；chapter=分章逐章管线（COLLECTING→gate→review→确认卡→下一章）",
+    )
     sp.set_defaults(fn=cmd_init)
     sp = sub.add_parser("next", help="控制器每轮先读：恰好一个下一步动作 + 精确命令 + 期望 rc")
     sp.add_argument("--state-dir", required=True)
@@ -820,7 +921,10 @@ def main() -> int:
     sp = sub.add_parser("status", help="全章状态表（含节子表计数）+ 派发计数 + 额度余量")
     sp.add_argument("--state-dir", required=True)
     sp.set_defaults(fn=cmd_status)
-    sp = sub.add_parser("mark", help="状态转移（DRAFTED/BLOCKED/ABSENT/PENDING；REVIEWED 章级审查步）；VERIFIED 禁手动（唯一通道=gate）、CONFIRMED 禁手动（唯一通道=confirm-chapter）。章: mark <chN> <status>；节批量: mark --sections <csv> <status>（bug-3048 批量原语）")
+    sp = sub.add_parser(
+        "mark",
+        help="状态转移（DRAFTED/BLOCKED/ABSENT/PENDING；REVIEWED 章级审查步）；VERIFIED 禁手动（唯一通道=gate）、CONFIRMED 禁手动（唯一通道=confirm-chapter）。章: mark <chN> <status>；节批量: mark --sections <csv> <status>（bug-3048 批量原语）",
+    )
     sp.add_argument("chapter", nargs="?", help="章 id（与 --sections 二选一）")
     sp.add_argument("status")
     sp.add_argument("--sections", help="节 id 逗号清单批量记账（原子——任一未知/非法全批拒绝），如 ch6_S01,ch6_S02")
@@ -828,17 +932,25 @@ def main() -> int:
     sp.add_argument("--gate", choices=["PASS", "FAIL"])
     sp.add_argument("--detail", default="")
     sp.set_defaults(fn=cmd_mark)
-    sp = sub.add_parser("gate", help="批量单章门：一次跑完全部（缺省）或指定章的门禁，PASS 章自动转 VERIFIED 并随章回写节 VERIFIED（两层模型改造点②——VERIFIED 唯一通道）")
+    sp = sub.add_parser(
+        "gate",
+        help="批量单章门：一次跑完全部（缺省）或指定章的门禁，PASS 章自动转 VERIFIED 并随章回写节 VERIFIED（两层模型改造点②——VERIFIED 唯一通道）",
+    )
     sp.add_argument("--state-dir", required=True)
     sp.add_argument("--chapters", help="逗号分隔，如 ch2,ch3；缺省=全部 DRAFTED 章")
     sp.add_argument("--targets", help="depth_targets.json 路径；仅调试，正式跑门绝不传（同 build_output 语义）")
     sp.set_defaults(fn=cmd_gate)
-    sp = sub.add_parser("delivered", help="交付回执：交付子代理按波批量回执节 delivered 布尔+交付波次（仅 VERIFIED 节；幂等；bug-3048 批量原语）")
+    sp = sub.add_parser(
+        "delivered",
+        help="交付回执：交付子代理按波批量回执节 delivered 布尔+交付波次（仅 VERIFIED 节；幂等；bug-3048 批量原语）",
+    )
     sp.add_argument("--sections", required=True, help="节 id 逗号清单，如 ch1_S01,ch1_S02")
     sp.add_argument("--wave", type=int, required=True, help="交付波次（D6 分波回执）")
     sp.add_argument("--state-dir", required=True)
     sp.set_defaults(fn=cmd_delivered)
-    sp = sub.add_parser("run-stage", help="固定脚本序列合并一次 bash：freeze=manifest+execute；finalize=build→consistency→snapshot")
+    sp = sub.add_parser(
+        "run-stage", help="固定脚本序列合并一次 bash：freeze=manifest+execute；finalize=build→consistency→snapshot"
+    )
     sp.add_argument("stage_name", choices=["freeze", "finalize"])
     sp.add_argument("--state-dir", required=True)
     sp.add_argument("--outputs-dir", help="finalize 必填：交付目录（报告+project_snapshot.json 落这里）")
@@ -848,7 +960,10 @@ def main() -> int:
     sp = sub.add_parser("confirm-key-points", help="要点包已经用户单表单确认（解锁 ch13 结论章）")
     sp.add_argument("--state-dir", required=True)
     sp.set_defaults(fn=cmd_confirm)
-    sp = sub.add_parser("confirm-chapter", help="分章模式确认卡：审查收口后用户确认本章（REVIEWED→CONFIRMED 唯一通道），highlights 并入 state/key_points.json（增量幂等）")
+    sp = sub.add_parser(
+        "confirm-chapter",
+        help="分章模式确认卡：审查收口后用户确认本章（REVIEWED→CONFIRMED 唯一通道），highlights 并入 state/key_points.json（增量幂等）",
+    )
     sp.add_argument("chapter", help="章 id，如 ch2")
     sp.add_argument("--highlights", default="", help="本章要点，| 分隔——并入 state/key_points.json 供 ch13 结论章引用")
     sp.add_argument("--state-dir", required=True)

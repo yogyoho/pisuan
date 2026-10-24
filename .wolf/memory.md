@@ -4640,7 +4640,7 @@
 | 18:42 | 三页面深度评审工作流完成（12 agent：4 Recon 67 事实/5 Ideate 40 提案/3 Judge 95 裁决）| .wolf/memory.md | 完成，待向用户汇报分级清单 | ~700k |
 | 18:52 | 词表口径名质量取证：本地复刻 QUANTITY_RE 抽取链挖 89 口径+上下文，19/19 报告项命中并回源；确认处置率×2 在 approved 会进物化；启动质量评审工作流 wf_77e52377-41d | .wolf/corpus-workdir/* | 运行中 | ~60k |
 | 19:50 | lexicon 口径裁决:对 lexicon_audit.json 中 8 条 candidate(价区植被覆盖度值/优势度/其盖度/出现频率/年均浓度平/浓度/超标率/频率)逐条回源裁决:rename×2(评价区植被覆盖度/SO2年均浓度平均值)、reject×6(混簇或代词断章) | .wolf/corpus-workdir/lexicon_audit.json; .wolf/lexicon_filter_tmp.py(已删) | done | ~7k |
-| 19:51 | ��ֵ�����ʱ�9��rejected�ھ��þ�(������ȡ֤):����rename 2��(�˵����������ǿn=8/ȫ��ȫ����ƽ��),ά��rejected 7�� | .wolf/corpus-workdir/lexicon_audit.json | done | ~15k |
+| 19:51 | ֵʱ9rejectedھþ(ȡ֤):rename 2(˵ǿn=8/ȫȫƽ),άrejected 7 | .wolf/corpus-workdir/lexicon_audit.json | done | ~15k |
 | 19:53 | lexicon audit adjudication: 3 assigned (控制效率/处置率×2) + 10 supplementary measure findings (水平达标率/回用率/综合利用率×2/抑尘效率/节水率/防渗率/降尘效率/环境质量达标率/危险废物处置率) | .wolf/corpus-workdir/lexicon_audit.json | done, 13 items via StructuredOutput | ~18k |
 | 19:59 | 对抗核验6条词表口径裁决：全部过验证(refuted=false)，价区植被覆盖度值改名需配重扫去重 | lexicon_audit.json,eia_data_service.py,bank_compile.py | 6/6 confirmed | ~9k |
 | 20:04 | 词表6条口径裁决对抗核验：抑尘效率split证伪(子簇2/1报<5不物化,split仅收splitting态)；4条rename证伪(重扫按旧指纹重导fresh approved,无抑制机制)；防渗率reject通过(重扫自稳) | eia_lexicon_service.py, eia_data_service.py, .wolf/corpus-workdir/lexicon_audit.json | 6 items 返回 | ~45k |
@@ -6630,3 +6630,1034 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 12:55 | Edited web/src/components/FileTable.vue | modified if() | ~106 |
 | 12:55 | Edited web/src/components/FileTable.vue | added optional chaining | ~64 |
 | 12:55 | Session end: 23 writes across 11 files (localized-rebuild-needs-clean-tree.md, 2026-10-20-table-merge-and-table-edit.md, table_merge.py, test_table_merge.py, deepseek_ocr.py) | 8 reads | ~6839 tok |
+| 13:10 | 用户未提交批次 6 提交入 pisuan-custom 并推送（断表合并/本地OCR引擎注册/markdown预览/标准库清单/docs/wolf）；在飞5文件 deliberate 排除 | backend/parser, web/components, docs | pushed 8a165647f | 6k |
+| 13:18 | Session end: 23 writes across 11 files (localized-rebuild-needs-clean-tree.md, 2026-10-20-table-merge-and-table-edit.md, table_merge.py, test_table_merge.py, deepseek_ocr.py) | 9 reads | ~6839 tok |
+| 13:18 | Edited backend/package/yuxi/knowledge/manager.py | modified get_file_content() | ~146 |
+| 13:23 | Session end: 24 writes across 12 files (localized-rebuild-needs-clean-tree.md, 2026-10-20-table-merge-and-table-edit.md, table_merge.py, test_table_merge.py, deepseek_ocr.py) | 9 reads | ~6985 tok |
+| 13:26 | Session end: 24 writes across 12 files (localized-rebuild-needs-clean-tree.md, 2026-10-20-table-merge-and-table-edit.md, table_merge.py, test_table_merge.py, deepseek_ocr.py) | 9 reads | ~6985 tok |
+| 13:29 | Edited backend/package/yuxi/knowledge/parser/table_merge.py | 4→4 lines | ~46 |
+| 13:29 | Edited backend/package/yuxi/knowledge/parser/table_merge.py | modified append() | ~38 |
+| 13:29 | Edited backend/test/unit/knowledge/test_table_merge.py | modified test_marker_with_page_number_gap_merges() | ~307 |
+| 13:30 | Session end: 27 writes across 12 files (localized-rebuild-needs-clean-tree.md, 2026-10-20-table-merge-and-table-edit.md, table_merge.py, test_table_merge.py, deepseek_ocr.py) | 10 reads | ~8281 tok |
+| 13:38 | Created docs/vibe/2026-10-20-enrich-table-routing.md | — | ~856 |
+| 13:40 | Edited web/src/components/TableEditModal.vue | 3→5 lines | ~40 |
+| 13:40 | Edited web/src/components/TableEditModal.vue | 3→7 lines | ~51 |
+| 13:43 | enrich增强立项：工单落盘 docs/vibe/2026-10-20-enrich-table-routing.md，派 t13-llm-impl（worktree task14-enrich-routing） | docs/vibe/2026-10-20-enrich-table-routing.md | DISPATCHED | ~12k |
+| 13:44 | Session end: 30 writes across 13 files (localized-rebuild-needs-clean-tree.md, 2026-10-20-table-merge-and-table-edit.md, table_merge.py, test_table_merge.py, deepseek_ocr.py) | 11 reads | ~10098 tok |
+| 13:46 | Edited web/src/components/TableEditModal.vue | added optional chaining | ~285 |
+| 13:46 | Edited web/src/components/TableEditModal.vue | 2→2 lines | ~26 |
+| 13:46 | Edited web/src/components/TableEditModal.vue | CSS: html | ~97 |
+| 13:46 | Edited web/src/components/TableEditModal.vue | CSS: formatted | ~43 |
+
+## Session: 2026-10-20 13:58
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 18:19 | Created .claude/worktrees/task14-enrich/backend/test/unit/extensions/test_regulation_enrich_routing.py | — | ~6322 |
+| 18:20 | Created .claude/worktrees/task14-enrich/backend/package/yuxi/extensions/regulation_library/structured_channel.py | — | ~1145 |
+| 18:21 | Created .claude/worktrees/task14-enrich/backend/package/yuxi/extensions/regulation_library/table_role_classifier.py | — | ~876 |
+| 18:21 | Created .claude/worktrees/task14-enrich/backend/package/yuxi/extensions/regulation_library/indicator_extractor.py | — | ~1564 |
+| 18:21 | Edited .claude/worktrees/task14-enrich/backend/package/yuxi/extensions/regulation_library/models.py | 3→5 lines | ~93 |
+| 18:21 | Edited .claude/worktrees/task14-enrich/backend/package/yuxi/extensions/regulation_library/enrichment_service.py | expanded (+6 lines) | ~182 |
+| 18:22 | Edited .claude/worktrees/task14-enrich/backend/package/yuxi/extensions/regulation_library/enrichment_service.py | modified all() | ~1150 |
+| 18:22 | Edited .claude/worktrees/task14-enrich/backend/package/yuxi/extensions/regulation_library/enrichment_service.py | 7→8 lines | ~64 |
+| 18:22 | Edited .claude/worktrees/task14-enrich/backend/package/yuxi/extensions/regulation_library/enrichment_service.py | 7→7 lines | ~85 |
+| 18:22 | Edited .claude/worktrees/task14-enrich/backend/package/yuxi/agents/toolkits/buildin/tools.py | 6→7 lines | ~101 |
+| 18:23 | Edited .claude/worktrees/task14-enrich/backend/package/yuxi/extensions/regulation_library/structured_channel.py | modified _extract_json() | ~164 |
+| 18:25 | Edited .claude/worktrees/task14-enrich/backend/package/yuxi/extensions/regulation_library/enrichment_service.py | 3→4 lines | ~87 |
+| 18:27 | Edited .claude/worktrees/task14-enrich/backend/package/yuxi/extensions/regulation_library/enrichment_service.py | "规范文档富化编排：读 chunks → 解析结构 " → "规范文档富化编排：读 chunks → 解析结构 " | ~19 |
+| 18:28 | Edited .claude/worktrees/task14-enrich/docs/develop-guides/changelog.md | modified feat() | ~462 |
+| 18:32 | A通道复工：deepseek_ocr凭证链OK(env SILICONFLOW_API_KEY)；GB3838(file_458dfb)云解析已发task 077308b6，监控已挂；Task14 spec评审后台进行中 | MEMORY | IN_PROGRESS | ~8k |
+| 18:39 | Session end: 14 writes across 8 files (test_regulation_enrich_routing.py, structured_channel.py, table_role_classifier.py, indicator_extractor.py, models.py) | 4 reads | ~15059 tok |
+| 18:39 | Session end: 14 writes across 8 files (test_regulation_enrich_routing.py, structured_channel.py, table_role_classifier.py, indicator_extractor.py, models.py) | 4 reads | ~15059 tok |
+
+## Session: 2026-10-20 18:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 18:40 | Task14 spec评审COMPLIANT(1个⚠️:limit_value字符串入NUMERIC风险移交质量评审)；质量评审后台进行 | - | 进行中 | ~3k |
+| 18:42 | GB3838 deepseek解析任务success(file_228d20, 状态parsed, 0分块-待人工门后再index) | - | 验证中 | ~2k |
+| 12:00 | Task14 质量评审修复轮：limit_value 出口数值归一守护+M1-M5 打磨，46 测试通过 | regulation_library/{indicator_extractor,enrichment_service,table_role_classifier}.py + 测试 | DONE commit a4c08b51a | ~9k |
+| 19:20 | Task14修复a4c08b51a(数值归一+5Minor,46测)→定点复审APPROVED→cherry-pick合并712f70395+42da8ac99→sync-dev→容器46/46 | regulation_library/* | 已落地 | ~8k |
+| 19:25 | A通道: GB3838表1质量门PASS(24×5全对)；GB3095解析5表/GB8978解析14表抽查正确；4数字档indexed；GB3095+8978索引排队 | - | 就绪 | ~5k |
+| 19:30 | 教训: scratch脚本被import致替换链重跑(耗一轮OCR配额)；worktree分支谱系重复rebase炸→cherry-pick修复 | cerebrum/buglog | 已记录 | ~2k |
+| 19:32 | GB3838 enrich试跑启动(后台,本地gemma4预计25-50min) | - | 运行中 | ~1k |
+| 19:21 | Edited backend/package/yuxi/extensions/regulation_library/indicator_extractor.py | inline fix | ~25 |
+| 19:21 | Edited backend/test/unit/extensions/test_regulation_enrich_routing.py | modified test_extract_indicators_truncation_logged() | ~173 |
+| 19:50 | 发现GB3838表1仅14/24项→根因512-token分块拦腰切HTML表；KB chunk_parser_config提4096+截断上限6000→24000(b11d30cc6,46测绿)；全库重索引success | general.py/indicator_extractor.py | 已修复 | ~6k |
+| 20:05 | GB3838 enrich重跑中(agnes通道) | - | 运行中 | ~1k |
+| 19:26 | Session end: 2 writes across 2 files (indicator_extractor.py, test_regulation_enrich_routing.py) | 8 reads | ~35798 tok |
+| 19:27 | Session end: 2 writes across 2 files (indicator_extractor.py, test_regulation_enrich_routing.py) | 8 reads | ~35798 tok |
+| 19:30 | Created docs/vibe/2026-10-20-table-aware-chunking.md | — | ~538 |
+| 20:25 | 4096分块实证失败：3巨型chunk埋4+7张表，enrich只见1单元0指标；两难落地(512切/4096埋)；工单草案docs/vibe/2026-10-20-table-aware-chunking.md(R1 enrich多表拆分+R2表格原子预设)待用户立项 | - | 待立项 | ~4k |
+| 19:31 | Session end: 3 writes across 3 files (indicator_extractor.py, test_regulation_enrich_routing.py, 2026-10-20-table-aware-chunking.md) | 9 reads | ~36374 tok |
+| 19:41 | Edited docs/vibe/2026-10-20-table-aware-chunking.md | 3→5 lines | ~83 |
+| 20:35 | 用户立项R1+R2；超大表裁决=a)允许嵌入截断+日志；工单状态更新 | docs/vibe/2026-10-20-table-aware-chunking.md | 实现中 | ~2k |
+| 19:43 | Session end: 4 writes across 3 files (indicator_extractor.py, test_regulation_enrich_routing.py, 2026-10-20-table-aware-chunking.md) | 9 reads | ~36463 tok |
+| 20:04 | Created .claude/worktrees/task15-table-chunking/backend/test/unit/extensions/test_table_splitter.py | — | ~3704 |
+| 20:05 | Created .claude/worktrees/task15-table-chunking/backend/test/unit/knowledge/test_table_chunking.py | — | ~1530 |
+| 20:07 | Created .claude/worktrees/task15-table-chunking/backend/package/yuxi/extensions/regulation_library/table_splitter.py | — | ~604 |
+| 20:08 | Edited .claude/worktrees/task15-table-chunking/backend/package/yuxi/extensions/regulation_library/enrichment_service.py | added 1 import(s) | ~82 |
+| 20:08 | Edited .claude/worktrees/task15-table-chunking/backend/package/yuxi/extensions/regulation_library/enrichment_service.py | modified in() | ~850 |
+| 20:08 | Edited .claude/worktrees/task15-table-chunking/backend/package/yuxi/extensions/regulation_library/enrichment_service.py | modified all() | ~632 |
+| 20:09 | Created .claude/worktrees/task15-table-chunking/backend/package/yuxi/knowledge/chunking/ragflow_like/parsers/table.py | — | ~875 |
+| 20:09 | Created .claude/worktrees/task15-table-chunking/backend/package/yuxi/knowledge/chunking/ragflow_like/parsers/__init__.py | — | ~48 |
+| 20:09 | Edited .claude/worktrees/task15-table-chunking/backend/package/yuxi/knowledge/chunking/ragflow_like/dispatcher.py | inline fix | ~31 |
+| 20:09 | Edited .claude/worktrees/task15-table-chunking/backend/package/yuxi/knowledge/chunking/ragflow_like/dispatcher.py | 2→4 lines | ~58 |
+| 20:09 | Edited .claude/worktrees/task15-table-chunking/backend/package/yuxi/knowledge/chunking/ragflow_like/presets.py | 5→9 lines | ~66 |
+| 20:11 | Edited .claude/worktrees/task15-table-chunking/backend/package/yuxi/extensions/regulation_library/table_splitter.py | 8→7 lines | ~84 |
+| 20:11 | Edited .claude/worktrees/task15-table-chunking/backend/test/unit/extensions/test_table_splitter.py | modified _wire() | ~137 |
+| 20:11 | Edited .claude/worktrees/task15-table-chunking/backend/test/unit/extensions/test_table_splitter.py | modified test_multi_table_limit_extracted_per_unit() | ~272 |
+| 20:20 | Edited .claude/worktrees/task15-table-chunking/docs/develop-guides/changelog.md | "table_role ∈ {limit, meth" → "table_splitter.py" | ~391 |
+| 20:21 | Edited .claude/worktrees/task15-table-chunking/docs/develop-guides/changelog.md | modified feat() | ~670 |
+| 20:22 | Created ../../Users/Lenovo/AppData/Local/Temp/task15-commit-msg.txt | — | ~181 |
+| 20:24 | Task15完成：表格感知分块+enrich多表单元识别（R1 table_splitter+enrichment接线，R2 table预设+parser），提交0dbbe6004于worktree task15-table-chunking | 9文件+714-13 | 84测试全绿(新增38+既有46)，ruff全绿 | ~95k |
+
+## Session: 2026-10-20 20:29
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:29 | Task 15 实现者交付 DONE：commit 0dbbe6004（table_splitter R1 + parsers/table R2 + enrich 多表接线），84 测试绿，ruff 净；spec 评审已派出 | worktree task15-table-chunking | 进行中 | ~5k |
+| 20:34 | Task 15 spec 合规评审 COMPLIANT（无 must-fix；3 个 discretion 点均不阻塞；实测 84 passed） | 0dbbe6004 | 通过 | ~3k |
+| 20:45 | Task 15 代码质量评审 APPROVED（无 Critical/Important；4 Minor+2 Nit 记为已知打磨项） | 0dbbe6004 | 通过 | ~3k |
+| 21:03 | Edited web/src/components/TableEditModal.vue | 7→7 lines | ~68 |
+| 21:07 | Edited docs/develop-guides/changelog.md | modified feat() | ~248 |
+| 21:07 | Edited docs/vibe/2026-10-20-table-merge-and-table-edit.md | expanded (+7 lines) | ~193 |
+| 21:08 | Edited backend/package/yuxi/extensions/regulation_library/indicator_extractor.py | 1→2 lines | ~52 |
+| 21:08 | Edited backend/package/yuxi/extensions/regulation_library/indicator_extractor.py | 5→5 lines | ~62 |
+| 21:08 | Edited backend/package/yuxi/extensions/regulation_library/indicator_extractor.py | 5→5 lines | ~64 |
+| 21:08 | Edited backend/package/yuxi/extensions/regulation_library/enrichment_service.py | added 1 import(s) | ~23 |
+| 21:08 | Edited backend/package/yuxi/extensions/regulation_library/enrichment_service.py | 1→2 lines | ~41 |
+| 21:08 | Edited backend/package/yuxi/extensions/regulation_library/enrichment_service.py | expanded (+6 lines) | ~156 |
+| 21:08 | Edited backend/test/unit/extensions/test_table_splitter.py | modified test_continuation_unit_inherits_base_role() | ~430 |
+| 21:08 | 跨页断表合并(table_merge.py+两装配点,13+17单测,真实产物12→4表守恒验证) + 表格编辑对话框(TableEditModal+PUT content端点+Manager转发+HTML格式化,浏览器QA全过)；两个实现bug修复(span装配/首尾丢失、dirty基准) | backend: table_merge.py/deepseek_ocr.py/paddleocr_vl_local.py/base.py/manager.py/knowledge_router.py; web: TableEditModal.vue/FileTable.vue/knowledge_api.js | done | ~180k |
+| 21:09 | Edited backend/test/unit/extensions/test_regulation_enrich_routing.py | modified test_extract_indicators_timeout_passed_to_channel() | ~180 |
+| 21:09 | Session end: 11 writes across 7 files (TableEditModal.vue, changelog.md, 2026-10-20-table-merge-and-table-edit.md, indicator_extractor.py, enrichment_service.py) | 1 reads | ~1554 tok |
+| 21:11 | Edited backend/test/unit/extensions/test_regulation_enrich_routing.py | 5→3 lines | ~73 |
+| 21:13 | 冒烟暴露 2 缺陷修复：续表角色继承 + 抽取超时 300s（d318c4440，87 测试绿）；发现文件级 preset 快照覆盖 KB 级 | d318c4440 | 已修复待复跑 | ~6k |
+| 21:25 | Edited backend/package/yuxi/knowledge/base.py | modified strip() | ~167 |
+| 21:25 | Edited docs/vibe/2026-10-20-table-aware-chunking.md | 7→8 lines | ~188 |
+| 21:25 | Edited web/src/components/FileDetailModal.vue | 9→10 lines | ~70 |
+| 21:25 | Edited web/src/components/FileDetailModal.vue | CSS: Pencil | ~371 |
+| 21:25 | Edited web/src/components/FileDetailModal.vue | expanded (+10 lines) | ~280 |
+| 21:25 | Edited web/src/components/FileDetailModal.vue | 2→2 lines | ~30 |
+| 21:25 | Edited web/src/components/FileDetailModal.vue | inline fix | ~25 |
+| 21:25 | Edited web/src/components/FileDetailModal.vue | 12→14 lines | ~93 |
+| 21:26 | Edited web/src/components/FileDetailModal.vue | 8→13 lines | ~72 |
+| 21:26 | Edited web/src/components/FileDetailModal.vue | added error handling | ~543 |
+| 21:26 | GB 3838 人工门通过（203 行：表1 118 全齐+特定项目 80+表2 5；other 清零）；工单清单已更新 | kb_9ks49hyvfj | 门通过 | ~4k |
+| 21:26 | Session end: 22 writes across 10 files (TableEditModal.vue, changelog.md, 2026-10-20-table-merge-and-table-edit.md, indicator_extractor.py, enrichment_service.py) | 3 reads | ~10423 tok |
+| 21:26 | Edited web/src/components/FileDetailModal.vue | expanded (+37 lines) | ~197 |
+| 21:26 | Edited web/src/components/FileTable.vue | inline fix | ~21 |
+| 21:29 | Edited web/src/components/FileDetailModal.vue | 2→4 lines | ~58 |
+| 21:29 | Edited web/src/components/FileDetailModal.vue | 3→3 lines | ~34 |
+
+## Session: 2026-10-20 21:32
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:38 | Edited web/src/components/FileDetailModal.vue | added 1 condition(s) | ~95 |
+| 21:44 | Edited docs/develop-guides/changelog.md | modified feat() | ~115 |
+| 21:44 | Edited docs/vibe/2026-10-20-table-merge-and-table-edit.md | 1→4 lines | ~80 |
+| 21:45 | FileDetailModal markdown 入库前编辑 + indexed 双层禁写完成；QA 揪出并修复 fileId 切换编辑态残留（bug-4110） | FileDetailModal.vue, changelog.md, vibe doc | 浏览器 QA 全过：18599 可编辑/脏态保护/无改动保存往返、14848 无编辑入口 | ~35k |
+| 21:45 | Session end: 3 writes across 3 files (FileDetailModal.vue, changelog.md, 2026-10-20-table-merge-and-table-edit.md) | 6 reads | ~21601 tok |
+| 21:57 | Session end: 3 writes across 3 files (FileDetailModal.vue, changelog.md, 2026-10-20-table-merge-and-table-edit.md) | 7 reads | ~21601 tok |
+| 21:58 | Created web/qa_katex_repro.mjs | — | ~368 |
+| 21:58 | Edited web/qa_katex_repro.mjs | 1→2 lines | ~37 |
+| 22:02 | Edited web/qa_katex_repro.mjs | 4→5 lines | ~60 |
+| 22:03 | Edited web/src/utils/markdown_preview.js | 5→8 lines | ~132 |
+| 22:09 | Edited docs/develop-guides/changelog.md | inline fix | ~114 |
+| 22:09 | Edited docs/vibe/2026-10-20-table-aware-chunking.md | inline fix | ~110 |
+| 22:09 | GB 8978 人工门通过：461 行全真限值（第一类 13 + 第二类 276 + 表4 60 + 排水量 112）；首轮被并行热重载杀掉后重跑成功 | kb_9ks49hyvfj/file_006336 | 门通过 | ~4k |
+| 22:10 | Session end: 9 writes across 6 files (FileDetailModal.vue, changelog.md, 2026-10-20-table-merge-and-table-edit.md, qa_katex_repro.mjs, markdown_preview.js) | 8 reads | ~22471 tok |
+| 22:10 | KaTeX 整段红字根因定位（尾随空格破单行 $$ 判定）+ 修复归一末步行尾清理，GB 8978 实测 115 公式 0 错误 | markdown_preview.js, changelog.md, buglog | 浏览器+node 复现双验证 | ~28k |
+| 22:10 | Session end: 9 writes across 6 files (FileDetailModal.vue, changelog.md, 2026-10-20-table-merge-and-table-edit.md, qa_katex_repro.mjs, markdown_preview.js) | 8 reads | ~22471 tok |
+| 22:38 | Edited web/src/components/common/MarkdownPreview.vue | 7→6 lines | ~57 |
+| 22:43 | Edited docs/develop-guides/changelog.md | inline fix | ~54 |
+| 22:43 | 弹窗 markdown 正文字体对齐标准页：.yk-markdown-preview 收编 var(--font-sans) | MarkdownPreview.vue, changelog.md | computed 栈含 Segoe UI 与全局一致，截图无异常 | ~12k |
+| 22:43 | Session end: 11 writes across 7 files (FileDetailModal.vue, changelog.md, 2026-10-20-table-merge-and-table-edit.md, qa_katex_repro.mjs, markdown_preview.js) | 11 reads | ~22590 tok |
+| 22:47 | Session end: 11 writes across 7 files (FileDetailModal.vue, changelog.md, 2026-10-20-table-merge-and-table-edit.md, qa_katex_repro.mjs, markdown_preview.js) | 11 reads | ~22590 tok |
+| 22:48 | Session end: 11 writes across 7 files (FileDetailModal.vue, changelog.md, 2026-10-20-table-merge-and-table-edit.md, qa_katex_repro.mjs, markdown_preview.js) | 11 reads | ~22590 tok |
+| 22:51 | Created docs/vibe/2026-10-20-standards-panel-kb-rewire.md | — | ~978 |
+
+## Session: 2026-10-20 22:55
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:04 | Created docs/vibe/prototypes/2026-10-20-standards-panel-redesign.html | — | ~10876 |
+| 23:12 | Created docs/vibe/2026-10-20-standards-panel-kb-rewire.md | — | ~1354 |
+| 23:20 | 专家录入原型四态自检（tab1亮暗/抽屉/tab2）+ 工单升级执行版 + 派 W1 后端实现者 | prototypes/2026-10-20-standards-panel-redesign.html, 2026-10-20-standards-panel-kb-rewire.md | 原型渲染全过，执行中 | ~25k |
+| 23:14 | Session end: 2 writes across 2 files (2026-10-20-standards-panel-redesign.html, 2026-10-20-standards-panel-kb-rewire.md) | 5 reads | ~14373 tok |
+| 23:24 | Edited backend/package/yuxi/extensions/regulation_library/models.py | 3→6 lines | ~118 |
+| 23:24 | Edited backend/package/yuxi/extensions/regulation_library/enrichment_service.py | modified StandardConflictError() | ~218 |
+| 23:25 | Edited backend/package/yuxi/extensions/regulation_library/enrichment_service.py | expanded (+10 lines) | ~207 |
+| 23:25 | Edited backend/package/yuxi/extensions/regulation_library/enrichment_service.py | modified set_unit_verification() | ~1778 |
+| 23:25 | Edited backend/package/yuxi/services/eia_limit_extract_core.py | 6→6 lines | ~95 |
+| 23:26 | Edited backend/package/yuxi/services/eia_limit_extract_core.py | modified table_key_for() | ~439 |
+| 23:26 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | 7→8 lines | ~54 |
+| 23:26 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | 8→9 lines | ~60 |
+| 23:26 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | modified list_source_candidates() | ~217 |
+| 23:26 | Edited backend/package/yuxi/extensions/regulation_library/router.py | 9→11 lines | ~167 |
+| 23:26 | Edited backend/package/yuxi/extensions/regulation_library/router.py | modified list_indicators() | ~1354 |
+| 23:27 | Edited backend/server/routers/domain_factory_router.py | modified list_eia_source_candidates() | ~232 |
+| 23:29 | Created backend/test/unit/extensions/test_standards_panel_w1.py | — | ~4718 |
+| 23:30 | Edited backend/test/unit/extensions/test_standards_panel_w1.py | 9→7 lines | ~91 |
+| 23:30 | Edited backend/test/unit/extensions/test_standards_panel_w1.py | modified test_create_manual_standard_conflict_on_any_existing_rows() | ~158 |
+| 23:32 | Edited backend/test/unit/extensions/test_regulation_enrich_routing.py | modified __init__() | ~222 |
+| 23:32 | Edited backend/test/unit/extensions/test_table_splitter.py | modified __init__() | ~206 |
+| 23:33 | Edited backend/package/yuxi/services/eia_limit_extract_core.py | modified diff_source_candidates() | ~261 |
+| 23:33 | Edited backend/test/unit/extensions/test_standards_panel_w1.py | modified raises() | ~40 |
+| 23:33 | Edited backend/test/unit/extensions/test_standards_panel_w1.py | modified test_create_manual_standard_inserts_born_verified() | ~127 |
+| 23:33 | Edited backend/test/unit/extensions/test_standards_panel_w1.py | modified test_aggregate_cited_codes_counts_reports_and_caps_samples() | ~171 |
+| 23:33 | Edited backend/test/unit/extensions/test_standards_panel_w1.py | modified test_diff_source_candidates_normalizes_dedups_and_sorts() | ~189 |
+| 23:35 | Edited backend/test/unit/extensions/test_standards_panel_w1.py | 7→7 lines | ~137 |
+| 23:35 | Edited backend/test/unit/extensions/test_standards_panel_w1.py | modified test_diff_source_candidates_normalizes_dedups_and_sorts() | ~190 |
+| 23:35 | Edited backend/test/unit/extensions/test_standards_panel_w1.py | modified test_delete_manual_standard_conflict_and_success() | ~89 |
+| 23:36 | Edited backend/test/unit/extensions/test_standards_panel_w1.py | 4→3 lines | ~60 |
+| 23:45 | W1 后端完成并提交 | regulation_library models/enrichment_service/router + eia_limit_extract core/service + domain_factory_router + tests | 03a36d9fa；extensions 105 passed | ~55k |
+| 23:43 | Session end: 28 writes across 11 files (2026-10-20-standards-panel-redesign.html, 2026-10-20-standards-panel-kb-rewire.md, models.py, enrichment_service.py, eia_limit_extract_core.py) | 12 reads | ~33615 tok |
+| 23:43 | Edited backend/package/yuxi/extensions/regulation_library/models.py | 4→5 lines | ~94 |
+| 23:44 | Edited backend/package/yuxi/extensions/regulation_library/enrichment_service.py | 22→23 lines | ~320 |
+| 23:44 | Edited backend/package/yuxi/extensions/regulation_library/enrichment_service.py | 10→10 lines | ~143 |
+| 23:44 | Edited backend/package/yuxi/extensions/regulation_library/enrichment_service.py | modified _insert_manual_rows() | ~364 |
+| 23:44 | Edited backend/package/yuxi/extensions/regulation_library/enrichment_service.py | modified replace_manual_standard() | ~85 |
+| 23:45 | Edited backend/package/yuxi/extensions/regulation_library/enrichment_service.py | 3→3 lines | ~50 |
+| 23:45 | Edited backend/package/yuxi/extensions/regulation_library/router.py | _manual_rows_payload() → _manual_meta_and_rows() | ~145 |
+| 23:45 | Edited backend/package/yuxi/extensions/regulation_library/router.py | _manual_rows_payload() → _manual_meta_and_rows() | ~149 |
+| 23:45 | Edited backend/package/yuxi/extensions/regulation_library/router.py | _manual_rows_payload() → _manual_meta_and_rows() | ~69 |
+| 23:45 | Edited backend/test/unit/extensions/test_standards_panel_w1.py | modified test_ddl_adds_verification_columns_idempotent() | ~152 |
+| 23:46 | Edited backend/test/unit/extensions/test_standards_panel_w1.py | modified test_query_indicators_selects_verification_columns() | ~355 |
+| 23:47 | Edited backend/package/yuxi/extensions/regulation_library/enrichment_service.py | 3→3 lines | ~73 |
+| 23:47 | Edited backend/package/yuxi/extensions/regulation_library/enrichment_service.py | 3→4 lines | ~93 |
+| 23:50 | 控制者补丁：doc_name 列贯通 enrich/手工/查询（doc_type 忽略） | models/enrichment_service/router + tests | acc97e839；129 passed | ~12k |
+| 23:50 | Edited docs/vibe/2026-10-20-standards-panel-kb-rewire.md | inline fix | ~20 |
+| 23:51 | Session end: 42 writes across 11 files (2026-10-20-standards-panel-redesign.html, 2026-10-20-standards-panel-kb-rewire.md, models.py, enrichment_service.py, eia_limit_extract_core.py) | 16 reads | ~35728 tok |
+| 23:56 | Edited docs/vibe/2026-10-20-standards-panel-kb-rewire.md | inline fix | ~28 |
+| 23:56 | Session end: 43 writes across 11 files (2026-10-20-standards-panel-redesign.html, 2026-10-20-standards-panel-kb-rewire.md, models.py, enrichment_service.py, eia_limit_extract_core.py) | 21 reads | ~35771 tok |
+| 00:03 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+180 lines) | ~2745 |
+| 00:04 | Edited web/src/components/eia-data/StandardsPanel.vue | removed 183 lines | ~4 |
+| 00:04 | 质量评审 03a36d9fa+acc97e839（W1 标准面板后端）：21+89 测试宿主复跑全绿，0 Important / 3 Minor / 4 Nit，结论 APPROVED | enrichment_service.py, router.py, eia_limit_extract_service.py | done | ~40k |
+| 00:04 | Edited web/src/components/eia-data/StandardsPanel.vue | removed 171 lines | ~12 |
+| 00:05 | Edited web/src/components/eia-data/StandardsPanel.vue | added optional chaining | ~1060 |
+| 00:05 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+7 lines) | ~147 |
+| 00:05 | Edited docs/vibe/2026-10-20-standards-panel-kb-rewire.md | inline fix | ~53 |
+| 00:05 | Edited web/src/components/eia-data/StandardsPanel.vue | 6→3 lines | ~27 |
+| 00:05 | Edited web/src/components/eia-data/StandardsPanel.vue | removed 8 lines | ~14 |
+| 00:05 | Session end: 51 writes across 12 files (2026-10-20-standards-panel-redesign.html, 2026-10-20-standards-panel-kb-rewire.md, models.py, enrichment_service.py, eia_limit_extract_core.py) | 22 reads | ~40123 tok |
+| 00:06 | Edited web/src/components/eia-data/StandardsPanel.vue | reduced (-10 lines) | ~46 |
+| 00:06 | Edited web/src/components/eia-data/StandardsPanel.vue | modified catch() | ~83 |
+| 00:06 | Edited backend/package/yuxi/extensions/regulation_library/indicator_extractor.py | _normalize_limit_value() → normalize_limit_value() | ~136 |
+| 00:06 | Edited backend/package/yuxi/extensions/regulation_library/indicator_extractor.py | inline fix | ~17 |
+| 00:06 | Edited backend/package/yuxi/extensions/regulation_library/enrichment_service.py | inline fix | ~23 |
+| 00:06 | Edited web/src/components/eia-data/StandardsPanel.vue | removed 53 lines | ~54 |
+| 00:06 | Edited backend/package/yuxi/extensions/regulation_library/router.py | modified _manual_meta_and_rows() | ~196 |
+| 00:06 | Edited backend/package/yuxi/extensions/regulation_library/router.py | 2→2 lines | ~40 |
+| 00:07 | Edited web/src/components/eia-data/StandardsPanel.vue | removed 343 lines | ~15 |
+| 00:05 | 质量评审 Minor#1/#2 修复：PUT 载荷 doc_code 豁免 + normalize_limit_value 公开化 | router/enrichment_service/indicator_extractor | 3c59da3dd；129 passed | ~8k |
+| 00:08 | Edited web/src/components/eia-data/StandardsPanel.vue | added error handling | ~2234 |
+| 00:08 | Edited web/src/components/eia-data/StandardsPanel.vue | 3→3 lines | ~41 |
+| 00:08 | Edited web/src/components/eia-data/StandardsPanel.vue | 7→7 lines | ~53 |
+| 00:08 | Edited web/src/components/eia-data/StandardsPanel.vue | removed 17 lines | ~10 |
+| 00:08 | Edited docs/vibe/2026-10-20-standards-panel-kb-rewire.md | inline fix | ~58 |
+| 00:08 | Edited web/src/components/eia-data/StandardsPanel.vue | removed 19 lines | ~13 |
+| 00:08 | Session end: 66 writes across 13 files (2026-10-20-standards-panel-redesign.html, 2026-10-20-standards-panel-kb-rewire.md, models.py, enrichment_service.py, eia_limit_extract_core.py) | 23 reads | ~43325 tok |
+| 00:09 | Edited web/src/components/eia-data/StandardsPanel.vue | removed 50 lines | ~19 |
+| 00:09 | Edited web/src/components/eia-data/StandardsPanel.vue | inline fix | ~13 |
+| 00:09 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+6 lines) | ~103 |
+| 00:09 | Edited web/src/components/eia-data/StandardsPanel.vue | removed 42 lines | ~6 |
+| 00:10 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+313 lines) | ~1807 |
+| 00:10 | Created web/src/apis/regulation_library_api.js | — | ~664 |
+| 00:11 | Created web/src/apis/eia_standard_api.js | — | ~440 |
+| 00:18 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+6 lines) | ~122 |
+| 00:18 | Edited web/src/components/eia-data/StandardsPanel.vue | 1→3 lines | ~38 |
+| 00:19 | Edited web/src/components/eia-data/StandardsPanel.vue | inline fix | ~14 |
+| 00:19 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+8 lines) | ~33 |
+| 00:19 | Edited web/src/components/eia-data/StandardsPanel.vue | modified if() | ~59 |
+| 22:55 | W2 前端：StandardsPanel 三卡收敛两 tab（tab1 指标核验台+专家录入折叠区/抽屉/删除确认，tab2 缺源候选）；新建 regulation_library_api.js；eia_standard_api.js 删 6 孤儿封装补 listSourceCandidates；lint+build 绿 | StandardsPanel.vue, eia_standard_api.js, regulation_library_api.js | done, 待提交 |
+| 00:23 | Edited docs/vibe/2026-10-20-standards-panel-kb-rewire.md | inline fix | ~21 |
+| 00:23 | Session end: 79 writes across 15 files (2026-10-20-standards-panel-redesign.html, 2026-10-20-standards-panel-kb-rewire.md, models.py, enrichment_service.py, eia_limit_extract_core.py) | 23 reads | ~64688 tok |
+| 00:35 | W2 前端 spec 评审 072ff438c：COMPLIANT（3 文件恰齐/页头门1零改动/孤儿清零/变量与 icon 合规） | docs/vibe/2026-10-20-standards-panel-kb-rewire.md | 评审完成 | ~40k |
+| 00:31 | Edited docs/vibe/2026-10-20-standards-panel-kb-rewire.md | inline fix | ~32 |
+| 00:31 | Session end: 80 writes across 15 files (2026-10-20-standards-panel-redesign.html, 2026-10-20-standards-panel-kb-rewire.md, models.py, enrichment_service.py, eia_limit_extract_core.py) | 23 reads | ~64793 tok |
+| 00:40 | Edited docs/vibe/2026-10-20-standards-panel-kb-rewire.md | inline fix | ~56 |
+| 00:40 | Session end: 81 writes across 15 files (2026-10-20-standards-panel-redesign.html, 2026-10-20-standards-panel-kb-rewire.md, models.py, enrichment_service.py, eia_limit_extract_core.py) | 23 reads | ~66839 tok |
+
+## Session: 2026-10-20 00:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:45 | Edited web/src/components/eia-data/StandardsPanel.vue | inline fix | ~8 |
+| 00:45 | Edited web/src/components/eia-data/StandardsPanel.vue | modified slice() | ~73 |
+| 00:45 | Edited web/src/components/eia-data/StandardsPanel.vue | added nullish coalescing | ~61 |
+| 00:45 | Edited web/src/components/eia-data/StandardsPanel.vue | added nullish coalescing | ~170 |
+| 00:45 | Edited web/src/components/eia-data/StandardsPanel.vue | inline fix | ~19 |
+| 00:45 | Edited web/src/components/eia-data/StandardsPanel.vue | 17→17 lines | ~221 |
+| 00:45 | Edited web/src/components/eia-data/StandardsPanel.vue | added 1 condition(s) | ~44 |
+| 00:45 | Edited web/src/components/eia-data/StandardsPanel.vue | 4→5 lines | ~58 |
+| 00:45 | Edited web/src/components/eia-data/StandardsPanel.vue | 3→4 lines | ~54 |
+| 00:55 | W2 评审修复：核验按单元上锁+updated校验+原始unit_no+候选缓存失效+空行拦截 | web/src/components/eia-data/StandardsPanel.vue | lint 0错 build ✓ 提交 fab1a8468 | ~6k |
+| 00:48 | Session end: 9 writes across 1 files (StandardsPanel.vue) | 1 reads | ~18645 tok |
+| 00:50 | Edited docs/vibe/2026-10-20-standards-panel-kb-rewire.md | 5→5 lines | ~99 |
+| 00:52 | Edited docs/vibe/2026-10-20-standards-panel-kb-rewire.md | 2→2 lines | ~103 |
+
+## Session: 2026-10-20 01:00
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 01:08 | Edited docs/vibe/2026-10-20-standards-panel-kb-rewire.md | inline fix | ~42 |
+| 01:08 | Edited docs/vibe/2026-10-20-standards-panel-kb-rewire.md | 2→5 lines | ~298 |
+| 01:30 | 标准面板改版运行时冒烟收口：API 21/22（唯一FAIL=验收前提错误：13201 在 corpus_meta 标注层零引用）+ UI 全交互；重跑即重验实证（表1 121行 verified 归零/206 守恒）；doc_name 回填；changelog 已写未提交（混挂并行改动） | .wolf/sampling/panel_smoke.py, docs/vibe/2026-10-20-standards-panel-kb-rewire.md | 冒烟通过收口 | ~40k |
+| 01:09 | Session end: 2 writes across 1 files (2026-10-20-standards-panel-kb-rewire.md) | 1 reads | ~364 tok |
+| 01:45 | 用户指令推送：pisuan-custom 11 提交推至 origin（8a165647f..fab1a8468），含标准面板改版全链 | git push origin pisuan-custom | 同步完成 | ~1k |
+| 06:48 | Session end: 2 writes across 1 files (2026-10-20-standards-panel-kb-rewire.md) | 1 reads | ~364 tok |
+| 06:50 | Edited web/src/components/eia-data/StandardsPanel.vue | 2→7 lines | ~67 |
+| 06:50 | Edited web/src/components/eia-data/StandardsPanel.vue | 2→3 lines | ~33 |
+| 06:50 | Edited web/src/components/eia-data/StandardsPanel.vue | 2→2 lines | ~38 |
+| 06:51 | Edited web/src/components/eia-data/StandardsPanel.vue | CSS: v-model | ~184 |
+| 06:51 | Edited web/src/components/eia-data/StandardsPanel.vue | CSS: justify-content | ~58 |
+| 02:10 | 缺源候选 tab 分页：每页 9 卡客户端切片 + a-pagination，sync-dev 后容器实测 24 页/末页余数正常；提交 21b6c5bf3（未推送） | web/src/components/eia-data/StandardsPanel.vue | 完成 | ~8k |
+| 06:56 | Session end: 7 writes across 2 files (2026-10-20-standards-panel-kb-rewire.md, StandardsPanel.vue) | 1 reads | ~772 tok |
+| 07:00 | Edited web/src/components/eia-data/StandardsPanel.vue | CSS: AlertTriangle | ~894 |
+| 07:00 | Edited web/src/components/eia-data/StandardsPanel.vue | 1→6 lines | ~44 |
+| 07:01 | Edited web/src/components/eia-data/StandardsPanel.vue | modified deep() | ~1100 |
+| 07:11 | Edited web/src/components/eia-data/StandardsPanel.vue | 6→10 lines | ~103 |
+| 07:11 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+48 lines) | ~329 |
+| 02:50 | 手工录入抽屉对齐改名弹窗原型（ident条/sec-hd/fld/rows-card/warn条）+ 修 drawer teleport 出 .ewp 致 footer .btn 配方失配（暗色白底白字）；全流程+明暗实测；提交 f686186b5（未推送） | web/src/components/eia-data/StandardsPanel.vue | 完成 | ~30k |
+| 07:14 | Session end: 12 writes across 2 files (2026-10-20-standards-panel-kb-rewire.md, StandardsPanel.vue) | 2 reads | ~3417 tok |
+| 07:19 | Edited web/src/components/eia-data/StandardsPanel.vue | 8→8 lines | ~151 |
+| 07:20 | Edited web/src/components/eia-data/StandardsPanel.vue | expanded (+28 lines) | ~414 |
+| 07:20 | Edited web/src/components/eia-data/StandardsPanel.vue | 16→16 lines | ~108 |
+| 03:20 | 限值行输入框 UI 提升：cell-inp 原型配方（32px/8px圆角/轻hairline/focus ring/透明底+行hover）去 placeholder；footer 按钮 13px/30px；明暗实测；提交 6bd72e6a2（未推送） | web/src/components/eia-data/StandardsPanel.vue | 完成 | ~12k |
+| 07:23 | Session end: 15 writes across 2 files (2026-10-20-standards-panel-kb-rewire.md, StandardsPanel.vue) | 2 reads | ~4138 tok |
+| 08:22 | Edited web/src/components/eia-data/StandardsPanel.vue | CSS: border-radius | ~219 |
+| 08:22 | Edited web/src/components/eia-data/StandardsPanel.vue | 26→26 lines | ~170 |
+| 08:22 | Edited web/src/components/eia-data/StandardsPanel.vue | CSS: margin-left, border-color, border-color | ~108 |
+
+## Session: 2026-10-21 08:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:20 | 抽屉控件四点统一（6px 圆角/13px 控件字号/底按钮 8px 间隔/cell-inp 边框对齐 antd），亮暗双态截图+计算样式核验后提交 | web/src/components/eia-data/StandardsPanel.vue | 34775df2e ✅ |
+| 08:39 | Edited web/src/components/eia-data/ParadigmsPanel.vue | inline fix | ~25 |
+| 08:39 | Edited web/src/components/eia-data/ParadigmsPanel.vue | added 1 import(s) | ~35 |
+| 08:39 | Edited web/src/components/eia-data/ParadigmsPanel.vue | 9→6 lines | ~44 |
+| 17:05 | 写作范式预览 tab 由纯文本插值改接 MarkdownPreview 组件，浏览器验证渲染生效（7 标题/1 表/3 列表） | web/src/components/eia-data/ParadigmsPanel.vue | d2610a4bb ✅ |
+| 08:42 | Session end: 3 writes across 1 files (ParadigmsPanel.vue) | 1 reads | ~110 tok |
+| 08:46 | Edited web/src/components/eia-data/ParadigmsPanel.vue | CSS: height, overflow-y | ~50 |
+| 17:20 | 范式预览区定高 320px + 内部纵向滚动（与编辑区同高防跳变），浏览器实测 scrollH 1884/clientH 319 | web/src/components/eia-data/ParadigmsPanel.vue | e584f6d71 ✅ |
+| 08:48 | Session end: 4 writes across 1 files (ParadigmsPanel.vue) | 1 reads | ~164 tok |
+| 08:53 | Edited web/src/components/eia-data/ParadigmsPanel.vue | inline fix | ~27 |
+| 17:35 | 范式预览表格加边框：复用组件 is-bordered 变体（bordered prop），零新增 CSS，实测网格边框+表头灰底 | web/src/components/eia-data/ParadigmsPanel.vue | 18d58bcce ✅ |
+| 08:54 | Session end: 5 writes across 1 files (ParadigmsPanel.vue) | 1 reads | ~193 tok |
+| 09:00 | Session end: 5 writes across 1 files (ParadigmsPanel.vue) | 1 reads | ~193 tok |
+| 10:01 | Session end: 5 writes across 1 files (ParadigmsPanel.vue) | 1 reads | ~193 tok |
+| 10:12 | Session end: 5 writes across 1 files (ParadigmsPanel.vue) | 1 reads | ~193 tok |
+| 18:40 | KB kb_jcwwz7h3pp 分片质量对账：33 份样例报告 32 份配对成功，KB markdown 过 slice_report 全指标=seed（章494/节2304/值8496），切片率 100%；分片 802 样本 avg 901 字不对齐节边界（管线不消费） | .wolf/sampling/kb_chunk_quality.py | 分析完成 ✅ |
+| 10:38 | Session end: 5 writes across 1 files (ParadigmsPanel.vue) | 1 reads | ~193 tok |
+| 19:10 | 确认分片模式：kb_jcwwz7h3pp=general(naive 512t)；按章节应切 book 预设（层级合并+token 上限），存量可 POST documents/index 重切 | 无代码改动 | 分析 ✅ |
+| 10:44 | Session end: 5 writes across 1 files (ParadigmsPanel.vue) | 1 reads | ~193 tok |
+| 19:50 | 横城 book/1024 试切查证：离线复现与线上逐片一致（5369/60%<100字），根因 hierarchical_merge 硬编码 218 token 预算、chunk_token_num 仅作裁剪上限；bug-4116 挂账待裁决 | backend/package/yuxi/knowledge/chunking/ragflow_like/{nlp,parsers/book}.py | 查证完成，修复待拍板 |
+| 11:20 | Session end: 5 writes across 1 files (ParadigmsPanel.vue) | 1 reads | ~193 tok |
+| 11:23 | Edited backend/package/yuxi/knowledge/chunking/ragflow_like/parsers/book.py | expanded (+8 lines) | ~138 |
+| 11:24 | Created backend/test/unit/backends/test_book_chunking.py | — | ~412 |
+
+## Session: 2026-10-21 11:28
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:35 | Edited backend/package/yuxi/knowledge/chunking/ragflow_like/parsers/book.py | modified _merge_groups_to_chunks() | ~357 |
+| 11:36 | Edited backend/package/yuxi/knowledge/chunking/ragflow_like/parsers/book.py | 11→8 lines | ~100 |
+| 11:36 | Edited backend/test/unit/backends/test_book_chunking.py | modified test_oversize_section_still_hard_split() | ~206 |
+| 11:42 | Edited docs/develop-guides/changelog.md | modified fix() | ~222 |
+| 11:50 | bug-4116 方案A修复：book.py _merge_groups_to_chunks 层级回填+面包屑去重，横城 5360→292片均939tok、碎片60%→0%、重复清零、节标题开头99.7% | parsers/book.py, test_book_chunking.py | 4测试过，线上重切294片验证一致 |
+| 11:48 | Session end: 4 writes across 3 files (book.py, test_book_chunking.py, changelog.md) | 3 reads | ~2081 tok |
+| 12:01 | Edited web/src/components/FileTable.vue | CSS: a-tooltip | ~87 |
+| 12:01 | Edited web/src/components/FileTable.vue | 8→8 lines | ~59 |
+| 12:09 | Edited backend/package/yuxi/models/embed.py | modified aencode() | ~147 |
+| 12:14 | Edited docs/develop-guides/changelog.md | modified fix() | ~319 |
+| 12:20 | 用户报重切后时间未更新：查为 FileTable 时间列绑 created_at（后端 updated_at 正常已刷）；改绑 updated_at+tooltip 上传时间。连带发现 4 文档重切 error_indexing（embed 60s 超时×ollama 并发排队），aencode 60→300s 后重提入库 | FileTable.vue, models/embed.py | 浏览器验证时间列生效；4 文档重切监视中 |
+| 12:15 | Session end: 8 writes across 5 files (book.py, test_book_chunking.py, changelog.md, FileTable.vue, embed.py) | 4 reads | ~2726 tok |
+| 12:22 | Session end: 8 writes across 5 files (book.py, test_book_chunking.py, changelog.md, FileTable.vue, embed.py) | 4 reads | ~2726 tok |
+| 12:23 | Session end: 8 writes across 5 files (book.py, test_book_chunking.py, changelog.md, FileTable.vue, embed.py) | 4 reads | ~2726 tok |
+| 12:24 | Session end: 8 writes across 5 files (book.py, test_book_chunking.py, changelog.md, FileTable.vue, embed.py) | 4 reads | ~2726 tok |
+| 12:40 | 用户裁决全量迁移：eia-corpus-qa 32 样例（除横城）book/1024 重切入队 951b5f86；清理 general 轮僵尸 arq 任务 8 个 + 废弃 pending 行 c931fec6；worker 300s 超时生效
+| 12:35 | Session end: 8 writes across 5 files (book.py, test_book_chunking.py, changelog.md, FileTable.vue, embed.py) | 4 reads | ~2726 tok |
+| 13:04 | Session end: 8 writes across 5 files (book.py, test_book_chunking.py, changelog.md, FileTable.vue, embed.py) | 4 reads | ~2726 tok |
+| 19:03 | Session end: 8 writes across 5 files (book.py, test_book_chunking.py, changelog.md, FileTable.vue, embed.py) | 5 reads | ~2726 tok |
+
+## Session: 2026-10-21 19:14
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:24 | Edited backend/package/yuxi/knowledge/chunking/ragflow_like/nlp.py | "[A-Za-z0-9_]+|[一-鿿]" → "[A-Za-z0-9_]+|[一-鿿]|[^\sa" | ~26 |
+| 19:24 | Created backend/test/unit/backends/test_nlp_count_tokens.py | — | ~343 |
+| 19:30 | 413 真因实锤：count_tokens 标点零计费低估 ASCII 表格串（4440字估780/真实4096超ollama物理批窗口）+ bge-m3 num_ctx 未设；nlp.py 计数校准 + ollama num_ctx 8192 重建 + 4文件重推 d15b348b | nlp.py, test_nlp_count_tokens.py, changelog.md, buglog.json | 探针200，重推进行中 |
+| 19:38 | Session end: 2 writes across 2 files (nlp.py, test_nlp_count_tokens.py) | 2 reads | ~5519 tok |
+| 19:50 | 用户裁决：回退 count_tokens 校准（肥表会被切碎损害检索完整性），保留 ollama num_ctx 8192；nlp.py git restore + 删配套测试，记录同步更新 | nlp.py, changelog.md, buglog.json, cerebrum.md | 已回退，待重推验证 |
+| 19:41 | Session end: 2 writes across 2 files (nlp.py, test_nlp_count_tokens.py) | 2 reads | ~5519 tok |
+| 19:47 | Session end: 2 writes across 2 files (nlp.py, test_nlp_count_tokens.py) | 2 reads | ~5519 tok |
+| 20:10 | 上一轮 d15b348b 被并行触发的 worker SIGINT 打断（413=0，ctx 修复有效非故障）；已同步回退代码并重推最终轮 f031ebd6（表格整块入库） | - | 运行中，监控 bukb4m4x8 |
+| 20:05 | Session end: 2 writes across 2 files (nlp.py, test_nlp_count_tokens.py) | 2 reads | ~5519 tok |
+| 20:17 | Session end: 2 writes across 2 files (nlp.py, test_nlp_count_tokens.py) | 2 reads | ~5519 tok |
+| 20:35 | Session end: 2 writes across 2 files (nlp.py, test_nlp_count_tokens.py) | 2 reads | ~5519 tok |
+| 20:45 | Session end: 2 writes across 2 files (nlp.py, test_nlp_count_tokens.py) | 2 reads | ~5519 tok |
+| 20:48 | Session end: 2 writes across 2 files (nlp.py, test_nlp_count_tokens.py) | 2 reads | ~5519 tok |
+| 21:05 | 用户裁决：本机资源不足不改代码逻辑，月儿湾入库搁置待生产；siliconflow 切换中止（未动 KB 绑定）；回到章节口径提取任务 | cerebrum.md | 32/33 已入库，月儿湾待生产 |
+
+## Session: 2026-10-21 21:20
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:40 | 质量门 PASS→线上提取章节口径：rid→file_id 名称匹配 33/33，桥接 KB markdown 16.5MB→/tmp/kb_compile，容器内 bank_compile 全量编译 | references/{section_expectations,depth_targets,samples_bank,samples,forms_catalog} | 5 stage 产物生成；与种子逐字节一致仅 forms_catalog 更新（种子陈旧）；repo 现仅 1 M 待用户决定提交 | ~45k |
+| 21:50 | 提交 forms_catalog（b119f1c10）+ 清理 milvus 残留向量：实测 556 条（非 608），删除后 count(*)=11192 与 postgres 逐文件对账一致 | milvus://kb_jcwwz7h3pp | 残留归零，检索不再被已删文件污染 | ~12k |
+| 21:55 | 用户指令推送：pisuan-custom 领先 11 提交（含 forms_catalog b119f1c10）推至 origin/yogyoho/pisuan | pisuan-custom | fab1a8468..b119f1c10 推送成功 | ~1k |
+
+## Session: 2026-10-21 22:18
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:40 | 章节口径重编译端点落地：POST /eia/stages/expectations/recompile（admin 别名 enqueue eia_corpus_process scope=all）+ SectionsPanel 重编译按钮 + 2 门控测试；e2e queued→success compiled:33 (14.2s)；changelog/cerebrum 记录，库↔KB 语料漂移已标记待用户裁定 | domain_factory_router.py, eia_data_api.js, SectionsPanel.vue, test_domain_factory_api.py, changelog.md | 完成，4 文件待提交 | ~90k |
+| 22:53 | Created docs/vibe/2026-10-21-corpus-kb-authoritative-compile.md | — | ~437 |
+| 23:20 | KB 为准编译语义落地：选集=KB 全量文档（stem join 库行）、内容=get_file_download(parsed)、fail fast 三项、台账 library_not_in_kb；单测 8 passed + e2e compiled=33 + 门控 401 + 幻影 rid 清理 | eia_corpus_task_service.py, test_eia_corpus_process.py, domain_factory_router.py, SectionsPanel.vue | 完成，6 文件待提交 | ~60k |
+| 23:02 | Session end: 1 writes across 1 files (2026-10-21-corpus-kb-authoritative-compile.md) | 3 reads | ~468 tok |
+| 23:10 | Session end: 1 writes across 1 files (2026-10-21-corpus-kb-authoritative-compile.md) | 3 reads | ~468 tok |
+| 23:34 | Session end: 1 writes across 1 files (2026-10-21-corpus-kb-authoritative-compile.md) | 3 reads | ~468 tok |
+| 23:44 | Session end: 1 writes across 1 files (2026-10-21-corpus-kb-authoritative-compile.md) | 3 reads | ~468 tok |
+
+## Session: 2026-10-22 10:38
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:46 | Created backend/test/unit/services/test_eia_lexicon_mapping.py | — | ~520 |
+| 10:46 | Created backend/test/unit/services/test_eia_lexicon_mapping.py | — | ~1114 |
+| 10:58 | Session end: 2 writes across 1 files (test_eia_lexicon_mapping.py) | 3 reads | ~1634 tok |
+| 10:59 | Session end: 2 writes across 1 files (test_eia_lexicon_mapping.py) | 4 reads | ~1634 tok |
+| 11:05 | P1+P2 词表×章节口径联动：bank_compile.build_label_map 抽取（词表标注/期望归并共源）、list_entries 挂 forms_field、export 跳过未映射、LexiconPanel 映射 pill + 导出弹窗一键重编译；单测 3+9 passed、e2e forms_field 在位 | bank_compile.py, eia_lexicon_service.py, LexiconPanel.vue, test_eia_lexicon_mapping.py, test_eia_corpus_process.py | 完成，待提交 | ~45k |
+| 11:04 | Session end: 2 writes across 1 files (test_eia_lexicon_mapping.py) | 4 reads | ~1634 tok |
+| 12:10 | 提交并推送两批：e3a69464a（KB 为准编译+重编译端点，6 文件）、45076c68f（词表×期望联动 P1+P2，4 文件）→ origin pisuan-custom；并行工作流文件未动 | git | 推送成功 b119f1c10..45076c68f | ~8k |
+| 11:11 | Session end: 2 writes across 1 files (test_eia_lexicon_mapping.py) | 4 reads | ~1634 tok |
+| 11:22 | Session end: 2 writes across 1 files (test_eia_lexicon_mapping.py) | 5 reads | ~1634 tok |
+| 13:05 | refs 治理：发现 sync-dev 回滚镜像新代产物；_merge_corpus_meta 加 prune（幻影根治）+ 统计断言去快照化；重编译后 refs 刷新到 KB 代（11M/320A/320D，切片 477→512），全量验证过；两笔提交 0ac995e4c/a46bef409 待推送 | eia_corpus_task_service.py, references/**, test_eia_corpus_process.py, test_eia_data_service.py | 完成，待推送 | ~55k |
+| 11:38 | Session end: 2 writes across 1 files (test_eia_lexicon_mapping.py) | 5 reads | ~1634 tok |
+| 13:20 | 推送治理批次 45076c68f..a46bef409（prune+去快照化 / refs 刷新）→ origin pisuan-custom | git | 推送成功 | ~2k |
+| 12:00 | Session end: 2 writes across 1 files (test_eia_lexicon_mapping.py) | 5 reads | ~1634 tok |
+| 12:10 | Session end: 2 writes across 1 files (test_eia_lexicon_mapping.py) | 5 reads | ~1634 tok |
+| 12:27 | Session end: 2 writes across 1 files (test_eia_lexicon_mapping.py) | 5 reads | ~1634 tok |
+
+## Session: 2026-10-22 12:40
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:20 | 开题三件套/data_expectations/refs×页面矩阵深挖：确认统一模式「references 文件锚点(只读) + DB 覆盖层表(eia_stage_field_edits/eia_paradigm_drafts/eia_formula_overrides/eia_entity_additions/eia_meta_annotations/eia_standard_limit_rows) + admin 导出物化回写」；ExpectationsPanel/SectionsPanel 只读，编辑面板各挂一张覆盖层表 | domain_factory_router.py, eia_*_service.py, EiaDataLayout.vue, eia_*_api.js | 分析完成 | ~18k |
+| 12:53 | Created docs/vibe/2026-10-22-eia-refs-pages-matrix.md | — | ~1014 |
+| 15:40 | 确认矩阵固化 docs/vibe/2026-10-22-eia-refs-pages-matrix.md：统一模式+核心矩阵（12 行 refs×页面）+无页面覆盖清单+三件套语境+待决 2 项 | docs/vibe/2026-10-22-eia-refs-pages-matrix.md | 完成（gitignored 无需提交） | ~3k |
+| 12:53 | Session end: 1 writes across 1 files (2026-10-22-eia-refs-pages-matrix.md) | 0 reads | ~1087 tok |
+| 16:05 | 核对 list_report_types 数据链：report_types 字典表（UNIQUE code+domain_code，种子 migrate_domain_factory.sql:179 + manager bootstrap），HTTP 仅只读 GET /domain-entity-builder/report-types，无 CRUD UI；线上 14 行已 dump | tools.py:705, domain_entity_repository.py:262, OutlineTemplate.vue | 答复完成 | ~12k |
+| 13:20 | Session end: 1 writes across 1 files (2026-10-22-eia-refs-pages-matrix.md) | 0 reads | ~1087 tok |
+| 13:31 | Session end: 1 writes across 1 files (2026-10-22-eia-refs-pages-matrix.md) | 0 reads | ~1087 tok |
+| 13:36 | Session end: 1 writes across 1 files (2026-10-22-eia-refs-pages-matrix.md) | 0 reads | ~1087 tok |
+| 17:10 | 大纲模板页全量梳理：extract→confirm 半自动入库闭环+编辑器；1055 条 outlines 完备度 55| 17:10 | 大纲模板页全量梳理：extract-confirm 半自动入库闭环+编辑器；1055 条 outlines 完备度分层、628 条 chapter_id NULL、writing_example 仅 1；埋点实证 get_chapter_outline 仅 2 次消费、SKILL.md 零引用；与 stages 13 章结构差一个量级 | OutlineTemplate.vue, domain_factory_router.py, domain_factory_outlines | 分析完成 | ~20k |
+| 13:48 | Session end: 1 writes across 1 files (2026-10-22-eia-refs-pages-matrix.md) | 0 reads | ~1087 tok |
+
+## Session: 2026-10-22 13:56
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:50 | SKILL.md 剥离 KF 模板依赖：tool_dependencies 收窄、三件套→两件事、KF 契约 resolve 条改剥离声明、D3 去 resolve 分句；镜像同步 + 容器 test_builtin_discovery 13 passed | coal-eia-writer/SKILL.md | 完成，待提交 | ~15k |
+| 18:00 | push 9fe9364af（SKILL.md 剥离 KF 模板依赖）到 origin/pisuan-custom，一次成功 | git | 完成 | ~1k |
+
+## Session: 2026-10-22 14:11
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:11 | Edited web/src/utils/modelIcon.js | "https://registry.npmmirro" → "/providers-logo" | ~28 |
+| 14:11 | Edited web/src/utils/modelIcon.js | "https://xerrors.oss-cn-sh" → "/providers-logo/fluxionai" | ~13 |
+| 14:11 | Edited web/src/utils/modelIcon.js | "openai" → "openai-completions" | ~24 |
+| 14:11 | Edited web/src/utils/modelIcon.js | "zhipu" → "zhipu-code-plan" | ~11 |
+| 14:15 | Edited web/src/components/eia-data/LibraryPanel.vue | 12→7 lines | ~83 |
+| 14:16 | Edited web/src/components/eia-data/LibraryPanel.vue | added 1 import(s) | ~26 |
+| 14:16 | Edited web/src/components/eia-data/LibraryPanel.vue | CSS: value, label | ~79 |
+| 14:16 | Edited web/src/components/eia-data/LibraryPanel.vue | modified catch() | ~86 |
+| 14:16 | Edited web/src/components/eia-data/LibraryPanel.vue | 6→3 lines | ~8 |
+| 14:17 | Created docs/vibe/prototypes/2026-10-22-writer-pipeline-diagrams.html | — | ~6287 |
+| 14:17 | Edited web/src/utils/modelIcon.js | 1→2 lines | ~46 |
+| 19:30 | 三张图固化 docs/vibe/prototypes/2026-10-22-writer-pipeline-diagrams.html：图1 写作链路(0-7+两门+FAIL回路+用户决策点) 图2 加工管线(主链+三DB机制+治理分发) 图3 加工x消费关联(7产物x5消费点跨只读边界+治理闭环)；静态走查修 8 处标签重叠/路径穿越；浏览器 QA 被残留 Chrome profile 锁阻塞 | docs/vibe/prototypes/2026-10-22-writer-pipeline-diagrams.html | 完成，待视觉复检 | ~35k |
+| 14:22 | Session end: 11 writes across 3 files (modelIcon.js, LibraryPanel.vue, 2026-10-22-writer-pipeline-diagrams.html) | 3 reads | ~7160 tok |
+| 14:36 | Edited docs/develop-guides/changelog.md | modified fix() | ~102 |
+| 14:55 | 供应商 logo 本地化：providers-logo/ 23 资产入库 + modelIcon.js 切 /providers-logo + ollama 映射；提交 b007aa833 (pisuan-custom)；pisuan-localized 重建 db86e752 并强制推送 github；浏览器端到端验证通过 | web/src/utils/modelIcon.js, web/public/providers-logo/ | 完成 | ~40k |
+| 14:37 | Created ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/localhost-5173-is-localized-stack.md | — | ~228 |
+| 14:38 | Session end: 13 writes across 5 files (modelIcon.js, LibraryPanel.vue, 2026-10-22-writer-pipeline-diagrams.html, changelog.md, localhost-5173-is-localized-stack.md) | 7 reads | ~7514 tok |
+| 14:40 | Edited web/src/components/eia-data/SectionsPanel.vue | inline fix | ~13 |
+| 14:48 | Edited docs/develop-guides/changelog.md | modified refactor() | ~77 |
+| 14:48 | 文件库阶段单元格原生 select→FilterSelect（受控+乐观回滚）+ SectionsPanel Modal 补 import；运行栈 sync-dev 连撞 Errno22 瞬态锁，-Revert+停 web 容器重跑干净通过，浏览器 QA 浅/暗色+PATCH 200 全过 | LibraryPanel.vue, SectionsPanel.vue | done | ~90k |
+| 14:49 | Edited docs/develop-guides/changelog.md | modified refactor() | ~79 |
+| 14:50 | Edited docs/develop-guides/changelog.md | modified fix() | ~78 |
+| 14:51 | Created ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/syncdev-einval-transient-lock.md | — | ~195 |
+| 14:51 | Session end: 18 writes across 7 files (modelIcon.js, LibraryPanel.vue, 2026-10-22-writer-pipeline-diagrams.html, changelog.md, localhost-5173-is-localized-stack.md) | 9 reads | ~7989 tok |
+| 19:30 | Created web/src/utils/svgRasterize.js | — | ~652 |
+| 19:30 | Edited web/src/apis/user_api.js | added optional chaining | ~135 |
+| 19:30 | Edited web/src/apis/base.js | added 1 condition(s) | ~90 |
+| 19:36 | Session end: 21 writes across 10 files (modelIcon.js, LibraryPanel.vue, 2026-10-22-writer-pipeline-diagrams.html, changelog.md, localhost-5173-is-localized-stack.md) | 13 reads | ~8866 tok |
+| 19:44 | Session end: 21 writes across 10 files (modelIcon.js, LibraryPanel.vue, 2026-10-22-writer-pipeline-diagrams.html, changelog.md, localhost-5173-is-localized-stack.md) | 13 reads | ~8866 tok |
+| 20:12 | Created docs/vibe/prototypes/2026-10-22-standards-merge-before-after.html | — | ~3210 |
+| 20:13 | Edited web/src/components/eia-data/LibraryPanel.vue | CSS: FileTypeIcon | ~43 |
+| 20:13 | Edited web/src/components/eia-data/LibraryPanel.vue | 4→3 lines | ~10 |
+| 20:13 | Edited web/src/components/eia-data/LibraryPanel.vue | added 1 import(s) | ~43 |
+| 20:14 | Edited web/src/components/eia-data/LibraryPanel.vue | reduced (-14 lines) | ~26 |
+
+## Session: 2026-10-22 20:15
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:30 | P1-B 全合流前后流程图绘成（合流前 3 存储 4 病灶 vs 合流后分层模型 4 消除） | docs-vibe-prototypes-2026-10-22-standards-merge-before-after.html | 完成，待用户过目 | ~6k |
+| 21:05 | 语料管线线上线下对照分析：读 eia_library_service/eia_corpus_task_service/bank_compile/corpus_meta 产物面，确认 4 硬伤（regenerate no-op 陈旧洞 bug-4010、删库不级联 KB、同名 stem 晚爆炸、stage 改判 prune 残留 bug-4011）+ 3 能力断链 + 2 架构张力 | eia_corpus_task_service.py 等 | 分析交付，均未修复 | ~18k |
+| 20:59 | Edited web/src/components/eia-data/factory-ui.less | 4→4 lines | ~31 |
+| 20:59 | Edited web/src/components/eia-data/EiaDataLayout.vue | 6→6 lines | ~41 |
+| 20:59 | Edited web/src/components/eia-data/EiaDataLayout.vue | 10→5 lines | ~17 |
+| 21:01 | Created docs/vibe/2026-10-22-corpus-pipeline-online-vs-offline.md | — | ~1294 |
+| 21:02 | Created backend/test/unit/services/test_eia_library_regenerate.py | — | ~905 |
+| 21:02 | Edited docs/develop-guides/changelog.md | modified fix() | ~51 |
+| 21:03 | Created backend/test/unit/services/test_eia_library_regenerate.py | — | ~869 |
+| 21:03 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_bank_compile_prune.py | — | ~629 |
+| 15:10 | eia-data 内容区弃 1180 画布封顶（chrome-canvas+ewp 双层），全宽化，宽屏右空档消除；三页 QA 浅/暗色过 | EiaDataLayout.vue, factory-ui.less | done | ~30k |
+| 21:03 | Session end: 8 writes across 6 files (factory-ui.less, EiaDataLayout.vue, 2026-10-22-corpus-pipeline-online-vs-offline.md, test_eia_library_regenerate.py, changelog.md) | 8 reads | ~3940 tok |
+| 21:05 | Edited backend/test/unit/services/test_eia_library_regenerate.py | 3→5 lines | ~50 |
+| 21:06 | Edited backend/test/unit/services/test_eia_library_regenerate.py | 2→4 lines | ~43 |
+| 22:05 | 修复语料管线两硬伤：regenerate 不覆写 md_sha1（bug-4010）+ prune (stage,rid) 二元组（bug-4011）；容器 27 passed；提交 4a042e58c（4 文件，未推送） | eia_library_service.py bank_compile.py +2 测试 | 完成 | ~14k |
+| 21:11 | Session end: 10 writes across 6 files (factory-ui.less, EiaDataLayout.vue, 2026-10-22-corpus-pipeline-online-vs-offline.md, test_eia_library_regenerate.py, changelog.md) | 8 reads | ~4033 tok |
+| 21:11 | Session end: 10 writes across 6 files (factory-ui.less, EiaDataLayout.vue, 2026-10-22-corpus-pipeline-online-vs-offline.md, test_eia_library_regenerate.py, changelog.md) | 8 reads | ~4033 tok |
+| 21:20 | Created backend/test/unit/services/test_eia_library_delete_upload.py | — | ~1582 |
+| 21:20 | Edited backend/test/unit/services/test_eia_library_delete_upload.py | modified __init__() | ~180 |
+| 21:21 | Edited backend/test/unit/services/test_eia_library_delete_upload.py | modified raises() | ~54 |
+| 22:35 | 修复 #2 删库级联 KB + #3 上传拦同名 stem；容器 25 passed；提交 4649f831c（3 文件，未推送）；buglog-4012/4013 销账 | eia_library_service.py domain_factory_router.py +1 测试 | 完成 | ~12k |
+| 21:24 | Session end: 13 writes across 7 files (factory-ui.less, EiaDataLayout.vue, 2026-10-22-corpus-pipeline-online-vs-offline.md, test_eia_library_regenerate.py, changelog.md) | 8 reads | ~5849 tok |
+| 23:10 | 修 #7：corpus_meta.py --front-matter 显式专用拆隐式默认；front_matter.json 保留（金样证据否决删除）；容器 27 passed | corpus_meta.py | 完成，待提交 | ~8k |
+
+## Session: 2026-10-22 21:38
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:44 | Created docs/superpowers/specs/2026-10-22-standards-limit-merge-design.md | — | ~1460 |
+| 21:44 | Edited docs/superpowers/specs/2026-10-22-standards-limit-merge-design.md | 3→3 lines | ~49 |
+| 23:40 | #7 提交 2a4127e88；P1-A spec 落稿（实测普查：乙通道 0 行/enrich 667 行 0 核验） | specs/2026-10-22-standards-limit-merge-design.md | 待用户评审 | ~12k |
+| 21:45 | Session end: 2 writes across 1 files (2026-10-22-standards-limit-merge-design.md) | 1 reads | ~1616 tok |
+| 22:03 | Created docs/superpowers/plans/2026-10-22-standards-limit-merge.md | — | ~10641 |
+| 22:04 | Edited docs/superpowers/plans/2026-10-22-standards-limit-merge.md | SimpleNamespace() → datetime() | ~95 |
+| 22:04 | Edited docs/superpowers/plans/2026-10-22-standards-limit-merge.md | 3→3 lines | ~50 |
+| 22:05 | Edited docs/superpowers/plans/2026-10-22-standards-limit-merge.md | expanded (+12 lines) | ~424 |
+| 22:05 | Edited docs/superpowers/plans/2026-10-22-standards-limit-merge.md | modified fake_insert() | ~121 |
+| 23:55 | P1-A 实施计划落稿（9 任务，自审修 3 处：Task7 转正改 page_row_id 幂等追加） | plans/2026-10-22-standards-limit-merge.md | 待执行方式选择 | ~10k |
+| 22:06 | Session end: 7 writes across 2 files (2026-10-22-standards-limit-merge-design.md, 2026-10-22-standards-limit-merge.md) | 1 reads | ~13756 tok |
+| 22:07 | Session end: 7 writes across 2 files (2026-10-22-standards-limit-merge-design.md, 2026-10-22-standards-limit-merge.md) | 4 reads | ~13756 tok |
+| 22:12 | Session end: 7 writes across 2 files (2026-10-22-standards-limit-merge-design.md, 2026-10-22-standards-limit-merge.md) | 5 reads | ~13756 tok |
+| 22:17 | Session end: 7 writes across 2 files (2026-10-22-standards-limit-merge-design.md, 2026-10-22-standards-limit-merge.md) | 5 reads | ~13756 tok |
+| 22:20 | Session end: 7 writes across 2 files (2026-10-22-standards-limit-merge-design.md, 2026-10-22-standards-limit-merge.md) | 5 reads | ~13756 tok |
+| 22:21 | Created backend/test/unit/services/test_eia_limit_row_mapping.py | — | ~867 |
+| 22:23 | Created backend/package/yuxi/services/eia_limit_row_mapping.py | — | ~943 |
+| 22:24 | Edited backend/package/yuxi/services/eia_limit_row_mapping.py | 6→6 lines | ~92 |
+| 22:24 | Edited backend/package/yuxi/services/eia_limit_row_mapping.py | 7→10 lines | ~164 |
+| 22:24 | Edited backend/test/unit/services/test_eia_limit_row_mapping.py | modified test_flat_rows_direct_map() | ~54 |
+| 22:25 | Edited backend/test/unit/services/test_eia_limit_row_mapping.py | 2→5 lines | ~62 |
+| 22:25 | Edited backend/test/unit/services/test_eia_limit_row_mapping.py | 1→2 lines | ~40 |
+| 22:30 | P1-T2 限值行形拍平/重组模块+5单测（host+container 5 passed）；修 sorted(groups) 序 bug 改 dict 保序；仅 add 两指名文件 |
+| 00:40 | Task1 双评审通过(2d04cdbc0)；Task2 实现 fdc8b66de，抓计划 bug-4015（md5 序→首现序） | eia_limit_row_mapping.py | spec 评审中 | ~15k |
+| 22:31 | Session end: 14 writes across 4 files (2026-10-22-standards-limit-merge-design.md, 2026-10-22-standards-limit-merge.md, test_eia_limit_row_mapping.py, eia_limit_row_mapping.py) | 5 reads | ~15978 tok |
+| 22:35 | Session end: 14 writes across 4 files (2026-10-22-standards-limit-merge-design.md, 2026-10-22-standards-limit-merge.md, test_eia_limit_row_mapping.py, eia_limit_row_mapping.py) | 5 reads | ~15978 tok |
+| 22:41 | Session end: 14 writes across 4 files (2026-10-22-standards-limit-merge-design.md, 2026-10-22-standards-limit-merge.md, test_eia_limit_row_mapping.py, eia_limit_row_mapping.py) | 7 reads | ~27127 tok |
+| 22:41 | Edited backend/test/unit/services/test_eia_limit_row_mapping.py | 1→2 lines | ~62 |
+| 22:42 | Edited backend/test/unit/services/test_eia_limit_row_mapping.py | 2→5 lines | ~69 |
+| 22:40 | P1-T2 评审 Minor 补钉：跨调用同键断言入 test_flat_rows_direct_map（E501 折行过 lint）；amend→e06188ca5；host+容器复跑 5 passed |
+| 22:45 | Session end: 16 writes across 4 files (2026-10-22-standards-limit-merge-design.md, 2026-10-22-standards-limit-merge.md, test_eia_limit_row_mapping.py, eia_limit_row_mapping.py) | 7 reads | ~27258 tok |
+| 22:51 | P1-T3 落地：save_limit_rows 重指向 standard_indicators（born-verified expert 行，事务删旧插新）；测试书 snippet 与实现 snippet 失配 2 处以测试为准修正；容器 5 passed+gate1；commit c7e6124bc | eia_standard_service.py, test_eia_standard_save_rows.py | DONE | ~9k |
+| 22:53 | Session end: 16 writes across 4 files (2026-10-22-standards-limit-merge-design.md, 2026-10-22-standards-limit-merge.md, test_eia_limit_row_mapping.py, eia_limit_row_mapping.py) | 7 reads | ~27258 tok |
+| 23:02 | Session end: 16 writes across 4 files (2026-10-22-standards-limit-merge-design.md, 2026-10-22-standards-limit-merge.md, test_eia_limit_row_mapping.py, eia_limit_row_mapping.py) | 7 reads | ~27258 tok |
+| 23:09 | Task3 qual review: save_limit_rows->standard_indicators diff e06188..c7e612; tests 2+7 passed in container; old table 0 rows verified; flagged missing ensure_schema | eia_standard_service.py, test_eia_standard_save_rows.py | APPROVED w/ 1 Important | ~9k |
+| 23:12 | Session end: 16 writes across 4 files (2026-10-22-standards-limit-merge-design.md, 2026-10-22-standards-limit-merge.md, test_eia_limit_row_mapping.py, eia_limit_row_mapping.py) | 7 reads | ~27258 tok |
+| 23:28 | Task4 list_limit_tables 重指向：list_expert_rows+verified 派生+ensure_schema 首写守卫；13 passed 容器 | eia_standard_service.py, eia_limit_row_mapping.py, test_eia_standard_list_limits.py, test_eia_standard_save_rows.py | committed 354da209e | ~60k || 23:29 | Session end: 16 writes across 4 files (2026-10-22-standards-limit-merge-design.md, 2026-10-22-standards-limit-merge.md, test_eia_limit_row_mapping.py, eia_limit_row_mapping.py) | 7 reads | ~27258 tok |
+| 01:20 | Task4 完成 354da209e（13 passed）；spec 发现并清除断诊泄漏的 2 行 alice 测试行（bug-4016）；Task7 清单+重写旧 test_eia_standard_service.py | - | 已清零 | ~12k |
+| 23:38 | Session end: 16 writes across 4 files (2026-10-22-standards-limit-merge-design.md, 2026-10-22-standards-limit-merge.md, test_eia_limit_row_mapping.py, eia_limit_row_mapping.py) | 7 reads | ~27258 tok |
+| 23:48 | Task4 code review: 6/6 unit tests pass in container, ruff clean; found frontend source-badge vocab gap (expert vs db) + drift-branch test gap | eia_standard_service.py, StandardsPanel.vue | reviewed, report delivered | ~40k |
+| 23:51 | Edited docs/superpowers/plans/2026-10-22-standards-limit-merge.md | expanded (+6 lines) | ~235 |
+| 23:51 | Session end: 17 writes across 4 files (2026-10-22-standards-limit-merge-design.md, 2026-10-22-standards-limit-merge.md, test_eia_limit_row_mapping.py, eia_limit_row_mapping.py) | 7 reads | ~27510 tok |
+| 00:40 | 修 bug-4017 amend 撞车：拆史 300a8cc0a+698c30eaf，容器 14 passed；Task4 闭环待质量复核 | .git | 史净 | ~6k |
+| 00:52 | Session end: 17 writes across 4 files (2026-10-22-standards-limit-merge-design.md, 2026-10-22-standards-limit-merge.md, test_eia_limit_row_mapping.py, eia_limit_row_mapping.py) | 7 reads | ~27510 tok |
+
+## Session: 2026-10-22 00:56
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 01:02 | Task 4 质量复核 APPROVED 收线；派发 Task 5 实现代理（enrich DELETE 收窄，TDD：ENRICH_DELETE_SQL 常量 + 集成测试） | .wolf/buglog.json, backend/package/yuxi/extensions/regulation_library/enrichment_service.py | 复核通过/代理在跑 | ~40k |
+| 01:45 | T5 enrich 删旧收窄 source='enrich'：红灯(ImportError)→常量+调用点(5e1549092)→挂死诊断(psycopg池任务)→_run包装close→绿灯 1 passed+DB三查净 | enrichment_service.py, test_enrich_delete_scope.py | DONE | ~90k |
+| 01:40 | Task 5 双评审收线：spec ✅（7 项独立验证+3 偏差核实）/ quality ✅（0 阻塞，3 Minor 采纳；Task 6 rider：第二 async 消费者出现时提升 _run 入 conftest） | 5e1549092 | Task 5 关闭 | ~45k |
+| 01:36 | Edited docs/superpowers/plans/2026-10-22-standards-limit-merge.md | expanded (+6 lines) | ~134 |
+| 01:38 | Session end: 1 writes across 1 files (2026-10-22-standards-limit-merge.md) | 4 reads | ~143 tok |
+| 02:00 | Task 6 query_indicators 分层查询（layer/tier/table_nv）+ 纯函数单测，修 spec 绑定键笔误 bug-4126 | enrichment_service.py, test_query_indicators_layer.py | 96fc77b72, 2 passed, 冒烟 667 行全 candidate | ~40k |
+| 01:51 | Session end: 1 writes across 1 files (2026-10-22-standards-limit-merge.md) | 4 reads | ~143 tok |
+| 02:10 | Task 6 实现完成 96fc77b7（含 bug-4126 计划稿绑定键笔误修正）；spec ✅（4 偏差全证实，遗留临时文件已核实字节同后删）；quality 评审发出（重点：层判定时序 format 后 truthiness） | 96fc77b7 | quality 在跑 | ~50k |
+| 01:55 | Session end: 1 writes across 1 files (2026-10-22-standards-limit-merge.md) | 5 reads | ~143 tok |
+| 02:01 | Session end: 1 writes across 1 files (2026-10-22-standards-limit-merge.md) | 7 reads | ~143 tok |
+| 02:40 | T6 评审修复：W1 假行补 table_key + _anchor_maps 守卫注释/契约用例（bug-4127） | test_standards_panel_w1.py, enrichment_service.py, test_query_indicators_layer.py | d83d4bd01, 全目录 107 passed, enrich=667 | ~30k |
+| 02:35 | Task 6 修复 d83d4bd01（W1 假行 table_key + 守卫契约；bug-4127 记录）；全目录 107 passed；轻量复审已发回原质量评审代理 | d83d4bd01 | 复审在跑 | ~35k |
+| 02:06 | Session end: 1 writes across 1 files (2026-10-22-standards-limit-merge.md) | 7 reads | ~143 tok |
+| 02:50 | Task 6 复审 APPROVED 收线（96fc77b72+d83d4bd01）；开始准备 Task 7（转正重指向+死代码+stale 测试清理） | .wolf/memory.md | Task 7 派发中 | ~15k |
+| 02:08 | Edited docs/superpowers/plans/2026-10-22-standards-limit-merge.md | 4→9 lines | ~227 |
+| 02:10 | Session end: 2 writes across 1 files (2026-10-22-standards-limit-merge.md) | 7 reads | ~10830 tok |
+| 02:18 | Created backend/test/unit/test_eia_standard_service.py | — | ~2053 |
+| 02:19 | Edited backend/test/unit/test_eia_standard_service.py | 2→1 lines | ~14 |
+| 02:19 | Edited backend/test/unit/services/test_eia_limit_extract_service.py | added 4 import(s) | ~117 |
+| 02:19 | Edited backend/test/unit/services/test_eia_limit_extract_service.py | modified __init__() | ~245 |
+| 02:20 | Edited backend/test/unit/services/test_eia_limit_extract_service.py | modified test_decide_row_confirm_writes_expert_row() | ~333 |
+| 02:20 | Edited backend/test/unit/services/test_eia_limit_extract_service.py | modified test_decide_row_discarded_never_finalizes() | ~152 |
+| 02:20 | Edited backend/package/yuxi/services/eia_limit_row_mapping.py | _page_row_id() → page_row_id_for() | ~128 |
+| 02:20 | Edited backend/test/unit/services/test_eia_limit_row_mapping.py | modified test_page_row_id_for_deterministic_and_table_scoped() | ~143 |
+| 02:20 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | added 4 import(s) | ~394 |
+| 02:20 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | modified _normalize_row_json() | ~38 |
+| 02:20 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | modified __init__() | ~132 |
+| 02:20 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | "行裁决：confirm/edited 经 upse" → "行裁决：confirm/edited 经 _ins" | ~31 |
+| 02:20 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | modified in() | ~314 |
+| 02:21 | Edited backend/package/yuxi/repositories/eia_standard_repository.py | 15→12 lines | ~89 |
+| 02:21 | Edited backend/package/yuxi/repositories/eia_standard_repository.py | modified list_rows() | ~193 |
+| 02:21 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | "行裁决：confirm/edited 经 _ins" → "行裁决：confirm/edited 经 _ins" | ~30 |
+| 02:22 | Edited backend/package/yuxi/services/eia_limit_extract_service.py | "行裁决：confirm/edited 经 _ins" → "行裁决：confirm/edited 经 _ins" | ~28 |
+| 02:30 | T7 语料限值转正 born-verified 重指向 + repo 死代码清理 + stale 测试处置 | eia_limit_extract_service.py, eia_limit_row_mapping.py, eia_standard_repository.py, test_eia_standard_service.py, test_eia_limit_extract_service.py, test_eia_limit_row_mapping.py | 两笔提交 6fd5c516c + a907207cc；services 1167 passed（goldens 集合期报错系既有环境缺陷）、extensions 107 passed、StepA 文件 15 passed；DB 基线无漂移 enrich=667/expert=0 | ~40k |
+| 03:40 | Task 7 实现 a907207cc+6fd5c516c（转正 born-verified 直写/page_row_id_for 公有化/repo 死方法/stale 测试 15 用例处置）；services 全目录 1167 passed；bug-4128（既有 goldens 集合期缺陷）记录；spec 复核发出 | a907207cc 6fd5c516c | spec 在跑 | ~65k |
+| 02:29 | Session end: 19 writes across 7 files (2026-10-22-standards-limit-merge.md, test_eia_standard_service.py, test_eia_limit_extract_service.py, eia_limit_row_mapping.py, test_eia_limit_row_mapping.py) | 16 reads | ~15264 tok |
+| 02:38 | Session end: 19 writes across 7 files (2026-10-22-standards-limit-merge.md, test_eia_standard_service.py, test_eia_limit_extract_service.py, eia_limit_row_mapping.py, test_eia_limit_row_mapping.py) | 16 reads | ~15264 tok |
+| 02:46 | Edited backend/test/unit/services/test_eia_canonical_md_goldens.py | modified _manifest() | ~62 |
+| 02:48 | Edited docs/superpowers/plans/2026-10-22-standards-limit-merge.md | expanded (+10 lines) | ~307 |
+| 04:20 | Task 7 双评审 APPROVED 收线（a907207cc+6fd5c516c）；bug-4128 单独小修 7a880330c（services 全目录 1167p/4s/0e）；Task 9 riders 折入 | 7a880330c | Task 8 待派发 | ~40k |
+| 02:50 | Session end: 21 writes across 8 files (2026-10-22-standards-limit-merge.md, test_eia_standard_service.py, test_eia_limit_extract_service.py, eia_limit_row_mapping.py, test_eia_limit_row_mapping.py) | 17 reads | ~25715 tok |
+| 03:10 | Task 8 执行：废除 export_limit_rows/limits/export/repo.list_rows/前端 exportLimits+dbTableCount，pending 口径切 source!=expert；12f72a9d8（+15/-181，6 文件）；13p+1167p/4s/0e，lint 0 错，web 栈待 sync-dev；遗留契约点 bug-4129（flow 集成测试旧口径） | 12f72a9d8 | DONE | ~35k |
+| 05:10 | Task 8 实现 12f72a9d8（导出废除 6 文件 +15/-181；徽章词表/pending 收口/list_rows 连带清；web 栈部署跳过待 sync-dev）；bug-4129（flow 测试旧口径潜伏）上报；spec 复核发出 | 12f72a9d8 | spec 在跑 | ~55k |
+| 03:05 | Session end: 21 writes across 8 files (2026-10-22-standards-limit-merge.md, test_eia_standard_service.py, test_eia_limit_extract_service.py, eia_limit_row_mapping.py, test_eia_limit_row_mapping.py) | 17 reads | ~25715 tok |
+| 03:12 | Session end: 21 writes across 8 files (2026-10-22-standards-limit-merge.md, test_eia_standard_service.py, test_eia_limit_extract_service.py, eia_limit_row_mapping.py, test_eia_limit_row_mapping.py) | 17 reads | ~25715 tok |
+| 03:21 | Edited docs/superpowers/plans/2026-10-22-standards-limit-merge.md | 5→9 lines | ~312 |
+| 05:50 | Task 8 双评审 APPROVED 收线（12f72a9d8）；flow 测试破坏性 fixture 约束入 cerebrum DNR；Task 9 清单修订提交 | ea24c102d+新docs | Task 9 待派发 | ~50k |
+| 03:22 | Session end: 22 writes across 8 files (2026-10-22-standards-limit-merge.md, test_eia_standard_service.py, test_eia_limit_extract_service.py, eia_limit_row_mapping.py, test_eia_limit_row_mapping.py) | 20 reads | ~26049 tok |
+| 11:50 | Task 9 收官：T7/T8 清扫（std_repo 死形参/金值钉扎/bug-4129 exp_pending 同源化/docstring 词表/退役注记/ruff 归零）+ SKILL 门1 限值断言接线 + changelog 顶部条目 + 冒烟 SMOKE OK（enrich=667/expert=0 对账）+ 回归 1167/4sk + 107 + 1p + 13p 全绿；提交 0b91c9cce + 5526363ff | eia_limit_extract_service.py 等 9 文件 + SKILL.md | DONE | ~45k |
+| 06:40 | Task 9 实现 0b91c9cce+5526363ff（清扫 8 项/SKILL 接线/冒烟 SMOKE OK/回归四连全绿）；未推送 25 笔清单产出；spec 复核发出 | 0b91c9cce 5526363ff | spec 在跑 | ~70k |
+| 03:43 | Session end: 22 writes across 8 files (2026-10-22-standards-limit-merge.md, test_eia_standard_service.py, test_eia_limit_extract_service.py, eia_limit_row_mapping.py, test_eia_limit_row_mapping.py) | 20 reads | ~26049 tok |
+| 07:10 | Task 9 spec ✅（8 项全 PASS，回归复跑全绿）；投影机制查明=运行时自动刷新无需手工同步；quality 评审发出 | 5526363ff | quality 在跑 | ~25k |
+| 03:51 | Session end: 22 writes across 8 files (2026-10-22-standards-limit-merge.md, test_eia_standard_service.py, test_eia_limit_extract_service.py, eia_limit_row_mapping.py, test_eia_limit_row_mapping.py) | 20 reads | ~26049 tok |
+| 07:40 | Task 9 双评审 APPROVED 收线（0b91c9cce+5526363ff）；P1 合流 9 任务全部完成；3 Minor 记录不修（SKILL 占位符括号/flow 注释首行/金值 assert msg）；25 笔待推送 | 5526363ff | 计划收官 | ~40k |
+
+## Session: 2026-10-22 04:02
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:14 | Created .archify/workflow-corpus-writer-20261023-071348/candidate.json | — | ~2664 |
+| 07:14 | Edited .archify/workflow-corpus-writer-20261023-071348/candidate.json | inline fix | ~31 |
+| 07:15 | Edited .archify/workflow-corpus-writer-20261023-071348/candidate.json | inline fix | ~24 |
+| 07:15 | Edited .archify/workflow-corpus-writer-20261023-071348/candidate.json | 3→3 lines | ~89 |
+| 07:15 | Edited .archify/workflow-corpus-writer-20261023-071348/candidate.json | inline fix | ~22 |
+| 07:17 | Created .archify/workflow-corpus-writer-20261023-071348/candidate.json | — | ~2532 |
+| 07:18 | Edited .archify/workflow-corpus-writer-20261023-071348/candidate.json | inline fix | ~37 |
+| 08:05 | /archify 语料管线×writer 双流程图（3 lanes 上下布局+中缝生产/消费边），4 轮修复后全门通过 | .archify/workflow-corpus-writer-20261023-071348/ | pass | ~45k |
+| 07:18 | Session end: 7 writes across 1 files (candidate.json) | 6 reads | ~5399 tok |
+| 08:20 | 用户指令推送 25 笔：9fe9364af..5526363ff 上 origin/pisuan-custom，与远端同步 | - | done | ~2k |
+| 07:22 | Session end: 7 writes across 1 files (candidate.json) | 6 reads | ~5399 tok |
+| 08:31 | Created web/src/views/GeneralOverviewView.vue | — | ~74 |
+| 08:31 | Edited web/src/router/index.js | expanded (+7 lines) | ~113 |
+| 08:31 | Edited web/src/components/factory-core/GeneralLayout.vue | CSS: on, LayoutDashboard | ~133 |
+| 08:31 | Edited web/src/components/factory-core/GeneralLayout.vue | 4→5 lines | ~60 |
+| 08:31 | Edited web/src/components/factory-core/GeneralLayout.vue | 11→12 lines | ~42 |
+| 08:31 | Edited web/src/components/factory-core/GeneralLayout.vue | 2→5 lines | ~59 |
+| 08:31 | Edited web/src/components/factory-core/GeneralLayout.vue | 3→7 lines | ~24 |
+| 08:31 | Edited web/src/components/factory-core/GeneralLayout.vue | 4→9 lines | ~45 |
+| 08:33 | Edited docs/develop-guides/changelog.md | modified feat() | ~132 |
+| 08:40 | 通用域侧栏顶部加总览项（GeneralOverviewView 1:1 复用 DomainFactoryView + 画布 bleed），eslint 0；未提交（等用户指令）；5173 进栈须 sync-dev | GeneralOverviewView.vue/GeneralLayout.vue/router | done | ~30k |
+| 08:33 | Session end: 16 writes across 5 files (candidate.json, GeneralOverviewView.vue, index.js, GeneralLayout.vue, changelog.md) | 8 reads | ~6119 tok |
+| 08:55 | sync-dev 进栈（停/起 web-1，walker 21 文件，5173 200+vite 编译冒烟过）；总览项提交 e54874969（3 文件，changelog 未暂存） | e54874969 | done | ~15k |
+| 08:39 | Session end: 16 writes across 5 files (candidate.json, GeneralOverviewView.vue, index.js, GeneralLayout.vue, changelog.md) | 9 reads | ~6119 tok |
+| 08:41 | Edited web/src/components/factory-core/GeneralLayout.vue | 8→7 lines | ~32 |
+| 08:41 | Edited web/src/components/factory-core/GeneralLayout.vue | 12→11 lines | ~38 |
+| 08:41 | Edited web/src/views/DomainFactoryView.vue | inline fix | ~10 |
+| 08:41 | Edited web/src/views/DomainFactoryView.vue | 3→2 lines | ~40 |
+| 08:42 | Edited web/src/router/index.js | removed 8 lines | ~15 |
+| 08:42 | Edited docs/develop-guides/changelog.md | modified feat() | ~71 |
+| 09:10 | 通用域下线数据统计屏：侧栏项/路由/GeneralStatsView(git rm)/Landing chip 四处清引用，eslint 0 | GeneralLayout/router/DomainFactoryView/GeneralStatsView | done | ~12k |
+| 08:44 | Edited web/src/router/index.js | 6→11 lines | ~104 |
+| 08:44 | Edited web/src/components/factory-core/GeneralLayout.vue | "/domain-factory/general" → "/domain-factory/general/d" | ~22 |
+| 08:44 | Edited web/src/views/DomainFactoryView.vue | 2→2 lines | ~18 |
+| 08:44 | Edited web/src/views/DomainFactoryView.vue | inline fix | ~19 |
+| 08:44 | Edited web/src/views/GeneralWorkbenchView.vue | inline fix | ~23 |
+| 08:44 | Edited web/src/views/GeneralWorkbenchView.vue | 5→5 lines | ~39 |
+| 08:44 | Edited docs/develop-guides/changelog.md | modified feat() | ~67 |
+| 09:25 | 进通用域默认 redirect 总览，数据源管理迁 data-sources（工作台回跳/Landing 工位 4 处跟进），eslint 0 | router/GeneralLayout/DomainFactoryView/GeneralWorkbench | done | ~10k |
+| 08:45 | Session end: 29 writes across 7 files (candidate.json, GeneralOverviewView.vue, index.js, GeneralLayout.vue, changelog.md) | 9 reads | ~6644 tok |
+| 08:48 | Edited web/src/views/GeneralOverviewView.vue | 5→4 lines | ~67 |
+| 08:48 | Edited web/src/router/index.js | inline fix | ~22 |
+| 08:48 | Edited docs/develop-guides/changelog.md | modified feat() | ~78 |
+| 09:40 | 总览改独立复刻：GeneralOverviewView 整文件拷贝 DomainFactoryView（非复用，后续各自演化），头注释声明演化约定；eslint 0 | GeneralOverviewView.vue | done | ~8k |
+| 08:50 | Session end: 32 writes across 7 files (candidate.json, GeneralOverviewView.vue, index.js, GeneralLayout.vue, changelog.md) | 9 reads | ~6820 tok |
+| 09:55 | sync-dev 进栈（40.4s，5173+模块编译 200，复刻版落栈）；两笔提交：12255cdc5（下线数据统计+默认总览，5 文件）+ 1914ebf39（总览独立复刻，1 文件） | 12255cdc5+1914ebf39 | done | ~12k |
+| 08:54 | Session end: 32 writes across 7 files (candidate.json, GeneralOverviewView.vue, index.js, GeneralLayout.vue, changelog.md) | 9 reads | ~6820 tok |
+
+## Session: 2026-10-23 09:00
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:02 | Edited web/src/views/GeneralOverviewView.vue | 4→5 lines | ~73 |
+| 17:05 | 总览屏去掉工位名录·领域模块区（模板/modules/样式/孤儿 import，与 hero 页分叉）| web/src/views/GeneralOverviewView.vue | eslint 过，待 sync+commit | ~1.2k |
+| 09:04 | Session end: 1 writes across 1 files (GeneralOverviewView.vue) | 1 reads | ~7857 tok |
+| 17:15 | sync-dev 进栈 + 总览屏去工位名录区提交 | web/src/views/GeneralOverviewView.vue | f52080474 落地，5173/模块转换 200 | ~0.8k |
+| 09:13 | Session end: 1 writes across 1 files (GeneralOverviewView.vue) | 1 reads | ~7857 tok |
+| 09:16 | Session end: 1 writes across 1 files (GeneralOverviewView.vue) | 1 reads | ~7857 tok |
+| 17:40 | hero 页重构：dfp-floor/dfp-plates 换 archify 管线全景 iframe | DomainFactoryView.vue + web/public/diagrams/corpus-writer-flow.html | eslint 过，待 sync+commit | ~1.5k |
+| 09:29 | Session end: 1 writes across 1 files (GeneralOverviewView.vue) | 1 reads | ~7857 tok |
+| 17:55 | sync-dev + hero 重构提交 | DomainFactoryView.vue + public/diagrams/corpus-writer-flow.html | 28cbac9a0，5173/模块/图 200 | ~0.9k |
+| 09:40 | Session end: 1 writes across 1 files (GeneralOverviewView.vue) | 1 reads | ~7857 tok |
+| 10:01 | Session end: 1 writes across 1 files (GeneralOverviewView.vue) | 1 reads | ~7857 tok |
+| 18:20 | embed 模式效果不佳，退回 28cbac9a0 已提交版（全页 viewer，操作全保留）| DomainFactoryView.vue | 已还原+sync 进栈 | ~0.5k |
+| 10:07 | Session end: 1 writes across 1 files (GeneralOverviewView.vue) | 1 reads | ~7857 tok |
+| 10:10 | Session end: 1 writes across 1 files (GeneralOverviewView.vue) | 1 reads | ~7857 tok |
+| 10:14 | Session end: 1 writes across 1 files (GeneralOverviewView.vue) | 1 reads | ~7857 tok |
+| 18:40 | sync + 提交：iframe 藏滚动条/实高校准/导出按钮对齐主按钮 36px | DomainFactoryView.vue | 落地，5173 200 | ~1.2k |
+| 10:19 | Session end: 1 writes across 1 files (GeneralOverviewView.vue) | 1 reads | ~7857 tok |
+| 18:50 | 推送 6 笔提交 5526363ff..af108c5a9 → origin/pisuan-custom | - | 成功，本地与远端同步 | ~0.3k |
+| 10:20 | Session end: 1 writes across 1 files (GeneralOverviewView.vue) | 1 reads | ~7857 tok |
+| 10:29 | Created ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/syncdev-syncs-uncommitted-backend.md | — | ~143 |
+| 19:05 | gstack 路由 direct：管线完备性审计出报告，测试方案 A/B 备妥待放行 | - | 核心链路完备，6 边界 1 基线注意 | ~2k |
+| 10:29 | Session end: 2 writes across 2 files (GeneralOverviewView.vue, syncdev-syncs-uncommitted-backend.md) | 1 reads | ~8010 tok |
+| 10:46 | Created docs/vibe/2026-10-23-coal-eia-writer-writing-test-plan.md | — | ~987 |
+| 19:20 | B 先行写作测试方案成文（对比法/页面验证/defects 回路）| docs/vibe/2026-10-23-coal-eia-writer-writing-test-plan.md | 待用户定模型/样本/清理策略后开跑 | ~2.5k |
+| 10:46 | Session end: 3 writes across 3 files (GeneralOverviewView.vue, syncdev-syncs-uncommitted-backend.md, 2026-10-23-coal-eia-writer-writing-test-plan.md) | 1 reads | ~9068 tok |
+| 20:05 | B 测试点火：横城样本资料包 5 件上传，@skill:coal-eia-writer + glm-5.3-flash 发送，线程 176dea8e 运行中 | .wolf/writing-test/ | collect 阶段启动 | ~1.5k |
+
+## Session: 2026-10-23 11:08
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:20 | 横城运行中：glm-5.3-flash 确认，步骤0避开王坡开 eia-report-hengcheng，步骤1a data族落盘中，挂30min Monitor盯 progress.json | sandbox-860e | 待办0/9 ctx28% | ~1k |
+| 20:58 | P0定位(bug-4130)：错用default-chatbot致300步撞墙；二轮换环评写作助手+glm-5.3-fire已点火线程7c9fef9d，user-data持久卷确认32族JSON完好 | buglog+cerebrum | 运行中 | ~1.2k |
+| 21:15 | 门1停点实操：5题收集卡(沉陷来源+4参数)已答(规范推荐值0.60/0.30/2.0/0.5×采深)，run恢复在查formula_runner的s_offset比例语义；首轮同阶段28min未达 | 线程7c9fef9d | 43%ctx | ~0.8k |
+| 21:35 | 沉陷参数CSV回传：采厚按修编地质资料锚定(1.96/1.39/1.51/1.83→2.0/1.4/1.5/1.8)，倾角15-25°中下限，埋深估算+重复采动按开发现状；agent此前拒把0.5×采深折算落盘(数字纪律实证) | 线程7c9fef9d | 门1补齐续跑 | ~0.9k |
+| 21:50 | 委托(宁东管委会[待确认])/编制单位(北京华宇)卡已答，run恢复；逐矿CSV已FORM_WRITTEN落盘4行 | 线程7c9fef9d | 门1收尾中 | ~0.4k |
+| 22:00 | 矸石产率卡已答5.6(519/9200反推，自洽口径)；剩土壤评分/公参 | 线程7c9fef9d | ctx50% | ~0.3k |
+| 22:10 | 土壤评分卡已答(含盐量=1/碱化度=2/合计3，按04资料9点位分级结论锚定) | 线程7c9fef9d | 剩公参 | ~0.3k |
+| 22:25 | 门1收集全清(15题5卡：沉陷5/委托编制2/矸石1/土壤2/公参5)，重挂监控等冻结+门2 | 线程7c9fef9d | ctx51% | ~0.4k |
+| 22:45 | 冻结完成：progress+chapter_manifest(57KB契约)+formula_state 三件套12:16落盘，WAVE1派发中，门2未拦 | eia-report-hengcheng | 里程碑 | ~0.5k |
+| 22:55 | 门2拦下16异常6类(沉陷软件成果拒公式硬凑/水气容量缺参/噪声格式/锅炉烟囱)，选推荐项1按冻结值继续+正文标注；派章开始 | 线程7c9fef9d | ctx54% | ~0.5k |
+| 23:00 | 首节稿ch1_S01交付质检通过：数字全对/槽位不编造/人格红线守住；formula冻结W_max=1141.27mm实证收集卡→公式闭环 | eia-report-hengcheng | WAVE1进行中 | ~0.6k |
+| 23:40 | ch1组装+跑门中(11节稿/增补派发)，敏感目标摘要与资料全对；ctx86%逼近停车点 | 线程7c9fef9d | run48min | ~0.4k |
+
+## Session: 2026-10-23 13:13
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:52 | ch1章门PASS(11/11节 eff11561)全VERIFIED——首跑FAIL8项(表单槽位非合法键/裸数字/自编表号)→返工→过门；ch2派发中(4节,S02修编双口径)；run接力8m ctx90% | 线程7c9fef9d | 里程碑 | ~0.6k |
+| 00:01 | run在ctx92%停车(ch2_S03派发中被打断,sections=13)；发「继续」接力run3，停止键已现 | 线程7c9fef9d | 接力成功 | ~0.3k |
+| 00:20 | ch2首门FAIL两类新缺陷：TABLE缺中文label(bug-366野生复现)+S01过瘦；根因=数据键与schema不匹配，ingest合法重写三族+S01扩写4921字符；run3 ctx82%重跑门中 | 线程7c9fef9d | 缺陷素材+1 | ~0.4k |
+| 00:47 | ch2按门禁规程BLOCKED(深度8987<14599,重派额度1次已用,渲染问题已清)；管线不中断继续ch3(S01/S02完成,S03在飞)；run3 ctx87%将停车 | 线程7c9fef9d | 规程实测 | ~0.4k |
+| 01:02 | ch3也BLOCKED(行键超schema+S04瘦块,中文列名零丢失修复)；bash预算60次成run级约束,agent自定策略:ch4派发完收口留下轮；结构性缺陷×2(schema契约偏差三连发/深度门vs产量缺口) | 线程7c9fef9d | 缺陷素材+2 | ~0.5k |
+| 01:55 | run3在ctx97%停车(sections=20,ch4_S01后)；发接力:继续+解锁ch2/ch3二次扩写；run4点火(停止键现)，监控b3bhf96to续期 | 线程7c9fef9d | 接力成功 | ~0.3k |
+| 02:25 | 全书77节盘清(ch6=10/ch8=9/ch13=10重章在后)；进度25/77(ch4_S06)；run4健康 | 线程7c9fef9d | ETA更新 | ~0.2k |
+| 03:05 | ch4一次过门VERIFIED(2/13章)，27/77节；等ch2/ch3解锁扩写 | 线程7c9fef9d | 正常 | ~0.2k |
+| 03:15 | ch5一次过门VERIFIED(3/13章)29/77节；ch6沉陷预测10节开派(冻结槽位主战场) | 线程7c9fef9d | 正常 | ~0.2k |
+| 03:40 | run4停车(31/77,ch6_S02后)；run5接力点火+重申ch2/ch3解锁；监控b1ftp1d2o | 线程7c9fef9d | 接力成功 | ~0.2k |
+| 04:15 | ch6门FAIL5项：S09表达式注入(渲染器做乘法)违规+4残留+深度缺19221字需10节全量扩写；S06错误除法算式被数值纪律拦截；扩写S02进行中 ctx83% | 线程7c9fef9d | 缺陷素材+1 | ~0.5k |
+| 04:35 | run5停车于ch6扩写中途(S01后)；run6接力点火(从S02续作+重申ch2/ch3解锁) | 线程7c9fef9d | 接力成功 | ~0.2k |
+| 05:20 | ch6过门VERIFIED(4/13章,39/77节)——37冻结槽位实战通过,扩写+全量清扫后一次重跑过 | 线程7c9fef9d | 里程碑 | ~0.3k |
+| 05:35 | ch7门FAIL暴露P1治理困境：stage JSON mines[]子字段缺中文label(bug-366)，修复指引与Iron Law冲突，agent自行推理中；ctx89%将停车，接力将授权label元数据修复 | 线程7c9fef9d | P1缺陷素材 | ~0.5k |
+| 06:20 | ch2解锁二次扩写过门VERIFIED(5/13章)，BLOCKED仅剩ch3；ch7门结果待出 | 线程7c9fef9d | 里程碑 | ~0.2k |
+| 07:05 | ch3解锁过门VERIFIED=6/13章BLOCKED清零；线程页CDP全挂(a11y树超时)→改API直发POST /api/agent/runs成功queued pos3；ch7-13待派38节 | 线程7c9fef9d | 旁路通道验证 | ~0.4k |
+| 07:50 | ch7一次过门VERIFIED=7/13章(43/77节)；连续五章零BLOCKED，进入稳定输出期 | 线程7c9fef9d | 正常 | ~0.2k |
+| 08:45 | ch8一次过门VERIFIED=8/13章(52/77节)——契约强化后analysis章零BLOCKED | 线程7c9fef9d | 正常 | ~0.2k |
+| 09:35 | ch9一次过门VERIFIED=9/13章(57/77节)；剩ch10-13共20节 | 线程7c9fef9d | 正常 | ~0.2k |
+| 10:10 | ch10过门VERIFIED=10/13章(62/77节)；剩16节 | 线程7c9fef9d | 正常 | ~0.2k |
+| 10:30 | ch11过门VERIFIED=11/13章；只剩ch12+ch13共14节 | 线程7c9fef9d | 正常 | ~0.2k |
+| 10:50 | ch12过门VERIFIED=12/13章(68/77节)；ch13最后9节+终验 | 线程7c9fef9d | 接近完成 | ~0.2k |
+| 11:20 | chapters/组装出货5章(ch2解锁扩写后49.7KB最大)；ch13派发至S03；KEY_POINTS为phase标签实际派发正常 | 线程7c9fef9d | 组装链打通 | ~0.3k |
+| 11:40 | run9停车于ch13_S05后(73/77)；API接力POST挂起转后台,待验证；沙箱已重建 | 线程7c9fef9d | 接力待确认 | ~0.2k |
+| 12:05 | 77/77全节派发完毕！只剩ch13跑门+全书终验交付 | 线程7c9fef9d | 收官段 | ~0.2k |
+| 12:20 | 🎉VERIFIED=13/13全书过门！77节全生成0BLOCKED；剩组装收尾+终验交付 | 线程7c9fef9d | 重大里程碑 | ~0.2k |
+| 12:15 | 终稿919KB已抢出沙箱→.wolf/writing-test/hengcheng-AI-generated-report.md；B测试生成段完成 | 产物落盘 | 安全 | ~0.2k |
+
+## Session: 2026-10-24 08:54
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:58 | Created docs/vibe/2026-10-24-writing-test-defects.md | — | ~1184 |
+| 13:10 | 对比评估完成：修正切片归属（残片72730=ch6后半），ch2 0.43/ch4 0.35薄、ch8 2.88/ch10 2.45/ch13 2.45厚、总量0.92；红线3命中全在合规性附录；倾角15~25°未命中定性为正确行为（逐矿18/20°优先） | .wolf/writing-test/compare.py,compare2.py | OK |
+| 13:15 | 缺陷台账成文：P0 bug-4130递归墙、P1 schema中文label缺失/IronLaw冲突/bash预算/深度偏斜/附录泄漏/结论章28缺口、P2长线程CDP/sandbox回收/键名错位 + 技能升级清单7条 | docs/vibe/2026-10-24-writing-test-defects.md | OK |
+| 13:16 | buglog 补 bug-4131（附录泄漏）/bug-4132（深度偏斜+结论章缺口），编号536→538 | .wolf/buglog.json | OK |
+| 09:01 | Session end: 1 writes across 1 files (2026-10-24-writing-test-defects.md) | 0 reads | ~1269 tok |
+| 09:18 | Session end: 1 writes across 1 files (2026-10-24-writing-test-defects.md) | 0 reads | ~1269 tok |
+| 09:43 | Session end: 1 writes across 1 files (2026-10-24-writing-test-defects.md) | 0 reads | ~1269 tok |
+| 09:47 | Session end: 1 writes across 1 files (2026-10-24-writing-test-defects.md) | 0 reads | ~1269 tok |
+| 09:56 | Session end: 1 writes across 1 files (2026-10-24-writing-test-defects.md) | 0 reads | ~1269 tok |
+| 10:06 | Session end: 1 writes across 1 files (2026-10-24-writing-test-defects.md) | 0 reads | ~1269 tok |
+| 10:29 | Session end: 1 writes across 1 files (2026-10-24-writing-test-defects.md) | 0 reads | ~1269 tok |
+| 10:33 | Created docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | — | ~1877 |
+| 10:34 | Edited docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | inline fix | ~47 |
+| 10:34 | Edited docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | inline fix | ~36 |
+| 10:34 | Edited docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | "formula_runner.py execute" → "formula_runner.py execute" | ~33 |
+| 10:34 | Edited docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | inline fix | ~35 |
+| 10:34 | Edited docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | inline fix | ~47 |
+| 14:20 | brainstorming：四问收敛（双轨制/A2全局包+逐章/独立reviewer/一期文件卡片），文风实证 style_compare.py（碎句化/文表割裂/AI腔30处），设计七节+文风三关卡获准 | docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | OK |
+| 14:25 | 设计文档落盘+自审5处修正；缺陷台账§五+bug-4133 文风差距；待用户审阅后转 writing-plans | 同上+buglog | OK |
+| 10:36 | Session end: 7 writes across 2 files (2026-10-24-writing-test-defects.md, 2026-10-24-chapter-writer-reviewer-design.md) | 0 reads | ~3493 tok |
+| 10:41 | Session end: 7 writes across 2 files (2026-10-24-writing-test-defects.md, 2026-10-24-chapter-writer-reviewer-design.md) | 0 reads | ~3493 tok |
+| 10:56 | Session end: 7 writes across 2 files (2026-10-24-writing-test-defects.md, 2026-10-24-chapter-writer-reviewer-design.md) | 0 reads | ~3493 tok |
+| 11:03 | Edited docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | inline fix | ~61 |
+| 11:03 | Edited docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | inline fix | ~55 |
+| 11:04 | Edited docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | expanded (+9 lines) | ~196 |
+| 11:04 | Edited docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | inline fix | ~57 |
+| 15:05 | 设计追加三修订获准并入：六角色范式（conclusion/process 补缺）、范式×文风门分工、roles/<stage>.json 映射分型（角色通用+映射定制）；spec 提交修订 | spec ce9176001 后修订 | OK |
+| 11:04 | Session end: 11 writes across 2 files (2026-10-24-writing-test-defects.md, 2026-10-24-chapter-writer-reviewer-design.md) | 0 reads | ~3889 tok |
+| 11:15 | Edited docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | 1→2 lines | ~152 |
+| 11:15 | Edited docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | 1→2 lines | ~23 |
+| 11:15 | Edited docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | 1→2 lines | ~37 |
+| 15:40 | 用户补需求：KB样例段落脱敏推荐+用户选模板仿写——落 spec 3a-2（按章/可选/降级三默认），提交修订 | spec 修订+commit | OK |
+| 11:16 | Session end: 14 writes across 2 files (2026-10-24-writing-test-defects.md, 2026-10-24-chapter-writer-reviewer-design.md) | 0 reads | ~4115 tok |
+| 11:26 | Created docs/superpowers/plans/2026-10-24-chapter-writer-reviewer.md | — | ~2394 |
+| 16:00 | spec 定稿（用户批准）；手写实施计划九任务（本环境无 Skill 工具，按项目 plans 惯例）并提交，待执行 | docs/superpowers/plans/2026-10-24-chapter-writer-reviewer.md | OK |
+| 11:27 | Session end: 15 writes across 3 files (2026-10-24-writing-test-defects.md, 2026-10-24-chapter-writer-reviewer-design.md, 2026-10-24-chapter-writer-reviewer.md) | 0 reads | ~6679 tok |
+| 11:40 | Session end: 15 writes across 3 files (2026-10-24-writing-test-defects.md, 2026-10-24-chapter-writer-reviewer-design.md, 2026-10-24-chapter-writer-reviewer.md) | 0 reads | ~6679 tok |
+| 11:49 | Edited docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | 5→7 lines | ~208 |
+| 11:49 | Edited docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | inline fix | ~90 |
+| 11:49 | Edited docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | expanded (+6 lines) | ~79 |
+| 11:49 | Edited docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | 1→2 lines | ~33 |
+| 11:50 | Edited docs/superpowers/plans/2026-10-24-chapter-writer-reviewer.md | inline fix | ~58 |
+| 11:50 | Edited docs/superpowers/plans/2026-10-24-chapter-writer-reviewer.md | inline fix | ~45 |
+| 11:50 | Edited docs/superpowers/plans/2026-10-24-chapter-writer-reviewer.md | inline fix | ~42 |
+| 11:51 | Edited docs/superpowers/plans/2026-10-24-chapter-writer-reviewer.md | 12→15 lines | ~286 |
+| 16:45 | 样例库盘点：33 份五 stage（planning17/井工7/露天6/post2/tracking1），修编13/新编3；分类学并入 spec（两级选择卡+variant 字段+§5.2）与 plan（Task5 扩展）并提交，开始执行 Task 1 | spec+plan commits | OK |
+| 11:56 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_paradigm_roles.py | — | ~1007 |
+
+## Session: 2026-10-24 11:59
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:04 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/paradigms/conclusion.md | — | ~347 |
+| 12:04 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/paradigms/process.md | — | ~238 |
+| 12:04 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/paradigm_role.py | — | ~556 |
+| 12:04 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/paradigms/baseline.md | inline fix | ~9 |
+| 12:04 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~59 |
+| 12:16 | Edited docs/superpowers/plans/2026-10-24-chapter-writer-reviewer.md | "MSYS_NO_PATHCONV=1 docker" → "MSYS_NO_PATHCONV=1 docker" | ~62 |
+| 12:16 | Edited docs/superpowers/plans/2026-10-24-chapter-writer-reviewer.md | inline fix | ~7 |
+| 12:17 | Edited docs/superpowers/plans/2026-10-24-chapter-writer-reviewer.md | inline fix | ~5 |
+| 12:17 | Edited docs/superpowers/plans/2026-10-24-chapter-writer-reviewer.md | inline fix | ~5 |
+| 12:17 | Edited docs/superpowers/plans/2026-10-24-chapter-writer-reviewer.md | inline fix | ~6 |
+| 12:18 | chapter-writer Task 1 范式角色分型：roles/<stage>.json 迁移+ch13 重归型+conclusion/process 范式+paradigm_role.py（TDD 7 绿/容器 119 绿/提交 f2a96717e） | coal-eia-writer/{scripts,references}, plans md | done | ~45k |
+| 12:23 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_style_targets.py | — | ~909 |
+| 12:23 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_style_targets.py | modified test_band_formula() | ~111 |
+| 12:23 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/style_targets.py | — | ~1341 |
+| 12:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/style_targets.py | 13→15 lines | ~187 |
+| 12:27 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_style_targets.py | 2→3 lines | ~39 |
+| 12:27 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_style_targets.py | 89 → 91 | ~11 |
+| 12:27 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_style_targets.py | 20.7 → 20.3 | ~20 |
+| 12:28 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_style_targets.py | round() → approx() | ~150 |
+| 12:29 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_style_targets.py | modified in() | ~131 |
+| 12:31 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/style_targets.py | 9→11 lines | ~151 |
+| 12:31 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/style_targets.py | "fig_table_ref_min 为该章正文文表" → "fig_table_ref_min 为该章单份报告" | ~21 |
+| 12:31 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_style_targets.py | modified _mk_bank() | ~370 |
+| 12:31 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_style_targets.py | modified test_zero_table_chapter_floor() | ~202 |
+| 12:32 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_style_targets.py | 2→2 lines | ~30 |
+| 12:34 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/style_targets.py | modified is_dir() | ~41 |
+| 12:34 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/style_targets.py | 2→3 lines | ~62 |
+| 12:37 | chapter-writer Task 2 style_targets 生成脚本+planning_eia 基准落盘（124 绿/容器绿/提交 655998e74）；fig_table_ref_min 总量→单份口径修正 | coal-eia-writer/{scripts,references} | done | ~50k |
+| 12:41 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_style_gate.py | — | ~937 |
+| 12:43 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | 1→2 lines | ~50 |
+| 12:43 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | 1→3 lines | ~59 |
+| 12:43 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | modified validate_residue() | ~726 |
+| 12:43 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | added 1 import(s) | ~28 |
+| 12:43 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | 3→7 lines | ~92 |
+| 12:44 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_style_gate.py | 22→24 lines | ~196 |
+| 12:45 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_style_gate.py | modified _base_with_num_min() | ~226 |
+| 12:45 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_style_gate.py | modified test_num_density_fail() | ~86 |
+| 12:45 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_style_gate.py | modified test_multi_fail_reports_all() | ~115 |
+| 12:46 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_style_gate.py | modified test_num_density_fail() | ~161 |
+| 12:46 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_style_gate.py | modified test_multi_fail_reports_all() | ~179 |
+| 12:48 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | 2→2 lines | ~36 |
+| 12:48 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | 2→3 lines | ~48 |
+| 12:48 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | 4→3 lines | ~47 |
+| 12:51 | chapter-writer Task 3 chapgate 文风门四规则（132 绿/容器绿/提交 0a11a5855）；banned_phrases 并入 RESIDUE_RE | coal-eia-writer/{build_output.py,test_style_gate.py} | done | ~55k |
+| 12:57 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_formula_runner_scope.py | — | ~1273 |
+
+## Session: 2026-10-24 13:01
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | modified compute() | ~298 |
+| 13:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | modified _in() | ~26 |
+| 13:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | modified _in() | ~72 |
+| 13:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | inline fix | ~21 |
+| 13:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | inline fix | ~31 |
+| 13:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | modified _in() | ~44 |
+| 13:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | inline fix | ~18 |
+| 13:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | modified _in() | ~39 |
+| 13:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | inline fix | ~36 |
+| 13:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | modified _in() | ~57 |
+| 13:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | inline fix | ~12 |
+| 13:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | modified _in() | ~27 |
+| 13:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | inline fix | ~11 |
+| 13:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | modified _in() | ~37 |
+| 13:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | modified resolve_scope() | ~312 |
+| 13:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | modified items() | ~209 |
+| 13:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | 1→2 lines | ~56 |
+| 13:08 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_formula_runner_scope.py | inline fix | ~37 |
+| 13:09 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_formula_runner_scope.py | inline fix | ~10 |
+| 13:12 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | added 1 condition(s) | ~40 |
+| 13:12 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | inline fix | ~24 |
+| 13:13 | Edited docs/superpowers/plans/2026-10-24-chapter-writer-reviewer.md | 3→3 lines | ~79 |
+| 13:14 | Task 4 完成：formula_runner --chapters 章级切片（resolve_scope+compute only guard+增量冻结合并），139 测试容器全绿，ruff 新行零违规 | formula_runner.py, test_formula_runner_scope.py | commit 909d75c54 | ~28k |
+| 13:21 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_global_families.py | — | ~1458 |
+| 13:21 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | expanded (+13 lines) | ~176 |
+| 13:22 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/derive_globals.py | — | ~1014 |
+| 13:22 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/ingest.py | modified cmd_check() | ~150 |
+| 13:22 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/ingest.py | modified sorted() | ~65 |
+| 13:22 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/ingest.py | modified items() | ~58 |
+| 13:22 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/ingest.py | 4→6 lines | ~92 |
+| 13:23 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/ingest.py | added 1 import(s) | ~51 |
+| 13:24 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_global_families.py | 3→4 lines | ~68 |
+| 13:25 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_global_families.py | 4→6 lines | ~87 |
+| 13:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/derive_globals.py | modified write_globals() | ~195 |
+| 13:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/derive_globals.py | added 1 import(s) | ~21 |
+| 13:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_global_families.py | modified test_write_globals_zero_disturb_and_idempotent() | ~306 |
+| 13:27 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_global_families.py | modified items() | ~108 |
+| 13:28 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/derive_globals.py | 8→9 lines | ~130 |
+| 13:29 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/derive_globals.py | 10→13 lines | ~186 |
+| 13:29 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_global_families.py | 5→6 lines | ~104 |
+| 13:33 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_corpus_variant.py | — | ~1010 |
+| 13:34 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_corpus_variant.py | modified test_build_merges_manual_override() | ~178 |
+| 13:35 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | modified delegate_org() | ~358 |
+| 13:35 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | modified get() | ~119 |
+| 13:36 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | modified add_variant() | ~584 |
+| 13:36 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | inline fix | ~24 |
+| 13:36 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_corpus_variant.py | 3→3 lines | ~57 |
+| 13:37 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_corpus_variant.py | 2→2 lines | ~42 |
+| 13:38 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_global_families.py | modified test_write_globals_zero_disturb_and_idempotent() | ~409 |
+| 13:42 | Edited docs/superpowers/plans/2026-10-24-chapter-writer-reviewer.md | 4→4 lines | ~83 |
+| 13:43 | Task 5 主体完成：derive_globals 派生 12 族+门1 --global-only+corpus_meta variant 即判落盘（needs_review 11 份待用户确认），149 测试容器全绿 | derive_globals.py, ingest.py, corpus_meta.py, data_expectations.json, corpus_meta.json | commit 已落 | ~45k |
+| 13:43 | Session end: 49 writes across 8 files (formula_runner.py, test_formula_runner_scope.py, 2026-10-24-chapter-writer-reviewer.md, test_global_families.py, derive_globals.py) | 1 reads | ~8640 tok |
+| 14:31 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/derive_globals.py | modified _cross_chapter_families() | ~469 |
+| 14:31 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_global_families.py | modified test_derive_mini() | ~282 |
+| 14:31 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_global_families.py | 6→6 lines | ~64 |
+| 14:34 | Edited docs/superpowers/plans/2026-10-24-chapter-writer-reviewer.md | inline fix | ~29 |
+| 14:35 | Task 5 收尾：global_families 收紧冻结依赖族口径（12→7 族）+ 11 份 needs_review 变体终值回写（040 裁定 expansion），149 容器全绿 | derive_globals.py, corpus_meta_annotations.json, data_expectations.json, corpus_meta.json | commit 83e5b6951 | ~35k |
+
+## Session: 2026-10-24 14:38
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:42 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_chapter_state_machine.py | — | ~2133 |
+| 14:44 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 5→8 lines | ~124 |
+| 14:44 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | expanded (+7 lines) | ~139 |
+| 14:44 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | modified derive_phase_chapter() | ~269 |
+| 14:45 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | modified next_action_chapter() | ~987 |
+| 14:45 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 6→9 lines | ~129 |
+| 14:45 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | modified cmd_next() | ~77 |
+| 14:45 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | expanded (+6 lines) | ~161 |
+| 14:45 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | modified cmd_confirm_chapter() | ~540 |
+| 14:45 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 2→3 lines | ~75 |
+| 14:45 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | inline fix | ~65 |
+| 14:45 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 3→8 lines | ~158 |
+| 14:46 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_chapter_state_machine.py | replace() → count() | ~57 |
+| 14:46 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_chapter_state_machine.py | 3→3 lines | ~43 |
+| 14:49 | Edited docs/superpowers/plans/2026-10-24-chapter-writer-reviewer.md | 3→3 lines | ~67 |
+| 15:10 | Task 6 分章 CONFIRMED 态机：TDD 8 用例红→绿 + 容器 157 全量零回归 + CLI 冒烟守卫 | progress.py, test_chapter_state_machine.py | commit c81ccde90 | ~45k |
+| 14:51 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | — | ~2462 |
+| 14:52 | Created scripts/sync_chapter_skill.py | — | ~778 |
+| 14:53 | Created backend/test/unit/agents/skills/test_chapter_skill_assets_sync.py | — | ~557 |
+| 14:53 | Edited backend/test/unit/agents/skills/test_chapter_skill_assets_sync.py | 13→14 lines | ~136 |
+| 14:54 | Edited backend/test/unit/agents/skills/test_chapter_skill_assets_sync.py | added 1 condition(s) | ~159 |
+| 14:54 | Edited backend/test/unit/agents/skills/test_chapter_skill_assets_sync.py | modified test_sync_script_check_mode_passes() | ~94 |
+| 14:55 | Edited backend/test/unit/agents/skills/test_chapter_skill_assets_sync.py | 6→6 lines | ~24 |
+| 14:56 | Edited scripts/sync_chapter_skill.py | modified sync() | ~206 |
+| 14:56 | Edited backend/test/unit/agents/skills/test_chapter_skill_assets_sync.py | modified _files() | ~57 |
+| 14:58 | Edited backend/test/unit/agents/skills/test_chapter_skill_assets_sync.py | expanded (+6 lines) | ~117 |
+| 14:58 | Edited backend/test/unit/agents/skills/test_chapter_skill_assets_sync.py | modified test_assets_byte_identical() | ~38 |
+| 14:58 | Edited backend/test/unit/agents/skills/test_chapter_skill_assets_sync.py | modified test_skill_md_is_per_package() | ~143 |
+| 15:00 | Edited docs/superpowers/plans/2026-10-24-chapter-writer-reviewer.md | 4→4 lines | ~97 |
+| 15:55 | Task 7 chapter-writer 包：SKILL.md + sync 镜像 1147 文件 + 两栖守卫（宿主/容器 skill-sources 双布局） | chapter-writer/, sync_chapter_skill.py, test_chapter_skill_assets_sync.py | commit c9082c8e6 | ~70k |
+| 15:02 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-reviewer/SKILL.md | — | ~943 |
+| 15:02 | Edited scripts/sync_chapter_skill.py | 4→7 lines | ~121 |
+| 15:03 | Edited scripts/sync_chapter_skill.py | modified sorted() | ~371 |
+| 15:03 | Edited backend/test/unit/agents/skills/test_chapter_skill_assets_sync.py | 3→6 lines | ~87 |
+| 15:03 | Edited backend/test/unit/agents/skills/test_chapter_skill_assets_sync.py | modified test_reviewer_minimal_copies() | ~155 |
+| 15:03 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | 1→3 lines | ~59 |
+| 16:40 | Task 8 reviewer 技能：SKILL.md 规程 + 最小副本同步清单 + 守卫扩展 + writer 接入句；运行栈滞后 _roles.json 两处清理（pisuan 改名层包 + skill-sources） | coal-eia-reviewer/, sync_chapter_skill.py, 守卫测试 | commit ccebce200 | ~40k |
+
+## Session: 2026-10-24 15:19
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:40 | 9.3 reviewer 冒烟发现初版测量失真（合并稿重建丢表格块），改 13 原始切片直测重写发现单 v2 | .wolf/reviewer-smoke/*-合规审查.md, bug-4134 | D 结论修正：表密度 FAIL 7 章/数字密度 2 章/AI 腔 6 处；ch4/ch8/ch12 全过；C 35 提取 14 不在册 | ~30k |
+| 15:42 | Created docs/vibe/2026-10-24-chapter-writer-reviewer-smoke.md | — | ~731 |
+| 15:42 | Edited docs/superpowers/plans/2026-10-24-chapter-writer-reviewer.md | 4→4 lines | ~195 |
+| 16:20 | 9.1 三技能注册+挂载：sync-dev 进栈，init_builtin_skills 容器直调（reviewer 原未注册），PUT /api/agent/agent-b8decd45b324 挂三技能 | skills 表, agents 表, docs/vibe/2026-10-24-chapter-writer-reviewer-smoke.md | 11 技能同步成功；环评写作助手 context.skills 三件套 | ~25k |
+| 16:35 | 9.2 分章 CLI 冒烟：init/next/门1 global-only/mark与confirm守卫/文风门真数据（横城 ch2）| .wolf/chapter-smoke/transcript.txt | 门1 六全局族缺失清单；文风门 FAIL 与 reviewer 独立发现交叉印证；stage 拒未启用 CLI 无门（对话契约）| ~20k |
+| 15:43 | Session end: 2 writes across 2 files (2026-10-24-chapter-writer-reviewer-smoke.md, 2026-10-24-chapter-writer-reviewer.md) | 0 reads | ~992 tok |
+| 15:46 | Session end: 2 writes across 2 files (2026-10-24-chapter-writer-reviewer-smoke.md, 2026-10-24-chapter-writer-reviewer.md) | 0 reads | ~992 tok |
+| 15:51 | Edited backend/test/integration/services/test_builtin_discovery.py | expanded (+6 lines) | ~137 |
+| 15:53 | Edited backend/package/yuxi/services/skills/shared.py | added 1 import(s) | ~12 |
+| 15:53 | Edited backend/package/yuxi/services/skills/shared.py | expanded (+6 lines) | ~83 |
+| 15:53 | Edited backend/package/yuxi/services/skills/shared.py | inline fix | ~21 |
+| 15:57 | Edited docs/develop-guides/changelog.md | modified fix() | ~112 |
+| 17:05 | 修复 /api/skills 500（bug-4135）：BUILTIN_SKILL_SHARE_CONFIG 裸 scope 缺 v2 信封；TDD 红→改常量+deepcopy→容器 3 passed；运行栈 reviewer 行 SQL 补 v2 后 200 | services/skills/shared.py, test_builtin_discovery.py, changelog.md | 页面恢复 21 卡；容器实测绿 | ~25k |
+| 16:00 | Session end: 7 writes across 5 files (2026-10-24-chapter-writer-reviewer-smoke.md, 2026-10-24-chapter-writer-reviewer.md, test_builtin_discovery.py, shared.py, changelog.md) | 1 reads | ~1365 tok |
+| 16:05 | Edited backend/package/yuxi/services/skills/shared.py | 7→4 lines | ~93 |
+| 16:05 | Edited backend/package/yuxi/services/skills/shared.py | copy() → deepcopy() | ~40 |
+| 16:05 | Edited backend/test/unit/services/skills/test_skill_service.py | modified test_builtin_normalize_read_scope_is_bare_scope_not_envelope() | ~256 |
+| 16:19 | Edited docs/develop-guides/changelog.md | modified fix() | ~141 |
+
+## Session: 2026-10-24 16:23
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:40 | bug-4135 两提交重建完成（第三次）：docs(smoke) f08fae576 + fix(skills) 4a7982503，工作树 changelog 还原组合态（其他工作流条目 41 行未提交），组合备份发现取自 f70d5cc3c（非 f8b5c3afe），临时文件清理 | docs/develop-guides/changelog.md, .wolf/buglog.json | 提交链干净，HEAD=4a7982503 | ~30k |
+| 17:05 | 清除废弃技能 coal-eia-report：判定=2026-09-29 上传的旧代副本（现行同管线=内置 coal-eia-writer 三件套，停更近月），无直接挂载但被三个 "all" 智能体全量扫入；删 skills 表 id=56 + 容器 skill-sources/shared/coal-eia-report（2.1MB/84 文件），API 验证 0 残留三件套完好 | 运行栈 DB + 容器 | 已清除 | ~25k |
+| 18:19 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | inline fix | ~45 |
+| 18:19 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | inline fix | ~48 |
+| 18:19 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | inline fix | ~40 |
+| 18:23 | Session end: 3 writes across 1 files (progress.py) | 8 reads | ~12344 tok |
+| 18:25 | Session end: 3 writes across 1 files (progress.py) | 8 reads | ~12344 tok |
+
+## Session: 2026-10-24 18:32
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:27 | Edited docs/vibe/2026-10-24-chapter-writer-reviewer-smoke.md | expanded (+19 lines) | ~376 |
+| 19:27 | bug-4136 f-string precompute 修复落地（repo+孪生+栈，157 tests）+ 冒烟文档 9.2.1 回填 + buglog fix 更新 | progress.py×2/smoke.md/buglog.json | OK | ~8k |
+| 19:29 | Session end: 1 writes across 1 files (2026-10-24-chapter-writer-reviewer-smoke.md) | 2 reads | ~12614 tok |
+| 19:29 | Session end: 1 writes across 1 files (2026-10-24-chapter-writer-reviewer-smoke.md) | 2 reads | ~12614 tok |
+| 19:30 | Session end: 1 writes across 1 files (2026-10-24-chapter-writer-reviewer-smoke.md) | 2 reads | ~12614 tok |
+| 19:31 | Session end: 1 writes across 1 files (2026-10-24-chapter-writer-reviewer-smoke.md) | 2 reads | ~12614 tok |
+| 19:31 | Session end: 1 writes across 1 files (2026-10-24-chapter-writer-reviewer-smoke.md) | 2 reads | ~12614 tok |
+| 19:35 | Session end: 1 writes across 1 files (2026-10-24-chapter-writer-reviewer-smoke.md) | 2 reads | ~12614 tok |
+| 19:36 | Session end: 1 writes across 1 files (2026-10-24-chapter-writer-reviewer-smoke.md) | 2 reads | ~12614 tok |
+| 19:37 | Session end: 1 writes across 1 files (2026-10-24-chapter-writer-reviewer-smoke.md) | 2 reads | ~12614 tok |
+| 19:38 | Session end: 1 writes across 1 files (2026-10-24-chapter-writer-reviewer-smoke.md) | 2 reads | ~12614 tok |
+| 19:38 | Session end: 1 writes across 1 files (2026-10-24-chapter-writer-reviewer-smoke.md) | 2 reads | ~12614 tok |
+| 19:42 | Session end: 1 writes across 1 files (2026-10-24-chapter-writer-reviewer-smoke.md) | 2 reads | ~12614 tok |
+| 19:43 | Session end: 1 writes across 1 files (2026-10-24-chapter-writer-reviewer-smoke.md) | 2 reads | ~12614 tok |
+| 19:44 | Session end: 1 writes across 1 files (2026-10-24-chapter-writer-reviewer-smoke.md) | 2 reads | ~12614 tok |
+| 19:45 | Session end: 1 writes across 1 files (2026-10-24-chapter-writer-reviewer-smoke.md) | 2 reads | ~12614 tok |
+| 19:45 | Session end: 1 writes across 1 files (2026-10-24-chapter-writer-reviewer-smoke.md) | 2 reads | ~12614 tok |
+| 19:50 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/formula_runner.py | modified is_finite() | ~329 |
+| 19:53 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_formula_runner_static_transcribe.py | — | ~860 |
+| 19:53 | Session end: 3 writes across 3 files (2026-10-24-chapter-writer-reviewer-smoke.md, formula_runner.py, test_formula_runner_static_transcribe.py) | 2 reads | ~13803 tok |
+| 19:55 | Session end: 3 writes across 3 files (2026-10-24-chapter-writer-reviewer-smoke.md, formula_runner.py, test_formula_runner_static_transcribe.py) | 2 reads | ~13803 tok |
+| 19:56 | Session end: 3 writes across 3 files (2026-10-24-chapter-writer-reviewer-smoke.md, formula_runner.py, test_formula_runner_static_transcribe.py) | 2 reads | ~13803 tok |
+| 19:57 | Session end: 3 writes across 3 files (2026-10-24-chapter-writer-reviewer-smoke.md, formula_runner.py, test_formula_runner_static_transcribe.py) | 2 reads | ~13803 tok |
+| 19:57 | Session end: 3 writes across 3 files (2026-10-24-chapter-writer-reviewer-smoke.md, formula_runner.py, test_formula_runner_static_transcribe.py) | 2 reads | ~13803 tok |
+
+## Session: 2026-10-24 20:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:52 | Edited docs/vibe/2026-10-24-chapter-writer-reviewer-smoke.md | 1→3 lines | ~103 |
+| 13:16 | 分章冒烟 ch2 gate 机械修循环推进；发现并修复 bug-4138（WRITER_CAP_RE 单段量词）+ bug-4139（机发表号节感知多级）；双通道审批竞态定位（UI UUID request_id vs drive.py resume-epoch，DB 查最新 run 校正 state.json） | build_output.py×2, test_build_output_bug394.py, buglog, smoke doc | 166+157 tests passed；gate 循环进行中 | ~45k |
+| 21:42 | Edited docs/vibe/2026-10-24-chapter-writer-reviewer-smoke.md | 1→2 lines | ~86 |
+
+## Session: 2026-10-24 21:59
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:36 | Edited docs/vibe/2026-10-24-chapter-writer-reviewer-smoke.md | expanded (+7 lines) | ~422 |
+| 22:36 | Edited docs/vibe/2026-10-24-chapter-writer-reviewer-smoke.md | inline fix | ~12 |
+| 22:36 | Edited docs/vibe/2026-10-24-chapter-writer-reviewer-smoke.md | 4→7 lines | ~121 |
+| 22:36 | Edited docs/superpowers/plans/2026-10-24-chapter-writer-reviewer.md | inline fix | ~98 |
+| 22:38 | Edited docs/develop-guides/changelog.md | modified fix() | ~222 |
+| 14:5x | 分章冒烟收口：确认卡 UI 应答✅、降档缺口实测、bug-4140 记录、冒烟文档/plan/changelog 回填 | docs/vibe/2026-10-24-chapter-writer-reviewer-smoke.md 等 | 冒烟闭环 | ~60k |

@@ -5,6 +5,8 @@
 > Last updated: 2026-05-16
 
 ## User Preferences
+- (2026-10-21) 本机资源局限不得驱动代码逻辑变更：开发机（T1200 4GB 显存 + 有限内存）嵌入大块失败（月儿湾 4693 字符块）时，用户明确裁决「不能因为本机资源不足就更改代码逻辑」——生产服务器资源足够。缺资源就标注搁置（如月儿湾 error_indexing 待生产重推），不改 embed/chunking 逻辑绕。
+- (2026-10-21) 分块 vs 表格完整性：用户明确优先「表格整块不切碎」，宁可服务端 accommodation（ollama num_ctx 8192 容纳肥块）也不在 chunking 层为 token 预算把表格切小。涉及表格的分块改动先评估表格完整性影响并询问。
 
 - [2026-10-14] 用户反馈：知识工厂 Landing 直接复用 HomeViewV2 配方「效果还行但与本系统首页太相似」——站内二级 landing 要与系统首页拉开布局差异，不能只换文案照搬骨架（hero+拟真窗/分区卡组/深色 CTA 全套复刻被判同质）
 
@@ -20,6 +22,17 @@
 - [2026-10-14] Landing 类页面忌「太素/单调」：结构极简的同时要有质感细节（实体感装饰、图标块、水印、微动效、氛围底纹）。用户对首版立式流水线评价「效果太单调」，二轮补齐后验收。以后 landing/展示页交付前自查：纯白底+细线框+纯文字 = 不合格。
 - [2026-10-14] 卡片式导航的点击范围要克制：大卡片/区域不整卡可点，仅显式「直达」链接可点（用户对知识工厂工位卡的裁定）。此后卡片导航默认按此执行，整卡可点需先问。
 ## Key Learnings
+- (2026-10-21) ollama 嵌入 413 的真机制：llama.cpp 对单条输入真实 SPM token 超 n_batch/物理批窗口时报 `input (N tokens) is too large to process` → HTTP 413，与请求体大小无关（140KB CJK 探针照过）。诊断入口：ollama 服务端日志 %LOCALAPPDATA%/Ollama/server.log（GIN 行 + srv send_error 行），比客户端猜测快得多。
+- (2026-10-21) ragflow_like nlp.count_tokens 公式（现状，upstream 一致）：英文单词/数字串 1 计、CJK 1 计、标点零计费。已知偏差：bge-m3 SPM 每个标点约 1 token，ASCII 表格密集文本低估 4-5 倍（4440 字符估 780/实际 4002）。凡 token 预算代码（各 parser _ensure_chunk_token_limit、hierarchical_merge 218、naive_merge）都依赖它。曾试验标点逐字计校准修 413，被裁决回退（见 User Preferences）。
+- (2026-10-21) ollama 改模型参数：`ollama show <m> --modelfile` 导出 + 追加 PARAMETER + `ollama create <同tag> -f` 原地重建（blob 复用秒完成）+ `ollama stop <m>` 卸载重载。bge-m3 现为 num_ctx 8192。
+- (2026-10-21 standards-panel) factory-ui.less 的按钮/.pill 等配方全部命名空间在 .ewp（页面根类）内；a-modal/a-drawer teleport 到 body 后配方失配——组件内用这些类必须本地复刻或加命名空间类，暗色下白底亮字会露馅（light 下 UA 裸样式恰好不显眼，容易漏）。
+- (2026-10-21 standards-panel) 项目 dark 切换正规路径 = theme store setTheme（html.dark + ant ConfigProvider darkAlgorithm 双层）；只手动加 html.dark 是半切换，会出现「CSS 变量已翻、ant token 未翻」的伪 bug。UI 验暗色用 localStorage.setItem('theme','dark')+reload。
+- (2026-10-21 standards-panel) chrome-devtools 验证 antdv 表单：手动 native setter+dispatch input 不同步 v-model；用 MCP fill 工具（真实键入）可靠。另注意空行会被前端校验拦（toast 3s 易错过，判读看有无 POST 更可靠）。
+
+- (2026-10-21 standards-panel) 缺源候选 tab2 数据源是 corpus_meta 标注层 standards_cited（eia_meta_service._load_corpus_meta，33 报告），不是全报告文本提取——两者覆盖面不可互推（GB/T 13201-91 前者零命中）。给"引用了哪些标准"类需求选数据源时先问：标注层还是全文层。
+- (2026-10-21 standards-panel) /api/auth/token 只收 form-urlencoded，JSON body 拿不到 access_token；冒烟脚本 call() 需区分 form=/data= 两形态。
+- (2026-10-21 standards-panel) 存量 standard_indicators 行在加列前入库，doc_name 全 NULL 显示「—」：enrich 重跑自动回填对应 doc；未重跑的 doc 用一条 SQL 补显示元数据即可（GB 8978 461 行已补）。
+- (2026-10-20) 宿主 --noconftest 跑 test_ragflow_like_chunking.py 时 test_chunking_should_apply_overlength_protection 的 book/laws 两条参数化用例报 setup ERROR 属存量环境问题（基线 b11d30cc6 经 stash 实测同样报错，疑与超长 unicode 用例 ID 有关），勿归因新改动；回归时 --deselect 该两条再判。
 
 - (2026-10-20) markdown-it-katex 只认 $/$$ 定界，不识别 \(...\)/\[...\]（KaTeX 原生写法，OCR 产物常用）；已在 markdown_preview.js 渲染层归一（normalizeLatexDelimiters + transformOutsideCodeSegments：split 捕获组保护围栏/行内代码段，奇数下标=代码段跳过转换），链入 renderMarkdown 归一管线首位。
 - eia-data 自绘表分页统一配方（LexiconPanel 先例，StandardsPanel 核实清单 2026-10-20 复用）：page/pageSize ref + PAGE_SIZE_OPTIONS [10,20,50] + sizeOptions 映射「N 条/页」+ tbl-foot 两段式（justify-content: space-between 页级覆写）+ pager-size-dd popupClassName + :global 下探 12px；筛选/页大小变更回第 1 页（v-model 直连的筛选面用 watch(filters) 一条兜住，无需逐入口重置）。卡片内多处 .tbl-foot 时 space-between 覆写安全：纯文本 footer 的 contiguous 文本 run 是单个匿名 flex item，视觉无差。
@@ -178,6 +191,15 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat
+- [2026-10-23] archify 图嵌 iframe 别用 ?embed=1：隐藏工具栏/页眉/导航，操作能力全丢，用户否决。hero 管线全景用全页 viewer 模式（滚动条是它固有代价，用户接受）；容器高度由 aspect-ratio 910/528 + min-height 兜底。
+
+- (2026-10-21) 仓库内多个 .py/.md 文件是 CRLF 行尾，Edit 工具的 old_string 用 
+ 匹配必失败（报 not found 且提示对换转义也没用）——对这些文件用 python 按行改写或先确认行尾。
+- [2026-10-23] 改动共享模块的查询/契约后，验证必须跑整个所在测试目录（docker exec pytest /app/test/unit/extensions/ 全目录），不许只跑新文件——Task 6 只验新文件 2 passed，同目录 W1 用例 KeyError: table_key 潜伏到评审才被抓（bug-4127）。
+- [2026-10-23] `Path.read_text()` 默认 universal-newlines 会把 CRLF 静默转 LF，随后 write_bytes 回写即全文件行尾漂移——CRLF 文件读改写必须走 read_bytes/decode/encode 全程 bytes（Edit 工具 CRLF 坑的孪生版）。
+- [2026-10-23] ruff format 对可折叠 comprehension 会给出超 line-length(120) 的单行折叠建议，随即 ruff check E501 打回——自相矛盾时提取中间变量缩短表达式（tables = doc.get(...)），勿整文件 ruff format（会重排他人代码）。
+- [2026-10-23] standard_indicators.pollutant 是精确等值过滤，真实值为带括号形态（'化学需氧量(COD)'），裸 '化学需氧量' 匹配 0 行——冒烟前先 GROUP BY 看字典值。
+- (2026-10-21) 不要用「请求体大小」直觉诊断嵌入 413：本次三轴探针（body/token/内容类型）全被事实否定，真因在服务端日志一行 send_error 里。先看服务端日志再设计探针。
 - [2026-10-19] 勿把噪声行 limit_value=null 当「值提取失败」——schema 本就是 day/night 字段，先查 row keys 再下结论
 - [2026-10-19] 抽检匹配针勿用短数字串（'0.0' 匹配全表），针长 <3 字符丢弃
 
@@ -1329,3 +1351,439 @@
 
 ### Decision Log
 - (2026-10-20) 上游 delta 低风险（compose/docs/OCR 门控），裁定不做全量单元回归，只做：三 tip 对齐验证 + 栈重启 + /api/system/ready + 错误扫描。
+
+## Do-Not-Repeat
+
+- [2026-10-20] 禁止 import 带 module-level main() 的 controller scratch 脚本——continue_a_channel.py 被 import 复用 call() 时整链重跑，把解析中的两个文档删了重传，白耗一轮 deepseek 配额。要复用 helper 就复制函数，不 import。
+
+## Key Learnings
+
+- [2026-10-20] KB 上传端点响应字段是 `file_path`/`minio_path`（不是 url/minio_url），无 file_id；file_id 在 documents/add 响应里，可递归找 "file_" 前缀值。
+- [2026-10-20] MinIOClient.download_file(bucket, object)：markdown_file URL 形如 http://host:9000/<bucket>/<object>，切 bucket 时先去掉 host:port 段。容器内跑一次性脚本结尾常挂住（async engine 未 dispose），外层 timeout + 容器内日志文件 + docker exec cat 取结果是可靠模式（管道 grep 会块缓冲吞输出）。
+- [2026-10-20] deepseek_ocr（siliconflow-cn）对 GB 3838-2002 扫描件解析质量极高：表1 24项×I~V类全对，含溶解氧≥方向列、总磷湖库括号值、水温/pH colspan、汞 0.00005。扫描件重解析路线可行。解析任务只做 parse（文档状态 parsed/0分块），index 是独立动作，中间可插人工质量门。
+
+## Key Learnings
+
+- [2026-10-20] KB 运行配置（additional_params 含 chunk_parser_config）走 Redis 缓存（knowledge/cache.py get_cached_kb_config），直连 SQL 改库**不会失效缓存**——改 KB 配置必须走 API 或先调 delete_cached_kb_config(kb_id)。已验证：SQL 改 chunk_token_num=4096 后重索引 chunk 完全不变（旧 512 配置），失效缓存后重跑才生效。
+- [2026-10-20] 分块对 HTML 表格的 token 密度约 2.9 token/字符（HTML 标记密集），4096 token ≈ 1400 字符表格 HTML——GB 8978 的 72 行大表在 4096 token 下仍会被拦腰切。根治需表格感知分块（table 整体不切），已列为待立项工单。
+
+## Decision Log
+
+- [2026-10-20] 表格感知工单（R1+R2 已立项）：超大表嵌入截断选 a) 允许截断+日志。依据：写作侧权威接口是 lookup_standard_indicator 结构化指标行而非表格 chunk 向量检索；b) 续切分与 R1 续表归并联动复杂度过高。
+
+## Key Learnings（2026-10-20 Task 15 表格感知分块追加）
+
+- **worktree 宿主跑后端测试的正确姿势**：`cd <worktree>\backend && uv run --frozen --with pytest --with pytest-asyncio python -m pytest <paths> -q --noconftest`。裸 `python -m pytest` 因缺 sqlalchemy 收集失败；`--frozen` 防 uv.lock 漂移改写（呼应 [[2026-10-05]] uv.lock 教训）。worktree 单提交评审两阶段均实测可跑。
+- **R1/R2 拆分边界（评审确认的自洽设计）**：R2 分块层把未闭合 `<table` 残段当普通文本保留（分块保数据），R1 enrich 层把残段丢弃不识别（enrich 拒绝误识别，宁可漏不可错）——同一现象两层相反策略是有意的，不是 bug。
+- **presets 前端零改动扩展点**：knowledge_router.py:1779 `get_chunk_preset_options()` 动态读 CHUNK_PRESETS，新增预设无需动 web/src。
+
+## Key Learnings (append 2026-10-20 跨页断表+表格编辑)
+
+- 知识库文档 markdown 正源：MinIO 确定性键 `{kb_id}/parsed/{file_id}.md`（base.py `_save_markdown_to_minio` 原键覆盖即更新，不动 meta）；router 的 `knowledge_base` 是 **KnowledgeBaseManager 分发器**——新增文档级方法必须 Manager（get_kb_executor 转发）+ KnowledgeBase 基类（具体方法，可调 get_file_basic_info/MinIO 助手）各一份，只加基类会 AttributeError。
+- OCR 逐页转写断表三信号（GB 国标语料实测）：`表N（续）/续表N` 标记行、逐字重复表头（含 `I/1` 噪声需 NFKC+折叠归一）、序号跨片连续。合并纯函数在 `yuxi/knowledge/parser/table_merge.py`，钩点 = 两处 `"\n\n".join(full_text)`（deepseek_ocr.py / paddleocr_vl_local.py）。
+- 环评引用标准规范库（kb_yn2req38m2）01:07 批次解析为 HTML 表+断表形态；另一规范库 kb_9ks49hyvfj 存量为纯文本散落表格（无 HTML/管道），TableEdit 对其显示「未找到表格」属正确行为。
+- 前端验证浏览器会话常已登录（chrome-devtools MCP 直连 localhost:5173 即达知识库页）；a11y 快照中 popover/dialog 内容首次点击可能未捕获，重开一次即现。
+
+## Do-Not-Repeat (append 2026-10-20 断表合并)
+
+- 纯函数多段装配循环：输出拼装用「原文切片」而非「累积变量」且漏拼首表前/末表后正文——单测只断言表数会漏过，**必须断言首尾文本保留与字符守恒**（真实 GB/T 14848 验证揪出：正文丢了 2497+788 字符）。
+- dirty/变更比对基准：编辑态存的是格式化文本时，比对对象必须是 formatted 基准而非原始 html（否则「还原」按钮初始常显）。
+- `powershell -File scripts/sync-dev.ps1` 依赖 bash cwd——`cd` 进子目录后必须显式 `cd /c/workspace/pisuan` 再跑，否则静默找不到脚本（已踩两次）。
+- 宿主机 Windows 跑 `test_parser_capabilities` 的子进程导入用例必挂（`yuxi/utils/paths.py` 用 `os.O_DIRECTORY` Linux-only）——该套件只能在容器跑。
+
+## Key Learnings + DNR（2026-10-20 Task 15 冒烟批追加）
+
+- **分块参数三级优先链（实测）**：request params > 文件级 processing_params（入库时快照） > KB additional_params。给 KB 换 preset 后重索引**不会**用新预设——文件级快照仍是旧值！必须 `POST documents/index` 请求级带 `params={"chunk_preset_id": "table"}`。worker 日志 `[index_file] processing_params=...` 是裁决依据。
+- **容器冒烟 enrich 的日志指纹**：structured 降级=恰 60s 空错误（_structured_support 缓存后同进程只烧一次）；prompt 通道再 60s 空错误=超时 fail-closed。表1 120 行输出必超 60s → timeout=300s 修复（d318c4440）。
+- **续表形态（deepseek OCR）**：跨页表会成多个 <table> 块，续块标题只剩「表N（续）」/「表N（完）」，且可能落到 chunk 头部无主表（表?（续）占位）。角色必须按主表序号继承（d318c4440 role_memo）。
+
+## Key Learnings + DNR（2026-10-20 FileDetailModal markdown 编辑追加）
+
+- **FileDetailModal 的 file 是 fileId prop 驱动的 ref**：watch [open, kbId, fileId] 仅在 open=false 时 resetLocalState；弹窗开着切换 fileId 只跑 loadBasicInfo。凡加可编辑态，必须在 fileId 变化分支显式丢弃（本次 editing/editText），否则 A 文档编辑内容残留到 B 文档。QA 实测触发路径：文件行单击即开弹窗（customRow onClick + 文件名 @click.stop），双击的第二次 click 会落在重渲染后的相邻行 → 弹窗切到别的文件。浏览器脚本 QA 时用 getComputedStyle(wrap).display!=='none' 判断弹窗可见，ant 保留隐藏 wrap，querySelector 存在≠打开。
+- **chrome-devtools uid 极易失效**：弹窗内容周期性重渲染（状态轮询）后 uid 全部作废，点击报 "no longer exists"。改用 evaluate_script 直接 DOM 查询+dispatchEvent（querySelector('.file-detail button')按 aria-label 找）。
+- **QA 约束延续**：保存链路验证用无改动保存（内容逐字节一致才允许 PUT），真实修改只入 textarea 不保存。
+
+## Key Learnings（2026-10-20 GB 8978 人工门追加）
+
+- **热重载杀在途请求实证**：并行会话改运行栈文件（knowledge/base.py）→ WatchFiles 重载 → "Cancel 1 running task(s)" 掐死在途 enrich（客户端 ~5 分钟后才收到 500，服务端无 500 访问行只有 shutdown ERROR）。跑长 enrich 前先确认无并行改动；失败先查 "graceful shutdown exceeded" 再怀疑代码。
+- **GB 8978 提取形态**：461 行。表2（现有）与表4（新改扩）是两张时段表，同因子同档位同值会双录（16 组良性）；45 组「同因子同档位不同值」靠 condition 里的行业条件区分（黄磷工业/低氟地区等），是正确的行不是冲突。category 命名有 LLM 方差（二级标准/二级），精确查询前需归一（打磨项）。
+- **enrich 端点是同步 HTTP**：GB 8978（14 表）约 5-7 分钟；客户端 urlopen 需 timeout≥1800，且中间被重载杀掉时只收 ConnectionReset/500，服务端无对应访问行。
+
+## Key Learnings + DNR（2026-10-20 KaTeX 尾随空格吞噬追加）
+
+- **@vscode/markdown-it-katex 1.1.2 单行 `$$x$$` 判定坑**：blockMath 用 `endIndexes[0].index === firstLine.length - 2` 定位闭合符，行尾任何尾随空格（OCR 硬换行双空格是本项目标配）都会判定失败，块规则向后吞到下一个 `$$` 结尾行——中间标题/段落全部进入公式体，KaTeX `Can't use function '$'` 红字回退。修法在 normalizeLatexDelimiters 末步 `^(.*\$\$)[ \t]+$ → $1`（markdown_preview.js）。**DNR**：诊断此类渲染问题别盯转换正则，用项目同款依赖写 node 复现脚本（web/ 下临时 .mjs，import markdown-it + 插件）直接看产出 HTML，一次定位；插件 dist 源码在 node_modules/.pnpm/@vscode+markdown-it-katex@1.1.2/。
+- **QA 素材即证据**：复现脚本跑完即删，但源文档 dump（.wolf/gb8978_source.md）留着——后续语料缺陷（如本文档 D3.5 起 9.3k 字符 `\dots` 幻觉复读到 EOF 且缺 `\]`，OCR 循环噪声）还要引用。
+
+## Key Learnings（2026-10-20 markdown 预览字体对齐追加）
+
+- **MarkdownPreview 正文栈已收编 var(--font-sans)**（2026-10-20 用户裁定与标准页对齐）：此前组件自带旧栈缺 Segoe UI，Windows 上英文/数字落字与站内不一致。全站正文单一真相 = base.css `--font-sans`（body 继承），mono = `--font-mono`；新组件不要再写裸字体栈。验证手法：evaluate_script 对 .yk-markdown-preview getComputedStyle 看 fontFamily 是否含 Segoe UI。
+
+## Key Learnings（2026-10-20 标准面板 W1 后端追加）
+
+- **standard_indicators 三新列与核验语义**：verified_at/verified_by/source（DEFAULT 'enrich'）经 models._DDL 幂等 ALTER 迁移；核验动作 UPDATE now()/NULL（DB 端 now()，不落 Python 时区）；enrich 重跑按 doc_code 删旧插新使核验态随行消失（重跑即重验，有意设计，勿加「保留核验态」防御）。enrich 冲突守护在首会话（读 chunks 前）SELECT count(*) WHERE source='expert'，检测点唯一，StandardConflictError→路由 409。测试桩注意：既有 enrich 流 FakeSession 需 count(*) 分支返回 scalar_one()（test_regulation_enrich_routing/test_table_splitter 已补）。
+- **norm_code 口径扩了全角－**：eia_limit_extract_core.norm_code 的 _STD_DASH_RE 现为 [—–－]；标准号归一一律复用它（手工查重与缺源候选差集同源），勿再手写归一。缺源候选 diff 语义：同归一码变体合并（ref_count 累加、samples 并集截 3、code 取先见原文）——GB 与 GBT 是不同标准号，变体合并只在 T 缺省/全半角/连字符写法间成立。
+- **手工行 born-verified 契约**：expert 行 unit_no='手录'、verified_at=now()、source='expert'，保存即核验；PUT/DELETE 仅认 expert 行（DELETE rowcount=0 即 409，单语句守护）；doc_code 路径参数用 {doc_code:path} 转换器（编号含 / 可过）。doc_name/doc_type 仅入 API 契约未落表（standard_indicators 无此两列，挂图/元数据延后）。
+
+## Key Learnings (appended 2026-10-21)
+- eia-data 各面板凡涉 md 预览一律接 `common/MarkdownPreview.vue`（:content + 可选 :compact），底层是 utils/markdown_preview.js（markdown-it+KaTeX+DOMPurify+shiki）；裸 `{{ text }}` 插值=源码态。给组件容器套样式时勿用 white-space:pre-wrap（与块级 HTML 冲突双倍换行），排版交组件自带。
+
+## Do-Not-Repeat (2026-10-21)
+- 新面板预览 tab 别再写纯文本插值 div；预览用 v-if 挂载（v-show 会在编辑态每个键击触发整条渲染管线 watch）。
+- MarkdownPreview 组件带形态开关：`compact`（聊天气泡扁平）与 `bordered`（表格完整网格边框含暗色，is-bordered 变体，MarkdownPreview.vue:837）；文档类预览场景默认应加 bordered，否则表格只有 td 底发丝线。
+- KB 文档内容端点（GET /api/knowledge/databases/{kb}/documents/{id}/content）返回 `content`（全文 markdown 正源）+ `lines`——对 LightRAG 型库 lines 即**分片**（键 chunk_order_index/content/start_char_pos/end_token_pos/graph_indexed/tags），不是逐行文本；chunks 键不存在。做全文档处理用 content 字段，勿 join lines。
+- 知识库分片引擎 = 自研 ragflow_like_v1（yuxi/knowledge/chunking/ragflow_like/，7 预设：general/qa/book/laws/semantic/separator/table）；预设挂在 KB additional_params.chunk_preset_id（+chunk_parser_config 可带 chunk_token_num/delimiter/overlapped_percent）。kb_jcwwz7h3pp（milvus 型）当前=general（naive 512 token）——分片不对齐章节的根因；book 预设=标题层级感知 hierarchical_merge。存量重入库走 POST /databases/{kb}/documents/index（index 阶段按新预设重切，markdown 正源不动）。
+
+## Append 2026-10-21 (bug-4116 book 预设修复)
+
+### Key Learnings
+- ragflow_like `hierarchical_merge` 每组头部携带完整祖先标题链（面包屑），5338/5358 组与前组共享前缀——“分片重复”的表象来源是跨组重复面包屑，碎片化只是预算硬编码 218 的另一症状；两症状要一起修。
+- book 路径修复模式：共享前缀去重（相邻组逐行同位比较）+ 预算打满 flush 时恢复完整面包屑置于块首——消重与块首标题对齐两全；实现在 parsers/book.py 层，nlp.py（上游共有）未动。
+- 运行栈容器命名空间是 `pisuan.*`（sys.path.insert(0,'/app/package')），repo 代码是 `yuxi.*`；容器内验证 chunking 用 docker cp 送数据到 /tmp。
+- host 无 PISUAN_ADMIN_* env 且 .env 无此变量；按约定内联 `PISUAN_ADMIN_USER=admin PISUAN_ADMIN_PASS=123` 仅经 env 通道传给单条命令。
+- GET /documents/{id} 单文档信息响应里 document 字段可能为 None 形态；文档 chunk_count 验收走 list 或 content 端点更稳。
+
+### Do-Not-Repeat
+- (2026-10-21) 节标题覆盖统计别拿节号当 dict 键对全量标题行——重复面包屑会把覆盖率扭曲成 6% 假低；先去重节号集合再算。
+- (2026-10-21) Git Bash 下 `docker exec ... ls /tmp/xxx` 会被 MSYS 改写成 Windows Temp 路径，加 MSYS_NO_PATHCONV=1（已有 memory，再次踩到 docker cp 后的验证步）。
+
+## Append 2026-10-21 (时间列 + 嵌入超时)
+
+### Key Learnings
+- FileTable「时间」列曾绑 created_at（上传时间，重切不触碰）；文档表 updated_at = onupdate=utc_now 随行级更新自动刷新，重切入库会正确变——UI 显示不等于后端语义。已改绑 updated_at+tooltip 上传时间。
+- web-1 容器非实时挂载：改 web/src 后必须跑 sync-dev 再强刷页面，否则浏览器一直旧 bundle。
+- 分块饱满（1024 tok）后嵌入负载大增：ollama 串行处理，多文档并发入库时请求排队，aencode 固定 60s 会以“空串 ReadTimeout”失败——日志特征是 `Embedding async request failed: , {...}`（逗号后直接 payload）。已放宽 300s。
+- git add -p 不可用时的 hunk 级暂存：`git diff -U2` 全量落盘 → awk NR<=4 保头 + /^@@/ 匹配目标 hunk 重置 keep → git apply --cached。FileTable 并行改动（表格编辑）已借此留在工作区未混入提交。
+
+### Do-Not-Repeat
+- (2026-10-21) buglog id 有非 bug-NNN 形态（如 bug-t14），取最大号要 re.fullmatch 过滤否则 int() 炸。
+
+## Key Learnings (2026-10-21 corpus compile)
+- autocrlf=true 仓库被批量覆盖 LF 文件后：`git status` 报 ~180 个 EOL round-trip 幻影 M，`git diff --name-only` 才是真实内容变更（且 stderr 警告风暴会拖慢 git diff 数分钟——务必 2>/dev/null 并耐心等待）。
+- `git checkout -- <path>` 会丢弃工作树新拷贝的产物；正确顺序：先 checkout 清幻影，再回拷真实变更文件。
+- bank_compile refs 契约：必须指向真实 references/（读 stages/*.json + overrides/curated_lexicon.json，:272/:573），不能空目录起跑；--prune 是 opt-in；同输入必同字节（幂等）。api-1 的 skills references 是挂载=镜像目录，容器内写即落 pisuan-localized。
+- /api/auth/token 响应是顶层 access_token（OAuth2 风格）；documents 端点返回 items[]（file_id/filename 字段）。
+- MSYS_NO_PATHCONV=1 必须加在每条含容器路径的 docker exec/cp 上，逐命令生效。
+
+## Key Learnings (2026-10-21 milvus 清理)
+- milvus `num_entities` 含已删除未 compact 的行，会虚高（清理前显示 13517，实际存活 11748）；真实存活数用 `query(expr='id != ""', output_fields=["count(*)"])`。
+- 对账铁律：postgres `knowledge_chunks`（yuxi_know 库）是逐文件 chunk 权威台账，milvus count(*) 应与其总和精确一致。
+- 容器内 pymilvus 版本 `query(iterator=True)` kwarg 有 bug（bad argument type）；定向操作直接用 `query(expr=..., limit=16384)`（残留量级远小于上限）。
+- milvus 该部署只有 default 库（应用 milvus_db 默认值 "yuxi" 未启用，按 KB 配置实际落 default）。
+- docker cp 进容器的文件属 root，exec 用户在 /tmp（sticky）删不掉——临时脚本要么 docker exec 写入，要么接受残留。
+
+## Key Learnings + DNR + Decision Log（2026-10-21 章节口径重编译端点批追加）
+
+### Key Learnings
+- POST /domain-factory/eia/stages/expectations/recompile 是薄别名端点：直接 enqueue `eia_corpus_process` scope=all 后台任务（get_admin_user 门控，tasker.enqueue），复用 P2 全库重编译链（_materialize_workdir → bank.main_with_args → 台账）。运行栈 e2e：queued → worker 14.2s {"compiled":33} success。
+- SectionsPanel.vue 的图标 import 来自 `@lucide/vue`（非 CLAUDE.md 通则的 lucide-vue-next）——给既有组件加 lucide 图标前先看该文件的 import 行。
+- eia 语料两套事实源已漂移：运行库 eia_library_files（33 份 ready+stage，rid 较新）≠ KB kb_jcwwz7h3pp 的 33 份；镜像 products 以运行库语料为准，repo 已提交 refs 以 KB 语料为准。收敛属 pushToKb/数据治理决策，不是代码 bug。
+- 集成测试 standard_user fixture 需在 docker exec 上加 `-e TEST_USERNAME -e TEST_PASSWORD`（env 形式使用管理员凭据是允许的），否则该用例 pytest.skip。
+- 宿主跑 ruff 用 `py -m ruff`（裸 ruff 不在 bash PATH，api 镜像无 ruff）；前端 prettier 走 web-1 容器 `pnpm exec prettier --write`，产物须从 pisuan-localized 拷回 pisuan。
+
+### Do-Not-Repeat
+- (2026-10-21) bash 里调 sync-dev.ps1 必须用正斜杠绝对路径 `C:/workspace/pisuan/scripts/sync-dev.ps1`——bash 会吃掉 `\`，报「不存在」且易被 tail 吞掉；所有 docker exec/cp 带容器路径的命令逐条加 MSYS_NO_PATHCONV=1。
+- (2026-10-21) api-1 的 uvicorn 在 Windows 挂载上不触发热重载——router 改动 sync 后已知端点仍 200、openapi.json 无新路由就是此症；处置 docker restart pisuan-localized-api-1（~51s 就绪），以 openapi.json 为准验证。
+- (2026-10-21) 任务状态 API 形状：GET /api/tasks/{id} → {"task":{"status":"success"|"failed",...}}，顶层无 data 键、状态值不是 completed——轮询解析别按 res["data"]["status"] 写。
+- (2026-10-21) milvus `num_entities` 含已删未 compact 行（虚高），对账一律用 count(*) query 与 postgres knowledge_chunks 按文件求和比对；pymilvus `query(iterator=True)` 有 TypeError bug，用普通 query + limit=16384。
+- (2026-10-21) docker cp 进容器的文件 root 属主且 /tmp 粘滞位删不掉——容器内临时脚本用 docker exec heredoc 写，不要 docker cp。
+
+### Decision Log
+- (2026-10-21) 重编译端点裁定为 eia_corpus_process scope=all 的别名而非仅 section_expectations 的局部重建：切片库/bank_index/深度基线与口径产物同源血缘，局部重建会造成口径与切片漂移；期望视图重编译入口与库处理入口同链不同视图。
+
+
+## Key Learnings + DNR + Decision Log（2026-10-21 KB 为准编译语义批追加）
+
+### Decision Log
+- (2026-10-21) 用户裁定语料权威 = 绑定语料 KB（eia_corpus_kb_id）：编译选集 = KB 全量文档；文件库是加工/推送暂存面（就绪未推送不入编，台账 library_not_in_kb 可见）。线下编译产物=初始化种子（历史快照，不追字节一致）；上线后新增样例走 推送→编译 循环。增量编译暂不做（33 份全量 14s 幂等，量级不到不优化）。
+
+### Key Learnings
+- KB markdown 读取原语：`knowledge_base.get_file_download(kb_id, file_id, variant="parsed")` 返回 {"content": bytes}（MinIO 解析 md）——对 error_indexing（解析完成未索引）文档也有效；`get_file_content` 依赖 chunks，未索引文档拿不到内容。
+- KB↔文件库 join 键用 `<original_filename stem>.md` ↔ KB filename（推送流 source_path 契约）；现状 kb_file_id 全空（KB 系线下种入）不可依赖。
+- `list_document_files(..., files_only=True, include_stats=False)` 分页取全即可；manager 层 recursive 仅在带 status 过滤时生效（语料 KB 无文件夹，无碍）。
+- `_merge_corpus_meta` 只增不减：rid 目录重编/文档删除后 corpus_meta 会留幻影（本次清了 10 个种子代旧 rid）；KB 文档删除场景的自动修剪未做（等真实删除案例再议）。
+- 镜像（容器写 LF）vs repo 工作树（autocrlf CRLF）全树 diff 会出现千级 "differ" 风暴——必须先 \r\n 归一再比对，真实内容差异才作数（本次 1095 文件仅 11 个真差异）。
+
+### Do-Not-Repeat
+- (2026-10-21) 勿以「产物与种子逐字节一致」作为 KB 为准编译的验收——KB 会演进（本次 10 rid 换代），正确验收 = 编译集==KB 集 + 台账 detail 干净 + 门控不破。
+- (2026-10-21) 长改动脚本勿用 bash heredoc 直写（本次被未知解析问题咬，命令整体语法错）——用 Write 工具落 .py 文件再 python 执行。
+
+
+## Key Learnings + DNR（2026-10-22 P1+P2 词表联动批追加）
+
+### Key Learnings
+- `Path.read_text()` 默认 universal newline 会把 CRLF 静默转 LF——对仓库文件做行级编辑须用 `read_bytes().decode()`（splitlines(keepends=True) 保留 \r\n）；此前 LexiconPanel/test 文件已被转为纯 LF（git autocrlf 会归一，diff 无噪声，无实害）。
+- 前端导出闭环模式：exportResult modal 内嵌「立即重编译」按钮 → eiaDataApi.recompileExpectations()（P1）；词表可映射性 pill 依赖后端 forms_field 字段（P2，build_label_map 共源）。
+
+### Do-Not-Repeat
+- (2026-10-22) 多行文本替换的 old 锚严禁「文件内首次出现」命中他处：插入的新代码若包含与目标块相同的行，replace(...,1) 会打在新插入的自己身上（本次 build_label_map 自调用递归，AST/ruff 查不出，运行时才炸）。多行编辑一律用「唯一上下文锚点 + 行号定位 + 邻行断言」，改完跑 AST 级结构断言。
+
+
+## Decision Log + Key Learnings（2026-10-22 refs 治理批追加）
+
+### Decision Log
+- (2026-10-22) repo committed refs 角色 = 部署初始化种子，随 KB 代际演进做治理提交刷新（时机：rid 换代/批量增删/编译器升级/发行节点）；日常演进只改镜像，refs 允许滞后。不改 sync-dev 排除 refs——保持 git 单一权威。流程见 docs/vibe/2026-10-22-refs-governance-refresh.md。
+- (2026-10-22) corpus_meta 语义改为「随 KB 编译集收敛」（_merge_corpus_meta prune）：add-only 幻影两度复现，编译集=KB 全量为权威。
+
+### Key Learnings
+- sync-dev.ps1 是 repo→运行栈全量差量同步，references/ 在同步面内：镜像侧编译产物在下次 sync-dev 必被回滚——「编译产物只落镜像」的策略在该同步语义下不成立。
+- 编译产物对账须区分两类漂移：rid 目录换代（切片文件名变）与编译器演进（同内容切片数变，477→512）；候选/统计类快照断言两者都敏感，只能断内部一致性。
+
+### Do-Not-Repeat
+- (2026-10-22) 数据快照断言（语料文档数/切片数/候选计数）勿硬编码——每次语料代际演进或编译器升级都会碎（本次 test_eia_data_service 的 31/477/92 在刷新前就已陈旧）；锚定权威源现读或只断内部一致性。
+
+
+## Decision Log（2026-10-22 KF 模板剥离追加）
+- (2026-10-22) coal-eia-writer 剥离知识工厂模板依赖：写作链路恒用内置 references/ 结构真源，不 resolve KF 模板/大纲。理由=KF 模板是 stage JSON 派生工件（seed_gen 导出）+ 大纲库 1055 条零消费（埋点 2 次）；resolve 优先=结构性循环。平台侧工具（list_report_types/get_templates/get_chapter_outline）与大纲模板页保留，其他技能（compliance-checker 等）不受影响。开题首动作由三件套改两件事。
+
+## Key Learnings + DNR（2026-10-22 供应商 logo 本地化 + localized 重建撞车批追加）
+
+### Key Learnings
+- **localhost:5173 = pisuan-localized 栈**：容器 pisuan-localized-web-1（compose 项目 pisuan-localized）bind-mount `C:\workspace\pisuan-localized\web\{public,src,test}` + vite.config.js + index.html。在 pisuan 侧改前端，必须经 sync-dev（秒级）或 localized 官方重建链才进栈；直接在 pisuan 提交推送不改变运行栈。
+- vite dev 对 `public/` 下缺失路径回退 index.html 且**状态码 200、content-type text/html**——浏览器侧表象是图片 naturalWidth=0 全裂；诊断时别只看 200，要看 content-type。
+- pisuan-localized 官方重建链（sync-upstream step5）：stash/清积垢 → `git checkout -f pisuan-localized` → `reset --hard <pisuan-custom tip>` → `apply_pisuan_rename.py --apply --allow-dirty` → `uv lock` ×2 (backend + packages/pisuan-cli) → commit → `push github pisuan-localized --force-with-lease`。localized 的 origin=C:/workspace/pisuan（本地路径），fetch 即取本地分支，无需先推 GitHub。
+- `apply_pisuan_rename.py` 在工作树有改动时拒绝 --apply；CRLF autocrlf 幻影 M（如 pixelAvatar.test.js）也会触发拒绝，官方 sync-dev 路径固定用 `--allow-dirty`。脚本失败会留下半成品：删除未跟踪的 `backend/package/pisuan/`、`packages/pisuan-cli/` 等再生积垢后重跑即可（可再生，删前抽查与 yuxi 侧逐字节一致）。
+- lobehub 图标本地化：web/public/providers-logo/ 存 SVG（fill=currentColor，title 即品牌名可验证）；用户手 Collect 的文件可能下错（ollama.svg 曾是 OpenAI 图标、kimi.svg 与 moonshot.svg 字节级重复），入库前用 <title> + MD5 校验。
+
+### Do-Not-Repeat
+- 2026-10-22：**不要在用户可能同时操作时手工重建 localized**——用户跑 sync-dev -Revert 会 `reset --hard github/pisuan-localized` 拨回旧 tip 并孤儿化刚提交的重建 commit（本次 dbe7892f 被孤儿）。重建前先问一句/确认无并发 sync；被孤儿后 reset 重做即可，勿试图复活旧 sha。
+- 2026-10-22：改 modelIcon.js 等前端引用后，不要用「第一次截图正常」当通过证据——那可能是栈内旧代码（CDN 图标）的缓存假象；必须以 content-type / 网络面板 + 最终栈态复验。
+
+## Key Learnings + DNR（2026-10-22 文件库阶段下拉 + sync-dev 瞬态锁批追加）
+
+**Key Learnings**
+- bind-mount 运行栈树（pisuan-localized）上新写入文件有瞬态锁窗口：写入后数秒内宿主 open 读报 `OSError [Errno 22] Invalid argument`（exists()=True 但不可开，即 Windows 删除挂起态表现），数秒后自愈。持有者 = web 容器 vite/chokidar 对挂载新文件的监听反应（Docker 挂载桥代持宿主句柄）。sync-dev 的 walker→git add→apply_pisuan_rename 每步都会回读新文件，与该窗口赛跑必输——**同步前先 `docker stop pisuan-localized-web-1`，完成后 start**（实测停容器后 36-39s 干净通过，4 连崩 → 一次通过）。
+- 中间态崩溃会把 localized git 状态搅乱（分支 ref 被拽离镜像 tip、工作树 overlay 丢失且 diff 归零等假象）；恢复铁律 = `sync-dev.ps1 -Revert`（回镜像 tip）→ 停 web 容器 → 重跑 sync-dev，不要试图在中间态上做增量修复或考古。-Revert 会 `clean -fd` syncPaths，但派生树无独有数据（curated_lexicon 已回迁 pisuan 工作区），安全。
+- LibraryPanel 阶段单元格已从原生 `<select>` 换成 FilterSelect（bug-438 同款裁定延伸到表格内联场景）；受控用法 = `:model-value` + `@change` 手动处理 + 乐观更新回滚（onStageChange prev 备份），别用 v-model 直写。
+
+**Do-Not-Repeat**
+- (2026-10-22) 不要在 web 容器运行时跑 sync-dev.ps1：Errno 22 瞬态锁会让 walker/git add/rename 随机步骤崩溃，且连跑会把 localized git 状态越搅越乱（本次 4 连崩付出 -Revert + 全量重同步代价）。
+- (2026-10-22) chrome-devtools MCP 报 "browser is already running" 时用项目现成的 `.wolf/kill-mcp-chrome.ps1` 清残留实例，勿绕路。
+- (2026-10-22) Edit 工具锚点用长行截断前缀会把原行从中间切开（changelog 实翻车一次，三轮才复原）——old_string 必须包含完整行或以行尾边界结尾；改完长行文件后立即回读受影响行复核。
+
+## Key Learnings（2026-10-22 语料管线对照追加）
+- bank_compile.py 产物面远大于 samples_bank：slices/SL3 指纹池(samples/)、bank_index.json、paradigms/forms_catalog.json、section_expectations/<stage>.json、depth_targets/<stage>.json + per-mineral 全是其产物；线上 run_eia_corpus_process 直写容器内技能 refs 目录（_SKILL_ROOT），git 面靠手工治理提交（gov_refs_refresh）。「矩阵统一模式」的 DB 覆盖层+admin 导出对编译产物面不适用——它是唯一「任务直写 refs」的例外。
+- corpus_meta.py（离线）与线上 _merge_corpus_meta 是两套生产者：province 频次判定、standards_cited 归一、attachment_checklist 只有离线脚本会产；线上新 rid 只得 cover 层字段（basis=cover/needs_review）。front_matter.json（samples_bank/）仍是离线脚本输入，线上改走 DB front_meta 列——双载体无同步。
+- KB 绑定 eia_corpus_kb_id（system_options）是编译集权威（2026-10-21 裁定 KB 为准）；KB 既是 RAG 检索面又是编译权威面，双角色寄生。join 键 = KB 文档名 <stem>.md ↔ original_filename stem，同名 stem 在编译时 ValueError（上传不拦）。
+
+## User Preferences + Key Learnings（2026-10-22 全宽布局裁定追加）
+
+**User Preferences**
+- P2 原型的 1180px 画布封顶被用户否决（「右侧间隔太大请与左侧对齐，列表宽度就能大一些」）：eia-data 模块内容区全宽化，`.chrome-canvas` 与 `.ewp` 双层 max-width 均移除，左右仅剩面板自身 20/24/40 内边距。此后该模块新页面不再加画布宽度封顶；「参照 P2 原型」指语汇配方（token/间距/组件），不含画布宽度。
+
+**Key Learnings**
+- 宽度封顶原本有双层：EiaDataLayout `.chrome-canvas`（不居中，宽屏右侧堆空档的元凶）+ factory-ui.less `.ewp`（margin auto 居中）。改布局宽度时先 grep 两处，只改一层会互相掩护。
+
+## Key Learnings (2026-10-22)
+- standard_indicators（regulation_library）无 ORM 模型：raw SQL + `models.py ensure_schema()`（ALTER TABLE IF NOT EXISTS 幂等追加列的既有模式）；extensions→services 的 import 已有先例（norm_code/_SKILL_ROOT）。
+- regulation_library 已有 born-verified 手工行机制（create/replace/delete_manual_standard，source='expert'+now()，_MANUAL_UNIT_NO='手录'）；StandardsPanel 合流通道与之并存，靠 create 的 doc_code 查重防混写。
+- eia_standard_limit_rows 实测 0 行、standard_indicators 667 行全 enrich 0 核验（2026-10-22 普查）——限值权威层现状完全靠文件锚点。
+- 裁决类 API 是逐行触发：转正/确认不能用整表替换语义（会冲掉先确认行），幂等键用 page_row_id（行形内容 md5 确定性派生）。
+
+## Key Learnings + DNR（2026-10-22 P1-T3 born-verified 追加）
+- 任务书给的 verbatim 实现 snippet 可能与自己 Step 1 的 verbatim 测试契约矛盾（本例：简写参数键 :code/:tk/:prid + 内联 'expert' 字面量 vs 测试断言全名键；saved 返回页面行数 vs 测试要拍平行数）。处置：以 Step 1 测试为契约修实现，任务书「修到全绿、限两文件」即此授权；报告须明示偏离点。
+- pg_manager.get_async_session_context 退出即 commit（manager.py:2190）——任何经真 Session 的旧测试（如 test_eia_standard_service.py::test_save_limit_rows_happy_path，现 stale 断言 repo.replace_rows 旧契约）在容器跑会向 standard_indicators 提交测试行且 DELETE 可能删真实 expert 行；stale 测试禁跑，留 Task 7 清理。
+- save_limit_rows 现写 standard_indicators（source='expert'，verified_at=SQL now()，day/night 拆两行共享 page_row_id）；repo.replace_rows 仍留存未删（Task 7 清）。
+
+## Do-Not-Repeat (2026-10-23)
+- 共享分支上控制器与子代理绝不可并发 git 写操作（含 --amend）：T4 补强 amend 抓错 HEAD 混入 docs 提交（bug-4017）。流程：派发评审/修复子代理前，控制器先清完自己的提交；子代理 amend/commit 期间不发新指令。
+- 修复类子代理中途 429 死亡时，控制器先 `git log/reflog + status` 核对现场再接管，不重派（现场可能半途态）。
+
+## Do-Not-Repeat (2026-10-23 T5 enrich 删旧收窄)
+
+- **asyncio.run + pg_manager 必挂死（本栈实证）**：pg_manager.initialize() 在当前 loop 拉起 LangGraph psycopg AsyncConnectionPool 后台 worker/scheduler 任务，asyncio.run 收尾 _cancel_all_tasks 取消不掉它们（psycopg_pool worker 靠 StopWorker 优雅退出，裸 cancel 无效）→ 永久挂死且无任何输出。裸 python -c 同序列却不复现——**不能用「脚本里跑通」推断 pytest 里能跑通**。修法：协程 finally 内 `await pg_manager.close()`（graceful，≤5s），让池在 loop 死前收尾；下个 loop _ensure_loop_fresh 自动重建。定位手段：`PYTHONFAULTHANDLER=1` 起进程 + `kill -ABRT <pid>` dump 全线程栈；临时 debug 测试里 `print(repr(asyncio.all_tasks(loop)))` 直接点名元凶任务。另：docker cp 源文件必须在 Windows 可见路径（Git Bash /tmp 会被 docker.exe 解析成 C:	mp），且 `sed a > a` 自截断——变换输出一律落不同文件名。实证 commit 5e1549092。
+- **集成测试容器部署链**：仓库正典 `yuxi.*` 前缀 → `sed 's/yuxi\./pisuan./g'` 变换 → docker cp 进 pisuan-localized 容器；/app/test 与 /app/package 是 bind-mount（写穿到 C:\workspace\pisuan-localized 对应路径，属预期，勿当异常），且 docker cp 不触发热重载。
+
+## Key Learnings + DNR（2026-10-23 T7 转正重指向追加）
+- **monkeypatch 模块级 seam 红灯形态**：新测试把写路径桩 patch 到模块级名字（pg_manager/ensure_schema/_load_standards_index）时，旧实现没有这些模块属性 → 红灯表现为 fixture setup 的 AttributeError 而非断言失败。这同样是合法红灯（旧实现不满足新契约的设计缝），且因 patch 先于写路径执行，红灯期零真库写——比「调用断言失败」更安全。TDD 红→绿报告应如实写明红灯形态。
+- **test_eia_canonical_md_goldens.py 容器集合期必炸（既有缺陷，非本次引入）**：模块级 `@pytest.mark.parametrize("entry", _manifest(), ...)` 在 import 时求值，绕过自身的 skipif 守卫；容器内 _REPO 解析为 `/` → `/.wolf/corpus-workdir/manifest.json` 不存在 → 全目录跑 /app/test/unit/services/ 必带 1 collection error。处置：--continue-on-collection-errors 跑其余；宿主跑该文件正常。修复归属语料工作流。
+- **跨文件构造点引用决定参数去留**：删服务构造参数前先 grep 构造点（含测试），如 EiaLimitExtractService(std_repo=...) 被 test_standards_panel_w1.py:480 引用——若该测试文件不在本次提交许可清单，参数保留加注释而非硬删，否则 Step F 全目录验证直接 TypeError。
+- 任务书提交清单列的文件不一定全有 diff（本次 eia_standard_service.py 经 grep 确认零改动，git add 为 no-op，提交 stat 5 文件属预期）。
+
+## Key Learnings + DNR（2026-10-23 T8 导出废除批追加）
+
+### Key Learnings
+- **遗留契约点（未修，下批跟进）**：`backend/test/integration/services/test_eia_standard_service_flow.py:31-34,63` 的 `exp_pending` 仍按文件 `needs_verification` flag 自算（T8 之前旧口径）；T8 已把 `list_standards.limit_tables_pending` 切到 `list_limit_tables()` 的 `source != 'expert'` 派生。当前不红仅因 7 张表文件 flag 全 true 且 expert=0（两口径数值巧合相等）；一旦任一表落 expert 行或文件 flag 翻 false 即红。修法：exp_pending 改按 `svc.list_limit_tables()` 的 dict 值 `source != 'expert'` 自算（该测试不在 T8 六文件提交范围）。
+- `scripts/apply_pisuan_rename.py` 是全树重建器（git mv + 内容重写，要求洁净树），不是单文件增量部署工具；localized 栈的单文件 web 同步无官方通道，只能等 sync-dev。
+- `pnpm` 宿主未装（只有 node/npm）；web lint 直接跑 `web/node_modules/.bin/eslint . --cache`（不带 --fix，防 auto-fix 他人脏文件）。
+
+### Do-Not-Repeat (2026-10-23 T8)
+- python 正则改文件时锚点必须来自实际读到的字节（grep/sed 输出逐字复制），不许凭记忆重构：本次连续两失——漏 `(self, ` 参数、发明文件里不存在的全角 `（`/`〉` 锚字符。失败时先 `sed -n` 对照原文再改 pattern。
+
+## Do-Not-Repeat (2026-10-23 T8 质量评审)
+
+- **绝对禁跑 `backend/test/integration/services/test_eia_standard_service_flow.py`（运行栈）**：其 fixture 对 `eia_standard_review` 表前后全量 DELETE **无备份**（JSON 侧有字节快照恢复，DB 侧没有）；docstring「绝不污染运行库」对 DB 行是夸大。与 `test_eia_lexicon_service_flow.py` 同一车道纪律。修它后验证 = 单测全绿 + 只读探针（counts 与 source 分布一致性），或可弃栈/CI。
+
+## Key Learnings + DNR（2026-10-23 Task 9 收官批追加）
+
+### Key Learnings
+- **localized 栈单文件部署正道 = docker cp 直达最终路径（root 身份）**：此前任务经 docker cp 部署的文件落盘为 root 属主 755；`docker exec <c> cp` 以容器用户 pisuan(uid 1000) 运行，覆盖它们必 Permission denied。cp 直达最终路径则由 docker daemon 以 root 写入，与既有部署链同权。exec cp 只对 777（Windows bind-mount 默认）文件有效。
+- **定点 ruff format 会横扫文件内既有格式漂移**（本次 models_domain_factory.py 一跑多出 to_dict 展开/md_status 换行 3 处无关 hunk）：先 format，再 git diff 逐 hunk 审查，无关 hunk 用 git checkout + 原锚点重放自己的改动回收；「模型与表本身不动」类约束按字面执行。
+- 本仓 package 树部分文件 HEAD 即存在 ruff I001（import 组间空行）基线（eia_limit_extract_service 等 3 文件 4 处），make format 的 `--select I` 只扫 package/ 未被日常执行；scoped 提交不横扫，新增 import 只须保证不新增 I001。
+- 金值钉扎流程实证：先宿主独立算 `page_row_id_for("gb3096_zone_limits", {category:0类, day:50, night:40, unit:dB(A)})` = f57ba7f1684dad2ff8a752093524852d 与任务书金值一致后才写入断言（不一致即映射被动过，须 STOP）。
+
+### Do-Not-Repeat (2026-10-23 Task 9)
+- 容器内改文件勿用 `docker exec cp`（uid 1000），用 `docker cp`（root）；/tmp 中转文件 root 属主，用户态 rm 不掉，清理须 `docker exec -u root rm`（Claude Code 安全检查会拦带变量的 sh -c rm 脚本，须逐文件显式路径）。
+- git status 无 --cached；看暂存区用 `git diff --cached --stat`。
+- python 改 JSON 字段勿在 -c/heredoc 里嵌中文长串（Windows 控制台 GBK 引爆引用）——写成 .wolf/task9-workdir/ 下的 UTF-8 脚本文件再执行。
+
+## Key Learnings (2026-10-23 P1 合流收尾)
+
+- **Skill 投影自动刷新**：`/app/skill-projections/<scope>/` 是运行时派生缓存；`composite.sync_agent_context_skills` 在每次 Agent Run 初始化时调 `refresh_user_skill_projection_async(uid)` 从 buildin 源重刷。改 buildin 技能文件后无需手工同步投影（重启也不必）——下次运行自动生效。投影与 buildin 源行尾不同（CRLF/LF），diff 全文件形态是行尾差异不是内容差异。
+
+## Key Learnings (2026-10-23 写作测试)
+
+- coal-eia-writer 写作测试/正式跑必须用专用智能体「环评写作助手」(agent-b8decd45b324, 入口 /agent?agent_id=agent-b8decd45b324)：它预配 max_execution_steps=1000 + skills=[coal-eia-writer] + subagents=[eia-section-writer] + 双知识库 + 写作工具集(save_chapter/create_report/query_kb)。用默认「智能助手」跑=预算300步+无工具集+无子代理，必然 GRAPH_RECURSION_LIMIT 撞墙（bug-4130）。
+- agent 默认模型是本地 gemma gguf；会话级须手动切 glm-5.3-flash（附件创建线程会把模型重置回 agent 默认，须建线程后再切）。
+- sandbox 的 /home/gem/user-data 是跨沙箱持久卷：沙箱被 provisioner 回收后数据族/工程目录全保留；重跑会遇到上一轮残留（恢复检测语义受考验）。
+- /api/agent 鉴权用 Bearer token（localStorage），页面内 fetch 带 Authorization 头可查 agent 配置。
+
+## Key Learnings + DNR（2026-10-24 横城 B 测试对比评估追加）
+
+- **深度对比必须修正切片归属再下结论**：原文切片在章中间断开（ch5/ch6 同切片、ch6 后半切片无章号标题），按切片首标题归属会把 ch6 的 72,730 字错标为「残片」，ch5 比值从 0.30 修正到 0.73。DNR：对比脚本按切片首标题归属原文深度前，先核对切片数（13）与章数（13）是否一一对应，不等则必须做切片内二次切分。
+- **横城 B 测试终局数字**（引用口径）：总量 0.92（AI 336,842 / 原文 367,009 有效字符）；薄 ch2 0.43 / ch4 0.35（表格量不足：AI 1436 表行 vs 原文约 2669）；厚 ch8 2.88 / ch10 2.45 / ch13 2.45（论证散文膨胀）；红线 3 命中全在自动生成合规性附录（formula_state/英文槽位键/告警混入交付物）；ch13 结论章 28 个待确认收敛性不足。
+- **「未命中≠缺陷」裁决先于记账**：倾角 15°~25° 一般值未命中，核查实为逐矿具体值（18°/20°，CSV 采集卡）按纪律优先的正确行为。DNR：对比评估中每个未命中项先查上下文定性（正确替换 or 真缺失），再决定进不进缺陷台账。
+- **缺陷台账已沉淀**：docs/vibe/2026-10-24-writing-test-defects.md（P0×1/P1×6/P2×3 + 技能升级清单 7 条）；buglog bug-4131（附录泄漏）/bug-4132（深度偏斜+结论章缺口）。
+
+## User Preferences + Decision Log（2026-10-24 分章技能设计批追加）
+
+- **用户最关注行文质量**：段落逻辑/废话/前后章呼应/表格完备/标准引用/数据一致/计算正确，尤其「行文风格是不是环评工程师风格」——是验收的核心维度，不是次要项。文风问题要用量化指标+门禁对待，不靠主观判断。
+- **决策**：双轨制——coal-eia-writer 按缺陷台账独立完善；分章需求落新技能 coal-eia-chapter-writer。分章模式=A2（全局必备包+逐章补充，非纯逐章：总则倒排依赖卡死纯逐章）。合规校验=独立 coal-eia-reviewer（两级粒度章级/全文+可审外部报告）。一期可见性=对话文件卡片（零平台改造），文件库/工作台二期。
+- **文表割裂是最典型非工程师特征**（正文零「见表」引用）：工程师文风=复合数据长句+表格引用解读段，AI 默认风格=碎句+孤立表格+AI腔过渡词（总体而言/值得注意）。style_targets/<stage>.json 基准从 samples_bank 实测生成（0.8 宽松系数），机制同 depth_targets。
+
+## Key Learnings（2026-10-24 范式角色体系追加）
+
+- **派发契约已有节级分型**：references/paradigms/_roles.json 把 77 节映射到 4 角色（opener 12/baseline 17/analysis 37/measures 11），每节派发注入对应范式文件（结构骨架+去实体化范文+反模式硬禁令+节尾收束段）。缺口：ch13 结论章 V1 就近归类无专属 conclusion 范式（_comment 自认 P2 细分）；_roles.json 是 planning_eia 形状单份文件（section_expectations/depth_targets 均已 per-stage，唯角色映射没有）。
+- **设计裁定（2026-10-24）**：角色（文体型）跨 stage 通用——人类工程师各类型环评用同一套文体技能；映射（节→角色）必须 per-stage——章节树不同。_roles.json → paradigms/roles/<stage>.json 目录化，六角色共享，范文段内分 stage 小节渐进扩充。
+
+## Decision Log（2026-10-24 模板推荐批追加）
+
+- **用户选模板仿写机制**（用户提出）：章节编写前 agent 从 KB 检索同型样例段落→脱敏（禁入清单机械校验）→推荐候选→用户选定→注入派发契约优先于默认范式。裁定三默认：按章不按节（13 次非 77 次）、可选不强制（常设「按默认范式」选项）、检索无果降级不阻塞。writer 全书模式不做（波次自动化冲突）。脱敏校验复用 sample_entities 禁入清单机制，仿写红线继承（句法参照、实体数值一律冻结值）。
+
+## Key Learnings（2026-10-24 样例库分类学追加）
+
+- **样例库实况**：samples_bank 33 份五 stage——planning_eia 17（238 切片）/井工 7（125）/露天 6（105）/post 2（33，薄）/tracking 1（11，极薄）。corpus_meta.json（dict reports）字段无 variant；标题可判 planning 修编 13/新编 3；11 份 project/post 封面标题提取失败（空或仅「环境影响报告书」）。
+- **bank slices 章目录有碎片段**（ch0/ch0101/ch1200/ch1600 等瑕疵名）——凡按章聚合 bank 的脚本必须对齐 stages/<stage>.json 章清单，不盲信目录名。
+- **分类学裁定**：主路由=评价层级（stage，五值，章节树分水岭）；变体=建设性质（planning 修编/新编、project 新建/改扩建）影响写作内容不切章节树；规模/省份/年份非路由属性仅类比过滤。路由=单子代理 eia-section-writer 分型注入，不建多写作子代理。
+
+## Key Learnings + DNR（2026-10-24 chapter-writer Task 1 追加）
+
+**Key Learnings:**
+- 容器内技能脚本测试真实路径：`MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 pytest /app/skill-sources/shared/coal-eia-writer/scripts/tests -q`。容器布局是 `/app/skill-sources/shared/`（sync-dev 目标）+ `/app/skill-projections/admin/`（投影），**无 /app/package 路径**；plans 文档原写的 /app/package/... 路径实测 No such file（已修正文档）。
+- 范式角色查表唯一入口=scripts/paradigm_role.py（resolve+LEGAL_ROLES 六值），映射在 references/paradigms/roles/<stage>.json；_roles.json 已删除（git rename 识别良好）。测试对账基准=references/stages/<stage>.json 位置序 S01-SNN，非 roles 文件自身。
+- _roles.json 全仓代码读者只有 SKILL.md 一处；删技能内参考文件前 grep backend/ web/src/ scripts/ 即可安心（site-packages 命中全是噪声）。
+
+**Do-Not-Repeat:**
+- 容器 docker exec pytest 别照抄文档里的 /app/package/... 路径——先 `docker exec ... ls` 核实容器内真实布局（本次实测 0 collected + No such file 才发现）。
+
+## Key Learnings + DNR（2026-10-24 chapter-writer Task 2 追加）
+
+**Key Learnings:**
+- bank slices 章目录 37 个中 24 个是 OCR 噪声碎段（n=1、首标题乱码如「## 1600 ∞」），文件名 __N 后缀与目录名一致地坏——对齐策略只能是「stage 章清单白名单，清单外整体忽略」，不存在可靠归章线索。
+- planning_eia 文风基准章型画像：ch1 长句带（obs 131 句长/63.6 数字千字）、ch2~ch4 重表带（表密度 89~145）、ch8/ch9 散文带（数字密度 19~24）、ch13 零表带（结论章 bank 事实 0 表行）。chapgate 规则语义据此分层。
+
+**Do-Not-Repeat:**
+- 聚合总量直接当门禁下限：fig_table_ref_min 初版用 17 份切片加总×0.5，ch4 得 499 次引用下限（不可能达成，全章必 FAIL）。凡「对单份报告生效」的门禁下限，分子分母必须同尺度（单份平均），生成时除以切片文件数。
+- band 区间基于未取整原始值计算，测试从取整后 obs 反算会有 ≤0.05×系数+0.05 的偏差——断言用 approx abs=0.12 而非精确相等。
+
+## Key Learnings + DNR（2026-10-24 chapter-writer Task 3 追加）
+
+**Key Learnings:**
+- build_output.py 有存量 ruff E501 基线（25 处，全在中文长消息 f-string）。判据=git diff hunk 行号与 ruff 违规行号求交集，零交集即不新增、可直接提交；只修自己引入的行。
+- 文风门数字密度口径：节标题号（### 2.1）剥 # 后计入正文数字——style_compare 分析脚本同源口径。真实章稿（万字节）标题号贡献 <1/千字可忽略；极小测试稿会放大到 50+/千字，fixture 须用长正文稀释或抬高 min。
+- 容器 sync 后首跑全量 pytest 可能出现「新测试文件在场但用例未收集」（124 vs 132），单跑该文件 passed、重 sync 后全量恢复——sync 与容器文件可见性存在瞬态时序，遇「本地绿容器少」先重 sync 再挖。
+
+**Do-Not-Repeat:**
+- 小尺度 fixture 上走钢丝（min 值贴近底噪）必翻车：数字密度下限 40 vs 标题号贡献 52.6/千字——用例稿要么长正文稀释，要么每用例基准只聚焦自己规则的触发条件（其余规则 min=0 恒过）。
+
+## Key Learnings（Task 4, 2026-10-24）
+- formula_runner compute 块级 scope guard 模式：`if <原条件> and _in(族): ... elif _in(族): <原else告警>` ——到 elif 意味着原条件 False，_in 重判区分「scope 外静默」vs「真缺失告警」；零重排保语义。subsidence 缺失告警跨 subsidence+fracture_zone 两族（fz 依赖 sp），用 `elif not sp and _in("subsidence","fracture_zone")` 而非裸 _in（否则 sp 在场但 subsidence 出 scope 时误报「缺失」）。
+- formula_state.json write_state 无时间戳、json.dumps 确定性序列化——同值重跑字节一致，幂等断言可写 read_bytes 相等。
+- 测试直调 cmd_execute 的 Namespace 须带 output=None（cmd_execute 先查 args.output）；二度调用同 tmp 的 _setup 须 mkdir(exist_ok=True)。
+- 派生工件不做 scope 源：plan 写 dependency_manifest，实际直读 stage sections uses.formulas——manifest 是 uses 的派生物，单一事实源取上游（commit message 记录偏离）。
+
+## Key Learnings（Task 5, 2026-10-24）
+- corpus_meta.json 是 corpus_meta.py 构建产物但 committed 件与 main() 输出（sort_keys/indent=1）已漂移，实际为 indent=2 保序格式——任何补标注走「载入→补键→indent=2 保序写回」就地模式，禁整档重生成（会产生全量噪声 diff）。
+- references JSON 多为 CRLF + 紧凑数组手写风格：写回必须 open(newline="") raw I/O（Path.read_text/write_text 的 universal-newline 翻译会破坏字节保形），换行符从原文探测沿用。
+- Python Path.read_text/write_text 的 newline 参数 3.13+ 才有；容器/宿主 3.12+ 约定下用 open() 显式形式最稳。
+- formula 族→data 表单依赖映射不在 stage JSON（在 compute 代码里），派生 global_families 用 formula_runner.FORMULA_FORM_DEPS 事实清单——compute 块增删表单读数须同步该表。
+- ingest check 有 data/ 外来文件+指纹（sha256）blocking 检查：测试直写 data/ 文件必须写 state_manifest.json 且带 ingest.sha256_file 指纹，否则 rc=2。
+
+## Key Learnings（Task 5 收尾, 2026-10-24）
+- global_families 口径用户裁定（2026-10-24）：仅冻结公式依赖族（7 族），跨章数据族 clause 废弃；裁定理由在 data_expectations._comment。变体判定用户通道 = corpus_meta_annotations.json（{rid:{variant,variant_basis}}，人工 basis 引证据+日期）。
+
+## Task 6 分章态机（2026-10-24）
+- 分章模式零变化手法：full 缺省不写 mode 键（progress.json 对既有管线字节级不变）；phase 推导统一走 derive_phase_any（get("mode")=="chapter" 分发），mark/gate/status/confirm 全部调用点一次 sed 替换
+- CONFIRMED 唯一通道 confirm-chapter（mark 禁达），REVIEWED 章级专属（节批量拒）；幂等重放=同 highlights no-op，变更须 mark DRAFTED 返工
+- 测 gate 免真跑：monkeypatch.setitem(sys.modules, "build_output", stub Module)——run_chapter_gate 无异常=PASS 语义与真门一致
+- 分章 BLOCKED 语义：挂起不阻后续章（协商后置 NEGOTIATE），与 full WAVE1 卡死不同
+
+## Task 7/8 同步守卫（2026-10-24）
+- 宿主 backend/test 的 conftest 无条件 import yuxi（langgraph）——宿主永远跑不了 backend/test，一切容器跑；「宿主可收集」仅指目录布局
+- 守卫测试两栖定位坑：容器 /app/package/pisuan（改名层运行栈，sync-dev 应用 yuxi→pisuan 机械改名）先于 skill-sources/shared 命中；运行栈含滞后基线（db86e752），已删文件会被 sync-dev 拷回——官方链再生前 _roles.json 类滞后文件每轮复发，手动清
+- sync_chapter_skill.py 镜像：__pycache__ 两侧不入比对集（容器跑测试再生，删了反复横跳）
+
+## Key Learnings (2026-10-24 reviewer 冒烟)
+
+- bank 切片布局：`slices/chN/<report_id>__N.md` 的 `__N` 是章号——每章每报告**恰一个文件**，不存在章内多切片；任何「拆分取最长块」启发式都会丢内容（ch4/ch5 切片内部有 `## 数字` 头）。测量永远逐文件直测。
+- style_targets 基准键名是 `avg_sent_len`（不是 `_metrics` 返回的 `avg_sent`）；用 `b.get('avg_sent', {})` 会静默跳过均句长判定——核对脚本必须与 gate 同源读键。
+- ch13（结论章）基准 tbl_per_10k = 0/0/0：0 表在带内，不是缺陷；勿把数字密度下限（19.5）误当表密度下限。
+- reviewers --full 冒烟方法定稿：D/C 用原始切片机械全量直测（_metrics + 标准号正则×standards_index），A/B 用条款定向 grep 取证（关键词计数 + ch1 精读）。
+
+## Key Learnings (2026-10-24 运行栈技能注册与挂载)
+
+- 新 buildin 技能包进运行栈三步：sync-dev 进 /app/package → **init_builtin_skills 不会因热重载自动跑**（容器直调 pisuan.services.skills.shared.init_builtin_skills 或管理端「同步内置技能」）→ 管理端智能体挂载（agents.config_json.context.skills，PUT /api/agent/{slug} body 只带 config_json）。
+- 运行栈登录：POST /api/auth/token（form: username/password）；admin 密码=123（用户口头确认）；seed 脚本 superadmin 15251638888/zwj12138 与运行栈不符勿再试（有锁定风险）。
+- skills.is_builtin **列**是遗留装饰；权限与序列化全部走 source_type=="builtin" 派生（skill_router.py:660 覆写）。
+- progress.py init --stage 收 stage JSON **文件路径**（references/stages/planning_eia.json），不是 stage 名。
+- 「stage 拒未启用」无 CLI 硬门（stages/ 五套文件物理在场，init 照跑）——纯 SKILL.md 路由选择卡 LLM 契约；是否加白名单硬门留裁决。
+- MSYS /tmp 路径容器内可用但 Windows 原生 python 看不见 /tmp/…——宿主与容器交换文件用仓库内实体路径（.wolf/）。
+
+## Key Learnings (2026-10-24 bug-4135)
+
+- 容器内跑集成测试要带凭据 env：`docker exec -e TEST_USERNAME=admin -e TEST_PASSWORD=123 … pytest /app/test/integration/...`（skip 提示 TEST_USERNAME/TEST_PASSWORD 未配置）。
+- docker cp 宿主文件进 localized 容器会破坏改名孪生（内容里 yuxi→pisuan）：cp 后必须 `sed -i "s/yuxi/pisuan/g"` 容器副本，否则 ModuleNotFoundError: yuxi；MSYS_NO_PATHCONV=1 时 docker cp 源路径要用 Windows 风格 `C:/...`。
+- 裸 v1 scope dict 一旦进 skills.share_config，/api/skills 整表 strict 500（一行坏全局炸）——新增任何写 share_config 的代码路径必须产出 v2 信封。
+
+## Do-Not-Repeat 追加 (2026-10-24)
+- **amend 陷阱（本日三次重建）**：`git reset --soft HEAD~N` 之后 `git commit --amend` 修订的是新 HEAD（错误父节点），会静默把两个提交合并成一个。soft reset 后要拆提交，一律 `git restore --staged .` 后按文件重新 `git add` + 新 `git commit`，不用 amend。每次 commit 前必看 `git diff --cached --stat` 逐文件核对（行数+文件清单）。
+- **共享备份先验证来源**：从 dangling commit 取回内容时先 `git show <sha>:<file> | grep <特征串>` 确认是哪个版本——本例 f8b5c3afe 与 f70d5cc3c 名字接近、changelog 内容一纯一全，取错会静默丢失 41 行他人条目。
+
+## Key Learnings 追加 (2026-10-24)
+- **常量双语义位风险（bug-4135 深层教训）**：同一常量若同时充当「行创建默认值」（需完整 v2 信封）和「normalize 返回值的槽位」（需裸 scope），修 bug 时只改一处会造出双嵌套。正确做法：拆成两个同名源常量（BUILTIN_SKILL_READ_SCOPE 裸形态 / BUILTIN_SKILL_SHARE_CONFIG 信封），后者由前者派生，一处修改处处生效。
+- bug-4135 最终修复提交 4a7982503；Task 9 冒烟记录提交 f08fae576。
+
+## Key Learnings 追加 (2026-10-24)
+- **agents.config_json.context.skills 支持 "all" 选择器**：字符串 "all" = 挂载全部启用技能（validate_resource_selection/_resolve_resource_selection，context.py:569）。新增/停用技能会影响所有 "all" 智能体（现 data-survey-writer/prediction-writer/regulation-writer）——技能描述里的触发词会被这些智能体看到。
+- **API 认证调试路径**：登录是 OAuth2 表单 POST /api/auth/token（username/password 表单字段，非 JSON）；经 5173 代理时 Bearer token 可用。直接 docker exec python 里 localhost:8000 不通（端口未映射到容器 network namespace 内回环），多行 python -c 经 sh -c 易挂起等 stdin，用 psql 直查 postgres 容器（库名 yuxi_know）更可靠。
+
+## Key Learnings 追加 (2026-10-24 对话冒烟)
+- **沙箱 Python 是旧版（<3.12）**：技能脚本真正跑在沙箱（runtime_profile=core），开发容器 3.13 编译过 ≠ 沙箱能跑。技能脚本语法必须兼容 3.8/3.11（禁 PEP 701 f-string：表达式内不得有反斜杠/引号复用）；扫描器见 .wolf/chapter-smoke/scan_fstring2.py 思路（f-string 表达式段扫反斜杠）。bug-4136。
+- **execute 类工具默认逐条人工审批**：每次 execute → run 变 interrupted（human_approval_required），前端 HumanApprovalModal 渲染审批卡。续跑协议：POST /api/agent/runs {query:null, resume:{decisions:[{type:'approve'}|{type:'reject',message}]}, created_by_run_id:<中断runid>}。审计里工具调用「空结果」=待审批态，非执行失败。
+- **沙箱工作区持久性**：/home/gem/user-data 挂载用户持久工作区（provision 时回挂），沙箱 idle 210s 销毁只杀容器不丢数据；/home/gem/skills 技能投影源=api 容器 /app/skill-sources/shared/<slug>。这些路径在 api 容器不存在——查工作区别在 api 容器里 ls。
+- **agent config context.model 指定模型档位**：智能体可钉本地小模型（如 gemma-4B-Q4，免费档纪律）——小模型跑不了技能管线（零工具调用、幻觉工具、英文推理裸文当回复）。冒烟/演示需 agnes-3.0-flash 档（openai2:agnes-3.0-flash，apihub.agnes-ai.com，容器可达）。
+
+- (2026-10-24) run resume 载荷形状双轨：工具审批={"decisions":[{type:approve}|{type:reject,message}]}；ask_user_question=裸对象 {question_id: value}（question_id 缺省 q-1/q-2，HumanApprovalModal.buildAnswer 同形）。drive.py resume 硬包 decisions——应答问题须直发裸对象。
+- (2026-10-24) progress.py state 的 mode 键缺省=full：confirm-chapter/分章 phase 硬门 mode=="chapter"（init --mode chapter 写入）。跨工程复用 state 目录会静默走 full 批量编排——分章冒烟必须独立 state 目录。
+- (2026-10-24) data/ 里若有他工程的 state_manifest.json，ingest check 指纹必炸；修法=ingest.register_file 逐条重签（唯一写通道），勿手改 manifest。
+
+## 2026-10-24 真人对话冒烟（分章 ch2）补充
+- 双通道审批竞态：网页 UI 的 resume 用 UUID request_id，drive.py 用 resume-<epoch>；UI 每次 resume 生成新 run，drive.py 的 created_by_run_id 若非线程最新 run 必 409 resume_superseded（agent_run_service.py:719）。修复法：DB 查最新 run → 更新 state.json run_id → 再 resume。history 端点只含 ai/human 消息，工具结果（gate 输出等）不可见。
+- WRITER_CAP_RE 编号体系：真实环评报告表题为「表<章>-<序>」，章号可多级（表2.2-1）；bug-394 单段后缀量词是 full 冒烟盲区（当时用单级编号）。bug-4138 已修为多段量词。
+- 沙箱 /home/gem/skills 投影每次 resume 可能重投影自 api-container /app/skill-sources/shared/<slug>——热修运行时要改 api-container 源，别只改沙箱（会被冲掉）。
+- style_targets/<stage>.json 的 effective_chars/table_blocks/fig_refs 是语料聚合观测值非门限；门限只有 avg_sent_len/num_per_k/tbl_per_10k 三带 + fig_table_ref_min（单份平均×0.5）。LLM 常误读聚合值为目标，需 steer。
+
+## 补充（同日冒烟后段）
+- 章级指标门构成：节级深度门 + 文表联动（fig_refs 正则只认 由表|见表|详见表|如表，「上表/下表」不计数）+ 章总字地板（corpus 每报告该章均值）+ num_per_k/tbl_per_10k 带。数组族数据（mines/facilities）只能 {{TABLE:}} 注入，正文数字密度只能靠标量槽位提升——LLM 想引用单矿数值时只能指表（详见表2.2-1），不得自造 per-mine 槽位键。
+- steer 通道：resume 决策 {"type":"reject","message":"…"} 即纠偏；reject 消息会被模型当作指令执行。bash 传 JSON 含反斜杠必炸（MSYS heredoc 吃 \），用 python 构造 payload。
+
+## Key Learnings (2026-10-24 分章冒烟追加)
+
+- 章级状态机降档语义：`downgrade_approvals` 凭据只被全文 `finalize --allow-partial` 消费；`run_chapter_gate` 无降档感知（L2 FAIL 必 raise，gate PASS 是 VERIFIED 唯一通道）；`confirm-chapter` 仅接受 REVIEWED→CONFIRMED——分章模式降档章无 CONFIRMED 合法通道（bug-4140 待裁决）。键名是 downgrade_approvals（复数 approvals），LLM 易误记为 approved_downgrades。
+- 沙箱容器按 run 供给/回收（`pisuan-localized-sandbox-<id>` 名随会话变，勿按旧 id docker exec）；工作区持久层在 `C:\workspace\pisuan-localized\docker\volumes\pisuan\threads\shared\admin\workspace\workspace\<proj>\`（state/chapters、outputs 都从这里捞）。
+- 容器内裸 asyncpg 连接：env 的 DSN 是 sqlalchemy 形（postgresql+asyncpg://），须 replace 成 postgresql:// 才能连。
+- agnes-3.0-flash 超长上下文（40+ 工具轮后）尾部会 132KB 级同句重复退化，run 记 completed 但零推进——长会话要设轮次上限、给键名级精确 steer 才能拉回。
+
+## Do-Not-Repeat (2026-10-24)
+
+- 双通道同时 resume 同一线程（drive.py 自动批准 + 用户 web UI 应答）互报 409「中断运行已被后续运行超越」——用户在 UI 侧活动时立即停自动批准循环，只做只读监控。
+- git-bash heredoc 会吞反斜杠、展开 $var——补丁脚本用 Write 工具落盘（chr(92) 造反斜杠）；`docker exec python - <<EOF` 在本机 bash 不喂 stdin，改 `docker exec -i ... python - < file`。

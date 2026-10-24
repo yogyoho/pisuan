@@ -136,7 +136,7 @@
 **Files:** 无新增（验收执行 + 缺陷记录）
 
 - [x] **Step 9.1**：预配置智能体（管理端）挂载三技能（coal-eia-writer/chapter-writer/reviewer）——手动配置步骤，留截图/说明。（API 实测完成：sync-dev 进栈 + init_builtin_skills 注册 + PUT agent 挂载，说明见 docs/vibe/2026-10-24-chapter-writer-reviewer-smoke.md）
-- [ ] **Step 9.2**：分章冒烟：横城 5 份资料走 chapter-writer——验收 1（ch2 文件卡片）/2（门1 只查全局包）/3（确认卡三选项+返工）/4（增量冻结 scope 日志）/5（文风门判定输出）/10（模板推荐链路含跳过路径）/11（stage 拒未启用+修编变体过滤）。（CLI 可证部分完成：2/3守卫/5 真数据实测过，transcript .wolf/chapter-smoke/；1/3应答/4冻结/10 需真人对话会话，runbook 见冒烟记录；11 CLI 无硬门留裁决）
+- [x] **Step 9.2**：分章冒烟：横城 5 份资料走 chapter-writer——验收 1（ch2 文件卡片）/2（门1 只查全局包）/3（确认卡三选项+返工）/4（增量冻结 scope 日志）/5（文风门判定输出）/10（模板推荐链路含跳过路径）/11（stage 拒未启用+修编变体过滤）。（CLI+真人对话双面完成：2/3守卫/5 CLI 实测；对话面 4/10/3✅（用户 UI 应答 accept+allow_partial）、1 以文件清单呈报（卡片口径待裁决）、11 无硬门留裁决；交付缺陷 bug-4136~4139 均修+测试；新发现章级状态机降档收口缺口移交裁决。详见 docs/vibe/2026-10-24-chapter-writer-reviewer-smoke.md 9.2.1）
 - [x] **Step 9.3**：reviewer 独立冒烟：对横城原文 `--full` 产出发现单——验收 7。（发现单 v2：.wolf/reviewer-smoke/，方法修订 bug-4134 后以原始切片直测为准）
 - [x] **Step 9.4**：缺陷即发现即记 buglog；验收结果汇总回填本计划 checkbox 并汇报。（bug-4134 测量方法缺陷已记；汇总见 docs/vibe/2026-10-24-chapter-writer-reviewer-smoke.md）
 
