@@ -56,9 +56,9 @@
 - Modify: 残留扫描词表所在处（`build_output.py` 或 progress.py 内 bug-367 词表常量——先 `grep -n "总体而言\|元话语\|残留" scripts/*.py` 定位）并入 banned_phrases
 - Create: `scripts/tests/test_style_gate.py`
 
-- [ ] **Step 3.1 (TDD 红)**：四规则各一通过/一失败 fixture（构造小章稿 md + style_targets fixture）：① 数字密度低于下限 FAIL；② 表行超上限 FAIL；③ 正文无「由表/见表/详见表」而主要表格 ≥2 FAIL；④ 含「总体而言」FAIL；⑤ 全过 PASS；⑥ style_targets ABSENT → 文风门 skip（gate 仍 rc=0 但 stdout 报 STYLE_GATE_SKIPPED）。
-- [ ] **Step 3.2**：实现 gate 集成；失败输出含节级归因（哪节/哪指标/实测 vs 基准）。
-- [ ] **Step 3.3 (绿)**：测试绿；对既有 writer 测试目录跑全量确认零回归。
+- [x] **Step 3.1 (TDD 红)**：四规则各一通过/一失败 fixture（构造小章稿 md + style_targets fixture）：① 数字密度低于下限 FAIL；② 表行超上限 FAIL；③ 正文无「由表/见表/详见表」而主要表格 ≥2 FAIL；④ 含「总体而言」FAIL；⑤ 全过 PASS；⑥ style_targets ABSENT → 文风门 skip（gate 仍 rc=0 但 stdout 报 STYLE_GATE_SKIPPED）。
+- [x] **Step 3.2**：实现 gate 集成；失败输出含节级归因（哪节/哪指标/实测 vs 基准）。
+- [x] **Step 3.3 (绿)**：测试绿；对既有 writer 测试目录跑全量确认零回归。
 
 **Verify:** `MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 pytest /app/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests -q` 全绿。
 
