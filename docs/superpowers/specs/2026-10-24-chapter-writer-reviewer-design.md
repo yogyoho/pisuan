@@ -57,7 +57,7 @@
 每章六步，全部落 progress.json 后才发确认卡：
 
 - **3a 本章资料包**：该章专属族（仅本章消费的数据族）已备 → 跳过；缺 → 按现行交互纪律补收 → 本章增量门（只校本章族）→ **增量冻结** `formula_runner execute --chapters chN`（按 dependency_manifest 切片本章公式；仅本章消费的公式冻结，跨章公式已在全局冻结过的不动）
-- **3b 节级派发**：eia-section-writer 子代理，波=本章全部 PENDING 节，在飞 ≤3，契约同 writer 4.1，**注入严格限定：本章数据族 + 本章冻结值 + 前章要点包（key_points 增量累积）+ 本章 samples_bank 风格基准切片**；禁注入全书上下文
+- **3b 节级派发**：eia-section-writer 子代理，波=本章全部 PENDING 节，在飞 ≤3，契约同 writer 4.1，**注入严格限定：本章数据族 + 本章冻结值 + 前章要点包（key_points 增量累积）+ 本章 samples_bank 风格基准切片 + 本节角色范式文件**；禁注入全书上下文。范式角色 4 → 6 扩展（新增 conclusion/process，ch13 全章重新归型，映射分型见 §5.1）
 - **3c 批量章门**：`progress.py gate`（含 §3.6 文风门）；FAIL 重派 ≤1 → BLOCKED（不中断后续章，协商留到该章确认卡）
 - **3d 章级审查**：按 coal-eia-reviewer 规程出本章发现单（语义合规维度 A–C + 行文质量维度 D）
 - **3e 呈现与确认**：`present_artifacts` 本章文件卡片 + 发现单卡片 + `ask_user_question` 确认卡（选项：**进入下一章 / 返工本章（附意见）/ 暂停**，另设快捷选项「后续章节自动确认直至全书合并」）——发卡即停
@@ -87,7 +87,7 @@
 - **AI 腔禁用词**：命中 banned_phrases 即 FAIL（词表并入 bug-367 残留扫描词表机制）
 - 均句长为软指标：偏离基准 ±40% 记 WARN 不 FAIL（句式是风格不是错误）
 
-写作侧配套（eia-section-writer 契约升级，两技能共用）：注入本章风格基准切片；纪律新增「每个主要表格正文必须有引用与解读段」「工程师复合句式，数据从句串联，禁碎句堆叠」「禁 AI 腔过渡词」。
+写作侧配套（eia-section-writer 契约升级，两技能共用）：注入本章风格基准切片；纪律新增「每个主要表格正文必须有引用与解读段」「工程师复合句式，数据从句串联，禁碎句堆叠」「禁 AI 腔过渡词」。**范式×文风门分工**：范式文件承担「怎么写」（结构骨架/句式/反模式硬禁令），style_targets 文风门承担「写没达标」（密度/联动/AI 腔机械判定）——两文件按节角色双注入，互不替代。
 
 ### 3.7 步骤 4–7 · 合并 → 全文审查 → 修复 → 交付
 
@@ -134,6 +134,15 @@
 - reviewer 包最小化：SKILL.md + compliance_checklist.md 副本 + standards_index.json 副本（同源同步）
 - 投影层零改动
 
+### 5.1 范式角色分型（角色通用 + 映射分型）
+
+现状缺口：`paradigms/_roles.json` 是单份文件、planning_eia 形状（77 节映射），而 section_expectations/depth_targets 均已按 stage 分文件——其他 stage（后评价/项目环评/跟踪评价）接入时角色映射会错乱。
+
+- **角色文件跨 stage 共享**：6 个范式文件（opener/baseline/analysis/measures + 新增 **conclusion**（结论章专属：结论先行/逐条溯源前章/禁新增实体与数值——EO3 语义化）/ **process**（公参等过程章：程序合规叙事））全 stage 通用——文体技能不随报告类型变化
+- **映射按 stage 定制**：`_roles.json` → `paradigms/roles/<stage>.json` 目录化；一期只交付 planning_eia（现有 77 节映射重构进目录 + ch13 十节按 conclusion 重新归型）；新 stage 接入成本 = 一个映射文件 + 该 stage samples_bank 切片
+- **范文按 stage 渐进扩充**：范式文件内范文段落分 stage 小节补充（如 analysis.md 增「项目环评工程分析」段），不另开文件
+- 派发契约查不到映射 = 拒派报错（现有纪律不变），未知角色同拒
+
 ## 6. 错误处理与边界
 
 - 章门 FAIL：重派 ≤1 → BLOCKED，协商三选项（补数据/批准降档/[待确认] 收尾），不中断后续章
@@ -157,7 +166,7 @@
 | 8 | writer 现有测试零回归 | 全目录 pytest |
 | 9 | 资产同步守卫测试在位且通过 | 单测 |
 
-单测清单：formula_runner `--chapters` scope；progress.py CONFIRMED 态机；style_targets 生成脚本；文风门四规则；资产同步守卫；data_expectations global_families 派生。集成：横城 ch2 端到端冒烟（资料包→冻结→派发→章门→审查→确认卡）。
+单测清单：formula_runner `--chapters` scope；progress.py CONFIRMED 态机；style_targets 生成脚本；文风门四规则；资产同步守卫；data_expectations global_families 派生；范式角色映射 schema（六角色合法值 + 77 节全覆盖 + 未知角色拒派）。集成：横城 ch2 端到端冒烟（资料包→冻结→派发→章门→审查→确认卡）。
 
 ## 8. 范围外
 
