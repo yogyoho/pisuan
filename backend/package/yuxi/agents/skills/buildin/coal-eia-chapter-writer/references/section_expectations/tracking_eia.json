@@ -1,0 +1,1634 @@
+{
+  "sections": {
+    "ch10_S01": {
+      "expected_quantities": [],
+      "title": "公众参与目的"
+    },
+    "ch10_S02": {
+      "expected_quantities": [],
+      "title": "规划实施期间公众参与调查"
+    },
+    "ch10_S03": {
+      "expected_quantities": [],
+      "title": "规划实施期间公众环保投诉情况调查"
+    },
+    "ch11_S01": {
+      "expected_quantities": [],
+      "title": "规划实施情况及开发强度"
+    },
+    "ch11_S02": {
+      "expected_quantities": [],
+      "title": "区域环境质量及变化趋势"
+    },
+    "ch11_S03": {
+      "expected_quantities": [],
+      "title": "后续开发环境影响评价"
+    },
+    "ch11_S04": {
+      "expected_quantities": [],
+      "title": "预防和减轻不良环境影响的对策措施"
+    },
+    "ch11_S05": {
+      "expected_quantities": [],
+      "title": "矿区清洁生产与循环经济分析结论"
+    },
+    "ch11_S06": {
+      "expected_quantities": [],
+      "title": "公众意见调查结论"
+    },
+    "ch11_S07": {
+      "expected_quantities": [],
+      "title": "规划后续实施优化调整建议"
+    },
+    "ch11_S08": {
+      "expected_quantities": [],
+      "title": "总体评价结论"
+    },
+    "ch1_S01": {
+      "expected_quantities": [],
+      "title": "规划跟踪评价的背景与任务由来"
+    },
+    "ch1_S02": {
+      "expected_quantities": [],
+      "title": "评价依据"
+    },
+    "ch1_S03": {
+      "expected_quantities": [],
+      "title": "评价目的"
+    },
+    "ch1_S04": {
+      "expected_quantities": [],
+      "title": "评价重点及方法"
+    },
+    "ch1_S05": {
+      "expected_quantities": [],
+      "title": "环境功能区划与评价标准"
+    },
+    "ch1_S06": {
+      "expected_quantities": [],
+      "title": "环境保护目标"
+    },
+    "ch2_S01": {
+      "expected_quantities": [],
+      "title": "地理位置与交通"
+    },
+    "ch2_S02": {
+      "expected_quantities": [],
+      "title": "自然环境概况"
+    },
+    "ch2_S03": {
+      "expected_quantities": [],
+      "title": "社会经济概况"
+    },
+    "ch3_S01": {
+      "expected_quantities": [],
+      "title": "规划(修编)背景以及规划内容"
+    },
+    "ch3_S02": {
+      "expected_quantities": [],
+      "title": "规划实施情况及变化情况"
+    },
+    "ch3_S03": {
+      "expected_quantities": [],
+      "title": "开发强度对比"
+    },
+    "ch3_S04": {
+      "expected_quantities": [],
+      "title": "环境管理要求落实情况"
+    },
+    "ch4_S01": {
+      "expected_quantities": [],
+      "title": ""
+    },
+    "ch4_S02": {
+      "expected_quantities": [],
+      "title": "生态系统结构与功能变化趋势分析"
+    },
+    "ch4_S03": {
+      "expected_quantities": [],
+      "title": ""
+    },
+    "ch5_S03": {
+      "expected_quantities": [],
+      "title": "地下水防治措施有效性分析"
+    },
+    "ch5_S04": {
+      "expected_quantities": [],
+      "title": "声环境影响对比评估及环保措施有效性分析"
+    },
+    "ch5_S05": {
+      "expected_quantities": [],
+      "title": "固体废物影响调查及环保措施有效性分析"
+    },
+    "ch5_S06": {
+      "expected_quantities": [],
+      "title": "生态环境影响对比评估及环保措施有效性分析"
+    },
+    "ch5_S07": {
+      "expected_quantities": [],
+      "title": "土壤环境质量回顾性评价"
+    },
+    "ch5_S08": {
+      "expected_quantities": [],
+      "title": "矿区开发过程中存在的环境问题及整改措施"
+    },
+    "ch6_S01": {
+      "expected_quantities": [],
+      "title": "规划后续实施开发方案及开发强度"
+    },
+    "ch6_S02": {
+      "expected_quantities": [],
+      "title": "规划后续开发地表沉陷影响预测与评价"
+    },
+    "ch6_S03": {
+      "expected_quantities": [],
+      "title": "规划后续开发生态环境影响评价"
+    },
+    "ch6_S04": {
+      "expected_quantities": [],
+      "title": "规划后续开发地下水环境影响预测与评价"
+    },
+    "ch6_S05": {
+      "expected_quantities": [],
+      "title": "规划后续开发地表水环境影响预测与评价"
+    },
+    "ch6_S06": {
+      "expected_quantities": [
+        {
+          "caliber": "抑尘效率",
+          "corpus_freq": 1.0,
+          "field": "measures.dust_suppression_efficiency",
+          "tier": "required",
+          "unit": "%"
+        }
+      ],
+      "title": "规划后续开发大气环境影响预测与评价"
+    },
+    "ch6_S07": {
+      "expected_quantities": [],
+      "title": "规划后续开发固体废物环境影响预测与评价"
+    },
+    "ch6_S08": {
+      "expected_quantities": [],
+      "title": "规划后续开发声环境影响评价"
+    },
+    "ch6_S09": {
+      "expected_quantities": [],
+      "title": "规划后续开发土壤环境影响评价"
+    },
+    "ch6_S10": {
+      "expected_quantities": [],
+      "title": "规划后续开发对伊吾胡杨林国家沙漠公园的影响分析"
+    },
+    "ch6_S11": {
+      "expected_quantities": [],
+      "title": "规划后续开发对淖毛湖镇的影响分析"
+    },
+    "ch6_S12": {
+      "expected_quantities": [],
+      "title": "规划后续开发线性工程环境影响分析"
+    },
+    "ch6_S13": {
+      "expected_quantities": [],
+      "title": "规划后续开发环境风险分析"
+    },
+    "ch6_S14": {
+      "expected_quantities": [],
+      "title": "矿区后续开发水资源承载力分析"
+    },
+    "ch6_S15": {
+      "expected_quantities": [],
+      "title": "规划后续开发大气环境容量分析与总量控制"
+    },
+    "ch6_S16": {
+      "expected_quantities": [],
+      "title": "矿区地表水环境容量分析与总量控制"
+    },
+    "ch7_S01": {
+      "expected_quantities": [],
+      "title": "矿区生态环境综合整治措施"
+    },
+    "ch7_S02": {
+      "expected_quantities": [],
+      "title": "矿区大气污染控制措施"
+    },
+    "ch7_S03": {
+      "expected_quantities": [],
+      "title": "矿区水环境影响控制措施"
+    },
+    "ch7_S04": {
+      "expected_quantities": [],
+      "title": "声环境保护措施"
+    },
+    "ch7_S05": {
+      "expected_quantities": [],
+      "title": "固体废物处置措施"
+    },
+    "ch7_S06": {
+      "expected_quantities": [],
+      "title": "土壤环境保护措施"
+    },
+    "ch7_S07": {
+      "expected_quantities": [],
+      "title": "线性工程环境影响减缓措施"
+    },
+    "ch7_S08": {
+      "expected_quantities": [],
+      "title": "规划后续实施优化调整建议"
+    },
+    "ch7_S09": {
+      "expected_quantities": [],
+      "title": "对后续实施的建议"
+    },
+    "ch7_S10": {
+      "expected_quantities": [],
+      "title": "后续开发煤矿环境影响减缓措施"
+    },
+    "ch7_S11": {
+      "expected_quantities": [],
+      "title": "先期及适时开发项目环境准入要求"
+    },
+    "ch8_S01": {
+      "expected_quantities": [],
+      "title": "矿区现有生产煤矿清洁生产分析"
+    },
+    "ch8_S02": {
+      "expected_quantities": [],
+      "title": "后续矿区循环经济发展建议"
+    },
+    "ch9_S01": {
+      "expected_quantities": [],
+      "title": "环境管理体系建设现状"
+    },
+    "ch9_S02": {
+      "expected_quantities": [],
+      "title": "矿区环境管理机构、制度落实情况"
+    },
+    "ch9_S03": {
+      "expected_quantities": [],
+      "title": "规划后续实施环境管理与跟踪监测要求"
+    }
+  },
+  "stage_scope": "tracking_eia",
+  "unmapped": [
+    {
+      "caliber": "面积约",
+      "sample": "034-r",
+      "section": "ch1",
+      "unit": "km2",
+      "value": "3096.12"
+    },
+    {
+      "caliber": "与矿区重叠面积",
+      "sample": "034-r",
+      "section": "ch1",
+      "unit": "km2",
+      "value": "0.597"
+    },
+    {
+      "caliber": "面积",
+      "sample": "034-r",
+      "section": "ch1",
+      "unit": "km2",
+      "value": "78.37"
+    },
+    {
+      "caliber": "镇区建设用地面积",
+      "sample": "034-r",
+      "section": "ch1",
+      "unit": "km2",
+      "value": "6.12"
+    },
+    {
+      "caliber": "其井田内长度分别",
+      "sample": "034-r",
+      "section": "ch1",
+      "unit": "km",
+      "value": "3.04"
+    },
+    {
+      "caliber": "区内基本农田面积",
+      "sample": "034-r",
+      "section": "ch1",
+      "unit": "km2",
+      "value": "0.597"
+    },
+    {
+      "caliber": "天煤矿的道路长度",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "km",
+      "value": "20"
+    },
+    {
+      "caliber": "设计初期年运能",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "万t",
+      "value": "3500"
+    },
+    {
+      "caliber": "现状年运输量约",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "万t",
+      "value": "1500"
+    },
+    {
+      "caliber": "现状年运输量约",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "万t",
+      "value": "3500"
+    },
+    {
+      "caliber": "分别",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "m",
+      "value": "6.0"
+    },
+    {
+      "caliber": "瞬时风速最大",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "m",
+      "value": "39"
+    },
+    {
+      "caliber": "煤干燥基全硫含量",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "%",
+      "value": "0.21"
+    },
+    {
+      "caliber": "煤干燥基全硫含量",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "%",
+      "value": "0.33"
+    },
+    {
+      "caliber": "平均值",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "%",
+      "value": "0.40"
+    },
+    {
+      "caliber": "煤干燥基全硫含量",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "%",
+      "value": "0.23"
+    },
+    {
+      "caliber": "平均值",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "%",
+      "value": "0.29"
+    },
+    {
+      "caliber": "层干燥基全硫含量",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "%",
+      "value": "0.27"
+    },
+    {
+      "caliber": "平均值",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "%",
+      "value": "0.31"
+    },
+    {
+      "caliber": "煤干燥基全硫含量",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "%",
+      "value": "0.26"
+    },
+    {
+      "caliber": "平均值",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "%",
+      "value": "0.30"
+    },
+    {
+      "caliber": "煤层干燥基磷含量",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "%",
+      "value": "0.028"
+    },
+    {
+      "caliber": "平均值",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "%",
+      "value": "0.076"
+    },
+    {
+      "caliber": "煤层干燥基氯含量",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "%",
+      "value": "0.037"
+    },
+    {
+      "caliber": "平均值",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "%",
+      "value": "0.076"
+    },
+    {
+      "caliber": "煤层干燥基氯含量",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "%",
+      "value": "0.093"
+    },
+    {
+      "caliber": "平均值",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "%",
+      "value": "0.115"
+    },
+    {
+      "caliber": "湾组干燥基氯含量",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "%",
+      "value": "0.037"
+    },
+    {
+      "caliber": "平均值",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "%",
+      "value": "0.064"
+    },
+    {
+      "caliber": "近期建设用地规模",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "km2",
+      "value": "12.95"
+    },
+    {
+      "caliber": "远期建设用地规模",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "km2",
+      "value": "46.23"
+    },
+    {
+      "caliber": "扩区后总规划面积",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "km2",
+      "value": "20"
+    },
+    {
+      "caliber": "近期发展规模",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "km2",
+      "value": "6.7"
+    },
+    {
+      "caliber": "处理规模",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "m",
+      "value": "2000"
+    },
+    {
+      "caliber": "三期处理规模分别",
+      "sample": "034-r",
+      "section": "ch2",
+      "unit": "m",
+      "value": "2000"
+    },
+    {
+      "caliber": "煤炭就地转化率",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "%",
+      "value": "70"
+    },
+    {
+      "caliber": "有效含气总面积",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "km2",
+      "value": "28.6"
+    },
+    {
+      "caliber": "有效含气面积",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "km2",
+      "value": "7.40"
+    },
+    {
+      "caliber": "有效含气面积",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "km2",
+      "value": "21.20"
+    },
+    {
+      "caliber": "划规模时总用水量",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "万m3",
+      "value": "2851.78"
+    },
+    {
+      "caliber": "行政设施用水量",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "万m3",
+      "value": "10.07"
+    },
+    {
+      "caliber": "中辅助设施用水量",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "万m3",
+      "value": "8.51"
+    },
+    {
+      "caliber": "行政设施用水量",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "万m3",
+      "value": "1.56"
+    },
+    {
+      "caliber": "长度",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "km",
+      "value": "21"
+    },
+    {
+      "caliber": "长度",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "km",
+      "value": "26.8"
+    },
+    {
+      "caliber": "生活污水总量",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "万m3",
+      "value": "73.6"
+    },
+    {
+      "caliber": "水产生量",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "万m3",
+      "value": "6909.88"
+    },
+    {
+      "caliber": "已有用地面积",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "hm²",
+      "value": "58.31"
+    },
+    {
+      "caliber": "新增用地面积",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "hm²",
+      "value": "504.32"
+    },
+    {
+      "caliber": "平均可采厚度",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "m",
+      "value": "24.31"
+    },
+    {
+      "caliber": "原采矿证生产能力",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "万t",
+      "value": "600"
+    },
+    {
+      "caliber": "平均可采厚度",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "m",
+      "value": "25.18"
+    },
+    {
+      "caliber": "排弃量约",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "万m3",
+      "value": "15695.6194"
+    },
+    {
+      "caliber": "地表境界面积",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "km2",
+      "value": "17.27"
+    },
+    {
+      "caliber": "剥离量共",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "万m3",
+      "value": "860.1192"
+    },
+    {
+      "caliber": "段规划的矿区面积",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "km2",
+      "value": "1185.52"
+    },
+    {
+      "caliber": "的矿区面积",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "km2",
+      "value": "1184.70"
+    },
+    {
+      "caliber": "新一号勘查区面积",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "km2",
+      "value": "29.73"
+    },
+    {
+      "caliber": "现状年运输量约",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "万t",
+      "value": "3500"
+    },
+    {
+      "caliber": "炭开发项目用水量",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "万m3",
+      "value": "2146.85"
+    },
+    {
+      "caliber": "个煤矿项目用水量",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "万m3",
+      "value": "2911.73"
+    },
+    {
+      "caliber": "设计初期年运能",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "万t",
+      "value": "3500"
+    },
+    {
+      "caliber": "现状运输量约",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "万t",
+      "value": "1500"
+    },
+    {
+      "caliber": "现状运输量约",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "万t",
+      "value": "3500"
+    },
+    {
+      "caliber": "将淖铁路总运量约",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "万t",
+      "value": "5000"
+    },
+    {
+      "caliber": "煤矿最大生产能力",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "万t",
+      "value": "2700"
+    },
+    {
+      "caliber": "成的排土场面积约",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "km2",
+      "value": "4.15"
+    },
+    {
+      "caliber": "目前成活率",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "%",
+      "value": "98"
+    },
+    {
+      "caliber": "处理规模",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "m",
+      "value": "250"
+    },
+    {
+      "caliber": "污水处理站总规模",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "m",
+      "value": "730"
+    },
+    {
+      "caliber": "规模分别",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "m",
+      "value": "720"
+    },
+    {
+      "caliber": "处理站规模分别",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "m",
+      "value": "1200"
+    },
+    {
+      "caliber": "处理污泥产生量约",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "t",
+      "value": "710"
+    },
+    {
+      "caliber": "处理站污泥产量约",
+      "sample": "034-r",
+      "section": "ch3",
+      "unit": "t",
+      "value": "30"
+    },
+    {
+      "caliber": "水位埋深",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "4.2"
+    },
+    {
+      "caliber": "水位埋深",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "5.11"
+    },
+    {
+      "caliber": "变幅",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "0.6"
+    },
+    {
+      "caliber": "变幅",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "0.5"
+    },
+    {
+      "caliber": "变幅",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "0.4"
+    },
+    {
+      "caliber": "变幅",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "0.6"
+    },
+    {
+      "caliber": "变幅",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "0.6"
+    },
+    {
+      "caliber": "变幅",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "0.5"
+    },
+    {
+      "caliber": "变幅",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "7.27"
+    },
+    {
+      "caliber": "变幅",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "2.25"
+    },
+    {
+      "caliber": "生态评价范围",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "km2",
+      "value": "1947.07"
+    },
+    {
+      "caliber": "乔木样方大小",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "10"
+    },
+    {
+      "caliber": "灌木样方大小",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "5"
+    },
+    {
+      "caliber": "草地样方大小",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "1"
+    },
+    {
+      "caliber": "砾幕层样方大小",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "1"
+    },
+    {
+      "caliber": "最高",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "10"
+    },
+    {
+      "caliber": "的梭梭荒漠盖度仅",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "%",
+      "value": "5"
+    },
+    {
+      "caliber": "内地方公益林面积",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "km2",
+      "value": "41.68"
+    },
+    {
+      "caliber": "杨林国家森林公园",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "km",
+      "value": "30"
+    },
+    {
+      "caliber": "最近距离",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "km",
+      "value": "2.2"
+    },
+    {
+      "caliber": "域多年平均降雨量",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "18.7"
+    },
+    {
+      "caliber": "区域平均耗水深度",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "21"
+    },
+    {
+      "caliber": "而该区域降雨量",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "18.7"
+    },
+    {
+      "caliber": "长度",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "km",
+      "value": "7.3"
+    },
+    {
+      "caliber": "球顶高度",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "33.5"
+    },
+    {
+      "caliber": "捕尘效率",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "%",
+      "value": "60"
+    },
+    {
+      "caliber": "烟囱高度均",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "8"
+    },
+    {
+      "caliber": "处理站规模分别",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "720"
+    },
+    {
+      "caliber": "水处理站规模分别",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "1920"
+    },
+    {
+      "caliber": "处理能力",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "500"
+    },
+    {
+      "caliber": "处理能力",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "150"
+    },
+    {
+      "caliber": "处理规模",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "250"
+    },
+    {
+      "caliber": "污水处理站总规模",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "730"
+    },
+    {
+      "caliber": "处理设计规模分别",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "1920"
+    },
+    {
+      "caliber": "总规模",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "730"
+    },
+    {
+      "caliber": "座规模",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "250"
+    },
+    {
+      "caliber": "座规模",
+      "sample": "034-r",
+      "section": "ch4",
+      "unit": "m",
+      "value": "480"
+    },
+    {
+      "caliber": "部边界的直线距离",
+      "sample": "034-r",
+      "section": "ch5",
+      "unit": "km",
+      "value": "7.2"
+    },
+    {
+      "caliber": "部边界的直线距离",
+      "sample": "034-r",
+      "section": "ch5",
+      "unit": "km",
+      "value": "8.9"
+    },
+    {
+      "caliber": "部边界的直线距离",
+      "sample": "034-r",
+      "section": "ch5",
+      "unit": "km",
+      "value": "12.5"
+    },
+    {
+      "caliber": "部边界的直线距离",
+      "sample": "034-r",
+      "section": "ch5",
+      "unit": "km",
+      "value": "10"
+    },
+    {
+      "caliber": "矿坑水处理站规模",
+      "sample": "034-r",
+      "section": "ch5",
+      "unit": "m",
+      "value": "7200"
+    },
+    {
+      "caliber": "排弃量约",
+      "sample": "034-r",
+      "section": "ch5",
+      "unit": "万m3",
+      "value": "15695.6194"
+    },
+    {
+      "caliber": "形成的排土场面积",
+      "sample": "034-r",
+      "section": "ch5",
+      "unit": "km2",
+      "value": "2.27"
+    },
+    {
+      "caliber": "前内排土场面积约",
+      "sample": "034-r",
+      "section": "ch5",
+      "unit": "km2",
+      "value": "1.25"
+    },
+    {
+      "caliber": "内排土场恢复面积",
+      "sample": "034-r",
+      "section": "ch5",
+      "unit": "km2",
+      "value": "0.71"
+    },
+    {
+      "caliber": "面积",
+      "sample": "034-r",
+      "section": "ch5",
+      "unit": "km2",
+      "value": "0.54"
+    },
+    {
+      "caliber": "成活率",
+      "sample": "034-r",
+      "section": "ch5",
+      "unit": "%",
+      "value": "98"
+    },
+    {
+      "caliber": "面积",
+      "sample": "034-r",
+      "section": "ch5",
+      "unit": "km2",
+      "value": "3.41"
+    },
+    {
+      "caliber": "成的内排土场面积",
+      "sample": "034-r",
+      "section": "ch5",
+      "unit": "km2",
+      "value": "4.01"
+    },
+    {
+      "caliber": "平均厚度",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "10.88"
+    },
+    {
+      "caliber": "平均厚度",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "1.32"
+    },
+    {
+      "caliber": "最大累计下沉值",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "24.32"
+    },
+    {
+      "caliber": "范围内公益林面积",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "km2",
+      "value": "1.2"
+    },
+    {
+      "caliber": "影响的公益林面积",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "km2",
+      "value": "20.5"
+    },
+    {
+      "caliber": "近系最大揭露厚度",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "204.71"
+    },
+    {
+      "caliber": "田孔最大揭露厚度",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "271.76"
+    },
+    {
+      "caliber": "层地下水影响半径",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "793.27"
+    },
+    {
+      "caliber": "层的最大影响半径",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "129.38"
+    },
+    {
+      "caliber": "层的最大影响半径",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "129.38"
+    },
+    {
+      "caliber": "层地下水影响半径",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "793.27"
+    },
+    {
+      "caliber": "年平均",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "4378"
+    },
+    {
+      "caliber": "部边界的直线距离",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "km",
+      "value": "7.2"
+    },
+    {
+      "caliber": "部边界的直线距离",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "km",
+      "value": "8.9"
+    },
+    {
+      "caliber": "部边界的直线距离",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "km",
+      "value": "12.5"
+    },
+    {
+      "caliber": "部边界的直线距离",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "km",
+      "value": "10"
+    },
+    {
+      "caliber": "部边界的直线距离",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "km",
+      "value": "7.2"
+    },
+    {
+      "caliber": "部边界的直线距离",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "km",
+      "value": "8.9"
+    },
+    {
+      "caliber": "煤矿南部边界最近",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "km",
+      "value": "5.6"
+    },
+    {
+      "caliber": "层的最大影响半径",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "129.38"
+    },
+    {
+      "caliber": "层地下水影响半径",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "793.27"
+    },
+    {
+      "caliber": "排放量分别",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "t",
+      "value": "21.9"
+    },
+    {
+      "caliber": "矿的颗粒物排放量",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "t",
+      "value": "12.37"
+    },
+    {
+      "caliber": "的百分比",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "%",
+      "value": "0.19"
+    },
+    {
+      "caliber": "的百分比",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "%",
+      "value": "0.48"
+    },
+    {
+      "caliber": "的百分比",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "%",
+      "value": "0.07"
+    },
+    {
+      "caliber": "的百分比",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "%",
+      "value": "0.13"
+    },
+    {
+      "caliber": "的百分比",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "%",
+      "value": "0.01"
+    },
+    {
+      "caliber": "的百分比",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "%",
+      "value": "0.044"
+    },
+    {
+      "caliber": "的百分比",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "%",
+      "value": "0.059"
+    },
+    {
+      "caliber": "的百分比",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "%",
+      "value": "0.002"
+    },
+    {
+      "caliber": "贡献值占标率分别",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "%",
+      "value": "1.24"
+    },
+    {
+      "caliber": "贡献值占标率分别",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "%",
+      "value": "0.83"
+    },
+    {
+      "caliber": "贡献值占标率分别",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "%",
+      "value": "0.20"
+    },
+    {
+      "caliber": "贡献值占标率分别",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "%",
+      "value": "0.21"
+    },
+    {
+      "caliber": "贡献值占标率分别",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "%",
+      "value": "0.20"
+    },
+    {
+      "caliber": "贡献值占标率分别",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "%",
+      "value": "0.06"
+    },
+    {
+      "caliber": "起尘时的瞬时源强",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "4000"
+    },
+    {
+      "caliber": "下风向影响距离",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "100"
+    },
+    {
+      "caliber": "矸石堆的起尘风速",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "4.8"
+    },
+    {
+      "caliber": "矿区多年平均风速",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "4.3"
+    },
+    {
+      "caliber": "距离最近",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "km",
+      "value": "2.1"
+    },
+    {
+      "caliber": "占标率分别",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "%",
+      "value": "0.148"
+    },
+    {
+      "caliber": "占标率分别",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "%",
+      "value": "0.047"
+    },
+    {
+      "caliber": "存区的临界量分别",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "t",
+      "value": "50"
+    },
+    {
+      "caliber": "其中天然补给量",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "万m3",
+      "value": "6004"
+    },
+    {
+      "caliber": "转化补给量",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "万m3",
+      "value": "6952"
+    },
+    {
+      "caliber": "渠首设计引水流量",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "1.5"
+    },
+    {
+      "caliber": "渠首设计引水流量",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "6.0"
+    },
+    {
+      "caliber": "子峡渠首饮水规模",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "1.5"
+    },
+    {
+      "caliber": "防渗率",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "%",
+      "value": "70.9"
+    },
+    {
+      "caliber": "区矿井水可供水量",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "万m3",
+      "value": "1207.17"
+    },
+    {
+      "caliber": "生活污水可供水量",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "万m3",
+      "value": "76.29"
+    },
+    {
+      "caliber": "选煤厂用水定额",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "0.020"
+    },
+    {
+      "caliber": "项目需水总量",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "万m3",
+      "value": "2911.73"
+    },
+    {
+      "caliber": "目实施后总用水量",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "万m3",
+      "value": "2911.73"
+    },
+    {
+      "caliber": "水可利用水源量",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "万m3",
+      "value": "1207.17"
+    },
+    {
+      "caliber": "目达产时需水总量",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "万m3",
+      "value": "2911.73"
+    },
+    {
+      "caliber": "区可供水资源总量",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "万m3",
+      "value": "11283.46"
+    },
+    {
+      "caliber": "区可供水资源总量",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "万m3",
+      "value": "11489.57"
+    },
+    {
+      "caliber": "划后续开发总面积",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "km2",
+      "value": "1184.70"
+    },
+    {
+      "caliber": "年均浓度值分别",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "0.06"
+    },
+    {
+      "caliber": "背景浓度值分别",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "m",
+      "value": "0.038"
+    },
+    {
+      "caliber": "环境容量分别",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "万t",
+      "value": "5.41"
+    },
+    {
+      "caliber": "排放量分别",
+      "sample": "034-r",
+      "section": "ch6",
+      "unit": "t",
+      "value": "153.3"
+    },
+    {
+      "caliber": "一般",
+      "sample": "034-r",
+      "section": "ch7",
+      "unit": "%",
+      "value": "50"
+    },
+    {
+      "caliber": "供水能力",
+      "sample": "034-r",
+      "section": "ch8",
+      "unit": "m",
+      "value": "1500"
+    },
+    {
+      "caliber": "部边界的直线距离",
+      "sample": "034-r",
+      "section": "ch11",
+      "unit": "km",
+      "value": "7.2"
+    },
+    {
+      "caliber": "部边界的直线距离",
+      "sample": "034-r",
+      "section": "ch11",
+      "unit": "km",
+      "value": "8.9"
+    },
+    {
+      "caliber": "占标率分别",
+      "sample": "034-r",
+      "section": "ch11",
+      "unit": "%",
+      "value": "0.47"
+    }
+  ],
+  "version": "1.1"
+}

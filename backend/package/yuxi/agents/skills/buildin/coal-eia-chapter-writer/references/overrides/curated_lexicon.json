@@ -1,0 +1,103 @@
+{
+  "entries": [
+    {
+      "caliber": "抑尘效率",
+      "range": {
+        "n_reports": 15,
+        "n_values": 15,
+        "p5": 90.0,
+        "p50": 90.0,
+        "p95": 90.0
+      },
+      "stage": "planning_eia",
+      "unit": "%"
+    },
+    {
+      "caliber": "PM10控制效率",
+      "range": {
+        "n_reports": 6,
+        "n_values": 14,
+        "p5": 55.0,
+        "p50": 59.0,
+        "p95": 84.0
+      },
+      "stage": "project_eia_openpit",
+      "unit": "%"
+    },
+    {
+      "caliber": "PM2.5控制效率",
+      "range": {
+        "n_reports": 6,
+        "n_values": 14,
+        "p5": 46.0,
+        "p50": 49.0,
+        "p95": 70.0
+      },
+      "stage": "project_eia_openpit",
+      "unit": "%"
+    },
+    {
+      "caliber": "TSP控制效率",
+      "range": {
+        "n_reports": 6,
+        "n_values": 14,
+        "p5": 61.0,
+        "p50": 61.0,
+        "p95": 90.0
+      },
+      "stage": "project_eia_openpit",
+      "unit": "%"
+    },
+    {
+      "caliber": "生活污水回用率",
+      "range": {
+        "n_reports": 5,
+        "n_values": 11,
+        "p5": 100.0,
+        "p50": 100.0,
+        "p95": 100.0
+      },
+      "stage": "project_eia_openpit",
+      "unit": "%"
+    },
+    {
+      "caliber": "矿坑水回用率",
+      "range": {
+        "n_reports": 6,
+        "n_values": 6,
+        "p5": 100.0,
+        "p50": 100.0,
+        "p95": 100.0
+      },
+      "stage": "project_eia_openpit",
+      "unit": "%"
+    },
+    {
+      "caliber": "设备完好率",
+      "range": {
+        "n_reports": 6,
+        "n_values": 6,
+        "p5": 100.0,
+        "p50": 100.0,
+        "p95": 100.0
+      },
+      "stage": "project_eia_openpit",
+      "unit": "%"
+    },
+    {
+      "caliber": "除尘效率",
+      "range": {
+        "n_reports": 5,
+        "n_values": 7,
+        "p5": 85.0,
+        "p50": 85.0,
+        "p95": 95.15
+      },
+      "stage": "project_eia_openpit",
+      "unit": "%"
+    }
+  ],
+  "exported_at": "2026-10-11T03:26:27+00:00",
+  "source": "eia_lexicon_entries",
+  "version": 1
+}

@@ -110,10 +110,10 @@
 - Create: `backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/`、`references/`（同步产物）
 - Create: `backend/test/unit/skills/test_chapter_skill_assets_sync.py`（宿主可收集路径——放 backend/test 下，勿放技能包内）
 
-- [ ] **Step 7.1**：写 SKILL.md（骨架照 coal-eia-writer 分节：角色/红线/工作区/管线步骤/预算停车/命令速查/能力边界；交互纪律全套继承；3a-2 与 3e 两处发卡即停显式写明；**开题两级路由选择卡**（stage 拒未启用 + 变体问法按 stage 分派，spec §3.2））。
-- [ ] **Step 7.2**：写同步脚本并执行生成 chapter-writer 包资产。
-- [ ] **Step 7.3 (TDD)**：守卫测试断言两包共用文件字节一致（hash 清单比对）；人为改一处跑红再恢复。
-- [ ] **Step 7.4**：`python -c "import ast; ast.parse(...)"` 语法过 + ruff 过 + 提交。
+- [x] **Step 7.1**：写 SKILL.md（骨架照 coal-eia-writer 分节：角色/红线/工作区/管线步骤/预算停车/命令速查/能力边界；交互纪律全套继承；3a-2 与 3e 两处发卡即停显式写明；**开题两级路由选择卡**（stage 拒未启用 + 变体问法按 stage 分派，spec §3.2））。
+- [x] **Step 7.2**：写同步脚本并执行生成 chapter-writer 包资产。
+- [x] **Step 7.3 (TDD)**：守卫测试断言两包共用文件字节一致（hash 清单比对）；人为改一处跑红再恢复。
+- [x] **Step 7.4**：`python -c "import ast; ast.parse(...)"` 语法过 + ruff 过 + 提交。
 
 **Verify:** 守卫测试绿 + chapter-writer 包结构完整（SKILL.md + scripts + references）。
 

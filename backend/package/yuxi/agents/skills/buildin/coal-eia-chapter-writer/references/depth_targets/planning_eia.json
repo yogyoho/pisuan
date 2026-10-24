@@ -1,0 +1,118 @@
+{
+  "chapters": {
+    "ch0": {
+      "floor_chars": 1585
+    },
+    "ch0101": {
+      "floor_chars": 5577
+    },
+    "ch1": {
+      "floor_chars": 7052
+    },
+    "ch10": {
+      "floor_chars": 2468
+    },
+    "ch11": {
+      "floor_chars": 1134
+    },
+    "ch12": {
+      "floor_chars": 2148
+    },
+    "ch1200": {
+      "floor_chars": 6813
+    },
+    "ch13": {
+      "floor_chars": 10255
+    },
+    "ch14": {
+      "floor_chars": 8976
+    },
+    "ch140": {
+      "floor_chars": 7065
+    },
+    "ch1600": {
+      "floor_chars": 2784
+    },
+    "ch16531": {
+      "floor_chars": 3204
+    },
+    "ch2": {
+      "floor_chars": 14599
+    },
+    "ch20": {
+      "floor_chars": 631
+    },
+    "ch200": {
+      "floor_chars": 3057
+    },
+    "ch201": {
+      "floor_chars": 316
+    },
+    "ch2015": {
+      "floor_chars": 696
+    },
+    "ch2017": {
+      "floor_chars": 115
+    },
+    "ch2018": {
+      "floor_chars": 2374
+    },
+    "ch2019": {
+      "floor_chars": 218
+    },
+    "ch2020": {
+      "floor_chars": 16285
+    },
+    "ch2500": {
+      "floor_chars": 2992
+    },
+    "ch3": {
+      "floor_chars": 11044
+    },
+    "ch4": {
+      "floor_chars": 14008
+    },
+    "ch40": {
+      "floor_chars": 3043
+    },
+    "ch41": {
+      "floor_chars": 7465
+    },
+    "ch42": {
+      "floor_chars": 68
+    },
+    "ch43": {
+      "floor_chars": 256
+    },
+    "ch45": {
+      "floor_chars": 62
+    },
+    "ch5": {
+      "floor_chars": 3362
+    },
+    "ch565": {
+      "floor_chars": 3533
+    },
+    "ch6": {
+      "floor_chars": 34806
+    },
+    "ch7": {
+      "floor_chars": 4315
+    },
+    "ch8": {
+      "floor_chars": 5992
+    },
+    "ch8760": {
+      "floor_chars": 2434
+    },
+    "ch9": {
+      "floor_chars": 9089
+    },
+    "ch96": {
+      "floor_chars": 1757
+    }
+  },
+  "confidence": "calibrated",
+  "source": "bank_compile aggregate: coal.json",
+  "stage": "planning_eia"
+}

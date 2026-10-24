@@ -1,0 +1,64 @@
+{
+  "chapters": {
+    "ch1": {
+      "floor_chars": 7095
+    },
+    "ch10": {
+      "floor_chars": 2605
+    },
+    "ch11": {
+      "floor_chars": 2328
+    },
+    "ch12": {
+      "floor_chars": 2286
+    },
+    "ch13": {
+      "floor_chars": 3760
+    },
+    "ch14": {
+      "floor_chars": 1724
+    },
+    "ch15": {
+      "floor_chars": 1104
+    },
+    "ch16": {
+      "floor_chars": 955
+    },
+    "ch17": {
+      "floor_chars": 1322
+    },
+    "ch18": {
+      "floor_chars": 6840
+    },
+    "ch19": {
+      "floor_chars": 8142
+    },
+    "ch2": {
+      "floor_chars": 21306
+    },
+    "ch3": {
+      "floor_chars": 6429
+    },
+    "ch4": {
+      "floor_chars": 1500
+    },
+    "ch5": {
+      "floor_chars": 5830
+    },
+    "ch6": {
+      "floor_chars": 21996
+    },
+    "ch7": {
+      "floor_chars": 13272
+    },
+    "ch8": {
+      "floor_chars": 5592
+    },
+    "ch9": {
+      "floor_chars": 6226
+    }
+  },
+  "confidence": "calibrated",
+  "source": "bank_compile aggregate: coal.json",
+  "stage": "project_eia_underground"
+}

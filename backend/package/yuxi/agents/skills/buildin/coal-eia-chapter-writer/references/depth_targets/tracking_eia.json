@@ -1,0 +1,40 @@
+{
+  "chapters": {
+    "ch1": {
+      "floor_chars": 6346
+    },
+    "ch10": {
+      "floor_chars": 883
+    },
+    "ch11": {
+      "floor_chars": 6147
+    },
+    "ch2": {
+      "floor_chars": 4777
+    },
+    "ch3": {
+      "floor_chars": 13710
+    },
+    "ch4": {
+      "floor_chars": 21931
+    },
+    "ch5": {
+      "floor_chars": 11961
+    },
+    "ch6": {
+      "floor_chars": 42205
+    },
+    "ch7": {
+      "floor_chars": 11799
+    },
+    "ch8": {
+      "floor_chars": 936
+    },
+    "ch9": {
+      "floor_chars": 1252
+    }
+  },
+  "confidence": "calibrated",
+  "source": "bank_compile aggregate: coal.json",
+  "stage": "tracking_eia"
+}

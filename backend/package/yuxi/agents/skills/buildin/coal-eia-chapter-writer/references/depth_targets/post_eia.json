@@ -1,0 +1,58 @@
+{
+  "chapters": {
+    "ch1": {
+      "floor_chars": 5658
+    },
+    "ch10": {
+      "floor_chars": 2394
+    },
+    "ch11": {
+      "floor_chars": 2798
+    },
+    "ch12": {
+      "floor_chars": 2406
+    },
+    "ch13": {
+      "floor_chars": 3061
+    },
+    "ch14": {
+      "floor_chars": 474
+    },
+    "ch15": {
+      "floor_chars": 2292
+    },
+    "ch16": {
+      "floor_chars": 2796
+    },
+    "ch17": {
+      "floor_chars": 1857
+    },
+    "ch2": {
+      "floor_chars": 16608
+    },
+    "ch3": {
+      "floor_chars": 2858
+    },
+    "ch4": {
+      "floor_chars": 7663
+    },
+    "ch5": {
+      "floor_chars": 13830
+    },
+    "ch6": {
+      "floor_chars": 9712
+    },
+    "ch7": {
+      "floor_chars": 6249
+    },
+    "ch8": {
+      "floor_chars": 2667
+    },
+    "ch9": {
+      "floor_chars": 1453
+    }
+  },
+  "confidence": "calibrated",
+  "source": "bank_compile aggregate: coal.json",
+  "stage": "post_eia"
+}
