@@ -82,10 +82,10 @@
 - Modify: `references/samples_bank/corpus_meta.json`（增 `variant` 字段：planning 17 份即标 13 修编/3 新编；标题空缺的 11 份 project/post 记 `needs_review`；带 `variant_basis`）
 - Create: `scripts/tests/test_global_families.py`
 
-- [ ] **Step 5.1 (TDD 红)**：fixture expectations（3 章小样）断言派生：族出现在 ≥2 章 → global；单章族不进。
-- [ ] **Step 5.2**：实现派生 + 门1 全局模式开关；对真实 planning_eia 派生并落盘（预期 4~5 族，与 spec 预估比对，偏差记 `_comment`）。
-- [ ] **Step 5.3 (绿)**：测试绿。
-- [ ] **Step 5.4**：corpus_meta variant 落盘（脚本改写保持 JSON 其余字段零扰动；planning 标题即判：含「修编」→revision，不含→new）。
+- [x] **Step 5.1 (TDD 红)**：fixture expectations（3 章小样）断言派生：族出现在 ≥2 章 → global；单章族不进。
+- [x] **Step 5.2**：实现派生 + 门1 全局模式开关；对真实 planning_eia 派生并落盘（预期 4~5 族，与 spec 预估比对，偏差记 `_comment`）。
+- [x] **Step 5.3 (绿)**：测试绿。
+- [x] **Step 5.4**：corpus_meta variant 落盘（脚本改写保持 JSON 其余字段零扰动；planning 标题即判：含「修编」→revision，不含→new）。
 - [ ] **Step 5.5**：needs_review 的 11 份标注补齐——LLM 读各报告 ch1/ch2 切片首段判「新建/改扩建（含调整规模）/不适用」初值 + 呈用户确认后回写；确认前不落终值。
 
 **Verify:** 单测绿 + `data_expectations.json` global_families 在场 + corpus_meta 全部 33 份带 variant（或 needs_review）。

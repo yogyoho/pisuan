@@ -34,6 +34,8 @@ import zipfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+import derive_globals  # 门1 --global-only 读 global_families（派生自 derive_globals，禁手拍）
+
 EXIT_OK = 0
 EXIT_ERROR = 1
 EXIT_MANUAL = 2
@@ -625,10 +627,14 @@ def cmd_file(args) -> int:
 def cmd_check(args) -> int:
     stage = load_stage(Path(args.stage))
     data_dir = Path(args.data_dir)
+    # 门1 全局包模式（chapter-writer A2 分章管线）：只校 global_families，逐章族不进全局门
+    global_fams = set(derive_globals.load_globals()) if args.global_only else None
     missing_forms: list[str] = []
     missing_fields: list[str] = []
     for fam, spec in stage.get("forms", {}).items():
         if not spec.get("required", True):
+            continue
+        if global_fams is not None and fam not in global_fams:
             continue
         fname = family_filename(spec)
         if not fname:  # bug-3208: 派生视图族(file=None)不进完备性门
@@ -661,6 +667,8 @@ def cmd_check(args) -> int:
     # agent 可绕过 ingest 直写 data/ JSON（页面实测），故除写入守卫外，门1 检查必须独立复核：
     # 任何预测结果族 status=filled 而 12 号 param_source 未定案/13 号开采阶段为空 → 阻断门1。
     for pred_fam in sorted(PREDICTION_RESULT_FAMILIES):
+        if global_fams is not None and pred_fam not in global_fams:
+            continue  # 预测链纪律属逐章数据族——全局包模式不在其列
         pred_spec = stage.get("forms", {}).get(pred_fam)
         if not pred_spec:
             continue
@@ -678,6 +686,8 @@ def cmd_check(args) -> int:
     # ── bug-3036 质量门（WARN 不阻断门1——完备性先行；下游 build 空槽/残留门兜底强制）────
     quality: list[str] = []
     for fam, spec in stage.get("forms", {}).items():
+        if global_fams is not None and fam not in global_fams:
+            continue
         fname = family_filename(spec)
         if not fname:  # bug-3208: 派生视图族(file=None)不进质量扫描
             continue
@@ -858,6 +868,8 @@ def main(argv: list[str] | None = None) -> int:
     c = sub.add_parser("check", help="必填完备性检查（门1 前置）")
     c.add_argument("--stage", required=True)
     c.add_argument("--data-dir", required=True)
+    c.add_argument("--global-only", action="store_true",
+                   help="门1 全局包模式（chapter-writer 分章管线）：只校 global_families，逐章族不进门")
     c.set_defaults(func=cmd_check)
 
     args = p.parse_args(argv)

@@ -99,7 +99,9 @@
         "HJ964-2018"
       ],
       "year_basis": "cover",
-      "year_hint": 2024
+      "year_hint": 2024,
+      "variant": "needs_review",
+      "variant_basis": "标题空缺/泛题，无法即判新建或改扩建"
     },
     "003-1-2024-1-30": {
       "eia_org": null,
@@ -183,7 +185,9 @@
         "HJ964-2018"
       ],
       "year_basis": "manual",
-      "year_hint": 2024
+      "year_hint": 2024,
+      "variant": "revision",
+      "variant_basis": "标题含修编标记"
     },
     "004-2-2021-1": {
       "eia_org": "中煤科工集团北京华宇工程有限公司",
@@ -260,7 +264,9 @@
         "HJ964-2018"
       ],
       "year_basis": "manual",
-      "year_hint": 2021
+      "year_hint": 2021,
+      "variant": "revision",
+      "variant_basis": "标题含修编标记"
     },
     "007-3": {
       "eia_org": "兰州洁华环境评价咨询有限公司",
@@ -351,7 +357,9 @@
         "HJ991-2018"
       ],
       "year_basis": "cover",
-      "year_hint": 2025
+      "year_hint": 2025,
+      "variant": "revision",
+      "variant_basis": "标题含修编标记"
     },
     "008-5---2": {
       "eia_org": null,
@@ -422,7 +430,9 @@
         "HJ964-2018"
       ],
       "year_basis": "cover",
-      "year_hint": 2023
+      "year_hint": 2023,
+      "variant": "revision",
+      "variant_basis": "标题含修编标记"
     },
     "010-r": {
       "eia_org": null,
@@ -499,7 +509,9 @@
         "HJ964-2018"
       ],
       "year_basis": "cover",
-      "year_hint": 2022
+      "year_hint": 2022,
+      "variant": "revision",
+      "variant_basis": "标题含修编标记"
     },
     "012-r": {
       "eia_org": null,
@@ -571,7 +583,9 @@
         "HJ619-2011"
       ],
       "year_basis": "cover",
-      "year_hint": 2018
+      "year_hint": 2018,
+      "variant": "new",
+      "variant_basis": "标题不含修编标记"
     },
     "013-3500-----2024-4-11": {
       "eia_org": "中煤科工集团北京华宇工程有限公司",
@@ -627,7 +641,9 @@
         "HJ964-2018"
       ],
       "year_basis": "manual",
-      "year_hint": 2024
+      "year_hint": 2024,
+      "variant": "needs_review",
+      "variant_basis": "标题空缺/泛题，无法即判新建或改扩建"
     },
     "017-2024-11": {
       "eia_org": "中煤科工集团北京华宇工程有限公司",
@@ -703,7 +719,9 @@
         "HJ964-2018"
       ],
       "year_basis": "manual",
-      "year_hint": 2024
+      "year_hint": 2024,
+      "variant": "revision",
+      "variant_basis": "标题含修编标记"
     },
     "018-_5-900-2023-8": {
       "eia_org": "中煤科工集团北京华宇工程有限公司",
@@ -768,7 +786,9 @@
         "HJ964-2018"
       ],
       "year_basis": "manual",
-      "year_hint": 2023
+      "year_hint": 2023,
+      "variant": "needs_review",
+      "variant_basis": "标题空缺/泛题，无法即判新建或改扩建"
     },
     "019-2023-7": {
       "eia_org": "中煤科工集团北京华宇工程有限公司",
@@ -843,7 +863,9 @@
         "HJ991-2018"
       ],
       "year_basis": "manual",
-      "year_hint": 2023
+      "year_hint": 2023,
+      "variant": "needs_review",
+      "variant_basis": "标题空缺/泛题，无法即判新建或改扩建"
     },
     "020-2023-4": {
       "eia_org": "中煤科工集团北京华宇工程有限公司",
@@ -944,7 +966,9 @@
         "HJ991-2018"
       ],
       "year_basis": "cover",
-      "year_hint": 2023
+      "year_hint": 2023,
+      "variant": "expansion",
+      "variant_basis": "标题含调整/改扩标记"
     },
     "021-2026": {
       "eia_org": null,
@@ -1031,7 +1055,9 @@
         "HJ991-2018"
       ],
       "year_basis": "manual",
-      "year_hint": 2026
+      "year_hint": 2026,
+      "variant": "new",
+      "variant_basis": "标题不含修编标记"
     },
     "025-r": {
       "eia_org": "中煤科工集团北京华宇工程有限公司",
@@ -1115,7 +1141,9 @@
         "HJ991-2018"
       ],
       "year_basis": "cover",
-      "year_hint": 2026
+      "year_hint": 2026,
+      "variant": "revision",
+      "variant_basis": "标题含修编标记"
     },
     "027-2025-11": {
       "eia_org": "中煤科工集团北京华宇工程有限公司",
@@ -1199,7 +1227,9 @@
         "HJ964-2018"
       ],
       "year_basis": "manual",
-      "year_hint": 2025
+      "year_hint": 2025,
+      "variant": "revision",
+      "variant_basis": "标题含修编标记"
     },
     "028-r": {
       "eia_org": null,
@@ -1275,7 +1305,9 @@
         "HJ610-2016",
         "HJ651-2013",
         "HJ964-2018"
-      ]
+      ],
+      "variant": "revision",
+      "variant_basis": "标题含修编标记"
     },
     "031-2026-3": {
       "eia_org": "中煤科工集团北京华宇工程有限公司",
@@ -1346,7 +1378,9 @@
         "HJ964-2018"
       ],
       "year_basis": "manual",
-      "year_hint": 2026
+      "year_hint": 2026,
+      "variant": "not_applicable",
+      "variant_basis": "post/tracking 不分变体"
     },
     "032-2021-10": {
       "eia_org": "中国环境科学研究院",
@@ -1430,7 +1464,9 @@
         "HJ964-2018"
       ],
       "year_basis": "manual",
-      "year_hint": 2021
+      "year_hint": 2021,
+      "variant": "not_applicable",
+      "variant_basis": "post/tracking 不分变体"
     },
     "033-r": {
       "eia_org": null,
@@ -1500,7 +1536,9 @@
         "HJ964-2018"
       ],
       "year_basis": "cover",
-      "year_hint": 2022
+      "year_hint": 2022,
+      "variant": "new",
+      "variant_basis": "标题不含修编标记"
     },
     "034-r": {
       "cover_scale_mt_a": 143.0,
@@ -1515,7 +1553,9 @@
       "scale_basis": "needs_review",
       "scale_candidates": [],
       "stage": "tracking_eia",
-      "year": 2024
+      "year": 2024,
+      "variant": "not_applicable",
+      "variant_basis": "post/tracking 不分变体"
     },
     "035-2022-12-7": {
       "eia_org": "中煤科工集团北京华宇工程有限公司",
@@ -1592,7 +1632,9 @@
         "HJ964-2018"
       ],
       "year_basis": "manual",
-      "year_hint": 2022
+      "year_hint": 2022,
+      "variant": "revision",
+      "variant_basis": "标题含修编标记"
     },
     "035-800--2026-2": {
       "cover_scale_mt_a": null,
@@ -1607,7 +1649,9 @@
       "scale_basis": "needs_review",
       "scale_candidates": [],
       "stage": "project_eia_underground",
-      "year": 2026
+      "year": 2026,
+      "variant": "needs_review",
+      "variant_basis": "标题空缺/泛题，无法即判新建或改扩建"
     },
     "036-2024-12": {
       "cover_scale_mt_a": null,
@@ -1622,7 +1666,9 @@
       "scale_basis": "needs_review",
       "scale_candidates": [],
       "stage": "project_eia_underground",
-      "year": 2024
+      "year": 2024,
+      "variant": "needs_review",
+      "variant_basis": "标题空缺/泛题，无法即判新建或改扩建"
     },
     "037-2000": {
       "cover_scale_mt_a": null,
@@ -1637,7 +1683,9 @@
       "scale_basis": "needs_review",
       "scale_candidates": [],
       "stage": "project_eia_openpit",
-      "year": 2023
+      "year": 2023,
+      "variant": "needs_review",
+      "variant_basis": "标题空缺/泛题，无法即判新建或改扩建"
     },
     "037-5-15": {
       "eia_org": "中煤科工集团北京华宇工程有限公司",
@@ -1732,7 +1780,9 @@
         "HJ991-2018"
       ],
       "year_basis": "cover",
-      "year_hint": 2024
+      "year_hint": 2024,
+      "variant": "new",
+      "variant_basis": "具体标题且无改扩/调整标记"
     },
     "038-2023-5": {
       "eia_org": "山西文龙中美环能科技股份有限公司",
@@ -1808,7 +1858,9 @@
         "HJ964-2018"
       ],
       "year_basis": "manual",
-      "year_hint": 2023
+      "year_hint": 2023,
+      "variant": "revision",
+      "variant_basis": "标题含修编标记"
     },
     "038-2024-7-9": {
       "cover_scale_mt_a": null,
@@ -1823,7 +1875,9 @@
       "scale_basis": "needs_review",
       "scale_candidates": [],
       "stage": "planning_eia",
-      "year": 2024
+      "year": 2024,
+      "variant": "revision",
+      "variant_basis": "标题含修编标记"
     },
     "039-r": {
       "cover_scale_mt_a": null,
@@ -1838,7 +1892,9 @@
       "scale_basis": "needs_review",
       "scale_candidates": [],
       "stage": "project_eia_underground",
-      "year": 2024
+      "year": 2024,
+      "variant": "needs_review",
+      "variant_basis": "标题空缺/泛题，无法即判新建或改扩建"
     },
     "040-2021-12": {
       "cover_scale_mt_a": null,
@@ -1853,7 +1909,9 @@
       "scale_basis": "needs_review",
       "scale_candidates": [],
       "stage": "project_eia_openpit",
-      "year": null
+      "year": null,
+      "variant": "needs_review",
+      "variant_basis": "标题空缺/泛题，无法即判新建或改扩建"
     },
     "040-r": {
       "eia_org": "中煤科工集团北京华宇工程有限公司",
@@ -1934,7 +1992,9 @@
         "HJ964-2018"
       ],
       "year_basis": "cover",
-      "year_hint": 2023
+      "year_hint": 2023,
+      "variant": "revision",
+      "variant_basis": "标题含修编标记"
     },
     "041-2023-9": {
       "cover_scale_mt_a": null,
@@ -1949,7 +2009,9 @@
       "scale_basis": "needs_review",
       "scale_candidates": [],
       "stage": "project_eia_underground",
-      "year": 2023
+      "year": 2023,
+      "variant": "needs_review",
+      "variant_basis": "标题空缺/泛题，无法即判新建或改扩建"
     },
     "042-r": {
       "cover_scale_mt_a": null,
@@ -1964,7 +2026,9 @@
       "scale_basis": "needs_review",
       "scale_candidates": [],
       "stage": "planning_eia",
-      "year": 2023
+      "year": 2023,
+      "variant": "revision",
+      "variant_basis": "标题含修编标记"
     },
     "043-1000": {
       "cover_scale_mt_a": null,
@@ -1979,7 +2043,9 @@
       "scale_basis": "needs_review",
       "scale_candidates": [],
       "stage": "project_eia_openpit",
-      "year": 2025
+      "year": 2025,
+      "variant": "needs_review",
+      "variant_basis": "标题空缺/泛题，无法即判新建或改扩建"
     }
   },
   "schema": 2

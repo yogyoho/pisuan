@@ -129,6 +129,29 @@ def delegate_org(text: str) -> str | None:
     return counts.most_common(1)[0][0] if counts else None
 
 
+# ── variant 变体即判（spec §3.2：planning 修编/新编；project 新建/改扩建；post/tracking 不分）──
+
+_PROJECT_EXPANSION_MARKS = ("调整", "改扩", "扩建", "改建")
+_GENERIC_TITLES = {None, "环境影响报告书", "环境影响报告表"}
+
+
+def judge_variant(stage: str, title: str | None) -> tuple[str, str]:
+    """标题即判：planning 含「修编」→revision；project 泛题→needs_review、含调整/改扩标记→expansion、
+    其余具体标题→new；post/tracking 不分变体。返回 (variant, basis)。"""
+    if stage.startswith("post_") or stage.startswith("tracking"):
+        return "not_applicable", "post/tracking 不分变体"
+    if title in _GENERIC_TITLES:
+        return "needs_review", "标题空缺/泛题，无法即判新建或改扩建"
+    if "修编" in title:
+        return "revision", "标题含修编标记"
+    if stage.startswith("project_"):
+        for m in _PROJECT_EXPANSION_MARKS:
+            if m in title:
+                return "expansion", "标题含调整/改扩标记"
+        return "new", "具体标题且无改扩/调整标记"
+    return "new", "标题不含修编标记"
+
+
 def build_corpus_meta(slices_root: Path, annotations: dict, front: dict | None = None) -> dict:
     """按 rid 聚合全部切片再判定（省/标准/规模是整报告字段，逐片算会被后片覆盖）。"""
     by_rid: dict[str, list] = {}
@@ -181,6 +204,10 @@ def build_corpus_meta(slices_root: Path, annotations: dict, front: dict | None =
                 r["eia_org_candidates"] = front_entry["eia_org_candidates"]
         if front_entry.get("project_no"):
             r["project_no"] = front_entry["project_no"]
+        if ann.get("variant"):  # 人工裁定优先（annotations 唯一人工通道）
+            r["variant"], r["variant_basis"] = ann["variant"], ann.get("variant_basis", "manual")
+        else:
+            r["variant"], r["variant_basis"] = judge_variant(stage, r.get("report_title"))
         r["standards_cited"] = extract_standards(text)
         reports[rid] = r
     return {"schema": 2, "reports": reports}
@@ -216,6 +243,26 @@ def build_attachment_checklist(slices_root: Path) -> dict:
     return {"provenance_note": PROVENANCE_NOTE, "stages": stages}
 
 
+def add_variant(meta_path: Path, annotations: dict | None = None) -> int:
+    """就地为现有 corpus_meta.json 补 variant/variant_basis 标注（零扰动幂等；annotations 显式值优先）。
+
+    不走 build 重生成——committed 件与 main() 的 sort_keys/indent 输出已漂移，重排会产生全量噪声 diff；
+    载入→逐报告补键→按现文件格式（indent=2、保序、ensure_ascii=False）写回，其余字节不动。"""
+    annotations = annotations or {}
+    doc = json.loads(Path(meta_path).read_bytes().decode("utf-8"))
+    reports = doc.get("reports", {})
+    for rid, r in reports.items():
+        ann = annotations.get(rid) or {}
+        if ann.get("variant"):
+            r["variant"], r["variant_basis"] = ann["variant"], ann.get("variant_basis", "manual")
+        else:
+            r["variant"], r["variant_basis"] = judge_variant(r.get("stage", ""), r.get("report_title"))
+    Path(meta_path).write_bytes((json.dumps(doc, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
+    counts = Counter(r["variant"] for r in reports.values())
+    print("variant: " + " ".join(f"{k}={v}" for k, v in sorted(counts.items())))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="编译语料元数据与附件必备清单（幂等）")
     ap.add_argument("--slices-root", default=str(SCRIPTS_DIR.parent / "references" / "samples_bank"))
@@ -226,10 +273,14 @@ def main(argv: list[str] | None = None) -> int:
         help="显式传入封面侧车 JSON（无隐式默认：真相在 DB front_meta；samples_bank 下同名 json 仅为金样资产）",
     )
     ap.add_argument("--out-dir", default=None)
+    ap.add_argument("--add-variant", action="store_true",
+                    help="就地为现有 corpus_meta.json 补 variant 标注（零扰动幂等；不重建其余字段）")
     args = ap.parse_args(argv)
     root = Path(args.slices_root)
     ann_path = Path(args.annotations) if args.annotations else root / "corpus_meta_annotations.json"
     annotations = json.loads(ann_path.read_text(encoding="utf-8")) if ann_path.exists() else {}
+    if args.add_variant:
+        return add_variant(root / "corpus_meta.json", annotations)
     front_path = Path(args.front_matter) if args.front_matter else None
     if front_path and not front_path.exists():
         raise SystemExit(f"--front-matter 文件不存在: {front_path}")  # 显式传入缺文件即报错，绝不静默

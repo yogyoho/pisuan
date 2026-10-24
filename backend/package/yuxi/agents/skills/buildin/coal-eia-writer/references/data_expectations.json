@@ -1,4 +1,5 @@
 {
+  "global_families": ["air", "eco", "economy", "investment", "mine_plan", "monitoring", "noise", "planning_indicators", "projection", "solid_waste", "subsidence_params", "water"],
   "_comment": "开题数据预告（T4，手写静态文件）：按规划环评 13 章列出所需数据族，引导用户一次备齐。缺某族 → 相关小节落 [待补充]/[待确认]，缺数不编造。族 key（family）与 stages/planning_eia.json forms 定义一致（stage 文件由另一任务产出，命名以本文件+走查 §2 表单清单为准）。章 title 为语义标题（要素章序 4 种排布实证——按标题匹配不锁章号）。",
   "stage_scope": "planning_eia（13 章深标杆）。第 4/5 章「回顾性评价/影响识别」互换双模式、10-12 章三型排布——章缺席或语义不符时对应数据族记 skip 非 fail。project_eia 章数不同（概述+17~19 章），数据族按语义复用本预告；openpit/post_eia 二期补。",
   "source_hint_vocabulary": {
