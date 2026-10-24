@@ -43,9 +43,9 @@
 - Create: `references/style_targets/planning_eia.json`（运行产物，横城 bank 播种）
 - Create: `scripts/tests/test_style_targets.py`
 
-- [ ] **Step 2.1 (TDD 红)**：测试用 mini-bank fixture（两章各 2 切片）断言生成的 JSON 结构与数值（密度计算口径：正文剥表格/剥标记/剥空白）。**章目录对齐警告**：bank slices 章目录含碎片段（ch0/ch0101/ch1200/ch1600 等瑕疵目录名），生成时必须按 `references/stages/<stage>.json` 章清单对齐，不盲信目录名。
-- [ ] **Step 2.2**：实现生成脚本；CLI：`python style_targets.py --stage planning_eia --bank <bank_dir> --out <out_json>`。
-- [ ] **Step 2.3 (绿)**：测试绿后对真实 bank 生成 planning_eia 基准落盘；spot-check ch4 表密度下限 ≈ 85（实测 106×0.8）、ch13 表上限 ≈ 10（原文结论章近 0 表）。
+- [x] **Step 2.1 (TDD 红)**：测试用 mini-bank fixture（两章各 2 切片）断言生成的 JSON 结构与数值（密度计算口径：正文剥表格/剥标记/剥空白）。**章目录对齐警告**：bank slices 章目录含碎片段（ch0/ch0101/ch1200/ch1600 等瑕疵目录名），生成时必须按 `references/stages/<stage>.json` 章清单对齐，不盲信目录名。
+- [x] **Step 2.2**：实现生成脚本；CLI：`python style_targets.py --stage planning_eia --bank <bank_dir> --out <out_json>`。
+- [x] **Step 2.3 (绿)**：测试绿后对真实 bank 生成 planning_eia 基准落盘；spot-check ch4 表密度下限 ≈ 85（实测 106×0.8）、ch13 表上限 ≈ 10（原文结论章近 0 表）。
 
 **Verify:** 单测绿 + `references/style_targets/planning_eia.json` 在场且 ch1–ch13 全覆盖（bank 缺章记 ABSENT）。
 
