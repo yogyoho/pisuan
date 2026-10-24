@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
 """global_families 派生：data_expectations.json 顶层增 global_families（build 派生，不手拍）。
 
-口径（spec §3.2 / chapter-writer plan Task 5）：
-    global_families = 跨 ≥2 章 per_chapter 出现的数据族
-                    ∪ 冻结公式依赖的数据表单族
-                    （跨 ≥2 章消费公式族的 FORMULA_FORM_DEPS ∪ derived 常算块依赖）
-
-与 spec 预估（4~5 族：规划方案/沉陷参数/标准确认/敏感目标）的偏差说明：机械派生结果为 12 族——
-跨章数据族实为 7 个（air/eco/economy/monitoring/planning_indicators/projection/water，
-ch13 收束章引用全部公式族使冻结依赖面覆盖 subsidence_params/water/air/noise + derived 三表单），
-并集后标准确认/敏感目标不在内（单章数据族且非公式依赖）。门 1 全局包随之变重；
-若需瘦身应收紧派生口径（如 clause1 限前部章），而非手拍清单。
+口径（2026-10-24 用户裁定）：global_families = 冻结公式依赖的数据表单族——
+    跨 ≥2 章消费公式族的 FORMULA_FORM_DEPS 表单 ∪ derived 常算块依赖（solid_waste/mine_plan/investment）。
+    原「跨 ≥2 章 per_chapter 数据族」clause 废弃：ch13 收束章引用全部公式族 + eco 等
+    跨章数据族会把门1 全局包膨胀至 12 族；冻结依赖才是门1 全局包的硬定义（实测 7 族）。
 
 CLI：
     python derive_globals.py [--stage planning_eia] [--expectations FILE]
@@ -41,17 +35,12 @@ def _cross_chapter_families(stage: dict) -> set[str]:
 
 
 def derive(expectations: dict, stage: dict, formula_deps: dict | None = None) -> list[str]:
-    """跨≥2章数据族 ∪ 冻结依赖表单族，排序返回。formula_deps 缺省用 formula_runner 事实清单。"""
+    """冻结依赖表单族（跨章公式族 + derived 常算块），排序返回。formula_deps 缺省用 formula_runner 事实清单。"""
     deps = formula_deps if formula_deps is not None else FORMULA_FORM_DEPS
-    seen: dict[str, int] = {}
-    for ch in expectations.get("per_chapter", []):
-        for f in ch.get("data_families") or []:
-            seen[f["family"]] = seen.get(f["family"], 0) + 1
-    cross_data = {f for f, n in seen.items() if n >= 2}
     freeze_forms: set[str] = set(deps.get("_derived") or ())
     for f in _cross_chapter_families(stage):
         freeze_forms.update(deps.get(f) or ())
-    return sorted(cross_data | freeze_forms)
+    return sorted(freeze_forms)
 
 
 def write_globals(expectations_path: Path, stage: dict) -> list[str]:

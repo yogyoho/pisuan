@@ -1,8 +1,8 @@
-"""global_families 派生测试：跨≥2章族 ∪ 冻结依赖族 + ingest check --global-only 门1 全局模式。
+"""global_families 派生测试：冻结依赖族派生 + ingest check --global-only 门1 全局模式。
 
-口径（spec §3.2 / plan Task 5）：global_families = per_chapter 中跨 ≥2 章出现的数据族
-∪ 冻结公式依赖的数据表单族（跨章公式族的 FORMULA_FORM_DEPS + derived 常算块依赖）；
-由脚本从 stage JSON + data_expectations 派生，不手拍。
+口径（2026-10-24 用户裁定）：global_families = 跨 ≥2 章消费公式族的 FORMULA_FORM_DEPS
+表单 ∪ derived 常算块依赖——仅冻结依赖族；跨章数据族 clause 已废弃（会膨胀至 12 族）。
+由脚本从 stage JSON 派生，不手拍。
 """
 
 import json
@@ -40,21 +40,21 @@ DEPS = {"fam_x": ("shared1",), "fam_y": ("solo_a",), "_derived": ("freeze_only",
 
 
 def test_derive_mini():
-    # clause1: shared1/shared2 跨≥2章 → 进；solo_a/solo_c 单章且非冻结依赖 → 不进
-    # clause2: fam_x 跨章(chA+chB) → shared1 进；fam_y 单章不进；_derived 常算 → freeze_only 进
-    assert derive_globals.derive(EXP, STAGE, formula_deps=DEPS) == ["freeze_only", "shared1", "shared2"]
+    # 口径（2026-10-24 用户裁定）：仅冻结依赖族——fam_x 跨章(chA+chB) → shared1 进；
+    # fam_y 单章不进；_derived 常算 → freeze_only 进；shared2 跨章数据族但非公式依赖 → 不进
+    assert derive_globals.derive(EXP, STAGE, formula_deps=DEPS) == ["freeze_only", "shared1"]
 
 
 def test_derive_real_planning_eia():
-    """真实 planning_eia 派生：冻结依赖 7 族 + 跨章 7 族（交并去重）全在；单章非冻结族不在。"""
+    """真实 planning_eia 派生：冻结依赖 7 族全在；跨章数据族/单章非冻结族不在。"""
     refs = Path(__file__).resolve().parent.parent.parent / "references"
     exp = json.loads((refs / "data_expectations.json").read_text(encoding="utf-8"))
     st = json.loads((refs / "stages" / "planning_eia.json").read_text(encoding="utf-8"))
     got = derive_globals.derive(exp, st)
-    for fam in ("planning_indicators", "subsidence_params", "water", "air", "noise",
-                "solid_waste", "mine_plan", "investment", "eco", "projection"):
+    for fam in ("subsidence_params", "water", "air", "noise", "solid_waste", "mine_plan", "investment"):
         assert fam in got, fam
-    for fam in ("measures", "public_participation", "standards_confirm", "sensitive_targets"):
+    for fam in ("eco", "economy", "monitoring", "planning_indicators", "projection",
+                "measures", "public_participation", "standards_confirm", "sensitive_targets"):
         assert fam not in got, fam
 
 
