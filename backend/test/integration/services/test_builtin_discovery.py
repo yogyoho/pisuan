@@ -156,6 +156,12 @@ async def test_discovered_content_persists_and_preserves_customization(
             assert skill.description == "初始描述"
             assert skill.tool_dependencies == ["web_search"]
             assert skill.version == "1.0" and skill.source_type == "builtin"
+            # 内置技能共享配置必须是 v2 信封（裸 scope 会让 /api/skills 列表 strict 校验 500）
+            assert skill.share_config == {
+                "version": 2,
+                "read_scope": {"access_level": "global", "department_ids": [], "user_uids": []},
+                "manage_scope": None,
+            }
             role_id, skill_id = role.id, skill.id
             role.name = "管理员定制"
             role.config_json = {"context": {"system_prompt": "定制提示词"}}

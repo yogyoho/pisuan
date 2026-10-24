@@ -22,6 +22,16 @@
 
 ### 功能与修复
 
+- fix(skills): 内置技能共享配置 v2 信封（技能列表页 500 修复）。`BUILTIN_SKILL_SHARE_CONFIG`
+  由裸 scope 改为 `{version: 2, read_scope, manage_scope}` 信封（建行默认值），另拆
+  `BUILTIN_SKILL_READ_SCOPE` 裸 scope 供 `normalize_skill_share_config` 的 read_scope 槽位同源
+  派生——该常量此前被建行与 normalize 两个语义位复用，只改一处会造出双嵌套配置；
+  建行处 `.copy()`→`copy.deepcopy()` 防嵌套 dict 跨行别名。`init_builtin_skills` 新注册的
+  内置技能此前携带裸 v1 配置，被资源共享配置 strict 校验拒收，导致 `/api/skills` 整表 500
+  （上游 strict 校验与裸常量两个 PR 的时间差潜伏缺口，新环境首次注册内置技能必触发）。
+  集成测试补建行信封断言 + normalize 槽位单测；存量裸配置行需一次性数据订正
+  （与在册 v2 行同形）。
+
 - feat(domain-factory): 标准限值提取管线一期落地 + 真实语料试跑结论（方向改向 A+B）。交付：`eia_limit_extract_rows` 暂存表（迁移 v20）+ 提取内核纯函数模块（GFM 表格/行内双路径、7 正式表注册、垃圾因子过滤/跨标准 dB(A) 隔离/噪声表数字档三项调参）+ 仓储/服务层（试跑/裁决/立表/引用清单）+ API 6 端点 + StandardsPanel 提取草稿与新表候选工作台 + 62 条总览引用清单与 KB 查询弹层。真实语料试跑（512 文件，4.5-5.4s/轮）：首轮 7276 行 → 调参后 7128 行；候选清单 GB 8978-1996(378)/GB 18599(25+55) 命中符合预期，GB/T 13201 A 值表语料零命中坐实（转乙通道用户 PDF 补源）。人工抽检门未过：严格精度约 10-15%（宽松口径约 30%），主导错误为监测值/水质值当限值、类别表档位系统性缺失、噪声表昼/夜取到实测值——正则启发式无法区分限值陈述与监测陈述，属结构性错配。经用户裁决改向 A+B：formal 表数据源改标准原文优先（乙通道提前，用户手头国标 PDF 优先、联网补缺），语料提取加 LLM 语义判别层（限值句 vs 监测句 + 四要素结构化抽取）后降级为佐证层；W3 工作台继续封存至新管线重过抽检门。
 - feat(knowledge): 跨页断表自动合并（OCR 装配层）+ 知识库文档表格编辑对话框。逐页转写 OCR 对跨页 PDF 表格产出断裂碎片（续页独立 `<table>` + `表N（续）` 标记 + 逐字重复表头，GB/T 14848 实测 12 表 8 处断裂）。新纯函数模块 `yuxi/knowledge/parser/table_merge.py`（merge_split_tables，规则保守 fail-open：间隙只允许续表标记/页码/空白；须有续标记或归一化表头一致〈NFKC+去空白+`I/l`→`1` OCR 易混折叠〉才合并；表头一致则去重表头行，标记明确但不一致则全行保留），挂入 deepseek_ocr 与 paddleocr_vl_local 两个 PDF 装配点（`"\n\n".join` 后，mineru 为服务端整文档返回不在范围）；真实产物容器验证 12→4 表、行数守恒（303→295=8 组去重表头）、正文零丢失。前端新增 TableEditModal（文档行操作菜单「表格编辑」项，已解析文档可见）：左渲染右编辑双栏、右侧 HTML 自动换行缩进格式化（td 内容行内、不产生空行避免打断 markdown html 块）、多表格切换、未编辑表格保存时按原文写回避免格式化噪音、脏态关闭确认；后端新增 `PUT /knowledge/databases/{kb_id}/documents/{doc_id}/content`（require_knowledge_base_manage）+ KnowledgeBase.update_file_markdown（确定性键原键覆盖 MinIO markdown 正源）+ KnowledgeBaseManager 显式转发；保存只更新正源，索引需手动「重新入库」刷新。存量老解析（纯文本表格无 HTML）不受影响，删除重传即可享受合并。设计见 docs/vibe/2026-10-20-table-merge-and-table-edit.md。
 - fix(web): Markdown 预览文档模式补表格网格边框 + LaTeX 定界符渲染归一。`MarkdownPreview` 新增 `bordered` 变体（表格完整网格边框、表头浅底、暗色主题独立配色），知识库文档预览弹层（FileDetailModal markdown 模式）启用，聊天气泡维持无边框扁平风格；deepseek_ocr 产物表格全 `<td>` 无 `<th>`、表头识别不可行，按用户裁决不做表头检测。渲染层新增 `\(...\)`→`$...$`、`\[...\]`→`$$...$$` 定界归一（markdown-it-katex 不识别圆括号/方括号定界，OCR 产物常用该写法），围栏/行内代码段经 split 捕获组保护不参与归一，存量文档免重导立即受益。

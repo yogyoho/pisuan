@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import hashlib
 import shutil
 import stat
@@ -30,7 +31,10 @@ from yuxi.storage.postgres.models_business import Skill, User
 
 BUILTIN_SKILL_OPERATOR = "builtin-system"
 ADMIN_ROLES = {"admin", "superadmin"}
-BUILTIN_SKILL_SHARE_CONFIG = {"access_level": "global", "department_ids": [], "user_uids": []}
+# 内置技能固定全局读共享。READ_SCOPE 为裸 scope（normalize 的 read_scope 槽位形态）；
+# SHARE_CONFIG 为 v2 信封（建行默认值），由前者派生——两处同源，防裸/双嵌套漂移（bug-4135）。
+BUILTIN_SKILL_READ_SCOPE = {"access_level": "global", "department_ids": [], "user_uids": []}
+BUILTIN_SKILL_SHARE_CONFIG = {"version": 2, "read_scope": BUILTIN_SKILL_READ_SCOPE, "manage_scope": None}
 SKILL_STORAGE_LOCK = 0x5958534B
 
 
@@ -258,7 +262,7 @@ async def init_builtin_skills(db: AsyncSession, *, created_by: str = "system") -
                 mcp_dependencies=spec["mcp_dependencies"],
                 skill_dependencies=spec["skill_dependencies"],
                 dir_path=(Path("shared") / slug).as_posix(),
-                share_config=BUILTIN_SKILL_SHARE_CONFIG.copy(),
+                share_config=copy.deepcopy(BUILTIN_SKILL_SHARE_CONFIG),
                 enabled=True,
                 version=spec["version"],
                 content_hash=spec["content_hash"],
@@ -430,7 +434,7 @@ def normalize_skill_share_config(
 ) -> dict:
     """校验并标准化共享 Skill 的授权配置。"""
     if source_type == "builtin":
-        return {"version": 2, "read_scope": BUILTIN_SKILL_SHARE_CONFIG.copy(), "manage_scope": None}
+        return {"version": 2, "read_scope": copy.deepcopy(BUILTIN_SKILL_READ_SCOPE), "manage_scope": None}
 
     default_scope = {
         "access_level": "user",

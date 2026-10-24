@@ -1504,6 +1504,19 @@ async def test_init_builtin_skills_create_missing(tmp_path: Path, monkeypatch: p
     ) == "prompt"
 
 
+def test_builtin_normalize_read_scope_is_bare_scope_not_envelope():
+    """normalize(builtin) 的 read_scope 槽位必须是裸 scope——信封常量整体塞入会双重嵌套（bug-4135）。"""
+    normalized = svc.normalize_skill_share_config(None, operator_uid="system", source_type="builtin")
+    assert normalized == {
+        "version": 2,
+        "read_scope": svc.BUILTIN_SKILL_READ_SCOPE,
+        "manage_scope": None,
+    }
+    # 建行默认值是完整信封；两个常量同源派生，形状各归其位
+    assert svc.BUILTIN_SKILL_SHARE_CONFIG["read_scope"] is svc.BUILTIN_SKILL_READ_SCOPE
+    assert svc.BUILTIN_SKILL_SHARE_CONFIG["version"] == 2
+
+
 @pytest.mark.asyncio
 async def test_init_builtin_skills_updates_existing_record_and_preserves_disabled(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
