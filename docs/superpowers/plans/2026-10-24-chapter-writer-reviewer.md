@@ -125,9 +125,9 @@
 - Modify: `coal-eia-writer/SKILL.md` 步骤 5–7（终验接入一句：「全书一致性 PASS 后按 coal-eia-reviewer 规程执行全文审查，发现单作为 QA 副产物交付，管线元数据/告警禁入报告正文」——缺陷#6 解）
 - Modify: `coal-eia-chapter-writer/SKILL.md`（3d/全文步骤引 reviewer 规程——Task 7 已含则此处校对）
 
-- [ ] **Step 8.1**：写 reviewer SKILL.md。
-- [ ] **Step 8.2**：同步清单扩展 + 守卫测试覆盖 reviewer 副本。
-- [ ] **Step 8.3**：writer SKILL.md 接入句 + 全文 grep 校对两处引用一致。
+- [x] **Step 8.1**：写 reviewer SKILL.md。
+- [x] **Step 8.2**：同步清单扩展 + 守卫测试覆盖 reviewer 副本。
+- [x] **Step 8.3**：writer SKILL.md 接入句 + 全文 grep 校对两处引用一致。
 
 **Verify:** 守卫测试绿；两 SKILL.md 对 reviewer 的引用路径存在。
 

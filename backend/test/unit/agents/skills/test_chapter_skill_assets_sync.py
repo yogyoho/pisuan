@@ -32,7 +32,10 @@ SYNC_SCRIPT = next(
 
 SRC = BUILDIN / "coal-eia-writer"
 DST = BUILDIN / "coal-eia-chapter-writer"
+REVIEWER = BUILDIN / "coal-eia-reviewer"
 SUBDIRS = ("scripts", "references")
+# reviewer 最小副本清单（与 sync_chapter_skill.py REVIEWER_FILES 同源）
+REVIEWER_FILES = ("references/compliance_checklist.md", "references/standards_index.json")
 
 
 def _files(root: Path) -> set[Path]:
@@ -61,6 +64,16 @@ def test_sync_script_check_mode_passes():
     r = subprocess.run([sys.executable, str(SYNC_SCRIPT), "--check"],
                        capture_output=True, text=True, encoding="utf-8")
     assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_reviewer_minimal_copies():
+    """reviewer 包最小副本：清单内两文件与 writer 字节一致；references/ 无清单外文件。"""
+    for rel in REVIEWER_FILES:
+        assert filecmp.cmp(SRC / rel, REVIEWER / rel, shallow=False), f"reviewer/{rel} 与 writer 漂移"
+    rev_refs = REVIEWER / "references"
+    extra = {p.relative_to(REVIEWER) for p in rev_refs.rglob("*")
+             if p.is_file() and "__pycache__" not in p.parts} - {Path(r) for r in REVIEWER_FILES}
+    assert not extra, f"reviewer/references 清单外文件: {sorted(extra)}"
 
 
 def test_skill_md_is_per_package():

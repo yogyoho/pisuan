@@ -18,6 +18,9 @@ ROOT = Path(__file__).resolve().parent.parent / "backend" / "package" / "yuxi" /
 SRC = ROOT / "coal-eia-writer"
 DST = ROOT / "coal-eia-chapter-writer"
 SUBDIRS = ("scripts", "references")
+# reviewer 包最小副本：审查依据文件（reviewer/SKILL.md 专属，不在清单；references/ 下清单外文件按孤儿清理）
+REVIEWER = ROOT / "coal-eia-reviewer"
+REVIEWER_FILES = ("references/compliance_checklist.md", "references/standards_index.json")
 
 
 def sync(check_only: bool = False) -> int:
@@ -53,6 +56,30 @@ def sync(check_only: bool = False) -> int:
             if not check_only:
                 (dst_dir / rel).unlink()
                 removed += 1
+    # reviewer 最小副本：清单内文件同步 + reviewer/references 清单外孤儿清理
+    rev_files = {Path(rel) for rel in REVIEWER_FILES}
+    rev_dst_files = {p.relative_to(REVIEWER) for p in REVIEWER.rglob("*")
+                     if p.is_file() and "__pycache__" not in p.parts and p.name != "SKILL.md"} \
+        if REVIEWER.is_dir() else set()
+    for rel in sorted(rev_files - rev_dst_files):
+        problems.append(f"缺失 reviewer/{rel}")
+        if not check_only:
+            (REVIEWER / rel).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(SRC / rel, REVIEWER / rel)
+            copied += 1
+    for rel in sorted(rev_files & rev_dst_files):
+        if not filecmp.cmp(SRC / rel, REVIEWER / rel, shallow=False):
+            problems.append(f"漂移 reviewer/{rel}")
+            if not check_only:
+                shutil.copy2(SRC / rel, REVIEWER / rel)
+                copied += 1
+        else:
+            kept += 1
+    for rel in sorted(rev_dst_files - rev_files):
+        problems.append(f"孤儿 reviewer/{rel}")
+        if not check_only:
+            (REVIEWER / rel).unlink()
+            removed += 1
     if check_only:
         if problems:
             print("SYNC_CHECK_FAIL: " + "; ".join(problems[:20]))

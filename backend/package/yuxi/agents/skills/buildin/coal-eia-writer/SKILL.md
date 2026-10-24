@@ -186,6 +186,8 @@ progress.py run-stage finalize --state-dir T --outputs-dir /home/gem/user-data/o
 
 **快照**：`snapshot.py save`（全文件 SHA-256 清单 + mapping 枚举 + 脚本版本指纹）；续跑恢复走 `show --verify`（见步骤 0）。
 
+**全文审查（缺陷#6 解）**：全书一致性 PASS 后按 coal-eia-reviewer 规程执行全文审查（`--full`），发现单 `{报告名}-合规审查.md` 作为 QA 副产物交付——管线元数据/告警一律进发现单，禁入报告正文。
+
 **交付双通道（起点 = 全书一致性 PASS 之后——章门 VERIFIED 只解锁组装，不触发交付）**：
 - **项目路径（pisuan 一期缓行——独立路径交付；原文保留供二期启用）**：**交付子代理**分波逐节写入——每波 ≤5–10 节：读 `state/sections/chNN_SNN.md` → `project_write_chapter(chapter_id=state/mapping.json[节id], content=节稿全文, status="draft")`（chapter_id 必须取自 mapping.json，禁用章号/标题）→ `progress.py delivered --sections … --wave N` 回执。**幂等**：write_chapter 全量覆盖语义，`delivered` 布尔+波次支撑断点续交（中断后按 progress.json 里 delivered=false 的节续波）。**交付后所有权与漂移回收**：交付后节对管线只读；任何重生成（含 impacted 回路）前先 `project_read_chapter` 预检，word_count 命中后深比对，diff 非空 → `ask_user_question`（USER_CONFIRM_NEEDED）→ 确认后以**编辑器当前稿拉回写入 state/sections 为新基线**再重冻结重注入（人工编辑保留在基线里，不被覆盖）。
 - **独立路径**：build_output 单文件 `{项目名}-{阶段}-环境影响报告.md` + `present_artifacts` 交付（交付前确认 `outputs/delivery_manifest.json` 在场）。
