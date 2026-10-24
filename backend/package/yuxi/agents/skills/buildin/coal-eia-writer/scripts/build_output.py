@@ -49,6 +49,8 @@ import re
 import sys
 from pathlib import Path
 
+import style_targets  # 同目录：文风门复用 _metrics/_eff/_strip_tables 口径（单一事实源）
+
 EXIT_OK, EXIT_ERROR = 0, 1
 SLOT_RE = re.compile(r"\{\{SLOT:([^}]+)\}\}")
 TABLE_RE = re.compile(r"\{\{TABLE:([^}]+)\}\}")
@@ -63,6 +65,7 @@ SLOT_DEFORM_OPEN_RE = re.compile(r"(?<!\{)\{SLOT:([^{}]+)\}")  # lookbehind 防 
 
 DEFAULT_CHAPTER_FLOOR_CHARS = 30000  # 一期绝对地板（无 depth 基线时的章级默认，spec L2 门）
 DEPTH_DIR = Path(__file__).resolve().parent.parent / "references" / "depth_targets"
+STYLE_TARGETS_DIR = Path(__file__).resolve().parent.parent / "references" / "style_targets"
 CONTRACTS_PATH = Path(__file__).resolve().parent.parent / "references" / "consistency_contracts.json"
 STANDARDS_PATH = Path(__file__).resolve().parent.parent / "references" / "standards_index.json"
 
@@ -522,6 +525,8 @@ RESIDUE_RE = re.compile(
     r"|其上游依据|其下游用途|本节回答的是|就任务性质而言"  # bug-367 派发契约导航词泄漏（节设计说明书段）
     r"|不作任何改写|补猜|逐字呈现|唯一口径|行文不再|行文不作"  # bug-367 数据纪律自述（规则不是内容）
     r"|直渲|登记口径|登记值|登记表单|冻结槽位|表单直出|衔接义务|分工边界"  # bug-367 管线内部术语
+    r"|总体而言|值得注意|至关重要|旨在|重要意义|换言之"  # AI 腔禁用词（2026-10-24 文风裁定，同 style_targets）
+    r"|毋庸置疑|不言而喻|众所周知|不难发现|进一步凸显"  # AI 腔禁用词续
     r"|[（(](?:XS|FC|CC|NR|SL)\d"  # 合约 ID 内联引用
     r"|\[\d+(?:\s*[,，]\s*\d+)+\]"  # 裸数字数组（表格粘贴痕迹）
     r"|%%"
@@ -536,6 +541,57 @@ def validate_residue(ch_id: str, text: str) -> None:
             f"残留扫描门 FAIL（bug-3036）：注入后正文仍含模板/内部词汇 {hits[:10]}"
             f"——槽位标记、脚手架词、合约 ID 不得出现在交付稿；XX 应写 [待确认]；合约结论只在合规性附录，改写为自然叙述后重跑"
         )
+
+
+# ── 文风门（chapter-writer Task 3：style_targets/<stage_id>.json 四规则）──────────────
+def _style_hit_sections(text: str, phrase: str) -> str:
+    """banned 词命中的节级归因：最近 ###/#### 标题。"""
+    cur = "章首"
+    found: list[str] = []
+    for line in text.splitlines():
+        hm = re.match(r"^#{2,4}\s+(.+?)\s*$", line)
+        if hm:
+            cur = hm.group(1)
+        if phrase in line:
+            found.append(cur)
+    return "、".join(sorted(set(found))) or "章首"
+
+
+def validate_style_gate(stage_id: str, ch_id: str, text: str, targets_path: Path | None = None) -> None:
+    """章级文风门四规则（口径与 style_targets._metrics 同源，杜绝漂移）：
+    ① 数字密度下限；② 表密度区间；③ 文表联动下限；④ AI 腔禁用词（节级归因）。
+    基准文件缺失/该章 ABSENT → STYLE_GATE_SKIPPED 上报（stdout），不阻断。"""
+    path = targets_path or (STYLE_TARGETS_DIR / f"{stage_id}.json")
+    if not path.exists():
+        print(f"STYLE_GATE_SKIPPED: {ch_id}（无文风基准 {path.name}——先跑 scripts/style_targets.py 生成）")
+        return
+    targets = json.loads(path.read_text(encoding="utf-8"))
+    ent = targets.get("chapters", {}).get(ch_id) or {}
+    if ent.get("status") != "OK":
+        print(f"STYLE_GATE_SKIPPED: {ch_id}（文风基准无该章或 ABSENT）")
+        return
+    m = style_targets._metrics(text)
+    errors: list[str] = []
+    if m["num_per_k"] < ent["num_per_k"]["min"]:
+        lo = ent["num_per_k"]["min"]
+        errors.append(f"数字密度 {m['num_per_k']:.1f}/千字 < 下限 {lo}（正文缺数据支撑，参照范文补数据句）")
+    tbl = ent["tbl_per_10k"]
+    if m["tbl_per_10k"] > tbl["max"]:
+        errors.append(f"表密度 {m['tbl_per_10k']:.1f}/万字 > 上限 {tbl['max']}（表格膨胀）")
+    elif m["tbl_per_10k"] < tbl["min"]:
+        errors.append(f"表密度 {m['tbl_per_10k']:.1f}/万字 < 下限 {tbl['min']}（偏薄）")
+    if m["fig_refs"] < ent["fig_table_ref_min"]:
+        errors.append(
+            f"文表联动 {m['fig_refs']} 处 < 下限 {ent['fig_table_ref_min']}"
+            f"（正文须以由表/见表/详见表/如表引用本章表格，禁文表割裂）"
+        )
+    body_e = style_targets._eff(style_targets._strip_tables(text))
+    for p in targets.get("banned_phrases", []):
+        if p in body_e:
+            errors.append(f"AI 腔禁用词「{p}」（节 {_style_hit_sections(text, p)}——删元话语，判断句直给）")
+    if errors:
+        head = f"文风门 FAIL（{len(errors)} 项，实测 vs 基准 style_targets/{stage_id}.json#{ch_id}）:\n  "
+        raise ValueError(head + "\n  ".join(errors))
 
 
 # ── 序无关目录覆盖门（章级，eng-review 拍板）──────────────────────────────────
@@ -939,6 +995,10 @@ def run_chapter_gate(stage: dict, data_dir: Path, state_dir: Path, ch_id: str, t
         eff = effective_chars(injected)
         if eff < 1000:
             errors.append(f"章 {ch_id}: 章最小有效字符门 FAIL：{eff} <1000（geo bug-2223 章级保留）")
+        try:
+            validate_style_gate(str(stage.get("stage_id", "")), ch_id, injected)
+        except ValueError as e:
+            errors.append(f"章 {ch_id}: {e}")
         try:
             eff, floor = validate_chapter_depth(ch_id, injected, targets)
         except ValueError as e:
