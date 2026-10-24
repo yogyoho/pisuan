@@ -131,7 +131,7 @@ progress.py run-stage freeze --state-dir T   # 冻结二连一次 bash：chapter
   本章该节切片（直接贴：节 id/title/elements 要素链——逐要素成段的依据）+ 该节 uses 引用的 {{TABLE}}/{{SLOT}} 清单
   references/depth_targets/<stage>.json（节级深度目标随契约注入；实际目标以门报错行内嵌数值为准）
   references/sample_entities/_index.json（范文实体禁入清单）
-  references/paradigms/<paradigm_role>.md（行文范式——<paradigm_role> 由 references/paradigms/_roles.json 按节 id 查得，查不到=拒派报错，禁静默跳过；范文仅示范句法与信息组织，其中实体与数值一律替换为本项目实体与冻结值）
+  references/paradigms/<paradigm_role>.md（行文范式——<paradigm_role> 由 scripts/paradigm_role.py --stage <stage> --section <节id> 解析（映射在 references/paradigms/roles/<stage>.json），查不到=拒派报错，禁静默跳过；范文仅示范句法与信息组织，其中实体与数值一律替换为本项目实体与冻结值）
   references/section_expectations/<stage>.json（写前对账：本节 expected_quantities 逐项与 data/ 现值核对，tier=required 缺项在节稿对应位置标 [待确认]（缺项：<字段>），禁臆造或四舍五入改写既有值；条目带 range（语料 P5–P95）时，data/ 现值出界在对应位置标 [待复核：<字段> 偏离语料区间 P5–P95]——warn 级不阻断、禁据此改值，供人工复核）
 输出契约：直写 /home/gem/user-data/workspace/eia-report/state/sections/chNN_SNN.md（绝对沙箱路径），
   首行 ### <节号> <节标题>（与 stage 节题语义相符），一节一稿，新增小节用 ####，禁写 #/## 章级标题；

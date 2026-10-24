@@ -1,5 +1,5 @@
 {
-  "_comment": "节角色 → 行文范式映射（方向A P0）。角色决定派发契约注入 references/paradigms/<role>.md。实证修正（2026-10-07）：衔接/收束是节尾段落而非独立节（stage 77 节无衔接节题，写手自创 #### 衔接小节系契约导航字段诱导）——收束段写法由各范式文件的「节尾收束段」小节承载，故无 linkage 角色。ch1 总则章整章 opener；ch12 公参 V1 归 analysis（P2 细分 process）；ch13 结论章 V1 就近归类（P2 细分 conclusion）。",
+  "_comment": "节角色→行文范式映射，按 stage 分文件（roles/<stage>.json），由 scripts/paradigm_role.py 解析；未知节/非法值拒派。六角色：opener/baseline/analysis/measures/conclusion/process。历史实证（2026-10-07）：衔接/收束是节尾段落而非独立节，收束段写法由各范式文件「节尾收束段」小节承载，故无 linkage 角色；ch1 总则整章 opener。ch13 结论章重归型（2026-10-24 Task 1）：S01 规划概况收束=baseline、S09 优化调整建议=measures、S02~S08+S10 八节=conclusion（废弃 V1 就近归类 analysis）。ch12 公参 V1 归 analysis（P2 细分 process，范式文件已备，待下轮实证后切）。",
   "schema_version": 1,
   "paradigm_dir": "references/paradigms",
   "roles": {
@@ -71,14 +71,14 @@
     "ch12_S03": "analysis",
     "ch12_S04": "analysis",
     "ch13_S01": "baseline",
-    "ch13_S02": "analysis",
-    "ch13_S03": "baseline",
-    "ch13_S04": "analysis",
-    "ch13_S05": "analysis",
-    "ch13_S06": "analysis",
-    "ch13_S07": "analysis",
-    "ch13_S08": "analysis",
+    "ch13_S02": "conclusion",
+    "ch13_S03": "conclusion",
+    "ch13_S04": "conclusion",
+    "ch13_S05": "conclusion",
+    "ch13_S06": "conclusion",
+    "ch13_S07": "conclusion",
+    "ch13_S08": "conclusion",
     "ch13_S09": "measures",
-    "ch13_S10": "analysis"
+    "ch13_S10": "conclusion"
   }
 }
