@@ -7675,3 +7675,18 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 23:29 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 4→6 lines | ~205 |
 | 10:3x | bug-4141 消歧事件处置：遗留工程归档 __archived/、SKILL.md 步骤0 补消歧规程并同步栈、buglog/changelog 回填 | SKILL.md 等 | 完成 | ~30k |
 | 23:31 | Edited docs/develop-guides/changelog.md | modified fix() | ~311 |
+| 23:31 | Session end: 4 writes across 4 files (docker-compose.langfuse.yml, 2026-10-25-langfuse-selfhost.md, SKILL.md, changelog.md) | 5 reads | ~5348 tok |
+| 23:45 | Edited web/src/components/ConversationNavSection.vue | 7→6 lines | ~30 |
+| 23:45 | Edited web/src/layouts/AppLayout.vue | CSS: height, margin-top | ~48 |
+| 21:40 | /agent 对话列表最后一条被遮 16px：margin-top+height:100% 溢出槽位，margin 移入 .fill；实测 fullyVisible=true | ConversationNavSection.vue, AppLayout.vue | done | ~25k |
+| 23:50 | Edited docs/develop-guides/changelog.md | modified fix() | ~79 |
+| 23:50 | Session end: 7 writes across 6 files (docker-compose.langfuse.yml, 2026-10-25-langfuse-selfhost.md, SKILL.md, changelog.md, ConversationNavSection.vue) | 8 reads | ~5516 tok |
+| 23:58 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | expanded (+20 lines) | ~223 |
+| 23:58 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | expanded (+20 lines) | ~228 |
+
+## Session: 2026-10-25 00:01
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:02 | Edited docs/develop-guides/changelog.md | modified fix() | ~128 |
+| 00:03 | 写作技能补用户沟通规范：全中文业务语体+术语映射（bug-4142），双 SKILL.md 编辑+栈同步 | coal-eia-writer/SKILL.md, coal-eia-chapter-writer/SKILL.md, changelog, buglog, cerebrum | 已提交并落栈 | ~30k |

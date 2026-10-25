@@ -9629,5 +9629,45 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-10-25"
+  },
+  {
+    "id": "bug-4124",
+    "timestamp": "2026-10-25",
+    "error_message": "/agent 左侧对话记录滚到底时最后一条显示不全被遮挡（缺 ~16px）",
+    "file": "web/src/components/ConversationNavSection.vue + web/src/layouts/AppLayout.vue",
+    "root_cause": "组件根 .conversation-nav-section 自带 margin-top:16px，又被 AppLayout 的 .sidebar-conversations 赋 height:100%——实际占高=槽位高+16px 溢出 .fill，被 .foo（z-index:1）盖住/.header overflow:hidden 裁掉",
+    "fix": "margin 移到槽位 .fill 上（flex item 的 margin 参与布局分配，不溢出），组件根删 margin-top；实测滚到底最后一条 bottom=列表底 fullyVisible=true",
+    "tags": [
+      "web",
+      "css",
+      "flex",
+      "sidebar",
+      "conversation-list",
+      "clipping"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-25"
+  },
+  {
+    "id": "bug-4142",
+    "timestamp": "2026-10-26",
+    "error_message": "用户反馈：对话页测试 coal-eia-writer / coal-eia-chapter-writer，回复文字大量 AI 内部用语（VERIFIED/phase/gate/DRAFTED 等），非 IT 用户看不懂；要求用非 IT 人员能懂的语言回复，少用英文",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md + coal-eia-chapter-writer/SKILL.md",
+    "root_cause": "两个 SKILL.md 只约束管线行为，未约束面向用户的文字语体；模型把内部状态机术语（状态枚举/gate/占位符/命令名/路径）直接透给用户",
+    "fix": "两 SKILL.md 在角色与红线之间新增「用户沟通规范」节：全中文业务语体，禁命令行/脚本名/路径/JSON/状态枚举；附内部术语→业务说法映射表（gate→章节质量校验、DRAFTED→编写中、VERIFIED→校验通过、SLOT→数值由登记资料自动带入、降档→按当前成稿收尾并注明差距等）与状态汇报句式；英文仅限标准号/业务单位/交付文件名；已 docker cp 同步栈 skill-sources 双副本",
+    "tags": [
+      "skill",
+      "ux",
+      "prompt",
+      "user-facing-language",
+      "coal-eia-writer",
+      "coal-eia-chapter-writer"
+    ],
+    "related_bugs": [
+      "bug-4141"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-26"
   }
 ]

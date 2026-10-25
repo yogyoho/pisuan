@@ -20,6 +20,8 @@
 - Large changes should have a requirements document in `docs/vibe/` with date prefix
 
 - [2026-10-14] Landing 类页面忌「太素/单调」：结构极简的同时要有质感细节（实体感装饰、图标块、水印、微动效、氛围底纹）。用户对首版立式流水线评价「效果太单调」，二轮补齐后验收。以后 landing/展示页交付前自查：纯白底+细线框+纯文字 = 不合格。
+- [2026-10-26] 面向用户的 AI 回复语言：用户实测反馈技能回复夹带 IT 内部用语（VERIFIED/phase/gate/SLOT 等枚举与机制词）「用户看不懂」——要求 AI 对用户的一切文字（回复/卡题面/选项/状态汇报）用非 IT 人员可懂的中文业务语言，少用英文。已落 coal-eia-writer / coal-eia-chapter-writer SKILL.md「用户沟通规范」节（术语映射+句式）；**后续所有面向用户的技能/智能体提示词默认遵守此规范**，不再裸透状态机枚举/命令/路径。
+
 - [2026-10-14] 卡片式导航的点击范围要克制：大卡片/区域不整卡可点，仅显式「直达」链接可点（用户对知识工厂工位卡的裁定）。此后卡片导航默认按此执行，整卡可点需先问。
 ## Key Learnings
 - (2026-10-21) ollama 嵌入 413 的真机制：llama.cpp 对单条输入真实 SPM token 超 n_batch/物理批窗口时报 `input (N tokens) is too large to process` → HTTP 413，与请求体大小无关（140KB CJK 探针照过）。诊断入口：ollama 服务端日志 %LOCALAPPDATA%/Ollama/server.log（GIN 行 + srv send_error 行），比客户端猜测快得多。
@@ -1792,3 +1794,4 @@
 
 - 沙箱工作区按用户共享（`threads/shared/<user>/workspace/workspace/<工程>`），跨线程可见、跨会话续作是设计意图（上游 v0.7.3 废 per-thread）——遗留工程对新会话是可见干扰源。已归档 `eia-report-hengcheng`/`eia-report-test2` 至 `workspace/__archived/`；`eia-report`=王坡在办勿动，jia/qinglong 无 progress.json 惰性。
 - SKILL.md 步骤0 新增消歧硬约束：续跑只认 mode=chapter；多候选/用户意图冲突必发卡（bug-4141）。
+- (2026-10-25) flex 槽位内子元素 `height: 100%` + 自带 `margin-top` = 必然溢出槽位 margin 的高度，溢出被下方 z-index 兄弟盖住或 overflow:hidden 裁掉（bug-4124 对话列表最后一条缺 16px）。间距应写在 flex 槽位（flex item 的 margin 参与分配），不要写在与 height:100% 同一个元素上。判这类遮挡：getBoundingClientRect 对比 last item bottom vs 容器 bottom，比截图快。

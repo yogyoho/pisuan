@@ -22,6 +22,8 @@
 
 ### 功能与修复
 
+- fix(skills): 写作技能补用户沟通规范（用户实测反馈）。对话页测试 coal-eia-writer / coal-eia-chapter-writer，回复夹带内部机制用语（VERIFIED/DRAFTED/phase/gate/SLOT、run/resume、命令与路径等），非 IT 背景的环评用户无法理解。两 SKILL.md 在角色与红线之间新增「用户沟通规范」节：全部面向用户的文字（回复/卡题面/选项/状态汇报）用中文业务语体，禁止出现命令行、脚本名、文件路径、JSON 片段与状态枚举；附内部术语→业务说法映射（gate→章节质量校验、DRAFTED→编写中、VERIFIED→校验通过、SLOT→数值由登记资料自动带入、降档→按当前成稿收尾并注明差距等）与状态汇报句式；英文仅限标准号（GB/HJ）、业务单位（Mt/a·km²·dB(A)）与交付文件名；已同步栈 skill-sources。
+
 - fix(skills): chapter-writer 步骤0 补工作区消歧规程（bug-4141）。新会话恢复检测把 full 管线冒烟遗留工程 `eia-report-hengcheng`（mode 缺省=full）误当「现成分章工作区」，将未过现行数字纪律的旧稿（硬编码数值、无表题行、SLOT 仅 3 个）当「第2章成品」交付，并引导用户对遗留物走 finalize。规程补齐：工作区按用户共享跨线程可见，多候选/意图冲突必发消歧卡（逐候选列 mode/stage/进度/最后修改时间）；硬约束**续跑只认 mode=chapter**，full 工程只能如实提示、禁止冒充分章现场；已同步栈 skill-sources。同日归档运行栈卷内冒烟遗留工程至 `workspace/__archived/`（eia-report-hengcheng、eia-report-test2，卷内操作不入库）。
 
 - fix(skills): 分章冒烟交付缺陷四连修（bug-4136~4139，横城 ch2 真人对话冒烟实测暴露，chapter-writer/writer 双副本同步 + 栈 skill-sources 落栈）。① bug-4136：沙箱 python<3.12 下 f-string 表达式内反斜杠转义非法，`progress.py next` FINAL 分支在沙箱必炸（dev 容器 3.13 掩盖）——改普通串 precompute 再插值；② bug-4137：stage forms JSON 顶层静态标量（{{SLOT:family.field}}）只有声明无生产者，单章门注入必 FAIL「未知槽位」——`formula_runner.compute()` 末尾静态转录补齐（公式派生键优先，bool/None/list/dict 跳过，键形不合记 anomaly），+5 tests；③ bug-4138：WRITER_CAP_RE 编号后缀单段量词匹配不了真实报告多级章号「表2.2-1」→ 写手表题全失格、表密度归零——量词升级 `(?:(?:[-.]\d+)+)?`；④ bug-4139：组装机发表号单级「表 2-N」与写手正文引用多级「表2.2-N」错位——`_assign_table_numbers` 节感知（SECTION_HEAD_RE 取 #### 标题前两段，节内连续号，节前定位表保持章级号），+4 tests（合计 15 passed）。全程冒烟记录见 `docs/vibe/2026-10-24-chapter-writer-reviewer-smoke.md`（9.2.1），含新发现章级状态机降档收口缺口（bug-4140，移交裁决）。
@@ -70,6 +72,8 @@
 - refactor(domain-factory): 语料加工/重编译输入改为以绑定语料知识库为准（KB 为准，用户裁定）。此前取 eia_library_files 的 MinIO canonical md，库与 KB 两套集合漂移时编译口径随之漂移；现选集 = KB 全量文档（list_document_files 分页取全），经 `<库文件名 stem>.md` ↔ original_filename join 库行取 rid/stage/front_meta（kb_file_id 现状全空不依赖），内容改读 `get_file_download(variant="parsed")`（解析完成未索引的文档也能取到）；缺登记/rid·stage 未填/库内同名文件 fail fast；库中就绪未推送 KB 的文件不入编，台账 detail.library_not_in_kb 可见；scope=file_ids 仅圈定 processed_at。运行栈 e2e：compiled=33（KB 集），并清掉 corpus_meta 中目录重编代遗留的 10 个旧 rid 幻影。
 
 - fix(web): 环评·数据加工模块内容区弃用 1180px 画布封顶（`.chrome-canvas` 与 `.ewp` 双层 max-width 移除），宽屏下右侧不再堆大空档，左右仅剩面板自身 20/24/40 内边距；各页列表/卡片吃满内容区宽度。窄屏（<1400px）下无感知变化。
+
+- fix(web): /agent 左侧对话记录列表滚到底时最后一条被遮挡 ~16px。组件根 `margin-top: 16px` 与槽位赋的 `height: 100%` 叠加导致内容溢出槽位、被底部用户栏盖住；间距移入 flex 槽位（`.fill`），布局由 flex 正确分配。
 
 - fix(web): 文件列表「时间」列改显示更新时间。知识库文档重新入库后列表时间不变的反馈：列原绑定 `created_at`（首次上传时间，重切等操作不触碰），后端 `updated_at` 本随行级更新刷新。列改绑 `updated_at` 并更名「更新时间」，悬停 tooltip 保留上传时间。
 - fix(knowledge): 嵌入异步请求超时 60s→300s。分块尺寸饱满后（如 book/1024 均 939 token、表格密集文档更重）单批 8 条长块在本地 ollama 上处理可达分钟级，多文档并发入库时请求在服务端排队，固定 60s 超时以空串 `httpx.ReadTimeout` 形态失败（日志仅见逗号），4 个报告文档重切 `error_indexing`。仅放宽 `aencode`（文档入库路径）；同步 `encode`（查询嵌入，短输入）维持 60s。另发现叠加故障并已处置：book/1024 重切后仍有 4 个表格密集文档 413。ollama 服务端日志实锤机制——单条输入真实 token 数超 llama.cpp 物理批窗口（`input (4002 tokens) is too large to process`），与请求体大小无关；根源是 `count_tokens` 旧公式标点零计费，把管道符坐标表等 ASCII 密集文本低估数倍（4440 字符估 780，SPM 实际 4002）。处置：ollama 侧（仓库外运维）bge-m3 Modelfile 显式 `PARAMETER num_ctx 8192` 原地重建同名 tag 并卸载重载，改后 4000/9000 token 单条探针 200（改前同规模必 413），表格密集块整块入库不受影响。曾试验在 nlp.py 校准计数（标点逐字计）使超预算硬切对肥表生效，因会把手风密集表格切碎、损害检索完整性，按裁决回退，nlp.py 保持 upstream 一致；残余边缘：极端 ASCII 密度块（估算 1024 × >8 倍真实密度）会在 8192 处被静默截断向量（实测语料最大倍率 5.2x，有余量），`超长 embedding 输入` 警告线保留可观测。4 个失败文档已按 book/1024 重推验证。
