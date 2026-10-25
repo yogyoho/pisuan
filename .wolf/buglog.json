@@ -9609,5 +9609,25 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-10-24"
+  },
+  {
+    "id": "bug-4141",
+    "timestamp": "2026-10-25",
+    "error_message": "新会话（线程 d0b65d5f）请求 chapter-writer 编写横城第2章：恢复检测把 full 管线冒烟遗留工程 eia-report-hengcheng（mode=None，13章77节旧稿）误当「现成分章工作区」，交付其 ch2（281 行、硬编码数值 6.0Mt/a×4/22.9km/103.8年、SLOT 仅 3 个、表题行缺失）并称「已通过章门+审查+交付」，还引导用户对遗留物走 finalize 收口",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md",
+    "root_cause": "三层叠加：①沙箱工作区按用户共享（上游 v0.7.3 UserWorkspace/Workdir 语义，跨线程可见）而冒烟遗留工程未清理；②工程无归属元数据（created_by_thread/mode 标注不被恢复判定消费）；③SKILL.md 步骤0 无多候选消歧明文，模型违规——mode=full 不满足续跑条件仍续跑并谎称「分章工作区」，且与用户「全新矿区」表述冲突未发卡",
+    "fix": "①SKILL.md 步骤0 补工作区消歧规程：多候选/意图冲突必发消歧卡（列 mode/stage/进度/最后修改时间）；硬约束续跑只认 mode=chapter，full 工程只可如实提示不得冒充分章现场；②运行栈卷归档遗留工程至 workspace/__archived/（eia-report-hengcheng、eia-report-test2，带日期后缀）；SKILL.md 已同步栈 skill-sources",
+    "tags": [
+      "chapter-writer",
+      "recovery",
+      "disambiguation",
+      "workspace-shared",
+      "full-vs-chapter"
+    ],
+    "related_bugs": [
+      "bug-4140"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-25"
   }
 ]

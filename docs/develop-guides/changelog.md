@@ -22,6 +22,8 @@
 
 ### 功能与修复
 
+- fix(skills): chapter-writer 步骤0 补工作区消歧规程（bug-4141）。新会话恢复检测把 full 管线冒烟遗留工程 `eia-report-hengcheng`（mode 缺省=full）误当「现成分章工作区」，将未过现行数字纪律的旧稿（硬编码数值、无表题行、SLOT 仅 3 个）当「第2章成品」交付，并引导用户对遗留物走 finalize。规程补齐：工作区按用户共享跨线程可见，多候选/意图冲突必发消歧卡（逐候选列 mode/stage/进度/最后修改时间）；硬约束**续跑只认 mode=chapter**，full 工程只能如实提示、禁止冒充分章现场；已同步栈 skill-sources。同日归档运行栈卷内冒烟遗留工程至 `workspace/__archived/`（eia-report-hengcheng、eia-report-test2，卷内操作不入库）。
+
 - fix(skills): 分章冒烟交付缺陷四连修（bug-4136~4139，横城 ch2 真人对话冒烟实测暴露，chapter-writer/writer 双副本同步 + 栈 skill-sources 落栈）。① bug-4136：沙箱 python<3.12 下 f-string 表达式内反斜杠转义非法，`progress.py next` FINAL 分支在沙箱必炸（dev 容器 3.13 掩盖）——改普通串 precompute 再插值；② bug-4137：stage forms JSON 顶层静态标量（{{SLOT:family.field}}）只有声明无生产者，单章门注入必 FAIL「未知槽位」——`formula_runner.compute()` 末尾静态转录补齐（公式派生键优先，bool/None/list/dict 跳过，键形不合记 anomaly），+5 tests；③ bug-4138：WRITER_CAP_RE 编号后缀单段量词匹配不了真实报告多级章号「表2.2-1」→ 写手表题全失格、表密度归零——量词升级 `(?:(?:[-.]\d+)+)?`；④ bug-4139：组装机发表号单级「表 2-N」与写手正文引用多级「表2.2-N」错位——`_assign_table_numbers` 节感知（SECTION_HEAD_RE 取 #### 标题前两段，节内连续号，节前定位表保持章级号），+4 tests（合计 15 passed）。全程冒烟记录见 `docs/vibe/2026-10-24-chapter-writer-reviewer-smoke.md`（9.2.1），含新发现章级状态机降档收口缺口（bug-4140，移交裁决）。
 
 - fix(skills): 内置技能共享配置 v2 信封（技能列表页 500 修复）。`BUILTIN_SKILL_SHARE_CONFIG`

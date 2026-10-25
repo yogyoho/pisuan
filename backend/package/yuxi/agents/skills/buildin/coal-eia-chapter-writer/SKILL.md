@@ -60,6 +60,8 @@ tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query
 有 `outputs/project_snapshot.json` 先 `snapshot.py show --input … --verify`（rc=3=被篡改，停），读 last_task 决定续做还是新任务。
 开新：`progress.py init --stage S --state-dir T --data-dir D --mode chapter`（**--mode chapter 必带**；缺省 full 是 writer 批量管线，分章管线不认）。续跑（progress.json 在场且 mode=chapter）：`progress.py next` 单章聚焦恢复——CONFIRMED 章自动跳过（恢复检测认 CONFIRMED），从首个未确认章继续；`state/mapping.json` 在场则续跑不重绑。
 
+**工作区消歧（工作区按用户共享，跨线程可见——恢复检测必须过这一关）**：工作区里存在多个候选工程目录（同名/近名/同矿区）时，或现场与用户表述冲突（用户称「新项目」却存在同名工程）时，**禁止静默选定或静默采用**，必须发消歧卡（ask_user_question 单表单），逐候选列：目录名 / mode / stage / 章进度摘要 / 最后修改时间。硬约束：**续跑只认 mode=chapter**——mode 缺省（=full）或 mode=full 的工程**不是分章候选**，禁止当分章现场续跑、禁止描述为「分章工作区」（哪怕工程名/章名再匹配）；full 工程只可作为「存在旧 full 管线产物」在卡中如实提示。卡选项至少含：A 续跑指定候选 / B 开新工作区（新目录名，建议带矿区名+模式后缀）/ C 先归档干扰候选再开新。
+
 ### 步骤 1 · 开题路由与全局必备包收集 → 门 1（全局）
 
 1. **开题两级路由选择卡（先于一切收集动作，单表单）**：

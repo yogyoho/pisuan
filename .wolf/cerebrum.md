@@ -1787,3 +1787,8 @@
 
 - 双通道同时 resume 同一线程（drive.py 自动批准 + 用户 web UI 应答）互报 409「中断运行已被后续运行超越」——用户在 UI 侧活动时立即停自动批准循环，只做只读监控。
 - git-bash heredoc 会吞反斜杠、展开 $var——补丁脚本用 Write 工具落盘（chr(92) 造反斜杠）；`docker exec python - <<EOF` 在本机 bash 不喂 stdin，改 `docker exec -i ... python - < file`。
+
+## Key Learnings (2026-10-25 消歧事件追加)
+
+- 沙箱工作区按用户共享（`threads/shared/<user>/workspace/workspace/<工程>`），跨线程可见、跨会话续作是设计意图（上游 v0.7.3 废 per-thread）——遗留工程对新会话是可见干扰源。已归档 `eia-report-hengcheng`/`eia-report-test2` 至 `workspace/__archived/`；`eia-report`=王坡在办勿动，jia/qinglong 无 progress.json 惰性。
+- SKILL.md 步骤0 新增消歧硬约束：续跑只认 mode=chapter；多候选/用户意图冲突必发卡（bug-4141）。
