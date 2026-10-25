@@ -22,7 +22,7 @@
 
 ### 功能与修复
 
-- fix(skills): 写作技能补用户沟通规范（用户实测反馈）。对话页测试 coal-eia-writer / coal-eia-chapter-writer，回复夹带内部机制用语（VERIFIED/DRAFTED/phase/gate/SLOT、run/resume、命令与路径等），非 IT 背景的环评用户无法理解。两 SKILL.md 在角色与红线之间新增「用户沟通规范」节：全部面向用户的文字（回复/卡题面/选项/状态汇报）用中文业务语体，禁止出现命令行、脚本名、文件路径、JSON 片段与状态枚举；附内部术语→业务说法映射（gate→章节质量校验、DRAFTED→编写中、VERIFIED→校验通过、SLOT→数值由登记资料自动带入、降档→按当前成稿收尾并注明差距等）与状态汇报句式；英文仅限标准号（GB/HJ）、业务单位（Mt/a·km²·dB(A)）与交付文件名；已同步栈 skill-sources。
+- fix(skills): 写作技能补用户沟通规范（用户实测反馈）。对话页测试 coal-eia-writer / coal-eia-chapter-writer，回复夹带内部机制用语（VERIFIED/DRAFTED/phase/gate/SLOT、run/resume、命令与路径等），非 IT 背景的环评用户无法理解。三个 SKILL.md（writer/chapter-writer/reviewer）在角色节后新增「用户沟通规范」节：全部面向用户的文字（回复/卡题面/选项/状态汇报）用中文业务语体，禁止出现命令行、脚本名、文件路径、JSON 片段与状态枚举；附内部术语→业务说法映射（gate→章节质量校验、DRAFTED→编写中、VERIFIED→校验通过、SLOT→数值由登记资料自动带入、降档→按当前成稿收尾并注明差距等）与状态汇报句式；英文仅限标准号（GB/HJ）、业务单位（Mt/a·km²·dB(A)）与交付文件名。reviewer 版按审查场景适配：发现单工作底稿保留结构化标记与证据摘录（契约不变），但对话转述发现必须译成业务语言（FAIL→必须修改、WARN→建议完善、PASS 一笔带过），不裸报标记与统计值；已同步栈 skill-sources。
 
 - fix(skills): chapter-writer 步骤0 补工作区消歧规程（bug-4141）。新会话恢复检测把 full 管线冒烟遗留工程 `eia-report-hengcheng`（mode 缺省=full）误当「现成分章工作区」，将未过现行数字纪律的旧稿（硬编码数值、无表题行、SLOT 仅 3 个）当「第2章成品」交付，并引导用户对遗留物走 finalize。规程补齐：工作区按用户共享跨线程可见，多候选/意图冲突必发消歧卡（逐候选列 mode/stage/进度/最后修改时间）；硬约束**续跑只认 mode=chapter**，full 工程只能如实提示、禁止冒充分章现场；已同步栈 skill-sources。同日归档运行栈卷内冒烟遗留工程至 `workspace/__archived/`（eia-report-hengcheng、eia-report-test2，卷内操作不入库）。
 

@@ -9653,9 +9653,9 @@
     "id": "bug-4142",
     "timestamp": "2026-10-26",
     "error_message": "用户反馈：对话页测试 coal-eia-writer / coal-eia-chapter-writer，回复文字大量 AI 内部用语（VERIFIED/phase/gate/DRAFTED 等），非 IT 用户看不懂；要求用非 IT 人员能懂的语言回复，少用英文",
-    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md + coal-eia-chapter-writer/SKILL.md",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-{writer,chapter-writer,reviewer}/SKILL.md",
     "root_cause": "两个 SKILL.md 只约束管线行为，未约束面向用户的文字语体；模型把内部状态机术语（状态枚举/gate/占位符/命令名/路径）直接透给用户",
-    "fix": "两 SKILL.md 在角色与红线之间新增「用户沟通规范」节：全中文业务语体，禁命令行/脚本名/路径/JSON/状态枚举；附内部术语→业务说法映射表（gate→章节质量校验、DRAFTED→编写中、VERIFIED→校验通过、SLOT→数值由登记资料自动带入、降档→按当前成稿收尾并注明差距等）与状态汇报句式；英文仅限标准号/业务单位/交付文件名；已 docker cp 同步栈 skill-sources 双副本",
+    "fix": "两 SKILL.md 在角色与红线之间新增「用户沟通规范」节：全中文业务语体，禁命令行/脚本名/路径/JSON/状态枚举；附内部术语→业务说法映射表（gate→章节质量校验、DRAFTED→编写中、VERIFIED→校验通过、SLOT→数值由登记资料自动带入、降档→按当前成稿收尾并注明差距等）与状态汇报句式；英文仅限标准号/业务单位/交付文件名；已 docker cp 同步栈 skill-sources 双副本；同日用户确认 reviewer 也需要——reviewer SKILL.md 角色节后插入适配版（发现单底稿契约保留，对话转述发现必须译成业务语言：FAIL→必须修改、WARN→建议完善），三技能齐备，栈 skill-sources 已同步",
     "tags": [
       "skill",
       "ux",
