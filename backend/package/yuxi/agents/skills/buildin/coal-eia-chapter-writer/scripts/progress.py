@@ -752,9 +752,12 @@ def cmd_run_stage(args: argparse.Namespace) -> int:
             "[run-stage] manifest OK → formula_runner execute（rc=3=有 anomalies，必须发卡逐条呈现用户确认）",
             file=sys.stderr,
         )
-        return _run_py(
-            "formula_runner.py", "execute", "--stage", stage, "--data-dir", data, "--state-dir", str(state_dir)
-        )
+        freeze_cmd = ["formula_runner.py", "execute", "--stage", stage, "--data-dir", data,
+                      "--state-dir", str(state_dir)]
+        if args.chapters:
+            # 目标章集切片冻结（bug-4143 方案A）：只冻目标章消费公式；缺省全量零变化
+            freeze_cmd += ["--chapters", args.chapters]
+        return _run_py(*freeze_cmd)
     # finalize：交付名唯一来源 = data/ 表单（expected_deliverable_name，与 build_output 交付名门同源）
     import build_output
 
@@ -952,6 +955,8 @@ def main() -> int:
         "run-stage", help="固定脚本序列合并一次 bash：freeze=manifest+execute；finalize=build→consistency→snapshot"
     )
     sp.add_argument("stage_name", choices=["freeze", "finalize"])
+    sp.add_argument("--chapters", default=None,
+                    help="freeze 切片（bug-4143）：逗号分隔目标章 id（如 ch2,ch6）——只冻目标章消费公式；缺省=全量")
     sp.add_argument("--state-dir", required=True)
     sp.add_argument("--outputs-dir", help="finalize 必填：交付目录（报告+project_snapshot.json 落这里）")
     sp.add_argument("--task", default="环评报告终验", help="snapshot last_task 一句话摘要")

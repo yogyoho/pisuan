@@ -1795,3 +1795,24 @@
 - 沙箱工作区按用户共享（`threads/shared/<user>/workspace/workspace/<工程>`），跨线程可见、跨会话续作是设计意图（上游 v0.7.3 废 per-thread）——遗留工程对新会话是可见干扰源。已归档 `eia-report-hengcheng`/`eia-report-test2` 至 `workspace/__archived/`；`eia-report`=王坡在办勿动，jia/qinglong 无 progress.json 惰性。
 - SKILL.md 步骤0 新增消歧硬约束：续跑只认 mode=chapter；多候选/用户意图冲突必发卡（bug-4141）。
 - (2026-10-25) flex 槽位内子元素 `height: 100%` + 自带 `margin-top` = 必然溢出槽位 margin 的高度，溢出被下方 z-index 兄弟盖住或 overflow:hidden 裁掉（bug-4124 对话列表最后一条缺 16px）。间距应写在 flex 槽位（flex item 的 margin 参与分配），不要写在与 height:100% 同一个元素上。判这类遮挡：getBoundingClientRect 对比 last item bottom vs 容器 bottom，比截图快。
+
+## Key Learnings (append 2026-10-26 langfuse-selfhost)
+
+- Langfuse v4 默认 events_only：SDK/OTLP 经 /api/public/otel/v1/traces 写入 ClickHouse 新表 events_core/events_full；旧 /api/public/ingestion 的 trace-create 被拒。查数据用 events_full，不是 traces；traces 表只在 LANGFUSE_MIGRATION_V4_WRITE_MODE=dual 双写模式才填充。
+- LANGFUSE_INIT_* 引导变量必须显式设置 LANGFUSE_INIT_ORG_ID 才生效（v4.70），否则整组被静默忽略。
+- 本系统容器内 langfuse SDK 4.14.5 与 v4 服务器兼容：CallbackHandler 走 OTLP；create_trace_id(seed) 确定性 ID 与 OTLP trace_id 一致（调试面板跳转可用）；get_trace_url 必须关键字参数 trace_id=；create_score 可用。yuxi 侧包名在 localized 栈经改名层为 pisuan.services.langfuse_service。
+- Windows 宿主可解析 host.docker.internal（Docker Desktop 写入 hosts），可同时作为容器与浏览器访问的统一 origin，避免登录会话 cookie 分裂；trace 跳转 URL 与 LANGFUSE_BASE_URL 必须同 origin 才能通过 langfuse_service 的源站校验。
+- Docker Hub 直连超时时的镜像拉取路径：docker.m.daocloud.io / docker.1panel.live 前缀拉取 + docker tag 还原；cgr.dev（chainguard）可直连。
+- chainguard/minio 镜像预置 alias 'local' 凭据陈旧（mc ls local/ 报 Access Denied 是误导），验证需用 $MINIO_ROOT_USER/$MINIO_ROOT_PASSWORD 重设 alias；健康检查 mc ready local 走匿名端点所以照常通过。
+
+## Do-Not-Repeat (append 2026-10-26 langfuse-selfhost)
+
+- 2026-10-26：转写第三方 docker-compose 时禁止凭记忆或聊天摘录，必须拉官方原文件（本例 .wolf/langfuse-deploy/official-ref.yml）逐项 grep 对齐环境变量。本次 v4 改名导致两次启动失败：缺 CLICKHOUSE_MIGRATION_URL（web crash-loop）、NEXTAUTH_SECRET 漏放在 web 节（500 Invalid environment variables）。
+
+## Decision Log (2026-10-26 bug-4143 按目标章裁剪)
+- 门1/门2 工程级硬门 vs 「只写第N章」单章任务口径错配（ch2 实际只消费 mine_plan，7 族里 6 族是 ch6/7/9 的）。用户三案裁决选 **A 按目标章裁剪**；B 规程降档放行否（矛盾后移）、C 维持现状否（解释解决不了被卡）。裁剪口径 = 目标章 {{SLOT}}/{{TABLE}} 引用族 ∪ 消费公式 FORMULA_FORM_DEPS 依赖 ∩ global_families；未知章回退全量（正确性优先，同 resolve_scope）。
+
+## Key Learnings (append 2026-10-26)
+- skill-sources 栈目录不经 sync-dev：技能脚本改动须两包全目录落栈 + sha256 逐文件核对（容器内 python 哈希法）；**双包测试数不一致 = 漂移信号**（bug-4144：栈 chapter 缺 bug-4138/4139 的 4 个回归测试，文件在内容旧）。
+- 容器内 docker cp 落栈文件为 root 属主，exec 用户 rm 不掉（pytest .pytest_cache 残留，无害）。
+- Windows 宿主 uv run 无 pytest：技能包测试只能容器内跑；宿主只做 ruff + sync_chapter_skill.py --check（与守卫测试同断言）。

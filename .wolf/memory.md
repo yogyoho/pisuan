@@ -7695,3 +7695,42 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 00:17 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-reviewer/SKILL.md | expanded (+11 lines) | ~123 |
 | 00:17 | Edited docs/develop-guides/changelog.md | inline fix | ~145 |
 | 00:18 | 用户沟通规范扩展到 reviewer SKILL.md（发现单契约保留/对话转述业务化），栈同步 | coal-eia-reviewer/SKILL.md, changelog, buglog | 已提交并落栈 | ~15k |
+| 00:18 | Session end: 4 writes across 3 files (changelog.md, docker-compose.langfuse.yml, SKILL.md) | 2 reads | ~38981 tok |
+| 00:19 | Edited docker-compose.langfuse.yml | 5→6 lines | ~96 |
+| 00:21 | Edited docker-compose.langfuse.yml | 3→6 lines | ~77 |
+| 00:29 | Session end: 6 writes across 3 files (changelog.md, docker-compose.langfuse.yml, SKILL.md) | 2 reads | ~39154 tok |
+| 00:39 | Edited docs/vibe/2026-10-25-langfuse-selfhost.md | expanded (+11 lines) | ~493 |
+| 00:39 | Langfuse 自托管栈部署完成（4.70.0，6 容器）并接入 localized 运行栈：v4 对齐官方 compose、ORG_ID init、OTLP/events_full 链路实测通过 | docker-compose.langfuse.yml, docs/vibe/2026-10-25-langfuse-selfhost.md | 成功 | ~110k |
+
+## Session: 2026-10-25 00:42
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 01:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | 2→2 lines | ~50 |
+| 01:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~89 |
+| 01:07 | 开题卡语言修正：结构声明模板改业务措辞+数据预告中文名（用户实测卡违规） | writer/chapter-writer SKILL.md | 已落栈待提交 | ~12k |
+| 01:08 | Session end: 2 writes across 1 files (SKILL.md) | 0 reads | ~149 tok |
+| 01:19 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_ingest_global_scope.py | — | ~1336 |
+| 01:20 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/derive_globals.py | inline fix | ~21 |
+| 01:20 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/derive_globals.py | modified load_globals() | ~475 |
+| 01:20 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/ingest.py | expanded (+8 lines) | ~181 |
+| 01:20 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/ingest.py | 2→4 lines | ~83 |
+| 01:20 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_global_families.py | modified _check_args() | ~55 |
+| 01:21 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_ingest_global_scope.py | modified test_scope_globals_formula_and_table() | ~68 |
+| 01:21 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_ingest_global_scope.py | 2→3 lines | ~53 |
+| 01:23 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_ingest_global_scope.py | 4→8 lines | ~126 |
+| 01:25 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/derive_globals.py | inline fix | ~28 |
+| 01:25 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/ingest.py | 2→2 lines | ~40 |
+| 01:27 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_run_stage_chapters.py | — | ~548 |
+| 01:27 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 7→9 lines | ~127 |
+| 01:27 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 1→3 lines | ~58 |
+| 01:29 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 1→2 lines | ~42 |
+| 01:29 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_run_stage_chapters.py | 5→5 lines | ~54 |
+| 01:29 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_run_stage_chapters.py | 8→6 lines | ~41 |
+| 01:39 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 2→2 lines | ~145 |
+| 01:39 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 5→6 lines | ~102 |
+| 01:39 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~82 |
+| 01:39 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | "ingest.py check --stage S" → "ingest.py check --stage S" | ~46 |
+| 01:40 | Created docs/vibe/2026-10-26-chapter-scoped-gates.md | — | ~568 |
+| 01:40 | Edited docs/develop-guides/changelog.md | modified feat() | ~346 |
+| 01:41 | bug-4143 方案A 落地：门1/门2 按目标章裁剪（scope_globals/ingest --chapters/run-stage freeze --chapters + SKILL.md 规程）；连带修栈漂移 bug-4144 | writer+chapter-writer 脚本×6×2, SKILL.md, changelog, vibe, buglog | 双包 176 tests 绿, 栈哈希核对 drift=0, 已提交 | ~80k |

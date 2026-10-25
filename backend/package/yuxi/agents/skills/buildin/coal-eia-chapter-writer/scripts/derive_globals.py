@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from formula_runner import FORMULA_FORM_DEPS  # noqa: E402
+from formula_runner import FORMULA_FORM_DEPS, resolve_scope  # noqa: E402
 
 REFS = Path(__file__).resolve().parent.parent / "references"
 EXPECTATIONS_PATH = REFS / "data_expectations.json"
@@ -71,6 +71,37 @@ def load_globals() -> list[str]:
     if globals_ is None:
         raise ValueError(f"{EXPECTATIONS_PATH} 缺 global_families——先跑 derive_globals.py 派生，禁手拍")
     return globals_
+
+
+# 门1 目标章裁剪（bug-4143 方案A）：目标章引用族 = {{SLOT:family.}}/{{TABLE:family}} ∪ 消费公式 FORMULA_FORM_DEPS 依赖
+_SLOT_FAM_RE = re.compile(r"\{\{SLOT:([A-Za-z_]\w*)\.")
+_TABLE_FAM_RE = re.compile(r"\{\{TABLE:([A-Za-z_]\w*)[.}]")
+
+
+def scope_globals(stage: dict, chapter_ids: set[str], formula_deps: dict | None = None) -> set[str] | None:
+    """目标章集 → 门1 裁剪口径的引用族。
+
+    未知章返回 None（调用方回退全量全局族——正确性优先，同 resolve_scope）；与
+    global_families 的交集由调用方（ingest cmd_check）做，公式槽位键族（subsidence 等
+    非表单族）经交集自然滤除。formula_deps 仅供测试注入。"""
+    deps = formula_deps if formula_deps is not None else FORMULA_FORM_DEPS
+    chapters = stage.get("chapters", {})
+    needed: set[str] = set()
+    for cid in sorted(chapter_ids):
+        ch = chapters.get(cid)
+        if ch is None:
+            print(f"GLOBAL_SCOPE_FALLBACK: 未知章 {cid}——门1 回退全量全局族")
+            return None
+        for sec in ch.get("sections", []):
+            text = json.dumps(sec, ensure_ascii=False)
+            needed.update(_SLOT_FAM_RE.findall(text))
+            needed.update(_TABLE_FAM_RE.findall(text))
+    fam_scope = resolve_scope(",".join(sorted(chapter_ids)), stage)
+    if fam_scope is None:  # 公式族未知——resolve_scope 已印 SCOPE_FALLBACK
+        return None
+    for f in fam_scope:
+        needed.update(deps.get(f) or ())
+    return needed
 
 
 def main() -> int:

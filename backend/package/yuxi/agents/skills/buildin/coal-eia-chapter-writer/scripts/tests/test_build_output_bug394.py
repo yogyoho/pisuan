@@ -150,3 +150,51 @@ def test_gate_legal_placements_pass():
     ]
     for text in ok:
         build_output.validate_section("ch6_S02", text)  # 不抛即过
+
+
+# ── bug-4138：写手表题编号允许多级章号 ──────────────────────────────────────
+
+
+def test_writer_cap_regex_multilevel_chapter():
+    """表题编号 X.Y-N（章号含点号）必须被 WRITER_CAP_RE 识别——真实报告编号即此形。"""
+    ok_caps = [
+        "表2.2-1 各矿井原规划规模及建设现状",
+        "表2.3-3 井田边界与保护目标位置关系一览表",
+        "表12.4-1 公用工程规格",
+        "表2-1 单级章号仍然合法",
+    ]
+    for cap in ok_caps:
+        assert build_output.WRITER_CAP_RE.match(cap), cap
+
+
+def test_writer_cap_regex_still_rejects_non_captions():
+    bad = [
+        "见表2.2-1",  # 引用句不是表题行
+        "表2.2-1 名称，含逗号",  # 表题名不得含句读
+        "表X-Y 无编号",
+    ]
+    for cap in bad:
+        assert not build_output.WRITER_CAP_RE.match(cap), cap
+
+
+# ── bug-4139：表题落号节感知多级 ────────────────────────────────────────────
+
+
+def test_table_numbers_section_aware():
+    """#### 节标题下的写手表题落「表 {ch}.{sec}-{seq}」节内连续号——与真实报告/正文引用一致。"""
+    text = (
+        "#### 2.1 概况\n\n表2.1-1 概况表\n\n| a | b |\n|---|---|\n\n"
+        "#### 2.2 矿井\n\n表2.2-1 矿井表一\n\n| a | b |\n|---|---|\n\n"
+        "表2.2-2 矿井表二\n\n| a | b |\n|---|---|\n"
+    )
+    out = build_output._assign_table_numbers(text, {"ch_no": "2", "seq": itertools.count(1)})
+    assert "**表 2.1-1 概况表**" in out
+    assert "**表 2.2-1 矿井表一**" in out
+    assert "**表 2.2-2 矿井表二**" in out
+
+
+def test_table_numbers_no_heading_falls_back_to_chapter_level():
+    """节前定位（无 #### 标题）的表保持章级「表 {ch}-{seq}」号。"""
+    text = "表2-1 无节归属表\n\n| a | b |\n|---|---|\n"
+    out = build_output._assign_table_numbers(text, {"ch_no": "2", "seq": itertools.count(1)})
+    assert "**表 2-1 无节归属表**" in out

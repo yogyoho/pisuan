@@ -87,24 +87,25 @@ tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query
 1. **开题两级路由选择卡（先于一切收集动作，单表单）**：
    - 第一问 **stage**：planning_eia / project_eia_underground / project_eia_openpit / post_eia / tracking_eia——未启用 stage 的场景**管线不可跑**（禁拿其他 stage 凑数、禁即兴自创章集），向用户如实声明。
    - 第二问 **变体**（按 stage 分派）：planning → 修编/新编；project 井工/露天 → 新建/改扩建；post/tracking 不分变体（schema 留位）。变体差异全部来自注入物（变体专款指引 + 模板检索过滤），**不建多个写作子代理**（`eia-section-writer` 始终一个）。修编变体使 ch2 多「原规划回顾+修编对比」、ch4 多「上一轮规划实施回顾」专款；改扩建变体影响工程分析/既有工程回顾。
-2. **开题首动作同 writer 纪律**：① 结构真源声明（以技能内置 `references/` 为准，不查询知识工厂模板/大纲）；② 数据预告两段式——「全局包 + 逐章路线图」（读 `references/data_expectations.json`，先预告 `global_families` 全局包清单，再按章预告逐章数据族）。①+② 载体 = 首张表单 `question` 文本开头，不另发独立消息。
-3. **全局包收集**：只收 `global_families`（`references/data_expectations.json` 顶层分组，7 族口径=跨章公式族冻结依赖 ∪ derived 常算块——由 derive_globals.py 派生，不手拍）；逐章数据族**留给各章 3a 再收**，开题不收。
-4. **门 1（全局包模式）**：`ingest.py check --global-only` → `GATE1_COMPLETE` 才继续；rc=2 缺项清单译成中文数据项清单呈现用户补齐。只校 global_families，逐章族不在本门（`ingest.py check` 不带旗标=全量校验，分章管线开题不用）。
+2. **开题首动作同 writer 纪律**：① 结构真源声明（以技能内置 `references/` 为准，不查询知识工厂模板/大纲；业务措辞模板见 writer 步骤 1，禁出现技能名/目录名/占位符记号/脚本机制描述）；② 数据预告两段式——「全局包 + 逐章路线图」（读 `references/data_expectations.json`，先预告 `global_families` 全局包清单，再按章预告逐章数据族；**数据族向用户展示中文名**，英文键至多括注（如「大气源强清单（air）」），禁出现 `{{SLOT}}`/`{{TABLE}}` 记号与脚本机制描述）。①+② 载体 = 首张表单 `question` 文本开头，不另发独立消息。
+3. **全局包收集**：只收 `global_families`（`references/data_expectations.json` 顶层分组，7 族口径=跨章公式族冻结依赖 ∪ derived 常算块——由 derive_globals.py 派生，不手拍）；逐章数据族**留给各章 3a 再收**，开题不收。**用户明示目标章集**（如「只写第2章」「先写第3、4章」）→ 记为目标章集：全局包只收目标章引用的族（门1 `--chapters` 裁剪口径），预告卡分「本次必需 / 后续章可缓」两栏；未明示（整本/从头写）→ 全量口径不变。
+4. **门 1（全局包模式）**：`ingest.py check --global-only`（目标章集模式带 `--chapters <目标章集>`）→ `GATE1_COMPLETE` 才继续；rc=2 缺项清单译成中文数据项清单呈现用户补齐。`--chapters` 只校目标章引用的全局族（stdout `GLOBAL_SCOPE:` 行=裁剪日志，向用户如实转述；未知章自动回退全量）。只校 global_families，逐章族不在本门（`ingest.py check` 不带旗标=全量校验，分章管线开题不用）。
    交互纪律全套继承 writer（单回合一卡、CSV 三步协议、示例值≠数据、只传用户提交的键、每收完一类立即落盘、脚本崩溃即停、ingest 唯一写者）。
 
 ### 步骤 2 · 全局冻结 → 门 2
 
 ```
-progress.py run-stage freeze --state-dir T          # manifest + formula_runner execute（全量）
+progress.py run-stage freeze --state-dir T                        # manifest + 全量冻结（默认整本）
+progress.py run-stage freeze --state-dir T --chapters <目标章集>   # 目标章集模式：只冻目标章消费公式（bug-4143）
 ```
 
-冻结后按 `state/dependency_manifest.json` 识别跨章消费公式族（全局包口径）。门 2 rc=3 anomalies 逐条呈现用户并获确认再进章循环——**发卡即停**；公式结果全 0/空同走本门呈现。
+冻结后按 `state/dependency_manifest.json` 识别跨章消费公式族（全局包口径）。目标章集模式只冻目标章消费公式（派生常算块照常计算），后续章的跨章公式推迟到各章 3a 增量冻结（setdefault 合并，已冻结槽位不重算）。门 2 rc=3 anomalies 逐条呈现用户并获确认再进章循环——**发卡即停**；公式结果全 0/空同走本门呈现。
 
 ### 步骤 3 · 逐章循环（N 按 stage 章序；每轮 `progress.py next` 单章聚焦给出恰好一个下一步）
 
 每章六步，全部落 progress.json 后才发确认卡：
 
-- **3a 本章资料包 + 增量冻结**：本章专属族（仅本章消费的数据族）已备 → 跳过；缺 → 按 writer 交互纪律补收 → 本章增量门（`ingest.py check` 全量口径，只看本章族缺口）→ **增量冻结** `formula_runner.py execute --stage S --data-dir D --state-dir T --chapters chN`——按 dependency_manifest 切片本章消费公式；跨章公式已在全局冻结过的不重算（stdout `SCOPE:` 行为切片日志，向用户如实转述）。
+- **3a 本章资料包 + 增量冻结**：本章专属族（仅本章消费的数据族）已备 → 跳过；缺 → 按 writer 交互纪律补收（**含此前因目标章集裁剪未收的全局族**——全量口径门会列出）→ 本章增量门（`ingest.py check` 全量口径，只看本章族缺口）→ **增量冻结** `formula_runner.py execute --stage S --data-dir D --state-dir T --chapters chN`——按 dependency_manifest 切片本章消费公式；跨章公式已在全局冻结过的不重算（stdout `SCOPE:` 行为切片日志，向用户如实转述）。
 - **3a-2 模板推荐（可选增强，发卡即停）**：`query_kb` 检索样例报告库（stage+变体+节角色+本章主题过滤）→ 取 2~4 候选**脱敏**（矿名/地名/企业名→占位、数值→占位化；`sample_entities` 禁入清单机械校验通过方可作候选）→ 候选文件卡片 + 选择卡（选项=候选编号 + 常设「不用模板，按默认范式」）。选中模板注入 3b，**优先于默认范式文件**作句法参照（实体与数值仍一律本项目冻结值）。检索无果/候选不足 → 如实告知降级默认范式，不阻塞。**按章不按节**（同章各节共享模板取向）。
 - **3b 节级派发**：`subagent_start`（`subagent_slug="eia-section-writer"`），波=本章全部 PENDING 节，在飞 ≤3，派发契约同 writer 4.1（节 id/要素链/深度目标/范式文件/输出契约/残留禁令全同）。**注入严格限定：本章数据族 + 本章冻结值 + 前章要点包（state/key_points.json 增量累积）+ 本章 samples_bank 风格基准切片 + 本节角色范式文件 + 用户选定模板（如有）**；禁注入全书上下文。范式角色六型（opener/baseline/analysis/measures/conclusion/process），`scripts/paradigm_role.py` 解析。写作纪律新增：「每个主要表格正文必须有引用与解读段」「工程师复合句式，数据从句串联，禁碎句堆叠」「禁 AI 腔过渡词（总体而言/值得注意/至关重要等）」。
 - **3c 批量章门**：`progress.py gate --chapters chN --state-dir T`（合规门 + L2 深度门 + **文风门四规则**：数字密度下限/表密度区间/文表联动下限/AI 腔禁用词，基准读 `references/style_targets/<stage>.json`；FAIL 输出节级归因）。FAIL 重派 ≤1（原 prompt+stderr）→ 仍 FAIL → `mark chN BLOCKED`——**BLOCKED 挂起不阻后续章**，协商留到该章确认卡或全书收口（next 指引为准）。
@@ -152,7 +153,7 @@ run 级预算硬顶同 writer（recursion_limit 1000 步、bash 60 次）；主�
 | 命令 | 作用 | 关键退出码 |
 |---|---|---|
 | `progress.py init --stage S --state-dir T --data-dir D --mode chapter` | 分章状态机初始化（**--mode chapter 必带**） | 0 / 1 已存在 |
-| `ingest.py check --stage S --data-dir D --global-only` | **门 1 全局包模式**：只校 global_families | 0=GATE1_COMPLETE / 2 缺项 |
+| `ingest.py check --stage S --data-dir D --global-only [--chapters <目标章集>]` | **门 1 全局包模式**：只校 global_families（`--chapters` 裁剪为目标章引用族，bug-4143） | 0=GATE1_COMPLETE / 2 缺项 |
 | `formula_runner.py execute --stage S --data-dir D --state-dir T --chapters chN` | **增量冻结**：只冻结本章消费公式（跨章已冻结不动）；缺省=全量 | 0 / 3 anomalies |
 | `progress.py next --state-dir T` | **单章聚焦**：COLLECTING→gate→review→确认卡→下一章，恰好一个下一步 | 0 |
 | `progress.py gate --chapters chN --state-dir T` | 单章门（合规+深度+文风四规则） | 0 / 1 FAIL（stderr 节级归因） |

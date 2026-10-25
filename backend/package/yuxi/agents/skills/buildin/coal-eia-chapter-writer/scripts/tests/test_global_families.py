@@ -108,7 +108,7 @@ def check_env(tmp_path, monkeypatch):
 
 
 def _check_args(tmp: Path, stage: Path, global_only: bool) -> Namespace:
-    return Namespace(stage=str(stage), data_dir=str(tmp / "data"), output=None, global_only=global_only)
+    return Namespace(stage=str(stage), data_dir=str(tmp / "data"), output=None, global_only=global_only, chapters=None)
 
 
 def test_check_global_only_skips_chapter_families(check_env, capsys):

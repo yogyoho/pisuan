@@ -629,6 +629,14 @@ def cmd_check(args) -> int:
     data_dir = Path(args.data_dir)
     # 门1 全局包模式（chapter-writer A2 分章管线）：只校 global_families，逐章族不进全局门
     global_fams = set(derive_globals.load_globals()) if args.global_only else None
+    if global_fams is not None and args.chapters:
+        # 门1 目标章裁剪（bug-4143 方案A）：「只写第N章」不必为后续章才消费的全局族备数
+        scoped = derive_globals.scope_globals(stage, {c.strip() for c in args.chapters.split(",") if c.strip()})
+        if scoped is None:
+            print("GLOBAL_SCOPE_FALLBACK: --chapters 含未知章——门1 回退全量全局族")
+        else:
+            global_fams &= scoped
+            print(f"GLOBAL_SCOPE: --chapters {args.chapters} → 门1 全局族裁剪为 {sorted(global_fams) or '（空——目标章无全局族引用）'}")
     missing_forms: list[str] = []
     missing_fields: list[str] = []
     for fam, spec in stage.get("forms", {}).items():
@@ -870,6 +878,8 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--data-dir", required=True)
     c.add_argument("--global-only", action="store_true",
                    help="门1 全局包模式（chapter-writer 分章管线）：只校 global_families，逐章族不进门")
+    c.add_argument("--chapters", default=None,
+                   help="门1 裁剪（配 --global-only）：逗号分隔目标章 id（如 ch2,ch6）——只校目标章引用的全局族；缺省=全量")
     c.set_defaults(func=cmd_check)
 
     args = p.parse_args(argv)

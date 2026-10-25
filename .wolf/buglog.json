@@ -9669,5 +9669,86 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-10-26"
+  },
+  {
+    "id": "bug-4142",
+    "timestamp": "2026-10-26",
+    "error_message": "langfuse-web crash-loop: \"Error: CLICKHOUSE_MIGRATION_URL is not configured\"；修复后又 \"Invalid environment variables: NEXTAUTH_SECRET expected string, received undefined\"",
+    "file": "docker-compose.langfuse.yml",
+    "root_cause": "compose 从过时摘要转写，未对齐 Langfuse v4 官方文件：v4 要求 CLICKHOUSE_MIGRATION_URL（原生协议 clickhouse://clickhouse:9000），且 NEXTAUTH_SECRET 是 web 专属变量（官方置于 <<: 合并之后的 web 节）",
+    "fix": "以官方 main docker-compose.yml 为底本（副本存 .wolf/langfuse-deploy/official-ref.yml）逐项对齐重写；web 节补 NEXTAUTH_SECRET",
+    "tags": [
+      "langfuse",
+      "docker-compose",
+      "v4",
+      "env",
+      "nextauth"
+    ],
+    "related_bugs": [
+      "bug-4143"
+    ],
+    "occurrences": 2,
+    "last_seen": "2026-10-26"
+  },
+  {
+    "id": "bug-4143",
+    "timestamp": "2026-10-26",
+    "error_message": "启动日志警告 \"Set LANGFUSE_INIT_ORG_ID to enable initialization\"，init 被跳过，预置 API Key 404",
+    "file": "docker-compose.langfuse.yml",
+    "root_cause": "Langfuse v4.70 要求显式设置 LANGFUSE_INIT_ORG_ID 才执行首启引导，否则整组 LANGFUSE_INIT_* 被静默忽略",
+    "fix": "environment 增加 LANGFUSE_INIT_ORG_ID: pisuan 与 LANGFUSE_INIT_PROJECT_ID: pisuan，重建后管理员/组织/项目/预置 Key 全部落库",
+    "tags": [
+      "langfuse",
+      "bootstrap",
+      "init",
+      "v470"
+    ],
+    "related_bugs": [
+      "bug-4142"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-26"
+  },
+  {
+    "id": "bug-4143",
+    "timestamp": "2026-10-26",
+    "error_message": "用户实测分章编写「只写第2章」，门1 仍要求收全局必备 7 族（其中 air/noise/solid_waste/subsidence/water/investment 6 族第2章不消费），被迫为不写的章节备数",
+    "file": "coal-eia-writer/scripts/{derive_globals,ingest,progress}.py + chapter-writer SKILL.md",
+    "root_cause": "门1/门2 是工程级硬门（假设分章最终成书，全局包前置收齐+跨章公式一次冻结），无「本次只写第N章」的裁剪口径——工程开工条件与单章任务口径错配",
+    "fix": "方案A（用户裁定）：derive_globals.scope_globals 按目标章推导引用族（{{SLOT}}/{{TABLE}} ∪ 消费公式 FORMULA_FORM_DEPS 依赖）；ingest check --global-only --chapters 裁剪门1（GLOBAL_SCOPE 日志，未知章回退全量）；run-stage freeze --chapters 切片门2；SKILL.md 同步（预告两栏/3a 补收）。实测 ch2 门1 缺项 7族→1族；缺省路径零变化，双包 176 tests 全绿",
+    "tags": [
+      "chapter-writer",
+      "gate1",
+      "global-families",
+      "scoping",
+      "skill-scripts"
+    ],
+    "related_bugs": [
+      "bug-4140",
+      "bug-4144"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-26"
+  },
+  {
+    "id": "bug-4144",
+    "timestamp": "2026-10-26",
+    "error_message": "容器内双包技能测试数不一致（writer 176 / chapter-writer 172）——栈上 chapter-writer 的 test_build_output_bug394.py 是旧版，缺 bug-4138/4139 的 4 个回归测试",
+    "file": "运行栈 /app/skill-sources/shared/coal-eia-chapter-writer/scripts/tests/test_build_output_bug394.py",
+    "root_cause": "skill-sources 栈目录不经 sync-dev 同步，昨日 bug-4138/4139 修复的「三处同步」漏了栈 chapter-writer 的该测试文件（文件在、内容旧）；单文件手工 docker cp 易漏",
+    "fix": "仓库 chapter 包 scripts 整目录重落栈；双包 sha256 逐文件核对 drift=0，两包 176 tests 全绿。教训：技能脚本改动后须两包全目录落栈+哈希核对，测试数不一致即漂移信号",
+    "tags": [
+      "stack-drift",
+      "skill-sources",
+      "twin-sync",
+      "docker-cp"
+    ],
+    "related_bugs": [
+      "bug-4138",
+      "bug-4139",
+      "bug-4143"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-26"
   }
 ]
