@@ -544,6 +544,15 @@ def cmd_mark(args: argparse.Namespace) -> int:
         )
         return EXIT_ERROR
     ent = doc["chapters"][ch_id]
+    if status == "REVIEWED" and ent.get("last_gate") != "PASS":
+        # bug-4146 双保险：审查凭据=门凭据。正常链路 gate FAIL 已把 VERIFIED 回落 DRAFTED，
+        # 此处拦手改 state 绕门（VERIFIED + last_gate=FAIL 的手改态）直达审查。
+        print(
+            f"[progress] {ch_id} 门凭据非 PASS（last_gate={ent.get('last_gate')}）——"
+            f"重跑 `progress.py gate --chapters {ch_id}` 至 PASS 后再进审查",
+            file=sys.stderr,
+        )
+        return EXIT_ERROR
     ent["status"] = status
     if status == "DRAFTED":
         ent["dispatches"] = ent.get("dispatches", 0) + 1
@@ -570,6 +579,8 @@ def cmd_mark(args: argparse.Namespace) -> int:
         extra = f"，级联节 ABSENT {cascaded}" if cascaded else ""
         print(f"MARKED: {ch_id} {cur} → ABSENT（phase={doc['phase']}{extra}）")
         return EXIT_OK
+    elif status == "REVIEWED":
+        pass  # 审查收口不改门凭据——confirm-chapter 凭 last_gate=PASS 判定（bug-4146）
     else:  # PENDING（ABSENT 开关回翻——章回 PENDING，节按节回翻）
         ent["last_gate"] = None
         ent["gate_detail"] = ""
@@ -637,21 +648,41 @@ def cmd_gate(args: argparse.Namespace) -> int:
     )  # EAI-CUSTOM (geo-sample-bank Phase 2 T4)
     passed: list[str] = []
     failed: list[str] = []
+
+    def _fail(ch: str, msg: str) -> None:
+        failed.append(ch)
+        print(f"CHAPTER_GATE_FAIL: {ch}\n{msg}", file=sys.stderr)
+        ent = doc["chapters"][ch]
+        if ent["status"] not in ("VERIFIED", "REVIEWED"):
+            return
+        # bug-4146 门凭据时效不变式：last_gate 只代表「最近一次真跑门」——新门 FAIL 即旧 PASS
+        # 凭据过期。VERIFIED 当场回落 DRAFTED（重写回路，默认门选章重新可见）；REVIEWED 状态不动
+        # 但确认通道被 last_gate=FAIL 封死（重审由审查回路裁决）；CONFIRMED 终态不自动翻
+        # （返工唯一出口 mark DRAFTED）。
+        ent["last_gate"] = "FAIL"
+        ent["gate_detail"] = msg.splitlines()[0][:200]
+        if ent["status"] == "VERIFIED":
+            ent["status"] = "DRAFTED"
+            print(
+                f"[progress] {ch} 门凭据失效：VERIFIED → DRAFTED（新门 FAIL，旧 PASS 过期）——重跑门至 PASS 再进审查",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"[progress] {ch} 门凭据失效：last_gate=FAIL（REVIEWED 确认通道已封死）——重跑门至 PASS 后重走审查",
+                file=sys.stderr,
+            )
+
     for ch in wanted:
         try:
             build_output.run_chapter_gate(stage, Path(doc["data_dir"]), state_dir, ch, targets)
             passed.append(ch)
         except ValueError as e:
-            failed.append(ch)
-            print(f"CHAPTER_GATE_FAIL: {ch}\n{e}", file=sys.stderr)
+            _fail(ch, str(e))
         except OSError as e:
             # coal-eia T1：冻结层缺失（formula_state.json 不存在）等文件级错误按该章门 FAIL 处理，
             # 不让 OSError 逃出批量门砸掉整批（geo 同路径会裸崩——两层模型下步骤2 先于步骤4 不再是隐含前提）。
-            failed.append(ch)
-            print(
-                f"CHAPTER_GATE_FAIL: {ch}\n文件级错误（冻结层/章稿缺失？先跑 run-stage freeze 或补齐产物）: {e}",
-                file=sys.stderr,
-            )
+            _fail(ch, f"文件级错误（冻结层/章稿缺失？先跑 run-stage freeze 或补齐产物）: {e}")
     skipped: list[str] = []
     for ch in passed:
         ent = doc["chapters"][ch]
@@ -752,8 +783,16 @@ def cmd_run_stage(args: argparse.Namespace) -> int:
             "[run-stage] manifest OK → formula_runner execute（rc=3=有 anomalies，必须发卡逐条呈现用户确认）",
             file=sys.stderr,
         )
-        freeze_cmd = ["formula_runner.py", "execute", "--stage", stage, "--data-dir", data,
-                      "--state-dir", str(state_dir)]
+        freeze_cmd = [
+            "formula_runner.py",
+            "execute",
+            "--stage",
+            stage,
+            "--data-dir",
+            data,
+            "--state-dir",
+            str(state_dir),
+        ]
         if args.chapters:
             # 目标章集切片冻结（bug-4143 方案A）：只冻目标章消费公式；缺省全量零变化
             freeze_cmd += ["--chapters", args.chapters]
@@ -868,6 +907,17 @@ def cmd_confirm_chapter(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return EXIT_ERROR
+    waived = ent.get("last_gate") != "PASS"
+    if waived and ch_id not in approved_set(doc):
+        # bug-4146：确认卡凭门凭据放行（last_gate=PASS）——凭据失效/缺失即拒绝；确要带缺陷确认，
+        # 唯一豁免 = 用户显式降档批准（approve-downgrade 落盘为凭据），禁静默确认未过门的章。
+        print(
+            f"[progress] {ch_id} 门凭据非 PASS（last_gate={ent.get('last_gate')}）且无降档批准——"
+            f"重跑 `progress.py gate --chapters {ch_id}` 至 PASS；确要带缺陷确认须用户先 "
+            f"`progress.py approve-downgrade --chapters {ch_id} --note <原因>` 再确认",
+            file=sys.stderr,
+        )
+        return EXIT_ERROR
     ent["status"] = "CONFIRMED"
     ent["highlights"] = highlights
     ent["blocked_reason"] = None
@@ -878,7 +928,8 @@ def cmd_confirm_chapter(args: argparse.Namespace) -> int:
     doc["phase"] = derive_phase_any(doc)
     save(state_dir, doc)
     print(
-        f"CONFIRMED_CHAPTER: {ch_id}（highlights {len(highlights)} 条并入 state/key_points.json；phase={doc['phase']}）"
+        f"CONFIRMED_CHAPTER: {ch_id}（highlights {len(highlights)} 条并入 state/key_points.json；phase={doc['phase']}"
+        + ("；降档豁免——门凭据非 PASS，凭 approve-downgrade 放行）" if waived else "）")
     )
     return EXIT_OK
 
@@ -926,7 +977,14 @@ def main() -> int:
     sp.set_defaults(fn=cmd_status)
     sp = sub.add_parser(
         "mark",
-        help="状态转移（DRAFTED/BLOCKED/ABSENT/PENDING；REVIEWED 章级审查步）；VERIFIED 禁手动（唯一通道=gate）、CONFIRMED 禁手动（唯一通道=confirm-chapter）。章: mark <chN> <status>；节批量: mark --sections <csv> <status>（bug-3048 批量原语）",
+        help="状态转移（DRAFTED/BLOCKED/ABSENT/PENDING；REVIEWED 章级审查步）；VERIFIED 禁手动（唯一通道=gate）、CONFIRMED 禁手动（唯一通道=confirm-chapter）；章: mark <chN> <status>；节批量: mark --sections <csv> <status>（bug-3048）",
+        epilog=(
+            "用法全样例（status 是第二个位置参数，紧跟章 id）：\n"
+            "  progress.py mark ch2 DRAFTED --state-dir state\n"
+            '  progress.py mark ch2 BLOCKED --state-dir state --detail "重派耗尽"\n'
+            "  progress.py mark --sections ch2_S01,ch2_S02 DRAFTED --state-dir state"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     sp.add_argument("chapter", nargs="?", help="章 id（与 --sections 二选一）")
     sp.add_argument("status")
@@ -938,6 +996,13 @@ def main() -> int:
     sp = sub.add_parser(
         "gate",
         help="批量单章门：一次跑完全部（缺省）或指定章的门禁，PASS 章自动转 VERIFIED 并随章回写节 VERIFIED（两层模型改造点②——VERIFIED 唯一通道）",
+        epilog=(
+            "用法全样例（rc 须重定向后取，禁过管道）：\n"
+            "  progress.py gate --state-dir state                # 全部 DRAFTED 章\n"
+            "  progress.py gate --chapters ch2 --state-dir state\n"
+            "  progress.py gate --chapters ch2 --state-dir state > /tmp/g.out 2>&1; echo rc=$?"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     sp.add_argument("--state-dir", required=True)
     sp.add_argument("--chapters", help="逗号分隔，如 ch2,ch3；缺省=全部 DRAFTED 章")
@@ -955,8 +1020,11 @@ def main() -> int:
         "run-stage", help="固定脚本序列合并一次 bash：freeze=manifest+execute；finalize=build→consistency→snapshot"
     )
     sp.add_argument("stage_name", choices=["freeze", "finalize"])
-    sp.add_argument("--chapters", default=None,
-                    help="freeze 切片（bug-4143）：逗号分隔目标章 id（如 ch2,ch6）——只冻目标章消费公式；缺省=全量")
+    sp.add_argument(
+        "--chapters",
+        default=None,
+        help="freeze 切片（bug-4143）：逗号分隔目标章 id（如 ch2,ch6）——只冻目标章消费公式；缺省=全量",
+    )
     sp.add_argument("--state-dir", required=True)
     sp.add_argument("--outputs-dir", help="finalize 必填：交付目录（报告+project_snapshot.json 落这里）")
     sp.add_argument("--task", default="环评报告终验", help="snapshot last_task 一句话摘要")

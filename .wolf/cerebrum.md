@@ -24,6 +24,8 @@
 
 - [2026-10-14] 卡片式导航的点击范围要克制：大卡片/区域不整卡可点，仅显式「直达」链接可点（用户对知识工厂工位卡的裁定）。此后卡片导航默认按此执行，整卡可点需先问。
 ## Key Learnings
+- ch2 终稿复盘（bug-4146~4151）：章门「有效字符」只计正文散文（不含表格管道内容），ch2.md raw 14254 门只计 4227——评估章稿深度看门口径不看 raw；progress.json 的 stage_path 是沙箱绝对路径 /home/gem/...，沙箱外（api-dev）重放门需在 state 副本上改 stage_path 才能跑。样例库=references/samples_bank（真实报告切片，38MB），模板库=references/paradigms（通用范式文档）——用户口径两者严格区分，章节写作的片段参照必须来自前者。
+
 - (2026-10-21) ollama 嵌入 413 的真机制：llama.cpp 对单条输入真实 SPM token 超 n_batch/物理批窗口时报 `input (N tokens) is too large to process` → HTTP 413，与请求体大小无关（140KB CJK 探针照过）。诊断入口：ollama 服务端日志 %LOCALAPPDATA%/Ollama/server.log（GIN 行 + srv send_error 行），比客户端猜测快得多。
 - (2026-10-21) ragflow_like nlp.count_tokens 公式（现状，upstream 一致）：英文单词/数字串 1 计、CJK 1 计、标点零计费。已知偏差：bge-m3 SPM 每个标点约 1 token，ASCII 表格密集文本低估 4-5 倍（4440 字符估 780/实际 4002）。凡 token 预算代码（各 parser _ensure_chunk_token_limit、hierarchical_merge 218、naive_merge）都依赖它。曾试验标点逐字计校准修 413，被裁决回退（见 User Preferences）。
 - (2026-10-21) ollama 改模型参数：`ollama show <m> --modelfile` 导出 + 追加 PARAMETER + `ollama create <同tag> -f` 原地重建（blob 复用秒完成）+ `ollama stop <m>` 卸载重载。bge-m3 现为 num_ctx 8192。
@@ -193,6 +195,7 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat
+- (2026-10-26) 取命令 rc 勿用 `cmd | head; echo $?`——$? 是 head 的 rc；先重定向文件再 echo rc（本次排查与 01:54 的 agent 各中招一次）。
 - [2026-10-23] archify 图嵌 iframe 别用 ?embed=1：隐藏工具栏/页眉/导航，操作能力全丢，用户否决。hero 管线全景用全页 viewer 模式（滚动条是它固有代价，用户接受）；容器高度由 aspect-ratio 910/528 + min-height 兜底。
 
 - (2026-10-21) 仓库内多个 .py/.md 文件是 CRLF 行尾，Edit 工具的 old_string 用 
@@ -1816,3 +1819,25 @@
 - skill-sources 栈目录不经 sync-dev：技能脚本改动须两包全目录落栈 + sha256 逐文件核对（容器内 python 哈希法）；**双包测试数不一致 = 漂移信号**（bug-4144：栈 chapter 缺 bug-4138/4139 的 4 个回归测试，文件在内容旧）。
 - 容器内 docker cp 落栈文件为 root 属主，exec 用户 rm 不掉（pytest .pytest_cache 残留，无害）。
 - Windows 宿主 uv run 无 pytest：技能包测试只能容器内跑；宿主只做 ruff + sync_chapter_skill.py --check（与守卫测试同断言）。
+
+## Key Learnings (append)
+
+- 2026-10-26 Langfuse v4 events_only：v1 trace/observation REST API 已禁用（报 not available）；查 trace 直接进 `langfuse-clickhouse-1` 容器查 `default.events_core`（列：trace_id/span_id/session_id/type/name/input/output/start_time），密钥在 pisuan-localized/.env（LANGFUSE_PUBLIC_KEY/SECRET_KEY）。
+- 2026-10-26 栈上技能三副本布局：`/app/skill-sources/shared/`（共享源）、`/app/skill-projections/<uid>/`（**运行时激活 + 沙箱活挂载到 /home/gem/skills**，供给器 pisuan-localized/docker/sandbox_provisioner/app.py 把 projections/<uid> bind 进沙箱）、`/app/package/pisuan/agents/skills/buildin/`（安装包副本，**非激活来源**，随 localized worktree 挂载，当前停留在 10-25 旧版待重建链）。技能同步后须验 projections/<uid> 这份——沙箱执行的就是它。
+- 2026-10-26 沙箱内路径：技能=/home/gem/skills/<skill>，工作区=/home/gem/user-data/workspace/<project>（对应宿主 volumes/pisuan/threads 挂载）。
+
+## Do-Not-Repeat (append)
+
+- 2026-10-26 判「agent 用了旧脚本」前必须先读 trace 里工具调用的**输出**（input 只见命令，output 才见结果）——本次 grep 输出证明沙箱脚本是新版，旧版假设错了。
+
+## Key Learnings + DNR（2026-10-26 bug-4146~4151 实施收尾追加）
+
+- 深度折算分支条件：n_proj < n_sample 才折算（ceil(base×n_proj/n_sample)）；测试数据若投影节 ≥ 样例中位，会静默走直通分支，断言折算值必失败——先对分支条件设计测试数据，再写断言。
+- 懒加载缓存的测试隔离：`_BANK_CACHE.clear()` 后函数会重读真实库文件（容器里真库存在）→「无 bank」用例须 setitem 注入 `{}` 而非清缓存。
+- 两技能 scripts 目录**不是** ruff-clean 基线（HEAD 每文件存量 E501 23~29 个）；`ruff format <目录>` 会重排几十个无关文件（实测 68 个）——只对本次改动文件跑 format/check，新增行 E501 自己修，存量不动。
+- chapter-writer 速查表的「关键退出码」列是 agent 运行时契约：改脚本退出语义（回落/豁免/凭据）必须同步改表，否则 agent 按 rc=0/1 二分理解。
+
+## Do-Not-Repeat (append)
+
+- 2026-10-26 禁对 skill scripts 整目录跑 `ruff format`/`make format`——该目录非 ruff-clean 基线，会重排几十个存量文件（本次 68 个，已逐文件 checkout 回滚）；只 format 本次触碰的文件。
+- 2026-10-26 `git checkout -- $(cat /tmp/xx)` 在 Git Bash/Windows 下 /tmp 不持久且空参 checkout 变成无参形式（打印状态不回滚）——批量回滚用显式变量列表 `git checkout -- $FILES`。

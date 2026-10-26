@@ -9750,5 +9750,137 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-10-26"
+  },
+  {
+    "id": "bug-4145",
+    "timestamp": "2026-10-26",
+    "error_message": "新会话分章实测（声明先写第2章）：agent 仍按全局 7 族全量组题收集，无「本次必需/后续章可缓」两栏，沉陷参数等 ch6/7/9 消费族被列为必填",
+    "file": "coal-eia-chapter-writer/SKILL.md (步骤1 流程序)",
+    "root_cause": "Langfuse trace 实证（session ac036794...，3+ trace）：技能激活正确（coal-eia-chapter-writer）、目标章集已记录（write_todos「先写第2章」）、沙箱脚本已是裁剪版（--chapters/scope_globals/GLOBAL_SCOPE_FALLBACK grep 全命中）；但全会话 ingest.py check 调用 0 次——agent 跳过门1，改用 ingest.py forms 自查表单字段 + data_expectations 7 族直接组问答题。裁剪裁决只存在于门1 内部，跳过门1 即无从裁剪。SKILL.md 步骤1 把「全局包收集」(item3) 排在「门1 check」(item4) 之前，给模型留下先收集后验证的解读空间；且 GENERATION 输出中 global-only/GATE1 零提及，说明门1 从未进入其计划",
+    "fix": "已实施：SKILL.md 步骤1 重排为「开题路由 → 门1 先行 → 缺项收集」（rc=0 不提问 / rc=2 缺项清单=预告卡/问答题唯一来源）+ 红线 P9「问什么由门1 裁决，禁 forms/data_expectations 自查代替门1 提问」；已落栈 skill-sources+skill-projections 四副本（sha256 与 repo 一致，标记验证通过），待新会话复测闭环",
+    "tags": [
+      "skills",
+      "chapter-writer",
+      "scoped-gates",
+      "bug-4143",
+      "prompt-compliance",
+      "langfuse",
+      "gate-bypass"
+    ],
+    "related_bugs": [
+      "bug-4143",
+      "bug-4142"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-26"
+  },
+  {
+    "id": "bug-4146",
+    "timestamp": "2026-10-26",
+    "error_message": "终稿 ch2 已 CONFIRMED 但重跑单章门 FAIL 3 项（残留词「登记口径」/文风门 3 项全挂含表密度 0/深度 4227<14599）",
+    "file": "coal-eia-chapter-writer/scripts/progress.py (mark 路径)",
+    "root_cause": "mark REVIEWED→CONFIRMED 不强制重跑单章门；门 FAIL 走 approve 降档后，重写稿从未再过任何一次门即被确认，last_gate 被清空",
+    "fix": "mark CONFIRMED 前强制重跑单章门；FAIL 须显式降档并落盘 waive 原因，禁静默 confirm〔2026-10-26 已实施：双包容器测试 194 passed，栈四副本落栈〕",
+    "tags": [
+      "chapter-writer",
+      "gate",
+      "mark",
+      "confirm",
+      "bypass"
+    ],
+    "related_bugs": [
+      "bug-4143"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-26"
+  },
+  {
+    "id": "bug-4147",
+    "timestamp": "2026-10-26",
+    "error_message": "写作全程范式上下文只有 references/paradigms 通用范式文档（模板库），0 次 samples_bank 样例切片读取、0 次 query_kb（用户指认+trace 实证）",
+    "file": "coal-eia-chapter-writer/SKILL.md 步骤3a-2/3b",
+    "root_cause": "SKILL.md 把 samples_bank 风格切片注入写成 3b 注入契约一项、模板检索写成「可选增强」，agent 执行时两项都没发生；章节段落片段没有脚本化强制来源",
+    "fix": "3a-2 升级为默认必做：每节派发前从 samples_bank/<stage>/slices/<章> 取同章真实片段包注入（脚本化产出，脱敏规则沿用）；paradigms 通用文档降级为无切片 fallback〔2026-10-26 已实施：双包容器测试 194 passed，栈四副本落栈〕",
+    "tags": [
+      "chapter-writer",
+      "samples_bank",
+      "paradigm",
+      "retrieval"
+    ],
+    "related_bugs": [
+      "bug-4145"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-26"
+  },
+  {
+    "id": "bug-4148",
+    "timestamp": "2026-10-26",
+    "error_message": "L2 深度门恒 FAIL：ch2 地板 14599（按样例 11 个三级节整章语料折算）压在只有 4 节的章投影上，终稿 4227 有效字符结构性到不了地板",
+    "file": "coal-eia-chapter-writer/references/depth_targets/planning_eia.json",
+    "root_cause": "章级地板取自全量样例章结构，未按章投影节集折算；门 FAIL 只能降档，门形同虚设",
+    "fix": "地板按投影节集折算（floor×投影节数/样例节数）或下沉到节级 depth_min，脚本推导不手调〔2026-10-26 已实施：双包容器测试 194 passed，栈四副本落栈〕",
+    "tags": [
+      "chapter-writer",
+      "depth-gate",
+      "calibration"
+    ],
+    "related_bugs": [
+      "bug-4146"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-26"
+  },
+  {
+    "id": "bug-4149",
+    "timestamp": "2026-10-26",
+    "error_message": "同一章两个深度口径：build_output 报「深度基线不在册→全章走默认」，gate 却按 14599 裁决",
+    "file": "coal-eia-chapter-writer/scripts/build_output.py",
+    "root_cause": "agent 把 stage 拷到 /tmp 改名 stage_planning_eia.json，注册表查找键=文件名 stem，planning_eia 在册而 stage_planning_eia 不在册；gate 走 progress.json 注册 stage_path，两路真源不一致",
+    "fix": "build_output/gate 统一以 progress.json 的 stage_path 为唯一真源，注册表按 stage_id 字段查而非文件名 stem；红线禁拷贝/改名 stage 契约〔2026-10-26 已实施：双包容器测试 194 passed，栈四副本落栈〕",
+    "tags": [
+      "chapter-writer",
+      "build_output",
+      "depth-targets",
+      "tmp-mutation"
+    ],
+    "related_bugs": [
+      "bug-4148"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-26"
+  },
+  {
+    "id": "bug-4150",
+    "timestamp": "2026-10-26",
+    "error_message": "run-stage freeze --chapters ch2 两次 rc=3 异常后写作照常推进，未停下处置",
+    "file": "coal-eia-chapter-writer/SKILL.md 步骤2",
+    "root_cause": "SKILL.md 未写明 freeze rc≠0 的处置纪律，agent 对非零退出码无停机反应",
+    "fix": "步骤2 补红线：freeze rc≠0 立即停，输出 stderr 报用户裁决，禁带病推进〔2026-10-26 已实施：双包容器测试 194 passed，栈四副本落栈〕",
+    "tags": [
+      "chapter-writer",
+      "freeze",
+      "rc-handling"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26"
+  },
+  {
+    "id": "bug-4151",
+    "timestamp": "2026-10-26",
+    "error_message": "CLI 摩擦：mark 位置参数语法错×2、发明 gate --gate FAIL、`gate | head` 把 rc 遮蔽成 head 的 rc（排查时同样中招一次）",
+    "file": "coal-eia-chapter-writer/scripts/progress.py",
+    "root_cause": "速查表命令样例不足/参数名不一致；shell 管道后 $? 是管道末端命令的 rc",
+    "fix": "SKILL.md 速查表命令全样例化（复制即用）；progress.py 用法错误时打印最接近的正确用法；规程写明取 rc 禁过管道〔2026-10-26 已实施：双包容器测试 194 passed，栈四副本落栈〕",
+    "tags": [
+      "cli",
+      "progress.py",
+      "exit-code",
+      "pipe"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26"
   }
 ]

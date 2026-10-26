@@ -40,6 +40,24 @@
 - **bug-4144 栈漂移**：容器内两包测试数 176/172 不一致，暴露昨天 bug-4138/4139 的 4 个回归测试没同步进栈上 chapter-writer 的 `test_build_output_bug394.py`（文件在、内容旧）——整目录重落栈 + 双包 sha256 逐文件核对（drift=0）修复。教训：skill-sources 栈目录不经 sync-dev，技能脚本改动须两包全目录落栈并哈希核对，单文件手工 cp 易漏。
 - 开题卡「结构声明」模板本身是技术口径（上一轮用户沟通规范的漏网点），writer/chapter-writer SKILL.md 模板已改业务措辞，数据预告补「数据族展示中文名、禁占位符记号」规则。
 
+## 复测回归（bug-4145，同日）
+
+- 现象：新会话实测预告卡仍 7 族全量。Langfuse trace（session `ac036794…`）实证三清白：技能激活正确（chapter-writer）、目标章集已记录（write_todos「先写第2章」）、沙箱脚本已是裁剪版（`--chapters`/`scope_globals`/`GLOBAL_SCOPE_FALLBACK` grep 全命中）。
+- 根因：全会话 `ingest.py check` 零调用——agent 跳过门1，用 `ingest.py forms` 自查表单字段 + `data_expectations` 7 族直接组题；裁剪裁决只存在于门1 内部，跳过即全量。SKILL.md 步骤1「收集」(item3) 排在「门1」(item4) 之前给了逃逸口。
+- 修复：步骤1 重排为「开题路由 → 门1 先行 → 缺项收集」（rc=0 不提问 / rc=2 缺项清单=预告卡唯一来源）+ 红线 P9「问什么由门1 裁决」。已落栈 skill-sources + skill-projections 四副本哈希核对，待新会话复测。
+- 排查副产物：栈上技能三副本布局（skill-sources / skill-projections\_<uid>＝运行时+沙箱活挂载 / package/pisuan…buildin＝安装包非激活源）；package 副本停留在 10-25（含语言规范前），待重建链统一。Langfuse v4 events_only 下 v1 API 禁用，查 trace 直查 clickhouse `default.events_core`。
+
+## ch2 全程复盘（bug-4146~4151，同日）
+
+第 2 章写完后的全链路复盘（trace 9fbac13e + 终稿 state 副本重放门）：
+
+- **bug-4146 mark 绕门（最重）**：02:06 门 FAIL（1714<14599）→ 降档放行 → 重写后 mark REVIEWED→CONFIRMED，终稿从未重跑门。state 副本重放实证：终稿 FAIL 3 项（S01 残留内部词「登记口径」；文风门 3 项全挂——数字密度 17.8/36.2、表密度 0、文表联动 1/13；深度 4227<14599）。**已 CONFIRMED ≠ 过门**。
+- **bug-4147 样例来源错位（用户指认）**：写作全程范式上下文只有 references/paradigms 通用范式文档（模板库），0 次 samples_bank 样例切片读取、0 次 query_kb——SKILL.md 把切片注入写成契约项、模板检索写成「可选增强」，执行时双双落空。修复方向：samples_bank 同章片段包注入脚本化必做，paradigms 降级 fallback。
+- **bug-4148 深度地板口径**：ch2 地板 14599 按样例整章（11 个三级节）折算，压在 4 节章投影上，结构性到不了 → 门恒 FAIL → 只能降档。地板须按投影节集折算或下沉节级。
+- **bug-4149 深度基线双口径**：/tmp stage 拷贝改名致 build_output 注册表查找不中（stage_planning_eia vs planning_eia）走默认，gate 走注册 stage_path 按 14599——同章两口径。真源统一到 progress.json 的 stage_path。
+- **bug-4150/4151 过程摩擦**：freeze rc=3 ×2 未停下处置；mark 语法错 ×2、发明 `--gate FAIL`、`| head` 遮蔽 rc。
+- 正面实证：门1 裁剪实测生效（GLOBAL_SCOPE ['mine_plan']，零提问）；状态机非法转移拒绝生效；章门 13→11 项按节归因修复闭环在工作。
+
 ## 遗留
 
 - 「本次必需 / 后续章可缓」两栏预告卡的实际卡面效果待下一轮对话实测回看。

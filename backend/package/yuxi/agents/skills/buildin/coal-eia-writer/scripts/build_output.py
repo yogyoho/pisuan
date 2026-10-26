@@ -46,6 +46,7 @@ import itertools
 import json
 import os
 import re
+import statistics
 import sys
 from pathlib import Path
 
@@ -672,10 +673,17 @@ def resolve_targets(
 ) -> tuple[dict | None, Path]:
     """深度基线装载（章级 floor_chars 形状 {"chapters":{"ch6":{"floor_chars":N,…}}}）：
     显式 --targets 优先（非技能基准高声警告并记入 delivery_manifest——geo 反绕语义保留）；
-    缺省 references/depth_targets/<stage_stem>.json；缺失 → (None, 规范路径)——门走默认地板 30000。
+    缺省 references/depth_targets/<stage_id>.json——stage 文档的 stage_id 字段优先、文件名 stem 兜底
+    （stage 被拷贝改名不再与注册表脱钩，bug-4149）；缺失 → (None, 规范路径)——门走默认地板 30000。
 
     data_dir 参数保留（progress.py 调用方签名兼容；coal 深度基线按 stage 不按矿种分流）。"""
-    canonical = DEPTH_DIR / (stage_path.stem + ".json")
+    stage_id = ""
+    try:
+        doc = json.loads(Path(stage_path).read_text(encoding="utf-8"))
+        stage_id = str(doc.get("stage_id") or "")
+    except (json.JSONDecodeError, OSError, AttributeError):
+        stage_id = ""  # stage 不可读 → stem 兜底；真实读取错误由门/装载路径再报
+    canonical = DEPTH_DIR / f"{stage_id or Path(stage_path).stem}.json"
     if args_targets:
         src = Path(args_targets)
         if src.exists() and src.resolve() != canonical.resolve():
@@ -687,7 +695,7 @@ def resolve_targets(
     if canonical.exists():
         return load_depth(canonical), canonical
     print(
-        f"[build] 深度基线不在册（{canonical}）——全章走默认字符地板 {DEFAULT_CHAPTER_FLOOR_CHARS}（一期绝对地板；calibrate 校准后入库）",
+        f"[build] 深度基线不在册（{canonical}）——全章走默认地板 {DEFAULT_CHAPTER_FLOOR_CHARS}（calibrate 校准后入库）",
         file=sys.stderr,
     )
     return None, canonical
@@ -698,14 +706,58 @@ def chapter_floor(targets: dict | None, ch_id: str) -> int:
     return int(ch.get("floor_chars") or DEFAULT_CHAPTER_FLOOR_CHARS)
 
 
-def validate_chapter_depth(ch_id: str, injected: str, targets: dict | None) -> tuple[int, int]:
-    """L2 章级地板门：章实有效字符 ≥ 章地板（floor_chars 或默认 30000）。返回 (eff, floor)。
-    地板即目标、覆盖缩放不可穿透（geo median×absolute_floor 语义在章级延续——abs floor 防把越改越薄洗成 PASS）。"""
+_BANK_CACHE: dict = {}
+
+
+def _bank_index() -> dict:
+    """samples_bank/bank_index.json 懒装载缓存；缺失/损坏 → {}（折算退化为原地板，不阻断）。"""
+    if "bank" not in _BANK_CACHE:
+        p = Path(__file__).resolve().parent.parent / "references" / "samples_bank" / "bank_index.json"
+        try:
+            _BANK_CACHE["bank"] = json.loads(p.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"[build] bank_index 不可读（{e}）——深度地板不按投影折算", file=sys.stderr)
+            _BANK_CACHE["bank"] = {}
+    return _BANK_CACHE["bank"]
+
+
+def chapter_floor_scaled(stage: dict, ch_id: str, targets: dict | None) -> tuple[int, int, str]:
+    """投影折算章地板（bug-4148）：floor × 投影节数 / 样例章节数（中位），向上取整。
+
+    样例章节数 = bank_index 该章各报告切片的标题级节计数中位（与 floor 同源语料的结构粒度，
+    全部标题级——calibrate 抽样同口径）。投影节数 ≥ 样例节数 / 无 bank 数据 / 章无节 → 原地板直通。
+    返回 (折算地板, 原地板, 折算说明)；说明空串 = 未折算。"""
+    base = chapter_floor(targets, ch_id)
+    ch = (stage.get("chapters") or {}).get(ch_id) or {}
+    n_proj = len([s for s in ch.get("sections", []) if s.get("id")])
+    entries = (_bank_index().get(str(stage.get("stage_id") or "")) or {}).get(ch_id) or []
+    if not entries or n_proj <= 0:
+        return base, base, ""
+    per_report: dict[str, set[str]] = {}
+    for e in entries:
+        per_report.setdefault(str(e.get("report_id", "")), set()).add(str(e.get("sec", "")))
+    counts = sorted(len(v) for v in per_report.values())
+    n_sample = int(statistics.median(counts))
+    if n_sample <= 0 or n_proj >= n_sample:
+        return base, base, ""
+    floor = max(1, -(-base * n_proj // n_sample))  # ceil 除法
+    return floor, base, f"（{base}×投影{n_proj}/样例中位{n_sample}节折算，bug-4148）"
+
+
+def validate_chapter_depth(
+    ch_id: str, injected: str, targets: dict | None, stage: dict | None = None
+) -> tuple[int, int]:
+    """L2 章级地板门：章实有效字符 ≥ 章地板（注册 floor_chars 经投影折算，或默认 30000）。返回 (eff, floor)。
+    地板即目标、覆盖缩放不可穿透（geo median×absolute_floor 语义在章级延续——abs floor 防把越改越薄洗成 PASS）。
+    stage 传入时按投影折算（bug-4148）；缺省 None = 未折算语义（既有调用/测试零变化）。"""
     eff = effective_chars(injected)
-    floor = chapter_floor(targets, ch_id)
+    if stage is None:
+        floor, note = chapter_floor(targets, ch_id), ""
+    else:
+        floor, _base, note = chapter_floor_scaled(stage, ch_id, targets)
     if eff < floor:
         raise ValueError(
-            f"L2 深度门 FAIL：章有效字符 {eff} < 章地板 {floor}（一期绝对地板，缺数写 [待确认] 不砍段；逐要素成段扩写）"
+            f"L2 深度门 FAIL：章有效字符 {eff} < 章地板 {floor}{note}（一期绝对地板，缺数写 [待确认] 不砍段；逐要素成段扩写）"
         )
     return eff, floor
 
@@ -1021,13 +1073,14 @@ def run_chapter_gate(stage: dict, data_dir: Path, state_dir: Path, ch_id: str, t
         except ValueError as e:
             errors.append(f"章 {ch_id}: {e}")
         try:
-            eff, floor = validate_chapter_depth(ch_id, injected, targets)
+            eff, floor = validate_chapter_depth(ch_id, injected, targets, stage=stage)
         except ValueError as e:
             thin = sorted(rows, key=lambda r: r["eff"])
             breakdown = "\n".join(f"  节 {r['id']}: eff {r['eff']}" for r in thin) or "  （无有效节行）"
             errors.append(f"章 {ch_id}: {e}\n{breakdown}")
     else:
-        eff, floor = 0, chapter_floor(targets, ch_id)
+        eff = 0
+        floor, _base, _note = chapter_floor_scaled(stage, ch_id, targets)
     if unknown_keys:
         errors.append(f"未知槽位 key（不在 formula_state.values，FAIL 阻断）: {sorted(unknown_keys)}")
     if slot_errors:
@@ -1037,9 +1090,8 @@ def run_chapter_gate(stage: dict, data_dir: Path, state_dir: Path, ch_id: str, t
             f"{ch_id} 单章门 FAIL（{len(errors)} 项，一次报齐——按节归因修复后重跑）:\n" + "\n".join(errors)
         )
     n_absent = sum(1 for s in stage_secs if s["id"] in absent_sections)
-    src_desc = (
-        f"基线 {chapter_floor(targets, ch_id)} 字符" if targets else f"默认地板 {DEFAULT_CHAPTER_FLOOR_CHARS} 字符"
-    )
+    note = chapter_floor_scaled(stage, ch_id, targets)[2]
+    src_desc = f"基线 {floor}{note} 字符" if targets else f"默认地板 {DEFAULT_CHAPTER_FLOOR_CHARS} 字符"
     print(
         f"CHAPTER_GATE_PASS: {ch_id} sections {len(rows)}/{len(stage_secs)}"
         f"（ABSENT 豁免 {n_absent}）eff {eff} ≥ 章地板 {floor}（{src_desc}）"
@@ -1061,10 +1113,13 @@ def atomic_write(path: Path, content: str) -> bool:
     return True
 
 
-def _depth_row(ch_id: str, injected: str, targets: dict | None, downgraded: bool) -> dict:
+def _depth_row(ch_id: str, injected: str, targets: dict | None, downgraded: bool, stage: dict | None = None) -> dict:
     """交付清单逐章深度行（章级地板口径，全量 build 也留痕——geo bug-3036 哲学）。"""
     eff = effective_chars(injected)
-    floor = chapter_floor(targets, ch_id)
+    if stage is None:
+        floor = chapter_floor(targets, ch_id)
+    else:
+        floor = chapter_floor_scaled(stage, ch_id, targets)[0]
     return {
         "chapter": ch_id,
         "effective_chars": eff,
@@ -1110,7 +1165,7 @@ def assemble(
             continue
         try:
             validate_chapter(ch_id, raw)
-            eff, _floor = validate_chapter_depth(ch_id, injected, targets)
+            eff, _floor = validate_chapter_depth(ch_id, injected, targets, stage=stage)
         except ValueError as e:
             thin = sorted(rows, key=lambda r: r["eff"])
             breakdown = "\n".join(f"  节 {r['id']}: eff {r['eff']}" for r in thin)
@@ -1128,7 +1183,7 @@ def assemble(
             "sections": len(rows),
             "effective_chars": eff,
         }
-        depth_rows.append(_depth_row(ch_id, injected, targets, bool(skip_l2 and ch_id in skip_l2)))
+        depth_rows.append(_depth_row(ch_id, injected, targets, bool(skip_l2 and ch_id in skip_l2), stage=stage))
     errors.extend(validate_toc_chapters(stage, actual, absent_ch))
     parts.append(render_compliance_appendix(consistency, state, state_path))
     if unknown_keys:

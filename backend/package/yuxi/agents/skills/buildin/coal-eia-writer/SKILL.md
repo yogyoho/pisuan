@@ -267,7 +267,7 @@ run 级预算硬顶（按 run 计）：recursion_limit 1000 步、LoopDetection 
 | `progress.py status --state-dir T` | 全章状态+节子表计数+派发额度余量 | 0 |
 | `progress.py mark chN DRAFTED\|BLOCKED\|ABSENT --state-dir T [--gate FAIL] [--detail …]` | 章记账（VERIFIED 手动 mark 已禁用——唯一通道=gate；bug-3049） | 0 / 1 非法转移 |
 | `progress.py mark --sections ch6_S01,ch6_S02 DRAFTED --state-dir T` | **节集批量记账**（原子——任一未知/非法全批拒；bug-3048） | 0 / 1 全批拒 |
-| `progress.py gate --state-dir T [--chapters ch2,ch3]` | **批量单章门（章+节 VERIFIED 唯一通道）**：PASS 章及其全部节自动转 VERIFIED | 0=GATE_BATCH_DONE / 1 有 FAIL（stderr 节级归因） |
+| `progress.py gate --state-dir T [--chapters ch2,ch3]` | **批量单章门（章+节 VERIFIED 唯一通道）**：PASS 章及其全部节自动转 VERIFIED | 0=GATE_BATCH_DONE / 1 有 FAIL（stderr 节级归因；VERIFIED 章新 FAIL 自动回落 DRAFTED） |
 | `progress.py run-stage freeze --state-dir T` | **冻结二连**：chapter_planner manifest → formula_runner execute | 0 / 3 anomalies（同门 2） |
 | `progress.py run-stage finalize --state-dir T --outputs-dir O --task "…"` | **终验三连**：build → consistency → snapshot（已批准降档自动 --allow-partial；交付名从 data/ 直拼） | 0 交付 / 1/2 即停；consistency rc=3 不改总码但有 WARN 行——逐条汇报后再交付 |
 | `progress.py confirm-key-points --state-dir T` | 要点包已经用户单表单确认（解锁投影章） | 0 |
