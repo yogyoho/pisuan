@@ -343,8 +343,36 @@ def next_action_chapter(doc: dict, state_dir: Path) -> str:
     if blocked:
         lines.append(f"挂起: BLOCKED {', '.join(blocked)}（不阻当前章，收口后协商）")
     if phase == "COLLECTING":
+        plan_p = state_dir / f"plan_{current}.json"
+        choice_p = state_dir / f"fragment_choice_{current}.json"
+        if not plan_p.exists():
+            # 交互卡点·卡A：计划卡是管线第一步（用户确认前禁收资料/派发，红线 P13）。
+            lines += [
+                "动作: 先发本章编写计划卡给用户确认（一屏摘要: 本章定位/编写要点 3~5 条/需准备的数据/篇幅规模三选（详实版|精简版|自定义字数）/过程预告；业务语体，无命令路径与内部术语）",
+                f'记账: {_self_cmd("plan-confirm", current, "--summary-file", "<卡面md>", "--notes", '"<用户补充意见，无则省略>"', "--state-dir", sd)}'
+                f"（篇幅: 缺省详实版；精简版 --depth compact；自定义 --depth custom --target N）",
+                "修订: 用户补充意见合入后重发修订版卡再确认（plan-confirm 幂等覆盖）——未确认前禁进资料汇集",
+            ]
+            return "\n".join(lines)
+        if not choice_p.exists():
+            lines += [
+                "动作: ① 本章资料汇集（首章门1 全局包 `ingest.py check --global-only`，后续章冻结层已在）→ ② 模板推荐（按范式角色查 references/paradigms/roles/<stage>.json + 模板库，呈用户可跳过）→ ③ batch_task 分波派发子代理直写节稿（派发契约同 full：stage sections 要素链+范文索引+节级深度目标）",
+                "派发前置（② 后 ③ 前必做）: sample_fragments.py --stage <stage> --chapter "
+                + current
+                + " --candidates 3 --out state/sample_candidates_"
+                + current
+                + ".json 列 3 份同类范例候选，呈用户挑选（编号选定或『不用范例』，业务语体呈现）→ "
+                + _self_cmd("fragment-choice", current, "--report-id", "<选定id>|--none", "--state-dir", sd)
+                + "；无 choice 禁派发（红线 P13）；选定后 sample_fragments.py --report-id <id> 取包注入派发契约",
+            ]
+        else:
+            choice = json.loads(choice_p.read_text(encoding="utf-8"))
+            rid = choice.get("report_id")
+            lines += [
+                "动作: ① 本章资料汇集（首章门1 全局包 `ingest.py check --global-only`，后续章冻结层已在）→ ② 模板推荐（按范式角色查 references/paradigms/roles/<stage>.json + 模板库，呈用户可跳过）→ ③ batch_task 分波派发子代理直写节稿（派发契约同 full：stage sections 要素链+范文索引+节级深度目标）",
+                f"范例: 已选定 {'不用范例（派发契约如实注明用户选择）' if rid is None else rid}——③ 派发契约注入 sample_fragments 包与计划卡（state/plan_{current}.json 的要点与用户补充意见，写作须回扣）",
+            ]
         lines += [
-            "动作: ① 本章资料汇集（首章门1 全局包 `ingest.py check --global-only`，后续章冻结层已在）→ ② 模板推荐（按范式角色查 references/paradigms/roles/<stage>.json + 模板库，呈用户可跳过）→ ③ batch_task 分波派发子代理直写节稿（派发契约同 full：stage sections 要素链+范文索引+节级深度目标）",
             f"记账: 节批量 mark --sections <节id csv> DRAFTED --state-dir {sd}（批量原语）→ 章稿齐后 progress.py mark {current} DRAFTED --state-dir {sd}",
         ]
     elif phase == "GATE":
@@ -875,6 +903,71 @@ def cmd_confirm(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_plan_confirm(args: argparse.Namespace) -> int:
+    """分章计划卡确认落盘（交互卡点·卡A）：state/plan_<ch>.json——卡面+用户补充意见+篇幅规模选择。
+    写作前置确认凭据（红线 P13：无 plan 不开工）；幂等覆盖（补充意见修订回环=重发卡再确认）。
+    depth 选择是 build_output 深度门的模式开关：full=详实版（推荐字数启用）/compact=精简版（不启用）/
+    custom=用户指定字数。分章模式限定。"""
+    state_dir = Path(args.state_dir)
+    doc = load(state_dir)
+    if doc.get("mode") != "chapter":
+        print("[progress] plan-confirm 仅分章模式（init --mode chapter）——full 批量管线无计划卡", file=sys.stderr)
+        return EXIT_ERROR
+    ch_id = args.chapter
+    if ch_id not in doc["chapters"]:
+        print(f"[progress] 未知章节 {ch_id}（在册: {chapter_order(doc['chapters'])}）", file=sys.stderr)
+        return EXIT_ERROR
+    if args.depth == "custom" and not (args.target and args.target > 0):
+        print("[progress] --depth custom 须带正整数 --target <字数>", file=sys.stderr)
+        return EXIT_ERROR
+    summary = Path(args.summary_file).read_text(encoding="utf-8").strip()
+    plan = {
+        "chapter": ch_id,
+        "summary": summary,
+        "notes": (args.notes or "").strip(),
+        "depth": {"mode": args.depth, "target": args.target},
+        "confirmed_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    p = state_dir / f"plan_{ch_id}.json"
+    p.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    depth_desc = {
+        "full": "详实版（篇幅目标启用）",
+        "compact": "精简版（篇幅规则不启用，门如实注明）",
+        "custom": f"自定义 {args.target} 字",
+    }[args.depth]
+    notes_desc = "；用户补充意见已记录" if plan["notes"] else "；无补充意见"
+    print(f"PLAN_CONFIRMED: {ch_id}（篇幅: {depth_desc}{notes_desc}）→ 进资料汇集（门1 全局包）")
+    return EXIT_OK
+
+
+def cmd_fragment_choice(args: argparse.Namespace) -> int:
+    """范例挑选落盘（交互卡点·卡B）：state/fragment_choice_<ch>.json——用户从 sample_fragments.py
+    candidates 候选中选定的 report_id，或 --none 显式不用（红线 P10 禁的是 agent 自主跳过；
+    用户显式豁免尊重，派发契约如实注明）。写作派发前置凭据（红线 P13：无 choice 不派发）；幂等覆盖。"""
+    state_dir = Path(args.state_dir)
+    doc = load(state_dir)
+    if doc.get("mode") != "chapter":
+        print("[progress] fragment-choice 仅分章模式（init --mode chapter）", file=sys.stderr)
+        return EXIT_ERROR
+    ch_id = args.chapter
+    if ch_id not in doc["chapters"]:
+        print(f"[progress] 未知章节 {ch_id}（在册: {chapter_order(doc['chapters'])}）", file=sys.stderr)
+        return EXIT_ERROR
+    if bool(args.report_id) == args.none:
+        print("[progress] --report-id 与 --none 恰好传一个（选定范例或显式不用）", file=sys.stderr)
+        return EXIT_ERROR
+    choice = {
+        "chapter": ch_id,
+        "report_id": None if args.none else args.report_id,
+        "chosen_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    p = state_dir / f"fragment_choice_{ch_id}.json"
+    p.write_text(json.dumps(choice, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    choice_desc = "不参照范例（写法与篇幅把握打折，质量检查照常）" if args.none else f"范例报告 {args.report_id}"
+    print(f"FRAGMENT_CHOICE: {ch_id} → {choice_desc} → 取包后进写作派发")
+    return EXIT_OK
+
+
 def cmd_confirm_chapter(args: argparse.Namespace) -> int:
     """分章模式确认卡（spec §3）：REVIEWED→CONFIRMED 唯一通道；本章 highlights 并入
     state/key_points.json（增量幂等——同章同要点重放 no-op 字节一致；要点变更须先
@@ -1041,6 +1134,45 @@ def main() -> int:
     sp.add_argument("--highlights", default="", help="本章要点，| 分隔——并入 state/key_points.json 供 ch13 结论章引用")
     sp.add_argument("--state-dir", required=True)
     sp.set_defaults(fn=cmd_confirm_chapter)
+    sp = sub.add_parser(
+        "plan-confirm",
+        help="分章计划卡确认落盘：state/plan_<ch>.json（卡面+用户补充意见+篇幅规模选择）——写作前置确认凭据（无 plan 不开工），幂等覆盖（修订版重确认）",
+        epilog=(
+            "用法全样例：\n"
+            "  progress.py plan-confirm ch2 --summary-file state/plan_card_ch2.md --state-dir state\n"
+            '  progress.py plan-confirm ch2 --summary-file state/plan_card_ch2.md --notes "补充: 需含村庄分布" --state-dir state\n'
+            "  progress.py plan-confirm ch2 --summary-file state/plan_card_ch2.md --depth compact --state-dir state\n"
+            "  progress.py plan-confirm ch2 --summary-file state/plan_card_ch2.md --depth custom --target 8000 --state-dir state"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    sp.add_argument("chapter", help="章 id，如 ch2")
+    sp.add_argument("--summary-file", required=True, help="计划卡卡面 md 文件（内容原样存入 plan 工件）")
+    sp.add_argument("--notes", default="", help="用户补充意见原文（修订回环取最新一版）")
+    sp.add_argument(
+        "--depth",
+        choices=["full", "compact", "custom"],
+        default="full",
+        help="篇幅规模: full=详实版（推荐字数启用，缺省）/compact=精简版（篇幅规则不启用）/custom=用户指定字数",
+    )
+    sp.add_argument("--target", type=int, help="custom 模式目标字数（正整数，--depth custom 必带）")
+    sp.add_argument("--state-dir", required=True)
+    sp.set_defaults(fn=cmd_plan_confirm)
+    sp = sub.add_parser(
+        "fragment-choice",
+        help="范例挑选落盘：state/fragment_choice_<ch>.json——用户从 sample_fragments.py candidates 候选选定的 report_id（或 --none 显式不用）——派发前置凭据（无 choice 不派发）",
+        epilog=(
+            "用法全样例：\n"
+            "  progress.py fragment-choice ch2 --report-id 2201 --state-dir state\n"
+            "  progress.py fragment-choice ch2 --none --state-dir state"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    sp.add_argument("chapter", help="章 id，如 ch2")
+    sp.add_argument("--report-id", help="候选卡中用户选定的报告 id（与 --none 二选一）")
+    sp.add_argument("--none", action="store_true", help="用户选择不参照范例（派发契约如实注明，质量检查照常）")
+    sp.add_argument("--state-dir", required=True)
+    sp.set_defaults(fn=cmd_fragment_choice)
     sp = sub.add_parser("approve-downgrade", help="记录用户批准的降档（--allow-partial 放行凭据）")
     sp.add_argument("--state-dir", required=True)
     sp.add_argument("--chapters", required=True, help="逗号分隔，如 ch3,ch8")

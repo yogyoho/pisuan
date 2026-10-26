@@ -53,7 +53,23 @@ def _main(args: Namespace) -> int:
     except (FileNotFoundError, json.JSONDecodeError) as e:
         print(f"SAMPLE_FRAGMENTS_FAIL: {e}", file=sys.stderr)
         return 1
-    pack, rid, clipped = sf.build_pack(bank, args.stage, args.chapter, args.max_chars, Path(args.references_dir))
+    if getattr(args, "candidates", None):
+        cands = sf.pick_candidates(bank, args.stage, args.chapter, args.candidates, Path(args.references_dir))
+        if not cands:
+            print(f"SAMPLE_FRAGMENTS_EMPTY: {args.stage}/{args.chapter} 无样例切片", file=sys.stderr)
+            return 2
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(cands, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print(f"SAMPLE_CANDIDATES_OK: {len(cands)} 份候选 → {out}")
+        return 0
+    rid_arg = getattr(args, "report_id", None)
+    if rid_arg:
+        valid = {c["report_id"] for c in sf.pick_candidates(bank, args.stage, args.chapter, 10**9, Path(args.references_dir))}
+        if rid_arg not in valid:
+            print(f"SAMPLE_FRAGMENTS_FAIL: 候选中无报告 {rid_arg}", file=sys.stderr)
+            return 1
+    pack, rid, clipped = sf.build_pack(bank, args.stage, args.chapter, args.max_chars, Path(args.references_dir), rid_arg)
     if not pack:
         print(f"SAMPLE_FRAGMENTS_EMPTY: {args.stage}/{args.chapter} 无样例切片", file=sys.stderr)
         return 2
@@ -64,9 +80,20 @@ def _main(args: Namespace) -> int:
     return 0
 
 
-def _run(tmp: Path, refs: Path, tag: str = "x", max_chars: int = 12000, chapter: str = "ch2") -> tuple[int, Path, str]:
-    out = tmp / f"pack_{tag}.md"
-    args = Namespace(references_dir=str(refs), stage="planning_eia", chapter=chapter, out=str(out), max_chars=max_chars)
+def _run(
+    tmp: Path,
+    refs: Path,
+    tag: str = "x",
+    max_chars: int = 12000,
+    chapter: str = "ch2",
+    candidates: int | None = None,
+    report_id: str | None = None,
+) -> tuple[int, Path, str]:
+    out = tmp / (f"cands_{tag}.json" if candidates else f"pack_{tag}.md")
+    args = Namespace(
+        references_dir=str(refs), stage="planning_eia", chapter=chapter,
+        out=str(out), max_chars=max_chars, candidates=candidates, report_id=report_id,
+    )
     with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()) as err:
         code = _main(args)
     return code, out, err.getvalue()
@@ -115,3 +142,36 @@ def test_deterministic_bytes(tmp_path):
 def test_missing_bank_rc1(tmp_path):
     rc, _, err = _run(tmp_path, tmp_path / "nope", tag="nobank")
     assert rc == 1 and "bank_index 缺失" in err
+
+
+def test_candidates_sorted_deterministic(tmp_path):
+    """范例挑选卡数据面：条目数降序主导在前；sections/chars 如实；字节确定。"""
+    refs = _refs(tmp_path)
+    rc, out, _ = _run(tmp_path, refs, tag="c1", candidates=3)
+    assert rc == 0
+    cands = json.loads(out.read_text(encoding="utf-8"))
+    assert [c["report_id"] for c in cands] == ["A", "B"]  # 条目数 4>2 降序
+    assert cands[0]["sections"] == 4 and cands[0]["chars"] == len(LONG_A.strip())
+    rc2, out2, _ = _run(tmp_path, refs, tag="c2", candidates=3)
+    assert out.read_bytes() == out2.read_bytes()
+
+
+def test_candidates_top_n_truncates(tmp_path):
+    refs = _refs(tmp_path)
+    rc, out, _ = _run(tmp_path, refs, tag="top1", candidates=1)
+    cands = json.loads(out.read_text(encoding="utf-8"))
+    assert rc == 0 and len(cands) == 1 and cands[0]["report_id"] == "A"
+
+
+def test_candidates_empty_rc2(tmp_path):
+    rc, out, err = _run(tmp_path, _refs(tmp_path), tag="ce", candidates=3, chapter="ch99")
+    assert rc == 2 and "无样例切片" in err and not out.exists()
+
+
+def test_report_id_pick_and_unknown_rc1(tmp_path):
+    """用户选定取件：--report-id B 取 B 切片；候选外 id rc=1。"""
+    refs = _refs(tmp_path)
+    rc, out, _ = _run(tmp_path, refs, tag="pickB", report_id="B")
+    assert rc == 0 and "report_id】B" in out.read_text(encoding="utf-8")
+    rc2, _, err = _run(tmp_path, refs, tag="pickZ", report_id="ZZZ")
+    assert rc2 == 1 and "候选中无报告 ZZZ" in err

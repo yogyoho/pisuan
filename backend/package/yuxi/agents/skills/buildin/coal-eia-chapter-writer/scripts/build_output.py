@@ -744,17 +744,42 @@ def chapter_floor_scaled(stage: dict, ch_id: str, targets: dict | None) -> tuple
     return floor, base, f"（{base}×投影{n_proj}/样例中位{n_sample}节折算，bug-4148）"
 
 
+def plan_depth_mode(state_dir: Path, ch_id: str) -> dict | None:
+    """计划卡篇幅选择装载（state/plan_<ch>.json 的 depth 键，progress.py plan-confirm 唯一写者）。
+    None = 无 plan 工件（存量工程/writer 全书模式）→ 既有强制语义，零回归。
+    mode 非法 = 手改特征，直接报错（不静默兜底）。"""
+    p = Path(state_dir) / f"plan_{ch_id}.json"
+    if not p.exists():
+        return None
+    plan = json.loads(p.read_text(encoding="utf-8"))
+    depth = plan.get("depth") or {}
+    mode = depth.get("mode")
+    if mode not in ("full", "compact", "custom"):
+        raise ValueError(
+            f"plan_{ch_id}.json depth.mode 非法: {mode!r}（合法 full/compact/custom——progress.py plan-confirm 是唯一写者）"
+        )
+    return {"mode": mode, "target": depth.get("target")}
+
+
 def validate_chapter_depth(
-    ch_id: str, injected: str, targets: dict | None, stage: dict | None = None
+    ch_id: str, injected: str, targets: dict | None, stage: dict | None = None, depth_mode: dict | None = None
 ) -> tuple[int, int]:
     """L2 章级地板门：章实有效字符 ≥ 章地板（注册 floor_chars 经投影折算，或默认 30000）。返回 (eff, floor)。
     地板即目标、覆盖缩放不可穿透（geo median×absolute_floor 语义在章级延续——abs floor 防把越改越薄洗成 PASS）。
-    stage 传入时按投影折算（bug-4148）；缺省 None = 未折算语义（既有调用/测试零变化）。"""
+    stage 传入时按投影折算（bug-4148）；缺省 None = 未折算语义（既有调用/测试零变化）。
+    depth_mode（计划卡篇幅选择，交互卡点）：compact → 篇幅规则不启用（返回 (eff,0) 不拦）；
+    custom → 用户指定字数为目标；full/None → 注册地板语义。"""
     eff = effective_chars(injected)
+    if depth_mode and depth_mode.get("mode") == "compact":
+        return eff, 0
     if stage is None:
         floor, note = chapter_floor(targets, ch_id), ""
     else:
         floor, _base, note = chapter_floor_scaled(stage, ch_id, targets)
+    if depth_mode and depth_mode.get("mode") == "custom":
+        target = int(depth_mode.get("target") or 0)
+        if target > 0:
+            floor, note = target, "（用户指定篇幅目标）"
     if eff < floor:
         raise ValueError(
             f"L2 深度门 FAIL：章有效字符 {eff} < 章地板 {floor}{note}（一期绝对地板，缺数写 [待确认] 不砍段；逐要素成段扩写）"
@@ -1053,6 +1078,7 @@ def run_chapter_gate(stage: dict, data_dir: Path, state_dir: Path, ch_id: str, t
         print(f"CHAPTER_GATE_SKIP: {ch_id}（ABSENT——stage 条件开关驱动，门/组装/目录覆盖同语义豁免）")
         return
     state, _consistency = load_state_and_check(state_dir)
+    dm = plan_depth_mode(state_dir, ch_id)
     unknown_keys: set[str] = set()
     slot_errors: set[str] = set()
     ch_no = ch_id[2:] if ch_id[2:].isdigit() else ""
@@ -1073,7 +1099,7 @@ def run_chapter_gate(stage: dict, data_dir: Path, state_dir: Path, ch_id: str, t
         except ValueError as e:
             errors.append(f"章 {ch_id}: {e}")
         try:
-            eff, floor = validate_chapter_depth(ch_id, injected, targets, stage=stage)
+            eff, floor = validate_chapter_depth(ch_id, injected, targets, stage=stage, depth_mode=dm)
         except ValueError as e:
             thin = sorted(rows, key=lambda r: r["eff"])
             breakdown = "\n".join(f"  节 {r['id']}: eff {r['eff']}" for r in thin) or "  （无有效节行）"
@@ -1090,8 +1116,11 @@ def run_chapter_gate(stage: dict, data_dir: Path, state_dir: Path, ch_id: str, t
             f"{ch_id} 单章门 FAIL（{len(errors)} 项，一次报齐——按节归因修复后重跑）:\n" + "\n".join(errors)
         )
     n_absent = sum(1 for s in stage_secs if s["id"] in absent_sections)
-    note = chapter_floor_scaled(stage, ch_id, targets)[2]
-    src_desc = f"基线 {floor}{note} 字符" if targets else f"默认地板 {DEFAULT_CHAPTER_FLOOR_CHARS} 字符"
+    if dm and dm["mode"] == "compact":
+        src_desc = "用户选择精简篇幅（篇幅规则未启用）"
+    else:
+        note = chapter_floor_scaled(stage, ch_id, targets)[2]
+        src_desc = f"基线 {floor}{note} 字符" if targets else f"默认地板 {DEFAULT_CHAPTER_FLOOR_CHARS} 字符"
     print(
         f"CHAPTER_GATE_PASS: {ch_id} sections {len(rows)}/{len(stage_secs)}"
         f"（ABSENT 豁免 {n_absent}）eff {eff} ≥ 章地板 {floor}（{src_desc}）"
@@ -1165,7 +1194,9 @@ def assemble(
             continue
         try:
             validate_chapter(ch_id, raw)
-            eff, _floor = validate_chapter_depth(ch_id, injected, targets, stage=stage)
+            eff, _floor = validate_chapter_depth(
+                ch_id, injected, targets, stage=stage, depth_mode=plan_depth_mode(state_dir, ch_id)
+            )
         except ValueError as e:
             thin = sorted(rows, key=lambda r: r["eff"])
             breakdown = "\n".join(f"  节 {r['id']}: eff {r['eff']}" for r in thin)

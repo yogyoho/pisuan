@@ -75,12 +75,23 @@ def _doc(sd: Path) -> dict:
     return json.loads((sd / "progress.json").read_text(encoding="utf-8"))
 
 
-# ── 全链：PENDING→DRAFTED→(gate)→VERIFIED→REVIEWED→CONFIRMED ──
+def _plan_card(sd: Path, ch: str = "ch2") -> int:
+    card = sd.parent / f"card_{ch}.md"
+    card.write_text(f"# 计划卡 {ch}", encoding="utf-8")
+    return progress.cmd_plan_confirm(Namespace(chapter=ch, summary_file=str(card), notes="",
+                                               depth="full", target=None, state_dir=str(sd)))
+
+
+# ── 全链：计划卡→PENDING→DRAFTED→(gate)→VERIFIED→REVIEWED→CONFIRMED ──
 
 def test_full_chain_to_confirmed(tmp_path, stub_gate, capsys):
     sd = _init(tmp_path)
     out = _next(sd)
-    assert "COLLECTING" in out and "ch2" in out and "模板推荐" in out  # 首站：汇集+模板推荐+派发
+    assert "计划卡" in out and "plan-confirm" in out  # 首站：计划卡先行（交互卡点，红线 P13）
+    assert "batch_task" not in out  # 未确认计划前禁派发
+    assert _plan_card(sd) == progress.EXIT_OK
+    out = _next(sd)
+    assert "COLLECTING" in out and "ch2" in out and "模板推荐" in out  # 计划确认后：汇集+模板推荐+派发
     assert "ch3" not in out.split("ch2_S01")[0] or "ch3" not in out  # 单章聚焦，不并派后章
 
     assert _mark(sd, "ch2", "DRAFTED") == progress.EXIT_OK
