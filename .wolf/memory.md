@@ -7808,3 +7808,118 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 12:08 | Edited docs/develop-guides/changelog.md | modified fix() | ~280 |
 | 12:09 | bug-4146~4151 六连修实施收尾：门凭据时效/样例片段包/深度折算+真源统一/rc 纪律；双包 194 passed×2；SKILL.md 速查表补齐；栈四副本落栈；ruff format 误伤 68 文件已回滚 | progress.py/build_output.py/sample_fragments.py/SKILL.md×2包 | 全绿 | ~90k |
 | 12:10 | Session end: 12 writes across 7 files (test_depth_floor_projection.py, SKILL.md, sample_fragments.py, test_gate_credential_link.py, progress.py) | 1 reads | ~4254 tok |
+| 12:23 | 提交 bug-4146~4151 六连修 4fa7bc0ff（19 文件 +1529/-81，双包 194 passed） |
+| 12:23 | Session end: 12 writes across 7 files (test_depth_floor_projection.py, SKILL.md, sample_fragments.py, test_gate_credential_link.py, progress.py) | 1 reads | ~4254 tok |
+| 12:28 | Session end: 12 writes across 7 files (test_depth_floor_projection.py, SKILL.md, sample_fragments.py, test_gate_credential_link.py, progress.py) | 1 reads | ~4254 tok |
+| 12:36 | Session end: 12 writes across 7 files (test_depth_floor_projection.py, SKILL.md, sample_fragments.py, test_gate_credential_link.py, progress.py) | 1 reads | ~4254 tok |
+| 12:39 | Session end: 12 writes across 7 files (test_depth_floor_projection.py, SKILL.md, sample_fragments.py, test_gate_credential_link.py, progress.py) | 1 reads | ~4254 tok |
+| 12:43 | Session end: 12 writes across 7 files (test_depth_floor_projection.py, SKILL.md, sample_fragments.py, test_gate_credential_link.py, progress.py) | 1 reads | ~4254 tok |
+| 12:48 | Session end: 12 writes across 7 files (test_depth_floor_projection.py, SKILL.md, sample_fragments.py, test_gate_credential_link.py, progress.py) | 1 reads | ~4254 tok |
+| 22:07 | Created docs/vibe/2026-10-26-chapter-writing-interaction-cards.md | — | ~955 |
+| 22:07 | 章节交互卡点设计定案落 docs/vibe：卡A计划卡+卡B范例挑选+篇幅选择化（用户裁定 B/A/不强制）；待实施 |
+| 22:07 | Session end: 13 writes across 8 files (test_depth_floor_projection.py, SKILL.md, sample_fragments.py, test_gate_credential_link.py, progress.py) | 1 reads | ~5277 tok |
+| 22:13 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | modified pick_report_file() | ~442 |
+| 22:13 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | modified pick_candidates() | ~252 |
+| 22:13 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | modified main() | ~581 |
+| 22:14 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | modified build_pack() | ~78 |
+| 22:14 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | 3→5 lines | ~120 |
+| 22:14 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | modified cmd_plan_confirm() | ~859 |
+| 22:14 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | inline fix | ~18 |
+| 22:15 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | modified exists() | ~621 |
+| 22:15 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | expanded (+39 lines) | ~625 |
+| 22:15 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | modified plan_depth_mode() | ~517 |
+| 22:16 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | set() → plan_depth_mode() | ~29 |
+| 22:16 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | 2→3 lines | ~39 |
+| 22:16 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | 2→2 lines | ~33 |
+| 22:16 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | 3→6 lines | ~92 |
+| 22:16 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | 3→5 lines | ~62 |
+| 22:18 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | modified _main() | ~642 |
+| 22:18 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | modified test_missing_bank_rc1() | ~437 |
+| 22:19 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_interaction_cards.py | — | ~1823 |
+| 22:19 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_interaction_cards.py | modified _plan() | ~108 |
+| 22:19 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_interaction_cards.py | modified test_plan_confirm_rejects_full_mode_and_unknown_ch() | ~79 |
+| 22:20 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_interaction_cards.py | 2→2 lines | ~33 |
+| 22:21 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_interaction_cards.py | modified _init() | ~122 |
+| 22:21 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_interaction_cards.py | modified _choice() | ~63 |
+| 22:24 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_chapter_state_machine.py | modified _doc() | ~276 |
+
+## Session: 2026-10-26 22:27
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:33 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~18 |
+| 22:33 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 1→2 lines | ~102 |
+| 22:33 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~10 |
+| 22:34 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 1→2 lines | ~179 |
+| 22:34 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 4 → 5 | ~8 |
+| 22:34 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | removed 2 lines | ~4 |
+| 22:34 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 9→4 lines | ~51 |
+| 22:34 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~51 |
+| 22:34 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 1→4 lines | ~227 |
+| 22:34 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~59 |
+| 22:34 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~91 |
+| 22:34 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~33 |
+| 22:34 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 1→2 lines | ~29 |
+| 22:34 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 1→3 lines | ~150 |
+| 22:34 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 1→2 lines | ~113 |
+| 22:35 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | "sample_fragments.py" → "fragment-choice" | ~47 |
+| 22:35 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 8→10 lines | ~134 |
+| 22:40 | Edited docs/vibe/2026-10-26-chapter-writing-interaction-cards.md | inline fix | ~16 |
+| 22:40 | Edited docs/vibe/2026-10-26-chapter-writing-interaction-cards.md | 6→6 lines | ~93 |
+| 22:41 | Edited docs/develop-guides/changelog.md | modified feat() | ~265 |
+| 22:47 | 批次2+3 收尾：SKILL.md 交互卡点规程（卡A/卡B/P13/篇幅分支/术语行/速查表）+ 顺修重复块(bug-4152) + ruff 假阴性修正(bug-4153) + changelog/设计文档/checklist | SKILL.md, changelog.md, 设计文档, buglog, cerebrum | 双包 207 passed，栈三副本 md5 一致 | ~55k |
+| 22:42 | Session end: 20 writes across 3 files (SKILL.md, 2026-10-26-chapter-writing-interaction-cards.md, changelog.md) | 0 reads | ~1800 tok |
+| 22:58 | 交互卡点批提交 52d479fc9（15 文件 +1025/−63，含 -f 设计文档）| scripts×2包+SKILL.md+changelog+设计文档 | 分支领先 origin 7 提交，推送仍搁置 | ~1k |
+| 22:51 | Session end: 20 writes across 3 files (SKILL.md, 2026-10-26-chapter-writing-interaction-cards.md, changelog.md) | 0 reads | ~1800 tok |
+
+## Session: 2026-10-26 23:18
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:36 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | inline fix | ~35 |
+| 23:37 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | expanded (+8 lines) | ~211 |
+| 23:37 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | 14→14 lines | ~173 |
+| 23:37 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | modified _main() | ~220 |
+| 23:37 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | 10→10 lines | ~160 |
+| 23:37 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | modified _run() | ~142 |
+| 23:38 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | modified test_report_id_pick_and_unknown_rc1() | ~328 |
+| 23:38 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | "sample_fragments.py --sta" → "sample_fragments.py --sta" | ~93 |
+| 23:38 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | "sample_fragments.py --sta" → "sample_fragments.py --sta" | ~86 |
+| 23:39 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~83 |
+| 23:39 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~70 |
+| 23:39 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | 8→8 lines | ~87 |
+| 23:39 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | inline fix | ~31 |
+| 23:39 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | 8→8 lines | ~88 |
+| 23:40 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | modified test_stage_path_normalized_to_id() | ~128 |
+| 23:46 | live-test: 门1表单3问修口径后过、门2异常接受、卡B遇bug-4154（stage路径口径→误判库空）；修sample_fragments双收+rc1分立，双包209 passed落栈；bug-4154/4155入账 | sample_fragments.py, test_sample_fragments.py, chapter-writer SKILL.md | done |
+
+## Session: 2026-10-26 00:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:52 | 验收6完成：同回合+整页刷新双恢复，ch2卡零重发、ch1计划卡自然衔接；bug-4156(UI预览缓存滞后)入账；终版验收报告已交付 | .wolf/buglog.json | OK | ~4k |
+| 18:48 | Created docs/vibe/2026-10-27-chapter-writer-user-test-plan.md | — | ~1094 |
+| 18:48 | 六点需求查证回复：合规校验技能盘点(reviewer/compliance-checker)、预算语义澄清(返工轮次非token)、个人空间目录梳理、子智能体规划(遗留三写手待裁决)、用户测试方案成文 | docs/vibe/2026-10-27-chapter-writer-user-test-plan.md, .wolf/anatomy.md | OK | ~12k |
+| 18:49 | Session end: 1 writes across 1 files (2026-10-27-chapter-writer-user-test-plan.md) | 0 reads | ~1172 tok |
+| 19:14 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~30 |
+| 19:14 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 3→4 lines | ~49 |
+| 19:15 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~30 |
+| 19:15 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | 3→4 lines | ~49 |
+| 19:15 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~25 |
+| 19:15 | Edited backend/test/unit/agents/test_builtin_discovery.py | 5→2 lines | ~15 |
+| 19:15 | Edited backend/test/unit/repositories/test_agent_repository_deep_research.py | 5→2 lines | ~17 |
+| 19:24 | Edited backend/test/unit/agents/test_builtin_discovery.py | 3→5 lines | ~43 |
+| 19:33 | Created docs/vibe/2026-10-27-post-confirm-revision-and-figure-slots.md | — | ~507 |
+| 19:34 | Edited docs/vibe/2026-10-27-chapter-writer-user-test-plan.md | inline fix | ~29 |
+| 19:34 | Edited docs/vibe/2026-10-27-chapter-writer-user-test-plan.md | 3→3 lines | ~61 |
+| 19:34 | Edited docs/vibe/2026-10-27-chapter-writer-user-test-plan.md | 2→3 lines | ~49 |
+| 19:34 | Edited docs/vibe/2026-10-27-chapter-writer-user-test-plan.md | inline fix | ~23 |
+| 19:36 | Edited docs/develop-guides/changelog.md | modified fix() | ~364 |
+| 19:38 | 三拍板执行：禁用词落SKILL.md×2（bug-4157）、三遗留写手删除（preset×3+双测试+DB，13/15）、测试方案批准+售后修改立项（两份docs/vibe）、changelog补3条 | docs/vibe×2, changelog, SKILL.md×2 | OK | ~15k |
+| 19:39 | Session end: 15 writes across 6 files (2026-10-27-chapter-writer-user-test-plan.md, SKILL.md, test_builtin_discovery.py, test_agent_repository_deep_research.py, 2026-10-27-post-confirm-revision-and-figure-slots.md) | 0 reads | ~2551 tok |
+
+## Session: 2026-10-27 20:33
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:45 | 提交批次修正：reset 重建 C4/C5，docs/vibe -f 入库，buglog 复原 indent=2，git 教训入 cerebrum | .wolf/cerebrum.md, docs/vibe×2, buglog.json | 5 提交终态干净，push 暂停 | ~30k |

@@ -9882,5 +9882,136 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-26"
+  },
+  {
+    "id": "bug-4152",
+    "timestamp": "2026-10-26",
+    "error_message": "chapter-writer SKILL.md 步骤1 尾「交互纪律全套继承 writer…」行重复一份、步骤2 冻结命令码块整块重复一份（4fa7bc0ff 已提交）",
+    "file": "coal-eia-chapter-writer/SKILL.md",
+    "root_cause": "前次会话编辑 SKILL.md 时插入内容与 old_string 拼接失误产生重复段，提交前只看了 diff 片段未做整节结构复查",
+    "fix": "批次2 编辑同区域时删除重复行与重复码块（grep -c 核对单一出现）；教训：SKILL.md 这类规程长文提交前用 grep 核对关键句出现次数",
+    "tags": [
+      "skill-md",
+      "duplicate-block",
+      "review-process"
+    ],
+    "related_bugs": [
+      "bug-4146"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-26"
+  },
+  {
+    "id": "bug-4153",
+    "timestamp": "2026-10-26",
+    "error_message": "收尾核查 ruff check 报 0 错误，实为 Git Bash 无 ruff 命令（command not found → 管道 grep 计数 0），假阴性通过",
+    "file": "(tooling)",
+    "root_cause": "宿主 Git Bash 不装 ruff，项目用 make format = cd backend && uv run ruff；直接敲 ruff 静默失败且计数脚本把 stderr 空输出当 0 错",
+    "fix": "改用 cd backend && UV_PYTHON=3.12 uv run ruff check --output-format=concise 重查（实得 68 E501 全为长中文行存量风格，与 HEAD 基线 52 同型，无新增非 E501）",
+    "tags": [
+      "ruff",
+      "false-negative",
+      "tooling"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26"
+  },
+  {
+    "id": "bug-4154",
+    "timestamp": "2026-10-26T23:40:00",
+    "error_message": "现场验证（会话 af5e2731）：3a-3 候选列出后 agent 呈卡「样例库中暂未收录『矿区总体规划环评·规划方案概况及分析』章节的同类范例切片」——但 bank_index.json 里 planning_eia/ch2 有 671 条、栈切片 17 个齐全",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py",
+    "root_cause": "全工具箱 --stage S 口径为 stages/*.json 文件路径（SKILL.md L82「S 一律填文件路径」，progress/ingest/formula_runner 均收路径），唯独 sample_fragments.py 按 bank_index 顶层键（裸 id）查找；agent 按规程传路径 → bank.get(路径) 恒空 → 走「无本章切片」rc=2 出口，参数口径错被伪装成真空库，agent 如实转述成「暂未收录」",
+    "fix": "sample_fragments.py main() 加 stage=Path(a.stage).stem 归一（路径/裸 id 双收，与 ingest.py 口径对齐）；stage 不在 bank 时 rc=1 SAMPLE_FRAGMENTS_FAIL 并列出顶层键（不再与 rc=2 空库混同）；+2 单测（路径归一命中/未知 stage rc=1）；SKILL.md L119/121/173 标注「S 路径或裸 id 均可，自动归一」；双包 209 passed；栈四副本 md5 一致",
+    "tags": [
+      "sample_fragments",
+      "stage-id",
+      "交互卡点",
+      "卡B",
+      "live-test",
+      "api-inconsistency"
+    ],
+    "related_bugs": [
+      "bug-4147"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T23:40:00"
+  },
+  {
+    "id": "bug-4155",
+    "timestamp": "2026-10-26T23:40:00",
+    "error_message": "现场验证：卡面/提问卡全程业务语体合格，但工具间过程旁白泄漏内部细节（state/plan_ch2.json、rc=0/3、脚本名、--global-only、英文夹杂「All data submitted. Filling in the form.」）——与 bug-4142 业务语体规范不符",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md",
+    "root_cause": "沟通规范（bug-4142）只硬约束卡片正文与最终回复，工具间旁白无把守；agnes-3.0-flash 对软规程遵循不稳定",
+    "fix": "暂未改码（观察项）：如复发可在 3b 派发契约追加「旁白同业务化」一句，或交 reviewer 规程核对；本次测试判定为验收5部分缺口",
+    "tags": [
+      "live-test",
+      "沟通规范",
+      "narration",
+      "验收5",
+      "agnes-3.0-flash"
+    ],
+    "related_bugs": [
+      "bug-4142"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T23:40:00"
+  },
+  {
+    "id": "bug-4156",
+    "timestamp": "2026-10-27T00:52:36",
+    "error_message": "确认卡返工完成后，工作区章稿已修复，但对话页文件面板预览仍显示返工前旧文本",
+    "file": "web/src 文件面板预览（交付/预览链路）",
+    "root_cause": "前端预览缓存未随交付刷新（未深查，观察项）",
+    "fix": "未改码；live 测试记录。复核路径：对照容器内 outputs 章稿（已含修复）与 UI 预览（仍旧文）",
+    "tags": [
+      "frontend",
+      "cache",
+      "preview",
+      "chapter-writer",
+      "observation"
+    ],
+    "related_bugs": [
+      "bug-4155"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-27T00:52:36"
+  },
+  {
+    "id": "bug-4157",
+    "timestamp": "2026-10-27T19:38:29",
+    "error_message": "用户反馈：智能体回答中的「降档」「BLOCKED」「裁决卡」等词环评工程师看不懂，需用普通人能理解的语言",
+    "file": "coal-eia-writer/SKILL.md, coal-eia-chapter-writer/SKILL.md",
+    "root_cause": "bug-4142 术语映射表存在但非硬约束，且映射本身仍带术语（暂挂（待你裁决）），agent 回复继续漏出内部词",
+    "fix": "两份 SKILL.md：BLOCKED 映射改「暂停（需要你拿主意）」；新增禁用词硬约束（降档/BLOCKED/裁决/协商单/回环/派发/额度/折算/地板/冻结+替换说法）；writer 4.5 降档选项补卡面业务文案；同步 localized backend 镜像+四份运行时技能副本（md5 核对）",
+    "tags": [
+      "skills",
+      "沟通语体",
+      "禁用词",
+      "user-feedback"
+    ],
+    "related_bugs": [
+      "bug-4155"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-27T19:38:29"
+  },
+  {
+    "id": "bug-4158",
+    "timestamp": "2026-10-27T19:38:29",
+    "error_message": "test_shipping_skills_keep_required_dependencies 断言陈旧：期望集缺 coal-eia-chapter-writer / coal-eia-reviewer（两技能早已入 buildin）",
+    "file": "backend/test/unit/agents/test_builtin_discovery.py",
+    "root_cause": "分章管线新增两技能时未同步该期望集",
+    "fix": "期望集补两 slug；连带发现上游 test_invalid_preset_is_not_silently_skipped 参数化缓存碰撞固有缺陷（首例 PRESET=None 导入成功入 sys.modules，2/3 例命中缓存拿不到新异常）——上游文件未动，仅记录",
+    "tags": [
+      "tests",
+      "stale-assertion",
+      "upstream",
+      "preset-discovery"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-27T19:38:29"
   }
 ]

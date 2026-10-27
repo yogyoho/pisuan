@@ -5,6 +5,7 @@
 > Last updated: 2026-05-16
 
 ## User Preferences
+- [2026-10-27] 面向用户的一切文字必须用普通人中文——禁用词清单（降档/BLOCKED/裁决/协商单/回环/派发/额度/折算/地板/冻结）已落 writer/chapter-writer SKILL.md 硬约束（bug-4157）；映射表内的「翻译」本身也不许带术语（如「暂挂（待你裁决）」→「暂停（需要你拿主意）」）。
 - (2026-10-21) 本机资源局限不得驱动代码逻辑变更：开发机（T1200 4GB 显存 + 有限内存）嵌入大块失败（月儿湾 4693 字符块）时，用户明确裁决「不能因为本机资源不足就更改代码逻辑」——生产服务器资源足够。缺资源就标注搁置（如月儿湾 error_indexing 待生产重推），不改 embed/chunking 逻辑绕。
 - (2026-10-21) 分块 vs 表格完整性：用户明确优先「表格整块不切碎」，宁可服务端 accommodation（ollama num_ctx 8192 容纳肥块）也不在 chunking 层为 token 预算把表格切小。涉及表格的分块改动先评估表格完整性影响并询问。
 
@@ -24,6 +25,7 @@
 
 - [2026-10-14] 卡片式导航的点击范围要克制：大卡片/区域不整卡可点，仅显式「直达」链接可点（用户对知识工厂工位卡的裁定）。此后卡片导航默认按此执行，整卡可点需先问。
 ## Key Learnings
+- [2026-10-27] localized 栈模块名是 pisuan 非 yuxi（/app/package/pisuan，挂载源 pisuan-localized/backend/package）。在 localized 容器跑 yuxi.* 单测：sitecustomize 装 meta-path 身份保持别名（ReuseLoader 复用 pisuan 模块对象，防类身份断裂）；带子进程的用例须 PYTHONPATH 指向垫片目录。上游 test_invalid_preset_is_not_silently_skipped 2/3 例为参数化缓存碰撞固有缺陷（勿当回归）。
 - ch2 终稿复盘（bug-4146~4151）：章门「有效字符」只计正文散文（不含表格管道内容），ch2.md raw 14254 门只计 4227——评估章稿深度看门口径不看 raw；progress.json 的 stage_path 是沙箱绝对路径 /home/gem/...，沙箱外（api-dev）重放门需在 state 副本上改 stage_path 才能跑。样例库=references/samples_bank（真实报告切片，38MB），模板库=references/paradigms（通用范式文档）——用户口径两者严格区分，章节写作的片段参照必须来自前者。
 
 - (2026-10-21) ollama 嵌入 413 的真机制：llama.cpp 对单条输入真实 SPM token 超 n_batch/物理批窗口时报 `input (N tokens) is too large to process` → HTTP 413，与请求体大小无关（140KB CJK 探针照过）。诊断入口：ollama 服务端日志 %LOCALAPPDATA%/Ollama/server.log（GIN 行 + srv send_error 行），比客户端猜测快得多。
@@ -195,6 +197,7 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat
+- [2026-10-27] 别把上下游口径当默认：在 localized 容器跑测试前先确认容器内模块名（pisuan≠yuxi），直接 pytest 会 ModuleNotFoundError 而非真实结果；判失败先分辨「环境/垫片伪失败」与「真实回归」（本轮 6 失败中 5 个是垫片伪失败，只有 shipping_skills 断言陈旧是真问题）。
 - (2026-10-26) 取命令 rc 勿用 `cmd | head; echo $?`——$? 是 head 的 rc；先重定向文件再 echo rc（本次排查与 01:54 的 agent 各中招一次）。
 - [2026-10-23] archify 图嵌 iframe 别用 ?embed=1：隐藏工具栏/页眉/导航，操作能力全丢，用户否决。hero 管线全景用全页 viewer 模式（滚动条是它固有代价，用户接受）；容器高度由 aspect-ratio 910/528 + min-height 兜底。
 
@@ -288,6 +291,7 @@
 - _MEASURE_RE（eia_data_service）与 QUANTITY_RE 是两处独立口径敏感点：QUANTITY_RE 新增口径形态时必须同步检查三分类正则是否认识新形态（控制效率拉丁前缀曾全落 junk，range_ready 门控静默失效）。
 
 ## Decision Log
+- [2026-10-27] 用户三拍板：① 交付后修改+插图占位立项（docs/vibe/2026-10-27-post-confirm-revision-and-figure-slots.md，R1-R6）；② 三遗留写手 preset（regulation/data-survey/prediction-writer，2026-07 v2 角色拆分遗留）删除——代码+测试+DB 行（历史 threads/runs 按 slug 留档）；③ 分章写作用户测试方案批准执行（Langfuse 过程监控入 §3）。
 - (2026-10-15) Task 9 changelog commit: pre-existing dirty hunks from other work streams were excluded via dual-version swap (committed version = HEAD + paradigm entry only; working tree keeps leftovers). User picked selective-commit (1A) over folding. docs/vibe design doc force-add pre-approved (plan's own git add line + tracked predecessor precedent).
 - [2026-10-15] KeyError→404 `detail=str(e)` 的 repr 引号伪影：house 全局既有（本路由 ~17 处 + 兄弟服务同款），局部修复会制造不一致 → 维持现状；横切整治候选：全部站点改 `e.args[0]` 或专用 NotFoundError，并核对前端 toast 是否剥引号。（范式层 Task 4 质量评审裁决）
 - [2026-10-15] 抑制名单 T2 质量评审留痕：add_suppression 对已抑制指纹走 repo upsert 幂等刷新时 new_caliber 硬传 ""，会覆写改名行的语境回落反查键（find_fingerprint_suppression 按 new_caliber 反查）——UI 候选下拉只列未抑制指纹故正常路径不可达，仅直调 API 可触发；计划/测试明文裁定「幂等刷新」语义，维持现状，日后触碰该文件可考虑刷新时保留原 new_caliber 或对改名源行拒绝手工刷新。（抑制名单 T2 质量评审）
@@ -1841,3 +1845,28 @@
 
 - 2026-10-26 禁对 skill scripts 整目录跑 `ruff format`/`make format`——该目录非 ruff-clean 基线，会重排几十个存量文件（本次 68 个，已逐文件 checkout 回滚）；只 format 本次触碰的文件。
 - 2026-10-26 `git checkout -- $(cat /tmp/xx)` 在 Git Bash/Windows 下 /tmp 不持久且空参 checkout 变成无参形式（打印状态不回滚）——批量回滚用显式变量列表 `git checkout -- $FILES`。
+
+## Key Learnings + DNR + Decision Log（2026-10-26 交互卡点批追加）
+
+### Key Learnings
+- 分章管线交互卡点凭据语义：`state/plan_<ch>.json`（卡A 计划卡）与 `state/fragment_choice_<ch>.json`（卡B 范例挑选）是纯工件凭据，**不进 TRANSITIONS**（与 bug-4146 门凭据策略一致）；`progress.py next` COLLECTING 分支按工件存在性裁决动作可见性（无 plan 只出计划卡、有 plan 无 choice 加派发前置候选卡提示）。
+- 篇幅规模三分语义落点：`build_output.plan_depth_mode()` 读 plan 工件 → `validate_chapter_depth(depth_mode=…)`；compact 直接 `return eff, 0`；custom 用用户 target 替 floor；assemble 与 run_chapter_gate 两处调用点都读，保证 VERIFIED 章 finalize 不被再拦。
+- `sample_fragments.py --candidates N` 出 top-N 确定性候选 JSON（条目数降序/report_id 字典序），`--report-id` 取件须在候选集内（rc=1 否）；缺省主导报告=writer 全书管线口径不变。
+
+### Do-Not-Repeat
+- (2026-10-26) Git Bash 宿主**没有 ruff**：`ruff check` 静默 command-not-found，接管道 grep 计数得 0 → 假阴性。核查一律 `cd backend && UV_PYTHON=3.12 uv run ruff check --output-format=concise <files>`。
+- (2026-10-26) SKILL.md 等规程长文提交前用 `grep -c` 核对关键句/码块出现次数（bug-4152：前次编辑拼接失误产生重复段且已提交）。
+
+### Decision Log
+- (2026-10-26) 交互卡点定案（用户逐项确认）：范例多候选挑一（B）、计划卡摘要式一屏（A）、篇幅**用户选择制不强制**（详实/精简/自定义；详实版未达=业务化问扩写或按现稿收尾=approve-downgrade 降档留痕）、「深度地板/折算/深度目标」对用户一律转译「篇幅规模」。范围只动 chapter-writer 链路，writer 全书暂不同步。设计全文 `docs/vibe/2026-10-26-chapter-writing-interaction-cards.md`。
+- **bug-4154 教训（2026-10-26 现场验证）**：全工具箱 `--stage S` 口径是 stages/*.json 文件路径（SKILL.md L82「一律填路径」），sample_fragments.py 曾单独按裸 id 查 bank_index → agent 按规程传路径被误判「库空」。已修：路径/裸 id 双收（Path().stem 归一），未知 stage rc=1 与空库 rc=2 分立。新脚本接 `--stage` 时先查兄弟脚本口径，别自创语义。
+
+## DNR + 状态（2026-10-27 提交批次收尾）
+
+### Do-Not-Repeat
+- (2026-10-27) **`git commit <pathspec>` 提交的是这些路径的工作区全量，绕过 index 的选择性暂存**——hunk 级拆分提交必须 `git add` 后用裸 `git commit`（本次 bug-4154 提交被混入禁用词 hunk，回退重做才干净）。
+- (2026-10-27) `.gitignore:78` 有 `docs/vibe` 规则，新需求文档 `git add` 会被静默拒绝（报错被 2>/dev/null 吞则更隐蔽）；要入库须 `git add -f`（同 2026-10-26 先例），且提交后用 `git log --all -- <file>` 复核真的进去了。
+- (2026-10-27) 重写仓内 JSON（buglog.json 等）前先 `git show HEAD~N:<file> | head` 看原格式——本仓 buglog.json 是 indent=2 + ensure_ascii=False；indent 不配会产生 ~2 万行格式噪音 diff。token-ledger.json 的大 diff 属 hooks 运行态真实累积，不是噪音。
+
+### 状态
+- (2026-10-27) 本批 5 提交落地（bug-4154 / 禁用词 / 写手删除 / docs 测试方案+立项 / wolf），**push 保持暂停**（用户指示）。localized 四副本 SKILL.md 已 md5 核对同步。
