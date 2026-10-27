@@ -33,9 +33,6 @@ def test_preset_discovery_includes_shipping_roles():
         "fact-verifier",
         # pisuan 环评写作链路写手
         "chapter-writer",
-        "regulation-writer",
-        "data-survey-writer",
-        "prediction-writer",
     }
     assert found["deep-research"].context["subagents"] == ["research-explorer", "fact-verifier"]
     assert found["general-purpose"].context == {}
@@ -190,6 +187,8 @@ def test_shipping_skills_keep_required_dependencies():
         "mysql-reporter",
         # pisuan 环评写作链路技能
         "coal-eia-writer",
+        "coal-eia-chapter-writer",
+        "coal-eia-reviewer",
         "template-recommender",
         "slot-filler",
         "compliance-checker",
