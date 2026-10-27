@@ -53,8 +53,16 @@ def _main(args: Namespace) -> int:
     except (FileNotFoundError, json.JSONDecodeError) as e:
         print(f"SAMPLE_FRAGMENTS_FAIL: {e}", file=sys.stderr)
         return 1
+    stage = Path(args.stage).stem  # 容错：--stage 传 stages/<id>.json 路径时取回 id（全脚本口径为路径，裸 id 亦收）
+    if stage not in bank:
+        print(
+            f"SAMPLE_FRAGMENTS_FAIL: stage '{args.stage}'（归一为 '{stage}'）不在样例库"
+            f"（顶层键：{'、'.join(bank)}）",
+            file=sys.stderr,
+        )
+        return 1
     if getattr(args, "candidates", None):
-        cands = sf.pick_candidates(bank, args.stage, args.chapter, args.candidates, Path(args.references_dir))
+        cands = sf.pick_candidates(bank, stage, args.chapter, args.candidates, Path(args.references_dir))
         if not cands:
             print(f"SAMPLE_FRAGMENTS_EMPTY: {args.stage}/{args.chapter} 无样例切片", file=sys.stderr)
             return 2
@@ -65,13 +73,13 @@ def _main(args: Namespace) -> int:
         return 0
     rid_arg = getattr(args, "report_id", None)
     if rid_arg:
-        valid = {c["report_id"] for c in sf.pick_candidates(bank, args.stage, args.chapter, 10**9, Path(args.references_dir))}
+        valid = {c["report_id"] for c in sf.pick_candidates(bank, stage, args.chapter, 10**9, Path(args.references_dir))}
         if rid_arg not in valid:
             print(f"SAMPLE_FRAGMENTS_FAIL: 候选中无报告 {rid_arg}", file=sys.stderr)
             return 1
-    pack, rid, clipped = sf.build_pack(bank, args.stage, args.chapter, args.max_chars, Path(args.references_dir), rid_arg)
+    pack, rid, clipped = sf.build_pack(bank, stage, args.chapter, args.max_chars, Path(args.references_dir), rid_arg)
     if not pack:
-        print(f"SAMPLE_FRAGMENTS_EMPTY: {args.stage}/{args.chapter} 无样例切片", file=sys.stderr)
+        print(f"SAMPLE_FRAGMENTS_EMPTY: {stage}/{args.chapter} 无样例切片", file=sys.stderr)
         return 2
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -88,10 +96,11 @@ def _run(
     chapter: str = "ch2",
     candidates: int | None = None,
     report_id: str | None = None,
+    stage: str = "planning_eia",
 ) -> tuple[int, Path, str]:
     out = tmp / (f"cands_{tag}.json" if candidates else f"pack_{tag}.md")
     args = Namespace(
-        references_dir=str(refs), stage="planning_eia", chapter=chapter,
+        references_dir=str(refs), stage=stage, chapter=chapter,
         out=str(out), max_chars=max_chars, candidates=candidates, report_id=report_id,
     )
     with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()) as err:
@@ -175,3 +184,20 @@ def test_report_id_pick_and_unknown_rc1(tmp_path):
     assert rc == 0 and "report_id】B" in out.read_text(encoding="utf-8")
     rc2, _, err = _run(tmp_path, refs, tag="pickZ", report_id="ZZZ")
     assert rc2 == 1 and "候选中无报告 ZZZ" in err
+
+
+def test_stage_path_normalized_to_id(tmp_path):
+    """bug-4154：--stage 传 stages/*.json 路径（全脚本口径）自动取回 id 命中样例库——此前路径被当 id 查找，误判库空。"""
+    refs = _refs(tmp_path)
+    rc, out, _ = _run(tmp_path, refs, tag="spath", candidates=3,
+                      stage="/skills/coal-eia-writer/references/stages/planning_eia.json")
+    assert rc == 0
+    cands = json.loads(out.read_text(encoding="utf-8"))
+    assert [c["report_id"] for c in cands] == ["A", "B"]
+
+
+def test_unknown_stage_rc1_not_empty(tmp_path):
+    """未知 stage 是参数错误 rc=1（带顶层键提示），不得与「库空」rc=2 混同。"""
+    rc, out, err = _run(tmp_path, _refs(tmp_path), tag="badstage", candidates=3, stage="planning_eia_rev")
+    assert rc == 1 and "不在样例库" in err and "planning_eia" in err  # 提示里列出合法顶层键
+    assert not out.exists()

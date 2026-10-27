@@ -107,7 +107,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="stage+章节 → samples_bank 同章真实切片包（bug-4147；范例挑选卡候选/取件）")
     default_refs = Path(__file__).resolve().parent.parent / "references"
     ap.add_argument("--references-dir", default=str(default_refs))
-    ap.add_argument("--stage", required=True, help="stage id，如 planning_eia（bank_index 顶层键）")
+    ap.add_argument("--stage", required=True, help="stages/*.json 路径或裸 stage id（如 planning_eia；路径自动取回 id）")
     ap.add_argument("--chapter", required=True, help="章 id，如 ch2（bank_index 章键）")
     ap.add_argument("--out", required=True, help="落盘路径（建议 state/sample_fragments_<ch>.md 或 candidates_<ch>.json）")
     ap.add_argument("--max-chars", type=int, default=12000, help="包正文字符预算（缺省 12000）")
@@ -119,10 +119,18 @@ def main() -> int:
     except (FileNotFoundError, json.JSONDecodeError) as e:
         print(f"SAMPLE_FRAGMENTS_FAIL: {e}", file=sys.stderr)
         return 1
+    stage = Path(a.stage).stem  # 容错：--stage 传 stages/<id>.json 路径时取回 id（全脚本口径为路径，裸 id 亦收）
+    if stage not in bank:
+        print(
+            f"SAMPLE_FRAGMENTS_FAIL: stage '{a.stage}'（归一为 '{stage}'）不在样例库"
+            f"（顶层键：{'、'.join(bank)}）",
+            file=sys.stderr,
+        )
+        return 1
     if a.candidates:
-        cands = pick_candidates(bank, a.stage, a.chapter, a.candidates, Path(a.references_dir))
+        cands = pick_candidates(bank, stage, a.chapter, a.candidates, Path(a.references_dir))
         if not cands:
-            print(f"SAMPLE_FRAGMENTS_EMPTY: {a.stage}/{a.chapter} 无样例切片——降级范式文档并如实告知用户", file=sys.stderr)
+            print(f"SAMPLE_FRAGMENTS_EMPTY: {stage}/{a.chapter} 无样例切片——降级范式文档并如实告知用户", file=sys.stderr)
             return 2
         out = Path(a.out)
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -130,16 +138,16 @@ def main() -> int:
         print(f"SAMPLE_CANDIDATES_OK: {len(cands)} 份候选 → {out}（呈用户挑选后 fragment-choice 落账）")
         return 0
     if a.report_id:
-        valid = {c["report_id"] for c in pick_candidates(bank, a.stage, a.chapter, 10**9, Path(a.references_dir))}
+        valid = {c["report_id"] for c in pick_candidates(bank, stage, a.chapter, 10**9, Path(a.references_dir))}
         if a.report_id not in valid:
             print(
                 f"SAMPLE_FRAGMENTS_FAIL: 候选中无报告 {a.report_id}（先 --candidates 查看在库候选）", file=sys.stderr
             )
             return 1
-    pack, rid, clipped = build_pack(bank, a.stage, a.chapter, a.max_chars, Path(a.references_dir), a.report_id)
+    pack, rid, clipped = build_pack(bank, stage, a.chapter, a.max_chars, Path(a.references_dir), a.report_id)
     if not pack:
         print(
-            f"SAMPLE_FRAGMENTS_EMPTY: {a.stage}/{a.chapter} 无样例切片——降级范式文档并如实告知用户",
+            f"SAMPLE_FRAGMENTS_EMPTY: {stage}/{a.chapter} 无样例切片——降级范式文档并如实告知用户",
             file=sys.stderr,
         )
         return 2
