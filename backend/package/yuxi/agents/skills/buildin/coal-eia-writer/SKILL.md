@@ -30,7 +30,7 @@ tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query
 | 内部术语 | 对用户说法 |
 |---|---|
 | gate / 章门 PASS·FAIL | 章节质量校验通过 / 未通过（附差距说明） |
-| PENDING / DRAFTED / VERIFIED / REVIEWED / CONFIRMED / BLOCKED | 待编写 / 编写中 / 校验通过 / 已审阅 / 已确认 / 暂挂（待你裁决） |
+| PENDING / DRAFTED / VERIFIED / REVIEWED / CONFIRMED / BLOCKED | 待编写 / 编写中 / 校验通过 / 已审阅 / 已确认 / 暂停（需要你拿主意） |
 | `{{SLOT:…}}` / 占位符 | 该处数值由已登记资料自动带入 |
 | 派发 / 交付回执 | 组织编写该节 / 编写完成登记 |
 | freeze / 冻结计算 | 数据核定 |
@@ -38,6 +38,7 @@ tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query
 | 降档 / allow-partial | 按当前成稿收尾并注明差距 |
 | ask_user_question / 确认卡 | 直接说「需要你确认：…」 |
 
+- **禁用词**：降档、BLOCKED、裁决、协商单、回环、派发、额度、折算、地板、冻结 一律不得出现在任何用户可见文字——「批准降档」要说「按当前成稿收尾（注明差距）」，「协商单/裁决卡」要说「请你选一个处理办法」，「待你裁决」要说「需要你拿主意」。
 - **全中文**；英文仅限无法回避的专有名词（标准号 GB/HJ、单位 Mt/a·km²·dB(A)、交付的报告与表格文件名）。
 - **状态汇报句式**：说「第2章已成稿，质量校验通过，待你确认后进入下一章」，不说「ch2 DRAFTED→gate PASS→VERIFIED」。
 - **卡题面**一句话讲清情境与后果，选项用动宾业务短语（如「接受当前成稿并注明差距 / 返回补写 / 我提供补充资料」），不出现命令与路径。
@@ -185,7 +186,7 @@ progress.py run-stage freeze --state-dir T   # 冻结二连一次 bash：chapter
 
 **4.4 wave2（投影章）**：`next` 指引派发投影章（契约同 4.1，输入追加 state/key_points.json）——只依据要点包写投影式结论，禁引入要点包之外的新数字与新结论（EO3 反向断言：结论章新增预测侧不存在的结论=FAIL）→ 批量 gate 同 4.2。
 
-**4.5 协商（存在 BLOCKED 时）**：`next` 进入 NEGOTIATE——差距表（章/实际 eff/章地板/缺口）单表单三选项：① 补数据（回 ingest → run-stage freeze → 相关节 `mark --sections … DRAFTED` 重派）② 批准降档（`progress.py approve-downgrade --chapters … --note "…"`）③ [待确认] 收尾。用户不回表单就停在那，不推进。
+**4.5 协商（存在 BLOCKED 时）**：`next` 进入 NEGOTIATE——差距表（章/实际 eff/章地板/缺口）单表单三选项：① 补数据（回 ingest → run-stage freeze → 相关节 `mark --sections … DRAFTED` 重派）② 批准降档（卡面写「按当前成稿收尾（注明差距）」；`progress.py approve-downgrade --chapters … --note "…"`）③ [待确认] 收尾。用户不回表单就停在那，不推进。
 
 ### 步骤 5–7 · 组装 → 一致性 → 快照 → 交付双通道
 

@@ -31,7 +31,7 @@ tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query
 | 内部术语 | 对用户说法 |
 |---|---|
 | gate / 章门 PASS·FAIL | 章节质量校验通过 / 未通过（附差距说明） |
-| PENDING / DRAFTED / VERIFIED / REVIEWED / CONFIRMED / BLOCKED | 待编写 / 编写中 / 校验通过 / 已审阅 / 已确认 / 暂挂（待你裁决） |
+| PENDING / DRAFTED / VERIFIED / REVIEWED / CONFIRMED / BLOCKED | 待编写 / 编写中 / 校验通过 / 已审阅 / 已确认 / 暂停（需要你拿主意） |
 | `{{SLOT:…}}` / 占位符 | 该处数值由已登记资料自动带入 |
 | 派发 / 交付回执 | 组织编写该节 / 编写完成登记 |
 | freeze / 冻结计算 | 数据核定 |
@@ -40,6 +40,7 @@ tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query
 | 深度目标 / 深度地板 / 深度折算 | 篇幅规模——只说「详实版 / 精简版 / 自定义字数」，禁出现「深度」「地板」「折算」字样 |
 | ask_user_question / 确认卡 | 直接说「需要你确认：…」 |
 
+- **禁用词**：降档、BLOCKED、裁决、协商单、回环、派发、额度、折算、地板、冻结 一律不得出现在任何用户可见文字——「批准降档」要说「按当前成稿收尾（注明差距）」，「协商单/裁决卡」要说「请你选一个处理办法」，「待你裁决」要说「需要你拿主意」。
 - **全中文**；英文仅限无法回避的专有名词（标准号 GB/HJ、单位 Mt/a·km²·dB(A)、交付的报告与表格文件名）。
 - **状态汇报句式**：说「第2章已成稿，质量校验通过，待你确认后进入下一章」，不说「ch2 DRAFTED→gate PASS→VERIFIED」。
 - **卡题面**一句话讲清情境与后果，选项用动宾业务短语（如「接受当前成稿并注明差距 / 返回补写 / 我提供补充资料」），不出现命令与路径。
