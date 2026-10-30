@@ -215,13 +215,6 @@ export const domainFactoryApi = {
       task: { ingest_task_id: `demo_reingest_${taskId}_${Date.now()}` }
     }),
 
-  // 重新提取未识别实体
-  refreshUnrecognizedEntities: (taskId) =>
-    withDemoFallback(
-      () => apiGet(`/api/domain-factory/tasks/${taskId}/proposed-entities`),
-      () => ({ entities: [], raw_slots: [] })
-    ),
-
   retryTask: (taskId) =>
     withDemoFallback(() => apiPost(`/api/domain-factory/tasks/${taskId}/retry`), {
       success: true,
@@ -233,18 +226,6 @@ export const domainFactoryApi = {
       success: true,
       demo: true
     }),
-
-  retryDataSource: (taskId) =>
-    withDemoFallback(() => apiPost(`/api/domain-factory/tasks/${taskId}/retry`), {
-      success: true,
-      demo: true
-    }),
-
-  getUnrecognizedEntities: (taskId) =>
-    withDemoFallback(
-      () => apiGet(`/api/domain-factory/tasks/${taskId}/proposed-entities`),
-      () => ({ entities: [], raw_slots: [] })
-    ),
 
   // 确认并保存建议的实体到实体库
   confirmProposedEntities: (taskId, entities) =>
@@ -299,25 +280,6 @@ export const domainFactoryApi = {
         ),
       { success: true, demo: true }
     ),
-
-  // ========== Pipeline Config ==========
-
-  getPipelineConfig: () =>
-    withDemoFallback(
-      () => apiGet('/api/domain-factory/pipeline-config'),
-      () => ({
-        pipeline_id: 'default',
-        entry_point: 'upload',
-        nodes: [],
-        edges: []
-      })
-    ),
-
-  updatePipelineConfig: (config) =>
-    withDemoFallback(() => apiAdminPut('/api/domain-factory/pipeline-config', config), {
-      success: true,
-      demo: true
-    }),
 
   // ========== Prompt Config ==========
 

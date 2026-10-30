@@ -44,11 +44,10 @@ async def test_outline_templates_list(test_client, admin_headers):
     assert res.status_code == 200, res.text
 
 
-async def test_pipeline_and_prompt_config_get(test_client, admin_headers):
-    """pipeline-config / prompt-config GET 可达。"""
-    for path in ("/api/domain-factory/pipeline-config", "/api/domain-factory/prompt-config"):
-        res = await test_client.get(path, headers=admin_headers)
-        assert res.status_code == 200, f"{path}: {res.text}"
+async def test_prompt_config_get(test_client, admin_headers):
+    """prompt-config GET 可达。"""
+    res = await test_client.get("/api/domain-factory/prompt-config", headers=admin_headers)
+    assert res.status_code == 200, res.text
 
 
 async def test_standard_user_workflow_access(test_client, standard_user):

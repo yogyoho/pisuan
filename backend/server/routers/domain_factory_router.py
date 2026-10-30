@@ -556,44 +556,6 @@ async def upload_file(
 
 
 # =============================================================================
-# Pipeline Config
-# =============================================================================
-
-
-@domain_factory.get("/pipeline-config")
-async def get_pipeline_config(
-    current_user: User = Depends(get_required_user),
-) -> dict[str, Any]:
-    """获取处理流程配置"""
-    try:
-        service = get_domain_factory_service()
-        config = await service.get_pipeline_config()
-        return config
-    except Exception as e:
-        logger.error(f"Failed to get pipeline config: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"获取流程配置失败: {str(e)}")
-
-
-@domain_factory.put("/pipeline-config")
-async def update_pipeline_config(
-    config: dict[str, Any] = Body(...),
-    current_user: User = Depends(get_admin_user),
-) -> dict[str, Any]:
-    """更新处理流程配置"""
-    try:
-        service = get_domain_factory_service()
-        success = await service.save_pipeline_config(config)
-        if not success:
-            raise HTTPException(status_code=500, detail="保存流程配置失败")
-        return {"success": True, "config": config}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to update pipeline config: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"更新流程配置失败: {str(e)}")
-
-
-# =============================================================================
 # Prompt Config
 # =============================================================================
 
@@ -779,45 +741,6 @@ def _map_df_status_to_tasker(df_status: str) -> str:
 def _calculate_progress(df_status: str) -> float:
     """根据状态计算进度（兼容旧代码）"""
     return DOMAIN_FACTORY_STATUS_MAP.get(df_status, {}).get("progress", 0.0)
-
-
-# =============================================================================
-# Graph Query - 图谱查询
-# =============================================================================
-
-
-@domain_factory.get("/graph/templates")
-async def query_graph_templates(
-    domain_code: str = Query("", description="领域编码"),
-    report_type_code: str = Query("", description="报告类型编码"),
-    limit: int = Query(50, description="返回数量限制"),
-    current_user: User = Depends(get_required_user),
-) -> dict[str, Any]:
-    """按 (domain, report_type) 查询图谱中的模板和骨架数据"""
-    try:
-        service = get_domain_factory_service()
-        result = await service.query_graph_templates(domain_code, report_type_code, limit)
-        return result
-    except Exception as e:
-        logger.error(f"Failed to query graph templates: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"图谱查询失败: {str(e)}")
-
-
-@domain_factory.get("/graph/legal-references")
-async def query_graph_legal_references(
-    domain_code: str = Query("", description="领域编码"),
-    scope: str = Query("", description="适用范围过滤 (national/regional/project)"),
-    limit: int = Query(100, description="返回数量限制"),
-    current_user: User = Depends(get_required_user),
-) -> dict[str, Any]:
-    """查询图谱中的法律引用，支持按 scope 过滤"""
-    try:
-        service = get_domain_factory_service()
-        result = await service.query_graph_legal_references(scope, limit)
-        return result
-    except Exception as e:
-        logger.error(f"Failed to query legal references: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"法律引用查询失败: {str(e)}")
 
 
 # ========== 大纲模板管理 ==========
