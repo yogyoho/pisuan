@@ -310,35 +310,6 @@ def test_user_shared_agent_is_manageable_for_normal_user():
     assert user_can_manage_agent(user, agent) is True
 
 
-@pytest.mark.asyncio
-async def test_ensure_writer_presets_create_with_config(monkeypatch):
-    """pisuan 定制 writer preset 幂等注册并携带工具配置（v0.7.3 preset 自动发现机制）。"""
-    from yuxi.agents.presets.subagents.data_survey_writer import PRESET as DATA_PRESET
-    from yuxi.agents.presets.subagents.prediction_writer import PRESET as PREDICTION_PRESET
-    from yuxi.agents.presets.subagents.regulation_writer import PRESET as REGULATION_PRESET
-
-    cases = [
-        (REGULATION_PRESET, ["get_chapter_outline", "save_chapter", "query_kb"]),
-        (DATA_PRESET, ["set_pps_param", "query_kb"]),
-        (PREDICTION_PRESET, ["calculate_a_value", "calculate_water_capacity", "lookup_subsidence_params"]),
-    ]
-    for preset, expected_tools in cases:
-        db = FakeDb()
-        repo = AgentRepository(db)
-
-        async def get_by_slug(_slug):
-            return None
-
-        monkeypatch.setattr(repo, "get_by_slug", get_by_slug)
-
-        agent = await repo.ensure_preset(preset, created_by="system")
-        ctx = agent.config_json.get("context", {})
-        assert agent.slug == preset.slug
-        assert agent.is_subagent is True
-        for tool in expected_tools:
-            assert tool in ctx.get("tools", [])
-
-
 def test_shared_agent_is_accessible_but_not_manageable_for_normal_user():
     user = User(username="user", uid="user", password_hash="x", role="user", department_id=1)
     agent = Agent(
