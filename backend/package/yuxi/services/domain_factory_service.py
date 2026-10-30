@@ -5835,8 +5835,8 @@ class DomainFactoryService:
         except Exception:
             entity_count = 0
 
-        # 从数据库查询领域
-        domains = await self.repo.list_domains()
+        # 从数据库查询领域（去领域化：仅暴露通用域，历史域行冻结保留不外露）
+        domains = [d for d in await self.repo.list_domains() if d.get("code") == GENERAL_DOMAIN_CODE]
 
         # 统计每个领域的已入库任务数
         committed_count = 0
