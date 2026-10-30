@@ -2339,7 +2339,7 @@ class DomainFactoryService:
     # 按 (domain, report_type) 预定义的章节级局部 Schema
     # 每个章节最多 10-20 个变量，避免全局 149 变量的提取失败问题
     LOCAL_SCHEMA_MAP: ClassVar[dict[str, dict[str, dict]]] = {
-        "coal.eia_construction": {
+        "general.eia_construction": {
             "3.1": {  # 自然环境概况
                 "地理位置": {"data_type": "text"},
                 "地貌类型": {
@@ -2374,7 +2374,7 @@ class DomainFactoryService:
                 "矿区面积": {"data_type": "number", "unit": "km²", "entity_ref": "mine_area"},
             },
         },
-        "coal.eia_planning": {
+        "general.eia_planning": {
             "3.1": {
                 "地理位置": {"data_type": "text"},
                 "地貌类型": {
