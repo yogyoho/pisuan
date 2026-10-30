@@ -9,16 +9,10 @@
           </a-button>
           <h2>大纲模板</h2>
         </div>
-        <p class="subtitle">
-          管理报告章节大纲模板，定义各章节的编写目的、内容契约和子章节结构
-        </p>
+        <p class="subtitle">管理报告章节大纲模板，定义各章节的编写目的、内容契约和子章节结构</p>
       </div>
       <div class="header-actions">
-        <a-upload
-          :show-upload-list="false"
-          :before-upload="onExtractFile"
-          accept=".docx,.pdf"
-        >
+        <a-upload :show-upload-list="false" :before-upload="onExtractFile" accept=".docx,.pdf">
           <a-button type="primary" :loading="extracting">
             <template #icon><FileSearch :size="14" /></template>
             从报告提取大纲
