@@ -1,22 +1,14 @@
 <script setup>
-import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { message, Modal, Upload } from 'ant-design-vue'
 import { Eye, FileText, FileType2, Inbox, Plus, Redo2, RotateCw, Search, Trash2 } from '@lucide/vue'
 import dayjs from 'dayjs'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { useTaskerStore } from '@/stores/tasker'
-import { useUserStore } from '@/stores/user'
 
-const props = defineProps({
-  domains: { type: Array, default: () => [] },
-  selectedDomain: { type: String, default: '' },
-  loadingDomains: { type: Boolean, default: false }
-})
-
-const emit = defineEmits(['update:domain', 'task-open', 'domains-refreshed'])
+const emit = defineEmits(['task-open'])
 
 const taskerStore = useTaskerStore()
-const userStore = useUserStore()
 
 // 状态
 const taskList = ref([])
@@ -62,14 +54,6 @@ const stopAutoRefresh = () => {
   }
 }
 
-// 新增：领域创建
-const showDomainModal = ref(false)
-const newDomain = ref({
-  name: '',
-  code: '',
-  description: ''
-})
-
 // 新增：Markdown查看
 const markdownModalVisible = ref(false)
 const markdownContent = ref('')
@@ -91,40 +75,6 @@ const statusMap = {
 
 // 计算属性
 const pendingCount = computed(() => taskList.value.length)
-
-// 领域选择
-const localDomain = ref('__all__')
-
-watch(
-  () => props.selectedDomain,
-  (val) => {
-    if (val && val !== localDomain.value) {
-      localDomain.value = val
-    }
-  }
-)
-
-watch(localDomain, (val) => {
-  fetchTasks(val)
-  fetchHistory(val)
-})
-
-const handleDomainChange = (eventOrValue) => {
-  const value = eventOrValue?.target?.value ?? eventOrValue
-  if (!value || value === localDomain.value) return
-  localDomain.value = value
-  emit('update:domain', value)
-}
-
-const domainOptions = computed(() => {
-  if (!Array.isArray(props.domains)) return []
-  const allOption = { label: '全部', value: '__all__' }
-  const domainList = props.domains.map((d) => ({
-    label: d.name,
-    value: d.code || d.id || d.name
-  }))
-  return [allOption, ...domainList]
-})
 
 const filteredTasks = computed(() => taskList.value)
 
@@ -156,12 +106,10 @@ const togglePendingSelect = (id, checked) => {
 }
 
 // 获取任务列表
-const fetchTasks = async (domain) => {
-  const d = domain !== undefined ? domain : localDomain.value
+const fetchTasks = async () => {
   taskLoading.value = true
   try {
-    const params = d && d !== '__all__' ? { domain: d } : {}
-    const res = await domainFactoryApi.fetchDataSources(params)
+    const res = await domainFactoryApi.fetchDataSources()
     taskList.value = res?.pending || res?.items || []
   } catch (e) {
     console.error('fetchTasks failed:', e)
@@ -172,15 +120,11 @@ const fetchTasks = async (domain) => {
 }
 
 // 获取历史记录
-const fetchHistory = async (domain) => {
-  const d = domain !== undefined ? domain : localDomain.value
+const fetchHistory = async () => {
   historyLoading.value = true
   try {
     const params = {
       keyword: searchKeyword.value || undefined
-    }
-    if (d && d !== '__all__') {
-      params.domain = d
     }
     const res = await domainFactoryApi.fetchHistory(params)
     historyList.value = res?.items || []
@@ -219,7 +163,6 @@ const handleBatchDelete = async () => {
     message.success(`已删除 ${ok} 个任务`)
     selectedRowKeys.value = []
     refresh()
-    emit('domains-refreshed')
   } catch {
     /* cancelled */
   } finally {
@@ -242,7 +185,6 @@ const handleDeleteTask = async (task) => {
     await domainFactoryApi.deleteDataSource(task.id || task.task_id)
     message.success('删除成功')
     refresh()
-    emit('domains-refreshed')
   } catch {
     message.error('删除失败')
   }
@@ -294,43 +236,10 @@ const handleViewMarkdown = async (task) => {
   }
 }
 
-// 新建领域
-const showCreateDomainModal = () => {
-  newDomain.value = { name: '', code: '', description: '' }
-  showDomainModal.value = true
-}
-
-const handleCreateDomain = async () => {
-  if (!newDomain.value.name) {
-    message.warning('请输入领域名称')
-    return
-  }
-  try {
-    await domainFactoryApi.createDomain(newDomain.value)
-    message.success('领域创建成功')
-    showDomainModal.value = false
-    emit('domains-refreshed')
-  } catch (e) {
-    console.error(e)
-    message.error('创建领域失败')
-  }
-}
-
 // 上传相关
-const uploadDomain = ref('')
-const uploadDomainOptions = computed(() => {
-  if (!Array.isArray(props.domains)) return []
-  return props.domains.map((d) => ({
-    label: d.name,
-    value: d.code || d.id || d.name
-  }))
-})
-
 const openUploadModal = async () => {
   uploadFiles.value = []
   uploadFileList.value = []
-  uploadDomain.value =
-    props.selectedDomain || props.domains?.[0]?.code || props.domains?.[0]?.id || ''
   selectedReportType.value = ''
   await loadReportTypes()
   uploadModalVisible.value = true
@@ -339,18 +248,12 @@ const openUploadModal = async () => {
 const loadReportTypes = async () => {
   try {
     const res = await domainFactoryApi.getContexts()
-    const domain = uploadDomain.value || props.selectedDomain || props.domains?.[0]?.code || ''
     const typesByDomain = res?.report_types || {}
-    const types = typesByDomain[domain] || []
+    const types = typesByDomain.general || []
     reportTypeOptions.value = types.map((t) => ({ label: t.name, value: t.code }))
   } catch {
     reportTypeOptions.value = []
   }
-}
-
-const handleUploadDomainChange = async () => {
-  selectedReportType.value = ''
-  await loadReportTypes()
 }
 
 const beforeUpload = (file) => {
@@ -418,17 +321,12 @@ const handleUpload = async () => {
     message.warning('请选择文件')
     return
   }
-  if (!uploadDomain.value) {
-    message.warning('请选择行业领域')
-    return
-  }
 
   uploading.value = true
   try {
     for (const file of uploadFiles.value) {
       const formData = new FormData()
       formData.append('file', file.originFileObj || file)
-      formData.append('domain', uploadDomain.value)
       const rtOption = reportTypeOptions.value.find((o) => o.value === selectedReportType.value)
       formData.append('document_type', rtOption?.label || selectedReportType.value)
       formData.append('report_type_code', selectedReportType.value)
@@ -446,7 +344,6 @@ const handleUpload = async () => {
       taskerStore.loadTasks()
       if (hasActiveTasks.value) startAutoRefresh()
     }, 500)
-    emit('domains-refreshed')
   } catch (e) {
     message.error('上传失败: ' + (e.message || '未知错误'))
   } finally {
@@ -500,32 +397,6 @@ defineExpose({ refresh })
       </div>
     </div>
 
-    <!-- 领域筛选 -->
-    <div class="domain-card">
-      <div class="domain-toolbar">
-        <div class="label">领域筛选</div>
-        <div class="domains">
-          <a-radio-group :value="localDomain" button-style="solid" @change="handleDomainChange">
-            <a-radio-button
-              v-for="domain in domainOptions"
-              :key="domain.value"
-              :value="domain.value"
-            >
-              {{ domain.label }}
-            </a-radio-button>
-          </a-radio-group>
-          <a-button
-            v-if="userStore.isAdmin"
-            type="link"
-            size="small"
-            @click="showCreateDomainModal"
-          >
-            <Plus :size="12" /> 新建领域
-          </a-button>
-        </div>
-      </div>
-    </div>
-
     <!-- 待处理任务 -->
     <div class="task-section">
       <div class="section-header">
@@ -566,7 +437,6 @@ defineExpose({ refresh })
             />
           </span>
           <span>文件名</span>
-          <span class="col-center">所属领域</span>
           <span>文档类型</span>
           <span class="col-center">上传时间</span>
           <span class="col-center">状态</span>
@@ -591,7 +461,6 @@ defineExpose({ refresh })
               <FileText :size="16" style="color: var(--main-500); flex-shrink: 0" />
               <span class="entry-name">{{ record.file_name }}</span>
             </span>
-            <span class="col-center">{{ record.domain_label }}</span>
             <span>{{
               record.document_type || record.report_type_name || record.report_type_code || '-'
             }}</span>
@@ -682,7 +551,6 @@ defineExpose({ refresh })
       <div class="file-table" role="table">
         <div class="file-row table-head no-checkbox">
           <span>文件名</span>
-          <span class="col-center">所属领域</span>
           <span>文档类型</span>
           <span class="col-center">操作人</span>
           <span class="col-center">入库时间</span>
@@ -701,7 +569,6 @@ defineExpose({ refresh })
               <FileText :size="16" style="color: var(--main-500); flex-shrink: 0" />
               <span class="entry-name">{{ record.file_name }}</span>
             </span>
-            <span class="col-center">{{ record.domain_label }}</span>
             <span>{{ record.document_type }}</span>
             <span class="col-center">{{ record.reviewer || '-' }}</span>
             <span class="col-center col-time">{{ formatDate(record.committed_at) }}</span>
@@ -751,15 +618,6 @@ defineExpose({ refresh })
         </div>
 
         <div class="form-selectors">
-          <a-form-item label="行业领域" required>
-            <a-select
-              v-model:value="uploadDomain"
-              :options="uploadDomainOptions"
-              placeholder="选择行业领域"
-              style="width: 100%"
-              @change="handleUploadDomainChange"
-            />
-          </a-form-item>
           <a-form-item label="报告类型" required>
             <a-select
               v-model:value="selectedReportType"
@@ -829,30 +687,6 @@ defineExpose({ refresh })
       </div>
     </a-modal>
 
-    <!-- 新建领域弹窗 -->
-    <a-modal
-      v-model:open="showDomainModal"
-      title="新建领域"
-      @ok="handleCreateDomain"
-      ok-text="创建"
-    >
-      <a-form layout="vertical">
-        <a-form-item label="领域名称" required>
-          <a-input v-model:value="newDomain.name" placeholder="如：煤炭采掘" />
-        </a-form-item>
-        <a-form-item label="领域标识">
-          <a-input v-model:value="newDomain.code" placeholder="仅用于接口标识，可留空自动生成" />
-        </a-form-item>
-        <a-form-item label="描述">
-          <a-textarea
-            v-model:value="newDomain.description"
-            rows="3"
-            placeholder="补充该领域适用范围"
-          />
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
     <!-- Markdown 查看弹窗 -->
     <a-modal
       v-model:open="markdownModalVisible"
@@ -916,48 +750,6 @@ defineExpose({ refresh })
         border-color: var(--main-color);
         color: var(--main-color);
         background: rgba(var(--main-color-rgb), 0.04);
-      }
-    }
-  }
-}
-
-.domain-card {
-  background: var(--gray-0);
-  border-radius: 0;
-  border-left: none;
-  border-right: none;
-  padding: 10px 20px;
-
-  :deep(.ant-card-body) {
-    padding: 16px 24px;
-  }
-
-  .domain-toolbar {
-    .label {
-      font-size: 12px;
-      font-weight: 400;
-      color: var(--gray-600);
-      margin-bottom: 8px;
-    }
-
-    .domains {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-
-      :deep(.ant-radio-button-wrapper) {
-        font-size: 13px;
-        height: 28px;
-        line-height: 26px;
-        padding: 0 12px;
-      }
-
-      :deep(.ant-btn-link) {
-        font-size: 13px;
-        height: 28px;
-        line-height: 28px;
-        padding: 0 8px;
       }
     }
   }
@@ -1052,7 +844,7 @@ defineExpose({ refresh })
 
 .file-row {
   display: grid;
-  grid-template-columns: 34px minmax(150px, 1fr) 88px 120px 140px 110px 88px 180px;
+  grid-template-columns: 34px minmax(150px, 1fr) 120px 140px 110px 88px 180px;
   align-items: center;
   gap: 8px;
   width: 100%;
@@ -1075,7 +867,7 @@ defineExpose({ refresh })
   }
 
   &.no-checkbox {
-    grid-template-columns: minmax(150px, 1fr) 120px 140px 130px 150px 88px 140px;
+    grid-template-columns: minmax(150px, 1fr) 140px 130px 150px 88px 140px;
   }
 }
 
