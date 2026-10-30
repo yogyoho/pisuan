@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from yuxi.config import get_user_data_dir
 from yuxi.config.options import domain_factory_llm_opts, system_options
 from yuxi.models.chat import select_model
-from yuxi.repositories.domain_factory_repository import DomainFactoryRepository
+from yuxi.repositories.domain_factory_repository import GENERAL_DOMAIN_CODE, DomainFactoryRepository
 from yuxi.services.domain_factory_region import (
     VALID_SCOPES,
     apply_min_permissive,
@@ -169,7 +169,7 @@ class DomainFactoryService:
         # Prompt 模板缓存
         self._prompt_templates: dict[str, str] | None = None
 
-    async def _get_template_matcher(self, domain: str = "coal") -> Any:
+    async def _get_template_matcher(self, domain: str = GENERAL_DOMAIN_CODE) -> Any:
         """获取或创建模板匹配器（延迟加载，含 DB 学习模板）"""
         if self._template_matcher is not None:
             return self._template_matcher
@@ -579,9 +579,8 @@ class DomainFactoryService:
         source_report_id: str | None = None,
         chapter_label: str | None = None,
     ) -> DomainTaskDTO:
-        domain = await self.repo.get_domain_by_code(domain_code)
-        if not domain:
-            raise ValueError(f"Domain not found: {domain_code}")
+        # 去领域化：不再按传入 domain 查表校验，外键统一指向通用域行
+        domain = await self.repo.get_or_create_general_domain()
 
         if chapter_label and not source_report_id:
             source_report_id = f"sr_{uuid.uuid4().hex[:12]}"
@@ -741,7 +740,7 @@ class DomainFactoryService:
 
         # 模板匹配：对标题段落进行模板匹配，附加 template_id / semantic_routing
         try:
-            matcher = await service._get_template_matcher(domain_code or "coal")
+            matcher = await service._get_template_matcher(domain_code or GENERAL_DOMAIN_CODE)
             if matcher:
                 matched_count = 0
                 for para in paragraphs:
@@ -750,7 +749,7 @@ class DomainFactoryService:
                     if not is_title or not title:
                         continue
 
-                    match_result = matcher.match(title, context={"domain": domain_code or "coal"})
+                    match_result = matcher.match(title, context={"domain": domain_code or GENERAL_DOMAIN_CODE})
                     if match_result.matched:
                         para["template_match"] = {
                             "template_id": match_result.template_id,
@@ -4359,7 +4358,7 @@ class DomainFactoryService:
 
         from yuxi.services.graph_builder import GraphBuilder
 
-        domain = self._normalize_domain_for_graph(task_detail.get("domain") or "coal")
+        domain = self._normalize_domain_for_graph(task_detail.get("domain") or GENERAL_DOMAIN_CODE)
         report_type = self._normalize_report_type_for_graph(task_detail.get("report_type_code") or "eia_report")
         builder = GraphBuilder()
         merged_count = 0
@@ -4718,7 +4717,7 @@ class DomainFactoryService:
                 await context.set_message("正在产出章节大纲...")
                 outline_count = await service._produce_outlines_async(
                     task_id,
-                    service._normalize_domain_for_graph(task_detail.get("domain") or "coal"),
+                    service._normalize_domain_for_graph(task_detail.get("domain") or GENERAL_DOMAIN_CODE),
                     service._normalize_report_type_for_graph(task_detail.get("report_type_code") or "eia_report"),
                 )
                 logger.info(f"章节大纲产出完成: {outline_count} 章")
@@ -5443,7 +5442,7 @@ class DomainFactoryService:
 
     async def _save_learned_templates_from_task(self, task_detail: dict[str, Any], task_id: str) -> int:
         """从已提交任务中提取高质量模板，回流到学习模板库"""
-        domain_code = task_detail.get("domain", "coal")
+        domain_code = task_detail.get("domain", GENERAL_DOMAIN_CODE)
         report_type_code = task_detail.get("report_type_code")
         paragraphs = task_detail.get("source_paragraphs", [])
         template_ids: list[int] = []
@@ -6055,7 +6054,7 @@ class DomainFactoryService:
             return {"error": "任务不存在"}
 
         paragraphs = detail.get("source_paragraphs", [])
-        domain_code = detail.get("domain") or "coal"
+        domain_code = detail.get("domain") or GENERAL_DOMAIN_CODE
 
         # ---- 步骤 1: 规则匹配自动绑定 ----
         rule_bound = await self._auto_map_slots_to_entity_properties(paragraphs, domain_code=domain_code)
@@ -6268,7 +6267,7 @@ class DomainFactoryService:
         if not raw_slots:
             return {"entities": [], "message": "没有未识别的插槽"}
 
-        domain_code = template_metadata.get("domain_code") or detail.get("domain") or "coal"
+        domain_code = template_metadata.get("domain_code") or detail.get("domain") or GENERAL_DOMAIN_CODE
 
         # 获取领域名称
         domain_obj = await self.repo.get_domain_by_code(domain_code) if domain_code else None
@@ -6314,7 +6313,7 @@ class DomainFactoryService:
             return {"saved": 0, "error": "任务不存在"}
 
         template_metadata = detail.get("template_metadata") or {}
-        domain_code = template_metadata.get("domain_code") or detail.get("domain") or "coal"
+        domain_code = template_metadata.get("domain_code") or detail.get("domain") or GENERAL_DOMAIN_CODE
 
         from yuxi.repositories.domain_entity_repository import DomainEntityRepository
 
