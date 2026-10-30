@@ -7,7 +7,6 @@ import {
   apiAdminGet,
   apiAdminPost,
   apiAdminPut,
-  apiAdminDelete,
   apiGet,
   apiPost,
   apiPut,
@@ -26,33 +25,33 @@ const buildUrl = (base, params = {}) => {
 const demoFlag = runtimeEnv?.VITE_ENABLE_DOMAIN_FACTORY_DEMO
 const enableDemoMode = demoFlag === 'true'
 
-const buildDemoTasks = (domain = 'coal') => [
+const buildDemoTasks = () => [
   {
-    id: `${domain}-task-1`,
+    id: 'general-task-1',
     file_name: '示例报告.docx',
-    domain,
-    domain_label: domain,
+    domain: 'general',
+    domain_label: '通用域',
     uploaded_at: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
     status: 'WAITING_REVIEW',
     ai_confidence: 85
   },
   {
-    id: `${domain}-task-2`,
+    id: 'general-task-2',
     file_name: '示例文档.pdf',
-    domain,
-    domain_label: domain,
+    domain: 'general',
+    domain_label: '通用域',
     uploaded_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
     status: 'EXTRACTING',
     ai_confidence: null
   }
 ]
 
-const buildDemoHistory = (domain = 'coal') => [
+const buildDemoHistory = () => [
   {
-    id: `${domain}-hist-1`,
+    id: 'general-hist-1',
     file_name: '示例历史文档.docx',
-    domain,
-    domain_label: domain,
+    domain: 'general',
+    domain_label: '通用域',
     reviewer: '系统示例',
     committed_at: new Date(Date.now() - 3600 * 1000).toISOString(),
     ai_confidence: 92
@@ -62,8 +61,8 @@ const buildDemoHistory = (domain = 'coal') => [
 const demoTaskDetail = () => ({
   id: 'demo-task',
   file_name: '示例报告.docx',
-  domain: 'demo',
-  domain_label: 'Demo',
+  domain: 'general',
+  domain_label: '通用域',
   form_schema: [
     {
       key: 'Project_Name',
@@ -112,46 +111,20 @@ const withDemoFallback = async (requestFn, fallbackFn) => {
 }
 
 export const domainFactoryApi = {
-  // ========== Domain Management ==========
-
-  getDomains: () =>
-    withDemoFallback(
-      () => apiGet('/api/domain-factory/domains'),
-      () => ({ items: [] })
-    ),
-
-  createDomain: (payload) =>
-    withDemoFallback(() => apiAdminPost('/api/domain-factory/domains', payload), {
-      success: true,
-      demo: true
-    }),
-
-  updateDomain: (domainId, payload) =>
-    withDemoFallback(() => apiAdminPut(`/api/domain-factory/domains/${domainId}`, payload), {
-      success: true,
-      demo: true
-    }),
-
-  deleteDomain: (domainId) =>
-    withDemoFallback(() => apiAdminDelete(`/api/domain-factory/domains/${domainId}`), {
-      success: true,
-      demo: true
-    }),
-
   // ========== Data Sources & Tasks ==========
 
   fetchDataSources: (params = {}) => {
     const url = buildUrl('/api/domain-factory/data-sources', params)
     return withDemoFallback(
       () => apiGet(url).then((res) => res),
-      () => ({ pending: buildDemoTasks(params?.domain || 'coal') })
+      () => ({ pending: buildDemoTasks() })
     )
   },
 
   fetchHistory: (params = {}) =>
     withDemoFallback(
       () => apiGet(buildUrl('/api/domain-factory/history', params)),
-      () => ({ items: buildDemoHistory(params?.domain || 'coal') })
+      () => ({ items: buildDemoHistory() })
     ),
 
   getTaskDetail: (taskId) =>
