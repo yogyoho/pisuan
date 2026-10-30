@@ -38,93 +38,12 @@ domain_factory = APIRouter(prefix="/domain-factory", tags=["Domain Factory"])
 
 
 # =============================================================================
-# Domain Management
-# =============================================================================
-
-
-@domain_factory.get("/domains")
-async def get_domains(
-    current_user: User = Depends(get_required_user),
-) -> dict[str, Any]:
-    """获取所有领域列表"""
-    try:
-        service = get_domain_factory_service()
-        domains = await service.get_domains()
-        return {"items": domains}
-    except Exception as e:
-        logger.error(f"Failed to get domains: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"获取领域列表失败: {str(e)}")
-
-
-@domain_factory.post("/domains")
-async def create_domain(
-    payload: dict[str, Any] = Body(...),
-    current_user: User = Depends(get_admin_user),
-) -> dict[str, Any]:
-    """创建新领域"""
-    try:
-        code = payload.get("code", "")
-        name = payload.get("name", "")
-        description = payload.get("description")
-        if not code or not name:
-            raise HTTPException(status_code=400, detail="code 和 name 不能为空")
-        service = get_domain_factory_service()
-        domain = await service.create_domain(code, name, description)
-        return {"success": True, "domain": domain}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to create domain: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"创建领域失败: {str(e)}")
-
-
-@domain_factory.put("/domains/{domain_id}")
-async def update_domain(
-    domain_id: int,
-    payload: dict[str, Any] = Body(...),
-    current_user: User = Depends(get_admin_user),
-) -> dict[str, Any]:
-    """更新领域配置"""
-    try:
-        service = get_domain_factory_service()
-        domain = await service.update_domain(domain_id, payload)
-        if not domain:
-            raise HTTPException(status_code=404, detail="领域不存在")
-        return {"success": True, "domain": domain}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to update domain {domain_id}: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"更新领域失败: {str(e)}")
-
-
-@domain_factory.delete("/domains/{domain_id}")
-async def delete_domain(
-    domain_id: int,
-    current_user: User = Depends(get_admin_user),
-) -> dict[str, Any]:
-    """删除领域"""
-    try:
-        service = get_domain_factory_service()
-        success = await service.delete_domain(domain_id)
-        if not success:
-            raise HTTPException(status_code=404, detail="领域不存在")
-        return {"success": True}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to delete domain {domain_id}: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"删除领域失败: {str(e)}")
-
-
-# =============================================================================
 # Data Sources & Tasks
 # =============================================================================
 
 
 @domain_factory.get("/data-sources")
 async def fetch_data_sources(
-    domain: str | None = Query(None),  # 阶段1 兼容保留：忽略，阶段3 删参
     status: str | None = Query(None),
     current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
@@ -140,7 +59,6 @@ async def fetch_data_sources(
 
 @domain_factory.get("/history")
 async def fetch_history(
-    domain: str | None = Query(None),  # 阶段1 兼容保留：忽略，阶段3 删参
     limit: int = Query(50),
     current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
@@ -506,7 +424,6 @@ async def fetch_region_board(
 @domain_factory.post("/upload")
 async def upload_file(
     file: UploadFile = File(...),
-    domain: str = Form("general"),  # 阶段1 兼容保留：客户端值被忽略，阶段3 删参
     document_type: str = Form("通用"),
     report_type_code: str = Form("通用"),
     source_report_id: str | None = Form(None),
@@ -619,7 +536,6 @@ async def get_contexts(
 
 @domain_factory.get("/tasks-center")
 async def get_tasks_for_task_center(
-    domain: str | None = Query(None),  # 阶段1 兼容保留：忽略，阶段3 删参
     limit: int = Query(100, ge=1, le=200),
     current_user: User = Depends(get_admin_user),
 ) -> dict[str, Any]:
@@ -748,7 +664,6 @@ def _calculate_progress(df_status: str) -> float:
 
 @domain_factory.get("/outline-templates")
 async def list_outline_templates(
-    domain: str = Query("general"),  # 阶段1：客户端值被忽略（去领域化）
     report_type: str = Query("eia_report"),
     current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
@@ -770,7 +685,6 @@ async def list_outline_templates(
 @domain_factory.get("/outline-templates/{chapter_key}")
 async def get_outline_template(
     chapter_key: str,
-    domain: str = Query("general"),  # 阶段1：客户端值被忽略（去领域化）
     report_type: str = Query("eia_report"),
     current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
@@ -792,7 +706,6 @@ async def get_outline_template(
 async def update_outline_template(
     chapter_key: str,
     body: dict = Body(...),
-    domain: str = Query("general"),  # 阶段1：客户端值被忽略（去领域化）
     report_type: str = Query("eia_report"),
     current_user: User = Depends(get_admin_user),
 ) -> dict[str, Any]:
@@ -860,7 +773,6 @@ async def seed_outline_templates(
 @domain_factory.post("/outline-templates/extract")
 async def extract_outline_preview(
     file: UploadFile = File(...),
-    domain: str = Form("general"),  # 阶段1：客户端值被忽略（去领域化）
     report_type: str = Form("eia_report"),
     current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
@@ -891,14 +803,13 @@ async def confirm_outline_extract(
 ) -> dict[str, Any]:
     """将人工确认的大纲章节入库（PG outline upsert + 图谱标准章节同步）。"""
     try:
-        domain = GENERAL_DOMAIN_CODE  # 阶段1：忽略客户端传入（去领域化）
         report_type = body.get("report_type", "eia_report")
         chapters = body.get("chapters") or []
         file_name = body.get("file_name") or ""
         if not chapters:
             raise HTTPException(status_code=400, detail="chapters 不能为空")
         service = get_domain_factory_service()
-        result = await service.confirm_outline_extract(domain, report_type, chapters, file_name)
+        result = await service.confirm_outline_extract(GENERAL_DOMAIN_CODE, report_type, chapters, file_name)
         return {"success": True, **result}
     except HTTPException:
         raise
@@ -918,10 +829,9 @@ async def generate_extraction_regex(
     对每个 std_ 章节调 _llm_chapter_meta 生成正则并写回图谱。
     """
     try:
-        domain = GENERAL_DOMAIN_CODE  # 阶段1：忽略客户端传入（去领域化）
         report_type = body.get("report_type", "eia_report")
         service = get_domain_factory_service()
-        result = await service.generate_standard_extraction_regex(domain, report_type)
+        result = await service.generate_standard_extraction_regex(GENERAL_DOMAIN_CODE, report_type)
         return {"success": True, **result}
     except Exception as e:
         logger.error(f"Failed to generate extraction_regex: {e}\n{traceback.format_exc()}")

@@ -3,19 +3,12 @@
 覆盖主链路只读端点 + 鉴权门控。写端点（upload/commit/reingest）涉及重依赖
 （docling/Milvus/Neo4j/MinIO），放 E2E 层；本层聚焦 HTTP 契约与权限。
 """
+
 from __future__ import annotations
 
 import pytest
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
-
-
-async def test_get_domains_admin_ok(test_client, admin_headers):
-    """admin 能取领域列表（即使空也应是 200 + list 结构）。"""
-    res = await test_client.get("/api/domain-factory/domains", headers=admin_headers)
-    assert res.status_code == 200, res.text
-    data = res.json()
-    assert isinstance(data, list) or isinstance(data, dict)
 
 
 async def test_get_contexts_returns_stats(test_client, admin_headers):
@@ -52,7 +45,7 @@ async def test_prompt_config_get(test_client, admin_headers):
 
 async def test_standard_user_workflow_access(test_client, standard_user):
     """普通用户可访问工作流只读端点（2026-09-27 权限放开）。"""
-    for path in ("/api/domain-factory/domains", "/api/domain-factory/contexts"):
+    for path in ("/api/domain-factory/contexts",):
         res = await test_client.get(path, headers=standard_user["headers"])
         assert res.status_code == 200, f"{path}: {res.text}"
 
@@ -60,18 +53,16 @@ async def test_standard_user_workflow_access(test_client, standard_user):
 async def test_standard_user_config_forbidden(test_client, standard_user):
     """普通用户访问配置类端点仍应被拒（401/403）。"""
     res = await test_client.post(
-        "/api/domain-factory/domains", json={"name": "x", "code": "x"}, headers=standard_user["headers"]
+        "/api/domain-factory/outline-templates/seed", json={}, headers=standard_user["headers"]
     )
     assert res.status_code in (401, 403), f"expected auth denial, got {res.status_code}"
-    res = await test_client.put(
-        "/api/domain-factory/prompt-config", json={}, headers=standard_user["headers"]
-    )
+    res = await test_client.put("/api/domain-factory/prompt-config", json={}, headers=standard_user["headers"])
     assert res.status_code in (401, 403), f"expected auth denial, got {res.status_code}"
 
 
 async def test_unauthenticated_denied(test_client):
     """未认证访问 domain-factory 应被拒（401）。"""
-    res = await test_client.get("/api/domain-factory/domains")
+    res = await test_client.get("/api/domain-factory/data-sources")
     assert res.status_code in (401, 403), f"expected auth denial, got {res.status_code}"
 
 
@@ -93,3 +84,21 @@ async def test_expectations_recompile_standard_user_denied(test_client, standard
         "/api/domain-factory/eia/stages/expectations/recompile", headers=standard_user["headers"]
     )
     assert res.status_code in (401, 403), f"expected auth denial, got {res.status_code}: {res.text[:200]}"
+
+
+async def test_upload_without_domain_field_ok(test_client, admin_headers):
+    """去领域化：上传不再要求 domain 表单字段，响应 domain 恒 general。"""
+    files = {"file": ("dedomain-smoke.txt", "通用域去领域化冒烟内容".encode(), "text/plain")}
+    res = await test_client.post("/api/domain-factory/upload", headers=admin_headers, files=files)
+    assert res.status_code == 200
+    body = res.json()
+    assert body["success"] is True
+    assert body["domain"] == "general"
+
+
+async def test_contexts_single_general_domain(test_client, admin_headers):
+    """去领域化：contexts 只返回通用域单元素。"""
+    res = await test_client.get("/api/domain-factory/contexts", headers=admin_headers)
+    assert res.status_code == 200
+    domains = res.json().get("domains") or []
+    assert [d["code"] for d in domains] == ["general"]

@@ -458,22 +458,6 @@ class DomainFactoryService:
             result = result.replace(f"{{{key}}}", str(value))
         return result
 
-    # ========== Domain ==========
-
-    async def get_domains(self) -> list[dict[str, Any]]:
-        return await self.repo.list_domains()
-
-    async def create_domain(self, code: str, name: str, description: str | None = None) -> dict[str, Any]:
-        domain = await self.repo.create_domain(code, name, description)
-        return domain.to_dict()
-
-    async def update_domain(self, domain_id: int, data: dict[str, Any]) -> dict[str, Any] | None:
-        domain = await self.repo.update_domain(domain_id, data)
-        return domain.to_dict() if domain else None
-
-    async def delete_domain(self, domain_id: int) -> bool:
-        return await self.repo.delete_domain(domain_id)
-
     # ========== Extraction Variables (Entity-driven) ==========
 
     async def _get_extraction_variables(self, domain_code: str | None = None) -> list[dict[str, Any]]:
