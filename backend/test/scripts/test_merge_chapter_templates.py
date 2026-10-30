@@ -33,11 +33,12 @@ from scripts.governance.merge_chapter_templates import (
 STD_PREFIX = "CH_coal_eia_report_std_"
 
 
-def make_row(nid, title, canonical, level, parents=(), chapter_no=None, **meta):
+def make_row(nid, title, canonical, level, parents=(), chapter_no=None, order=None, **meta):
     """构造 fetch_graph_state 查询行（同 GraphQL 行结构）。"""
     row = {
         "id": nid, "title": title, "canonical": canonical, "level": level,
         "chapter_no": chapter_no, "frequency": 1.0, "parent_ids": list(parents),
+        "order": order,
     }
     for f in GRAPH_META_FIELDS:
         row[f] = meta.get(f)
@@ -69,6 +70,7 @@ def rows_from_state(state):
             "id": nid, "title": n["title"], "canonical": n["canonical"], "level": n["level"],
             "chapter_no": n["chapter_no"], "frequency": n["frequency"],
             "parent_ids": list(state.parents_of.get(nid, [])),
+            "order": n.get("order"),
         }
         for f in GRAPH_META_FIELDS:
             row[f] = n.get(f)
@@ -286,6 +288,45 @@ def test_plan_retitles_keeps_existing_chapter_no():
     ])
     plans = {p["id"]: p for p in plan_retitles(state)}
     assert plans == {}  # 缺省即 null，置空为零动作；已有值不覆盖
+
+
+def test_plan_retitles_structural_fallback_uses_source_order():
+    """无号无 chapter_no 的存量节点：按 父号.order（源文档位次）推导；无 order 或父无号不猜。"""
+    state = build_state([
+        make_row(STD_PREFIX + "2", "类比调查", "类比调查", 1),
+        make_row("CH_coal_eia_report_s003", "监测布点", "监测布点", 2, parents=[STD_PREFIX + "2"], order=3),
+        make_row("CH_coal_eia_report_s001", "污染源调查", "污染源调查", 2, parents=[STD_PREFIX + "2"], order=1),
+        make_row("CH_coal_eia_report_s001a", "布点原则", "布点原则", 3, parents=["CH_coal_eia_report_s001"], order=1),
+        make_row("CH_coal_eia_report_s001b", "布点方法", "布点方法", 3, parents=["CH_coal_eia_report_s001"]),
+    ])
+    plans = {p["id"]: p for p in plan_retitles(state)}
+    assert plans["CH_coal_eia_report_s001"] == {"id": "CH_coal_eia_report_s001", "chapter_no": "2.1"}
+    assert plans["CH_coal_eia_report_s003"]["chapter_no"] == "2.3"
+    assert plans["CH_coal_eia_report_s001a"]["chapter_no"] == "2.1.1"
+    assert plans[STD_PREFIX + "2"] == {"id": STD_PREFIX + "2", "chapter_no": "2"}
+    assert "CH_coal_eia_report_s001b" not in plans  # 无 order 不猜，保持 null 零动作
+
+
+def test_plan_retitles_structural_fallback_parent_unnumbered_keeps_null():
+    """父无号（根无编号且非 std 且自身也无既有号）→ 子不猜号，整体零动作。"""
+    state = build_state([
+        make_row("CH_coal_eia_report_r001", "附录", "附录", 1),
+        make_row("CH_coal_eia_report_r001a", "附表", "附表", 2, parents=["CH_coal_eia_report_r001"], order=1),
+    ])
+    assert plan_retitles(state) == []
+
+
+def test_plan_retitles_structural_fallback_uses_existing_parent_no():
+    """既有 chapter_no 不重算（fill-empty-only），但作为父号传递给无号子女。"""
+    state = build_state([
+        make_row("CH_coal_eia_report_p001", "概况", "概况", 1, chapter_no="3"),
+        make_row("CH_coal_eia_report_p001a", "地质", "地质", 2, parents=["CH_coal_eia_report_p001"], order=1),
+        make_row("CH_coal_eia_report_p001b", "气候", "气候", 2, parents=["CH_coal_eia_report_p001"], order=2),
+    ])
+    plans = {p["id"]: p for p in plan_retitles(state)}
+    assert "CH_coal_eia_report_p001" not in plans  # 既有号保留不动
+    assert plans["CH_coal_eia_report_p001a"]["chapter_no"] == "3.1"
+    assert plans["CH_coal_eia_report_p001b"]["chapter_no"] == "3.2"
 
 
 def test_apply_retitle_updates_state():

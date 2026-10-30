@@ -877,7 +877,8 @@ class GraphBuilder:
             # std 命中复用：种子节点的 frequency/rigidity/meta 由 seed 体系所有，不参与语料覆盖重算；
             # 仅补 DomainOutline/HAS_CHILD 归边（幂等）
             if not is_std_reuse:
-                # MERGE：ON CREATE 落去编号干净标题与结构化编号；命中时 frequency+1，rigidity 按 命中数/source_count 重算
+                # MERGE：ON CREATE 落去编号干净标题与结构化编号；命中时 frequency+1、rigidity 按 命中数/source_count 重算，
+                # chapter_no 只填空（存量节点建成于编号字段引入前，靠后续文档命中自愈，不覆盖已有值）
                 tx.run(
                     """
                     MERGE (ch:ChapterTemplate {id: $chapter_id})
@@ -895,7 +896,8 @@ class GraphBuilder:
                         ch.created_at = datetime()
                     ON MATCH SET
                         ch.frequency = coalesce(ch.frequency, 0) + 1.0,
-                        ch.canonical_chapter_key = COALESCE(ch.canonical_chapter_key, $canonical_key)
+                        ch.canonical_chapter_key = COALESCE(ch.canonical_chapter_key, $canonical_key),
+                        ch.chapter_no = CASE WHEN ch.chapter_no IS NULL OR ch.chapter_no = '' THEN $chapter_no ELSE ch.chapter_no END
                     WITH ch
                     SET ch.rigidity = CASE
                         WHEN coalesce(ch.frequency, 1.0) / $source_count >= 0.9 THEN 'rigid'

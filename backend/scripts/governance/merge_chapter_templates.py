@@ -11,7 +11,7 @@ import 兼容 yuxi/pisuan 双包名（localized 容器内包名为 pisuan，脚�
      HAS_CHILD（入+出）/ HAS_CHAPTER / REQUIRES_PARAGRAPH_ROLE，meta COALESCE 取非空、
      frequency 取最大，DELETE 重复节点（迭代至不动点）
   4. 编号结构化：title 剥前导编号；chapter_no = 标题自带编号或 std 编号（std_1→"1"、
-     std_2_3→"2.3"；ETL 无编号保留既有值/置 null）
+     std_2_3→"2.3"）；仍缺时按 父号.order（源文档位次）推导，无 order/父无号不猜（置 null）
   5. 删「测试」前缀节点及其全部后代（DETACH DELETE，dry-run 列出将删清单）
   6. 从 PG domain_factory_outlines（purpose/overview 非空的行）按归一 canonical 回写图谱 meta
 PG 阶段: 带编号 canonical 的行与归一后相同的行归并（字段逐个取非空、source_task_ids 并集、
@@ -144,6 +144,7 @@ def state_from_query_rows(rows: list[dict], domain: str, report_type: str) -> Gr
             "canonical_norm": normalize_chapter_key(raw) or normalize_chapter_key(r["title"] or ""),
             "level": r["level"] if r["level"] is not None else 0,
             "chapter_no": r["chapter_no"],
+            "order": r.get("order"),
             "frequency": r["frequency"],
             **{f: r[f] for f in GRAPH_META_FIELDS},
         }
@@ -221,8 +222,41 @@ def plan_reparents(state: GraphState, std_sub_index: dict[str, tuple[str, str]])
     return plans
 
 
+def _effective_numbers(state: GraphState) -> dict[str, str | None]:
+    """步骤④ 辅助：自根逐级推导各节点在本轮改号后的编号。
+
+    取值优先级：std → std 序号；标题带号 → 剥出号；既有 chapter_no 非空 → 保留；
+    否则 父号.order（order 为建库时记录的源文档位次，与既有 6.4/6.12 实测一致）。
+    父无号或节点无 order 不猜（置 None）。既有编号不重算（fill-empty-only），
+    但作为父号传递给后代。跨文档累积的兄弟集合次序 ≠ 任一源文档目录，故不用兄弟序。
+    """
+    by_level: dict[int, list[str]] = {}
+    for nid, n in state.nodes.items():
+        by_level.setdefault(n["level"], []).append(nid)
+
+    result: dict[str, str | None] = {}
+    for lvl in sorted(by_level):  # 父先于子
+        for nid in by_level[lvl]:
+            n = state.nodes[nid]
+            no, _ = split_leading_number(n.get("title") or "")
+            if nid.startswith(state.std_prefix):
+                result[nid] = std_chapter_no(nid, state.std_prefix)
+            elif no:
+                result[nid] = no
+            elif n.get("chapter_no"):
+                result[nid] = n.get("chapter_no")
+            else:
+                parents = sorted(p for p in state.parents_of.get(nid, []) if p in state.nodes)
+                pno = result.get(parents[0]) if parents else None
+                order = n.get("order")
+                result[nid] = f"{pno}.{int(order)}" if pno and order else None
+    return result
+
+
 def plan_retitles(state: GraphState) -> list[dict]:
-    """④ 编号结构化：title 剥前导编号；chapter_no = 标题自带编号或 std 编号（ETL 无编号保留既有/置 null）。"""
+    """④ 编号结构化：title 剥前导编号；chapter_no = 标题自带编号或 std 编号，
+    仍缺时按 父号.order（源位次）推导（_effective_numbers），使目录树全层级带编号。"""
+    effective = _effective_numbers(state)
     plans = []
     for nid in sorted(state.nodes):
         n = state.nodes[nid]
@@ -235,7 +269,8 @@ def plan_retitles(state: GraphState) -> list[dict]:
         elif no:
             target_no = no
         else:
-            target_no = n.get("chapter_no")  # 保留新写入路径的推导值（first-won）；旧节点为 None → 置空
+            # 保留新写入路径的推导值（first-won）；旧节点为空 → 结构化兜底
+            target_no = n.get("chapter_no") or effective.get(nid)
         changes: dict = {}
         if clean and clean != title:
             changes["title"] = clean
@@ -512,7 +547,7 @@ def fetch_graph_state(session, domain: str, report_type: str) -> GraphState:
         OPTIONAL MATCH (p:ChapterTemplate)-[:HAS_CHILD]->(ch)
         RETURN ch.id AS id, ch.title AS title, ch.canonical_chapter_key AS canonical,
                ch.level AS level, ch.chapter_no AS chapter_no, ch.frequency AS frequency,
-               {meta_returns}, collect(p.id) AS parent_ids
+               ch.order AS order, {meta_returns}, collect(p.id) AS parent_ids
         """,
         domain=domain, rt=report_type,
     )
