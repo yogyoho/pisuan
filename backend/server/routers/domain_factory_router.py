@@ -9,6 +9,7 @@ from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, 
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
+from yuxi.repositories.domain_factory_repository import GENERAL_DOMAIN_CODE
 from yuxi.services import eia_corpus_task_service as eia_corpus_tasks
 from yuxi.services.domain_factory_service import get_domain_factory_service
 from yuxi.services.eia_data_service import (
@@ -123,14 +124,14 @@ async def delete_domain(
 
 @domain_factory.get("/data-sources")
 async def fetch_data_sources(
-    domain: str | None = Query(None),
+    domain: str | None = Query(None),  # 阶段1 兼容保留：忽略，阶段3 删参
     status: str | None = Query(None),
     current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """获取待处理数据源列表"""
     try:
         service = get_domain_factory_service()
-        tasks = await service.list_pending_tasks(domain)
+        tasks = await service.list_pending_tasks(None)
         return {"pending": tasks}
     except Exception as e:
         logger.error(f"Failed to fetch data sources: {e}\n{traceback.format_exc()}")
@@ -139,14 +140,14 @@ async def fetch_data_sources(
 
 @domain_factory.get("/history")
 async def fetch_history(
-    domain: str | None = Query(None),
+    domain: str | None = Query(None),  # 阶段1 兼容保留：忽略，阶段3 删参
     limit: int = Query(50),
     current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """获取已提交历史列表"""
     try:
         service = get_domain_factory_service()
-        tasks = await service.list_history_tasks(domain, limit)
+        tasks = await service.list_history_tasks(None, limit)
         return {"items": tasks}
     except Exception as e:
         logger.error(f"Failed to fetch history: {e}\n{traceback.format_exc()}")
@@ -505,7 +506,7 @@ async def fetch_region_board(
 @domain_factory.post("/upload")
 async def upload_file(
     file: UploadFile = File(...),
-    domain: str = Form(...),
+    domain: str = Form("general"),  # 阶段1 兼容保留：客户端值被忽略，阶段3 删参
     document_type: str = Form("通用"),
     report_type_code: str = Form("通用"),
     source_report_id: str | None = Form(None),
@@ -522,11 +523,11 @@ async def upload_file(
             raise HTTPException(status_code=400, detail="文件内容为空")
 
         service = get_domain_factory_service()
-        task_id, storage_path = await service.save_uploaded_file(file_content, file.filename, domain)
+        task_id, storage_path = await service.save_uploaded_file(file_content, file.filename, GENERAL_DOMAIN_CODE)
 
         uploaded_by = current_user.username if current_user else None
         await service.create_task(
-            domain_code=domain,
+            domain_code=GENERAL_DOMAIN_CODE,
             file_name=file.filename,
             file_path=storage_path,
             uploaded_by=uploaded_by,
@@ -540,7 +541,7 @@ async def upload_file(
             "success": True,
             "task_id": task_id,
             "file_name": file.filename,
-            "domain": domain,
+            "domain": GENERAL_DOMAIN_CODE,
             "report_type_code": report_type_code,
             "source_report_id": source_report_id,
             "chapter_label": chapter_label,
@@ -656,7 +657,7 @@ async def get_contexts(
 
 @domain_factory.get("/tasks-center")
 async def get_tasks_for_task_center(
-    domain: str | None = Query(None),
+    domain: str | None = Query(None),  # 阶段1 兼容保留：忽略，阶段3 删参
     limit: int = Query(100, ge=1, le=200),
     current_user: User = Depends(get_admin_user),
 ) -> dict[str, Any]:
@@ -824,7 +825,7 @@ async def query_graph_legal_references(
 
 @domain_factory.get("/outline-templates")
 async def list_outline_templates(
-    domain: str = Query("coal"),
+    domain: str = Query("general"),  # 阶段1：客户端值被忽略（去领域化）
     report_type: str = Query("eia_report"),
     current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
@@ -834,7 +835,7 @@ async def list_outline_templates(
 
         svc = GraphQueryService()
         try:
-            items = await svc.list_outline_templates(domain, report_type)
+            items = await svc.list_outline_templates(GENERAL_DOMAIN_CODE, report_type)
             return {"items": items, "total": len(items)}
         finally:
             svc.close()
@@ -846,7 +847,7 @@ async def list_outline_templates(
 @domain_factory.get("/outline-templates/{chapter_key}")
 async def get_outline_template(
     chapter_key: str,
-    domain: str = Query("coal"),
+    domain: str = Query("general"),  # 阶段1：客户端值被忽略（去领域化）
     report_type: str = Query("eia_report"),
     current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
@@ -873,7 +874,7 @@ async def get_outline_template(
 async def update_outline_template(
     chapter_key: str,
     body: dict = Body(...),
-    domain: str = Query("coal"),
+    domain: str = Query("general"),  # 阶段1：客户端值被忽略（去领域化）
     report_type: str = Query("eia_report"),
     current_user: User = Depends(get_admin_user),
 ) -> dict[str, Any]:
@@ -883,7 +884,7 @@ async def update_outline_template(
 
         svc = GraphQueryService()
         try:
-            updated = await svc.update_chapter_template(domain, report_type, chapter_key, body)
+            updated = await svc.update_chapter_template(GENERAL_DOMAIN_CODE, report_type, chapter_key, body)
             if not updated:
                 raise HTTPException(status_code=404, detail=f"章节 '{chapter_key}' 不存在或无可更新字段")
             return {"success": True, "chapter_key": chapter_key}
@@ -941,7 +942,7 @@ async def seed_outline_templates(
 @domain_factory.post("/outline-templates/extract")
 async def extract_outline_preview(
     file: UploadFile = File(...),
-    domain: str = Form("coal"),
+    domain: str = Form("general"),  # 阶段1：客户端值被忽略（去领域化）
     report_type: str = Form("eia_report"),
     current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
@@ -954,7 +955,9 @@ async def extract_outline_preview(
         if not file_bytes:
             raise HTTPException(status_code=400, detail="上传文件为空")
         service = get_domain_factory_service()
-        preview = await service.extract_outline_preview(file_bytes, file.filename or "upload.docx", domain, report_type)
+        preview = await service.extract_outline_preview(
+            file_bytes, file.filename or "upload.docx", GENERAL_DOMAIN_CODE, report_type
+        )
         return preview
     except HTTPException:
         raise
@@ -970,7 +973,7 @@ async def confirm_outline_extract(
 ) -> dict[str, Any]:
     """将人工确认的大纲章节入库（PG outline upsert + 图谱标准章节同步）。"""
     try:
-        domain = body.get("domain", "coal")
+        domain = GENERAL_DOMAIN_CODE  # 阶段1：忽略客户端传入（去领域化）
         report_type = body.get("report_type", "eia_report")
         chapters = body.get("chapters") or []
         file_name = body.get("file_name") or ""
@@ -997,7 +1000,7 @@ async def generate_extraction_regex(
     对每个 std_ 章节调 _llm_chapter_meta 生成正则并写回图谱。
     """
     try:
-        domain = body.get("domain", "coal")
+        domain = GENERAL_DOMAIN_CODE  # 阶段1：忽略客户端传入（去领域化）
         report_type = body.get("report_type", "eia_report")
         service = get_domain_factory_service()
         result = await service.generate_standard_extraction_regex(domain, report_type)
