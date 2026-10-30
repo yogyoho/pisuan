@@ -1,5 +1,5 @@
 import asyncio
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -99,6 +99,23 @@ def test_llm_chapter_meta_parses_json_and_reuses_seed_key():
     assert "水位下降" in out["key_points"]
 
 
+def test_llm_chapter_meta_fallback_key_normalized():
+    """LLM 异常回退时 canonical 过 normalize_chapter_key，消灭带编号/含空白 PG key（bug-4167）"""
+    svc = DomainFactoryService.__new__(DomainFactoryService)
+    failing_model = type("M", (), {"call": AsyncMock(side_effect=RuntimeError("llm down"))})()
+    import yuxi.services.domain_factory_service as mod
+
+    with patch.object(mod, "select_model", return_value=failing_model), patch.object(
+        mod,
+        "system_options",
+        type("O", (), {"get": AsyncMock(return_value={"default_model": "test:model"})}),
+    ):
+        out = asyncio.run(svc._llm_chapter_meta("3  总　则", {"content_requirements": []}, seed_keys=[]))
+    assert out["canonical_chapter_key"] == "总则"
+    assert out["purpose"] is None
+    assert out["key_points"] == []
+
+
 @pytest.mark.asyncio
 async def test_produce_outlines_async_writes_rows_and_backfills(monkeypatch):
     svc = DomainFactoryService.__new__(DomainFactoryService)
@@ -131,9 +148,47 @@ async def test_produce_outlines_async_writes_rows_and_backfills(monkeypatch):
             "writing_hints": "h",
         }
     )
-    n = await svc._produce_outlines_async("task-1", "coal", "eia_report")
+    with patch("yuxi.services.graph_builder.GraphBuilder") as gb:
+        gb.return_value._get_driver.return_value = None  # 图谱不可用 → 仅告警跳过
+        n = await svc._produce_outlines_async("task-1", "coal", "eia_report")
     assert n == 1
     svc.repo.upsert_outline.assert_awaited_once()
     svc.repo.backfill_template_chapter_key.assert_awaited_once_with(
         "coal", "eia_report", ["5.2 地下水"], "地下水环境影响预测"
     )
+
+
+@pytest.mark.asyncio
+async def test_produce_outlines_async_backfills_graph_meta():
+    """LLM meta 落 PG 后按归一 canonical 回写图谱节点（bug-4167）"""
+    svc = DomainFactoryService.__new__(DomainFactoryService)
+    svc.repo = AsyncMock()
+    svc.repo.list_chapter_keys = AsyncMock(return_value=[])
+    svc.get_task_detail = AsyncMock(
+        return_value={
+            "source_paragraphs": [
+                {"id": "p1", "title": "1  总　则", "classify_type": "narrative", "template": {}},
+            ],
+        }
+    )
+    svc._llm_chapter_meta = AsyncMock(
+        return_value={
+            "canonical_chapter_key": "总　则",
+            "purpose": "p",
+            "overview": "o",
+            "key_points": ["k"],
+            "writing_hints": "h",
+            "extraction_regex": r"^\d+\s*总则",
+        }
+    )
+    fake_session = MagicMock()
+    fake_driver = MagicMock()
+    fake_driver.session.return_value.__enter__.return_value = fake_session
+    with patch("yuxi.services.graph_builder.GraphBuilder") as gb:
+        gb.return_value._get_driver.return_value = fake_driver
+        n = await svc._produce_outlines_async("task-2", "coal", "eia_report")
+    assert n == 1
+    fake_session.run.assert_called_once()
+    params = fake_session.run.call_args.kwargs
+    assert params["key"] == "总则"  # 归一后定位图谱节点
+    assert params["purpose"] == "p"

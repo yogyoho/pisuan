@@ -32,28 +32,52 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import uuid
 from typing import Any
 
 from neo4j import GraphDatabase as Neo4jDriver
 
-from yuxi.utils import hashstr, logger
+from yuxi.utils import hashstr, logger, normalize_chapter_key
 
 
 def _derive_canonical_key(title: str) -> str:
-    """从章节标题推导 canonical_chapter_key:去所有前导编号,只留纯标题。纯编号返回空。"""
-    text = (title or "").strip()
-    if not text:
+    """从章节标题推导 canonical_chapter_key:去前导编号与所有内部空白,只留纯标题。纯编号返回空。"""
+    return normalize_chapter_key(title)
+
+
+def _derive_chapter_no(section_path: list) -> str:
+    """由 section_path 推导章节编号（如 [1, 4] → "1.4"、["1", "1.4.2"] → "1.4.2"）。
+
+    ETL 解析路径末段即完整点分编号,直接取用;计数栈路径逐级以'.'连接。
+    """
+    parts = [str(p) for p in (section_path or [])]
+    if not parts:
         return ""
-    if re.fullmatch(r"\d+(?:\.\d+)*", text):
-        return ""
-    while True:
-        m = re.match(r"^(\d+(?:\.\d+)*)\s*(\S.*)$", text)
-        if not m:
-            break
-        text = m.group(2).strip()
-    return text
+    last = parts[-1]
+    if "." in last:
+        return last
+    return ".".join(parts)
+
+
+def resolve_chapter_id(
+    domain_code: str,
+    report_type_code: str,
+    norm_canonical: str,
+    level: int,
+    parent_resolved_id: str,
+    std_index: dict[tuple[str, str, int], str],
+) -> str:
+    """按聚合身份键解析 ChapterTemplate 节点 id（纯函数,std 索引由调用方预构建）。
+
+    身份 = (domain, report_type, 归一canonical, level, 父节点解析id)：
+    - std_index 命中 → 复用 std id（键为 (归一canonical, 父解析id, level),level=1 父解析id 固定空串）
+    - 未命中 → CH_{domain}_{rt}_{level}_{hashstr(归一canonical + '|' + 父解析id)}
+    同构章节树跨文档解析出相同 id → MERGE 幂等;不同父同名单独成点。
+    """
+    std_id = std_index.get((norm_canonical, parent_resolved_id, level))
+    if std_id:
+        return std_id
+    return f"CH_{domain_code}_{report_type_code}_{level}_{hashstr(f'{norm_canonical}|{parent_resolved_id}', 10)}"
 
 
 class GraphBuilder:
@@ -802,110 +826,93 @@ class GraphBuilder:
             except (ValueError, IndexError):
                 order_int = 0
 
-            chapter_id = f"CH_{domain_code}_{report_type_code}_{hashstr(section_path_str, 10)}"
+            chapter_id = ""
             canonical_key = _derive_canonical_key(title)
             chapter_map[section_path_str] = {
                 "chapter_id": chapter_id,
                 "title": title,
                 "canonical_key": canonical_key,
+                "chapter_no": _derive_chapter_no(sp),
                 "level": level,
                 "order": order_int,
                 "section_path_str": section_path_str,
             }
 
-        # 创建 ChapterTemplate 节点并关联到 DomainOutline
-        for sp_str, ch_info in chapter_map.items():
-            chapter_id = ch_info["chapter_id"]
-            title = ch_info["title"]
+        # std 节点索引: (归一canonical, 父解析id, level) → std id，供身份键解析复用标准章节
+        std_index: dict[tuple[str, str, int], str] = {}
+        std_rows = tx.run(
+            """
+            MATCH (std:ChapterTemplate)
+            WHERE std.id STARTS WITH $prefix AND std.domain = $domain AND std.report_type = $rt
+            OPTIONAL MATCH (parent:ChapterTemplate)-[:HAS_CHILD]->(std)
+            RETURN std.id AS id, std.canonical_chapter_key AS key, std.level AS level, parent.id AS parent_id
+            """,
+            prefix=f"CH_{domain_code}_{report_type_code}_std_",
+            domain=domain_code,
+            rt=report_type_code,
+        )
+        for row in std_rows:
+            key = normalize_chapter_key(row["key"] or "")
+            std_level = row["level"]
+            if not key or std_level is None:
+                continue
+            std_index[(key, row["parent_id"] or "", int(std_level))] = row["id"]
+
+        # 自根逐级解析聚合身份（父节点先于子节点），同构章节树跨文档解析出相同 id → MERGE 幂等
+        for sp_str, ch_info in sorted(chapter_map.items(), key=lambda item: item[1]["level"]):
             level = ch_info["level"]
-            order = ch_info["order"]
 
-            # 计算 frequency：查询同 outline 下同名章节出现次数
-            rigidity = "flexible"
-            if source_count >= 2:
-                # 在已有 ChapterTemplate 中查找同名章节
-                count_result = tx.run(
-                    """
-                    MATCH (dol:DomainOutline {id: $outline_id})-[:HAS_CHAPTER]->(ch:ChapterTemplate {title: $title})
-                    RETURN count(ch) AS cnt
-                    """,
-                    outline_id=outline_id,
-                    title=title,
-                ).single()
-                existing_count = count_result["cnt"] if count_result else 0
-                freq = (existing_count + 1) / source_count
-                if freq >= 0.9:
-                    rigidity = "rigid"
-                elif freq >= 0.5:
-                    rigidity = "flexible"
-                else:
-                    rigidity = "conditional"
-            else:
-                freq = 1.0
-                rigidity = "rigid"  # 第一篇文档，默认刚性
+            # 父节点解析 id（level=1 挂 DomainOutline，父 id 记空串）
+            sp_parts = sp_str.split("/")
+            parent_sp_str = "/".join(sp_parts[:-1]) if len(sp_parts) > 1 else ""
+            parent_resolved_id = chapter_map[parent_sp_str]["chapter_id"] if parent_sp_str in chapter_map else ""
 
-            # Bug1修复: level=1 且标准章节已存在 → 跳过创建, 后续子章节直接HAS_CHILD到标准章节
-            canonical_key = ch_info.get("canonical_key", "")
-            if level == 1 and domain_code and report_type_code and canonical_key:
-                std_check = tx.run(
-                    """
-                    MATCH (std:ChapterTemplate)
-                    WHERE std.id STARTS WITH $prefix
-                      AND std.level = 1
-                      AND std.canonical_chapter_key = $key
-                    RETURN std.id AS std_id
-                    LIMIT 1
-                    """,
-                    prefix=f"CH_{domain_code}_{report_type_code}_std_",
-                    key=canonical_key,
-                ).single()
-                if std_check:
-                    # 标准章节已存在, 记录映射供后续子章节HAS_CHILD使用
-                    chapter_map[sp_str]["chapter_id"] = std_check["std_id"]
-                    nodes_created += 1
-                    # 建 DomainOutline-HAS_CHAPTER 到标准章节(幂等)
-                    tx.run(
-                        """
-                        MATCH (dol:DomainOutline {id: $outline_id})
-                        MATCH (std:ChapterTemplate {id: $std_id})
-                        MERGE (dol)-[:HAS_CHAPTER]->(std)
-                        """,
-                        outline_id=outline_id,
-                        std_id=std_check["std_id"],
-                    )
-                    continue
-
-            tx.run(
-                """
-                MERGE (ch:ChapterTemplate {id: $chapter_id})
-                ON CREATE SET
-                    ch.id = $chapter_id,
-                    ch.title = $title,
-                    ch.canonical_chapter_key = $canonical_key,
-                    ch.level = $level,
-                    ch.`order` = $order,
-                    ch.rigidity = $rigidity,
-                    ch.frequency = $frequency,
-                    ch.domain = $domain_code,
-                    ch.report_type = $report_type_code,
-                    ch.kb_id = $kb_id,
-                    ch.created_at = datetime()
-                ON MATCH SET
-                    ch.frequency = $frequency,
-                    ch.rigidity = $rigidity,
-                    ch.canonical_chapter_key = COALESCE(ch.canonical_chapter_key, $canonical_key)
-                """,
-                chapter_id=chapter_id,
-                title=title,
-                canonical_key=ch_info["canonical_key"],
-                level=level,
-                order=order,
-                rigidity=rigidity,
-                frequency=freq,
-                domain_code=domain_code,
-                report_type_code=report_type_code,
-                kb_id=kb_id,
+            # 身份键解析：先复用 std，未命中落聚合键 id；回写映射供子章节 HAS_CHILD 与段落角色挂载
+            chapter_id = resolve_chapter_id(
+                domain_code, report_type_code, ch_info["canonical_key"], level, parent_resolved_id, std_index
             )
+            is_std_reuse = chapter_id.startswith(f"CH_{domain_code}_{report_type_code}_std_")
+            chapter_map[sp_str]["chapter_id"] = chapter_id
+
+            # std 命中复用：种子节点的 frequency/rigidity/meta 由 seed 体系所有，不参与语料覆盖重算；
+            # 仅补 DomainOutline/HAS_CHILD 归边（幂等）
+            if not is_std_reuse:
+                # MERGE：ON CREATE 落去编号干净标题与结构化编号；命中时 frequency+1，rigidity 按 命中数/source_count 重算
+                tx.run(
+                    """
+                    MERGE (ch:ChapterTemplate {id: $chapter_id})
+                    ON CREATE SET
+                        ch.id = $chapter_id,
+                        ch.title = $title,
+                        ch.chapter_no = $chapter_no,
+                        ch.canonical_chapter_key = $canonical_key,
+                        ch.level = $level,
+                        ch.`order` = $order,
+                        ch.frequency = 1.0,
+                        ch.domain = $domain_code,
+                        ch.report_type = $report_type_code,
+                        ch.kb_id = $kb_id,
+                        ch.created_at = datetime()
+                    ON MATCH SET
+                        ch.frequency = coalesce(ch.frequency, 0) + 1.0,
+                        ch.canonical_chapter_key = COALESCE(ch.canonical_chapter_key, $canonical_key)
+                    WITH ch
+                    SET ch.rigidity = CASE
+                        WHEN coalesce(ch.frequency, 1.0) / $source_count >= 0.9 THEN 'rigid'
+                        WHEN coalesce(ch.frequency, 1.0) / $source_count >= 0.5 THEN 'flexible'
+                        ELSE 'conditional' END
+                    """,
+                    chapter_id=chapter_id,
+                    title=ch_info["canonical_key"] or ch_info["title"].strip(),
+                    chapter_no=ch_info["chapter_no"],
+                    canonical_key=ch_info["canonical_key"],
+                    level=level,
+                    order=ch_info["order"],
+                    domain_code=domain_code,
+                    report_type_code=report_type_code,
+                    kb_id=kb_id,
+                    source_count=source_count,
+                )
             nodes_created += 1
 
             # DomainOutline -[HAS_CHAPTER]-> ChapterTemplate
@@ -920,42 +927,18 @@ class GraphBuilder:
             )
             relationships_created += 1
 
-            # 建立 ChapterTemplate 层级关系（HAS_CHILD）
-            sp_parts = sp_str.split("/")
-            if len(sp_parts) > 1:
-                parent_sp_str = "/".join(sp_parts[:-1])
-                if parent_sp_str in chapter_map:
-                    parent_ch_id = chapter_map[parent_sp_str]["chapter_id"]
-                    tx.run(
-                        """
-                        MATCH (parent:ChapterTemplate {id: $parent_id})
-                        MATCH (child:ChapterTemplate {id: $child_id})
-                        MERGE (parent)-[:HAS_CHILD]->(child)
-                        """,
-                        parent_id=parent_ch_id,
-                        child_id=chapter_id,
-                    )
-                    relationships_created += 1
-
-            # ETL 子章节映射到标准子章节 (level=2 时按标题匹配)
-            if level == 2 and domain_code and report_type_code:
-                std_prefix = f"CH_{domain_code}_{report_type_code}_std_"
+            # 建立 ChapterTemplate 层级关系（HAS_CHILD，挂解析后节点）
+            if parent_sp_str and parent_resolved_id:
                 tx.run(
                     """
-                    MATCH (etl:ChapterTemplate {id: $etl_id})
-                    MATCH (std:ChapterTemplate)
-                    WHERE std.id STARTS WITH $std_prefix
-                      AND std.level = 2
-                      AND (std.canonical_chapter_key = etl.canonical_chapter_key
-                           OR etl.canonical_chapter_key CONTAINS std.canonical_chapter_key
-                           OR std.canonical_chapter_key CONTAINS etl.canonical_chapter_key)
-                    WITH etl, std LIMIT 1
-                    MERGE (std)-[:HAS_CHILD]->(etl)
-                    SET etl.canonical_chapter_key = std.canonical_chapter_key
+                    MATCH (parent:ChapterTemplate {id: $parent_id})
+                    MATCH (child:ChapterTemplate {id: $child_id})
+                    MERGE (parent)-[:HAS_CHILD]->(child)
                     """,
-                    etl_id=chapter_id,
-                    std_prefix=std_prefix,
+                    parent_id=parent_resolved_id,
+                    child_id=chapter_id,
                 )
+                relationships_created += 1
 
         # 3. ParagraphRole 节点（从散文段落提取段落角色，spec-W1 三值）
         para_order = 0

@@ -17,7 +17,7 @@ from yuxi.storage.postgres.models_domain_factory import (
     DomainFactoryReportPps,
     DomainFactoryToolUsage,
 )
-from yuxi.utils import hashstr
+from yuxi.utils import hashstr, normalize_chapter_key
 from yuxi.utils.datetime_utils import utc_now_naive
 
 # 去领域化（2026-10-29）：通用域唯一常量。领域维度废弃后，所有写入与查询固定使用此值；
@@ -424,6 +424,8 @@ class DomainFactoryRepository:
         source_count=1,
         prose_based_on_source_count=None,
     ) -> DomainFactoryOutline:
+        # canonical 归一化单一收口：带编号/含空白 key 统一归一后入库（bug-4167）
+        canonical_chapter_key = normalize_chapter_key(canonical_chapter_key) or canonical_chapter_key
         from yuxi.storage.postgres.models_domain_factory import DomainFactoryOutline
 
         async with pg_manager.get_async_session_context() as session:

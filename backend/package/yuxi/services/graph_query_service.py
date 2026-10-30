@@ -57,7 +57,8 @@ class GraphQueryService:
         """查询单个章节大纲,含子章节和段落角色预览。
 
         canonical_key 支持 "canonical||level" 复合格式(list_outline_templates 返回)，
-        按 (canonical, level) 精确匹配；纯 canonical 时按 canonical LIMIT 1(向后兼容)。
+        按 (canonical, level) 精确匹配；纯 canonical 时按 canonical 匹配(向后兼容)。
+        同 canonical 多节点并存时确定性选取:std 种子节点优先,其次按 id 升序(与 update_chapter_template 同款)。
         """
         parts = (canonical_key or "").split("||")
         canonical = parts[0]
@@ -67,7 +68,9 @@ class GraphQueryService:
                 result = session.run(
                     """
                     MATCH (ch:ChapterTemplate {domain: $domain, report_type: $rt, canonical_chapter_key: $key, level: $lvl})
-                    WITH ch LIMIT 1
+                    WITH ch
+                    ORDER BY CASE WHEN ch.id STARTS WITH $std_prefix THEN 0 ELSE 1 END, ch.id
+                    LIMIT 1
                     OPTIONAL MATCH (ch)-[:HAS_CHILD]->(sub:ChapterTemplate)
                     OPTIONAL MATCH (ch)-[:REQUIRES_PARAGRAPH_ROLE]->(pr:ParagraphRole)
                     RETURN ch.canonical_chapter_key AS key, ch.title AS title,
@@ -79,16 +82,23 @@ class GraphQueryService:
                            ch.regulations AS regulations,
                            ch.writing_hints AS writing_hints,
                            ch.extraction_regex AS extraction_regex,
-                           collect(DISTINCT {title: sub.title, key: sub.canonical_chapter_key}) AS children,
+                           ch.expected_tables AS expected_tables,
+                           ch.expected_charts AS expected_charts,
+                           ch.expected_formulas AS expected_formulas,
+                           collect(DISTINCT {title: sub.title, key: sub.canonical_chapter_key,
+                                             chapter_no: sub.chapter_no}) AS children,
                            collect(DISTINCT pr.name) AS roles
                     """,
                     domain=domain, rt=report_type, key=canonical, lvl=level,
+                    std_prefix=f"CH_{domain}_{report_type}_std_",
                 )
             else:
                 result = session.run(
                     """
                     MATCH (ch:ChapterTemplate {domain: $domain, report_type: $rt, canonical_chapter_key: $key})
-                    WITH ch LIMIT 1
+                    WITH ch
+                    ORDER BY CASE WHEN ch.id STARTS WITH $std_prefix THEN 0 ELSE 1 END, ch.id
+                    LIMIT 1
                 OPTIONAL MATCH (ch)-[:HAS_CHILD]->(sub:ChapterTemplate)
                 OPTIONAL MATCH (ch)-[:REQUIRES_PARAGRAPH_ROLE]->(pr:ParagraphRole)
                 RETURN ch.canonical_chapter_key AS key, ch.title AS title,
@@ -100,12 +110,17 @@ class GraphQueryService:
                        ch.regulations AS regulations,
                        ch.writing_hints AS writing_hints,
                        ch.extraction_regex AS extraction_regex,
-                       collect(DISTINCT {title: sub.title, key: sub.canonical_chapter_key}) AS children,
+                       ch.expected_tables AS expected_tables,
+                       ch.expected_charts AS expected_charts,
+                       ch.expected_formulas AS expected_formulas,
+                       collect(DISTINCT {title: sub.title, key: sub.canonical_chapter_key,
+                                         chapter_no: sub.chapter_no}) AS children,
                        collect(DISTINCT pr.name) AS roles
                 """,
                 domain=domain,
                 rt=report_type,
                 key=canonical,
+                std_prefix=f"CH_{domain}_{report_type}_std_",
             )
             rec = result.single()
             if rec is None or rec["key"] is None:
@@ -123,6 +138,9 @@ class GraphQueryService:
                 "regulations": _parse_json_field(rec["regulations"]),
                 "writing_hints": rec["writing_hints"],
                 "extraction_regex": rec["extraction_regex"],
+                "expected_tables": _parse_json_field(rec["expected_tables"]),
+                "expected_charts": _parse_json_field(rec["expected_charts"]),
+                "expected_formulas": _parse_json_field(rec["expected_formulas"]),
                 "child_chapters": [c for c in rec["children"] if c and c.get("title")],
                 "paragraph_roles": [r for r in (rec["roles"] or []) if r],
             }
@@ -229,6 +247,7 @@ class GraphQueryService:
                 ORDER BY ch.level, ch.`order`
                 RETURN ch.canonical_chapter_key AS key, ch.title AS title,
                        ch.`order` AS `order`, ch.level AS level,
+                       ch.chapter_no AS chapter_no,
                        ch.frequency AS frequency, ch.rigidity AS rigidity,
                        ch.purpose AS purpose, ch.content_contract AS content_contract,
                        parent.canonical_chapter_key AS parent_key, parent.level AS parent_level
@@ -258,6 +277,7 @@ class GraphQueryService:
                     "title": r["title"] or canonical,
                     "order": r["order"],
                     "level": level,
+                    "chapter_no": r["chapter_no"],
                     "frequency": r["frequency"],
                     "rigidity": r["rigidity"],
                     "is_universal": r["rigidity"] == "rigid",
@@ -279,7 +299,7 @@ class GraphQueryService:
             return roots
 
     async def update_chapter_template(self, domain: str, report_type: str, canonical_key: str, updates: dict[str, Any]) -> bool:
-        """更新标准章节节点的模板字段。"""
+        """更新章节模板字段，按 (canonical, level) 身份匹配（与 get_chapter_outline 同款拆分）。"""
         import json as _json
 
         allowed_fields = {
@@ -291,8 +311,15 @@ class GraphQueryService:
         if not filtered:
             return False
 
+        # chapter_key 支持 "canonical||level" 复合格式(list_outline_templates 返回)，纯 canonical 时不限 level
+        parts = (canonical_key or "").split("||")
+        canonical = parts[0]
+        level = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else None
+
         set_clauses = []
-        params: dict[str, Any] = {}
+        params: dict[str, Any] = {"domain": domain, "rt": report_type, "key": canonical}
+        if level is not None:
+            params["lvl"] = level
         for field, value in filtered.items():
             if field in ("key_points", "regulations", "expected_tables", "expected_charts", "expected_formulas", "content_contract"):
                 params[field] = _json.dumps(value, ensure_ascii=False) if isinstance(value, (list, dict)) else value
@@ -300,20 +327,26 @@ class GraphQueryService:
                 params[field] = value
             set_clauses.append(f"ch.{field} = ${field}")
 
+        level_clause = "AND ch.level = $lvl" if level is not None else ""
+        # 与 GET 同款确定性选取:同 canonical 多节点时只更新 std 优先的那个,保证保存→刷新读回同一节点
+        params["std_prefix"] = f"CH_{domain}_{report_type}_std_"
         with self._driver.session() as session:
             result = session.run(
                 f"""
                 MATCH (ch:ChapterTemplate)
                 WHERE ch.domain = $domain AND ch.report_type = $rt
                   AND ch.canonical_chapter_key = $key
-                  AND ch.level = 1
-                  AND ch.id STARTS WITH 'CH_' + $domain + '_' + $rt + '_std_'
+                  {level_clause}
+                WITH ch
+                ORDER BY CASE WHEN ch.id STARTS WITH $std_prefix THEN 0 ELSE 1 END, ch.id
+                LIMIT 1
                 SET {', '.join(set_clauses)}
-                RETURN ch.id AS id
+                RETURN count(ch) AS cnt
                 """,
-                domain=domain, rt=report_type, key=canonical_key, **params,
+                **params,
             )
-            return result.single() is not None
+            rec = result.single()
+            return rec is not None and rec["cnt"] > 0
 
     async def lookup_chapter_order(self, domain: str, report_type: str, canonical_key: str) -> int | None:
         """查询章节顺序号。"""

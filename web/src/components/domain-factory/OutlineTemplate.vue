@@ -9,7 +9,9 @@
           style="flex: 1"
           @change="onDomainChange"
         >
-          <a-select-option v-for="d in domains" :key="d.code" :value="d.code">{{ d.name }}</a-select-option>
+          <a-select-option v-for="d in domains" :key="d.code" :value="d.code">{{
+            d.name
+          }}</a-select-option>
         </a-select>
         <a-select
           v-model:value="selectedReportType"
@@ -18,7 +20,9 @@
           :disabled="!reportTypeOptions.length"
           @change="loadList"
         >
-          <a-select-option v-for="rt in reportTypeOptions" :key="rt.code" :value="rt.code">{{ rt.name }}</a-select-option>
+          <a-select-option v-for="rt in reportTypeOptions" :key="rt.code" :value="rt.code">{{
+            rt.name
+          }}</a-select-option>
         </a-select>
         <a-tooltip title="为标准章节生成提取正则">
           <a-button :loading="generatingRegex" @click="handleGenerateRegex">
@@ -27,11 +31,7 @@
         </a-tooltip>
       </div>
       <div class="panel-header">
-        <a-input
-          v-model:value="searchKeyword"
-          placeholder="搜索章节..."
-          allow-clear
-        >
+        <a-input v-model:value="searchKeyword" placeholder="搜索章节..." allow-clear>
           <template #prefix><Search :size="14" /></template>
         </a-input>
       </div>
@@ -55,8 +55,14 @@
                 <ChevronRight v-else :size="11" />
               </span>
               <span v-else class="node-toggle node-toggle-leaf"></span>
-              <span v-if="node._level === 0 && node.order" class="node-order">{{ node.order }}</span>
-              <span class="node-title">{{ node.title }}</span>
+              <span v-if="node._level === 0 && node.order" class="node-order">{{
+                node.order
+              }}</span>
+              <span class="node-title">{{
+                node.chapter_no && node._level > 0
+                  ? `${node.chapter_no} ${node.title}`
+                  : node.title
+              }}</span>
               <span v-if="node.content_contract_summary?.total_reports" class="cc-badge">
                 {{ node.content_contract_summary.total_reports }}报告
               </span>
@@ -89,131 +95,182 @@
         </div>
 
         <div v-else class="schema-editor">
-        <!-- 基础信息 -->
-        <a-card title="基础信息" size="small" class="editor-section">
-          <a-form :model="detail" layout="vertical">
-            <a-form-item label="编写目的">
-              <a-textarea
-                v-model:value="detail.purpose"
-                :rows="3"
-                placeholder="本章在环评报告中的作用与编写目的"
-              />
-            </a-form-item>
+          <!-- 基础信息 -->
+          <a-card title="基础信息" size="small" class="editor-section">
+            <a-form :model="detail" layout="vertical">
+              <a-form-item label="编写目的">
+                <a-textarea
+                  v-model:value="detail.purpose"
+                  :rows="3"
+                  placeholder="本章在环评报告中的作用与编写目的"
+                />
+              </a-form-item>
 
-            <a-form-item label="提取关键字">
-              <a-select
-                v-model:value="detail.key_points"
-                mode="tags"
-                style="width: 100%"
-                placeholder="输入关键字后回车"
-              />
-            </a-form-item>
+              <a-form-item label="提取关键字">
+                <a-select
+                  v-model:value="detail.key_points"
+                  mode="tags"
+                  style="width: 100%"
+                  placeholder="输入关键字后回车"
+                />
+              </a-form-item>
 
-            <a-form-item label="提取正则表达式">
-              <a-input
-                v-model:value="detail.extraction_regex"
-                placeholder="用于从报告中提取该章节内容的正则表达式"
-              />
-            </a-form-item>
-          </a-form>
-        </a-card>
+              <a-form-item label="提取正则表达式">
+                <a-input
+                  v-model:value="detail.extraction_regex"
+                  placeholder="用于从报告中提取该章节内容的正则表达式"
+                />
+              </a-form-item>
+            </a-form>
+          </a-card>
 
-        <!-- 内容契约 -->
-        <a-card v-if="detail.content_contract" title="内容契约" size="small" class="editor-section">
-          <div class="contract-box">
-            <div class="contract-row">
-              <span class="contract-label">必写要素 ({{ requiredElements.length }}):</span>
-              <a-tag v-for="el in requiredElements" :key="el" color="green">{{ el }}</a-tag>
+          <!-- 内容契约 -->
+          <a-card
+            v-if="detail.content_contract"
+            title="内容契约"
+            size="small"
+            class="editor-section"
+          >
+            <div class="contract-box">
+              <div class="contract-row">
+                <span class="contract-label">必写要素 ({{ requiredElements.length }}):</span>
+                <a-tag v-for="el in requiredElements" :key="el" color="green">{{ el }}</a-tag>
+              </div>
+              <div class="contract-row">
+                <span class="contract-label">可选要素 ({{ optionalElements.length }}):</span>
+                <a-tag v-for="el in optionalElements" :key="el" color="orange">{{ el }}</a-tag>
+              </div>
+              <div class="contract-row">
+                <span class="contract-label">贡献报告数:</span>
+                <span>{{ detail.content_contract.total_reports || 0 }}</span>
+              </div>
             </div>
-            <div class="contract-row">
-              <span class="contract-label">可选要素 ({{ optionalElements.length }}):</span>
-              <a-tag v-for="el in optionalElements" :key="el" color="orange">{{ el }}</a-tag>
+          </a-card>
+
+          <!-- 编写提示 -->
+          <a-card title="编写提示" size="small" class="editor-section">
+            <a-form :model="detail" layout="vertical">
+              <a-form-item label="编写提示词">
+                <a-textarea
+                  v-model:value="detail.writing_hints"
+                  :rows="4"
+                  placeholder="本章专属写作提示"
+                />
+              </a-form-item>
+
+              <a-form-item label="法规标准引用">
+                <a-select
+                  v-model:value="detail.regulations"
+                  mode="tags"
+                  style="width: 100%"
+                  placeholder="输入法规标准后回车"
+                />
+              </a-form-item>
+
+              <a-row :gutter="16">
+                <a-col :span="8">
+                  <a-form-item label="预期表格">
+                    <a-select
+                      v-model:value="detail.expected_tables"
+                      mode="tags"
+                      style="width: 100%"
+                      placeholder="表格清单"
+                    />
+                  </a-form-item>
+                </a-col>
+                <a-col :span="8">
+                  <a-form-item label="预期图表">
+                    <a-select
+                      v-model:value="detail.expected_charts"
+                      mode="tags"
+                      style="width: 100%"
+                      placeholder="图表清单"
+                    />
+                  </a-form-item>
+                </a-col>
+                <a-col :span="8">
+                  <a-form-item label="预期公式">
+                    <a-select
+                      v-model:value="detail.expected_formulas"
+                      mode="tags"
+                      style="width: 100%"
+                      placeholder="公式清单"
+                    />
+                  </a-form-item>
+                </a-col>
+              </a-row>
+            </a-form>
+          </a-card>
+
+          <!-- 来源数据（PG 富字段，只读） -->
+          <a-card v-if="hasSourceData" title="来源数据" size="small" class="editor-section">
+            <div class="contract-box">
+              <div v-if="detail.source_data.overview" class="contract-row">
+                <span class="contract-label">内容概述:</span>
+                <span class="source-text">{{ detail.source_data.overview }}</span>
+              </div>
+              <div v-if="detail.source_data.content_requirements.length" class="contract-row">
+                <span class="contract-label">
+                  内容要求 ({{ detail.source_data.content_requirements.length }}):
+                </span>
+                <a-tag v-for="req in detail.source_data.content_requirements" :key="req">{{
+                  req
+                }}</a-tag>
+              </div>
+              <div v-if="detail.source_data.entity_bindings.length" class="contract-row">
+                <span class="contract-label">
+                  实体绑定 ({{ detail.source_data.entity_bindings.length }}):
+                </span>
+                <a-tag v-for="(binding, idx) in detail.source_data.entity_bindings" :key="idx">{{
+                  formatEntityBinding(binding)
+                }}</a-tag>
+              </div>
+              <div v-if="detail.source_data.writing_example" class="contract-row">
+                <span class="contract-label">写作示例:</span>
+                <span class="source-text">{{ detail.source_data.writing_example }}</span>
+              </div>
+              <div v-if="detail.source_data.source_count" class="contract-row">
+                <span class="contract-label">来源文档数:</span>
+                <span>{{ detail.source_data.source_count }}</span>
+              </div>
             </div>
-            <div class="contract-row">
-              <span class="contract-label">贡献报告数:</span>
-              <span>{{ detail.content_contract.total_reports || 0 }}</span>
+          </a-card>
+
+          <!-- 子章节结构 -->
+          <a-card
+            v-if="detail.child_chapters && detail.child_chapters.length"
+            title="子章节结构"
+            size="small"
+            class="editor-section"
+          >
+            <div class="children-list">
+              <div v-for="child in detail.child_chapters" :key="child.key" class="child-item">
+                <span class="child-title">{{
+                  child.chapter_no ? `${child.chapter_no} ${child.title}` : child.title
+                }}</span>
+                <span class="child-key">{{ child.key }}</span>
+              </div>
             </div>
+          </a-card>
+
+          <!-- 操作按钮 -->
+          <div class="editor-actions">
+            <a-space>
+              <a-button
+                type="primary"
+                @click="handleSave"
+                :loading="saving"
+                :disabled="!selectedKey"
+              >
+                <template #icon><Save :size="14" /></template>
+                保存
+              </a-button>
+              <a-button @click="loadList" :loading="loadingList">
+                <template #icon><RotateCw :size="14" /></template>
+                刷新
+              </a-button>
+            </a-space>
           </div>
-        </a-card>
-
-        <!-- 编写提示 -->
-        <a-card title="编写提示" size="small" class="editor-section">
-          <a-form :model="detail" layout="vertical">
-            <a-form-item label="编写提示词">
-              <a-textarea
-                v-model:value="detail.writing_hints"
-                :rows="4"
-                placeholder="本章专属写作提示"
-              />
-            </a-form-item>
-
-            <a-form-item label="法规标准引用">
-              <a-select
-                v-model:value="detail.regulations"
-                mode="tags"
-                style="width: 100%"
-                placeholder="输入法规标准后回车"
-              />
-            </a-form-item>
-
-            <a-row :gutter="16">
-              <a-col :span="8">
-                <a-form-item label="预期表格">
-                  <a-select
-                    v-model:value="detail.expected_tables"
-                    mode="tags"
-                    style="width: 100%"
-                    placeholder="表格清单"
-                  />
-                </a-form-item>
-              </a-col>
-              <a-col :span="8">
-                <a-form-item label="预期图表">
-                  <a-select
-                    v-model:value="detail.expected_charts"
-                    mode="tags"
-                    style="width: 100%"
-                    placeholder="图表清单"
-                  />
-                </a-form-item>
-              </a-col>
-              <a-col :span="8">
-                <a-form-item label="预期公式">
-                  <a-select
-                    v-model:value="detail.expected_formulas"
-                    mode="tags"
-                    style="width: 100%"
-                    placeholder="公式清单"
-                  />
-                </a-form-item>
-              </a-col>
-            </a-row>
-          </a-form>
-        </a-card>
-
-        <!-- 子章节结构 -->
-        <a-card v-if="detail.child_chapters && detail.child_chapters.length" title="子章节结构" size="small" class="editor-section">
-          <div class="children-list">
-            <div v-for="child in detail.child_chapters" :key="child.key" class="child-item">
-              <span class="child-title">{{ child.title }}</span>
-              <span class="child-key">{{ child.key }}</span>
-            </div>
-          </div>
-        </a-card>
-
-        <!-- 操作按钮 -->
-        <div class="editor-actions">
-          <a-space>
-            <a-button type="primary" @click="handleSave" :loading="saving" :disabled="!selectedKey">
-              <template #icon><Save :size="14" /></template>
-              保存
-            </a-button>
-            <a-button @click="loadList" :loading="loadingList">
-              <template #icon><RotateCw :size="14" /></template>
-              刷新
-            </a-button>
-          </a-space>
-        </div>
         </div>
       </div>
     </div>
@@ -229,7 +286,8 @@
       @ok="handleConfirmOutline"
     >
       <p v-if="extractedChapters.length" class="extract-tip">
-        从「{{ extractFileName }}」提取到 {{ extractedChapters.length }} 个章节，可编辑规范名和编写目的后确认入库：
+        从「{{ extractFileName }}」提取到
+        {{ extractedChapters.length }} 个章节，可编辑规范名和编写目的后确认入库：
       </p>
       <a-empty v-else description="未提取到章节" />
       <div class="extract-list">
@@ -266,9 +324,7 @@ const selectedReportType = ref('eia_report')
 const domains = ref([])
 const reportTypesByDomain = ref({})
 
-const reportTypeOptions = computed(
-  () => reportTypesByDomain.value[selectedDomain.value] || []
-)
+const reportTypeOptions = computed(() => reportTypesByDomain.value[selectedDomain.value] || [])
 const chapterTree = ref([])
 const selectedKey = ref('')
 const detail = ref(null)
@@ -279,7 +335,11 @@ const filterTree = (nodes, kw) => {
   const result = []
   for (const n of nodes) {
     const children = filterTree(n.children || [], kw)
-    if ((n.title || '').toLowerCase().includes(kw) || (n.key || '').toLowerCase().includes(kw) || children.length) {
+    if (
+      (n.title || '').toLowerCase().includes(kw) ||
+      (n.key || '').toLowerCase().includes(kw) ||
+      children.length
+    ) {
       result.push({ ...n, children })
     }
   }
@@ -331,6 +391,28 @@ const optionalElements = computed(() => {
   return cc.optional_elements || []
 })
 
+// 来源数据全部为空时隐藏整卡（bug-4167）
+const hasSourceData = computed(() => {
+  const sd = detail.value?.source_data
+  if (!sd) return false
+  return Boolean(
+    sd.overview ||
+      sd.content_requirements?.length ||
+      sd.entity_bindings?.length ||
+      sd.writing_example ||
+      sd.source_count
+  )
+})
+
+// entity_bindings 元素为对象（entity_key/role），历史数据可能是纯字符串
+const formatEntityBinding = (binding) => {
+  if (binding && typeof binding === 'object') {
+    const name = binding.entity_key || binding.entity_id || ''
+    return binding.role ? `${name}（${binding.role}）` : name
+  }
+  return binding
+}
+
 const loadList = async () => {
   loadingList.value = true
   selectedKey.value = ''
@@ -338,7 +420,7 @@ const loadList = async () => {
   try {
     const res = await domainFactoryApi.getOutlineTemplates({
       domain: selectedDomain.value,
-      report_type: selectedReportType.value,
+      report_type: selectedReportType.value
     })
     chapterTree.value = res?.items || []
     expandedKeys.value = new Set()
@@ -393,7 +475,7 @@ const handleExtract = async (file) => {
   try {
     const res = await domainFactoryApi.extractOutlinePreview(file, {
       domain: selectedDomain.value,
-      report_type: selectedReportType.value,
+      report_type: selectedReportType.value
     })
     extractedChapters.value = res?.chapters || []
     extractFileName.value = res?.file_name || file.name
@@ -418,7 +500,7 @@ const handleConfirmOutline = async () => {
       domain: selectedDomain.value,
       report_type: selectedReportType.value,
       chapters: extractedChapters.value,
-      file_name: extractFileName.value,
+      file_name: extractFileName.value
     })
     message.success(`入库完成：${res.saved} 章（图谱同步 ${res.graph_synced}）`)
     extractModalVisible.value = false
@@ -436,7 +518,7 @@ const handleGenerateRegex = async () => {
   try {
     const res = await domainFactoryApi.generateExtractionRegex(
       selectedDomain.value,
-      selectedReportType.value,
+      selectedReportType.value
     )
     if (res?.generated) {
       message.success(`提取规则生成完成：${res.generated}/${res.total} 章`)
@@ -457,7 +539,7 @@ const selectChapter = async (key) => {
   try {
     const res = await domainFactoryApi.getOutlineTemplate(key, {
       domain: selectedDomain.value,
-      report_type: selectedReportType.value,
+      report_type: selectedReportType.value
     })
     detail.value = {
       ...res,
@@ -466,7 +548,7 @@ const selectChapter = async (key) => {
       expected_tables: res.expected_tables || [],
       expected_charts: res.expected_charts || [],
       expected_formulas: res.expected_formulas || [],
-      extraction_regex: res.extraction_regex || '',
+      extraction_regex: res.extraction_regex || ''
     }
   } catch {
     message.error('加载章节详情失败')
@@ -488,7 +570,7 @@ const handleSave = async () => {
       extraction_regex: detail.value.extraction_regex || '',
       expected_tables: detail.value.expected_tables || [],
       expected_charts: detail.value.expected_charts || [],
-      expected_formulas: detail.value.expected_formulas || [],
+      expected_formulas: detail.value.expected_formulas || []
     }
     await domainFactoryApi.updateOutlineTemplate(selectedKey.value, payload)
     message.success('大纲模板保存成功')
@@ -598,7 +680,9 @@ onMounted(async () => {
   }
 
   &.active {
-    background: var(--main-100); /* [pisuan-custom] 原 var(--main-color-light, #e6f7ff) 未定义变量激活 antd 淡蓝 */
+    background: var(
+      --main-100
+    ); /* [pisuan-custom] 原 var(--main-color-light, #e6f7ff) 未定义变量激活 antd 淡蓝 */
     color: var(--main-color);
     font-weight: 500;
   }
@@ -692,6 +776,15 @@ onMounted(async () => {
     .contract-label {
       font-weight: 500;
       margin-right: 4px;
+    }
+
+    .source-text {
+      flex: 1;
+      min-width: 0;
+      font-size: 13px;
+      color: var(--gray-700);
+      white-space: pre-wrap;
+      word-break: break-word;
     }
 
     .children-list {

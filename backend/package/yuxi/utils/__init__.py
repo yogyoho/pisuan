@@ -2,6 +2,7 @@ import os
 
 from yuxi.utils.hash_utils import hashstr as hashstr
 from yuxi.utils.logging_config import logger
+from yuxi.utils.string_utils import normalize_chapter_key as normalize_chapter_key
 
 
 def get_docker_safe_url(base_url):

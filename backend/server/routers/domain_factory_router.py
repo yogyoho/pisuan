@@ -774,18 +774,13 @@ async def get_outline_template(
     report_type: str = Query("eia_report"),
     current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
-    """获取单章大纲模板详情"""
+    """获取单章大纲模板详情（图谱 meta + PG 富字段合并）"""
     try:
-        from yuxi.services.graph_query_service import GraphQueryService
-
-        svc = GraphQueryService()
-        try:
-            outline = await svc.get_chapter_outline(domain, report_type, chapter_key)
-            if outline is None:
-                raise HTTPException(status_code=404, detail=f"章节 '{chapter_key}' 不存在")
-            return outline
-        finally:
-            svc.close()
+        service = get_domain_factory_service()
+        detail = await service.get_outline_template_detail(GENERAL_DOMAIN_CODE, report_type, chapter_key)
+        if detail is None:
+            raise HTTPException(status_code=404, detail=f"章节 '{chapter_key}' 不存在")
+        return detail
     except HTTPException:
         raise
     except Exception as e:

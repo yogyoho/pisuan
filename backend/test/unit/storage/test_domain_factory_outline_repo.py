@@ -47,3 +47,19 @@ async def test_list_chapter_keys_and_backfill():
     assert "地下水环境影响预测" in keys
     n = await repo.backfill_template_chapter_key("coal", "eia_report", ["5.2"], "地下水环境影响预测")
     assert n >= 0
+
+
+@pytest.mark.asyncio
+async def test_upsert_outline_normalizes_canonical_key():
+    """canonical 写入口统一过 normalize_chapter_key（bug-4167）：带编号/含空白 key 归一后入库"""
+    repo = DomainFactoryRepository()
+    await repo.upsert_outline(
+        domain_code="coal",
+        report_type_code="eia_report",
+        canonical_chapter_key="1  总　则",
+        chapter_title="1  总　则",
+        source_task_ids=["t-norm"], source_count=1,
+    )
+    got = await repo.get_outline("coal", "eia_report", "总则")
+    assert got is not None
+    assert got["canonical_chapter_key"] == "总则"

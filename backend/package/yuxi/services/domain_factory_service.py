@@ -31,7 +31,7 @@ from yuxi.services.domain_factory_region import (
 )
 from yuxi.services.entity_meta_service import EntityMetaAdapter, EntityMetaMatcher, SlotEntityMapper
 from yuxi.services.task_service import TaskContext, tasker
-from yuxi.utils import hashstr
+from yuxi.utils import hashstr, normalize_chapter_key
 from yuxi.utils.datetime_utils import utc_isoformat
 from yuxi.utils.logging_config import logger
 
@@ -676,9 +676,7 @@ class DomainFactoryService:
         # 按章节和段落切分文档（传入 HTML 内容用于存储完整表格）
         paragraphs = self._parse_markdown_to_paragraphs(raw_markdown, html_content=raw_html)
         if not paragraphs:
-            raise ValueError(
-                f"解析产物为空（0 段落）: {file_path}——文件可能为空壳或解析退化，请检查文件"
-            )
+            raise ValueError(f"解析产物为空（0 段落）: {file_path}——文件可能为空壳或解析退化，请检查文件")
         if len(raw_markdown) < 1000:
             logger.warning(f"解析产物疑似退化（Markdown 仅 {len(raw_markdown)} 字符）: {file_path}")
         logger.info(f"文档切分完成，共 {len(paragraphs)} 个段落")
@@ -5023,7 +5021,8 @@ class DomainFactoryService:
             requirements=", ".join(deterministic.get("content_requirements", [])[:30]) or "（无）",
             seed_keys=", ".join(seed_keys) or "（首次，无已有规范名）",
         )
-        fallback_key = chapter_title
+        # 回退/字段缺失的 canonical 同样过归一化，消灭带编号 PG key（bug-4167）
+        fallback_key = normalize_chapter_key(chapter_title) or chapter_title
         try:
             model = select_model(model_spec=(await system_options.get())["default_model"])
             response = await model.call(prompt)
@@ -5054,10 +5053,21 @@ class DomainFactoryService:
         groups = self._group_assets_by_chapter(task_detail)
         seed_keys = await self.repo.list_chapter_keys(domain_code, report_type_code)
         count = 0
+        graph_meta_rows: list[dict[str, Any]] = []
         for chapter_raw, assets in groups.items():
             deterministic = self._assemble_deterministic_outline(assets)
             meta = await self._llm_chapter_meta(chapter_raw, deterministic, seed_keys)
             canonical_key = meta["canonical_chapter_key"]
+            graph_meta_rows.append(
+                {
+                    "key": normalize_chapter_key(canonical_key) or canonical_key,
+                    "purpose": meta.get("purpose"),
+                    "overview": meta.get("overview"),
+                    "key_points": meta.get("key_points") or [],
+                    "writing_hints": meta.get("writing_hints"),
+                    "extraction_regex": meta.get("extraction_regex"),
+                }
+            )
             await self.repo.upsert_outline(
                 domain_code=domain_code,
                 report_type_code=report_type_code,
@@ -5082,8 +5092,87 @@ class DomainFactoryService:
             count += 1
         # LLM 算出的 canonical_chapter_key 已通过 ETL 源头(graph_builder Task 1)写入图谱;
         # 此处若需 LLM key 覆盖推导 key,需重建 chapter_id——见 GraphBuilder.backfill_canonical_keys
+        # LLM meta 落 PG 后按 (domain, report_type, 归一canonical) 回写图谱节点（只填空值，不覆盖已有 meta），
+        # 治 ETL 节点 purpose/overview/key_points 等元数据全空；图谱不可用仅告警跳过，不阻断（bug-4167）
+        if graph_meta_rows:
+            from yuxi.services.graph_builder import GraphBuilder
+
+            builder = GraphBuilder()
+            driver = builder._get_driver()
+            try:
+                if driver is None:
+                    logger.warning("Neo4j 未连接，跳过章节元数据图谱回写")
+                else:
+                    # 只填空值：现有属性非空则保留（std 种子 meta 不被单任务 LLM 输出覆盖，与治理脚本同语义）
+                    set_clause = ", ".join(
+                        f"ch.{field} = CASE WHEN ch.{field} IS NULL OR ch.{field} = '' THEN ${field} ELSE ch.{field} END"
+                        for field in ("purpose", "overview", "writing_hints", "extraction_regex")
+                    )
+                    with driver.session() as session:
+                        for meta_row in graph_meta_rows:
+                            kp = meta_row["key_points"]
+                            session.run(
+                                f"""
+                                MATCH (ch:ChapterTemplate)
+                                WHERE ch.domain = $domain AND ch.report_type = $rt
+                                  AND ch.canonical_chapter_key = $key
+                                SET {set_clause},
+                                    ch.key_points = CASE WHEN ch.key_points IS NULL OR size(ch.key_points) = 0
+                                                         THEN $key_points ELSE ch.key_points END
+                                """,
+                                domain=domain_code,
+                                rt=report_type_code,
+                                key=meta_row["key"],
+                                purpose=meta_row["purpose"],
+                                overview=meta_row["overview"],
+                                key_points=json.dumps(kp, ensure_ascii=False) if kp else None,
+                                writing_hints=meta_row["writing_hints"],
+                                extraction_regex=meta_row["extraction_regex"],
+                            )
+            finally:
+                builder.close()
         logger.info(f"章节大纲产出: {count} 章, domain={domain_code}, report_type={report_type_code}")
         return count
+
+    async def get_outline_template_detail(
+        self, domain: str, report_type: str, chapter_key: str
+    ) -> dict[str, Any] | None:
+        """单章大纲模板详情：图谱 meta + PG 大纲行富字段薄装配（读路径对称，bug-4167）。
+
+        PG 透出 overview/content_requirements/entity_bindings/writing_example/source_count（收进 source_data）；
+        PG 的 expected_* 仅在图谱侧缺失时兜底。两侧均无返回 None。
+        """
+        from yuxi.services.graph_query_service import GraphQueryService
+
+        graph_svc = GraphQueryService()
+        try:
+            outline = await graph_svc.get_chapter_outline(domain, report_type, chapter_key)
+        finally:
+            graph_svc.close()
+
+        raw_key = (chapter_key or "").split("||")[0]
+        canonical = normalize_chapter_key(raw_key) or raw_key
+        pg = await self.repo.get_outline(domain, report_type, canonical) or {}
+        if outline is None and not pg:
+            return None
+
+        pg_title = pg.get("chapter_title") or canonical
+        detail: dict[str, Any] = dict(outline) if outline else {
+            "canonical_chapter_key": canonical,
+            # pg-only 分支同样存去编号干净标题，与图谱分支一致（bug-4167）
+            "title": normalize_chapter_key(pg_title) or pg_title,
+        }
+        for field in ("expected_tables", "expected_charts", "expected_formulas"):
+            if not detail.get(field):
+                detail[field] = pg.get(field) or []
+        detail["source_data"] = {
+            "overview": pg.get("overview"),
+            "content_requirements": pg.get("content_requirements") or [],
+            "entity_bindings": pg.get("entity_bindings") or [],
+            "writing_example": pg.get("writing_example"),
+            "source_count": pg.get("source_count"),
+        }
+        return detail
 
     async def extract_outline_preview(
         self, file_bytes: bytes, filename: str, domain_code: str, report_type_code: str
@@ -5362,7 +5451,9 @@ class DomainFactoryService:
             # level 1 必须归一到 std_ 13 章根；真非导则章(前言/附录等)跳过，不建独立 level 1
             if level == 1 and canonical not in std_set:
                 continue
-            title = canonical or (ch.get("chapter_title") or "").strip()
+            raw_title = canonical or (ch.get("chapter_title") or "").strip()
+            # 图谱节点 canonical_chapter_key 存归一值，meta 回填按此匹配；raw key（带编号/空格）永远打不中（bug-4167）
+            title = normalize_chapter_key(raw_title) or raw_title
             result.append(
                 {
                     "is_title": True,
