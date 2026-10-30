@@ -310,10 +310,9 @@ export const domainFactoryApi = {
       demo: true
     }),
 
-  extractOutlinePreview: (file, { domain = 'coal', report_type = 'eia_report' } = {}) => {
+  extractOutlinePreview: (file, { report_type = 'eia_report' } = {}) => {
     const form = new FormData()
     form.append('file', file)
-    form.append('domain', domain)
     form.append('report_type', report_type)
     return withDemoFallback(
       () => apiAdminPost('/api/domain-factory/outline-templates/extract', form),
@@ -327,11 +326,10 @@ export const domainFactoryApi = {
       demo: true
     }),
 
-  generateExtractionRegex: (domain, report_type) =>
+  generateExtractionRegex: (report_type) =>
     withDemoFallback(
       () =>
         apiAdminPost('/api/domain-factory/outline-templates/generate-regex', {
-          domain,
           report_type
         }),
       { success: true, generated: 0, total: 0, demo: true }

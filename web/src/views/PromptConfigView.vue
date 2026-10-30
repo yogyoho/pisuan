@@ -93,7 +93,7 @@ const defaultPrompts = {
 
   section_generalization_prompt: `你是一个专业的环评报告分析助手。请对以下章节进行泛化处理。
 
-## 行业领域：
+## 文档类型：
 {industry}
 
 ## 报告类型：

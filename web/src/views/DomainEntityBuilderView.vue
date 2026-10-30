@@ -138,15 +138,6 @@
 
               <a-row :gutter="16">
                 <a-col :span="8">
-                  <a-form-item label="行业 (domain_code)" required>
-                    <a-select
-                      v-model:value="editingEntity.domain_code"
-                      :disabled="!!editingEntity.entity_id"
-                      :options="domainOptions"
-                    />
-                  </a-form-item>
-                </a-col>
-                <a-col :span="8">
                   <a-form-item label="值类型">
                     <a-select v-model:value="editingEntity.value_type">
                       <a-select-option value="String">String</a-select-option>
@@ -677,7 +668,7 @@ const normalizeEntityForEditing = (entity) => {
       return nr
     })
   }
-  copy.domain_code = copy.domain_code || currentDomain.value
+  copy.domain_code = 'general' // 去领域化：实体归属统一通用域
   return copy
 }
 
@@ -790,7 +781,7 @@ const handleCreateEntity = (domainId = null) => {
   editingEntity.value = {
     entity_id: null, entity_key: '', name_cn: '',
     category: defaultCategory,
-    domain_code: currentDomain.value,
+    domain_code: 'general', // 去领域化：实体归属统一通用域
     value_type: 'String', unit: '', is_list_type: false,
     description: '', synonyms: [], properties: [], relation_rules: [], metadata: {}
   }

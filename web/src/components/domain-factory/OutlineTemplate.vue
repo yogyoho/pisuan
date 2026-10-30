@@ -4,16 +4,6 @@
     <div class="left-panel">
       <div class="scope-bar">
         <a-select
-          v-model:value="selectedDomain"
-          placeholder="业务领域"
-          style="flex: 1"
-          @change="onDomainChange"
-        >
-          <a-select-option v-for="d in domains" :key="d.code" :value="d.code">{{
-            d.name
-          }}</a-select-option>
-        </a-select>
-        <a-select
           v-model:value="selectedReportType"
           placeholder="报告类型"
           style="flex: 1"
@@ -319,12 +309,10 @@ const generatingRegex = ref(false)
 const extractModalVisible = ref(false)
 const extractedChapters = ref([])
 const extractFileName = ref('')
-const selectedDomain = ref('coal')
 const selectedReportType = ref('eia_report')
-const domains = ref([])
 const reportTypesByDomain = ref({})
 
-const reportTypeOptions = computed(() => reportTypesByDomain.value[selectedDomain.value] || [])
+const reportTypeOptions = computed(() => reportTypesByDomain.value.general || [])
 const chapterTree = ref([])
 const selectedKey = ref('')
 const detail = ref(null)
@@ -419,7 +407,6 @@ const loadList = async () => {
   detail.value = null
   try {
     const res = await domainFactoryApi.getOutlineTemplates({
-      domain: selectedDomain.value,
       report_type: selectedReportType.value
     })
     chapterTree.value = res?.items || []
@@ -437,23 +424,13 @@ const loadList = async () => {
 const loadContexts = async () => {
   try {
     const res = await domainFactoryApi.getContexts()
-    domains.value = res?.domains || []
     reportTypesByDomain.value = res?.report_types || {}
-    // 当前领域若无报告类型，回退到第一个有数据的领域
-    if (!reportTypeOptions.value.length && domains.value.length) {
-      selectedDomain.value = domains.value[0].code
-    }
     if (!reportTypeOptions.value.some((rt) => rt.code === selectedReportType.value)) {
       selectedReportType.value = reportTypeOptions.value[0]?.code || ''
     }
   } catch {
-    message.error('加载领域/报告类型失败')
+    message.error('加载报告类型失败')
   }
-}
-
-const onDomainChange = () => {
-  selectedReportType.value = reportTypeOptions.value[0]?.code || ''
-  loadList()
 }
 
 const handleSeed = async () => {
@@ -474,7 +451,6 @@ const handleSeed = async () => {
 const handleExtract = async (file) => {
   try {
     const res = await domainFactoryApi.extractOutlinePreview(file, {
-      domain: selectedDomain.value,
       report_type: selectedReportType.value
     })
     extractedChapters.value = res?.chapters || []
@@ -497,7 +473,6 @@ const handleConfirmOutline = async () => {
   confirming.value = true
   try {
     const res = await domainFactoryApi.confirmOutlineExtract({
-      domain: selectedDomain.value,
       report_type: selectedReportType.value,
       chapters: extractedChapters.value,
       file_name: extractFileName.value
@@ -516,10 +491,7 @@ const handleConfirmOutline = async () => {
 const handleGenerateRegex = async () => {
   generatingRegex.value = true
   try {
-    const res = await domainFactoryApi.generateExtractionRegex(
-      selectedDomain.value,
-      selectedReportType.value
-    )
+    const res = await domainFactoryApi.generateExtractionRegex(selectedReportType.value)
     if (res?.generated) {
       message.success(`提取规则生成完成：${res.generated}/${res.total} 章`)
       if (selectedKey.value) await selectChapter(selectedKey.value)
@@ -538,7 +510,6 @@ const selectChapter = async (key) => {
   loadingDetail.value = true
   try {
     const res = await domainFactoryApi.getOutlineTemplate(key, {
-      domain: selectedDomain.value,
       report_type: selectedReportType.value
     })
     detail.value = {

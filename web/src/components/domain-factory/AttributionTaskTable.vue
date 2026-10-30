@@ -28,7 +28,6 @@ const SCOPE_CHIPS = [
 
 const columns = [
   { title: '任务', dataIndex: 'file_name', ellipsis: true },
-  { title: '领域', dataIndex: 'domain_label', width: 110 },
   { title: 'scope', key: 'scope', width: 110 },
   { title: 'region_label', dataIndex: 'region_label', width: 140, ellipsis: true },
   { title: 'region_key', dataIndex: 'region_key', width: 130 },
