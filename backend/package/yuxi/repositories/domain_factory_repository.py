@@ -20,6 +20,11 @@ from yuxi.storage.postgres.models_domain_factory import (
 from yuxi.utils import hashstr
 from yuxi.utils.datetime_utils import utc_now_naive
 
+# 去领域化（2026-10-29）：通用域唯一常量。领域维度废弃后，所有写入与查询固定使用此值；
+# domains 表冻结保留（历史外键兼容），不再暴露增删改接口。
+GENERAL_DOMAIN_CODE = "general"
+GENERAL_DOMAIN_NAME = "通用域"
+
 # 中文别名 → DB code 映射（agent 可能传中文名，这里统一归一化）
 _DOMAIN_ALIASES: dict[str, str] = {
     "煤矿": "coal",
@@ -113,6 +118,22 @@ class DomainFactoryRepository:
         async with pg_manager.get_async_session_context() as session:
             domain = DomainFactoryDomain(code=code, name=name, description=description)
             session.add(domain)
+        return domain
+
+    async def get_or_create_general_domain(self) -> DomainFactoryDomain:
+        """通用域行不存在则建（幂等）。去域后任务外键统一指向它。"""
+        async with pg_manager.get_async_session_context() as session:
+            result = await session.execute(
+                select(DomainFactoryDomain).where(DomainFactoryDomain.code == GENERAL_DOMAIN_CODE)
+            )
+            domain = result.scalar_one_or_none()
+            if domain is None:
+                domain = DomainFactoryDomain(
+                    code=GENERAL_DOMAIN_CODE,
+                    name=GENERAL_DOMAIN_NAME,
+                    description="去领域化后的唯一通用域",
+                )
+                session.add(domain)
         return domain
 
     async def update_domain(self, id: int, data: dict[str, Any]) -> DomainFactoryDomain | None:
