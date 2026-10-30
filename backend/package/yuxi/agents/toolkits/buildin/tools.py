@@ -22,8 +22,8 @@ from yuxi.agents.backends.sandbox import ProvisionerSandboxBackend
 from yuxi.agents.toolkits.registry import ToolExtraMetadata, _all_tool_instances, _extra_registry, tool
 from yuxi.config.options import system_options
 from yuxi.repositories.domain_factory_repository import (
+    GENERAL_DOMAIN_CODE,
     DomainFactoryRepository,
-    _normalize_domain,
     _normalize_report_type,
 )
 from yuxi.utils import logger
@@ -629,7 +629,7 @@ async def get_chapter_outline(domain: str, report_type: str, canonical_chapter_k
     """
     from yuxi.services.graph_query_service import GraphQueryService
 
-    domain = _normalize_domain(domain)
+    domain = GENERAL_DOMAIN_CODE  # 去领域化：形参保留兼容写手 prompts，语义恒通用域
     report_type = _normalize_report_type(report_type)
     graph_errored = False
     try:
@@ -706,7 +706,7 @@ async def list_report_types(domain: str) -> list[dict]:
     """查询数据字典中指定领域的报告类型 code。"""
     from yuxi.repositories.domain_entity_repository import DomainEntityRepository
 
-    domain = _normalize_domain(domain)
+    domain = GENERAL_DOMAIN_CODE  # 去领域化：形参保留兼容写手 prompts，语义恒通用域
     repo = DomainEntityRepository()
     # [pisuan-custom] W0 埋点
     out = await repo.list_report_types(domain)
@@ -730,7 +730,7 @@ async def list_chapter_keys(domain: str, report_type: str) -> list[str]:
     """列出指定领域+报告类型下所有已入库的 canonical_chapter_key。优先查图谱,回退 DB。"""
     from yuxi.services.graph_query_service import GraphQueryService
 
-    domain = _normalize_domain(domain)
+    domain = GENERAL_DOMAIN_CODE  # 去领域化：形参保留兼容写手 prompts，语义恒通用域
     report_type = _normalize_report_type(report_type)
     try:
         graph_svc = GraphQueryService()
@@ -777,7 +777,7 @@ async def get_templates(domain: str, report_type: str, canonical_chapter_key: st
     """获取结构化段落模板。优先查图谱,回退 DB。回退条目带 _source 标注（对齐 get_chapter_outline）。"""
     from yuxi.services.graph_query_service import GraphQueryService
 
-    domain = _normalize_domain(domain)
+    domain = GENERAL_DOMAIN_CODE  # 去领域化：形参保留兼容写手 prompts，语义恒通用域
     report_type = _normalize_report_type(report_type)
     templates: list[dict] = []
     graph_errored = False
@@ -847,7 +847,7 @@ domain/report_type 必须使用数据字典中的 code（用 list_report_types �
     description=CREATE_REPORT_DESCRIPTION,
 )
 async def create_report(thread_id: str, title: str, domain: str, report_type: str, kb_id: str) -> dict:
-    domain = _normalize_domain(domain)
+    domain = GENERAL_DOMAIN_CODE  # 去领域化：形参保留兼容写手 prompts，语义恒通用域
     report_type = _normalize_report_type(report_type)
     """为一篇报告创建持久化记录,返回 report_id。"""
     repo = DomainFactoryRepository()
