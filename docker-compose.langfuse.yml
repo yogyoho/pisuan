@@ -1,0 +1,172 @@
+# Langfuse 自托管观测栈（独立 compose 项目 name: langfuse，与主栈 docker-compose.yml 完全隔离）
+# 环境变量对齐 Langfuse v4 官方 docker-compose.yml（参考副本: .wolf/langfuse-deploy/official-ref.yml）
+#
+# 用法（在仓库根目录执行）：
+#   docker compose -f docker-compose.langfuse.yml up -d      # 启动
+#   docker compose -f docker-compose.langfuse.yml ps         # 状态
+#   docker compose -f docker-compose.langfuse.yml logs -f langfuse-web
+#   docker compose -f docker-compose.langfuse.yml down       # 停止（加 -v 连数据卷一起销毁）
+#
+# 密钥全部来自仓库根目录 .env（gitignored）。
+#
+# 端口适配说明（相对官方的差异）：本机 5432/6379/9000/9001/9091 已被主栈占用，
+# 基础设施不发布宿主端口；web 发 3100:3000，minio 发 9090:9000（浏览器经签名 URL
+# 拉取 trace 媒体文件用；9091 与主栈 milvus 冲突故不发布控制台）。
+# 统一访问源：http://host.docker.internal:3100 —— 容器（SDK 上报/跳转链接解析）
+# 与宿主浏览器（控制台）使用同一 origin，避免登录会话 cookie 按 host 分裂。
+# 管理员账号经 LANGFUSE_INIT_* 于首次启动自动创建（仅 langfuse-web 生效）。
+name: langfuse
+
+services:
+  langfuse-db:
+    image: postgres:17
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - database_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "${LANGFUSE_STACK_PG_PASS:?LANGFUSE_STACK_PG_PASS missing in .env}"
+      POSTGRES_DB: postgres
+      TZ: UTC
+      PGTZ: UTC
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.12
+    restart: unless-stopped
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: "${LANGFUSE_STACK_CH_PASSWORD:?LANGFUSE_STACK_CH_PASSWORD missing in .env}"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 1s
+
+  minio:
+    image: cgr.dev/chainguard/minio
+    restart: unless-stopped
+    entrypoint: sh
+    # 预建唯一 bucket 'langfuse'，events/media/exports 以对象前缀区分（官方 v4 布局）
+    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" --console-address ":9001" /data'
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: "${LANGFUSE_STACK_MINIO_PASS:?LANGFUSE_STACK_MINIO_PASS missing in .env}"
+    ports:
+      - "9090:9000"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+      start_period: 1s
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    command: >
+      --requirepass ${LANGFUSE_STACK_REDIS_AUTH:?LANGFUSE_STACK_REDIS_AUTH missing in .env}
+      --maxmemory-policy noeviction
+    environment:
+      REDIS_AUTH: "${LANGFUSE_STACK_REDIS_AUTH:?LANGFUSE_STACK_REDIS_AUTH missing in .env}"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_AUTH\" ping | grep PONG"]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+
+  langfuse-worker:
+    image: langfuse/langfuse-worker:4
+    restart: unless-stopped
+    depends_on: &langfuse-depends-on
+      langfuse-db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    environment: &langfuse-env
+      NEXTAUTH_URL: http://host.docker.internal:3100
+      DATABASE_URL: "postgresql://postgres:${LANGFUSE_STACK_PG_PASS:?LANGFUSE_STACK_PG_PASS missing in .env}@langfuse-db:5432/postgres"
+      SALT: "${LANGFUSE_STACK_SALT:?LANGFUSE_STACK_SALT missing in .env}"
+      ENCRYPTION_KEY: "${LANGFUSE_STACK_ENCRYPTION_KEY:?LANGFUSE_STACK_ENCRYPTION_KEY missing in .env}"
+      TELEMETRY_ENABLED: "false"
+      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: "${LANGFUSE_STACK_CH_PASSWORD:?LANGFUSE_STACK_CH_PASSWORD missing in .env}"
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: "${LANGFUSE_STACK_MINIO_PASS:?LANGFUSE_STACK_MINIO_PASS missing in .env}"
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: minio
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: "${LANGFUSE_STACK_MINIO_PASS:?LANGFUSE_STACK_MINIO_PASS missing in .env}"
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+      LANGFUSE_S3_MEDIA_UPLOAD_REQUEST_TIMEOUT_MS: "30000"
+      LANGFUSE_S3_BATCH_EXPORT_ENABLED: "false"
+      LANGFUSE_S3_BATCH_EXPORT_BUCKET: langfuse
+      LANGFUSE_S3_BATCH_EXPORT_PREFIX: exports/
+      LANGFUSE_S3_BATCH_EXPORT_REGION: auto
+      LANGFUSE_S3_BATCH_EXPORT_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_BATCH_EXPORT_EXTERNAL_ENDPOINT: http://localhost:9090
+      LANGFUSE_S3_BATCH_EXPORT_ACCESS_KEY_ID: minio
+      LANGFUSE_S3_BATCH_EXPORT_SECRET_ACCESS_KEY: "${LANGFUSE_STACK_MINIO_PASS:?LANGFUSE_STACK_MINIO_PASS missing in .env}"
+      LANGFUSE_S3_BATCH_EXPORT_FORCE_PATH_STYLE: "true"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_AUTH: "${LANGFUSE_STACK_REDIS_AUTH:?LANGFUSE_STACK_REDIS_AUTH missing in .env}"
+      # 首次启动引导：自动创建管理员/组织/项目/API Key（仅 web 使用，worker 忽略）
+      # v4.70 起：必须显式给 LANGFUSE_INIT_ORG_ID 才会执行 init，否则全部忽略
+      LANGFUSE_INIT_ORG_ID: pisuan
+      LANGFUSE_INIT_ORG_NAME: pisuan
+      LANGFUSE_INIT_PROJECT_ID: pisuan
+      LANGFUSE_INIT_PROJECT_NAME: pisuan
+      LANGFUSE_INIT_USER_EMAIL: langfuse-admin@pisuan.local
+      LANGFUSE_INIT_USER_NAME: Langfuse Admin
+      LANGFUSE_INIT_USER_PASSWORD: "${LANGFUSE_STACK_INIT_USER_PASSWORD:?LANGFUSE_STACK_INIT_USER_PASSWORD missing in .env}"
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: "${LANGFUSE_STACK_INIT_PROJECT_PUBLIC_KEY:?LANGFUSE_STACK_INIT_PROJECT_PUBLIC_KEY missing in .env}"
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: "${LANGFUSE_STACK_INIT_PROJECT_SECRET_KEY:?LANGFUSE_STACK_INIT_PROJECT_SECRET_KEY missing in .env}"
+
+  langfuse-web:
+    image: langfuse/langfuse:4
+    restart: unless-stopped
+    depends_on: *langfuse-depends-on
+    ports:
+      - "3100:3000"
+    environment:
+      <<: *langfuse-env
+      NEXTAUTH_SECRET: "${LANGFUSE_STACK_NEXTAUTH_SECRET:?LANGFUSE_STACK_NEXTAUTH_SECRET missing in .env}"
+      # 浏览器侧媒体签名 URL 走宿主发布端口（localhost:9090），服务端上传走内网端点
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://localhost:9090
+      LANGFUSE_S3_MEDIA_UPLOAD_INTERNAL_ENDPOINT: http://minio:9000
+
+volumes:
+  database_data:
+  clickhouse_data:
+  clickhouse_logs:
+  minio_data:
+  redis_data:
