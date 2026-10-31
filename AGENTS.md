@@ -35,6 +35,14 @@ Yuxi 是基于 LangGraph、FastAPI、Vue 和多种持久化服务构建的知识
 - Shipping 启动、路由注册和能力发现始终包含知识库、图谱与评估能力；附件解析入口只在真实解析动作发生时惰性加载 parser。
 - 沙盒虚拟路径、对象 URL 和宿主机路径不可混用；所有用户路径必须在 owning filesystem boundary 校验。
 
+## 环评域（coal-eia-writer 与知识工厂）
+
+- 技能源码在 `backend/package/yuxi/agents/skills/buildin/coal-eia-writer/`；`docker/volumes/yuxi/{skill-sources,threads}` 是运行投影，`.claude/worktrees/` 是旧工作树副本，都不要直接改。改 `SKILL.md`/`scripts`/`references` 后走 `POST /api/system/skills/builtin/sync`（或重启）同步、重启 worker，并新开对话。
+- 运行管线的红线：`data/` 只由 `scripts/ingest.py` 写，`formula_state.json` 只由 `formula_runner.py` 写，`state/progress.json` 是唯一进度真源；数值只经 `{{SLOT:key}}`/`{{TABLE:族}}` 注入；为过门手改 `references/` 或绕过 `build_output.py`/gate 等于伪造基准。
+- `scripts/` 保持纯 stdlib、零 DB/网络依赖（`eia_data_service.py` 直接 import 其 `QUANTITY_RE`）；脚本测试不在默认 `testpaths`：`docker compose exec api uv run --group test pytest package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests`。
+- 知识工厂 EIA：路由 `server/routers/domain_factory_router.py`（`/api/domain-factory/eia/*`），服务/仓库 `yuxi/{services,repositories}/eia_*`，前端 `/domain-factory/eia-data`（`web/src/components/eia-data`）。`references/stages/*.json` 是唯一结构真源，KF 模板不一致时以 stage 为准；PostgreSQL 是运营态真相，显式导出才物化回 `references/`（词表 → gitignored `overrides/`）；`eia_data_service.py` 的统计直读技能文件，不走 DB。
+- 设计上下文：`docs/design/eia-data-factory.md`、`docs/superpowers/specs/2026-09-30-coal-eia-writer-v2-port-design.md`。
+
 ## 证据规则
 
 - Agent 的完成报告、HTTP 200、日志关键词或 mock 调用次数都不是最终事实；重新读取数据库、文件、对象、DOM 或协议结果。

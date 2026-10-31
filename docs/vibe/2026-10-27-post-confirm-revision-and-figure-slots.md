@@ -47,10 +47,10 @@ SKILL.md 沟通规范已落**禁用词清单**（降档/BLOCKED/裁决/协商单
 
 ## Checklist
 
-- [ ] R1 SKILL.md 用户路径小节 + live 实测
-- [ ] R2 级联路径说明 + 跨章残留扫描
-- [ ] R3 复查路径文档化 + 实测
-- [ ] R4 返工预算 ≤5（两份 SKILL.md）
-- [ ] R5 FIG 占位族（门放行 + 派发契约 + 确认卡清单）
-- [ ] R6 已完成（本次）；测试方案 4.2 验证
-- [ ] 全量：changelog.md 记录；回归 chapter-writer 脚本测试
+- [x] R1 SKILL.md 用户路径小节（「售后修改与复查」）；live 实测待 sync-dev 进栈
+- [x] R2 级联路径说明（同小节）+ 跨章残留兜底（步骤 4–7 consistency XS/SL）
+- [x] R3 复查路径文档化（同小节）；实测待
+- [x] R4 返工预算 ≤5（chapter-writer 3f；writer 侧无该条款，无需同步）
+- [x] R5 FIG 占位族（门放行+空图名 FAIL / 3b 派发契约 / 3d 发现单 / 3e 确认卡清单；单测 10+回归 172/176 全绿）
+- [x] R6 已完成（本次）；测试方案 4.2 验证
+- [x] 全量：changelog.md 记录；回归 chapter-writer 脚本测试（localized 容器内）
