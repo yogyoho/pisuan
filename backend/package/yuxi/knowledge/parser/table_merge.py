@@ -27,7 +27,7 @@ def merge_split_tables(md: str) -> tuple[str, int]:
     if len(matches) < 2:
         return md, 0
 
-    parts: list[str] = []
+    parts: list[str] = [md[: matches[0].start()]]  # 首表前的正文（标题/目次等）原样保留
     prev_end = matches[0].end()
     prev_html = matches[0].group(0)
     merged_count = 0
@@ -57,6 +57,7 @@ def merge_split_tables(md: str) -> tuple[str, int]:
         merged_count += 1
 
     parts.append(prev_html)
+    parts.append(md[matches[-1].end() :])  # 末表后的正文（附表/参考文献等）原样保留
     return "".join(parts), merged_count
 
 

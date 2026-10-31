@@ -1013,6 +1013,11 @@ class KnowledgeBaseManager:
         kb_instance = await self.get_kb_executor(kb_id)
         return await kb_instance.get_file_content(kb_id, file_id)
 
+    async def update_file_markdown(self, kb_id: str, file_id: str, content: str) -> dict:
+        """更新已解析文档的 markdown 正源（表格编辑等场景；索引需重新入库后刷新）"""
+        kb_instance = await self.get_kb_executor(kb_id)
+        return await kb_instance.update_file_markdown(kb_id, file_id, content)
+
     async def open_file_content(self, kb_id: str, file_id: str, offset: int = 0, limit: int = 800) -> dict:
         """按行窗口打开文件解析后的 Markdown 内容"""
         kb_instance = await self.get_kb_executor(kb_id)

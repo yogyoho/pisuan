@@ -118,3 +118,32 @@ def test_marker_with_page_number_gap_merges():
     merged, count = merge_split_tables(md)
     assert count == 1
     assert "12" not in merged
+
+
+def test_leading_and_trailing_text_preserved():
+    """首表前与末表后的正文必须原样保留（真实回归：目次/参考文献曾被丢弃）。"""
+    md = (
+        "# 标准标题\n\n目次\n\n前言\n\n"
+        + _table([HEADER, ["1", "a", "1"]])
+        + "\n表1（续）\n"
+        + _table([HEADER, ["2", "b", "2"]])
+        + "\n\n## 参考文献\n\n[1] GB 3838—2002\n"
+    )
+    merged, count = merge_split_tables(md)
+    assert count == 1
+    assert merged.startswith("# 标准标题\n\n目次\n\n前言\n\n")
+    assert merged.endswith("## 参考文献\n\n[1] GB 3838—2002\n")
+
+
+def test_nonmerge_branch_keeps_leading_and_trailing():
+    md = (
+        "前言文本\n\n"
+        + _table([HEADER, ["1", "a", "1"]])
+        + "\n表2 其他表\n\n"
+        + _table([["编号"], ["1"]])
+        + "\n\n尾注文本"
+    )
+    merged, count = merge_split_tables(md)
+    assert count == 0
+    assert merged.startswith("前言文本")
+    assert merged.endswith("尾注文本")

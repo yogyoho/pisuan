@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from starlette.responses import StreamingResponse
 from yuxi.config.options import system_options
-from yuxi.knowledge.base import KBNameConflictError, KBNotFoundError
+from yuxi.knowledge.base import KBNameConflictError, KBNotFoundError, KnowledgeBaseException
 from yuxi.knowledge.chunking.ragflow_like.presets import get_chunk_preset_options
 from yuxi.knowledge.graphs.milvus_graph_service import GRAPH_TASK_TYPE, MilvusGraphService
 from yuxi.knowledge.read_models import KnowledgeBaseDetail
@@ -1055,6 +1055,27 @@ async def get_document_content(kb_id: str, doc_id: str, current_user: User = Dep
     except Exception as e:
         logger.error(f"Failed to get file content, {e}, {kb_id=}, {doc_id=}, {traceback.format_exc()}")
         return {"message": "Failed to get file content", "status": "failed"}
+
+
+@knowledge.put("/databases/{kb_id}/documents/{doc_id}/content")
+async def update_document_content(
+    kb_id: str,
+    doc_id: str,
+    content: str = Body(..., embed=True),
+    current_user: User = Depends(require_knowledge_base_manage),
+):
+    """更新已解析文档的 markdown 正源（表格编辑等场景；索引需重新入库后刷新）"""
+    logger.debug(f"PUT document {doc_id} content in {kb_id}")
+    await _ensure_database_supports_documents(kb_id, "文档内容更新")
+
+    try:
+        result = await knowledge_base.update_file_markdown(kb_id, doc_id, content)
+    except KnowledgeBaseException as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to update file markdown, {e}, {kb_id=}, {doc_id=}, {traceback.format_exc()}")
+        raise HTTPException(status_code=400, detail=f"更新文档内容失败: {e}")
+    return {"message": "markdown 已更新，重新入库后检索生效", **result}
 
 
 @knowledge.delete("/databases/{kb_id}/documents/batch")

@@ -472,6 +472,24 @@ class KnowledgeBase(ABC):
         content_bytes = await self._read_minio_bytes(file_path)
         return content_bytes.decode("utf-8")
 
+    async def update_file_markdown(self, kb_id: str, file_id: str, content: str) -> dict:
+        """更新已解析文档的 markdown 正源（确定性键原键覆盖，不触碰索引 chunk）
+
+        索引内容需用户手动「重新入库」后才会刷新。
+        """
+        basic = await self.get_file_basic_info(kb_id, file_id)
+        meta = basic.get("meta") or {}
+        markdown_file = basic.get("markdown_file") or meta.get("markdown_file")
+        if not markdown_file:
+            raise KnowledgeBaseException(f"文档尚未解析，无 markdown 正源可更新: {file_id}")
+        status = basic.get("status") or meta.get("status")
+        if status == "indexed":
+            raise KnowledgeBaseException("文档已入库，markdown 正源不可编辑（入库前修正识别内容）")
+        if not isinstance(content, str) or not content.strip():
+            raise KnowledgeBaseException("markdown 内容不能为空")
+        url = await self._save_markdown_to_minio(kb_id, file_id, content)
+        return {"markdown_url": url}
+
     async def _get_file_meta(self, kb_id: str, file_id: str) -> dict:
         return await self._load_file_meta(kb_id, file_id)
 

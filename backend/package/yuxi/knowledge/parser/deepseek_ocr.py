@@ -17,6 +17,7 @@ import requests
 
 from yuxi.knowledge.parser.base import BaseDocumentProcessor, DocumentParserException
 from yuxi.knowledge.parser.capabilities import get_parser_capability
+from yuxi.knowledge.parser.table_merge import merge_split_tables
 from yuxi.utils import logger
 
 _CAPABILITY = get_parser_capability("deepseek_ocr")
@@ -139,7 +140,10 @@ class DeepSeekOCRParser(BaseDocumentProcessor):
                 page_text = self._call_api(img_bytes, "image/png", params)
                 full_text.append(page_text)
 
-            return "\n\n".join(full_text)
+            merged_text, merged_count = merge_split_tables("\n\n".join(full_text))
+            if merged_count:
+                logger.info(f"Merged {merged_count} cross-page table fragments")
+            return merged_text
         finally:
             pdf.close()
 
