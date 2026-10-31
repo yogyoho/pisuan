@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-31T02:27:50.726Z
-> Files: 64 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-31T07:01:10.549Z
+> Files: 68 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -11,6 +11,7 @@
 
 ## ../../Users/Lenovo/AppData/Local/Temp/
 
+- `wolf-commit-msg2.txt` (~58 tok)
 
 ## ../../Users/Lenovo/AppData/Local/Temp/claude/
 
@@ -333,7 +334,7 @@
 
 ## backend/package/yuxi/services/
 
-- `domain_factory_service.py` — Domain Factory Service - 领域知识工厂服务层 (~80230 tok)
+- `domain_factory_service.py` — Domain Factory Service - 领域知识工厂服务层 (~80069 tok)
 - `graph_builder.py` — 知识图谱构建服务：将领域工厂结构化数据写入 Neo4j 图谱 (~19261 tok)
 - `graph_query_service.py` — 图谱查询服务:封装 Cypher,供工具直查 Neo4j 图谱。 (~4951 tok)
 
@@ -406,6 +407,12 @@
 ## backend/test/integration/services/
 
 
+## backend/test/integration/storage/
+
+- `test_chapter_writer_subagent.py` — chapter-writer 预置子智能体落库幂等集成测试：直连真实 PostgreSQL。 (~252 tok)
+- `test_domain_factory_outline_repo.py` — domain_factory_outlines repository 落库链路集成测试：直连真实 PostgreSQL。 (~732 tok)
+- `test_report_repo.py` — report/chapter/pps repository 落库链路集成测试：直连真实 PostgreSQL。 (~432 tok)
+
 ## backend/test/scripts/
 
 - `test_merge_chapter_templates.py` — merge_chapter_templates 治理脚本单测：纯函数规划逻辑 + dry-run 零写断言（不连库）。 (~6015 tok)
@@ -456,16 +463,13 @@
 
 ## backend/test/unit/services/
 
+- `test_etl_normalization.py` — Task 9: ETL report_type 归一化测试。 (~204 tok)
 - `test_normalize_chapter_key.py` — 章节标题归一化与聚合身份键解析单测（不连图库）。 (~1311 tok)
 - `test_outline_detail_assembler.py` — get_outline_template_detail 薄装配测试：图谱 meta + PG 大纲行富字段合并（bug-4167）。 (~1158 tok)
 - `test_outline_producer.py` — test_group_assets_by_chapter_buckets_by_chapter, test_assemble_deterministic_outline_fields, test_ll (~2228 tok)
 
 ## backend/test/unit/services/skills/
 
-
-## backend/test/unit/storage/
-
-- `test_domain_factory_outline_repo.py` — test_upsert_and_get_outline, test_list_chapter_keys_and_backfill, test_upsert_outline_normalizes_can (~694 tok)
 
 ## backend/test/unit/toolkits/
 
@@ -505,7 +509,7 @@
 
 ## docs/develop-guides/
 
-- `changelog.md` — 版本变更记录 (~39766 tok)
+- `changelog.md` — 版本变更记录 (~40110 tok)
 - `upstream-sync-guide.md` — 上游代码同步与本地化扩展实施方案 (~4100 tok)
 
 ## docs/intro/

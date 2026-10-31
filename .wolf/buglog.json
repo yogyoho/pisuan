@@ -10537,5 +10537,48 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-10-31"
+  },
+  {
+    "id": "bug-4186",
+    "timestamp": "2026-10-31",
+    "error_message": "迁移 dry-run 复盘发现 3 行新煤数据（rpt_3fc5c8977a + outlines 1251/1252），最初误判为 worker 未热重载跑旧代码所致",
+    "file": "scripts/sync-dev.ps1 + pisuan-localized-worker-1",
+    "root_cause": "误判修正：worker 容器入口由 watchfiles 包装，10:39:12 已随 sync-dev 重启加载新代码；煤行真实来源是 backend/test/unit/storage/ 两个伪 unit 测试（test_report_repo.py / test_domain_factory_outline_repo.py）直连容器 env 的真实 PostgreSQL，10:51 我跑全量单测回归时写入占位数据（thread_id=t1/kb_x/created_by=admin 与测试代码逐字吻合）；管线 task.domain 透传为真实但独立的契约缺口，与本事件无关",
+    "fix": "删除 5 行测试垃圾（report/chapter/pps/outlines×2）；3 个直连真库的伪 unit 测试移入 test/integration/storage/ 并标 integration（含 chapter_writer_subagent）；管线 8 站点 task.domain 透传恒收敛 GENERAL_DOMAIN_CODE（bug-4187 修复面）",
+    "tags": [
+      "sync-dev",
+      "worker",
+      "hot-reload",
+      "misattribution",
+      "leaky-unit-test",
+      "dedomain"
+    ],
+    "related_bugs": [
+      "bug-4174",
+      "bug-4182",
+      "bug-4183"
+    ],
+    "occurrences": 2,
+    "last_seen": "2026-10-31"
+  },
+  {
+    "id": "bug-4187",
+    "timestamp": "2026-10-31",
+    "error_message": "docker exec 容器内跑 pytest test/unit 会向活库写入测试占位行：coal 报告/大纲/章节/PPS 各表出现 thread_id=t1、kb_id=kb_x、created_by=admin 的假数据，污染已收敛的去领域化存量",
+    "file": "backend/test/unit/storage/test_report_repo.py + test_domain_factory_outline_repo.py（移至 test/integration/storage/）",
+    "root_cause": "两个测试名为 unit 实为集成：直连 pg_manager 真实 PostgreSQL 且无任何隔离/回滚，在容器内跑全量单测时 DATABASE_URL 指向本地化栈库，create_report/upsert_outline/upsert_chapter/upsert_pps_param 直接落库；testing-guidelines 明确 unit 层不得依赖运行中 Docker 服务",
+    "fix": "git mv 三文件（含同类的 test_chapter_writer_subagent.py）到 backend/test/integration/storage/，pytestmark=[asyncio, integration]；容器内 rm 旧路径文件防双跑；删除本次写入的 5 行垃圾数据",
+    "tags": [
+      "leaky-test",
+      "unit-vs-integration",
+      "pg_manager",
+      "live-db-pollution",
+      "testing-guidelines"
+    ],
+    "related_bugs": [
+      "bug-4186"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-31"
   }
 ]

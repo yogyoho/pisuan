@@ -1972,3 +1972,17 @@
 
 ### Do-Not-Repeat
 - 不要把「爆炸半径」清单当完备：本次设计清单只盘 domain_factory_router，漏 entity-builder 路由 coal 默认值（bug-4184）与 manager.py 种子层（bug-4183）。凡 domain 语义收敛，grep 必须含默认值字面量（payload.get("domain_code", "coal") 型）与 DDL/ORM 列默认。
+
+## Key Learnings (append 2026-10-31 dedomain 终审收口)
+
+- **容器内 pytest test/unit 会写活库**：docker exec 进 api 容器跑全量单测时，任何直连 pg_manager（继承容器 DATABASE_URL=活栈库）的伪 unit 测试都会真实落库。backend/test/integration/storage/ 现收容此类测试（report_repo/outline_repo/chapter_writer_subagent 三件，pytestmark integration）。跑测试前后如发现"莫名新数据"，先查测试层是否漏库。
+- **库行取证法**：数据溯源先比对"哪条代码路径能写出该字段值组合"——占位值（thread_id=t1/kb_x/created_by=admin）与测试代码逐字吻合=测试写入指纹；生产路径 tools.py create_report 恒传 created_by=None、domain 强制 general。
+- **worker 有热重载**：worker 容器入口是 watchfiles 包装（`watchfiles 👀 path=/app,/app/package target=python -m server.worker_main`），.py 变更→SIGINT→5s 后 SIGKILL→重启。RestartCount=0/StartedAt 陈旧≠不重载；判重载要看日志 "Watch files changes detected"/"Starting worker"。
+- **DB 时间戳是 UTC naive**：domain_factory 各表 created_at/updated_at 由 utc_now_naive 生成，本地 +0800 = 库值+8h。库值 '02:51' = 本地上午 10:51，不是深夜数据。
+- **PS 5.1 外层 2>&1 会杀死 sync-dev.ps1**：外层重定向把 git LF/CRLF stderr 警告升级为 NativeCommandError 终止脚本；跑 ps1 脚本不要套外层 2>&1。
+- **ruff 基线剖面比对法**：同 config 下 current 与 `git show HEAD:file` 副本各跑 ruff，对照 (rule, count) 剖面而非逐行 diff——两个副本 config 一致时结论有效。
+
+## Do-Not-Repeat (append 2026-10-31)
+
+- 2026-10-31: 不要把直连真库的测试放 test/unit（bug-4186/4187：全量单测回归把 coal 占位行写进活库，还误导出"worker 未热重载"的错归因）。判据：测试 import pg_manager 且未 monkeypatch 即为集成层。
+- 2026-10-31: docker exec 传容器绝对路径必须 MSYS_NO_PATHCONV=1（Git Bash 把 /app 改写成 C:/Program Files/Git/app；rm -f 对改写后不存在路径静默成功，假象"已删除"）。

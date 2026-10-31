@@ -8504,3 +8504,38 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 10:27 | Edited backend/test/unit/routers/test_domain_factory_dedomain_contract.py | inline fix | ~26 |
 | 10:39 | Session end: 33 writes across 9 files (DomainEntityBuilderView.vue, GeneralOverviewView.vue, domain_factory_api.js, dedomain_coal_to_general.py, dedomain_chapter_templates_graph.py) | 14 reads | ~201051 tok |
 | 10:40 | Session end: 33 writes across 9 files (DomainEntityBuilderView.vue, GeneralOverviewView.vue, domain_factory_api.js, dedomain_coal_to_general.py, dedomain_chapter_templates_graph.py) | 14 reads | ~201051 tok |
+| 10:54 | Session end: 33 writes across 9 files (DomainEntityBuilderView.vue, GeneralOverviewView.vue, domain_factory_api.js, dedomain_coal_to_general.py, dedomain_chapter_templates_graph.py) | 14 reads | ~201051 tok |
+| 11:08 | Session end: 33 writes across 9 files (DomainEntityBuilderView.vue, GeneralOverviewView.vue, domain_factory_api.js, dedomain_coal_to_general.py, dedomain_chapter_templates_graph.py) | 17 reads | ~228303 tok |
+
+## Session: 2026-10-31 11:25
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:42 | Edited backend/package/yuxi/services/domain_factory_service.py | 2→2 lines | ~51 |
+| 11:42 | Edited backend/package/yuxi/services/domain_factory_service.py | inline fix | ~24 |
+| 11:42 | Edited backend/package/yuxi/services/domain_factory_service.py | inline fix | ~17 |
+| 11:42 | Edited backend/package/yuxi/services/domain_factory_service.py | inline fix | ~17 |
+| 11:42 | Edited backend/package/yuxi/services/domain_factory_service.py | inline fix | ~17 |
+| 11:42 | Edited backend/package/yuxi/services/domain_factory_service.py | inline fix | ~17 |
+| 11:42 | Edited backend/package/yuxi/services/domain_factory_service.py | modified _normalize_report_type_for_graph() | ~21 |
+| 11:42 | Created backend/test/unit/services/test_etl_normalization.py | — | ~204 |
+| 11:43 | Edited backend/test/integration/storage/test_report_repo.py | 3→7 lines | ~78 |
+| 11:43 | Edited backend/test/integration/storage/test_domain_factory_outline_repo.py | 3→7 lines | ~79 |
+| 11:43 | Edited backend/test/integration/storage/test_chapter_writer_subagent.py | 5→9 lines | ~96 |
+| 11:45 | Edited backend/package/yuxi/services/domain_factory_service.py | 6→5 lines | ~53 |
+| 11:58 | Session end: 12 writes across 5 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 7 reads | ~134498 tok |
+| 11:20 | 破案：3 行新煤数据源自伪 unit 测试直连活库（test_report_repo/outline_repo 与测试代码 t1/kb_x/admin 逐字吻合），管线透传嫌疑洗清 | test_report_repo.py | bug-4186 归因修正 | ~12k |
+| 11:25 | 删除 5 行测试垃圾（report/chapter/pps/outline×2），coal 报告/大纲双表归零 | live DB | 库已收敛 | ~3k |
+| 11:30 | 服务层 8 站点 task.domain 透传恒收敛 GENERAL + 删孤儿 _normalize_domain_for_graph + ETL 测试修剪 | domain_factory_service.py | ruff 剖面=HEAD 基线 | ~15k |
+| 11:40 | 3 个漏库测试 git mv 至 test/integration/storage + pytestmark integration；容器旧路径 rm（首次因 MSYS 改写静默空跑，MSYS_NO_PATHCONV=1 重做） | backend/test | 层级合规 | ~8k |
+| 11:50 | sync-dev 重跑成功（外层 2>&1 会杀脚本）；契约 3/3 + ETL 2/2；全量回归后台中 | localized stack | 验证链进行中 | ~6k |
+| 14:55 | Edited docs/develop-guides/changelog.md | inline fix | ~359 |
+| 14:55 | Edited docs/develop-guides/changelog.md | inline fix | ~21 |
+| 14:55 | Edited docs/develop-guides/changelog.md | modified fix() | ~190 |
+| 14:56 | 验证电池收口：集成存储 5/5、凭据集成 API 12/12（6.42s）、迁移 dry-run 七表零待迁移、api reload 确认（11:52:03）；清除容器内 2 个僵尸探针进程 | localized stack | 全绿 | ~9k |
+| 15:00 | 清理迁移翻入 general 的历史测试垃圾：28 份 t1/kb_x 占位报告及章节/PPS + 7 月 16 日上古大纲 387（指纹扫尾归零） | live DB | coal 0/0、指纹 0 | ~5k |
+| 15:05 | 三笔提交落位：1185b60b4 后端（透传收敛+契约下沉+泄库整改）/ ac5393398 前端 / 2fa34a976 脚本文档 | pisuan-custom | 会话终审收口完成 | ~6k |
+| 14:58 | Session end: 15 writes across 6 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 9 reads | ~139733 tok |
+| 14:58 | Session end: 15 writes across 6 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 9 reads | ~139733 tok |
+| 14:59 | Session end: 15 writes across 6 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 9 reads | ~139733 tok |
+| 15:01 | Created ../../Users/Lenovo/AppData/Local/Temp/wolf-commit-msg2.txt | — | ~62 |
