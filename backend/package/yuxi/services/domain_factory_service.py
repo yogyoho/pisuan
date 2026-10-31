@@ -4309,12 +4309,6 @@ class DomainFactoryService:
             logger.warning(f"原文件上传 MinIO 失败(不阻断入库): {e}")
             return "", 0
 
-    def _normalize_domain_for_graph(self, domain: str) -> str:
-        """ETL 入图谱前归一化 domain(中文名→code)。"""
-        from yuxi.repositories.domain_factory_repository import _normalize_domain
-
-        return _normalize_domain(domain or "") or (domain or "")
-
     def _normalize_report_type_for_graph(self, report_type: str) -> str:
         """ETL 入图谱前归一化 report_type('通用'→'eia_report')。"""
         from yuxi.repositories.domain_factory_repository import _normalize_report_type
@@ -4340,7 +4334,7 @@ class DomainFactoryService:
 
         from yuxi.services.graph_builder import GraphBuilder
 
-        domain = self._normalize_domain_for_graph(task_detail.get("domain") or GENERAL_DOMAIN_CODE)
+        domain = GENERAL_DOMAIN_CODE  # 去领域化：历史任务行 domain 不再透传入图谱
         report_type = self._normalize_report_type_for_graph(task_detail.get("report_type_code") or "eia_report")
         builder = GraphBuilder()
         merged_count = 0
@@ -4645,7 +4639,7 @@ class DomainFactoryService:
                         source_paragraphs=source_paragraphs,
                         domain_label=domain_label,
                         base_info=base_info,
-                        domain_code=self._normalize_domain_for_graph(task_detail.get("domain") or ""),
+                        domain_code=GENERAL_DOMAIN_CODE,  # 去领域化：图谱 scoping 键恒通用域
                         report_type_code=self._normalize_report_type_for_graph(
                             task_detail.get("report_type_code") or ""
                         ),
@@ -4699,7 +4693,7 @@ class DomainFactoryService:
                 await context.set_message("正在产出章节大纲...")
                 outline_count = await service._produce_outlines_async(
                     task_id,
-                    service._normalize_domain_for_graph(task_detail.get("domain") or GENERAL_DOMAIN_CODE),
+                    GENERAL_DOMAIN_CODE,  # 去领域化：大纲模板恒通用域
                     service._normalize_report_type_for_graph(task_detail.get("report_type_code") or "eia_report"),
                 )
                 logger.info(f"章节大纲产出完成: {outline_count} 章")
@@ -5517,7 +5511,7 @@ class DomainFactoryService:
 
     async def _save_learned_templates_from_task(self, task_detail: dict[str, Any], task_id: str) -> int:
         """从已提交任务中提取高质量模板，回流到学习模板库"""
-        domain_code = task_detail.get("domain", GENERAL_DOMAIN_CODE)
+        domain_code = GENERAL_DOMAIN_CODE  # 去领域化：模板回流恒通用域
         report_type_code = task_detail.get("report_type_code")
         paragraphs = task_detail.get("source_paragraphs", [])
         template_ids: list[int] = []
@@ -5712,7 +5706,7 @@ class DomainFactoryService:
                         source_paragraphs=source_paragraphs,
                         domain_label=domain_label,
                         base_info=base_info,
-                        domain_code=self._normalize_domain_for_graph(task_detail.get("domain") or ""),
+                        domain_code=GENERAL_DOMAIN_CODE,  # 去领域化：图谱 scoping 键恒通用域
                         report_type_code=self._normalize_report_type_for_graph(
                             task_detail.get("report_type_code") or ""
                         ),
@@ -5974,7 +5968,7 @@ class DomainFactoryService:
             return {"error": "任务不存在"}
 
         paragraphs = detail.get("source_paragraphs", [])
-        domain_code = detail.get("domain") or GENERAL_DOMAIN_CODE
+        domain_code = GENERAL_DOMAIN_CODE  # 去领域化：实体匹配只认通用域
 
         # ---- 步骤 1: 规则匹配自动绑定 ----
         rule_bound = await self._auto_map_slots_to_entity_properties(paragraphs, domain_code=domain_code)
@@ -6187,7 +6181,7 @@ class DomainFactoryService:
         if not raw_slots:
             return {"entities": [], "message": "没有未识别的插槽"}
 
-        domain_code = template_metadata.get("domain_code") or detail.get("domain") or GENERAL_DOMAIN_CODE
+        domain_code = GENERAL_DOMAIN_CODE  # 去领域化：实体归属恒通用域
 
         # 获取领域名称
         domain_obj = await self.repo.get_domain_by_code(domain_code) if domain_code else None
@@ -6232,8 +6226,7 @@ class DomainFactoryService:
         if not detail:
             return {"saved": 0, "error": "任务不存在"}
 
-        template_metadata = detail.get("template_metadata") or {}
-        domain_code = template_metadata.get("domain_code") or detail.get("domain") or GENERAL_DOMAIN_CODE
+        domain_code = GENERAL_DOMAIN_CODE  # 去领域化：实体归属恒通用域
 
         from yuxi.repositories.domain_entity_repository import DomainEntityRepository
 

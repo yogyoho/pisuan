@@ -1,8 +1,12 @@
+"""chapter-writer 预置子智能体落库幂等集成测试：直连真实 PostgreSQL。"""
+
 import pytest
 
 from yuxi.agents.presets.subagents.chapter_writer import PRESET as CHAPTER_WRITER_PRESET
 from yuxi.repositories.agent_repository import AgentRepository
 from yuxi.storage.postgres.manager import pg_manager
+
+pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
 
 @pytest.fixture(autouse=True)
