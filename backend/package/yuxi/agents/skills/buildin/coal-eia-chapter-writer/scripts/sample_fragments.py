@@ -16,7 +16,8 @@
 
 CLI 用法：
     python sample_fragments.py --stage planning_eia --chapter ch2 --out state/sample_fragments_ch2.md
-    python sample_fragments.py --stage planning_eia --chapter ch2 --candidates 3 --out state/sample_candidates_ch2.json
+    python sample_fragments.py --stage planning_eia --chapter ch2 --candidates 3 \
+        --out state/sample_candidates_ch2.json --content-dir state/candidates_content_ch2
     python sample_fragments.py --stage planning_eia --chapter ch2 --report-id 2201 --out state/sample_fragments_ch2.md
 rc：0=成包/候选列出；2=样例库无本章切片（降级范式文档并如实告知用户）；1=参数/文件错误（含 --report-id 不在候选）。
 """
@@ -72,6 +73,42 @@ def pick_candidates(bank: dict, stage: str, chapter: str, top: int, references_d
     return out
 
 
+def export_candidates(
+    bank: dict,
+    stage: str,
+    chapter: str,
+    top: int,
+    references_dir: Path,
+    out: Path,
+    content_dir: Path | None = None,
+) -> tuple[list[dict], int]:
+    """候选摘要落盘 + 每份候选整章原文导出（范例挑选卡数据面+内容面）。
+
+    content_dir 给定时逐份写 candidate-<i>-<report_id>.md：整章切片原文（方案一：原文展示，
+    来源可见——用户通读比对写法质量后再选；卡面摘要仍按 bug-4155 脱敏，摘要与全文分层）。
+    候选 JSON 逐份增记 content_file 路径。返回 (候选列表, rc)：rc=0 成功；rc=2 无切片。"""
+    cands = pick_candidates(bank, stage, chapter, top, references_dir)
+    if not cands:
+        return [], 2
+    if content_dir is not None:
+        content_dir.mkdir(parents=True, exist_ok=True)
+    for i, c in enumerate(cands, 1):
+        if content_dir is None:
+            continue
+        p = Path(references_dir) / c["file"]
+        body = p.read_text(encoding="utf-8").strip() if p.exists() else ""
+        head = (
+            f"# 范例候选{i} · {stage} {chapter}（{c['sections']} 节 · 约 {c['chars']} 字）\n"
+            f"<!-- 候选整章原文（供通读比对后选择；report_id={c['report_id']} · {c['file']}） -->\n"
+        )
+        f = content_dir / f"candidate-{i}-{c['report_id']}.md"
+        f.write_text(head + body + "\n", encoding="utf-8", newline="\n")
+        c["content_file"] = str(f)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(cands, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return cands, 0
+
+
 def clip_at_heading(text: str, max_chars: int) -> str:
     """预算截断：预算内最后一个节标题（##/###/#### 任意级）处下刀，保完整开头节；无标题可断则硬截。"""
     if len(text) <= max_chars:
@@ -104,14 +141,26 @@ def build_pack(
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="stage+章节 → samples_bank 同章真实切片包（bug-4147；范例挑选卡候选/取件）")
+    ap = argparse.ArgumentParser(
+        description="stage+章节 → samples_bank 同章真实切片包（bug-4147；范例挑选卡候选/取件）"
+    )
     default_refs = Path(__file__).resolve().parent.parent / "references"
     ap.add_argument("--references-dir", default=str(default_refs))
-    ap.add_argument("--stage", required=True, help="stages/*.json 路径或裸 stage id（如 planning_eia；路径自动取回 id）")
+    ap.add_argument(
+        "--stage", required=True, help="stages/*.json 路径或裸 stage id（如 planning_eia；路径自动取回 id）"
+    )
     ap.add_argument("--chapter", required=True, help="章 id，如 ch2（bank_index 章键）")
-    ap.add_argument("--out", required=True, help="落盘路径（建议 state/sample_fragments_<ch>.md 或 candidates_<ch>.json）")
+    ap.add_argument(
+        "--out", required=True, help="落盘路径（建议 state/sample_fragments_<ch>.md 或 candidates_<ch>.json）"
+    )
     ap.add_argument("--max-chars", type=int, default=12000, help="包正文字符预算（缺省 12000）")
-    ap.add_argument("--candidates", type=int, metavar="N", help="列 top-N 候选摘要 JSON 到 --out（范例挑选卡数据面，不取件）")
+    ap.add_argument(
+        "--candidates", type=int, metavar="N", help="列 top-N 候选摘要 JSON 到 --out（范例挑选卡数据面，不取件）"
+    )
+    ap.add_argument(
+        "--content-dir",
+        help="候选逐份整章原文导出目录（范例挑选卡内容面——供用户点开通读比对后再选；与 --candidates 同用）",
+    )
     ap.add_argument("--report-id", help="取指定报告的整章切片（范例挑选卡用户选定；缺省=自动主导报告）")
     a = ap.parse_args()
     try:
@@ -122,27 +171,32 @@ def main() -> int:
     stage = Path(a.stage).stem  # 容错：--stage 传 stages/<id>.json 路径时取回 id（全脚本口径为路径，裸 id 亦收）
     if stage not in bank:
         print(
-            f"SAMPLE_FRAGMENTS_FAIL: stage '{a.stage}'（归一为 '{stage}'）不在样例库"
-            f"（顶层键：{'、'.join(bank)}）",
+            f"SAMPLE_FRAGMENTS_FAIL: stage '{a.stage}'（归一为 '{stage}'）不在样例库（顶层键：{'、'.join(bank)}）",
             file=sys.stderr,
         )
         return 1
     if a.candidates:
-        cands = pick_candidates(bank, stage, a.chapter, a.candidates, Path(a.references_dir))
-        if not cands:
-            print(f"SAMPLE_FRAGMENTS_EMPTY: {stage}/{a.chapter} 无样例切片——降级范式文档并如实告知用户", file=sys.stderr)
+        cands, rc = export_candidates(
+            bank,
+            stage,
+            a.chapter,
+            a.candidates,
+            Path(a.references_dir),
+            Path(a.out),
+            Path(a.content_dir) if a.content_dir else None,
+        )
+        if rc == 2:
+            print(
+                f"SAMPLE_FRAGMENTS_EMPTY: {stage}/{a.chapter} 无样例切片——降级范式文档并如实告知用户", file=sys.stderr
+            )
             return 2
-        out = Path(a.out)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(cands, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print(f"SAMPLE_CANDIDATES_OK: {len(cands)} 份候选 → {out}（呈用户挑选后 fragment-choice 落账）")
+        extra = f" · 候选全文 x{len(cands)} → {a.content_dir}" if a.content_dir else ""
+        print(f"SAMPLE_CANDIDATES_OK: {len(cands)} 份候选 → {a.out}{extra}（呈用户挑选后 fragment-choice 落账）")
         return 0
     if a.report_id:
         valid = {c["report_id"] for c in pick_candidates(bank, stage, a.chapter, 10**9, Path(a.references_dir))}
         if a.report_id not in valid:
-            print(
-                f"SAMPLE_FRAGMENTS_FAIL: 候选中无报告 {a.report_id}（先 --candidates 查看在库候选）", file=sys.stderr
-            )
+            print(f"SAMPLE_FRAGMENTS_FAIL: 候选中无报告 {a.report_id}（先 --candidates 查看在库候选）", file=sys.stderr)
             return 1
     pack, rid, clipped = build_pack(bank, stage, a.chapter, a.max_chars, Path(a.references_dir), a.report_id)
     if not pack:
