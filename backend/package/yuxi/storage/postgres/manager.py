@@ -2037,20 +2037,17 @@ class PostgresManager(metaclass=SingletonMeta):
             "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
             ")",
             "CREATE INDEX IF NOT EXISTS idx_dftu_tool_time ON domain_factory_tool_usage(tool_name, created_at)",
-            # Seed default domains if not exist
+            # Seed default domain if not exist（去领域化：仅通用域；历史 coal/chem/transport 行
+            # 冻结保留于存量库，不再重建）
             "INSERT INTO domain_factory_domains (code, name, description) VALUES "
-            "('coal', '煤炭采掘', '煤矿/露天矿环评项目') ON CONFLICT (code) DO NOTHING",
-            "INSERT INTO domain_factory_domains (code, name, description) VALUES "
-            "('chem', '石油化工', '化工/精细化工环评项目') ON CONFLICT (code) DO NOTHING",
-            "INSERT INTO domain_factory_domains (code, name, description) VALUES "
-            "('transport', '交通运输', '交通工程与物流园项目') ON CONFLICT (code) DO NOTHING",
+            "('general', '通用域', '去领域化后的唯一通用域') ON CONFLICT (code) DO NOTHING",
             # Domain Entity Builder: entity schema table + migration for existing installs
             "CREATE TABLE IF NOT EXISTS domain_entity_schemas ("
             "    entity_id VARCHAR(64) PRIMARY KEY,"
             "    entity_key VARCHAR(255) UNIQUE NOT NULL,"
             "    name_cn VARCHAR(255) NOT NULL,"
             "    category VARCHAR(128) NOT NULL,"
-            "    domain_code VARCHAR(64) NOT NULL DEFAULT 'coal',"
+            "    domain_code VARCHAR(64) NOT NULL DEFAULT 'general',"
             "    value_type VARCHAR(32) NOT NULL DEFAULT 'String',"
             "    unit VARCHAR(64),"
             "    is_list_type BOOLEAN DEFAULT FALSE,"
@@ -2062,7 +2059,7 @@ class PostgresManager(metaclass=SingletonMeta):
             "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
             "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
             ")",
-            "ALTER TABLE IF EXISTS domain_entity_schemas ADD COLUMN IF NOT EXISTS domain_code VARCHAR(64) NOT NULL DEFAULT 'coal'",
+            "ALTER TABLE IF EXISTS domain_entity_schemas ADD COLUMN IF NOT EXISTS domain_code VARCHAR(64) NOT NULL DEFAULT 'general'",
             "ALTER TABLE IF EXISTS domain_entity_schemas DROP COLUMN IF EXISTS report_types",
             "CREATE INDEX IF NOT EXISTS idx_des_entity_key ON domain_entity_schemas(entity_key)",
             "CREATE INDEX IF NOT EXISTS idx_des_category ON domain_entity_schemas(category)",
@@ -2083,13 +2080,13 @@ class PostgresManager(metaclass=SingletonMeta):
             # 旧形态，而新建 DDL 是 PK(code)。NOT EXISTS 写法不依赖 ON CONFLICT
             # 目标约束，在新旧两种形态下都幂等（ensure 在 schema 迁移锁内单飞执行）
             "INSERT INTO report_types (code, name, domain_code, sort_order) "
-            "SELECT '通用', '通用（全部报告类型）', 'coal', 0 "
+            "SELECT '通用', '通用（全部报告类型）', 'general', 0 "
             "WHERE NOT EXISTS (SELECT 1 FROM report_types WHERE code = '通用')",
             "INSERT INTO report_types (code, name, domain_code, sort_order) "
-            "SELECT 'feasibility_report', '可行性研究报告', 'coal', 1 "
+            "SELECT 'feasibility_report', '可行性研究报告', 'general', 1 "
             "WHERE NOT EXISTS (SELECT 1 FROM report_types WHERE code = 'feasibility_report')",
             "INSERT INTO report_types (code, name, domain_code, sort_order) "
-            "SELECT 'eia_report', '环境影响评价报告', 'coal', 2 "
+            "SELECT 'eia_report', '环境影响评价报告', 'general', 2 "
             "WHERE NOT EXISTS (SELECT 1 FROM report_types WHERE code = 'eia_report')",
             # [pisuan-custom] W3 scope×region：任务/模板归属列（存量库补列，create_all 不补列）
             "ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS project_name VARCHAR(255)",

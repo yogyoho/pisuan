@@ -36,7 +36,12 @@ const STATUS_CHIPS = [
   { value: 'retired', label: 'retired' }
 ]
 const STATUS_COLORS = { draft: 'orange', confirmed: 'green', retired: 'default' }
-const TYPE_LABELS = { monitoring: '监测', sensitive_target: '敏感目标', measure: '措施', constraint: '约束' }
+const TYPE_LABELS = {
+  monitoring: '监测',
+  sensitive_target: '敏感目标',
+  measure: '措施',
+  constraint: '约束'
+}
 
 const columns = [
   { title: '类型', key: 'fact_type', width: 90 },
@@ -115,7 +120,10 @@ const confirmRetire = () => {
         message.success(`已退役 ${res.retired} 条`)
         selectedIds.value = []
         // 退役可能清空当前页：按剩余总数回缩页码，避免停在越界空页
-        pagination.current = Math.min(pagination.current, Math.max(1, Math.ceil((pagination.total - res.retired) / pagination.pageSize)))
+        pagination.current = Math.min(
+          pagination.current,
+          Math.max(1, Math.ceil((pagination.total - res.retired) / pagination.pageSize))
+        )
         fetchList()
       } catch (e) {
         message.error('退役失败: ' + (e.message || '未知错误'))
@@ -142,16 +150,39 @@ defineExpose({
 <template>
   <div class="regional-facts-table">
     <div class="filter-bar">
-      <a-select v-model:value="regionKey" :options="regionOptions" style="width: 200px" size="small" @change="onFilterChange" />
+      <a-select
+        v-model:value="regionKey"
+        :options="regionOptions"
+        style="width: 200px"
+        size="small"
+        @change="onFilterChange"
+      />
       <a-select
         :options="FACT_TYPE_OPTIONS"
         style="width: 120px"
         size="small"
         :value="factType"
-        @change="(v) => { factType = v; onFilterChange() }"
+        @change="
+          (v) => {
+            factType = v
+            onFilterChange()
+          }
+        "
       />
-      <a-radio-group :value="status" button-style="solid" size="small" @change="(e) => { status = e.target.value; onFilterChange() }">
-        <a-radio-button v-for="c in STATUS_CHIPS" :key="c.value" :value="c.value">{{ c.label }}</a-radio-button>
+      <a-radio-group
+        :value="status"
+        button-style="solid"
+        size="small"
+        @change="
+          (e) => {
+            status = e.target.value
+            onFilterChange()
+          }
+        "
+      >
+        <a-radio-button v-for="c in STATUS_CHIPS" :key="c.value" :value="c.value">{{
+          c.label
+        }}</a-radio-button>
       </a-radio-group>
     </div>
     <a-table

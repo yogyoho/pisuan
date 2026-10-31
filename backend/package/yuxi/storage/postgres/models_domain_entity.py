@@ -21,7 +21,7 @@ class DomainEntitySchema(Base):
     entity_key = Column(String(255), nullable=False, unique=True, index=True)
     name_cn = Column(String(255), nullable=False)
     category = Column(String(128), nullable=False, index=True)
-    domain_code = Column(String(64), nullable=False, default="coal", index=True)
+    domain_code = Column(String(64), nullable=False, default="general", index=True)
     value_type = Column(String(32), nullable=False, default="String")
     unit = Column(String(64), nullable=True)
     is_list_type = Column(Boolean, default=False)

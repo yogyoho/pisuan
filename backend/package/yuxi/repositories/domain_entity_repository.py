@@ -5,6 +5,7 @@ from typing import Any
 
 from sqlalchemy import select
 
+from yuxi.repositories.domain_factory_repository import GENERAL_DOMAIN_CODE
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_domain_entity import DomainEntitySchema, ReportType
 from yuxi.storage.postgres.models_domain_factory import DomainFactoryDomain
@@ -268,9 +269,11 @@ class DomainEntityRepository:
             return [r[0].to_dict() for r in result.all()]
 
     async def list_domains_in_use(self) -> list[dict[str, Any]]:
-        """列出 domain_factory_domains 字典表中所有行业"""
+        """列出 domain_factory_domains 字典表行业（去领域化：仅暴露通用域，历史域行冻结保留不外露）"""
         async with pg_manager.get_async_session_context() as session:
             result = await session.execute(
-                select(DomainFactoryDomain).order_by(DomainFactoryDomain.id)
+                select(DomainFactoryDomain)
+                .where(DomainFactoryDomain.code == GENERAL_DOMAIN_CODE)
+                .order_by(DomainFactoryDomain.id)
             )
             return [r[0].to_dict() for r in result.all()]

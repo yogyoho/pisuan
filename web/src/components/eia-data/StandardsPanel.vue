@@ -329,10 +329,7 @@
                 </div>
               </div>
               <div class="doc-body">
-                <template
-                  v-for="unit in doc.units"
-                  :key="unitKey(doc.doc_code, unit.unit_no)"
-                >
+                <template v-for="unit in doc.units" :key="unitKey(doc.doc_code, unit.unit_no)">
                   <div class="unit-row">
                     <span class="u-no">{{ unit.unit_no || '—' }}</span>
                     <span v-if="unit.category" class="pill pill-gray">{{ unit.category }}</span>
@@ -437,8 +434,9 @@
               <div class="note-bar expert-note">
                 <Info :size="14" />
                 <span
-                  >适用场景：缺源或无法解析入库的标准（如 GB/T 13201-91）。手工行<b>保存即核验生效</b
-                  >并进入 lookup_standard_indicator 查找范围；后续若该标准补源入库，enrich
+                  >适用场景：缺源或无法解析入库的标准（如 GB/T
+                  13201-91）。手工行<b>保存即核验生效</b>并进入 lookup_standard_indicator
+                  查找范围；后续若该标准补源入库，enrich
                   会<b>检测到手工行并拒绝覆盖</b>，需先删除或迁移手工行。</span
                 >
               </div>
@@ -474,7 +472,9 @@
               >环评写作引用了但权威指标库尚未覆盖的标准 · 补源 → 上传解析 → enrich 的漏斗入口</span
             >
             <div class="hd-right">
-              <span class="pill pill-gray num">引用清单去重 − 已覆盖 = {{ candidates.length }}</span>
+              <span class="pill pill-gray num"
+                >引用清单去重 − 已覆盖 = {{ candidates.length }}</span
+              >
             </div>
           </div>
           <a-spin v-if="candidatesLoading" style="display: block; margin: 48px auto" />
@@ -519,12 +519,12 @@
           <div class="tbl-foot">
             <Info :size="13" />
             <span
-              >确有原文的标准优先「去补源」走 KB enrich 管线（行与 KB 分块可溯）；确无来源的才落手工录入。</span
+              >确有原文的标准优先「去补源」走 KB enrich 管线（行与 KB
+              分块可溯）；确无来源的才落手工录入。</span
             >
           </div>
         </div>
       </template>
-
     </template>
 
     <div class="note-bar">
@@ -1148,7 +1148,14 @@ const groupIndicators = (kind) => {
     if (!doc.doc_name && r.doc_name) doc.doc_name = r.doc_name
     const uNo = r.unit_no ?? '' // 分组保留原始 unit_no（可能为空），「—」仅作展示 fallback
     if (!doc.units.has(uNo)) {
-      doc.units.set(uNo, { unit_no: uNo, rows: [], category: '', verified: false, verified_by: '', verified_at: '' })
+      doc.units.set(uNo, {
+        unit_no: uNo,
+        rows: [],
+        category: '',
+        verified: false,
+        verified_by: '',
+        verified_at: ''
+      })
     }
     doc.units.get(uNo).rows.push(r)
   }
@@ -2293,7 +2300,9 @@ code.k {
     font-size: 13px;
     font-family: inherit;
     font-variant-numeric: tabular-nums;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
 
     &:hover {
       border-color: var(--main-400);

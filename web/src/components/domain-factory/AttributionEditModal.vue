@@ -90,7 +90,11 @@ const handleOk = async () => {
 <template>
   <a-modal
     :open="open"
-    :title="task && task.region_key ? `改判归属 · ${task.file_name}` : `归属确认 · ${task?.file_name || ''}`"
+    :title="
+      task && task.region_key
+        ? `改判归属 · ${task.file_name}`
+        : `归属确认 · ${task?.file_name || ''}`
+    "
     :confirm-loading="submitting"
     :ok-text="task && task.region_key ? '确认改判' : '确认归属'"
     @ok="handleOk"
@@ -112,7 +116,9 @@ const handleOk = async () => {
       <div class="form-row">
         <span class="form-label">scope *</span>
         <a-radio-group v-model:value="scope">
-          <a-radio v-for="o in SCOPE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</a-radio>
+          <a-radio v-for="o in SCOPE_OPTIONS" :key="o.value" :value="o.value">{{
+            o.label
+          }}</a-radio>
         </a-radio-group>
       </div>
       <a-alert

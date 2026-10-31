@@ -52,7 +52,9 @@ const fetchBoard = async () => {
 
 const regionLabel = (node) => node.region_label || node.region_key || '未归属'
 const nodeKey = (node) => node.region_key ?? '__unassigned__'
-const expandedNode = computed(() => (board.value?.region_tree || []).find((n) => nodeKey(n) === expandedKey.value))
+const expandedNode = computed(() =>
+  (board.value?.region_tree || []).find((n) => nodeKey(n) === expandedKey.value)
+)
 const toggleExpand = (node) => {
   expandedKey.value = expandedKey.value === nodeKey(node) ? null : nodeKey(node)
 }
@@ -85,9 +87,15 @@ defineExpose({ refresh: fetchBoard })
       <div class="stat-card">
         <div class="stat-title">事实 × 状态</div>
         <div class="stat-body">
-          <span class="stat-item"><b>{{ fbs.draft ?? 0 }}</b> draft</span>
-          <span class="stat-item"><b>{{ fbs.confirmed ?? 0 }}</b> confirmed</span>
-          <span class="stat-item"><b>{{ fbs.retired ?? 0 }}</b> retired</span>
+          <span class="stat-item"
+            ><b>{{ fbs.draft ?? 0 }}</b> draft</span
+          >
+          <span class="stat-item"
+            ><b>{{ fbs.confirmed ?? 0 }}</b> confirmed</span
+          >
+          <span class="stat-item"
+            ><b>{{ fbs.retired ?? 0 }}</b> retired</span
+          >
         </div>
       </div>
     </div>
@@ -121,8 +129,12 @@ defineExpose({ refresh: fetchBoard })
         :class="{ active: expandedKey === nodeKey(node) }"
         @click="toggleExpand(node)"
       >
-        <div class="region-name">{{ expandedKey === nodeKey(node) ? '▾' : '▸' }} {{ regionLabel(node) }}</div>
-        <div class="region-badges">任务 {{ node.task_count }} · 事实 {{ node.fact_count }} · 模板 {{ node.template_count }}</div>
+        <div class="region-name">
+          {{ expandedKey === nodeKey(node) ? '▾' : '▸' }} {{ regionLabel(node) }}
+        </div>
+        <div class="region-badges">
+          任务 {{ node.task_count }} · 事实 {{ node.fact_count }} · 模板 {{ node.template_count }}
+        </div>
       </div>
     </div>
     <div v-if="expandedNode" class="region-detail">
@@ -133,8 +145,14 @@ defineExpose({ refresh: fetchBoard })
         {{ expandedNode.fact_counts_by_type.constraint }}
       </p>
       <p v-if="expandedNode.region_key">
-        <a @click="emit('jump-to-tasks', { regionKey: expandedNode.region_key })">任务 {{ expandedNode.task_count }} →</a>
-        <a style="margin-left: 16px" @click="emit('jump-to-facts', { regionKey: expandedNode.region_key })">事实 {{ expandedNode.fact_count }} →</a>
+        <a @click="emit('jump-to-tasks', { regionKey: expandedNode.region_key })"
+          >任务 {{ expandedNode.task_count }} →</a
+        >
+        <a
+          style="margin-left: 16px"
+          @click="emit('jump-to-facts', { regionKey: expandedNode.region_key })"
+          >事实 {{ expandedNode.fact_count }} →</a
+        >
       </p>
       <p v-else class="detail-hint">未归属伪节点：改判任务后自动归位</p>
     </div>

@@ -5835,6 +5835,9 @@ class DomainFactoryService:
         except Exception:
             entity_count = 0
 
+        # 锚定通用域行（去领域化：保证 contexts 恒返回通用域单元素，全新库亦成立）
+        await self.repo.get_or_create_general_domain()
+
         # 从数据库查询领域（去领域化：仅暴露通用域，历史域行冻结保留不外露）
         domains = [d for d in await self.repo.list_domains() if d.get("code") == GENERAL_DOMAIN_CODE]
 
@@ -5846,11 +5849,11 @@ class DomainFactoryService:
         # 从数据库查询报告类型
         report_types = await self.repo.list_report_types()
 
-        # 按 domain_code 分组
+        # 按 domain_code 分组（仅保留通用域键，历史域编码行不外露）
         report_types_by_domain: dict[str, list] = {}
         for rt in report_types:
             dc = rt.get("domain_code", "")
-            if dc:
+            if dc == GENERAL_DOMAIN_CODE:
                 report_types_by_domain.setdefault(dc, []).append(rt)
 
         return {

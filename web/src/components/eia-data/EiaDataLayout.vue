@@ -28,7 +28,7 @@
         </button>
       </div>
     </aside>
-    <!-- 内容列：max-width 对齐原型 .screen 画布（各面板自带 20/24/40 内边距） -->
+    <!-- 内容列：全宽（各面板自带 20/24/40 内边距） -->
     <main class="chrome-main">
       <div class="chrome-canvas">
         <router-view />
@@ -219,11 +219,6 @@ const groups = [
   flex: 1;
   min-width: 0;
   overflow-y: auto;
-}
-
-/* 原型 .screen 画布宽（.ewp 自带 20/24/40 内边距，画布只管宽） */
-.chrome-canvas {
-  max-width: 1180px;
 }
 
 /* 暗色：选中底/组标签底提亮一档（原型 .proto-dark 同款） */

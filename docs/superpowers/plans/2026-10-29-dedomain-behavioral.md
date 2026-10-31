@@ -13,11 +13,16 @@
 ## 执行环境约定（每个任务都适用）
 
 - 工作目录 `C:\workspace\pisuan`，分支 `pisuan-custom`（无 worktree——本项目依赖主树的 sync-dev 热重载栈）。
+- **执行通道修正（2026-10-30 实测）**：计划起草时假设的 `api-dev` 容器**不存在**（compose 无此命名，pisuan 栈未启动）。实际验证通道为 **localized 栈经 sync-dev 链**（用户裁定）：
+  1. 改代码/测试 → `docker stop pisuan-localized-web-1` → `powershell -ExecutionPolicy Bypass -File scripts/sync-dev.ps1` → 测试 → `docker start pisuan-localized-web-1`；
+  2. 容器名 `pisuan-localized-api-1`；容器内包名是 `pisuan`（sync 的 walker 自动把内容 yuxi→pisuan 改写，测试源码照常写 yuxi）；
+  3. sync 会把工作树**全部未提交改动**带进栈（含 bug-4167 在途 WIP）——提交时必须选择性暂存（patch 只含本任务 hunks，`git apply --cached`）；
+  4. api 容器热重载，改码后等 ~5s 再跑测试。
 - **docker 内测试必须加 `MSYS_NO_PATHCONV=1`**（Git Bash 会改写 `/app/...` 导致 0 collected，见 .wolf/cerebrum）：
   ```bash
-  MSYS_NO_PATHCONV=1 docker exec api-dev pytest /app/test/... -v
+  MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 pytest /app/test/... -v
   ```
-- 容器布局：`/app` = backend/ 内容（`/app/test`、`/app/package/yuxi`）。仓库根的 `scripts/` 不确定是否挂载——数据脚本用 `docker exec -i api-dev python - < <宿主路径>` 执行。
+- 容器布局：`/app` = backend/ 内容（`/app/test`、`/app/package/pisuan`）。仓库根的 `scripts/` 不在容器内——数据脚本用 `docker exec -i pisuan-localized-api-1 python - < <宿主路径>` 执行。
 - 提交前：`make format`（或容器内 `ruff format` + `ruff check`）；提交信息中文 + Conventional Commits + `Co-Authored-By: Claude Code <noreply@anthropic.com>`。
 - 前端命令在 `web/` 下：`pnpm run lint`。
 - 基线：动手前先跑一次现有集成测试确认绿（见 Task 1 Step 0）。
@@ -712,15 +717,15 @@ Expected: format 无 diff 或自动修完；测试全 PASS；lint 过。
 - [ ] **Step 3: E2E 冒烟（需栈内 LLM key 可用；凭据读 .env 的管理员账号）**
 
 ```bash
-# 1) 登录取 token（ADMIN 用户密码见 .env）
-curl -s -X POST http://localhost:8000/api/auth/login -H "Content-Type: application/json" \
+# 1) 登录取 token（ADMIN 用户密码见 .env；localized 栈 api 端口为 5050）
+curl -s -X POST http://localhost:5050/api/auth/login -H "Content-Type: application/json" \
   -d '{"username":"<admin>","password":"<password>"}' | python -c "import sys,json;print(json.load(sys.stdin)['access_token'])"
 # 2) 无 domain 字段上传
-curl -s -X POST http://localhost:8000/api/domain-factory/upload -H "Authorization: Bearer <token>" \
+curl -s -X POST http://localhost:5050/api/domain-factory/upload -H "Authorization: Bearer <token>" \
   -F file=@<任一小体积 md/txt 样例>
 # Expected: {"success":true,...,"domain":"general"}
 # 3) 轮询任务至 WAITING_REVIEW（泛化依赖 LLM，约数分钟）
-curl -s http://localhost:8000/api/domain-factory/data-sources -H "Authorization: Bearer <token>"
+curl -s http://localhost:5050/api/domain-factory/data-sources -H "Authorization: Bearer <token>"
 # Expected: 新任务 status 经 PARSING→GENERALIZING→WAITING_REVIEW
 ```
 

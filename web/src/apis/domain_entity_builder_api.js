@@ -69,7 +69,8 @@ export const domainEntityBuilderApi = {
 
   importExtractedEntities: (entities, domainCode) => {
     return apiAdminPost('/api/domain-entity-builder/entities/import-extracted', {
-      entities, domain_code: domainCode
+      entities,
+      domain_code: domainCode
     })
   }
 }

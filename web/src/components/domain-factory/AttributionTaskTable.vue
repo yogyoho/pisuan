@@ -77,9 +77,9 @@ const applyRegionFilter = (regionKey) => {
 }
 const clearRegionFilter = () => applyRegionFilter('')
 
-const usedRegionKeys = computed(
-  () => [...new Set(items.value.map((t) => t.region_key).filter(Boolean))]
-)
+const usedRegionKeys = computed(() => [
+  ...new Set(items.value.map((t) => t.region_key).filter(Boolean))
+])
 
 const editingTask = ref(null)
 const handleEdited = (result) => {
@@ -97,8 +97,15 @@ defineExpose({ applyRegionFilter, refresh: fetchList })
 <template>
   <div class="attribution-task-table">
     <div class="filter-bar">
-      <a-radio-group v-model:value="scopeFilter" button-style="solid" size="small" @change="onFilterChange">
-        <a-radio-button v-for="c in SCOPE_CHIPS" :key="c.value" :value="c.value">{{ c.label }}</a-radio-button>
+      <a-radio-group
+        v-model:value="scopeFilter"
+        button-style="solid"
+        size="small"
+        @change="onFilterChange"
+      >
+        <a-radio-button v-for="c in SCOPE_CHIPS" :key="c.value" :value="c.value">{{
+          c.label
+        }}</a-radio-button>
       </a-radio-group>
       <a-input-search
         v-model:value="keyword"

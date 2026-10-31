@@ -139,12 +139,12 @@
               <tr v-for="f in files" :key="f.id">
                 <td>
                   <div class="fname-cell">
-                    <span class="fic" :class="ext(f.original_filename) === 'PDF' ? 'pdf' : 'docx'">
-                      <File :size="16" />
-                    </span>
+                    <FileTypeIcon :name="f.original_filename" :size="16" />
                     <span class="fn-wrap">
                       <span class="fn" :title="f.original_filename">{{ f.original_filename }}</span>
-                      <span v-if="q || (folderId === ALL && f.folder_name)" class="floc">位于〈{{ f.folder_name || '未归类' }}〉</span>
+                      <span v-if="q || (folderId === ALL && f.folder_name)" class="floc"
+                        >位于〈{{ f.folder_name || '未归类' }}〉</span
+                      >
                     </span>
                   </div>
                 </td>
@@ -152,18 +152,13 @@
                   <span class="pill"><span class="dot dot-ok"></span>已入库</span>
                 </td>
                 <td>
-                  <select
+                  <FilterSelect
                     v-if="ext(f.original_filename) === 'DOCX'"
-                    class="inp stage-sel"
-                    :value="f.stage || ''"
-                    :aria-label="`阶段：${f.original_filename}`"
-                    @change="onStageChange(f, $event)"
-                  >
-                    <option value="">—</option>
-                    <option v-for="(label, key) in STAGE_LABELS" :key="key" :value="key">
-                      {{ label }}
-                    </option>
-                  </select>
+                    class="stage-sel"
+                    :model-value="f.stage || ''"
+                    :options="stageOptions"
+                    @change="(stage) => onStageChange(f, stage)"
+                  />
                   <span v-else class="cell-dim">—</span>
                 </td>
                 <td>
@@ -306,7 +301,6 @@ import {
   Database,
   Download,
   Ellipsis,
-  File,
   FileText,
   FileUp,
   Files,
@@ -322,6 +316,8 @@ import {
   Upload
 } from '@lucide/vue'
 import { eiaDataApi } from '@/apis/eia_data_api'
+import FileTypeIcon from '@/components/common/FileTypeIcon.vue'
+import FilterSelect from './FilterSelect.vue'
 
 const folders = ref([])
 const files = ref([])
@@ -344,6 +340,11 @@ const STAGE_LABELS = {
   project_eia_underground: '项目环评·井工',
   tracking_eia: '跟踪评价'
 }
+
+const stageOptions = [
+  { value: '', label: '—' },
+  ...Object.entries(STAGE_LABELS).map(([value, label]) => ({ value, label }))
+]
 
 const rootCount = computed(
   () => totalCount.value - folders.value.reduce((sum, f) => sum + (f.file_count || 0), 0)
@@ -434,14 +435,15 @@ const onRowMenu = (key, f) => {
   } else if (key === 'delete') confirmDelete(f)
 }
 
-const onStageChange = async (f, e) => {
-  const stage = e.target.value
+const onStageChange = async (f, stage) => {
+  const prev = f.stage || ''
+  f.stage = stage // FilterSelect 受控显示：乐观更新即时反馈，失败回滚
   try {
     Object.assign(f, await eiaDataApi.updateFileMeta(f.id, { stage }))
     message.success('阶段已更新')
   } catch (err) {
+    f.stage = prev
     message.error(err?.message || '阶段更新失败')
-    e.target.value = f.stage || ''
   }
 }
 
@@ -792,20 +794,6 @@ onMounted(() => {
   gap: 9px;
   min-width: 0;
 
-  .fic {
-    display: inline-flex;
-    flex: none;
-    color: var(--color-text-tertiary);
-
-    &.docx {
-      color: var(--main-500);
-    }
-
-    &.pdf {
-      color: var(--second-600);
-    }
-  }
-
   .fn-wrap {
     min-width: 0;
   }
@@ -842,9 +830,6 @@ onMounted(() => {
 
 .stage-sel {
   width: 112px;
-  height: 26px;
-  padding: 0 6px;
-  font-size: 12px;
 }
 
 .cell-dim {

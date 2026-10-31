@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile
 
 from server.utils.auth_middleware import get_admin_user
+from yuxi.repositories.domain_factory_repository import GENERAL_DOMAIN_CODE
 from yuxi.services.domain_entity_service import get_entity_service
 from yuxi.storage.postgres.models_business import User
 from yuxi.utils import logger
@@ -212,7 +213,7 @@ async def import_extracted_entities(
     """保存用户确认的 AI 提取实体"""
     try:
         entities = payload.get("entities", [])
-        domain_code = payload.get("domain_code", "coal")
+        domain_code = payload.get("domain_code", GENERAL_DOMAIN_CODE)
         if not entities:
             raise HTTPException(status_code=400, detail="请提供要导入的实体列表")
         service = get_entity_service()

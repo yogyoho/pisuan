@@ -150,13 +150,7 @@ import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useInfoStore } from '@/stores/info'
-import {
-  Sparkles,
-  ArrowRight,
-  Factory,
-  Sprout,
-  Mountain
-} from '@lucide/vue'
+import { Sparkles, ArrowRight, Factory, Sprout, Mountain } from '@lucide/vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -207,7 +201,6 @@ const fitFlowmap = (evt) => {
   sync()
   new ResizeObserver(sync).observe(root)
 }
-
 
 const modules = [
   {

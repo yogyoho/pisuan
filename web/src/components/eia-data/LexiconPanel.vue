@@ -128,7 +128,11 @@
                   <td>
                     <div class="caliber-cell">
                       <span class="caliber-name" :title="record.caliber">{{ record.caliber }}</span>
-                      <span v-if="record.forms_field" class="pill pill-ok pill-sm" :title="`归并到范式字段 ${record.forms_field}`">
+                      <span
+                        v-if="record.forms_field"
+                        class="pill pill-ok pill-sm"
+                        :title="`归并到范式字段 ${record.forms_field}`"
+                      >
                         → {{ record.forms_field }}
                       </span>
                       <span
@@ -556,7 +560,7 @@
         <span class="export-hint">值域落章节期望需重编译（任务中心跟踪）</span>
         <button class="btn btn-sm" @click="exportResult.open = false">稍后</button>
         <button class="btn btn-pri btn-sm" :disabled="recompiling" @click="onRecompileExpectations">
-          <RefreshCw :size="13" />{{ recompiling ? "提交中…" : "立即重编译期望" }}
+          <RefreshCw :size="13" />{{ recompiling ? '提交中…' : '立即重编译期望' }}
         </button>
       </div>
     </a-modal>
