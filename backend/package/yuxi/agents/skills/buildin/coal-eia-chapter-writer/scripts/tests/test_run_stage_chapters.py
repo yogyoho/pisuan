@@ -20,6 +20,7 @@ STAGE = {
 
 
 def _freeze_state(tmp: Path) -> Path:
+    (tmp / "data").mkdir(parents=True, exist_ok=True)
     stage = tmp / "stage.json"
     stage.write_text(json.dumps(STAGE, ensure_ascii=False), encoding="utf-8")
     sd = tmp / "state"

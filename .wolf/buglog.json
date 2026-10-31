@@ -10013,5 +10013,451 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-27T19:38:29"
+  },
+  {
+    "id": "bug-4159",
+    "timestamp": "2026-10-28T08:40:00",
+    "error_message": "SyntaxError: progress.py line 353 f-string nested same-quote（技能脚本在沙盒 Python 3.10 解析失败，分章管线 init/next 无法运行）",
+    "file": "backend/package/yuxi/agents/skills/buildin/{coal-eia-chapter-writer,coal-eia-writer}/scripts/progress.py",
+    "root_cause": "commit 52d479fc9 在单引号 f-string 表达式内嵌套单引号字符串（PEP 701 仅 3.12+ 合法）；沙盒容器 all-in-one-sandbox 的 python3=3.10.12，与 api 容器 3.12+ 环境不一致——单测全绿掩盖了沙盒侧语法雷。今天手工同步技能副本到沙盒后才暴露（旧副本无此行故昨天能跑）",
+    "fix": "占位说明提为变量 notes_ph，f-string 表达式内只留双引号串；双副本 lockstep 同步；沙盒 py310 全量编译扫描 0 FAIL；api 容器回归 219+219 全绿；五副本（repo/localized×2/projections×2）md5 一致",
+    "tags": [
+      "skill-scripts",
+      "python310",
+      "fstring",
+      "sandbox",
+      "py-compile",
+      "sync-exposure"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-28T08:40:00"
+  },
+  {
+    "id": "bug-4160",
+    "timestamp": "2026-10-28T23:15:00",
+    "error_message": "Error: Path /home/gem/user-data/projects/<ts>_<id>/uploads: path_not_found（新对话首轮工具调用即报错卡面）",
+    "file": "threads/shared/admin/workspace/projects/",
+    "root_cause": "新对话未上传文件时平台不创建 projects/<对话项目>/uploads/ 目录；智能体步骤0按「数据文件已上传」承诺先列 uploads/ 即撞 path_not_found。属可自愈的工具层报错（智能体随即转查共享工作区 data/ 并正常推进），非管线缺陷",
+    "fix": "无需代码修复；测试口径：S0 仅在真实上传时才承诺已上传，预置数据场景改为「数据文件在共享工作区 data/ 目录」",
+    "tags": [
+      "eai-flow",
+      "uploads",
+      "path-not-found",
+      "benign",
+      "test-protocol"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-28T23:15:00"
+  },
+  {
+    "id": "bug-4161",
+    "timestamp": "2026-10-29T04:05:00",
+    "error_message": "章门探针报告 S02/S03 残留 {{SLOT:mine_plan.*}} 10+ 处、表列 label 缺失等 5 项 FAIL；progress.json last_gate 长期 None 被判为智能体从不跑门",
+    "file": "coal-eia-chapter-writer/scripts/build_output.py（探针用法）",
+    "root_cause": "两个叠加误判：①探针把 formula_state.json 塞进 state-dir/state/ 子目录，而 --state-dir 语义是工作区根（formula_state.json/progress.json/sections/ 须直在其下）→注入全空→残留门 FAIL 全是探针伪影；②操作智能体实际用 build_output --chapter 模式跑门，该模式不写 progress.json，last_gate=None 是监视盲区而非「从不跑门」",
+    "fix": "探针镜像 live 布局（formula_state+progress+sections 置 state-dir 根）重跑：残留/表列全 PASS，唯一真实 FAIL=文风门数字密度 17.8/千字<36.2；判定智能体行为前先看页面推理链",
+    "tags": [
+      "chapter-writer",
+      "gate-probe",
+      "layout-artifact",
+      "blind-spot",
+      "monitoring"
+    ],
+    "related_bugs": [
+      "bug-4160"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-29T04:05:00"
+  },
+  {
+    "id": "bug-4162",
+    "timestamp": "2026-10-29T05:00:00+08:00",
+    "error_message": "文风基准数字密度门限虚高：整章目录切片拼一个文本取池化均值，少数超密报告拉高下限（ch5 24.1 vs 单稿典型约16）",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/style_targets.py",
+    "root_cause": "generate() 把整章所有切片拼成一个文本测指标（池化均值），掩盖单报告典型水平；密度/句长/表密度是单报告行为，聚合口径应取逐文件中位数",
+    "fix": "generate() 改逐文件 _metrics 实测后取 statistics.median（带宽 0.8/1.25 不变），新增 n_files 字段；官方 planning_eia.json 重生成（ch2 36.2→35.4、ch5 24.1→16.4、ch11 24.1→18.1、ch1 表带 41.0-64.0）；test_minibank_exact_metrics 期望迁中位口径（140.6→137.5、eff 91→45 等）；实测证明 ch2 基准非虚高（逐报告中位 44.2≈池化 45.2），真实差距是生成稿内容密度",
+    "tags": [
+      "chapter-writer",
+      "style-gate",
+      "style-targets",
+      "median-vs-pooled",
+      "benchmark"
+    ],
+    "related_bugs": [
+      "bug-4161"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-29T05:00:00+08:00"
+  },
+  {
+    "id": "bug-4163",
+    "timestamp": "2026-10-29T05:00:00+08:00",
+    "error_message": "信任模式自动应答被智能体记作「用户裁定」落盘降档凭据（approve-downgrade note 写「用户裁定：按当前成稿收尾」），收尾话术三称「你已裁定」——用户从未真实裁定",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md",
+    "root_cause": "EAI-Flow 信任模式对 ask_user_question 卡自动应答（ask_user_question_resume，与人工点击形态无法区分）；智能体把自动应答当用户意志，据以落盘降档放行凭据，架空 progress.py bug-4146「用户显式批准」设计意图",
+    "fix": "SKILL.md Iron Law 加降档授权真实性句：自动应答≠用户裁定；approve-downgrade note 禁写「用户裁定」，自动应答场合须如实写「信任模式自动应答」并告知用户可改判；用户可见话术禁称「你已裁定/你选定」。平台层（自动应答披露/人工确认通道）另立产品项",
+    "tags": [
+      "chapter-writer",
+      "downgrade-credential",
+      "auto-answer",
+      "authorization-attribution",
+      "trust-mode",
+      "D4"
+    ],
+    "related_bugs": [
+      "bug-4146",
+      "bug-4161"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-29T05:00:00+08:00"
+  },
+  {
+    "id": "bug-4164",
+    "timestamp": "2026-10-29T05:35:00+08:00",
+    "error_message": "attempt2 现场归档实际 0 文件：cp 因 eia-report-hc/sections 符号链接报错中断 && 链，后续目录从未拷贝；未核对文件数即 rm 清空源目录，attempt2 节稿终版与完整工作区不可恢复",
+    "file": ".wolf/live-backup-attempt2-20261029/ (归档目录)",
+    "root_cause": "归档命令用 && 链接多个 cp（首命令失败静默吞掉后续）；cp 未加 -L 解引用 symlink；删除源目录前未做归档完整性核对",
+    "fix": "证据保全：LOSS-NOTE.md + 发现单逐字转录存档 + md5 账(probe-v2-evidence.txt) + 报告§10 终态记录；data 可由 attempt1 备份同源恢复。流程铁律：换现场必须「归档→文件数核对→才许 rm」三步分立，禁 && 链，cp 加 -L",
+    "tags": [
+      "observer-ops",
+      "archive",
+      "data-loss",
+      "cp-chain",
+      "symlink",
+      "workspace-restore"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-29"
+  },
+  {
+    "id": "bug-4165",
+    "timestamp": "2026-10-29T13:25:00+08:00",
+    "error_message": "新建对话页选择「请求审批」后发送首条消息，创建的线程首个 run 实际以完全信任模式运行（execute 命令审批卡 ~90s 内被平台自动应答，从不等待人工）",
+    "file": "web/src/views/agent 新建对话页（模式选择器→会话创建参数传递）",
+    "root_cause": "前端未将新建页所选审批模式写入会话/run 创建参数，线程创建后静默回落默认完全信任（待代码核实具体落点）",
+    "fix": "未修复。实测证据：线程 ab0c7900 run1（11:04 发起，发送前已选请求审批并有快照留证），find 命令审批卡 11:09 出现、11:10:27 被自动应答（messages.id=22398 resume approve），早于观察者 11:11:30 的点击尝试。规避：线程页再次选择模式后从线程页发消息（run2 实测生效）",
+    "tags": [
+      "eai-flow",
+      "approval-mode",
+      "trust-mode",
+      "new-conversation",
+      "product-defect",
+      "P1"
+    ],
+    "related_bugs": [
+      "bug-4163",
+      "bug-4166"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-29"
+  },
+  {
+    "id": "bug-4166",
+    "timestamp": "2026-10-29T13:25:00+08:00",
+    "error_message": "run 运行中模式按钮错误显示「完全信任」，实际该 run 为请求审批模式（execute 卡等待人工批准 53 分钟）——纯显示缺陷，严重误导观察者（一度误判需抢答确认卡）",
+    "file": "web/src 视图（运行中模式标签的状态绑定）",
+    "root_cause": "运行中模式标签绑定到了错误的状态源（疑似 run 创建后回读默认值而非 run 实际模式），待代码核实",
+    "fix": "未修复（前端）。判别真模式唯一可信方法：execute 卡是否等待人工。2026-10-30 修正：请求审批模式下 edit_file 卡同样等人工——tool_approval.py 设计=项目内写自动豁免（_project_write_requires_approval），但线程工作区在建对话时未绑项目（独立目录），编辑全在项目外故全部弹卡；非我方点击的 resume approve 实为用户本人在浏览器确认（前端 toolApproval.js 无自动放行逻辑，后端豁免路径不产生 resume 记录）——原「平台分级自动放行与信任模式同形」说法作废",
+    "tags": [
+      "eai-flow",
+      "approval-mode",
+      "display-bug",
+      "misleading-label",
+      "product-defect",
+      "P2"
+    ],
+    "related_bugs": [
+      "bug-4163",
+      "bug-4165"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-29"
+  },
+  {
+    "id": "bug-4167",
+    "timestamp": "2026-10-29",
+    "error_message": "通用域知识工厂大纲模板页：煤炭挖掘领域环评报告大纲模板不正确——章节重叠（总  则/总则双根、公众参与×5、错挂结论与建议下）、子章节缺编号（标题编号有无不一且前端仅根节点渲染 order）、章节结构化数据缺项（558 个 ETL 节点 meta 全 null、GET 不返回 expected_tables/charts/formulas 保存即丢、PG 富字段不可见；PG 1055 行中 490 键带编号、0 行 expected_*）",
+    "file": "backend/package/yuxi/services/graph_builder.py",
+    "root_cause": "①ChapterTemplate 建点身份=doc 级 section_path hash（graph_builder.py:805），同章节 N 份文档建 N 点，天然不幂等；②_derive_canonical_key 不归一内部空白（全角空格「总  则」绕过 Bug1 精确匹配），level-2 CONTAINS+LIMIT1 模糊匹配错挂；③读路径不对称：get_chapter_outline 缺 expected_* 字段而 update 允许保存，update_chapter_template 限 std_+level1 编辑即 404，PG 富字段从不透出；④_llm_chapter_meta 失败回退保留编号原始标题做 canonical key，meta 不回写图谱",
+    "fix": "已实施（2026-10-30，设计 docs/superpowers/specs/2026-10-29-outline-template-idempotency-design.md）：①聚合身份键 resolve_chapter_id(domain,rt,归一canonical,level,父解析id) 逐级 MERGE+std 命中复用（is_std_reuse 跳过 frequency/rigidity 重算）；normalize_chapter_key 收敛 utils/graph_builder/_llm_chapter_meta 回退/upsert_outline 入口；chapter_no 结构化。②读路径：get_chapter_outline 补 expected_*/子章节 chapter_no；GET/PUT 同款确定性选取（std_ 优先+id 升序）；update 去 std_/level1 限制；get_outline_template_detail 薄装配（图谱 meta+PG 富字段）；前端全层级编号+来源数据卡。③meta 回写图谱改只填空值（CASE 查节点旧值——原实现条件查新值实为覆盖语义，review 抓出）+confirm_outline_extract 回填 key 归一+driver 关闭。④治理脚本 merge_chapter_templates.py：归一→纠挂→合并→编号→删测试→回填；纠挂必须先于合并（先合并孤立错挂节点，dry-run gate 抓 reparented=0 根因）；线上无 std level-2 种子（seed_standard_subchapters 未跑过）→「同名节点最大 std level-1 簇」回退纠挂。实测：apply 后图谱 571→494 节点/13 干净根/公众参与唯一挂 std_12/测试节点 0/purpose 覆盖 326；PG 1055→633 行/带编号 key 490→0；重跑零动作",
+    "tags": [
+      "domain-factory",
+      "outline-template",
+      "neo4j",
+      "idempotency",
+      "graph-builder",
+      "chapter-template"
+    ],
+    "related_bugs": [
+      "bug-4154"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-29"
+  },
+  {
+    "id": "bug-4168",
+    "timestamp": "2026-10-29",
+    "error_message": "EtlWorkbench 工作台 rawSlots 计数恒为 0",
+    "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+    "root_cause": "rawSlots 于 :45 声明后从未被赋值，:1920 仍引用其 length——死变量，槽位计数展示永远 0",
+    "fix": "设计定稿 docs/vibe/2026-10-29-etl-pipeline-dedomain-design.md 方案 C-5：删除死变量或接上真实槽位数据；实施时修复",
+    "tags": [
+      "domain-factory",
+      "frontend",
+      "dead-code"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-29"
+  },
+  {
+    "id": "bug-4169",
+    "timestamp": "2026-10-29",
+    "error_message": "中文章节数字换算错误：十一 → 101",
+    "file": "backend/package/yuxi/services/domain_factory_service.py",
+    "root_cause": "_chinese_to_arabic(:1606) 逐字替换（十→10、一→1）得到 \"101\" 而非 11；章节归一失败后靠位置编号兜底(:1416-1421)，章节键质量受损",
+    "fix": "设计定稿方案 C-5：重写为正规中文数字解析（十/百位进位规则）",
+    "tags": [
+      "domain-factory",
+      "etl",
+      "chapter-key",
+      "chinese-numeral"
+    ],
+    "related_bugs": [
+      "bug-4167"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-29"
+  },
+  {
+    "id": "bug-4170",
+    "timestamp": "2026-10-29",
+    "error_message": "FAILED_PROVIDER 状态在前端不可达：服务商熔断后用户看不到状态、也无法触发断点续跑",
+    "file": "web/src/components/domain-factory/DataSourceDashboard.vue",
+    "root_cause": "statusMap(:80-96) 无 FAILED_PROVIDER 条目（渲染回退默认文案），重试按钮(:642-646)仅 status==='FAILED' 显示；后端 retry_task 对 FAILED_PROVIDER 的 resume 逻辑(:5694-5695)永远无法被 UI 触达",
+    "fix": "设计定稿方案 C-2：statusMap 补「服务商中断」条目 + 重试按钮条件扩为 FAILED∪FAILED_PROVIDER",
+    "tags": [
+      "domain-factory",
+      "frontend",
+      "state-machine",
+      "circuit-breaker",
+      "retry"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-29"
+  },
+  {
+    "id": "bug-4171",
+    "timestamp": "2026-10-29",
+    "error_message": "reingest 重复入库：同一任务再次入库在 KB 产生重复文档",
+    "file": "backend/package/yuxi/services/domain_factory_service.py",
+    "root_cause": "commit file_id=df_{hashstr(task_id+uuid4,8)}(:4555) 含随机成分，reingest 再生成 df_ri_{hashstr(task_id+uuid4,8)}(:5577) 新 ID 且不清理旧 KB 记录——Milvus/MinIO 均按新 key 追加",
+    "fix": "设计定稿方案 C-1：file_id 改确定性 df_{hashstr(task_id,12)}（去随机），同任务重跑同 key 覆盖；状态机引入 INGESTING 中间态",
+    "tags": [
+      "domain-factory",
+      "idempotency",
+      "milvus",
+      "commit-pipeline"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-29"
+  },
+  {
+    "id": "bug-4172",
+    "timestamp": "2026-10-30",
+    "error_message": "hxmc-planning-rev2-chapter progress.json data_dir 指向不存在路径（/home/gem/user-data/workspace/eia-report/ 前缀残留）——账面与磁盘不符",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/progress.py",
+    "root_cause": "init 不校验 --data-dir 存在性即落账；run_chapter_gate 对 data_dir 仅签名兼容不读取（build_output.py:690），坏账被照跑的门掩盖；真读 data_dir 的路径（render_front_matter/render_family）对缺失文件静默回退 {}——哑降级违背快速失败原则",
+    "fix": "progress.py 三处快速失败守卫：init 校验 data_dir is_dir、gate/run-stage 校验 stage_path/data_dir exists 并提示停 run 修账；工作区账面已修为真实路径；新增 tests/test_progress_path_guard.py 5 用例+4 个既有 helper 补 mkdir fixture",
+    "tags": [
+      "coal-eia-chapter-writer",
+      "progress-ledger",
+      "fail-fast",
+      "path-guard"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-30"
+  },
+  {
+    "id": "bug-4173",
+    "timestamp": "2026-10-30",
+    "error_message": "test_detail_serves_pg_only_when_graph_missing 容器实测 FAIL：assert '总则' == '1  总　则'",
+    "file": "backend/test/unit/services/test_outline_detail_assembler.py",
+    "root_cause": "实现代理按「pg-only 分支 title 原样透传」写测试断言，随后 pg-only title 归一修复（bug-4167 spec §4.1 模板层 title 存去编号干净标题）改变了行为，测试预期未同步——行为与测试脱节",
+    "fix": "测试预期改为「总则」（干净标题），docstring 注明与图谱分支一致；容器复跑 4 passed",
+    "tags": [
+      "domain-factory",
+      "test-drift",
+      "outline-template"
+    ],
+    "related_bugs": [
+      "bug-4167"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-30"
+  },
+  {
+    "id": "bug-4174",
+    "timestamp": "2026-10-30",
+    "error_message": "UniqueViolationError: report_types_code_domain_key — Key (code, domain_code)=(eia_report, general) already exists（去领域化迁移 --apply 首跑失败，事务整体回滚）",
+    "file": "scripts/governance/dedomain_coal_to_general.py",
+    "root_cause": "计划脚本对 report_types 盲目 UPDATE domain_code，但该表有 UNIQUE(code, domain_code)（ORM 侧误标 PK=code）；首次修复的整表 UPDATE ... NOT EXISTS 仍撞键：同一语句内多行（(eia_report,coal)/(eia_report,mineral)/(eia_report,chem)）翻到同一 (code,general) 时互相碰撞——PostgreSQL 语句快照不读本语句自身改动，NOT EXISTS 守卫对同语句已更新行不可见",
+    "fix": "MERGE 四表（learned_templates/outlines/prompt_configs/report_types，均有含 domain_code 的复合唯一键）改为逐业务键处理：每键 ctid 定位一行 promote（coal 行优先），存在 general 行或不适用时删除同键其余域行；实跑迁移成功且二次 apply 幂等",
+    "tags": [
+      "migration",
+      "unique-constraint",
+      "postgresql",
+      "domain-factory",
+      "dedomain",
+      "snapshot-visibility"
+    ],
+    "related_bugs": [],
+    "occurrences": 2,
+    "last_seen": "2026-10-30"
+  },
+  {
+    "id": "bug-4175",
+    "timestamp": "2026-10-30",
+    "error_message": "大纲模板页面「无匹配章节」（环境影响评价报告目录为空）；修复过程中 id 重写又出现 CH_general_ia_report_（'e' 被吃）错位",
+    "file": "backend/scripts/governance/dedomain_chapter_templates_graph.py",
+    "root_cause": "两层：① 去领域化改造（路由/服务/五工具恒传 general + PG 7 表迁移）漏掉 Neo4j——496 个 ChapterTemplate 与 1 个 DomainOutline 仍挂 domain='coal' 且 id 内嵌域，list_outline_templates 按 domain='general' 查图谱返回空目录；② 迁移脚本首版用 substring(id, size($old)+1) 截前缀，本栈 Neo4j 的 substring 起始索引实测 0 基（9 字符被丢弃而非 8），多删一位致 id 变 CH_general_ia_report_",
+    "fix": "① 新增 dedomain_chapter_templates_graph.py：id 前缀重写 + domain 属性收敛（幂等，dry-run 缺省 / --apply 落写，冲突守卫）；② 事故经 apply 后逐项校验抓出，cypher replace() 定向修复 497 个 id，脚本改 replace() 整串替换杜绝索引算术；实测 13 根 std id 正确、HAS_CHILD 481 完好、真重复簇 0、重跑零动作",
+    "tags": [
+      "neo4j",
+      "migration",
+      "dedomain",
+      "domain-factory",
+      "substring",
+      "off-by-one",
+      "outline-template"
+    ],
+    "related_bugs": [
+      "bug-4174",
+      "bug-4167"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-30"
+  },
+  {
+    "id": "bug-4176",
+    "timestamp": "2026-10-30",
+    "error_message": "大纲模板页 13 章目录正常后，二级三级章节没有章节编号（用户：是否提取大纲时没提取章节编号）",
+    "file": "backend/scripts/governance/merge_chapter_templates.py",
+    "root_cause": "双因：① 写入端 graph_builder.py 的 ChapterTemplate MERGE 只在 ON CREATE 落 chapter_no（由 section_path 推导），ON MATCH 不补——存量节点建成于编号字段引入前，永远缺号；② 存量治理步骤④ 只从标题/std 取号，无号标题保持 null。另实测 std_6 下 19 个 L2 子节点为跨文档累积（7 个 order=6 的少数文档章节），兄弟集合次序≠任一源文档目录，兄弟序推号会把声环境（order=7，真实 6.7）错编 6.13",
+    "fix": "① builder ON MATCH 增 chapter_no fill-empty-only（CASE WHEN 空则补 $chapter_no），后续文档命中自愈；② 治理步骤④ 增 _effective_numbers 结构化兜底：std 序号/标题带号/既有号优先，仍缺按 父号.order（源文档位次，与既有 6.4/6.12 实测一致）推导，无 order/父无号不猜；--apply 落写 425 节点 + 删 2 测试子树，L1-L4 缺号全部清零（13/93/271/117），重跑零动作；测试 +3 用例共 31 passed",
+    "tags": [
+      "graph-builder",
+      "chapter_no",
+      "outline-template",
+      "governance",
+      "neo4j",
+      "domain-factory"
+    ],
+    "related_bugs": [
+      "bug-4167",
+      "bug-4175"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-30"
+  },
+  {
+    "id": "bug-4177",
+    "timestamp": "2026-10-30",
+    "error_message": "test/unit/repositories 全量回归 1 failed：test_ensure_writer_presets_create_with_config ModuleNotFoundError: No module named 'yuxi.agents.presets.subagents.data_survey_writer'",
+    "file": "backend/test/unit/repositories/test_agent_repository.py",
+    "root_cause": "1490e45f7（用户裁定删除 regulation/data_survey/prediction 三写手预置）收敛双测试期望集时漏掉本用例——它仍 import 三个已删预置模块，且是文件内唯一以这三者为对象的用例；该提交同场已修 test_shipping_skills 陈旧断言，属同类漏网。",
+    "fix": "整函数删除（主体已不存在，无可测对象）；FakeDb/AgentRepository/monkeypatch 均有其余用例引用无孤儿。提交 fc8d527e0；localized 栈 test/unit/repositories/ 121 passed 全绿。",
+    "tags": [
+      "stale-test",
+      "preset-deletion",
+      "agent-repository",
+      "regression"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-30"
+  },
+  {
+    "id": "bug-4178",
+    "timestamp": "2026-10-30",
+    "error_message": "对 CRLF 文件做 Edit 删除行操作后，SyntaxError: expected 'except' or 'finally'（router :800）；后续发现另有 6 处函数签名被粘成一行",
+    "file": "backend/server/routers/domain_factory_router.py",
+    "root_cause": "Edit 工具在 CRLF 文件上以行内容（不含行尾）匹配删除时，吞掉了前一行与被删行之间的换行，导致 try: 与首语句、或相邻签名参数行粘成一行；ast.parse 未拦住签名粘行（universal newline 把裸 \\r 也当换行，解析恰好合法），只有 try: 粘行（语法真错）报错。git diff 中粘行以畸形 +行现形。",
+    "fix": "python 脚本按真实字节 repr 定位（dump 行 repr），对 '    try:        report_type...' 精确 replace 为 CRLF 分行；6 处签名粘行交给 ruff format 展开复原。教训：CRLF 文件删除行优先用『上一行尾+整行』作锚（含尾随换行语义），改完必须 ast.parse + git diff 双验，ast 单验对粘行不可靠。",
+    "tags": [
+      "crlf",
+      "edit-tool",
+      "python-parsing",
+      "universal-newlines",
+      "gotcha"
+    ],
+    "related_bugs": [
+      "bug-4174"
+    ],
+    "occurrences": 8,
+    "last_seen": "2026-10-30"
+  },
+  {
+    "id": "bug-4179",
+    "timestamp": "2026-10-30",
+    "error_message": "sync-dev 后首次 pytest：test_unauthenticated_denied / test_expectations_recompile_unauthenticated_denied httpx.ReadTimeout；credentialed 跑 12 全 ERROR（session 级 cleanup fixture 登录 POST 撞 12:51:55 uvicorn 热重载窗口）",
+    "file": "pisuan-localized-api-1（uvicorn --reload）",
+    "root_cause": "sync-dev 落盘触发 uvicorn WatchFiles 热重载，重启窗口内（~10s）到达的 HTTP 请求挂起至超时；集成测试的 session 级 autouse cleanup fixture 首个登录请求一旦撞窗，该 session 全部用例连带 ERROR（一个 fixture 失败污染整 session）。另：重载可能由他会话改动触发（graph_builder.py 12:51:55），非本会话 sync 也会撞。",
+    "fix": "纪律固化：sync-dev 后首跑出现这两个具名用例 ReadTimeout 即复跑（第二轮恒绿）；credentialed 套件跑前确认容器日志无进行中的 Reloading/启动段。OpenWolf 记忆已有该模式，本条补 credentialed session-factory 连带 ERROR 形态。",
+    "tags": [
+      "hot-reload",
+      "readtimeout",
+      "sync-dev",
+      "pytest-flake",
+      "localized-stack"
+    ],
+    "related_bugs": [],
+    "occurrences": 2,
+    "last_seen": "2026-10-30"
+  },
+  {
+    "id": "bug-4180",
+    "timestamp": "2026-10-30",
+    "error_message": "credentialed 集成套件 1 failed：test_contexts_single_general_domain 断言 domains==['general']，实际 ['coal','chem','mineral','transport','general']",
+    "file": "backend/package/yuxi/services/domain_factory_service.py",
+    "root_cause": "get_contexts 直接透传 repo.list_domains() 全量行。Task 6 迁移已把 report_types 全部重指到 general、domains 表行冻结保留（不删只不外露），但本读路径漏改——domains 行『冻结保留』的语义是存储层保留，接口层仍须收敛为通用域单元素，该读点在计划 Task 10 的端点收口清单之外。",
+    "fix": "list_domains() 结果按 code == GENERAL_DOMAIN_CODE 过滤（GENERAL_DOMAIN_CODE 已在文件头部导入）；sync-dev 进 localized 栈复跑 credentialed 套件 12/12 通过。提交 9ba63af18。",
+    "tags": [
+      "dedomain",
+      "contexts",
+      "frozen-rows",
+      "read-path",
+      "integration-test"
+    ],
+    "related_bugs": [
+      "bug-4174"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-30"
+  },
+  {
+    "id": "bug-4181",
+    "timestamp": "2026-10-30",
+    "error_message": "E2E 冒烟：POST /api/domain-factory/upload 响应 task_id=018a51ef...，随后 GET /tasks/{task_id} 持续 404 任务不存在；库中实际行 id=ec5d3f60...",
+    "file": "backend/package/yuxi/services/domain_factory_service.py",
+    "root_cause": "save_uploaded_file(:544) 与 create_task(:572) 各自独立 uuid.uuid4()：前者 id 只用作存储文件名前缀并被路由回显进响应，后者才是 domain_factory_tasks 行 id。上传响应契约里的 task_id 从未等于真实行 id，任何按响应 id 轮询详情的调用方必 404。git show afbee5bfd 证实该形态在全部去域提交之前已存在（上游共有代码继承），前端 EtlWorkbench 走 /data-sources 列表取真实 id，故从未暴露。",
+    "fix": "本次未修（范围裁定）：预置于上游共有代码、超出去领域化计划范围，按『最大限度不动上游共有代码』约束仅记账。修复方向（待用户裁定另立任务）：create_task 接受可选 task_id 参数由 upload 路由透传 save_uploaded_file 生成的 id，或 upload 响应改回传 create_task 返回的行 id。E2E 冒烟改以库行 id 完成详情读验证（200，domain=general，WAITING_REVIEW）。",
+    "tags": [
+      "upload",
+      "task-id-mismatch",
+      "pre-existing",
+      "upstream-shared",
+      "e2e-smoke",
+      "scope-deferred"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-30"
   }
 ]

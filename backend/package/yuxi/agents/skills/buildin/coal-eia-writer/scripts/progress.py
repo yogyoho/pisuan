@@ -347,9 +347,10 @@ def next_action_chapter(doc: dict, state_dir: Path) -> str:
         choice_p = state_dir / f"fragment_choice_{current}.json"
         if not plan_p.exists():
             # 交互卡点·卡A：计划卡是管线第一步（用户确认前禁收资料/派发，红线 P13）。
+            notes_ph = "<用户补充意见，无则省略>"  # 占位说明提出来：py310 f-string 表达式内禁同引号嵌套（bug-4159）
             lines += [
                 "动作: 先发本章编写计划卡给用户确认（一屏摘要: 本章定位/编写要点 3~5 条/需准备的数据/篇幅规模三选（详实版|精简版|自定义字数）/过程预告；业务语体，无命令路径与内部术语）",
-                f'记账: {_self_cmd("plan-confirm", current, "--summary-file", "<卡面md>", "--notes", '"<用户补充意见，无则省略>"', "--state-dir", sd)}'
+                f"记账: {_self_cmd('plan-confirm', current, '--summary-file', '<卡面md>', '--notes', notes_ph, '--state-dir', sd)}"
                 f"（篇幅: 缺省详实版；精简版 --depth compact；自定义 --depth custom --target N）",
                 "修订: 用户补充意见合入后重发修订版卡再确认（plan-confirm 幂等覆盖）——未确认前禁进资料汇集",
             ]
@@ -404,6 +405,13 @@ def cmd_init(args: argparse.Namespace) -> int:
     if p.exists():
         print(f"[progress] {p} 已存在——续跑请用 next/status，勿重复 init 抹掉进度", file=sys.stderr)
         return EXIT_ERROR
+    data_dir = Path(args.data_dir).resolve() if args.data_dir else None
+    if data_dir is not None and not data_dir.is_dir():
+        print(
+            f"[progress] --data-dir 不存在: {data_dir}（init 拒绝——账面路径必须真实在盘，防门/组装静默降级）",
+            file=sys.stderr,
+        )
+        return EXIT_ERROR
     stage = json.loads(Path(args.stage).read_text(encoding="utf-8"))
     # 节 id 契约校验（stage sections 与 progress 解析的接口契约，T1 骨架即生效）：
     # id 形状 chNN_SNN、章前缀与所属章一致、章内唯一。
@@ -438,7 +446,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         }
     doc = {
         "stage_path": str(Path(args.stage).resolve()),
-        "data_dir": str(Path(args.data_dir).resolve()) if args.data_dir else None,
+        "data_dir": str(data_dir) if data_dir else None,
         "phase": "WAVE1",
         "total_dispatches": 0,
         "chapters": chapters,
@@ -657,6 +665,15 @@ def cmd_gate(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return EXIT_ERROR
+    bad_paths = [k for k in ("stage_path", "data_dir") if doc.get(k) and not Path(doc[k]).exists()]
+    if bad_paths:
+        detail = "；".join(f"{k}={doc[k]}" for k in bad_paths)
+        print(
+            f"[progress] 账面路径不在盘: {detail}"
+            "——工作区被移动或 init 记错路径；先停 run 修账（progress.json 单写者）再跑门",
+            file=sys.stderr,
+        )
+        return EXIT_ERROR
     if args.chapters:
         wanted = [c.strip() for c in args.chapters.split(",") if c.strip()]
         unknown = [c for c in wanted if c not in doc["chapters"]]
@@ -796,6 +813,15 @@ def cmd_run_stage(args: argparse.Namespace) -> int:
     doc = load(state_dir)
     if not doc.get("stage_path") or not doc.get("data_dir"):
         print("[progress] progress.json 缺 stage_path/data_dir（init 须带 --stage 与 --data-dir）", file=sys.stderr)
+        return EXIT_ERROR
+    bad_paths = [k for k in ("stage_path", "data_dir") if doc.get(k) and not Path(doc[k]).exists()]
+    if bad_paths:
+        detail = "；".join(f"{k}={doc[k]}" for k in bad_paths)
+        print(
+            f"[progress] 账面路径不在盘: {detail}"
+            "——工作区被移动或 init 记错路径；先停 run 修账（progress.json 单写者）再跑 finalize/freeze",
+            file=sys.stderr,
+        )
         return EXIT_ERROR
     stage, data = doc["stage_path"], doc["data_dir"]
     if args.stage_name == "finalize" and not args.outputs_dir:
