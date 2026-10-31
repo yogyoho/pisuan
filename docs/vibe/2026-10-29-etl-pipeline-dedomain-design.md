@@ -125,6 +125,8 @@
 - graph_builder.py：章节节点 ID `CH_{domain}_{rt}_{level}_{hash}`（:63-80）、Document 属性（:214-240）、`OUTLINE_{domain}_{rt}` MERGE（:774-803）：**键结构不动**，domain 槽恒 general；存量 `*_coal_*` 节点保留只读
 - tools.py 五工具（get_chapter_outline :624 / list_report_types :705 / list_chapter_keys :729 / get_templates :776 / create_report :849）：**签名保留 domain 形参**，`_normalize_domain` 后强制覆盖 general；`_track_usage`（:40-51）记 general
 
+> **偏差回写（2026-10-31 实施后）**：存量图谱未按上文「`*_coal_*` 只读保留」执行。行为级改造（Task 6）只迁了 PG 7 表，漏迁 Neo4j，导致按 domain='general' 查询的大纲模板页返回空目录（bug-4175）。实际处置为**就地迁移**：`backend/scripts/governance/dedomain_chapter_templates_graph.py` 重写 id 前缀 `CH_coal_`→`CH_general_`、`OUTLINE_coal_`→`OUTLINE_general_` 并收敛 domain 属性（图内零 coal 残留）。只读保留不可行的原因：大纲骨架按 id MERGE，id 内嵌旧域不改，下次构建会分裂出第二个投影节点。
+
 ### 3.5 路由（domain_factory_router.py）
 
 | 端点组 | 位置 | 处理 |
@@ -215,5 +217,5 @@ B 阶段1（后端收敛+数据脚本） → B 阶段2（前端） → B 阶段3
 
 - B 是行为收敛但**可逆**（常量改回、参数复原即可），schema 级清理可日后在 B 之上补刀
 - 数据脚本幂等设计，UPDATE 前自动备份受影响行数统计
-- 图谱存量 coal 键只读保留，无重放风险
+- 图谱存量 coal 键已就地迁移（偏差回写见 §3.4，bug-4175）；id 前缀重写幂等可重跑，无重放风险
 - /eia 段零耦合已核实，回归成本低

@@ -55,14 +55,20 @@ def main() -> None:
                 old=OLD_DOMAIN,
             ).data()
 
-            # 冲突守卫：新前缀 id 已被非旧域节点占用 → 混合状态（防半迁移下覆盖重名）
-            collisions = session.run(
-                "MATCH (n) WHERE n.id STARTS WITH $p AND n.domain <> $old RETURN count(*) AS cnt",
-                p=f"CH_{NEW_DOMAIN}_", old=OLD_DOMAIN,
-            ).single()["cnt"]
-            if collisions:
+            # 冲突守卫：每个新前缀都检查——id 已被非旧域节点占用（含 domain 为空的节点）→
+            # 混合状态（防半迁移下覆盖重名）。n.domain <> $old 对 NULL 得 NULL 不命中，须显式 OR IS NULL。
+            guard_msgs: list[str] = []
+            for _, new_prefix in ID_PREFIX_REWRITES:
+                collisions = session.run(
+                    "MATCH (n) WHERE n.id STARTS WITH $p AND (n.domain IS NULL OR n.domain <> $old) "
+                    "RETURN count(*) AS cnt",
+                    p=new_prefix, old=OLD_DOMAIN,
+                ).single()["cnt"]
+                if collisions:
+                    guard_msgs.append(f"新前缀 {new_prefix} 已被 {collisions} 个非旧域节点占用")
+            if guard_msgs:
                 report["collision_guard"] = (
-                    f"发现 {collisions} 个已占用的新前缀 id，疑似半迁移状态"
+                    "疑似半迁移状态：" + "；".join(guard_msgs)
                     + ("，中止。请人工核查。" if args.apply else "（dry-run 仅提示）")
                 )
                 if args.apply:

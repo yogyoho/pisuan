@@ -7,10 +7,15 @@
 
 两类目标表：
 - PLAIN_TARGETS：无含 domain 的唯一约束，直接 UPDATE。
-- MERGE_TARGETS：有 UNIQUE(domain_code, 业务键…) 约束（learned_templates/outlines/prompt_configs/report_types）。
+- MERGE_TARGETS：learned_templates/outlines/prompt_configs 有 UNIQUE(domain_code, 业务键…) 约束；
+  report_types 实为主键 code 单列（翻 domain_code 不会撞键），走同一合并路径时 promote 即退化为直更、
+  删重为空操作，行为安全。
   逐业务键处理：无 general 行时 promote 一行（coal 行优先），有 general 行或已有同名键行时删除重复
-  （general 行为准；report_types 无 FK 引用、learned/outlines 重复行本就是去域后的同一实体）。
+  （general 行为准；learned/outlines 重复行本就是去域后的同一实体）。
   注意不能整表一条 UPDATE：同一语句内多行翻到同一 (domain,键) 会互相撞唯一键。
+
+dry-run 严格只读：不执行 get_or_create_general_domain（其含 INSERT），仅对各目标表做 SELECT 统计；
+通用域行只在其不存在且 --apply 时创建。
 """
 import argparse
 import asyncio
@@ -42,9 +47,13 @@ MERGE_TARGETS = [
 
 async def main(apply: bool) -> None:
     repo = DomainFactoryRepository()
-    general = await repo.get_or_create_general_domain()
-    print(f"通用域行: id={general.id} code={general.code}")
     tag = "apply" if apply else "dry-run"
+    # dry-run 严格只读：get_or_create_general_domain 含 INSERT，仅在 --apply 下执行
+    general_id = None
+    if apply:
+        general = await repo.get_or_create_general_domain()
+        general_id = general.id
+        print(f"通用域行: id={general.id} code={general.code}")
 
     async with pg_manager.get_async_session_context() as session:
         for table, col in PLAIN_TARGETS:
@@ -131,7 +140,7 @@ async def main(apply: bool) -> None:
                     "UPDATE domain_factory_tasks t SET domain_id = :gid "
                     "FROM domain_factory_domains d WHERE t.domain_id = d.id AND d.code <> :c"
                 ),
-                {"gid": general.id, "c": GENERAL_DOMAIN_CODE},
+                {"gid": general_id, "c": GENERAL_DOMAIN_CODE},
             )
             print(f"[apply] domain_factory_tasks 重指向 {result.rowcount} 行")
     print("完成（general 行名为 " + GENERAL_DOMAIN_NAME + "；domains 表其他历史行冻结保留）")

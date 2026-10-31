@@ -255,6 +255,8 @@ e2e 已知限制：确定性回放路径依赖模型端点从容器内可达；�
 | `web/src/components/model-management/AgentEditModal.vue` | 编辑弹窗预览头像图源（thumbs） | 同上 |
 | `web/src/layouts/AppLayout.vue` | ① 领域工厂导航项 (`Layers` 图标) ② 任务中心独立位置 ③ UserInfoComponent 简化用法 ④ GitHub 已移除 | 保留我们的导航结构和组件用法，上游新增的 ConversationNavSection 等特性可以合并 |
 | `backend/package/yuxi/config/static/info.template.yaml` | 页脚版权: `"© 北京华宇工程有限公司 2026 v1.6.0"` | 始终使用我们的版本 |
+| `backend/package/yuxi/utils/string_utils.py` | `normalize_chapter_key` 章节名归一函数（bug-4167 系，graph_builder / `_llm_chapter_meta` / `repo.upsert_outline` 三入口共用）。落位上游 utils 属 M3 裁定（2026-10-31）：登记不重排，不迁往独立模块 | 冲突保 pisuan 侧函数；上游若引入同名/相近函数，人工比对语义后合并，不得直接覆盖 |
+| `backend/package/yuxi/utils/__init__.py` | re-export `normalize_chapter_key`（:5） | 同上一行；保 re-export 行 |
 | `docker-compose.yml` | ① api/worker 双 `./backend/templates:/app/templates:ro` 挂载（bug-363）② worker `depends_on: milvus`（ff68f20a）③ `UV_HTTP_TIMEOUT` 类 env 定制 | 保留定制行，上游新增服务/变量并入；dev 栈传播见 scripts/sync-dev.ps1（$copyFiles 已携带本文件） |
 | `docker/api.Dockerfile` | `COPY backend/templates /app/templates`（bug-363）；`ENV UV_HTTP_TIMEOUT=600` | 保留定制行，上游层序变化时手工并入同位置（templates COPY 须在 uv sync 之后、entrypoint COPY 之前） |
 
