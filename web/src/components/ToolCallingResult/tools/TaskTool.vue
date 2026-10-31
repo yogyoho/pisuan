@@ -1,9 +1,5 @@
 <template>
-  <BaseToolCall
-    :tool-call="toolCall"
-    :status="baseStatus"
-    :force-show-result="hasDisplayResult"
-  >
+  <BaseToolCall :tool-call="toolCall" :status="baseStatus" :force-show-result="hasDisplayResult">
     <template #header>
       <div class="sep-header">
         <span class="note">{{ subagentDisplayName }}</span>

@@ -145,14 +145,7 @@
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useInfoStore } from '@/stores/info'
-import {
-  Sparkles,
-  ArrowRight,
-  Inbox,
-  Workflow,
-  Database,
-  PenLine
-} from '@lucide/vue'
+import { Sparkles, ArrowRight, Inbox, Workflow, Database, PenLine } from '@lucide/vue'
 
 const router = useRouter()
 const infoStore = useInfoStore()
@@ -1013,7 +1006,6 @@ onUnmounted(() => {
   .c-wm {
     display: none;
   }
-
 }
 
 @media (max-width: 767px) {

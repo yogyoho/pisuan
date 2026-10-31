@@ -40,7 +40,9 @@ export class MessageProcessor {
         return {
           ...item,
           tool_calls: item.tool_calls.map((toolCall) => {
-            const toolResponse = toolResponseMap.get(JSON.stringify([item.run_id || '', toolCall.id]))
+            const toolResponse = toolResponseMap.get(
+              JSON.stringify([item.run_id || '', toolCall.id])
+            )
             return {
               ...toolCall,
               tool_call_result: toolResponse || null
@@ -70,8 +72,10 @@ export class MessageProcessor {
     let legacyConv = null
 
     for (const item of serverHistory) {
-      if (item.type === 'tool' ||
-          (item.type === 'human' && item.extra_metadata?.source === 'ask_user_question_resume')) {
+      if (
+        item.type === 'tool' ||
+        (item.type === 'human' && item.extra_metadata?.source === 'ask_user_question_resume')
+      ) {
         continue
       }
       const runId = item.run_id || item.extra_metadata?.run_id

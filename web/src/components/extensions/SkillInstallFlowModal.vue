@@ -554,8 +554,7 @@ const retryFailedItems = async () => {
       item.retryable &&
       drafts.value.some(
         (draft) =>
-          draft.draft_id === item.draft_id &&
-          draft.items.some((entry) => entry.slug === item.slug)
+          draft.draft_id === item.draft_id && draft.items.some((entry) => entry.slug === item.slug)
       )
   )
   if (retryableItems.length) {

@@ -1,5 +1,8 @@
-const DICEBEAR_GLYPHS_AVATAR_BASE_URL = 'https://api.dicebear.com/10.x/glyphs/svg'
-// [pisuan-custom] 智能体统一头像：thumbs 扁平图形套图（用户选定；上游仅 glyphs 一套），同步时保留
+// [pisuan-custom] 用户默认头像使用随前端包发布的本地图标，内网/离线部署不请求外网图源。
+const LOCAL_USER_AVATAR = '/user-avatar.svg'
+// [pisuan-custom] 用户头像底色统一取系统主体色（浅色 #4f46e5，深色主题由 token 映射）。
+const USER_AVATAR_BACKGROUND = { background: 'var(--main-color)', color: '#fff' }
+// [pisuan-custom] 智能体统一头像：thumbs 扁平图形套图（用户选定），同步时保留
 const DICEBEAR_AGENT_AVATAR_BASE_URL = 'https://api.dicebear.com/10.x/thumbs/svg'
 
 export const AVATAR_BACKGROUND_TOKENS = [
@@ -29,12 +32,13 @@ const normalizeSeed = (id) => {
   return String(id).trim()
 }
 
+/** [pisuan-custom] 用户头像统一为本地图标；保留入参校验，调用方仍以 uid 判断是否渲染默认头像。 */
 export const generatePixelAvatar = (id) => {
-  const seed = normalizeSeed(id)
-  return `${DICEBEAR_GLYPHS_AVATAR_BASE_URL}?seed=${encodeURIComponent(seed)}`
+  normalizeSeed(id)
+  return LOCAL_USER_AVATAR
 }
 
-/** [pisuan-custom] 智能体统一使用 thumbs 套图，与用户头像（glyphs 符号）区分；上游无此函数。 */
+/** [pisuan-custom] 智能体统一使用 thumbs 套图，与用户头像（本地人形图标）区分；上游无此函数。 */
 export const generateAgentAvatar = (id) => {
   const seed = normalizeSeed(id)
   return `${DICEBEAR_AGENT_AVATAR_BASE_URL}?seed=${encodeURIComponent(seed)}`
@@ -57,4 +61,6 @@ export const getAvatarColorIndex = (seed) => {
   return hash % AVATAR_BACKGROUND_TOKENS.length
 }
 
-export const getAvatarFallbackStyle = (seed) => AVATAR_BACKGROUND_TOKENS[getAvatarColorIndex(seed)]
+/** [pisuan-custom] 头像兜底底色：用户取系统主体色，智能体按种子取渐变色板。 */
+export const getAvatarFallbackStyle = (seed, kind = 'user') =>
+  kind === 'user' ? USER_AVATAR_BACKGROUND : AVATAR_BACKGROUND_TOKENS[getAvatarColorIndex(seed)]

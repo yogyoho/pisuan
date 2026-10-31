@@ -85,9 +85,7 @@ const groups = [
   {
     label: '数据与工具',
     tag: '',
-    items: [
-      { label: '规范库加工', icon: ShieldCheck, drawer: true }
-    ]
+    items: [{ label: '规范库加工', icon: ShieldCheck, drawer: true }]
   }
 ]
 

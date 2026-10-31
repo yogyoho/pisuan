@@ -104,7 +104,6 @@ const visible = computed({
   set: (val) => emit('update:visible', val)
 })
 
-
 // 文件上传前验证
 const beforeUpload = async (file) => {
   // 检查文件类型

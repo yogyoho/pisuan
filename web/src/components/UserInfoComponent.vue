@@ -9,7 +9,7 @@
             :name="userStore.username"
             :seed="userStore.uid || userStore.username"
             kind="user"
-            :size="32"
+            :size="24"
             shape="circle"
             :alt="userStore.username"
             class="avatar-image"
@@ -185,7 +185,7 @@ const openProfile = () => {
 }
 
 .user-avatar {
-  @avatar-size: 32px;
+  @avatar-size: 24px;
   width: @avatar-size;
   height: @avatar-size;
   min-width: @avatar-size;
@@ -199,7 +199,8 @@ const openProfile = () => {
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 2px 8px var(--shadow-1);
+  // [pisuan-custom] 用户图标投影沿用系统主体色规格：0 2px 0 rgba(55, 5, 255, 0.06)
+  box-shadow: 0 2px 0 rgba(55, 5, 255, 0.06);
 
   &:hover {
     opacity: 0.9;

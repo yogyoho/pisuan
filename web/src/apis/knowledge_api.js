@@ -231,6 +231,17 @@ export const documentApi = {
   },
 
   /**
+   * 更新文档解析后的 markdown 正源（表格编辑等场景；索引需重新入库后刷新）
+   * @param {string} kbId - 知识库ID
+   * @param {string} docId - 文档ID
+   * @param {string} content - 完整 markdown 内容
+   * @returns {Promise} - 更新结果
+   */
+  updateDocumentContent: async (kbId, docId, content) => {
+    return apiAdminPut(`/api/knowledge/databases/${kbId}/documents/${docId}/content`, { content })
+  },
+
+  /**
    * 删除文档
    * @param {string} kbId - 知识库ID
    * @param {string} docId - 文档ID

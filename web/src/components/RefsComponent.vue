@@ -460,7 +460,6 @@ const cancelDislike = () => {
         }
       }
     }
-
   }
 
   .sources-panel-body {

@@ -33,18 +33,17 @@ const toTask = (raw = {}) => ({
   cancel_requested: raw.cancel_requested || false
 })
 
-
 // 知识工厂状态到任务中心状态的映射
 const DOMAIN_FACTORY_STATUS_MAP = {
-  'UPLOADED': { status: 'running', progress: 5, message: '文件已上传，等待处理...' },
-  'PARSING': { status: 'running', progress: 25, message: '正在解析文档...' },
-  'EXTRACTING': { status: 'running', progress: 55, message: '正在提取信息...' },
-  'GENERALIZING': { status: 'running', progress: 80, message: '正在生成槽位模板...' },
-  'WAITING_REVIEW': { status: 'running', progress: 95, message: '信息提取完成，等待人工审核...' },
-  'COMMITTED': { status: 'success', progress: 100, message: '报告已入库完成' },
-  'COMMIT_FAILED': { status: 'failed', progress: 100, message: '入库失败，请检查后重试' },
-  'COMMIT_PARTIAL': { status: 'running', progress: 95, message: '部分入库完成，大纲生成未完成' },
-  'FAILED': { status: 'failed', progress: 100, message: '执行失败' },
+  UPLOADED: { status: 'running', progress: 5, message: '文件已上传，等待处理...' },
+  PARSING: { status: 'running', progress: 25, message: '正在解析文档...' },
+  EXTRACTING: { status: 'running', progress: 55, message: '正在提取信息...' },
+  GENERALIZING: { status: 'running', progress: 80, message: '正在生成槽位模板...' },
+  WAITING_REVIEW: { status: 'running', progress: 95, message: '信息提取完成，等待人工审核...' },
+  COMMITTED: { status: 'success', progress: 100, message: '报告已入库完成' },
+  COMMIT_FAILED: { status: 'failed', progress: 100, message: '入库失败，请检查后重试' },
+  COMMIT_PARTIAL: { status: 'running', progress: 95, message: '部分入库完成，大纲生成未完成' },
+  FAILED: { status: 'failed', progress: 100, message: '执行失败' }
 }
 
 export const useTaskerStore = defineStore('tasker', () => {
@@ -121,7 +120,7 @@ export const useTaskerStore = defineStore('tasker', () => {
       // 并行获取通用任务与知识工厂任务
       const [response, dfResponse] = await Promise.all([
         taskerApi.fetchTasks(params),
-        domainFactoryApi.getTasksForTaskCenter(params).catch(err => {
+        domainFactoryApi.getTasksForTaskCenter(params).catch((err) => {
           console.warn('获取知识工厂任务失败:', err)
           return { tasks: [] }
         })
@@ -146,7 +145,7 @@ export const useTaskerStore = defineStore('tasker', () => {
         total: mergedTasks.length,
         filtered_total: mergedTasks.length,
         status_counts: statusCounter,
-        type_counts: typeCounter,
+        type_counts: typeCounter
       }
 
       // 合并去重：相同 ID 的知识工厂任务更新通用任务状态

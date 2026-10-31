@@ -307,7 +307,6 @@ const confirmDeleteProject = (project) => {
   display: flex;
   min-height: 0;
   flex-direction: column;
-  margin-top: 16px;
   overflow: hidden;
 }
 .history-panel {

@@ -60,7 +60,10 @@
                 @pressEnter="saveEtlConcurrency"
                 @blur="saveEtlConcurrency"
               />
-              <span class="etl-concurrency-hint">同时进行的泛化 LLM 调用数：串行本地模型建议 2，云端高速模型可调大，下一次运行生效</span>
+              <span class="etl-concurrency-hint"
+                >同时进行的泛化 LLM 调用数：串行本地模型建议
+                2，云端高速模型可调大，下一次运行生效</span
+              >
             </div>
           </div>
         </div>

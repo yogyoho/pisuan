@@ -196,16 +196,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
-import {
-  CircleUser,
-  Settings,
-  Key,
-  ScanText,
-  SquareTerminal,
-  User,
-  Users,
-  X
-} from '@lucide/vue'
+import { CircleUser, Settings, Key, ScanText, SquareTerminal, User, Users, X } from '@lucide/vue'
 import { createAsyncPanel } from '@/utils/asyncPanel'
 
 const AccountSettingsComponent = createAsyncPanel(

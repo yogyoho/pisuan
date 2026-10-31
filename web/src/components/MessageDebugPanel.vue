@@ -638,9 +638,10 @@ const runTraceById = computed(() => {
   return result
 })
 const combinedRuns = computed(() =>
-  [...runTraceById.value.values()].sort((left, right) =>
-    (left.timing?.created_at || '').localeCompare(right.timing?.created_at || '') ||
-    left.run_id.localeCompare(right.run_id)
+  [...runTraceById.value.values()].sort(
+    (left, right) =>
+      (left.timing?.created_at || '').localeCompare(right.timing?.created_at || '') ||
+      left.run_id.localeCompare(right.run_id)
   )
 )
 const baseGroups = computed(() =>

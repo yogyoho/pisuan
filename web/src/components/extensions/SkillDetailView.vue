@@ -237,7 +237,7 @@
               v-for="group in dependencyGroups"
               :key="group.key"
               class="dependency-card extension-detail-divider-row"
-                :class="{ readonly: !canEditSkill }"
+              :class="{ readonly: !canEditSkill }"
             >
               <div class="dependency-card-header">
                 <div class="dependency-title-block">
@@ -472,9 +472,7 @@ const isBuiltinInstalledSkill = computed(() => {
 })
 const canManageCurrentSkill = computed(() => currentSkill.value?.can_manage !== false)
 const isReadOnlySkill = computed(() => isInstalledSkill.value && !canManageCurrentSkill.value)
-const canEditSkill = computed(
-  () => canManageCurrentSkill.value && !isBuiltinInstalledSkill.value
-)
+const canEditSkill = computed(() => canManageCurrentSkill.value && !isBuiltinInstalledSkill.value)
 const hasUnsavedDependencyChanges = computed(() =>
   ['tool_dependencies', 'mcp_dependencies', 'skill_dependencies'].some(
     (key) => JSON.stringify(dependencyForm[key]) !== JSON.stringify(currentSkill.value?.[key] || [])

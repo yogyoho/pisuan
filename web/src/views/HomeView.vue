@@ -12,20 +12,36 @@
     <div class="hero-section">
       <div class="glass-header">
         <div class="logo">
-          <img :src="infoStore.organization.logo" :alt="infoStore.organization.name" class="logo-img" />
+          <img
+            :src="infoStore.organization.logo"
+            :alt="infoStore.organization.name"
+            class="logo-img"
+          />
           <span class="logo-text">{{ infoStore.organization.name }}</span>
         </div>
         <nav class="nav-links">
-          <router-link to="/dashboard" class="nav-link" v-if="userStore.isLoggedIn && userStore.isAdmin">
+          <router-link
+            to="/dashboard"
+            class="nav-link"
+            v-if="userStore.isLoggedIn && userStore.isAdmin"
+          >
             <span>Dashboard</span>
           </router-link>
           <router-link to="/database" class="nav-link" v-if="userStore.isLoggedIn">
             <span>知识库</span>
           </router-link>
-          <router-link to="/graph" class="nav-link" v-if="userStore.isLoggedIn && userStore.isAdmin">
+          <router-link
+            to="/graph"
+            class="nav-link"
+            v-if="userStore.isLoggedIn && userStore.isAdmin"
+          >
             <span>知识图谱</span>
           </router-link>
-          <router-link to="/extensions" class="nav-link" v-if="userStore.isLoggedIn && userStore.isSuperAdmin">
+          <router-link
+            to="/extensions"
+            class="nav-link"
+            v-if="userStore.isLoggedIn && userStore.isSuperAdmin"
+          >
             <span>扩展</span>
           </router-link>
         </nav>
@@ -60,7 +76,12 @@
         </div>
 
         <div class="insight-panel" v-if="featureCards.length">
-          <div class="stat-card" v-for="(card, index) in featureCards" :key="card.label" :style="{ animationDelay: `${index * 0.1}s` }">
+          <div
+            class="stat-card"
+            v-for="(card, index) in featureCards"
+            :key="card.label"
+            :style="{ animationDelay: `${index * 0.1}s` }"
+          >
             <div class="stat-icon-wrapper" v-if="card.icon">
               <span class="stat-icon">
                 <component :is="card.icon" />
@@ -293,7 +314,11 @@ const actionLinks = computed(() => {
 <style scoped lang="less">
 .home-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #fafcfd 0%, #f5f7f7 100%); /* [pisuan-custom] 青云素雅：品牌页背景微渐变为一次性装饰色（无精确对应 token），不随主题 */
+  background: linear-gradient(
+    135deg,
+    #fafcfd 0%,
+    #f5f7f7 100%
+  ); /* [pisuan-custom] 青云素雅：品牌页背景微渐变为一次性装饰色（无精确对应 token），不随主题 */
   position: relative;
   overflow-x: hidden;
 }
@@ -347,7 +372,8 @@ const actionLinks = computed(() => {
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(0, 0) scale(1);
   }
   33% {
@@ -498,7 +524,12 @@ const actionLinks = computed(() => {
       left: 0;
       width: 100%;
       height: 8px;
-      background: linear-gradient(90deg, var(--main-color), var(--main-bright), var(--color-accent-500));
+      background: linear-gradient(
+        90deg,
+        var(--main-color),
+        var(--main-bright),
+        var(--color-accent-500)
+      );
       border-radius: 4px;
       animation: expandWidth 1s ease-out 0.3s both;
     }
@@ -514,7 +545,9 @@ const actionLinks = computed(() => {
 
   .subtitle-switch-enter-active,
   .subtitle-switch-leave-active {
-    transition: opacity 0.32s ease, transform 0.32s ease;
+    transition:
+      opacity 0.32s ease,
+      transform 0.32s ease;
   }
 
   .subtitle-switch-enter-from,
@@ -542,7 +575,8 @@ const actionLinks = computed(() => {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {
@@ -583,7 +617,9 @@ const actionLinks = computed(() => {
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.3);
     transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
+    transition:
+      width 0.6s,
+      height 0.6s;
   }
 
   &:hover::before {
@@ -632,7 +668,9 @@ const actionLinks = computed(() => {
   text-decoration: none;
   border-bottom: 1px dashed var(--main-300);
   padding-bottom: 0.15rem;
-  transition: color 0.2s ease, border-color 0.2s ease;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease;
 
   &:hover {
     color: var(--main-700);

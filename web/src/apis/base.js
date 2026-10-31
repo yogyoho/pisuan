@@ -64,6 +64,8 @@ function safeErrorData(errorData, status, publicMessage) {
  */
 function extractBusinessErrorDetail(errorData) {
   const detail = errorData?.detail
+  // FastAPI HTTPException(detail="字符串") 是最常见的业务错误形态，不能吞掉具体原因
+  if (typeof detail === 'string' && detail.trim()) return { code: '', message: detail }
   if (!detail || typeof detail !== 'object' || Array.isArray(detail)) return null
   if (typeof detail.code !== 'string' || typeof detail.message !== 'string') return null
   return { code: detail.code, message: detail.message }

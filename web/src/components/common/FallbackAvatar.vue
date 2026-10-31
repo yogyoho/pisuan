@@ -75,7 +75,9 @@ const currentSrc = computed(() => imageCandidates.value[failedImageCount.value] 
 
 const initials = computed(() => getAvatarInitials(props.name, props.kind))
 
-const fallbackStyle = computed(() => getAvatarFallbackStyle(props.seed || props.name || props.kind))
+const fallbackStyle = computed(() =>
+  getAvatarFallbackStyle(props.seed || props.name || props.kind, props.kind)
+)
 
 const avatarSizeStyle = computed(() => {
   const size = typeof props.size === 'number' ? `${props.size}px` : props.size

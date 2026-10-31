@@ -783,9 +783,9 @@ const formattedToolArgs = computed(() => formatToolApprovalArgs(activeToolReques
 .question-title {
   margin: 0 0 10px;
   color: var(--color-text);
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.55;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.8;
   overflow-wrap: anywhere;
 
   span {

@@ -2517,12 +2517,7 @@ const createClientRequestId = () => {
   return `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
-const buildOptimisticHumanMessage = ({
-  requestId,
-  text,
-  imageContents = [],
-  attachments = []
-}) => {
+const buildOptimisticHumanMessage = ({ requestId, text, imageContents = [], attachments = [] }) => {
   const message = {
     id: requestId,
     role: 'user',

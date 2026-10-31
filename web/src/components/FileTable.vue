@@ -354,7 +354,9 @@
       </template>
 
       <template #cell-updated_at="{ row, text }">
-        <a-tooltip :title="row.is_virtual_folder ? '' : `上传时间 ${formatFileTableTime(row.created_at)}`">
+        <a-tooltip
+          :title="row.is_virtual_folder ? '' : `上传时间 ${formatFileTableTime(row.created_at)}`"
+        >
           <span class="file-time-cell">
             {{ row.is_virtual_folder ? '-' : formatFileTableTime(text) }}
           </span>
@@ -413,6 +415,18 @@
                     下载文件
                   </a-button>
 
+                  <!-- Table Edit Action -->
+                  <a-button
+                    v-if="!readonly && canEditTables(row)"
+                    type="text"
+                    block
+                    @click="openTableEditor(row)"
+                    :disabled="lock"
+                  >
+                    <template #icon><component :is="h(Table2)" size="14" /></template>
+                    表格编辑
+                  </a-button>
+
                   <!-- Parse Action -->
                   <a-button
                     v-if="!readonly && canParseFile(row)"
@@ -469,6 +483,13 @@
         </div>
       </template>
     </FileBrowserTable>
+
+    <TableEditModal
+      v-model:open="tableEditorVisible"
+      :kb-id="store.kbId || ''"
+      :file-id="tableEditorRow?.file_id || ''"
+      :filename="tableEditorRow?.filename || ''"
+    />
   </div>
 </template>
 
@@ -477,6 +498,7 @@ import { ref, computed, h, watch } from 'vue'
 import { useDatabaseStore } from '@/stores/database'
 import { useConfigStore } from '@/stores/config'
 import OCRSelector from '@/components/OCRSelector.vue'
+import TableEditModal from '@/components/TableEditModal.vue'
 import { message, Modal } from 'ant-design-vue'
 import { documentApi } from '@/apis/knowledge_api'
 import {
@@ -516,7 +538,8 @@ import {
   MoreHorizontal,
   Pencil,
   Search,
-  Map as MapIcon
+  Map as MapIcon,
+  Table2
 } from '@lucide/vue'
 
 const store = useDatabaseStore()
@@ -639,6 +662,16 @@ const closePopover = (fileId) => {
   if (fileId) {
     popoverVisibleMap.value[fileId] = false
   }
+}
+
+// 表格编辑相关
+const tableEditorVisible = ref(false)
+const tableEditorRow = ref(null)
+const canEditTables = (row) => !canParseFile(row) && row.status !== 'indexed'
+const openTableEditor = (row) => {
+  closePopover(row.file_id)
+  tableEditorRow.value = row
+  tableEditorVisible.value = true
 }
 
 // 新建文件夹相关
@@ -1560,7 +1593,7 @@ import { generatePixelAvatar } from '@/utils/pixelAvatar'
   padding: 0;
   height: auto;
   line-height: 1.4;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-text);
   text-decoration: none;

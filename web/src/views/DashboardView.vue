@@ -62,11 +62,7 @@
     />
 
     <!-- Tab 1: 系统概览主要内容区域 -->
-    <div
-      v-if="overviewActivated"
-      v-show="activeTab === 'overview'"
-      class="dashboard-grid"
-    >
+    <div v-if="overviewActivated" v-show="activeTab === 'overview'" class="dashboard-grid">
       <!-- 调用统计模块 - 占据2x1网格 -->
       <CallStatsComponent :loading="loading" ref="callStatsRef" />
 

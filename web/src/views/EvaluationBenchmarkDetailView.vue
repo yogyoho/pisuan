@@ -11,7 +11,9 @@
     >
       <template #breadcrumb>
         <nav class="extension-detail-breadcrumb benchmark-breadcrumb" aria-label="评估基准详情导航">
-          <button type="button" class="extension-detail-back" @click="backToKnowledgeList">知识库</button>
+          <button type="button" class="extension-detail-back" @click="backToKnowledgeList">
+            知识库
+          </button>
           <ChevronRight :size="15" aria-hidden="true" />
           <button type="button" class="extension-detail-back" @click="backToKnowledgeEvaluation">
             {{ database.name || kbId }}
@@ -23,7 +25,6 @@
         </nav>
       </template>
 
-
       <template #panel-questions>
         <div class="benchmark-detail-panel">
           <div class="benchmark-summary-strip">
@@ -32,9 +33,17 @@
               <span>{{ dataset.description || '暂无描述' }}</span>
             </div>
             <div class="benchmark-summary-metrics">
-              <span><small>题目</small><strong>{{ questionPagination.total }}</strong></span>
-              <span><small>Gold Chunks</small><strong>{{ dataset.has_gold_chunks ? '有' : '无' }}</strong></span>
-              <span><small>Gold Answer</small><strong>{{ dataset.has_gold_answers ? '有' : '无' }}</strong></span>
+              <span
+                ><small>题目</small><strong>{{ questionPagination.total }}</strong></span
+              >
+              <span
+                ><small>Gold Chunks</small
+                ><strong>{{ dataset.has_gold_chunks ? '有' : '无' }}</strong></span
+              >
+              <span
+                ><small>Gold Answer</small
+                ><strong>{{ dataset.has_gold_answers ? '有' : '无' }}</strong></span
+              >
             </div>
           </div>
 
@@ -105,7 +114,11 @@
                   <span v-else class="benchmark-cell-empty">-</span>
                 </template>
                 <template v-else-if="column.key === 'gold_answer'">
-                  <div v-if="record.gold_answer" class="benchmark-cell-secondary" :title="record.gold_answer">
+                  <div
+                    v-if="record.gold_answer"
+                    class="benchmark-cell-secondary"
+                    :title="record.gold_answer"
+                  >
                     {{ record.gold_answer }}
                   </div>
                   <span v-else class="benchmark-cell-empty">-</span>
@@ -149,16 +162,30 @@
                   @change="handleRunSelection"
                 />
                 <div class="benchmark-run-meta">
-                  <span>{{ formatTime(selectedRun?.started_at) }} · {{ formatRunDuration(selectedRun) }}</span>
+                  <span
+                    >{{ formatTime(selectedRun?.started_at) }} ·
+                    {{ formatRunDuration(selectedRun) }}</span
+                  >
                 </div>
-                <span class="benchmark-run-status" :class="`status-${selectedRun?.status || 'unknown'}`">
+                <span
+                  class="benchmark-run-status"
+                  :class="`status-${selectedRun?.status || 'unknown'}`"
+                >
                   {{ getRunStatusText(selectedRun?.status) }}
                 </span>
               </div>
               <div class="benchmark-result-metrics">
-                <span><small>综合评分</small><strong>{{ formatScore(selectedRun?.overall_score) }}</strong></span>
-                <span><small>Recall@10</small><strong>{{ formatMetric(selectedRun?.metrics?.['recall@10']) }}</strong></span>
-                <span><small>完成题目</small><strong>{{ formatRunItems(selectedRun) }}</strong></span>
+                <span
+                  ><small>综合评分</small
+                  ><strong>{{ formatScore(selectedRun?.overall_score) }}</strong></span
+                >
+                <span
+                  ><small>Recall@10</small
+                  ><strong>{{ formatMetric(selectedRun?.metrics?.['recall@10']) }}</strong></span
+                >
+                <span
+                  ><small>完成题目</small><strong>{{ formatRunItems(selectedRun) }}</strong></span
+                >
               </div>
             </div>
 
@@ -206,10 +233,16 @@
               >
                 <template #bodyCell="{ column, record }">
                   <template v-if="column.key === 'query'">
-                    <div class="benchmark-cell-primary" :title="record.query">{{ record.query }}</div>
+                    <div class="benchmark-cell-primary" :title="record.query">
+                      {{ record.query }}
+                    </div>
                   </template>
                   <template v-else-if="column.key === 'generated_answer'">
-                    <div v-if="record.generated_answer" class="benchmark-cell-secondary" :title="record.generated_answer">
+                    <div
+                      v-if="record.generated_answer"
+                      class="benchmark-cell-secondary"
+                      :title="record.generated_answer"
+                    >
                       {{ record.generated_answer }}
                     </div>
                     <span v-else class="benchmark-cell-empty">-</span>
@@ -220,7 +253,11 @@
                         <small>{{ metric.label }}</small>
                         <strong>{{ formatMetric(metric.value) }}</strong>
                       </span>
-                      <span v-if="getRetrievalMetrics(record.metrics).length === 0" class="benchmark-cell-empty">-</span>
+                      <span
+                        v-if="getRetrievalMetrics(record.metrics).length === 0"
+                        class="benchmark-cell-empty"
+                        >-</span
+                      >
                     </div>
                   </template>
                   <template v-else-if="column.key === 'answer_score'">
@@ -240,7 +277,9 @@
                 </template>
                 <template #emptyText>
                   <a-empty
-                    :description="results.length > 0 ? '当前页没有符合筛选条件的结果' : '暂无逐题结果'"
+                    :description="
+                      results.length > 0 ? '当前页没有符合筛选条件的结果' : '暂无逐题结果'
+                    "
                   />
                 </template>
               </a-table>
@@ -399,7 +438,8 @@ const runOptions = computed(() =>
 
 const getRunName = (run) => run?.name || run?.run_name || '未命名测试'
 const getRunStatusText = (status) =>
-  ({ running: '运行中', completed: '已完成', failed: '失败', paused: '已暂停' })[status] || '未知状态'
+  ({ running: '运行中', completed: '已完成', failed: '失败', paused: '已暂停' })[status] ||
+  '未知状态'
 const formatMetric = (value) => (Number.isFinite(value) ? Number(value).toFixed(2) : '-')
 const formatScore = (value) => (Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : '-')
 const formatTime = (value) => (value ? new Date(value).toLocaleString('zh-CN') : '-')
@@ -425,9 +465,10 @@ const getRetrievalMetricLabel = (key) => {
 
 const getRetrievalMetrics = (metrics = {}) =>
   Object.entries(metrics)
-    .filter(([key, value]) =>
-      Number.isFinite(value) &&
-      (key.startsWith('recall') || key.startsWith('precision') || ['map', 'ndcg'].includes(key))
+    .filter(
+      ([key, value]) =>
+        Number.isFinite(value) &&
+        (key.startsWith('recall') || key.startsWith('precision') || ['map', 'ndcg'].includes(key))
     )
     .map(([key, value]) => ({ key, label: getRetrievalMetricLabel(key), value }))
 

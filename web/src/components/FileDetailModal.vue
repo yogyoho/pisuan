@@ -7,6 +7,7 @@
     wrap-class-name="file-detail"
     @after-open-change="afterOpenChange"
     :bodyStyle="{ height: '80vh', padding: '0' }"
+    :mask-closable="!isEditDirty"
   >
     <template #title>
       <div class="modal-title-wrapper">
@@ -24,6 +25,19 @@
           <div class="view-controls" v-if="file && viewModeOptions.length > 1">
             <a-segmented v-model:value="viewMode" :options="viewModeOptions" />
           </div>
+
+          <!-- Markdown 编辑入口（入库前可修正识别内容） -->
+          <a-button
+            v-if="canEditMarkdown && viewMode === 'markdown' && !editing"
+            type="default"
+            class="edit-toggle-btn"
+            title="编辑 markdown"
+            aria-label="编辑 markdown"
+            @click="startEdit"
+          >
+            <Pencil :size="15" />
+            <span>编辑</span>
+          </a-button>
 
           <!-- 下载按钮下拉菜单 -->
           <a-dropdown trigger="click" v-if="file">
@@ -46,7 +60,7 @@
           </a-dropdown>
 
           <!-- 自定义关闭按钮 -->
-          <button class="custom-close-btn" @click="visible = false">
+          <button class="custom-close-btn" @click="handleClose">
             <X :size="16" />
           </button>
         </div>
@@ -77,18 +91,30 @@
 
       <!-- Markdown 模式 -->
       <div v-else-if="viewMode === 'markdown'" class="content-panel flat-md-preview">
-        <div v-if="contentState.loading" class="loading-container">
-          <a-spin tip="正在加载解析内容..." />
-        </div>
-        <MarkdownPreview
-          v-else-if="mergedContent"
-          :content="mergedContent"
-          class="markdown-content"
-          bordered
-        />
-        <div v-else class="empty-content">
-          <p>{{ contentState.error || '暂无文件内容' }}</p>
-        </div>
+        <template v-if="editing">
+          <div class="md-edit-toolbar">
+            <span class="md-edit-hint">直接编辑 markdown 正源，保存后需重新入库检索才生效</span>
+            <a-button size="small" :disabled="saving" @click="cancelEdit">取消</a-button>
+            <a-button size="small" type="primary" :loading="saving" @click="saveEdit"
+              >保存</a-button
+            >
+          </div>
+          <textarea v-model="editText" class="md-edit-area" spellcheck="false" />
+        </template>
+        <template v-else>
+          <div v-if="contentState.loading" class="loading-container">
+            <a-spin tip="正在加载解析内容..." />
+          </div>
+          <MarkdownPreview
+            v-else-if="mergedContent"
+            :content="mergedContent"
+            class="markdown-content"
+            bordered
+          />
+          <div v-else class="empty-content">
+            <p>{{ contentState.error || '暂无文件内容' }}</p>
+          </div>
+        </template>
       </div>
 
       <!-- Chunks 模式：使用 Grid 布局 -->
@@ -120,7 +146,7 @@
 
 <script setup>
 import { computed, h, onBeforeUnmount, ref, watch } from 'vue'
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 import { documentApi } from '@/apis/knowledge_api'
 import { getWorkspaceKnowledgeFileContent } from '@/apis/workspace_api'
 import { mergeChunks } from '@/utils/chunkUtils'
@@ -135,7 +161,7 @@ import {
 import MarkdownPreview from '@/components/common/MarkdownPreview.vue'
 import FileTypeIcon from '@/components/common/FileTypeIcon.vue'
 import AgentFilePreview from '@/components/AgentFilePreview.vue'
-import { Download, ChevronDown, FileSearch, FileText, Rows3, X } from '@lucide/vue'
+import { Download, ChevronDown, FileSearch, FileText, Rows3, X, Pencil } from '@lucide/vue'
 
 const props = defineProps({
   open: {
@@ -180,6 +206,11 @@ const sourcePreview = ref({
   supported: true
 })
 
+// markdown 编辑态（入库前可修正识别内容；声明须先于 resetLocalState，watch immediate 会调用）
+const editing = ref(false)
+const editText = ref('')
+const saving = ref(false)
+
 let basicRequestSeq = 0
 let contentRequestSeq = 0
 let sourceRequestSeq = 0
@@ -222,6 +253,8 @@ const resetLocalState = () => {
   detailError.value = ''
   downloadingOriginal.value = false
   downloadingMarkdown.value = false
+  editing.value = false
+  editText.value = ''
   resetContentState()
   resetSourcePreview()
   viewMode.value = 'markdown'
@@ -398,10 +431,15 @@ const loadParsedContent = async () => {
 
 watch(
   () => [props.open, props.kbId, props.fileId],
-  ([open]) => {
+  ([open], prev) => {
     if (!open) {
       resetLocalState()
       return
+    }
+    // 切换文档时丢弃当前编辑态，避免把 A 文档的修改写进 B 文档
+    if (prev && (prev[1] !== props.kbId || prev[2] !== props.fileId)) {
+      editing.value = false
+      editText.value = ''
     }
     loadBasicInfo()
   },
@@ -452,6 +490,77 @@ const mergeResult = computed(() => mergeChunks(contentState.value.lines || []))
 const mappedChunks = computed(() => mergeResult.value.chunks)
 const mergedContent = computed(() => contentState.value.content || mergeResult.value.content || '')
 const charCount = computed(() => mergedContent.value.length)
+
+// markdown 编辑：仅入库前开放，且仅当真实 md 正源已加载（chunks 兜底合并文本不可编辑）
+const canEditMarkdown = computed(() =>
+  Boolean(file.value && file.value.status !== 'indexed' && contentState.value.content)
+)
+const isEditDirty = computed(() => editing.value && editText.value !== contentState.value.content)
+
+const startEdit = () => {
+  editText.value = contentState.value.content
+  editing.value = true
+}
+
+const cancelEdit = () => {
+  if (isEditDirty.value) {
+    Modal.confirm({
+      title: '有未保存的修改',
+      content: '放弃当前编辑内容？',
+      okText: '放弃修改',
+      okType: 'danger',
+      cancelText: '继续编辑',
+      onOk: () => {
+        editing.value = false
+        editText.value = ''
+      }
+    })
+    return
+  }
+  editing.value = false
+  editText.value = ''
+}
+
+const saveEdit = async () => {
+  if (!editText.value.trim()) {
+    message.warning('markdown 内容不能为空')
+    return
+  }
+  saving.value = true
+  try {
+    const response = await documentApi.updateDocumentContent(
+      String(props.kbId || ''),
+      String(props.fileId || ''),
+      editText.value
+    )
+    message.success(response?.message || 'markdown 已更新')
+    editing.value = false
+    editText.value = ''
+    contentState.value = { ...contentState.value, loaded: false, content: '', lines: [] }
+    await loadParsedContent()
+  } catch (error) {
+    message.error(error?.response?.data?.detail || error.message || '保存失败')
+  } finally {
+    saving.value = false
+  }
+}
+
+const handleClose = () => {
+  if (isEditDirty.value) {
+    Modal.confirm({
+      title: '有未保存的修改',
+      content: '关闭将丢失当前编辑内容，确认关闭？',
+      okText: '丢弃修改并关闭',
+      okType: 'danger',
+      cancelText: '继续编辑',
+      onOk: () => {
+        visible.value = false
+      }
+    })
+    return
+  }
+  visible.value = false
+}
 const chunkCount = computed(
   () => mappedChunks.value.length || contentState.value.lines?.length || 0
 )
@@ -616,6 +725,43 @@ onBeforeUnmount(resetLocalState)
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+}
+
+.edit-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.md-edit-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.md-edit-hint {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--gray-500);
+}
+
+.md-edit-area {
+  display: block;
+  width: 100%;
+  height: calc(80vh - 48px);
+  resize: none;
+  border: none;
+  outline: none;
+  padding: 12px 16px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--gray-800);
+  background: var(--gray-25);
+  box-sizing: border-box;
 }
 
 .content-panel,

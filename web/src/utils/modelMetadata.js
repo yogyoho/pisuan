@@ -3,7 +3,9 @@ let catalogPromise
 export const USD_TO_CNY_RATE = 7
 
 export const loadModelMetadataCatalog = () => {
-  catalogPromise ||= import('virtual:model-display-metadata').then(({ providers }) => ({ providers }))
+  catalogPromise ||= import('virtual:model-display-metadata').then(({ providers }) => ({
+    providers
+  }))
   return catalogPromise
 }
 

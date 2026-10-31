@@ -315,7 +315,9 @@ onBeforeUnmount(() => {
 
 .pdf-spinner {
   animation: pdf-spin 1s linear infinite;
-  color: var(--main-color); /* [pisuan-custom] 原 var(--primary-color, #2563eb) 未定义变量激活旧主题蓝 */
+  color: var(
+    --main-color
+  ); /* [pisuan-custom] 原 var(--primary-color, #2563eb) 未定义变量激活旧主题蓝 */
 }
 
 .pdf-error-view {

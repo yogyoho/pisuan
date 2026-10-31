@@ -627,6 +627,9 @@ div.header,
   .fill {
     flex: 1 1 0;
     min-height: 0;
+    /* 与上方 .nav 的间距放槽位自身：不能写在组件根上（组件根 height:100% + margin 会溢出槽位，
+       底部 16px 被 .foo 盖住，最后一条对话显示不全） */
+    margin-top: 16px;
   }
 
   .foo {

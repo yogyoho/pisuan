@@ -125,7 +125,9 @@ const buildDefaultName = () => {
   const date = [now.getFullYear(), now.getMonth() + 1, now.getDate()]
     .map((value, index) => (index === 0 ? value : String(value).padStart(2, '0')))
     .join('')
-  const suffix = globalThis.crypto?.randomUUID?.().replaceAll('-', '').slice(0, 6) || Date.now().toString(16).slice(-6)
+  const suffix =
+    globalThis.crypto?.randomUUID?.().replaceAll('-', '').slice(0, 6) ||
+    Date.now().toString(16).slice(-6)
   return `eval-${date}-${suffix}`
 }
 

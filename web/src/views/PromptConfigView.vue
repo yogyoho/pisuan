@@ -133,8 +133,10 @@ const fetchPromptConfig = async () => {
       promptConfig.value = {
         extract_prompt: cfg.extract_prompt || defaultPrompts.extract_prompt,
         template_prompt: cfg.template_prompt || defaultPrompts.template_prompt,
-        schema_generation_prompt: cfg.schema_generation_prompt || defaultPrompts.schema_generation_prompt,
-        section_generalization_prompt: cfg.section_generalization_prompt || defaultPrompts.section_generalization_prompt
+        schema_generation_prompt:
+          cfg.schema_generation_prompt || defaultPrompts.schema_generation_prompt,
+        section_generalization_prompt:
+          cfg.section_generalization_prompt || defaultPrompts.section_generalization_prompt
       }
     } else {
       // 使用默认
@@ -287,7 +289,9 @@ onMounted(() => {
                   <h3>Schema 生成 Prompt</h3>
                   <p class="prompt-desc">用于从示例文档中自动生成领域 Schema 配置的提示词</p>
                 </div>
-                <a-button size="small" @click="handleReset('schema_generation_prompt')">重置为默认</a-button>
+                <a-button size="small" @click="handleReset('schema_generation_prompt')"
+                  >重置为默认</a-button
+                >
               </div>
               <div class="variable-hint">
                 <span>可用变量：</span>
@@ -316,7 +320,9 @@ onMounted(() => {
                   <h3>章节泛化提取 Prompt</h3>
                   <p class="prompt-desc">用于对样例报告进行章节提取和泛化处理的提示词</p>
                 </div>
-                <a-button size="small" @click="handleReset('section_generalization_prompt')">重置为默认</a-button>
+                <a-button size="small" @click="handleReset('section_generalization_prompt')"
+                  >重置为默认</a-button
+                >
               </div>
               <div class="variable-hint">
                 <span>可用变量：</span>

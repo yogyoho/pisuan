@@ -38,10 +38,13 @@ export const normalizeLegacyMinioPublicUrls = (content) =>
   String(content || '').replace(LEGACY_MINIO_PUBLIC_URL_RE, '/minio/public/')
 
 // \(...\)/\[...\] LaTeX 定界符归一为 KaTeX 的 $/$$（markdown-it-katex 不识别圆括号/方括号定界，OCR 产物常用）
+// 末步去掉行尾 $$ 后的尾随空格：OCR 普遍带硬换行双空格，@vscode/markdown-it-katex 的单行 $$x$$ 判定
+// 按 firstLine.length - 2 定位闭合符，尾随空格会让块规则吞掉后续所有内容直到下一个 $$ 行（整段红字）
 const normalizeLatexDelimiters = (content) =>
   String(content || '')
     .replace(/\\\[([\s\S]*?)\\\]/g, (_, body) => `$$${body}$$`)
     .replace(/\\\(([\s\S]*?)\\\)/g, (_, body) => `$${body}$`)
+    .replace(/^(.*\$\$)[ \t]+$/gm, '$1')
 
 // 围栏/行内代码段不参与文本归一（split 捕获组：奇数下标为代码段）
 const transformOutsideCodeSegments = (content, transform) => {

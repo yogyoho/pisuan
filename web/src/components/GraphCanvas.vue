@@ -833,7 +833,9 @@ defineExpose({
 .stats-panel-enter-active,
 .stats-panel-leave-active {
   transform-origin: bottom right;
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .stats-panel-enter-from,

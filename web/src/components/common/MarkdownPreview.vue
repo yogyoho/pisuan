@@ -558,9 +558,8 @@ const showCopiedFeedback = (btn) => {
 .flat-md-preview.yk-markdown-preview {
   max-width: 100%;
   color: var(--gray-1000);
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei',
-    'Hiragino Sans GB', 'Source Han Sans CN', sans-serif;
+  // [pisuan-custom] 正文/中英文数字对齐全站单一真相（base.css --font-sans，与标准与限值库等页面一致）
+  font-family: var(--font-sans);
   font-size: 0.9rem;
   line-height: 1.75;
   word-break: break-word;

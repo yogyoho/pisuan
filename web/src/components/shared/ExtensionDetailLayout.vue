@@ -20,11 +20,7 @@
 
       <a-tab-pane v-for="tab in tabs" :key="tab.key" :force-render="tab.forceRender === true">
         <template #tab>
-          <span
-            class="extension-detail-tab-title"
-            :aria-label="tab.label"
-            :title="tab.label"
-          >
+          <span class="extension-detail-tab-title" :aria-label="tab.label" :title="tab.label">
             <component
               :is="tab.icon"
               v-if="tab.icon"

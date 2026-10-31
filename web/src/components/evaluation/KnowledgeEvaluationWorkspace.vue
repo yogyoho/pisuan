@@ -42,7 +42,11 @@
         <div class="evaluation-list-shell">
           <div v-if="loading" class="evaluation-skeleton-list" aria-label="正在加载评估基准">
             <div v-for="index in 3" :key="index" class="evaluation-skeleton-row">
-              <a-skeleton active :paragraph="{ rows: 1, width: ['72%'] }" :title="{ width: '38%' }" />
+              <a-skeleton
+                active
+                :paragraph="{ rows: 1, width: ['72%'] }"
+                :title="{ width: '38%' }"
+              />
             </div>
           </div>
 
@@ -194,7 +198,11 @@
         <div class="evaluation-list-shell">
           <div v-if="loading" class="evaluation-skeleton-list" aria-label="正在加载近期评估">
             <div v-for="index in 3" :key="index" class="evaluation-skeleton-row">
-              <a-skeleton active :paragraph="{ rows: 1, width: ['64%'] }" :title="{ width: '32%' }" />
+              <a-skeleton
+                active
+                :paragraph="{ rows: 1, width: ['64%'] }"
+                :title="{ width: '32%' }"
+              />
             </div>
           </div>
 
@@ -254,7 +262,9 @@
                       status="active"
                     />
                     <span>
-                      {{ run.message || `已完成 ${run.completed_items || 0}/${run.total_items || 0}` }}
+                      {{
+                        run.message || `已完成 ${run.completed_items || 0}/${run.total_items || 0}`
+                      }}
                     </span>
                   </span>
                 </span>

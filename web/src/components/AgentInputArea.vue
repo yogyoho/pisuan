@@ -25,7 +25,10 @@
         <div v-if="currentImages.length || previewAttachments.length" class="input-top-stack">
           <div v-if="currentImages.length" class="image-preview-list">
             <template v-for="(image, index) in currentImages" :key="image.localId">
-              <div v-if="image.status === 'uploading'" class="image-preview-wrapper image-uploading-tile">
+              <div
+                v-if="image.status === 'uploading'"
+                class="image-preview-wrapper image-uploading-tile"
+              >
                 <span class="image-uploading-text">上传中…</span>
                 <button
                   class="image-uploading-remove"

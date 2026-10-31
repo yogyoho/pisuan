@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
 import {
@@ -9,19 +10,13 @@ import {
   getAvatarInitials
 } from '../../src/utils/pixelAvatar.js'
 
-const DICEBEAR_GLYPHS_AVATAR_BASE_URL = 'https://api.dicebear.com/10.x/glyphs/svg'
+const LOCAL_USER_AVATAR = '/user-avatar.svg'
 
-test('pixel avatars are stable and provide localized fallbacks', () => {
-  assert.equal(generatePixelAvatar('user-001'), generatePixelAvatar('user-001'))
-  assert.notEqual(generatePixelAvatar('user-001'), generatePixelAvatar('user-002'))
-  assert.equal(
-    generatePixelAvatar('user-003'),
-    `${DICEBEAR_GLYPHS_AVATAR_BASE_URL}?seed=user-003`
-  )
-  assert.equal(
-    generatePixelAvatar(' user/中文 '),
-    `${DICEBEAR_GLYPHS_AVATAR_BASE_URL}?seed=user%2F%E4%B8%AD%E6%96%87`
-  )
+test('user avatars resolve to the bundled local icon', () => {
+  assert.equal(generatePixelAvatar('user-001'), LOCAL_USER_AVATAR)
+  assert.equal(generatePixelAvatar('user-002'), LOCAL_USER_AVATAR)
+  assert.equal(generatePixelAvatar(' user/中文 '), LOCAL_USER_AVATAR)
+  assert.doesNotMatch(generatePixelAvatar('user-001'), /^https?:/i)
   assert.throws(() => generatePixelAvatar(''), /requires an id/)
   assert.throws(() => generatePixelAvatar(null), /requires an id/)
 
@@ -35,7 +30,19 @@ test('pixel avatars are stable and provide localized fallbacks', () => {
   assert.notEqual(first, getAvatarColorIndex('user-002'))
   assert.ok(first >= 0 && first < AVATAR_BACKGROUND_TOKENS.length)
 
-  const style = getAvatarFallbackStyle('agent-001')
-  assert.equal(typeof style.background, 'string')
-  assert.equal(typeof style.color, 'string')
+  const userStyle = getAvatarFallbackStyle('user-001', 'user')
+  assert.equal(userStyle.background, 'var(--main-color)')
+  assert.equal(userStyle.color, '#fff')
+  assert.equal(getAvatarFallbackStyle('user-001').background, 'var(--main-color)')
+
+  const agentStyle = getAvatarFallbackStyle('agent-001', 'agent')
+  assert.match(agentStyle.background, /^linear-gradient\(/)
+  assert.equal(typeof agentStyle.color, 'string')
+})
+
+test('bundled user avatar is served locally without remote references', async () => {
+  const svg = await readFile(new URL(`../../public${LOCAL_USER_AVATAR}`, import.meta.url), 'utf8')
+  assert.match(svg, /<svg[\s>]/)
+  assert.doesNotMatch(svg, /(?:href|src)=["']https?:/i)
+  assert.doesNotMatch(svg, /url\(\s*["']?https?:/i)
 })

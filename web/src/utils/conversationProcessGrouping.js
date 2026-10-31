@@ -98,12 +98,13 @@ export const isConversationSettled = (conversations, conv, isProcessing = false)
 }
 
 /** 为没有普通消息的 Run 提供可观察状态。 */
-export const formatEmptyRunStatus = (status) => ({
-  pending: '等待运行',
-  running: '正在处理',
-  cancel_requested: '正在取消',
-  cancelled: '本次运行已取消',
-  failed: '本次运行失败',
-  interrupted: '本次运行已中断',
-  completed: '本次运行已结束'
-})[status] || '暂无消息'
+export const formatEmptyRunStatus = (status) =>
+  ({
+    pending: '等待运行',
+    running: '正在处理',
+    cancel_requested: '正在取消',
+    cancelled: '本次运行已取消',
+    failed: '本次运行失败',
+    interrupted: '本次运行已中断',
+    completed: '本次运行已结束'
+  })[status] || '暂无消息'
