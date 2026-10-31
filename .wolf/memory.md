@@ -8449,3 +8449,58 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 09:49 | Session end: 10 writes across 4 files (progress.py, progress.json, DEPRECATED-首次尝试遗留现场说明.md, .git-commit-msg-wolf.txt) | 28 reads | ~163227 tok |
 | 09:52 | Session end: 10 writes across 4 files (progress.py, progress.json, DEPRECATED-首次尝试遗留现场说明.md, .git-commit-msg-wolf.txt) | 28 reads | ~163227 tok |
 | 21:5x | 终审工作流完成（9 agents/6 维/3 Major 对抗复核全确认 0 驳回）：3f0059a55 上游 utils 落位（bug-4167 系，需裁定）、/domain-entity-builder/domains 外露（bug-4182）、manager.py 种子层 coal（bug-4183）；Minor 若干含 import-extracted coal 默认（bug-4184）、contexts 锚定缺失（bug-4185）；评审员 E2E 段信息滞后（API 冒烟已跑 20:30） | wkh3k6qqa | buglog 590→594，分批裁定呈用户 | ~30k |
+| 10:03 | Session end: 10 writes across 4 files (progress.py, progress.json, DEPRECATED-首次尝试遗留现场说明.md, .git-commit-msg-wolf.txt) | 30 reads | ~163227 tok |
+| 10:03 | Edited backend/package/yuxi/repositories/domain_entity_repository.py | added 1 import(s) | ~83 |
+| 10:04 | Edited backend/package/yuxi/repositories/domain_entity_repository.py | modified list_domains_in_use() | ~140 |
+| 10:04 | Edited backend/package/yuxi/storage/postgres/manager.py | 7→4 lines | ~78 |
+| 10:05 | Edited backend/package/yuxi/storage/postgres/manager.py | 2→2 lines | ~40 |
+| 10:05 | Edited backend/package/yuxi/storage/postgres/manager.py | inline fix | ~39 |
+| 10:06 | Edited backend/package/yuxi/storage/postgres/manager.py | 9→9 lines | ~194 |
+| 10:06 | Edited backend/package/yuxi/storage/postgres/models_domain_entity.py | "coal" → "general" | ~24 |
+| 10:06 | Edited backend/server/routers/domain_entity_builder_router.py | added 1 import(s) | ~57 |
+| 10:07 | Edited backend/server/routers/domain_entity_builder_router.py | inline fix | ~20 |
+| 10:07 | Edited backend/package/yuxi/services/domain_factory_service.py | 17→20 lines | ~225 |
+| 10:11 | Created backend/test/unit/routers/test_domain_factory_dedomain_contract.py | — | ~999 |
+
+## Session: 2026-10-31 10:14
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:17 | Edited web/src/views/DomainEntityBuilderView.vue | inline fix | ~18 |
+| 10:18 | Edited web/src/views/DomainEntityBuilderView.vue | reduced (-8 lines) | ~24 |
+| 10:18 | Edited web/src/views/DomainEntityBuilderView.vue | removed 9 lines | ~12 |
+| 10:18 | Edited web/src/views/DomainEntityBuilderView.vue | "!extractFile || !extractD" → "!extractFile" | ~11 |
+| 10:18 | Edited web/src/views/DomainEntityBuilderView.vue | 5→4 lines | ~43 |
+| 10:18 | Edited web/src/views/DomainEntityBuilderView.vue | 4→3 lines | ~20 |
+| 10:18 | Edited web/src/views/DomainEntityBuilderView.vue | 3→2 lines | ~16 |
+| 10:18 | Edited web/src/views/DomainEntityBuilderView.vue | 3→1 lines | ~8 |
+| 10:18 | Edited web/src/views/DomainEntityBuilderView.vue | 4→4 lines | ~45 |
+| 10:18 | Edited web/src/views/DomainEntityBuilderView.vue | 2→1 lines | ~23 |
+| 10:18 | Session end: 10 writes across 1 files (DomainEntityBuilderView.vue) | 5 reads | ~120424 tok |
+| 10:18 | Edited web/src/views/DomainEntityBuilderView.vue | modified if() | ~33 |
+| 10:18 | Edited web/src/views/DomainEntityBuilderView.vue | removed 16 lines | ~10 |
+| 10:18 | Edited web/src/views/DomainEntityBuilderView.vue | modified if() | ~30 |
+| 10:19 | Edited web/src/views/DomainEntityBuilderView.vue | modified if() | ~95 |
+| 10:19 | Edited web/src/views/DomainEntityBuilderView.vue | 3→2 lines | ~27 |
+| 10:19 | Edited web/src/views/DomainEntityBuilderView.vue | 3→2 lines | ~16 |
+| 10:19 | Edited web/src/views/DomainEntityBuilderView.vue | inline fix | ~9 |
+| 10:19 | Edited web/src/views/DomainEntityBuilderView.vue | inline fix | ~28 |
+| 10:19 | Edited web/src/views/DomainEntityBuilderView.vue | inline fix | ~28 |
+| 10:19 | Edited web/src/views/DomainEntityBuilderView.vue | removed 7 lines | ~3 |
+| 10:19 | Edited web/src/views/GeneralOverviewView.vue | "领域文档批量上传，选择领域与报告类型，自动建任务入" → "批量上传，选择报告类型，自动建任务入队解析。" | ~10 |
+| 10:19 | Edited web/src/apis/domain_factory_api.js | 3→2 lines | ~22 |
+| 10:19 | Edited web/src/apis/domain_factory_api.js | "知识工厂: 新阳煤矿2023环评.docx" → "知识工厂: 示例环境评估报告2026.docx" | ~13 |
+| 10:19 | Edited web/src/apis/domain_factory_api.js | inline fix | ~28 |
+| 10:20 | Session end: 24 writes across 3 files (DomainEntityBuilderView.vue, GeneralOverviewView.vue, domain_factory_api.js) | 5 reads | ~120798 tok |
+| 10:21 | Edited scripts/governance/dedomain_coal_to_general.py | 7→12 lines | ~142 |
+| 10:21 | Edited scripts/governance/dedomain_coal_to_general.py | modified main() | ~108 |
+| 10:21 | Edited scripts/governance/dedomain_coal_to_general.py | inline fix | ~18 |
+| 10:22 | Edited backend/scripts/governance/dedomain_chapter_templates_graph.py | expanded (+6 lines) | ~282 |
+| 10:23 | Edited docs/develop-guides/changelog.md | "backend/scripts/governanc" → "scripts/governance/dedoma" | ~15 |
+| 10:24 | Edited docs/vibe/2026-10-29-etl-pipeline-dedomain-design.md | 1→3 lines | ~155 |
+| 10:24 | Edited docs/vibe/2026-10-29-etl-pipeline-dedomain-design.md | inline fix | ~16 |
+| 10:25 | Session end: 31 writes across 7 files (DomainEntityBuilderView.vue, GeneralOverviewView.vue, domain_factory_api.js, dedomain_coal_to_general.py, dedomain_chapter_templates_graph.py) | 10 reads | ~167331 tok |
+| 10:25 | Edited docs/develop-guides/upstream-sync-guide.md | 1→3 lines | ~157 |
+| 10:27 | Edited backend/test/unit/routers/test_domain_factory_dedomain_contract.py | inline fix | ~26 |
+| 10:39 | Session end: 33 writes across 9 files (DomainEntityBuilderView.vue, GeneralOverviewView.vue, domain_factory_api.js, dedomain_coal_to_general.py, dedomain_chapter_templates_graph.py) | 14 reads | ~201051 tok |
+| 10:40 | Session end: 33 writes across 9 files (DomainEntityBuilderView.vue, GeneralOverviewView.vue, domain_factory_api.js, dedomain_coal_to_general.py, dedomain_chapter_templates_graph.py) | 14 reads | ~201051 tok |

@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-31T01:44:36.469Z
-> Files: 57 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-31T02:27:50.726Z
+> Files: 64 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -328,11 +328,12 @@
 
 ## backend/package/yuxi/repositories/
 
+- `domain_entity_repository.py` — Domain Entity Builder 数据访问层 - Repository (~3642 tok)
 - `domain_factory_repository.py` — Domain Factory 数据访问层 - Repository (~13976 tok)
 
 ## backend/package/yuxi/services/
 
-- `domain_factory_service.py` — Domain Factory Service - 领域知识工厂服务层 (~80186 tok)
+- `domain_factory_service.py` — Domain Factory Service - 领域知识工厂服务层 (~80230 tok)
 - `graph_builder.py` — 知识图谱构建服务：将领域工厂结构化数据写入 Neo4j 图谱 (~19261 tok)
 - `graph_query_service.py` — 图谱查询服务:封装 Cypher,供工具直查 Neo4j 图谱。 (~4951 tok)
 
@@ -344,6 +345,8 @@
 
 ## backend/package/yuxi/storage/postgres/
 
+- `manager.py` — PostgreSQL 数据库管理器 - 支持知识库和业务数据 (~33526 tok)
+- `models_domain_entity.py` — Domain Entity Builder - 领域实体 Schema 定义模型 (~953 tok)
 
 ## backend/package/yuxi/utils/
 
@@ -355,7 +358,7 @@
 
 ## backend/scripts/governance/
 
-- `dedomain_chapter_templates_graph.py` — 去领域化图谱侧存量迁移：ChapterTemplate / DomainOutline 的 domain 'coal' → 'general'，并重写内嵌域的节点 id。 (~1328 tok)
+- `dedomain_chapter_templates_graph.py` — 去领域化图谱侧存量迁移：ChapterTemplate / DomainOutline 的 domain 'coal' → 'general'，并重写内嵌域的节点 id。 (~1425 tok)
 - `merge_chapter_templates.py` — 存量 ChapterTemplate 治理脚本（bug-4167 spec §4.4）：归一 canonical、合并重复、纠挂、编号结构化、删测试子树、meta 回写。 (~9250 tok)
 
 ## backend/server/
@@ -363,6 +366,7 @@
 
 ## backend/server/routers/
 
+- `domain_entity_builder_router.py` — Domain Entity Builder API Router - 领域实体构建器路由 (~3354 tok)
 - `domain_factory_router.py` — Domain Factory API Router - 领域知识工厂路由 (~23002 tok)
 
 ## backend/server/utils/
@@ -445,6 +449,7 @@
 
 ## backend/test/unit/routers/
 
+- `test_domain_factory_dedomain_contract.py` — 去领域化 HTTP 契约的 CI 通道单测。 (~997 tok)
 
 ## backend/test/unit/server/
 
@@ -500,7 +505,8 @@
 
 ## docs/develop-guides/
 
-- `changelog.md` — 版本变更记录 (~39768 tok)
+- `changelog.md` — 版本变更记录 (~39766 tok)
+- `upstream-sync-guide.md` — 上游代码同步与本地化扩展实施方案 (~4100 tok)
 
 ## docs/intro/
 
@@ -518,7 +524,7 @@
 - `2026-10-27-chapter-writer-user-test-plan.md` — 分章节环评报告写作 · 用户测试方案 (~1123 tok)
 - `2026-10-27-post-confirm-revision-and-figure-slots.md` — 交付后章节修改 + 插图占位 · 需求文档 (~476 tok)
 - `2026-10-29-chapter-writer-clear-rerun-test.md` — 分章管线清空重测报告（planning_eia / ch2 全自主轮） (~2270 tok)
-- `2026-10-29-etl-pipeline-dedomain-design.md` — 通用域知识工厂 ETL 管线：现状梳理与去领域化设计 (~2963 tok)
+- `2026-10-29-etl-pipeline-dedomain-design.md` — 通用域知识工厂 ETL 管线：现状梳理与去领域化设计 (~3062 tok)
 
 ## docs/vibe/assets/2026-09-30-coal-eia-v2-port/
 
@@ -534,7 +540,7 @@
 
 ## scripts/governance/
 
-- `dedomain_coal_to_general.py` — 去领域化存量迁移：domain_code 'coal' 等历史域值 → 'general'（设计 docs/vibe/2026-10-29-etl-pipeline-dedomain-design.m (~1725 tok)
+- `dedomain_coal_to_general.py` — 去领域化存量迁移：domain_code 'coal' 等历史域值 → 'general'（设计 docs/vibe/2026-10-29-etl-pipeline-dedomain-design.m (~1812 tok)
 
 ## web/
 
@@ -547,7 +553,7 @@
 
 ## web/src/apis/
 
-- `domain_factory_api.js` — Domain Knowledge Factory API (~3026 tok)
+- `domain_factory_api.js` — Domain Knowledge Factory API (~3016 tok)
 
 ## web/src/assets/css/
 
@@ -590,8 +596,9 @@
 
 ## web/src/views/
 
-- `DomainEntityBuilderView.vue` — Vue component (~13930 tok)
+- `DomainEntityBuilderView.vue` — Vue component (~13556 tok)
 - `GeneralDataView.vue` — Vue: setup (~139 tok)
+- `GeneralOverviewView.vue` — Vue: setup (~5655 tok)
 - `PromptConfigView.vue` — Vue: setup (~3069 tok)
 
 ## web/test/unit/
