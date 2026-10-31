@@ -2961,6 +2961,22 @@
       "note": "遥感解译成果=用户文档录入（三期影像 LUCC/植被/NPP/侵蚀/景观指数），禁 LLM 生成——生态方法学不入 formula freeze（能力边界）",
       "fields": [
         {
+          "name": "eval_area_km2",
+          "label": "评价区面积",
+          "type": "number",
+          "unit": "km²",
+          "required": false,
+          "note": "评价区=矿区外扩3km（2021版评价口径）"
+        },
+        {
+          "name": "mine_area_km2",
+          "label": "矿区面积",
+          "type": "number",
+          "unit": "km²",
+          "required": false,
+          "note": "规划矿区面积（修编后）"
+        },
+        {
           "name": "land_use",
           "label": "土地利用构成",
           "type": "array<object>",
