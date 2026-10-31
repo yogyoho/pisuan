@@ -1,5 +1,8 @@
 import MessageProcessor from '@/utils/messageProcessor'
-import { enrichTaskToolCalls } from '@/components/ToolCallingResult/toolRegistry'
+import { enrichTaskToolCalls, getToolCallId } from '@/components/ToolCallingResult/toolRegistry'
+
+/** 提问类工具（卡A/卡B 等交互卡）必须常驻可见，禁被任务收起栏折叠。 */
+const QUESTION_TOOL_NAME = 'ask_user_question'
 import { collapseConversationProcess } from '@/utils/conversationProcessGrouping'
 
 const hasVisibleAssistantBody = (message) => {
@@ -78,6 +81,9 @@ export const getConversationDisplayItems = (
 
     if (toolCalls.length > 0) {
       const group = ensureToolGroup('tools')
+      if (toolCalls.some((toolCall) => getToolCallId(toolCall) === QUESTION_TOOL_NAME)) {
+        group.hasInteractive = true
+      }
       group.toolCalls.push(...toolCalls)
       group.entries.push(
         ...toolCalls.map((toolCall, toolIndex) => ({

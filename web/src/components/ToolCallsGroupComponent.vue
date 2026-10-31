@@ -46,7 +46,7 @@
               v-else
               :tool-call="entry.toolCall"
               appearance="timeline"
-              :default-expanded="false"
+              :default-expanded="isQuestionEntry(entry)"
             />
           </div>
         </div>
@@ -104,7 +104,17 @@ const displayEntries = computed(() =>
 const hasReasoning = computed(() =>
   displayEntries.value.some((entry) => entry.type === 'reasoning')
 )
-const shouldCollapseToolCalls = computed(() => displayEntries.value.length > 0)
+// 含提问卡的组禁折叠（卡A/卡B 等——候选详情必须常驻可见，用户要看并选择）
+const hasInteractiveQuestion = computed(() =>
+  displayEntries.value.some(
+    (entry) => entry.type === 'tool' && getToolCallId(entry.toolCall) === 'ask_user_question'
+  )
+)
+const shouldCollapseToolCalls = computed(
+  () => displayEntries.value.length > 0 && !hasInteractiveQuestion.value
+)
+const isQuestionEntry = (entry) =>
+  entry.type === 'tool' && getToolCallId(entry.toolCall) === 'ask_user_question'
 const areToolCallsExpanded = ref(false)
 
 watch(

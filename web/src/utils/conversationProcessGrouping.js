@@ -45,6 +45,9 @@ export const formatProcessDuration = (durationMs) => {
 export const collapseConversationProcess = (items, enabled = false, runTiming = null) => {
   if (!enabled) return items
 
+  // 含提问卡的组不折叠成过程栏——交互候选（卡A/卡B 等）必须常驻可见，用户要看详情并选择
+  if (items.some((item) => item.type === 'tool-group' && item.hasInteractive)) return items
+
   const finalIndex = items.findLastIndex(
     (item) => item.type === 'message' && item.message?.type === 'ai'
   )
