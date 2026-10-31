@@ -1962,3 +1962,13 @@
 - 不要假设仓库根 scripts/ 会被 sync-dev 带进运行栈——它只同步 backend/web；一次性脚本用 docker cp 进容器。
 - 宿主机 python 没有 sqlalchemy——凡依赖 yuxi/pisuan 包的治理脚本一律进容器跑，别在宿主试跑。
 - [2026-10-30] sync-dev 同步完成后立刻跑集成测试必撞 api 容器热重载窗口：2 failed 全是 httpx.ReadTimeout 假红（本轮基线首轮中招），等约 1 分钟复跑即绿；判基线红前先复跑一次再定性。另：平台 Bash 分类器限流可持续 10 分钟以上，期间只读工具(Read/Grep/Glob)与 Monitor 均可用，Monitor sleep 是合规等待手段。
+
+## 2026-10-31 终审窗口追加
+
+### Key Learnings
+- **读路径收口必须跨路由盘点**：contexts 修一处（9ba63af18）不够——同型外露在 /domain-entity-builder/domains（list_domains_in_use 全表 select）复现，且设计期爆炸半径清单漏了 entity-builder 路由与 manager.py 种子层。收口清单应按「数据表→全部出口」反向盘点，而非按「计划改过的文件」正向盘点。
+- **fresh-stack 是去域验收盲区**：迁移/过滤只护存量栈；种子层 coal 默认值（manager.py:2041-2093）、contexts 不锚定通用域行（单跑测试/fresh 库 domains=[]）都会在全新安装复发。凡「恒返回 X」契约必须无条件锚定，不能依赖兄弟用例副作用。
+- **评审区间混入并行工作线时**：Major 按约束字面判（上游共有文件 hunk 不可追溯即违规）成立，但处置分两层——归档口径（它有自有 spec，评审簿记剔除即可）与代码动作（utils 落位迁移是语义改动，须原作者/用户裁定，控制台不可单方迁）。
+
+### Do-Not-Repeat
+- 不要把「爆炸半径」清单当完备：本次设计清单只盘 domain_factory_router，漏 entity-builder 路由 coal 默认值（bug-4184）与 manager.py 种子层（bug-4183）。凡 domain 语义收敛，grep 必须含默认值字面量（payload.get("domain_code", "coal") 型）与 DDL/ORM 列默认。

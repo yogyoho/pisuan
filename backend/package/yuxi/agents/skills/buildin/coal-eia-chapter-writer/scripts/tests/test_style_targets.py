@@ -10,22 +10,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from style_targets import generate
 
-# fixture 文本均经实现口径逐字符核对：ch1 两切片全文 eff=91（54+37，含表格行）、
-# 表行 4、表格块 2、文表引用 2、正文 eff=64、正文数字 9 → num_per_k=140.6；
-# 分句 24/14/23 → 均句长 20.3
-A1 = (
-    "## 1 总则\n"
-    "本次评价范围面积为86平方公里，见表1-1。\n"
-    "| 指标 | 数值 |\n"
-    "| 面积 | 86 |\n"
-    "由表1-1可知，规划面积明确。\n"
-)
-B1 = (
-    "## 1.2 评价时段\n"
-    "评价时段为2025年至2035年。\n"
-    "| 时段 | 年限 |\n"
-    "| 近期 | 5 |\n"
-)
+# fixture 文本均经实现口径逐字符核对（bug-4162 中位数口径：逐文件实测取中位，双文件取均值）：
+# A1: eff=54、表行 2、表块 1、文表引用 2、密度 150.0、均句长 19.0；
+# B1: eff=37、表行 2、表块 1、文表引用 0、密度 125.0、均句长 23.0
+A1 = "## 1 总则\n本次评价范围面积为86平方公里，见表1-1。\n| 指标 | 数值 |\n| 面积 | 86 |\n由表1-1可知，规划面积明确。\n"
+B1 = "## 1.2 评价时段\n评价时段为2025年至2035年。\n| 时段 | 年限 |\n| 近期 | 5 |\n"
 A2 = "## 2 规划概况\n矿区位于某省某市，含三个井田。\n"
 C4 = "## 4 识别\n由表4-1识别结果，见表4-2清单，由表4-3因子，详见表4-4。\n"  # 单文件 4 处引用
 
@@ -67,14 +56,15 @@ def test_minibank_exact_metrics(tmp_path):
     bank = _mk_bank(tmp_path)
     c1 = generate("demo", bank, tmp_path / "stage.json")["chapters"]["ch1"]
     assert c1["status"] == "OK"
-    assert c1["effective_chars"] == 91
-    assert c1["table_rows"] == 4
-    assert c1["table_blocks"] == 2
-    assert c1["fig_refs"] == 2
-    # 文表联动下限 = max(1, round(单份平均 refs×0.5))；ch1 两文件 2 refs → 地板 1
+    assert c1["n_files"] == 2
+    assert c1["effective_chars"] == 45  # 中位(54,37)=45.5→45；池化均值 91 是 bug-4162 缺陷口径
+    assert c1["table_rows"] == 2
+    assert c1["table_blocks"] == 1
+    assert c1["fig_refs"] == 1
+    # 文表联动下限 = max(1, round(单份中位 refs×0.5))；中位 1 → round(0.5)=0 → 地板 1
     assert c1["fig_table_ref_min"] == 1
-    assert c1["num_per_k"]["obs"] == pytest.approx(140.6, abs=0.2)
-    assert c1["avg_sent_len"]["obs"] == pytest.approx(20.3, abs=0.2)
+    assert c1["num_per_k"]["obs"] == pytest.approx(137.5, abs=0.2)  # 中位(150.0,125.0)；池化 140.6
+    assert c1["avg_sent_len"]["obs"] == pytest.approx(21.0, abs=0.2)  # 中位(19.0,23.0)
 
 
 def test_zero_table_chapter_floor(tmp_path):

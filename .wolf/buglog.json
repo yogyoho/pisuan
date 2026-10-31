@@ -10459,5 +10459,83 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-30"
+  },
+  {
+    "id": "bug-4182",
+    "timestamp": "2026-10-31",
+    "error_message": "终审确认 Major：GET /api/domain-entity-builder/domains 全量透出冻结历史域行（coal/chem/mineral/transport），前端 DomainEntityBuilderView 仍渲染为行业选择器选项",
+    "file": "backend/package/yuxi/repositories/domain_entity_repository.py",
+    "root_cause": "list_domains_in_use(:274) select(DomainFactoryDomain) 全表无过滤，经 domain_entity_builder_router.py:39-50（__init__.py:70 挂载）直通客户端；Task 10 只下线了 /domain-factory/domains 四端点，e13772d91 提交信息自承『listDomains 暂保留待 domains 服务下线时统一收口』但触发条件（f40cb436c）发生后收口未落地，计划亦无此收口任务。与 9ba63af18 修掉的 contexts 外露完全同型（读路径漏改）。",
+    "fix": "待裁定（终审对抗复核确认，0 驳回）：比照 9ba63af18 在 repo 方法或路由层过滤 code == GENERAL_DOMAIN_CODE，前端一并摘除 listDomains 调用与两个选择器 domainOptions 数据源。",
+    "tags": [
+      "dedomain",
+      "read-path-exposure",
+      "frozen-rows",
+      "entity-builder",
+      "review-confirmed-major"
+    ],
+    "related_bugs": [
+      "bug-4180"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-31"
+  },
+  {
+    "id": "bug-4183",
+    "timestamp": "2026-10-31",
+    "error_message": "终审 Major：manager.py 启动引导种子/默认值仍写 coal——全新安装会重建 coal/chem/transport 域行与 coal 编码 report_types，经 contexts 再度外露且大纲模板页报告类型恒空（bug-4175 同类）",
+    "file": "backend/package/yuxi/storage/postgres/manager.py",
+    "root_cause": "manager.py:2041-2046 每次启动幂等重建 coal/chem/transport 域行、:2085-2093 全新库插 3 条 domain_code='coal' 的 report_types 种子、:2053/:2065 与 models_domain_entity.py:24 的 DDL/ORM 默认值均 'coal'；设计 §3.7 误记『scripts/ 零匹配』未盘点此层。存量栈已被迁移遮蔽，fresh stack 必复发。",
+    "fix": "待裁定（触及上游共有文件 manager.py，需用户授权 hunks）：启动种子与列默认值统一改 'general'（幂等 NOT EXISTS 不影响已迁移存量），contexts 分组后仅保留 GENERAL_DOMAIN_CODE 键兜底。",
+    "tags": [
+      "dedomain",
+      "seed-layer",
+      "fresh-install",
+      "upstream-shared",
+      "review-major-unverified"
+    ],
+    "related_bugs": [
+      "bug-4175",
+      "bug-4182"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-31"
+  },
+  {
+    "id": "bug-4184",
+    "timestamp": "2026-10-31",
+    "error_message": "终审 Minor：import-extracted 端点默认值 \"coal\" 残留（domain_entity_builder_router.py:215 payload.get(\"domain_code\", \"coal\")），缺省调用把实体重新写回历史域",
+    "file": "backend/server/routers/domain_entity_builder_router.py",
+    "root_cause": "设计爆炸半径清单只盘了 domain_factory_router，漏掉本路由；省略 domain_code 的客户端调用会把 domain_entity_schemas 行以 'coal' 落库，此后按 general 检索均不可见，悄悄重演已迁移清除的脏数据。",
+    "fix": "待裁定：默认值改 GENERAL_DOMAIN_CODE（导入常量）或必填校验拒绝缺省。",
+    "tags": [
+      "dedomain",
+      "write-path",
+      "coal-default",
+      "entity-builder"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-31"
+  },
+  {
+    "id": "bug-4185",
+    "timestamp": "2026-10-31",
+    "error_message": "终审 Minor：test_contexts_single_general_domain 的恒绿依赖同文件 upload 用例建行副作用；单独跑（pytest -k）或全新库上 domains=[] 断言必红",
+    "file": "backend/test/integration/api/test_domain_factory_api.py",
+    "root_cause": "get_contexts 只过滤不锚定（domain_factory_service.py:5838-5839），通用域行仅由 create_task 的 get_or_create_general_domain 锚定（service :567）；「响应恒单元素」的承诺在无上传历史的新栈不成立。",
+    "fix": "待裁定：get_contexts 内调用 get_or_create_general_domain 使恒单元素无条件成立，或用例前置显式锚定。另同文件 upload 用例在活栈留无清理永久残留（dedomain-smoke.txt 任务行），需 teardown 或 cleanup 回收。",
+    "tags": [
+      "dedomain",
+      "test-contract",
+      "anchor-missing",
+      "fresh-install",
+      "cleanup-gap"
+    ],
+    "related_bugs": [
+      "bug-4180"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-31"
   }
 ]

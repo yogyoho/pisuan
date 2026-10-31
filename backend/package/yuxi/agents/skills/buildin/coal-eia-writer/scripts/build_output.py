@@ -7,6 +7,8 @@ state/chapters/chNN.md 供门与组装，两层状态模型）→ 合规性附�
 
 注入协议（D5/1A，geo 语义原样）：{{SLOT:key}} → formula_state.values[key].display（未知 key=FAIL）；
 {{TABLE:fam}} → data/ 表单族渲染为 markdown 表。原子写 tmp+os.replace；内容不变跳过写盘保 mtime。
+{{FIG:图名}} → 注入协议之外的合法占位（R5 插图位）：不注入、交付稿原样保留，用户后续自行插图；
+形非法（空图名/畸形括号）在残留门 FAIL。
 
 章门（--chapter / progress.py gate 批量入口，D9 粒度分层：门禁=章级、节无独立门）：
   节级门（错误**归因到节**，一行一节——OV#7 修复派发不盲）：
@@ -14,7 +16,7 @@ state/chapters/chNN.md 供门与组装，两层状态模型）→ 合规性附�
     ② 节清单约束：一节一稿一 ###（新增小节用 ####；自创节 FAIL——节由 stage sections 清单约束）
     ③ L0 深度门：每个标题块 ≥3 句（表格行不计句；有更深子块的父块豁免——geo 语义节级化）
     ④ 槽位注入：未知 {{SLOT:}} FAIL、display 空/非标量 FAIL、TABLE 未知表单族 FAIL（geo 语义原样）
-    ⑤ 残留扫描：槽位标记/脚手架词/合约 ID/XX 占位（geo 语义原样）
+    ⑤ 残留扫描：槽位标记/脚手架词/合约 ID/XX 占位（geo 语义原样）；FIG 占位合法保留、空图名/畸形形 FAIL（R5 插图占位）
   章级门：
     ⑥ L2 深度门对**章**断言：章实有效字符 ≥ 章地板（references/depth_targets/<stage>.json 的
        chapters[ch].floor_chars；缺省默认字符地板 30000——一期绝对地板，二期 calibrate 校准）。
@@ -55,6 +57,7 @@ import style_targets  # 同目录：文风门复用 _metrics/_eff/_strip_tables 
 EXIT_OK, EXIT_ERROR = 0, 1
 SLOT_RE = re.compile(r"\{\{SLOT:([^}]+)\}\}")
 TABLE_RE = re.compile(r"\{\{TABLE:([^}]+)\}\}")
+FIG_RE = re.compile(r"\{\{FIG\s*[:：]([^{}]*)\}\}")  # 插图占位（R5）：不注入，交付稿原样保留，用户后续自行插图
 TBLNO = "⟦TBLNO⟧"  # 机位表题占位：render_family 发射，inject _assign_table_numbers 落号（bug-394）
 WRITER_CAP_RE = re.compile(
     r"^表\s*\d+(?:(?:[-.]\d+)+)?\s+([^，。；！？]+)$"
@@ -538,6 +541,14 @@ RESIDUE_RE = re.compile(
 
 
 def validate_residue(ch_id: str, text: str) -> None:
+    # 插图占位（R5）：{{FIG:图名}} 是合法交付内容——占位原样保留由用户自行插图，不属残留；
+    # 但只认双括号规整形且图名非空（空图名/单括号/错配收形会以字面量污染交付稿，N19 同构）。
+    figs = FIG_RE.findall(text)
+    if any(not name.strip() for name in figs) or len(re.findall(r"\{+FIG\s*[:：]", text)) != len(figs):
+        raise ValueError(
+            "残留扫描门 FAIL（R5 插图占位）：{{FIG:…}} 形不合法——图名不得为空，占位须双括号规整形"
+            "（如 {{FIG:矿区井田划分图}}，业务语图名），改后重跑"
+        )
     hits = sorted({m.group(0) for m in RESIDUE_RE.finditer(text)})
     if hits:
         raise ValueError(

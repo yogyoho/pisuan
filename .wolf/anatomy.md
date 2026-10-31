@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-31T01:42:17.848Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-31T01:44:36.469Z
 > Files: 57 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
@@ -38,7 +38,7 @@
 ## ./
 
 - `.git-commit-msg-bug4176.txt` (~164 tok)
-- `.git-commit-msg-wolf.txt` (~73 tok)
+- `.git-commit-msg-wolf.txt` (~116 tok)
 
 ## .archify/workflow-corpus-writer-20261023-071348/
 
