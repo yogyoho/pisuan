@@ -1170,12 +1170,12 @@ const handleSaveRule = () => {
 // --- Import / Export ---
 const handleExport = async () => {
   try {
-    const res = await domainEntityBuilderApi.exportConfig(currentDomain.value)
+    const res = await domainEntityBuilderApi.exportConfig('general') // 去领域化：恒传通用域
     if (res.success) {
       const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' })
       const link = document.createElement('a')
       link.href = URL.createObjectURL(blob)
-      link.download = `domain_entity_${currentDomain.value}_${Date.now()}.json`
+      link.download = `domain_entity_general_${Date.now()}.json`
       link.click()
       URL.revokeObjectURL(link.href)
       message.success('配置导出成功')
@@ -1237,7 +1237,6 @@ const handleDownloadJson = () => {
 const handleBack = () => router.push({ name: 'DomainFactoryMain' })
 
 onMounted(async () => {
-  await loadDictionaries()
   if (route.query.entity_key) pendingEntityKey.value = route.query.entity_key
   loadData()
 })
@@ -1253,7 +1252,6 @@ watch(
 // ========== AI Extraction ==========
 
 const handleOpenExtract = () => {
-  extractDomain.value = currentDomain.value
   extractFile.value = null
   extractComparison.value = []
   extractSelected.value = {}
@@ -1271,10 +1269,10 @@ const handleExtractUpload = (file) => {
 }
 
 const handleStartExtract = async () => {
-  if (!extractFile.value || !extractDomain.value) return
+  if (!extractFile.value) return
   extracting.value = true
   try {
-    const res = await domainEntityBuilderApi.extractEntities(extractFile.value, extractDomain.value)
+    const res = await domainEntityBuilderApi.extractEntities(extractFile.value, 'general') // 去领域化：恒传通用域
     if (res.success) {
       extractComparison.value = res.data.comparison || res.data.entities || []
       extractSelected.value = {}
@@ -1310,7 +1308,7 @@ const handleImportExtracted = async () => {
   }
   importing.value = true
   try {
-    const res = await domainEntityBuilderApi.importExtractedEntities(selected, extractDomain.value)
+    const res = await domainEntityBuilderApi.importExtractedEntities(selected, 'general') // 去领域化：恒传通用域
     if (res.success) {
       message.success(res.message || `导入完成`)
       showExtractModal.value = false
@@ -1348,11 +1346,6 @@ const formatFileSize = (bytes) => {
   if (bytes < 1024) return bytes + ' B'
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
-}
-
-const domainLabel = (code) => {
-  const found = domainOptions.value.find((d) => d.value === code)
-  return found ? found.label : code
 }
 </script>
 

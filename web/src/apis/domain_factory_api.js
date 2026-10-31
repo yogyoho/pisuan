@@ -359,7 +359,6 @@ export const domainFactoryApi = {
   /**
    * 获取所有领域工厂任务（用于任务中心展示）
    * @param {object} params - 查询参数
-   * @param {string} params.domain - 领域筛选
    * @param {number} params.limit - 返回数量限制
    * @returns {Promise<{tasks: Array}>}
    */
@@ -370,13 +369,13 @@ export const domainFactoryApi = {
         tasks: [
           {
             id: 'demo-task-center-1',
-            name: '知识工厂: 新阳煤矿2023环评.docx',
+            name: '知识工厂: 示例环境评估报告2026.docx',
             type: 'domain_factory',
             status: 'running',
             progress: 60,
             message: '正在提取信息...',
             created_at: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-            payload: { task_id: 'demo-1', domain_code: 'coal', file_name: '新阳煤矿2023环评.docx' }
+            payload: { task_id: 'demo-1', domain_code: 'general', file_name: '示例环境评估报告2026.docx' }
           }
         ]
       })

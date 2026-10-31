@@ -162,7 +162,7 @@ const stations = [
     wm: '01',
     icon: Inbox,
     title: '语料进料',
-    desc: '领域文档批量上传，选择领域与报告类型，自动建任务入队解析。',
+    desc: '批量上传，选择报告类型，自动建任务入队解析。',
     meters: ['批量上传', '自动入队'],
     screen: '数据源管理',
     to: '/domain-factory/general/data-sources'
