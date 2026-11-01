@@ -13,6 +13,17 @@ if str(PROJECT_ROOT) not in sys.path:
 
 
 @pytest.fixture(autouse=True)
+def _isolate_refs_git_chain(monkeypatch):
+    """批次2 refs git 链默认对全部测试隔离（eia_refs_git env 未设 → 导出只落技能文件）。
+
+    导出类流程测试不得写 refs-repo 工作树/Gitea 权威仓；专项链路测试在
+    test_eia_refs_git.py 内自行 setenv 指向用例自建的临时仓。
+    """
+    for key in ("REFS_REPO_WORKTREE", "REFS_GITEA_PUSH_URL", "GITEA_REFS_USER", "GITEA_REFS_PASSWORD"):
+        monkeypatch.delenv(key, raising=False)
+
+
+@pytest.fixture(autouse=True)
 async def _dispose_pg_pools():
     """psycopg 连接池的后台建连任务必须在其所属循环内显式关闭。
 

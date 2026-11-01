@@ -29,6 +29,7 @@ from yuxi.services.eia_data_service import (
     _scan_all,
     collect_mention_details,
 )
+from yuxi.services.eia_refs_git import commit_refs_export
 from yuxi.storage.postgres.models_domain_factory import EiaLexiconEntry, _LEXICON_BLOCKLIST_SEED
 from yuxi.utils import logger
 from yuxi.utils.datetime_utils import format_utc_datetime, utc_now_naive
@@ -447,10 +448,15 @@ class EiaLexiconService:
         )
         await self.repo.save_switch(CURATED_LEXICON_KEY, True, username)
         logger.info(f"[eia-lexicon] 导出物化 {len(doc_entries)} 条 → {OVERRIDES_PATH.name}（跳过 {len(skipped)}）")
+        sha = commit_refs_export(
+            [OVERRIDES_PATH],
+            f"export: curated_lexicon 词表 {len(doc_entries)} 条（跳过 {len(skipped)}）（by {username}）",
+        )
         return {
             "materialized": len(doc_entries),
             "skipped": skipped,
             "path": "references/overrides/curated_lexicon.json",
+            "commit": sha,
         }
 
 

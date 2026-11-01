@@ -18,6 +18,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from yuxi.repositories.eia_formula_repository import EiaFormulaRepository
 from yuxi.services.eia_data_service import _SKILL_ROOT
+from yuxi.services.eia_refs_git import commit_refs_export
 from yuxi.utils import logger
 
 FORMULAS_PATH = _SKILL_ROOT / "references" / "formulas.json"
@@ -174,9 +175,13 @@ class EiaFormulaService:
         total = sum(s["materialized"] for s in results.values())
         skipped = sum(s["skipped"] for s in results.values())
         logger.info(f"[eia-formula] 导出物化参考值 +{total}（跳过已同值 {skipped}）→ formulas.json（by {username}）")
+        sha = commit_refs_export(
+            [FORMULAS_PATH], f"export: formulas 参数参考值 +{total}（跳过 {skipped}）（by {username}）"
+        )
         return {
             "results": results,
             "paths": ["references/formulas.json"],
+            "commit": sha,
             "exported_at": datetime.now(UTC).isoformat(timespec="seconds"),
         }
 

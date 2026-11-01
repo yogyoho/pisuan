@@ -18,6 +18,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from yuxi.repositories.eia_meta_repository import EiaMetaRepository
 from yuxi.services.eia_data_service import _SKILL_ROOT
+from yuxi.services.eia_refs_git import commit_refs_export
 from yuxi.storage.postgres.models_domain_factory import EiaMetaAnnotation
 from yuxi.utils import logger
 from yuxi.utils.datetime_utils import format_utc_datetime, utc_now_naive
@@ -195,9 +196,13 @@ class EiaMetaService:
 
         await run_in_threadpool(_write)
         logger.info(f"[eia-meta] 导出物化 {len(doc)} 条 → {META_ANNOTATIONS_PATH.name}（by {username}）")
+        sha = commit_refs_export(
+            [META_ANNOTATIONS_PATH], f"export: corpus_meta_annotations 人工标注 {len(doc)} 条（by {username}）"
+        )
         return {
             "materialized": len(doc),
             "path": "references/samples_bank/corpus_meta_annotations.json",
+            "commit": sha,
             "exported_at": datetime.now(UTC).isoformat(timespec="seconds"),
         }
 

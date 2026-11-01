@@ -12,12 +12,14 @@ from __future__ import annotations
 import json
 import re
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from fastapi.concurrency import run_in_threadpool
 
 from yuxi.repositories.eia_stage_repository import EiaStageRepository
 from yuxi.services.eia_data_service import STAGES, _SKILL_ROOT
+from yuxi.services.eia_refs_git import commit_refs_export
 from yuxi.utils import logger
 
 STAGES_DIR = _SKILL_ROOT / "references" / "stages"
@@ -322,12 +324,16 @@ class EiaStageService:
             else:
                 fam["amends"][r.field_name] = dict(r.field_json)
 
+        written: list[Path] = []
+
         def _export_one(s: str, fam_edits: dict[str, dict[str, Any]]) -> dict[str, int]:
             original = _load_stage_text(s)
             text, added, amended = _apply_stage_edits(original, fam_edits)
             skipped = sum(len(e["adds"]) + len(e["amends"]) for e in fam_edits.values()) - added - amended
             if text != original:
-                (STAGES_DIR / f"{s}.json").write_text(text, encoding="utf-8", newline="")
+                path = STAGES_DIR / f"{s}.json"
+                path.write_text(text, encoding="utf-8", newline="")
+                written.append(path)
             return {"added": added, "amended": amended, "skipped": skipped}
 
         results = {s: await run_in_threadpool(_export_one, s, fam_edits) for s, fam_edits in by_stage.items()}
@@ -337,9 +343,13 @@ class EiaStageService:
             f"[eia-stage] 导出物化口径字段 +{total_added} add / ~{total_amended} amend"
             f" → {len(results)} 个 stage 文件（by {username}）"
         )
+        sha = commit_refs_export(
+            written, f"export: stages 口径字段 +{total_added} add/~{total_amended} amend（by {username}）"
+        )
         return {
             "results": results,
             "paths": [f"references/stages/{s}.json" for s in results],
+            "commit": sha,
             "exported_at": datetime.now(UTC).isoformat(timespec="seconds"),
         }
 

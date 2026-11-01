@@ -19,6 +19,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from yuxi.repositories.eia_entity_repository import EiaEntityRepository
 from yuxi.services.eia_data_service import _SKILL_ROOT
+from yuxi.services.eia_refs_git import commit_refs_export
 from yuxi.utils import logger
 
 SAMPLE_ENTITIES_DIR = _SKILL_ROOT / "references" / "sample_entities"
@@ -189,9 +190,10 @@ class EiaEntityService:
         if not additions:
             raise ValueError("无待导出的实体补充")
 
-        def _export_one() -> tuple[dict[str, dict[str, int]], list[str], str]:
+        def _export_one() -> tuple[dict[str, dict[str, int]], list[str], str, list]:
             results: dict[str, dict[str, int]] = {}
             changed_paths: list[str] = []
+            written: list = []
             index_text = ENTITY_INDEX_PATH.read_text(encoding="utf-8", newline="")
             index_original = index_text
             deltas: dict[tuple[str, str], int] = {}
@@ -208,6 +210,7 @@ class EiaEntityService:
                     path.write_text(new_text, encoding="utf-8", newline="")
                     if f"sample_entities/{r.sample_slug}.json" not in changed_paths:
                         changed_paths.append(f"sample_entities/{r.sample_slug}.json")
+                        written.append(path)
                     stat["materialized"] += 1
                     key = (r.sample_slug, r.etype)
                     deltas[key] = deltas.get(key, 0) + 1
@@ -216,15 +219,20 @@ class EiaEntityService:
             if index_text != index_original:
                 ENTITY_INDEX_PATH.write_text(index_text, encoding="utf-8", newline="")
                 changed_paths.append("sample_entities/_index.json")
-            return results, changed_paths, index_text
+                written.append(ENTITY_INDEX_PATH)
+            return results, changed_paths, index_text, written
 
-        results, changed_paths, _ = await run_in_threadpool(_export_one)
+        results, changed_paths, _, written = await run_in_threadpool(_export_one)
         total = sum(s["materialized"] for s in results.values())
         skipped = sum(s["skipped"] for s in results.values())
         logger.info(f"[eia-entity] 导出物化实体补充 +{total}（跳过已物化 {skipped}）→ {changed_paths}（by {username}）")
+        sha = commit_refs_export(
+            written, f"export: sample_entities 实体补充 +{total}（跳过 {skipped}）（by {username}）"
+        )
         return {
             "results": results,
             "paths": changed_paths,
+            "commit": sha,
             "exported_at": datetime.now(UTC).isoformat(timespec="seconds"),
         }
 

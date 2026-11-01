@@ -23,6 +23,7 @@ from fastapi.concurrency import run_in_threadpool
 from yuxi.repositories.eia_paradigm_repository import EiaParadigmRepository
 from yuxi.services import eia_paradigm_scan
 from yuxi.services.eia_data_service import _SKILL_ROOT
+from yuxi.services.eia_refs_git import commit_refs_export
 from yuxi.utils import logger
 
 _PARADIGM_DIR = _SKILL_ROOT / "references" / "paradigms"
@@ -313,9 +314,13 @@ class EiaParadigmService:
                 _atomic_write(path, original)
             raise
         logger.info(f"[eia-paradigm] 导出物化 {len(written)} 文件 → references/paradigms/（by {username}）")
+        sha = commit_refs_export(
+            [p for p, _ in written], f"export: paradigms 范式资产 {len(written)} 文件（by {username}）"
+        )
         return {
             "results": results,
             "paths": sorted({str(p.relative_to(_SKILL_ROOT)) for p, _ in written}) or ["(无变更)"],
+            "commit": sha,
             "exported_at": datetime.now(UTC).isoformat(timespec="seconds"),
         }
 

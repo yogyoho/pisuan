@@ -23,6 +23,7 @@ from yuxi.extensions.regulation_library.models import ensure_schema
 from yuxi.repositories.eia_standard_repository import EiaStandardRepository
 from yuxi.services.eia_data_service import _SKILL_ROOT
 from yuxi.services.eia_limit_row_mapping import flatten_limit_row, regroup_limit_rows
+from yuxi.services.eia_refs_git import commit_refs_export
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_domain_factory import EiaStandardReview
 from yuxi.utils import logger
@@ -327,9 +328,13 @@ class EiaStandardService:
 
         _, flipped = await run_in_threadpool(_write)
         logger.info(f"[eia-standard] 导出物化 {flipped} 条裁决 → {STANDARDS_INDEX_PATH.name}（by {username}）")
+        sha = commit_refs_export(
+            [STANDARDS_INDEX_PATH], f"export: standards_index 裁决物化 {flipped} 条（by {username}）"
+        )
         return {
             "materialized": flipped,
             "path": "references/standards_index.json",
+            "commit": sha,
             "exported_at": datetime.now(UTC).isoformat(timespec="seconds"),
         }
 

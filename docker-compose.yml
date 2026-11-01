@@ -35,8 +35,8 @@ x-api-worker-env: &api-worker-env
   YUXI_SKILL_DATA_DIR: /app/skill-sources
   YUXI_SKILL_PROJECTION_DIR: /app/skill-projections
   # 其他环境变量
-  NO_PROXY: localhost,127.0.0.1,milvus,graph,minio,etcd,mineru,paddlex,sandbox-provisioner,api.siliconflow.cn
-  no_proxy: localhost,127.0.0.1,milvus,graph,minio,etcd,mineru,paddlex,sandbox-provisioner,api.siliconflow.cn
+  NO_PROXY: localhost,127.0.0.1,milvus,graph,minio,etcd,mineru,paddlex,sandbox-provisioner,gitea,api.siliconflow.cn
+  no_proxy: localhost,127.0.0.1,milvus,graph,minio,etcd,mineru,paddlex,sandbox-provisioner,gitea,api.siliconflow.cn
 
 # 长驻服务的容器日志轮转上界，防止 docker json.log 无限增长占满磁盘。
 x-logging: &default-logging
@@ -77,6 +77,12 @@ services:
         target: /app/eia-library
         bind:
           create_host_path: true
+      # 环评 refs 数据仓工作树（批次2）：导出物化 → git commit → push 本地 Gitea
+      - type: bind
+        source: ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/refs-repo
+        target: /app/refs-repo
+        bind:
+          create_host_path: true
       - ./backend/test:/app/test
       - ./backend/scripts:/app/scripts
       - ./docker/sandbox_provisioner:/app/docker/sandbox_provisioner:ro
@@ -99,6 +105,11 @@ services:
       LANGGRAPH_POSTGRES_POOL_SIZE: ${API_LANGGRAPH_POSTGRES_POOL_SIZE:-10}
       LANGGRAPH_POSTGRES_POOL_TIMEOUT_SECONDS: ${API_LANGGRAPH_POSTGRES_POOL_TIMEOUT_SECONDS:-30}
       REDIS_MAX_CONNECTIONS: ${API_REDIS_MAX_CONNECTIONS:-256}
+      # 环评 refs git 链（批次2）：工作树 + push 三件套；密码走 .env 不入库
+      REFS_REPO_WORKTREE: /app/refs-repo/worktree
+      REFS_GITEA_PUSH_URL: http://gitea:3000/refsadmin/eia-refs.git
+      GITEA_REFS_USER: refsadmin
+      GITEA_REFS_PASSWORD: ${GITEA_REFS_PASSWORD:-}
     # endregion api_envs
     command: uv run --no-sync --no-dev uvicorn server.main:app --host 0.0.0.0 --port 5050 --reload --reload-dir /app/server --reload-dir /app/package --timeout-graceful-shutdown 5
     restart: unless-stopped
@@ -512,6 +523,39 @@ services:
         target: /data
         bind:
           create_host_path: true
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # 环评域 refs 数据仓版本管理骨干（docs/vibe/2026-11-01-eia-refs-local-git-chain.md 批次2）：
+  # 专家在 UI 浏览历史/审计/回滚；eia_*_service 导出 → refs-repo 工作树 → commit → push 本服务。
+  # sqlite 内嵌不入主 postgres；注册关闭，管理员与专家只读账号由 refs_repo_seed 脚本初始化。
+  gitea:
+    # 本机 docker.io 直连不可用，走 daocloud 加速（见 docker-build-mirror 盘点）
+    image: docker.m.daocloud.io/gitea/gitea:1.24
+    ports:
+      - "127.0.0.1:${YUXI_GITEA_HTTP_PORT:-3000}:3000"
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__server__DOMAIN=localhost
+      - GITEA__server__ROOT_URL=http://localhost:${YUXI_GITEA_HTTP_PORT:-3000}/
+      - GITEA__database__DB_TYPE=sqlite3
+      - GITEA__database__PATH=/data/gitea/gitea.db
+      - GITEA__service__DISABLE_REGISTRATION=true
+      - GITEA__security__INSTALL_LOCK=true
+      - TZ=${TZ:-Asia/Shanghai}
+    volumes:
+      - type: bind
+        source: ${YUXI_STATE_DIR:-./docker/volumes}/pisuan/gitea-data
+        target: /data
+        bind:
+          create_host_path: true
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3000/api/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
     networks:
       - app-network
     restart: unless-stopped
