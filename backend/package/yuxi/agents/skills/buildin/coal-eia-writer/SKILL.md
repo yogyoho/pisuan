@@ -29,7 +29,7 @@ tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query
 
 对话对象是环评专业人员，不是程序员——回复里**不出现**命令行、脚本名、文件路径、JSON 片段、状态枚举值（DRAFTED/VERIFIED/CONFIRMED/phase 等）、run/resume 等内部机制词。对内术语一律译成业务说法：
 
-**红线·对话正文 ≠ 管线日志**：写给用户的每条正文只准含三类内容——①业务进展（第几节写完、要点是什么）②需要用户做的事（确认/二选一/补数据）③章节成品内容。排查问题、分析报错、推敲路径与参数、状态机推演等**一切机制性独白禁入正文**——那些在工具调用里做，不写给用户。写正文前自问：「这句删掉，用户会少知道哪条业务信息？」答不出就整句删。每条正文 ≤3 句：进展一句、下一步一句、（如需）请求一句。节稿/章稿写完后全文呈现给用户（随写随看，确认/交付时不重贴）。
+**红线·对话正文 ≠ 管线日志**：写给用户的每条正文只准含三类内容——①业务进展（第几节写完、要点是什么）②需要用户做的事（确认/二选一/补数据）③章节成品内容。排查问题、分析报错、推敲路径与参数、状态机推演等**一切机制性独白禁入正文**——那些在工具调用里做，不写给用户。写正文前自问：「这句删掉，用户会少知道哪条业务信息？」答不出就整句删。每条播报类正文 ≤3 句：进展一句、下一步一句、（如需）请求一句；章/节成品正文不计入此限。节稿/章稿写完后全文呈现给用户（随写随看，确认/交付时不重贴）。
 
 | 内部术语 | 对用户说法 |
 |---|---|
@@ -43,13 +43,12 @@ tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query
 | ask_user_question / 确认卡 | 直接说「需要你确认：…」 |
 | 落盘 / 写入文件 / 存档 | 已登记（存进项目资料库） |
 | 记账 / 落账 / 收口 / 推进 | 进度登记 / 完成这一步 |
-| 数据族英文键（geography、economy、monitoring、eco、water、standards_confirm、mine_plan、sensitive_targets 等） | 一律中文名：自然环境资料 / 社会经济资料 / 环境质量监测资料 / 生态环境资料 / 水环境资料 / 标准限值确认表 / 矿区规划方案 / 环境敏感目标 |
 | 样例库 / bank / 片段包 / 取件 | 同类报告参考库 / 选定范例的参考段落 |
 | 工作区 / state / init / 开新 | 编写档案 / 建立编写档案 |
 | 门1 / 门2 / 增量冻结 / 重算 | 资料齐备性检查 / 指标核定检查 / 补充核定（后台进行，不必向用户播报） |
 
 - **禁用词**：降档、BLOCKED、裁决、协商单、回环、派发、额度、折算、地板、冻结、落盘、收口、记账、落账 一律不得出现在任何用户可见文字——「批准降档」要说「按当前成稿收尾（注明差距）」，「协商单/裁决卡」要说「请你选一个处理办法」，「待你裁决」要说「需要你拿主意」，「已落盘/已记账」要说「已登记」，「收口」要说「完成这一步」。
-- **数据族/文件一律中文名**：正文中提到任何资料族、数据表、文件，一律用中文名（如「自然环境资料」「标准限值确认表」）——禁出现 geography/monitoring/06_geography.json 等英文键与文件名（交付的报告/表格文件名除外）。
+- **数据族/文件一律中文名**：正文中提到任何资料族、数据表、文件，一律用中文名（如「自然环境资料」「标准限值确认表」）——中文名一律取 stage forms 各族的 `label` 字段（`ingest.py check` 缺项清单已直出「中文名（英文键）」，照抄即可），禁出现 geography/monitoring/06_geography.json 等英文键与文件名（交付的报告/表格文件名除外）。
 - **全中文**；英文仅限无法回避的专有名词（标准号 GB/HJ、单位 Mt/a·km²·dB(A)、交付的报告与表格文件名）。
 - **状态汇报句式**：说「第2章已成稿，质量校验通过，待你确认后进入下一章」，不说「ch2 DRAFTED→gate PASS→VERIFIED」。
 - **卡题面**一句话讲清情境与后果，选项用动宾业务短语（如「接受当前成稿并注明差距 / 返回补写 / 我提供补充资料」），不出现命令与路径。
@@ -214,7 +213,7 @@ progress.py run-stage finalize --state-dir T --outputs-dir /home/gem/user-data/o
 - 交付名门：`{项目名}-{阶段}-环境影响报告.md` 由脚本从 data/ 直拼，outputs/ 禁其他 .md
 - 已批准降档自动 `--allow-partial`：BLOCKED 章跳 L2 章地板门（其余门在场），stdout `PARTIAL_DELIVERY` + manifest 留痕——交付时如实汇报
 
-**consistency（四类 geo 合约 + 环评注册表 21 条：XS1–XS18 跨章一致(含 XS16 三本账恒等式/XS17·18 源措双向断言)/EO1–EO3 呼应义务）**，退出码：0 全过 / 1 有 FAIL（修节重跑，禁改数据绕过）/ 2 需人工（载荷缺席降级 manual）/ 3 完成带 WARN（汇报用户）；**条件激活**：合约带 applicable_stages + 依赖章按语义标题在场才激活，缺席记 **skip 非 fail**（openpit 无沉陷章/可选章缺席/互换双模式同理）；**表格感知**（环评数字主体在表格，最高 91% 段落在表——候选值扫全部 md 表行）；**口径标签**（异标签在场=口径冲突 FAIL；双口径并存无标签=歧义 FAIL）；**呼应义务**（影响识别→措施 EO1、风险→应急 EO2、预测→结论 EO3：源清单实体逐项在目标章在场断言，反向新增 FAIL）。
+**consistency（四类 geo 合约 + 环评注册表 23 条：XS1–XS20 跨章一致(含 XS16 三本账恒等式/XS17·18 源措双向断言)/EO1–EO3 呼应义务）**，退出码：0 全过 / 1 有 FAIL（修节重跑，禁改数据绕过）/ 2 需人工（载荷缺席降级 manual）/ 3 完成带 WARN（汇报用户）；**条件激活**：合约带 applicable_stages + 依赖章按语义标题在场才激活，缺席记 **skip 非 fail**（openpit 无沉陷章/可选章缺席/互换双模式同理）；**表格感知**（环评数字主体在表格，最高 91% 段落在表——候选值扫全部 md 表行）；**口径标签**（异标签在场=口径冲突 FAIL；双口径并存无标签=歧义 FAIL）；**呼应义务**（影响识别→措施 EO1、风险→应急 EO2、预测→结论 EO3：源清单实体逐项在目标章在场断言，反向新增 FAIL）。
 
 **快照**：`snapshot.py save`（全文件 SHA-256 清单 + mapping 枚举 + 脚本版本指纹）；续跑恢复走 `show --verify`（见步骤 0）。
 
@@ -313,7 +312,7 @@ run 级预算硬顶（按 run 计）：recursion_limit 1000 步、LoopDetection 
 
 - `references/stages/planning_eia.json` — **唯一结构真源**（13 章章集级收敛；回顾/识别互换与 ch10–12 排布=槽位不锁编号；sections[].uses 结构化引用供 chapter_planner deps 编译）。`project_eia_underground.json` 已随包就绪（一期未验收、暂不启用）；openpit/post_eia 二期启用。
 - `references/standards_index.json` — 标准注册表（tier 五档分级 + limit_tables 限值表 + 门 1 标准号体检 gate1_code_checks）。
-- `references/consistency_contracts.json` — 合约注册表（XS1–XS12 + EO1–EO3 + caliber_labels 口径标签 + 条件激活语义）。
+- `references/consistency_contracts.json` — 合约注册表（XS1–XS20 + EO1–EO3 + caliber_labels 口径标签 + 条件激活语义）。
 - `references/data_expectations.json` — 按章数据预告（开题首动作②，per_chapter 13 章）。
 - `references/section_expectations/<stage>.json` — 节级应引数值清单（31 份语料统计的 per 节 expected_quantities，corpus_freq 报告覆盖率定 tier；写手开节前对账，unmapped 池为 label 扩充素材。v1.1 条目可带 range={p5,p50,p95,n_values,n_reports}，仅 dB(A)/mg/L/μg/m3/% 强度类且 distinct-rid≥5 才发布——extensive 量随产能走不做原始分布。v1.2 起若存在词表覆盖层 references/overrides/curated_lexicon.json（运营确认导出），确认口径发布跨节聚合区间并挂到该口径出现的每个节）。
 - `references/depth_targets/<stage>.json` — 深度基线（章地板 floor_chars；一期绝对地板，二期 calibrate 样例校准）。

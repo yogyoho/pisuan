@@ -151,6 +151,13 @@ def family_filename(spec: dict) -> str:
     return spec.get("file") or ""
 
 
+def fam_disp(spec: dict, fam: str) -> str:
+    """数据族显示名「中文名（英文键）」——中文名一律取 stage forms 的 label 字段（唯一权威），
+    缺 label 回落英文键。check 缺项清单直出中文名，模型照抄向用户提问即可，无需背译名表。"""
+    label = (spec or {}).get("label")
+    return f"{label}（{fam}）" if label else fam
+
+
 def find_family_by_prefix(data_dir: Path, prefix: str) -> tuple[str, str] | None:
     """'13' → ('industrial_params', '13_industrial_params.json')。按序号前缀精确匹配。"""
     for p in sorted(data_dir.glob(f"{prefix}_*.json")) + sorted(data_dir.glob(f"{prefix}_*.csv")):
@@ -649,27 +656,27 @@ def cmd_check(args) -> int:
             continue
         p = data_dir / fname
         if not p.exists():
-            missing_forms.append(f"{fam} ({family_filename(spec)})")
+            missing_forms.append(f"{fam_disp(spec, fam)} · 文件 {family_filename(spec)}")
             continue
         if spec.get("format") == "csv" or "columns" in spec:
             lines = [ln for ln in p.read_text(encoding="utf-8").splitlines() if ln.strip()]
             if len(lines) < 2:
-                missing_fields.append(f"{fam}: CSV 无数据行")
+                missing_fields.append(f"{fam_disp(spec, fam)}: CSV 无数据行")
             continue
         try:
             doc = json.loads(p.read_text(encoding="utf-8"))
         except Exception:
-            missing_fields.append(f"{fam}: JSON 损坏")
+            missing_fields.append(f"{fam_disp(spec, fam)}: JSON 损坏")
             continue
         if isinstance(doc, list):
             # bug-3004: 清单族经 `ingest.py file` 从 CSV 摄入后落成行数组（如 08_orebody_list），
             # 逐字段门只适用于 dict 形状——行数组按非空判完备，避免 doc.get AttributeError。
             if not doc:
-                missing_fields.append(f"{fam}: 清单为空")
+                missing_fields.append(f"{fam_disp(spec, fam)}: 清单为空")
             continue
         for f in spec.get("fields", []):
             if f.get("required", True) and _get_dotted(doc, f["name"]) in (None, "", []):
-                missing_fields.append(f"{fam}.{f['name']}")
+                missing_fields.append(f"{fam_disp(spec, fam)}.{f['name']}")
 
     # ── bug-3229 预测链纪律（blocking）：结果先于参数=LLM 编数通道 ──────────────────
     # agent 可绕过 ingest 直写 data/ JSON（页面实测），故除写入守卫外，门1 检查必须独立复核：
@@ -689,7 +696,7 @@ def cmd_check(args) -> int:
             continue
         if isinstance(pred_doc, dict) and pred_doc.get("_meta", {}).get("status") == "filled":
             for e in prediction_prereq_errors(stage, data_dir, pred_fam):
-                missing_fields.append(f"{pred_fam}: {e}")
+                missing_fields.append(f"{fam_disp(pred_spec, pred_fam)}: {e}")
 
     # ── bug-3036 质量门（WARN 不阻断门1——完备性先行；下游 build 空槽/残留门兜底强制）────
     quality: list[str] = []
