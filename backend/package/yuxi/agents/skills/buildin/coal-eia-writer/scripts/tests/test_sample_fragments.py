@@ -56,24 +56,31 @@ def _main(args: Namespace) -> int:
     stage = Path(args.stage).stem  # 容错：--stage 传 stages/<id>.json 路径时取回 id（全脚本口径为路径，裸 id 亦收）
     if stage not in bank:
         print(
-            f"SAMPLE_FRAGMENTS_FAIL: stage '{args.stage}'（归一为 '{stage}'）不在样例库"
-            f"（顶层键：{'、'.join(bank)}）",
+            f"SAMPLE_FRAGMENTS_FAIL: stage '{args.stage}'（归一为 '{stage}'）不在样例库（顶层键：{'、'.join(bank)}）",
             file=sys.stderr,
         )
         return 1
     if getattr(args, "candidates", None):
-        cands = sf.pick_candidates(bank, stage, args.chapter, args.candidates, Path(args.references_dir))
-        if not cands:
+        content_dir = getattr(args, "content_dir", None)
+        cands, rc = sf.export_candidates(
+            bank,
+            stage,
+            args.chapter,
+            args.candidates,
+            Path(args.references_dir),
+            Path(args.out),
+            Path(content_dir) if content_dir else None,
+        )
+        if rc == 2:
             print(f"SAMPLE_FRAGMENTS_EMPTY: {args.stage}/{args.chapter} 无样例切片", file=sys.stderr)
             return 2
-        out = Path(args.out)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(cands, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print(f"SAMPLE_CANDIDATES_OK: {len(cands)} 份候选 → {out}")
+        print(f"SAMPLE_CANDIDATES_OK: {len(cands)} 份候选 → {args.out}")
         return 0
     rid_arg = getattr(args, "report_id", None)
     if rid_arg:
-        valid = {c["report_id"] for c in sf.pick_candidates(bank, stage, args.chapter, 10**9, Path(args.references_dir))}
+        valid = {
+            c["report_id"] for c in sf.pick_candidates(bank, stage, args.chapter, 10**9, Path(args.references_dir))
+        }
         if rid_arg not in valid:
             print(f"SAMPLE_FRAGMENTS_FAIL: 候选中无报告 {rid_arg}", file=sys.stderr)
             return 1
@@ -100,8 +107,13 @@ def _run(
 ) -> tuple[int, Path, str]:
     out = tmp / (f"cands_{tag}.json" if candidates else f"pack_{tag}.md")
     args = Namespace(
-        references_dir=str(refs), stage=stage, chapter=chapter,
-        out=str(out), max_chars=max_chars, candidates=candidates, report_id=report_id,
+        references_dir=str(refs),
+        stage=stage,
+        chapter=chapter,
+        out=str(out),
+        max_chars=max_chars,
+        candidates=candidates,
+        report_id=report_id,
     )
     with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()) as err:
         code = _main(args)
@@ -177,6 +189,33 @@ def test_candidates_empty_rc2(tmp_path):
     assert rc == 2 and "无样例切片" in err and not out.exists()
 
 
+def test_candidates_content_export(tmp_path):
+    """卡B 内容面：--content-dir 逐份导出整章原文，候选 JSON 增记 content_file 路径（用户点开预览通读比对）。"""
+    refs = _refs(tmp_path)
+    out = tmp_path / "state" / "candidates_ch2.json"
+    content_dir = tmp_path / "state" / "candidates_content_ch2"
+    cands, rc = sf.export_candidates(sf.load_bank(refs), "planning_eia", "ch2", 3, refs, out, content_dir)
+    assert rc == 0 and len(cands) == 2
+    f1 = Path(cands[0]["content_file"])
+    assert f1.exists() and "甲段叙述句" in f1.read_text(encoding="utf-8")
+    assert "范例候选1" in f1.read_text(encoding="utf-8")
+    f2 = Path(cands[1]["content_file"])
+    assert f2.exists() and "B节" in f2.read_text(encoding="utf-8")
+    recorded = json.loads(out.read_text(encoding="utf-8"))
+    assert [Path(c["content_file"]).name for c in recorded] == [
+        "candidate-1-A.md",
+        "candidate-2-B.md",
+    ]
+
+
+def test_candidates_no_content_dir_unchanged(tmp_path):
+    """不传 --content-dir 时行为与旧版一致（纯摘要 JSON，无 content_file 键）。"""
+    refs = _refs(tmp_path)
+    out = tmp_path / "state" / "candidates_ch2.json"
+    cands, rc = sf.export_candidates(sf.load_bank(refs), "planning_eia", "ch2", 3, refs, out, None)
+    assert rc == 0 and all("content_file" not in c for c in cands)
+
+
 def test_report_id_pick_and_unknown_rc1(tmp_path):
     """用户选定取件：--report-id B 取 B 切片；候选外 id rc=1。"""
     refs = _refs(tmp_path)
@@ -189,8 +228,9 @@ def test_report_id_pick_and_unknown_rc1(tmp_path):
 def test_stage_path_normalized_to_id(tmp_path):
     """bug-4154：--stage 传 stages/*.json 路径（全脚本口径）自动取回 id 命中样例库——此前路径被当 id 查找，误判库空。"""
     refs = _refs(tmp_path)
-    rc, out, _ = _run(tmp_path, refs, tag="spath", candidates=3,
-                      stage="/skills/coal-eia-writer/references/stages/planning_eia.json")
+    rc, out, _ = _run(
+        tmp_path, refs, tag="spath", candidates=3, stage="/skills/coal-eia-writer/references/stages/planning_eia.json"
+    )
     assert rc == 0
     cands = json.loads(out.read_text(encoding="utf-8"))
     assert [c["report_id"] for c in cands] == ["A", "B"]
