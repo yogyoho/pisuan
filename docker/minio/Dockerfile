@@ -10,6 +10,8 @@ ARG MINIO_VERSION=RELEASE.2023-03-20T20-16-18Z
 ARG MINIO_SHA256_AMD64=df0de9982c4ae440d2c9617bc1da805cf71eb7d9ce5b106b3fdb036fa27ba163
 ARG MINIO_SHA256_ARM64=d9c80afe0455f30726457ed7af0af28e1dc8a506ebaf2418ed7d89d763674ff2
 ARG TARGETARCH
+# github 直连不可达时经加速前缀代理同一资产 URL（字节不变，sha256 校验门不变）
+ARG MINIO_DL_PREFIX=
 
 # curl 供 Compose 的健康检查使用
 RUN apk add --no-cache ca-certificates curl
@@ -23,7 +25,7 @@ RUN set -eux; \
     esac; \
     mkdir -p /opt/bin; \
     curl -fsSL --retry 5 --retry-delay 2 --retry-all-errors -o /opt/bin/minio \
-        "https://github.com/minio/minio/releases/download/${MINIO_VERSION}/${asset}"; \
+        "${MINIO_DL_PREFIX}https://github.com/minio/minio/releases/download/${MINIO_VERSION}/${asset}"; \
     echo "${sha256}  /opt/bin/minio" | sha256sum -c -; \
     chmod +x /opt/bin/minio
 
