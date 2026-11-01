@@ -800,6 +800,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { refsCommitNote } from './refsCommitNote'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
@@ -930,7 +931,7 @@ const onExport = async () => {
   try {
     const r = await eiaStandardApi.exportReviews()
     message.success({
-      content: `已翻转 ${r.materialized} 条裁决 → standards_index.json（落运行栈技能目录，需人工回流 pisuan-custom）`,
+      content: `已翻转 ${r.materialized} 条裁决 → standards_index.json（${refsCommitNote(r.commit)}）`,
       key: 'std-export'
     })
     await fetchList()

@@ -349,6 +349,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { refsCommitNote } from './refsCommitNote'
 import { useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { Download, Info, LayoutGrid, RefreshCw } from '@lucide/vue'
@@ -486,7 +487,7 @@ const onExport = async () => {
   try {
     const r = await eiaMetaApi.exportAnnotations()
     message.success({
-      content: `已重写人工层文件（${r.materialized} 条；落运行栈技能目录，需人工回流 pisuan-custom）`,
+      content: `已重写人工层文件（${r.materialized} 条）；${refsCommitNote(r.commit)}`,
       key: 'meta-export'
     })
   } catch (e) {

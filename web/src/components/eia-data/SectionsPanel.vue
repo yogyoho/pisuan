@@ -290,8 +290,8 @@
       <div class="note-bar">
         <Info :size="14" />
         <span>
-          导出物化按文本级插接写回 stages/*.json（字节纪律，幂等）；文件落运行栈技能目录，需人工回流
-          pisuan-custom 仓库，重跑 bank_compile 后节级明细生效。
+          导出物化按文本级插接写回 stages/*.json（字节纪律，幂等），并提交本地
+          git（refsadmin/eia-refs）； 分发到技能消费侧后重跑 bank_compile，节级明细生效。
         </span>
       </div>
     </template>
@@ -371,6 +371,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { refsCommitNote } from './refsCommitNote'
 import { message, Modal } from 'ant-design-vue'
 import { AlignLeft, Check, Download, Info, Plus, RefreshCw, TrendingUp } from '@lucide/vue'
 import { eiaDataApi } from '@/apis/eia_data_api'
@@ -687,7 +688,7 @@ const onExport = async () => {
     const out = await eiaStageApi.exportForms(fieldsStage.value)
     const r = out.results[fieldsStage.value]
     message.success(
-      `已写回 ${out.paths.join('、')}（+${r?.added ?? 0} 新增 / ~${r?.amended ?? 0} 修改）；落运行栈技能目录，需人工回流 pisuan-custom`,
+      `已写回 ${out.paths.join('、')}（+${r?.added ?? 0} 新增 / ~${r?.amended ?? 0} 修改）；${refsCommitNote(out.commit)}`,
       6
     )
     await fetchForms()

@@ -236,6 +236,7 @@ import 'katex/dist/katex.min.css'
 import { eiaFormulaApi } from '@/apis/eia_formula_api'
 import { useUserStore } from '@/stores/user'
 import { splitMathText, mathToLatex } from './expr_latex'
+import { refsCommitNote } from './refsCommitNote'
 
 const userStore = useUserStore()
 
@@ -377,7 +378,7 @@ const onExport = async () => {
     const materialized = Object.values(out.results).reduce((acc, r) => acc + r.materialized, 0)
     const skipped = Object.values(out.results).reduce((acc, r) => acc + r.skipped, 0)
     message.success(
-      `已写回 ${out.paths.join('、')}（物化 ${materialized} / 跳过已同值 ${skipped}）；落运行栈技能目录，需人工回流 pisuan-custom`,
+      `已写回 ${out.paths.join('、')}（物化 ${materialized} / 跳过已同值 ${skipped}）；${refsCommitNote(out.commit)}`,
       6
     )
     await fetchFormulas()

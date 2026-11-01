@@ -160,6 +160,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { refsCommitNote } from './refsCommitNote'
 import { message } from 'ant-design-vue'
 import { Download, Package, Plus } from '@lucide/vue'
 import { eiaEntityApi } from '@/apis/eia_entity_api'
@@ -304,7 +305,7 @@ const onExport = async () => {
     const materialized = Object.values(out.results).reduce((acc, r) => acc + r.materialized, 0)
     const skippedN = Object.values(out.results).reduce((acc, r) => acc + r.skipped, 0)
     message.success(
-      `已写回 ${out.paths.join('、')}（物化 ${materialized} / 跳过已物化 ${skippedN}）；落运行栈技能目录，需人工回流 pisuan-custom`,
+      `已写回 ${out.paths.join('、')}（物化 ${materialized} / 跳过已物化 ${skippedN}）；${refsCommitNote(out.commit)}`,
       6
     )
     await fetchSamples()

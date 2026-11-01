@@ -38,6 +38,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { refsCommitNote } from './refsCommitNote'
 import { message } from 'ant-design-vue'
 import { TriangleAlert } from '@lucide/vue'
 import { eiaParadigmApi } from '@/apis/eia_paradigm_api'
@@ -75,10 +76,7 @@ const onExport = async () => {
   exporting.value = true
   try {
     const out = await eiaParadigmApi.exportParadigms()
-    message.success(
-      `已写回 ${out.paths.join('、')}（落运行栈技能目录，需人工回流 pisuan-custom 走 git 评审）`,
-      6
-    )
+    message.success(`已写回 ${out.paths.join('、')}；${refsCommitNote(out.commit)}`, 6)
     emit('update:open', false)
     emit('exported')
   } catch (e) {

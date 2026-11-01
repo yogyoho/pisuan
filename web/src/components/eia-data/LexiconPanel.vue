@@ -575,6 +575,7 @@ import { eiaDataApi } from '@/apis/eia_data_api'
 import { eiaLexiconApi } from '@/apis/eia_lexicon_api'
 import { useUserStore } from '@/stores/user'
 import FilterSelect from './FilterSelect.vue'
+import { refsCommitNote } from './refsCommitNote'
 
 const STAGES = [
   { key: 'planning_eia', label: '规划环评' },
@@ -1055,7 +1056,7 @@ const onExport = () => {
     .exportOverrides()
     .then((r) => {
       message.success({
-        content: `物化 ${r.materialized} 条完成（落运行栈技能目录，需人工回流 pisuan-custom）`,
+        content: `物化 ${r.materialized} 条完成；${refsCommitNote(r.commit)}`,
         key: 'lexicon-export'
       })
       exportResult.materialized = r.materialized
