@@ -13,8 +13,9 @@ ARG TARGETARCH
 # github 直连不可达时经加速前缀代理同一资产 URL（字节不变，sha256 校验门不变）
 ARG MINIO_DL_PREFIX=
 
-# curl 供 Compose 的健康检查使用
-RUN apk add --no-cache ca-certificates curl
+# curl 供 Compose 的健康检查使用（alpine 官方 CDN 本网络不可达，换阿里云源）
+RUN sed -i 's|dl-cdn.alpinelinux.org|mirrors.aliyun.com|g' /etc/apk/repositories \
+    && apk add --no-cache ca-certificates curl
 
 RUN set -eux; \
     arch="${TARGETARCH:-$(apk --print-arch)}"; \
