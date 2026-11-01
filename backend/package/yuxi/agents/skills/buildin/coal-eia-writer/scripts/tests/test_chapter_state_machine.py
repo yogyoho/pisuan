@@ -83,6 +83,14 @@ def _plan_card(sd: Path, ch: str = "ch2") -> int:
                                                depth="full", target=None, state_dir=str(sd)))
 
 
+def _creds(sd: Path, ch: str) -> None:
+    """补齐双卡凭据（P0-3 起 mark DRAFTED/gate 前置）：计划卡 + 范例卡真走落账契约。"""
+    assert _plan_card(sd, ch) == progress.EXIT_OK
+    assert progress.cmd_fragment_choice(
+        Namespace(chapter=ch, report_id="027-2025-11", none=False, state_dir=str(sd))
+    ) == progress.EXIT_OK
+
+
 # ── 全链：计划卡→PENDING→DRAFTED→(gate)→VERIFIED→REVIEWED→CONFIRMED ──
 
 def test_full_chain_to_confirmed(tmp_path, stub_gate, capsys):
@@ -91,6 +99,9 @@ def test_full_chain_to_confirmed(tmp_path, stub_gate, capsys):
     assert "计划卡" in out and "plan-confirm" in out  # 首站：计划卡先行（交互卡点，红线 P13）
     assert "batch_task" not in out  # 未确认计划前禁派发
     assert _plan_card(sd) == progress.EXIT_OK
+    assert progress.cmd_fragment_choice(
+        Namespace(chapter="ch2", report_id="027-2025-11", none=False, state_dir=str(sd))
+    ) == progress.EXIT_OK
     out = _next(sd)
     assert "COLLECTING" in out and "ch2" in out and "模板推荐" in out  # 计划确认后：汇集+模板推荐+派发
     assert "ch3" not in out.split("ch2_S01")[0] or "ch3" not in out  # 单章聚焦，不并派后章
@@ -114,10 +125,12 @@ def test_full_chain_to_confirmed(tmp_path, stub_gate, capsys):
 
 def test_next_skips_confirmed_chapters(tmp_path, stub_gate):
     sd = _init(tmp_path)
+    _creds(sd, "ch2")
     assert _mark(sd, "ch2", "DRAFTED") == progress.EXIT_OK
     assert _gate(sd, "ch2") == progress.EXIT_OK
     assert _mark(sd, "ch2", "REVIEWED") == progress.EXIT_OK
     assert _confirm(sd, "ch2") == progress.EXIT_OK
+    _creds(sd, "ch3")
     assert _mark(sd, "ch3", "DRAFTED") == progress.EXIT_OK
     assert _gate(sd, "ch3") == progress.EXIT_OK
     assert _mark(sd, "ch3", "REVIEWED") == progress.EXIT_OK
@@ -130,6 +143,7 @@ def test_next_skips_confirmed_chapters(tmp_path, stub_gate):
 
 def test_confirmed_rework_via_mark_draft(tmp_path, stub_gate):
     sd = _init(tmp_path)
+    _creds(sd, "ch2")
     _mark(sd, "ch2", "DRAFTED")
     _gate(sd, "ch2")
     _mark(sd, "ch2", "REVIEWED")
@@ -142,6 +156,7 @@ def test_confirmed_rework_via_mark_draft(tmp_path, stub_gate):
 
 def test_blocked_does_not_block_later_chapters(tmp_path, stub_gate):
     sd = _init(tmp_path)
+    _creds(sd, "ch2")
     _mark(sd, "ch2", "DRAFTED")
     assert _mark(sd, "ch2", "BLOCKED") == progress.EXIT_OK  # 门 FAIL 重派耗尽语义
     out = _next(sd)
@@ -149,10 +164,12 @@ def test_blocked_does_not_block_later_chapters(tmp_path, stub_gate):
     assert "挂起" in out and "BLOCKED ch2" in out  # 挂起章如实提示且不阻当前章
 
     # 收口后章 → 只剩 BLOCKED 时才进协商
+    _creds(sd, "ch3")
     _mark(sd, "ch3", "DRAFTED")
     _gate(sd, "ch3")
     _mark(sd, "ch3", "REVIEWED")
     _confirm(sd, "ch3")
+    _creds(sd, "ch4")
     _mark(sd, "ch4", "DRAFTED")
     _gate(sd, "ch4")
     _mark(sd, "ch4", "REVIEWED")
@@ -166,6 +183,7 @@ def test_blocked_does_not_block_later_chapters(tmp_path, stub_gate):
 def test_key_points_incremental_merge_idempotent(tmp_path, stub_gate):
     sd = _init(tmp_path)
     for ch, hl in (("ch2", "规模 15.0Mt/a"), ("ch3", "现状调查结论 A")):
+        _creds(sd, ch)
         _mark(sd, ch, "DRAFTED")
         _gate(sd, ch)
         _mark(sd, ch, "REVIEWED")

@@ -21,7 +21,7 @@ def load_roles(references_dir: Path, stage: str) -> dict[str, str]:
     """读取并校验一个 stage 的角色映射；文件缺失/形状错/值非法都抛异常。"""
     path = references_dir / "paradigms" / "roles" / f"{stage}.json"
     if not path.exists():
-        raise FileNotFoundError(f"角色映射缺失（stage 未启用？）: {path}")
+        raise FileNotFoundError(f"该阶段尚未启用（角色映射缺失）: {path}——progress.py init 有预检并列出可跑阶段")
     data = json.loads(path.read_text(encoding="utf-8"))
     roles = data.get("roles")
     if not isinstance(roles, dict) or not roles:

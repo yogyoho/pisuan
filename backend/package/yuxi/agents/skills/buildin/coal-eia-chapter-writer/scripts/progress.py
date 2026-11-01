@@ -401,6 +401,29 @@ def _blank_section(s: dict) -> dict:
     return {"id": s["id"], "title": s.get("title", ""), "status": "PENDING", "dispatches": 0, "delivered": False}
 
 
+def builtin_stages_dir() -> Path:
+    return (Path(__file__).resolve().parent.parent / "references" / "stages").resolve()
+
+
+def builtin_stage_missing_assets(stage_arg: str) -> list[Path]:
+    """P1-4 stage 可用性预检：内置 stage 的启用资产缺失清单（roles/style_targets）。
+
+    仅内置 stage（路径落在技能包 references/stages/ 下）做预检——五个 stage 平铺可选但只有
+    planning_eia 启用，缺失会在 3b 派发第一步硬停；自造 stage（测试/变体）不在此列，由调用方自责。
+    """
+    stage_resolved = Path(stage_arg).resolve()
+    builtin_stages = builtin_stages_dir()
+    if stage_resolved.parent != builtin_stages:
+        return []
+    refs = builtin_stages.parent
+    stem = stage_resolved.stem
+    return [
+        d / f"{stem}.json"
+        for d in (Path("paradigms") / "roles", Path("style_targets"))
+        if not (refs / d / f"{stem}.json").is_file()
+    ]
+
+
 def cmd_init(args: argparse.Namespace) -> int:
     state_dir = Path(args.state_dir)
     p = state_dir / "progress.json"
@@ -415,6 +438,20 @@ def cmd_init(args: argparse.Namespace) -> int:
         )
         return EXIT_ERROR
     stage = json.loads(Path(args.stage).read_text(encoding="utf-8"))
+    # P1-4 stage 可用性预检：内置 stage 五个齐备但仅启用的可跑（roles/style_targets 缺失会在
+    # 3b 派发第一步硬停——彼时计划卡与资料收集已投入）。开题第一秒闭合「可选 N 个」与「能跑
+    # M 个」的落差。
+    missing_assets = builtin_stage_missing_assets(args.stage)
+    if missing_assets:
+        refs = builtin_stages_dir().parent
+        stem = Path(args.stage).resolve().stem
+        enabled = sorted(p.stem for p in (refs / "paradigms" / "roles").glob("*.json"))
+        print(
+            f"[progress] stage「{stem}」尚未启用（缺 {'、'.join((refs / m).as_posix() for m in missing_assets)}）"
+            f"——目前可跑: {', '.join(enabled) or '（无）'}；请与用户改选可用阶段，或如实声明该阶段暂不可跑",
+            file=sys.stderr,
+        )
+        return EXIT_ERROR
     # 节 id 契约校验（stage sections 与 progress 解析的接口契约，T1 骨架即生效）：
     # id 形状 chNN_SNN、章前缀与所属章一致、章内唯一。
     chapters: dict = {}
@@ -582,6 +619,23 @@ def cmd_mark(args: argparse.Namespace) -> int:
         )
         return EXIT_ERROR
     ent = doc["chapters"][ch_id]
+    if doc.get("mode") == "chapter" and status == "DRAFTED":
+        # P0-3 双卡凭据守卫（红线 P13 脚本强制）：无计划卡/范例卡不得进写作。next 的
+        # COLLECTING 分支只在 PENDING 态给卡点提示，状态乱序（重试/上下文丢失后补 mark/
+        # 并行线程）会让提示蒸发——硬校验兜底。plan-confirm/fragment-choice 幂等覆盖，
+        # 补卡后重试即可；--none 是合法「不用范例」豁免（同样落账）。
+        missing = [
+            n for n in (f"plan_{ch_id}.json", f"fragment_choice_{ch_id}.json")
+            if not (state_dir / n).exists()
+        ]
+        if missing:
+            print(
+                f"[progress] {ch_id} 双卡凭据缺失: {', '.join(missing)}"
+                f"（红线 P13：每章先计划卡、先选范例再写）——先呈计划卡并 `progress.py plan-confirm {ch_id}`、"
+                f"范例挑选卡并 `progress.py fragment-choice {ch_id}`（用户明确不用范例用 --none，同样落账）",
+                file=sys.stderr,
+            )
+            return EXIT_ERROR
     if status == "REVIEWED" and ent.get("last_gate") != "PASS":
         # bug-4146 双保险：审查凭据=门凭据。正常链路 gate FAIL 已把 VERIFIED 回落 DRAFTED，
         # 此处拦手改 state 绕门（VERIFIED + last_gate=FAIL 的手改态）直达审查。
@@ -687,6 +741,24 @@ def cmd_gate(args: argparse.Namespace) -> int:
     if not wanted:
         print("[progress] 没有 DRAFTED 章（显式列表除外）——先按 next 指引派发", file=sys.stderr)
         return EXIT_ERROR
+    if doc.get("mode") == "chapter":
+        # P0-3 双卡凭据守卫（防绕过 mark 直接跑门）：缺凭据章说明状态乱序（PENDING 章不该
+        # 出现在门的待跑列表），快速失败整批拒——与 mark 同语义，补卡后重跑。
+        no_cred = [
+            ch for ch in wanted
+            if not (state_dir / f"plan_{ch}.json").exists()
+            or not (state_dir / f"fragment_choice_{ch}.json").exists()
+        ]
+        if no_cred:
+            for ch in no_cred:
+                miss = [n for n in (f"plan_{ch}.json", f"fragment_choice_{ch}.json") if not (state_dir / n).exists()]
+                print(f"[progress] {ch} 双卡凭据缺失: {', '.join(miss)}", file=sys.stderr)
+            print(
+                "[progress] 红线 P13：每章先计划卡、先选范例再写——先 `plan-confirm <ch>` / "
+                "`fragment-choice <ch>` 补卡（--none 为合法豁免，同样落账）后重跑门",
+                file=sys.stderr,
+            )
+            return EXIT_ERROR
     stage = json.loads(Path(doc["stage_path"]).read_text(encoding="utf-8"))
     import build_output  # 同目录脚本；targets 语义与 build_output CLI 一致（--targets 仅调试）
 
