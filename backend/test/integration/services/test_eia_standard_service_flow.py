@@ -4,7 +4,7 @@
 核实校验（未知 code 404 / action 白名单 / 未知字段 400）→ 裁决落库合并 →
 导出翻转两标志（round-trip 字节纪律：翻转外逐字节不变）→ 空库导出拒绝。
 关键隔离：测试前后恢复 standards_index.json 原字节（导出会重写技能内真实文件），
-DB 行前后自清理；绝不污染运行库与技能目录。
+DB 行走行级快照恢复（bug-4198：delete 全表曾抹掉运行库核实裁决），测试后还原原状。
 """
 
 from __future__ import annotations
@@ -30,7 +30,10 @@ async def _clean_state():
     from yuxi.storage.postgres.models_domain_factory import EiaStandardReview
 
     pg_manager.initialize()
+    from test.integration.services._flow_isolation import restore_rows, snapshot_rows
+
     snapshot = STANDARDS_INDEX_PATH.read_bytes()
+    saved = await snapshot_rows(EiaStandardReview)
 
     async def _wipe():
         async with pg_manager.get_async_session_context() as session:
@@ -40,6 +43,7 @@ async def _clean_state():
     yield
     await _wipe()
     STANDARDS_INDEX_PATH.write_bytes(snapshot)
+    await restore_rows(EiaStandardReview, saved)
 
 
 async def test_standard_full_flow():

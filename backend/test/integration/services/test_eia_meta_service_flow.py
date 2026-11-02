@@ -4,7 +4,7 @@
 导出物化（重写人工层文件）→ 导入绝不覆盖 DB 裁决（DB≠文件判别场景）→
 note 不进物化文件、全清空条目剔除。
 关键隔离：测试前后恢复 corpus_meta_annotations.json 原字节（导出会重写技能内真实文件），
-DB 行前后自清理；绝不污染运行库与技能目录。
+DB 行走行级快照恢复（bug-4198：delete 全表曾抹掉运行库标注），测试后还原原状。
 """
 
 from __future__ import annotations
@@ -30,7 +30,10 @@ async def _clean_state():
     from yuxi.storage.postgres.models_domain_factory import EiaMetaAnnotation
 
     pg_manager.initialize()
+    from test.integration.services._flow_isolation import snapshot_rows, restore_rows
+
     snapshot = META_ANNOTATIONS_PATH.read_bytes() if META_ANNOTATIONS_PATH.is_file() else None
+    saved = await snapshot_rows(EiaMetaAnnotation)
 
     async def _wipe():
         async with pg_manager.get_async_session_context() as session:
@@ -43,6 +46,7 @@ async def _clean_state():
         META_ANNOTATIONS_PATH.unlink(missing_ok=True)
     else:
         META_ANNOTATIONS_PATH.write_bytes(snapshot)
+    await restore_rows(EiaMetaAnnotation, saved)
 
 
 async def test_meta_full_flow():

@@ -3,7 +3,8 @@
 覆盖：导入幂等 → 状态分布 → PATCH 状态机 → 拆分 → 导出物化 → 开关闭环。
 同覆盖面的 API 层测试（test_eia_lexicon_flow.py）需 TEST_USERNAME/TEST_PASSWORD；
 本文件直连服务层，容器内即可验证业务语义。
-前后清理 DB 行与 overrides 文件，绝不污染运行库与技能目录。
+关键隔离：运行库为共享生产库，DB 行走行级快照恢复、overrides 文件走字节级
+快照恢复（bug-4198：delete 全表曾抹掉运营词表），测试后还原原状。
 """
 
 from __future__ import annotations
@@ -25,7 +26,13 @@ async def _clean_state():
     from yuxi.storage.postgres.manager import pg_manager
     from yuxi.storage.postgres.models_domain_factory import EiaDatasetSwitch, EiaLexiconEntry
 
+    from test.integration.services._flow_isolation import restore_rows, snapshot_rows
+
     pg_manager.initialize()  # 幂等；pytest-asyncio 函数级 loop 不容模块级 async fixture
+
+    saved_entries = await snapshot_rows(EiaLexiconEntry)
+    saved_switches = await snapshot_rows(EiaDatasetSwitch)
+    overrides_snapshot = OVERRIDES_PATH.read_bytes() if OVERRIDES_PATH.is_file() else None
 
     async def _wipe():
         async with pg_manager.get_async_session_context() as session:
@@ -36,7 +43,12 @@ async def _clean_state():
     OVERRIDES_PATH.unlink(missing_ok=True)
     yield
     await _wipe()
-    OVERRIDES_PATH.unlink(missing_ok=True)
+    if overrides_snapshot is None:
+        OVERRIDES_PATH.unlink(missing_ok=True)
+    else:
+        OVERRIDES_PATH.write_bytes(overrides_snapshot)
+    await restore_rows(EiaLexiconEntry, saved_entries)
+    await restore_rows(EiaDatasetSwitch, saved_switches)
 
 
 async def test_lexicon_service_full_flow():
