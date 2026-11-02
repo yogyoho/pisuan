@@ -1,8 +1,8 @@
 """eia_meta 服务层全链路集成测试（不经 HTTP，无凭据依赖）。
 
 覆盖：存量导入幂等与越界 rid 拒收 → 总览合并与 counts → 标注校验（404/400）→
-导出物化（重写人工层文件）→ 导入绝不覆盖 DB 裁决（DB≠文件判别场景）→
-note 不进物化文件、全清空条目剔除。
+导出物化（重写人工层文件、文件独有层按 rid 携带）→ 导入绝不覆盖 DB 裁决（DB≠文件判别场景）→
+note 不进物化文件、全清空条目回落文件独有层。
 关键隔离：测试前后恢复 corpus_meta_annotations.json 原字节（导出会重写技能内真实文件），
 DB 行走行级快照恢复（bug-4198：delete 全表曾抹掉运行库标注），测试后还原原状。
 """
@@ -14,7 +14,9 @@ import json
 import pytest
 
 from yuxi.services.eia_meta_service import (
+    _ANNOTATION_FIELDS,
     META_ANNOTATIONS_PATH,
+    _load_corpus_meta,
     get_eia_meta_service,
 )
 
@@ -53,21 +55,28 @@ async def test_meta_full_flow():
     """导入幂等 → 总览合并/counts → 标注校验 → 导出物化与再导入。"""
     svc = get_eia_meta_service()
 
-    # 1) 导入幂等：首扫把存量人工层全部入库，二扫零新增
+    # 1) 导入幂等：首扫把存量人工层全部入库（漂移残留拒收计数上浮），二扫零新增
     r1 = await svc.import_annotations()
-    assert r1["added"] == r1["scanned"] and r1["added"] > 0
+    assert r1["added"] == r1["scanned"] - r1["skipped_unknown"] and r1["added"] > 0
     r2 = await svc.import_annotations()
     assert r2["added"] == 0
 
-    # 2) 总览：31 份全量；已标注 == 导入数；counts 与明细自洽
+    # 2) 总览：规模锚 corpus_meta 现读；counts 与明细自洽（annotated 只数非空四字段行）
+    corpus_meta = _load_corpus_meta()
     data = await svc.list_reports()
-    assert data["total"] == 31
-    assert data["counts"]["annotated"] == r1["added"]
-    assert data["counts"]["scale_needs_review"] == 27
+    assert data["total"] == len(corpus_meta.get("reports", {}))
+    nonempty = sum(
+        1
+        for ann in json.loads(META_ANNOTATIONS_PATH.read_text(encoding="utf-8")).values()
+        if any(k in (ann or {}) for k in _ANNOTATION_FIELDS)
+    )
+    assert data["counts"]["annotated"] == nonempty
+    needs_review = sum(1 for m in corpus_meta.get("reports", {}).values() if m.get("scale_basis") == "needs_review")
+    assert data["counts"]["scale_needs_review"] == needs_review
     with_year = sum(1 for it in data["items"] if not it["year_missing"])
     with_scale = sum(1 for it in data["items"] if not it["scale_missing"])
-    assert data["counts"]["year_missing"] + with_year == 31
-    assert data["counts"]["scale_missing"] + with_scale == 31
+    assert data["counts"]["year_missing"] + with_year == data["total"]
+    assert data["counts"]["scale_missing"] + with_scale == data["total"]
     by_rid = {it["report_id"]: it for it in data["items"]}
     assert "001-wps" in by_rid
 
@@ -82,12 +91,16 @@ async def test_meta_full_flow():
     assert row["annotations"] == {"year_hint": 2024, "scale_mt_a": 1.8}
     assert row["decided_by"] == "tester"
 
-    # 4) 导出物化：DB 全量（导入 18 + 新标 1）重写人工层文件；rid 序确定
+    # 4) 导出物化：DB 四字段全量重写 + 文件独有层按 rid 携带；rid 序确定
+    before = json.loads(META_ANNOTATIONS_PATH.read_text(encoding="utf-8"))
     result = await svc.export_annotations("tester")
-    assert result["materialized"] == r1["added"] + 1
     doc = json.loads(META_ANNOTATIONS_PATH.read_text(encoding="utf-8"))
+    assert result["materialized"] == len(doc)
     assert list(doc) == sorted(doc) and "001-wps" in doc
-    assert doc["001-wps"] == {"year_hint": 2024, "scale_mt_a": 1.8}
+    assert set(doc) == set(before)  # 存活 rid 全保留（含 variant-only 条目）
+    assert doc["001-wps"]["year_hint"] == 2024 and doc["001-wps"]["scale_mt_a"] == 1.8
+    extras = {k: v for k, v in before["001-wps"].items() if k not in _ANNOTATION_FIELDS}
+    assert extras and all(doc["001-wps"].get(k) == v for k, v in extras.items())  # 文件独有层不丢
 
     # 5) 导入绝不覆盖 DB 裁决（判别场景：DB 值 ≠ 文件值，回归为文件覆盖即在此失败）
     target = next(rid for rid, a in sorted(doc.items()) if "year_hint" in a and rid != "001-wps")
@@ -100,13 +113,15 @@ async def test_meta_full_flow():
     assert it2["annotation"]["decided_by"] == "tester"
     assert it2["annotation"]["note"] == "页面裁决依据"
 
-    # 6) note 仅 DB 留档不进物化文件；全清空条目从文件剔除
+    # 6) note 仅 DB 留档不进物化文件；全清空条目回落文件独有层（四字段裁决剔除、variant 保留）
     await svc.set_annotation("001-wps", {"annotations": {}}, "tester")
     result2 = await svc.export_annotations("tester")
-    assert result2["materialized"] == r1["added"]
     doc2 = json.loads(META_ANNOTATIONS_PATH.read_text(encoding="utf-8"))
-    assert "001-wps" not in doc2
-    assert doc2[target] == {"year_hint": 2099}
+    assert result2["materialized"] == len(doc2)
+    cleared_extras = {k: v for k, v in before["001-wps"].items() if k not in _ANNOTATION_FIELDS}
+    assert doc2.get("001-wps") == cleared_extras
+    assert doc2[target]["year_hint"] == 2099
+    assert "note" not in doc2[target]
 
     r3 = await svc.import_annotations()
     assert r3["added"] == 0

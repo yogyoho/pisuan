@@ -179,13 +179,36 @@ class EiaMetaService:
         return row.to_dict()
 
     async def export_annotations(self, username: str) -> dict[str, Any]:
-        """DB → 人工层文件全量重写（rid 序确定性）；全清空标注的 rid 从文件剔除。"""
+        """DB → 人工层文件全量重写（rid 序确定性）；全清空标注的 rid 从文件剔除。
+
+        文件独有字段（variant/variant_basis 等编译层裁决，DB schema 不知情）按 rid 携带：
+        DB 是 _ANNOTATION_FIELDS 四字段的唯一真相，导出只重写这四个字段；DB 无四字段
+        裁决但 rid 仍存活的文件条目（variant-only）原样保留；rid 已不在 corpus_meta
+        的漂移残留整条剔除（bug-4196 伴随修复——此前全量重写会静默抹掉文件独有层）。
+        """
         rows = await self.repo.list_annotations()
+        # 真相倒挂守卫（bug-4192 同族）：DB 无任何四字段裁决时拒绝导出——此时重写会把
+        # 文件里的 year/scale 人工层剥掉（仅剩 variant 等独有层），必须先导入再导出
+        if not any(r.annotations for r in rows):
+            raise ValueError("无标注可导出：请先完成标注或导入存量人工层")
+        existing = await run_in_threadpool(
+            lambda: (
+                json.loads(META_ANNOTATIONS_PATH.read_text(encoding="utf-8")) if META_ANNOTATIONS_PATH.is_file() else {}
+            )
+        )
+        known_ids = set((await run_in_threadpool(_load_corpus_meta)).get("reports", {}))
         doc: dict[str, Any] = {}
         for r in sorted(rows, key=lambda x: x.report_id):
             fields = {k: r.annotations[k] for k in _ANNOTATION_FIELDS if k in (r.annotations or {})}
             if fields:
-                doc[r.report_id] = fields
+                extras = {k: v for k, v in (existing.get(r.report_id) or {}).items() if k not in _ANNOTATION_FIELDS}
+                doc[r.report_id] = {**extras, **fields}
+        for rid, ann in existing.items():
+            if rid in doc or rid not in known_ids:
+                continue
+            extras = {k: v for k, v in (ann or {}).items() if k not in _ANNOTATION_FIELDS}
+            if extras:
+                doc[rid] = extras
         if not doc:
             raise ValueError("无标注可导出：请先完成标注或导入存量人工层")
 
