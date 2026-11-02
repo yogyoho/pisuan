@@ -126,9 +126,15 @@ _ROLES = {
 
 
 def _write_roles(tmp_path):
-    (tmp_path / "_roles.json").write_text(
-        json.dumps(_ROLES, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline=""
-    )
+    """roles/<stage>.json 目录化形状（2026-10-24）；ch1/ch2 拆两份 stage 文件锁定合并语义。"""
+    d = tmp_path / "roles"
+    d.mkdir()
+    meta = {k: v for k, v in _ROLES.items() if k != "roles"}
+    for stage, prefix in (("planning_eia", "ch1_"), ("eia_review", "ch2_")):
+        doc = {**meta, "roles": {k: v for k, v in _ROLES["roles"].items() if k.startswith(prefix)}}
+        (d / f"{stage}.json").write_text(
+            json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline=""
+        )
 
 
 def test_validate_md_anchor_prefix_match(tmp_path, monkeypatch):

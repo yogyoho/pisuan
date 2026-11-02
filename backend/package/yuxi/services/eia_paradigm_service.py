@@ -1,7 +1,7 @@
 """写作范式层编辑服务（s12/s13：DB 草稿=编辑唯一真相 + admin 导出物化回写 references/paradigms/*）。
 
 编辑边界（2026-10-14 设计）：paradigm md 整文件草稿；forms_catalog 仅 desc/templates 两键
-（stats/examples 为 bank_compile 语料统计只读）；_roles.json 只读。导出 validate-all-then-write：
+（stats/examples 为 bank_compile 语料统计只读）；roles/<stage>.json 只读。导出 validate-all-then-write：
 锚点小节 / forms 两键形状 / 专名扫描任一不过 → 全批不写。写入字节纪律：forms 走整文件
 json round-trip（indent=2 + 结尾换行，与现文件逐字节恒等）仅改两键，键序不重排；md 整文件
 写回。base_hash 为存草稿时文件 sha256，导出前重算比对 → drift 标记（不阻断，admin 确认
@@ -60,6 +60,21 @@ def _read_text(path) -> str:
     if not path.exists():
         raise KeyError(f"数据文件未找到: {path}")
     return path.read_text(encoding="utf-8", newline="")
+
+
+def _load_roles_map() -> dict[str, str]:
+    """节→范式角色映射，roles/<stage>.json 目录化形状（2026-10-24，单份 _roles.json 已废）。
+
+    逐 stage 文件合并（节键带 stage 前缀天然不冲突，文件名序确定性）；roles 缺键走
+    KeyError 响亮报错（同 bug-4022 纪律：不静默兜底）。
+    """
+    roles_dir = _PARADIGM_DIR / "roles"
+    if not roles_dir.is_dir():
+        raise KeyError(f"范式角色目录未找到: {roles_dir}")
+    merged: dict[str, str] = {}
+    for f in sorted(roles_dir.glob("*.json")):
+        merged.update(json.loads(_read_text(f))["roles"])
+    return merged
 
 
 def _sha(text: str) -> str:
@@ -133,8 +148,7 @@ class EiaParadigmService:
 
     def _overview_sync(self, rows: list[tuple]) -> dict[str, Any]:
         drafts = {(k, a): (c, h, ub) for k, a, c, h, ub, _ua in rows}
-        roles = json.loads(_read_text(_PARADIGM_DIR / "_roles.json"))
-        role_map = roles["roles"]  # 真实形状：顶层是元数据键，节映射嵌套在 roles（bug-4022；缺键走 KeyError 响亮报错）
+        role_map = _load_roles_map()
         counts = {r: sum(1 for v in role_map.values() if v == r) for r in PARADIGM_IDS}
         forms_text = _read_text(_PARADIGM_DIR / "forms_catalog.json")
         forms_doc = _load_forms_doc(forms_text)
