@@ -1067,7 +1067,24 @@ const onExport = () => {
     .catch((e) => message.error({ content: e?.message || '导出失败', key: 'lexicon-export' }))
 }
 
-const onToggleSwitch = async (enabled) => {
+const onToggleSwitch = (enabled) => {
+  // 关闭即删 overrides 物化文件（管线回内置词表）——危险侧二次确认；开启无破坏直接执行
+  if (!enabled) {
+    Modal.confirm({
+      title: '关闭词表覆盖层？',
+      content:
+        '将删除 references/overrides/curated_lexicon.json，写作技能的数值护栏口径回落内置词表；DB 裁决保留，重新「导出物化」即可恢复。',
+      okText: '确认关闭',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: () => doSetSwitch(false)
+    })
+    return
+  }
+  doSetSwitch(true)
+}
+
+const doSetSwitch = async (enabled) => {
   switchLoading.value = true
   try {
     const r = await eiaLexiconApi.setSwitch('curated_lexicon', enabled)
