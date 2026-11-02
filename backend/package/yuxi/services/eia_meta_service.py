@@ -25,6 +25,12 @@ from yuxi.utils.datetime_utils import format_utc_datetime, utc_now_naive
 
 CORPUS_META_PATH = _SKILL_ROOT / "references" / "samples_bank" / "corpus_meta.json"
 META_ANNOTATIONS_PATH = _SKILL_ROOT / "references" / "samples_bank" / "corpus_meta_annotations.json"
+# 双包消费方：chapter-writer 按 refs 分发清单同收标注副本，导出需双包同步写
+# （单写 writer 会滞留旧标注，此前靠手工回流收敛）。
+_ANNOTATION_PATHS = (
+    META_ANNOTATIONS_PATH,
+    _SKILL_ROOT.parent / "coal-eia-chapter-writer" / "references" / "samples_bank" / "corpus_meta_annotations.json",
+)
 
 # 可标注字段与取值域（越界即 400，不静默丢弃未知字段）
 _ANNOTATION_FIELDS = {"year_hint", "scale_mt_a", "report_title", "eia_org"}
@@ -213,9 +219,10 @@ class EiaMetaService:
             raise ValueError("无标注可导出：请先完成标注或导入存量人工层")
 
         def _write() -> None:
-            META_ANNOTATIONS_PATH.write_text(
-                json.dumps(doc, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
-            )
+            payload = json.dumps(doc, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+            for p in _ANNOTATION_PATHS:  # 双包同步写（chapter-writer 分发清单同收）
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.write_text(payload, encoding="utf-8", newline="\n")
 
         await run_in_threadpool(_write)
         logger.info(f"[eia-meta] 导出物化 {len(doc)} 条 → {META_ANNOTATIONS_PATH.name}（by {username}）")

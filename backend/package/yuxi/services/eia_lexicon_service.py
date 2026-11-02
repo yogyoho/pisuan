@@ -35,6 +35,13 @@ from yuxi.utils import logger
 from yuxi.utils.datetime_utils import format_utc_datetime, utc_now_naive
 
 OVERRIDES_PATH = _SKILL_ROOT / "references" / "overrides" / "curated_lexicon.json"
+# 覆盖层双包消费方：chapter-writer 的 bank_compile 字节一致、同样读 overrides，refs 分发
+# 清单也向其供给——导出/关闸必须双包同步，单写 writer 会滞留旧词表（此前靠手工
+# 「回流 chapter 包副本」收敛，6b9bb3180）。
+_OVERRIDE_PATHS = (
+    OVERRIDES_PATH,
+    _SKILL_ROOT.parent / "coal-eia-chapter-writer" / "references" / "overrides" / "curated_lexicon.json",
+)
 _SKILL_REFS = _SKILL_ROOT / "references"
 CURATED_LEXICON_KEY = "curated_lexicon"
 
@@ -378,8 +385,10 @@ class EiaLexiconService:
         if dataset_key != CURATED_LEXICON_KEY:
             raise ValueError(f"未知数据集开关: {dataset_key}")
         switch = await self.repo.save_switch(dataset_key, enabled, username)
-        if not enabled and OVERRIDES_PATH.is_file():
-            OVERRIDES_PATH.unlink()
+        if not enabled:
+            for p in _OVERRIDE_PATHS:  # 双包同步删：单删 writer 会滞留 chapter 旧词表
+                if p.is_file():
+                    p.unlink()
             logger.info(f"[eia-lexicon] 关闭 {dataset_key}：物化文件已删除（管线回到 builtin）")
         return {**switch.to_dict(), "overrides_file": OVERRIDES_PATH.is_file()}
 
@@ -442,21 +451,33 @@ class EiaLexiconService:
             "source": "eia_lexicon_entries",
             "entries": doc_entries,
         }
-        OVERRIDES_PATH.parent.mkdir(parents=True, exist_ok=True)
-        OVERRIDES_PATH.write_text(
-            json.dumps(doc, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
-        )
+        payload = json.dumps(doc, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        for p in _OVERRIDE_PATHS:  # 双包同步写（chapter-writer 同读 overrides）
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(payload, encoding="utf-8", newline="\n")
         await self.repo.save_switch(CURATED_LEXICON_KEY, True, username)
         logger.info(f"[eia-lexicon] 导出物化 {len(doc_entries)} 条 → {OVERRIDES_PATH.name}（跳过 {len(skipped)}）")
         sha = commit_refs_export(
             [OVERRIDES_PATH],
             f"export: curated_lexicon 词表 {len(doc_entries)} 条（跳过 {len(skipped)}）（by {username}）",
         )
+        # overrides 是 bank_compile 的编译输入（curated 区间编译期挂载）：排队全库重编译任务
+        # 把新词表挂进 section_expectations——「不做局部重编译」防口径与切片漂移（与
+        # /eia/stages/expectations/recompile 同链）；任务尾部自行传播 shared，导出方无需等待。
+        from yuxi.services.task_service import tasker  # 局部导入：与 task 体系解耦，先例 router:547
+
+        recompile_task = await tasker.enqueue(
+            name="词表导出后语料重编译",
+            task_type="eia_corpus_process",
+            payload={"scope": "all", "operator_id": username},
+        )
+        logger.info(f"[eia-lexicon] 已排队语料重编译任务 {recompile_task.id}（挂载新词表 → section_expectations）")
         return {
             "materialized": len(doc_entries),
             "skipped": skipped,
             "path": "references/overrides/curated_lexicon.json",
             "commit": sha,
+            "recompile_task_id": recompile_task.id,
         }
 
 

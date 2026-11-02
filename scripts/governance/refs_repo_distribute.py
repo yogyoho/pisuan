@@ -16,6 +16,7 @@ standards_index.json（在册核对真源）。清单级 overlay：只覆盖清�
 对账口径：清单内每文件在消费侧存在且内容一致（CRLF 归一 md5——Gitea 权威字节是 LF，
 Windows 检出/栈包副本是 CRLF，同内容异 EOL 不算漂移）；消费侧多余文件不视为漂移。
 """
+
 import argparse
 import hashlib
 import os
@@ -59,8 +60,13 @@ def git(wt: Path, *args: str) -> subprocess.CompletedProcess:
 
 
 def manifest_files(worktree: Path) -> list[Path]:
-    return [p for p in worktree.rglob("*") if p.is_file() and ".git" not in p.parts
-            and in_manifest(p.relative_to(worktree).as_posix())]
+    return [
+        p
+        for p in worktree.rglob("*")
+        if p.is_file()
+        and ".git" not in p.parts
+        and in_manifest(p.relative_to(worktree).as_posix())
+    ]
 
 
 def targets_for(state_dir: Path) -> list[tuple[Path, str]]:
@@ -82,14 +88,22 @@ def targets_for(state_dir: Path) -> list[tuple[Path, str]]:
 
 
 def main() -> None:
+    # Windows 控制台默认 cp936，✗ 等字符会 UnicodeEncodeError 中断对账；保编码仅替换不可编码符
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="replace")
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--state-dir", default=os.environ.get("YUXI_STATE_DIR", ""),
-                    help="运行栈卷根（含 pisuan/refs-repo、pisuan/skill-sources…）")
+    ap.add_argument(
+        "--state-dir",
+        default=os.environ.get("YUXI_STATE_DIR", ""),
+        help="运行栈卷根（含 pisuan/refs-repo、pisuan/skill-sources…）",
+    )
     ap.add_argument("--remote", default="http://127.0.0.1:3000/refsadmin/eia-refs.git")
     ap.add_argument("--user", default="refsadmin")
     ap.add_argument("--password", default=os.environ.get("GITEA_REFS_PASSWORD"))
     ap.add_argument("--check", action="store_true", help="只对账，不 pull 不写")
-    ap.add_argument("--no-pull", action="store_true", help="跳过 pull，直接分发本地工作树")
+    ap.add_argument(
+        "--no-pull", action="store_true", help="跳过 pull，直接分发本地工作树"
+    )
     args = ap.parse_args()
     if not args.state_dir:
         sys.exit("[refs-dist] 缺 --state-dir（运行栈卷根）")
@@ -100,12 +114,24 @@ def main() -> None:
 
     if not args.check and not args.no_pull:
         if not args.password:
-            sys.exit("[refs-dist] pull 需 --password / GITEA_REFS_PASSWORD（或改用 --no-pull）")
+            sys.exit(
+                "[refs-dist] pull 需 --password / GITEA_REFS_PASSWORD（或改用 --no-pull）"
+            )
         authed = args.remote.replace("://", f"://{args.user}:{args.password}@", 1)
-        r = git(worktree, "-c", f"safe.directory={worktree}", "pull", "--ff-only", authed, "main")
+        r = git(
+            worktree,
+            "-c",
+            f"safe.directory={worktree}",
+            "pull",
+            "--ff-only",
+            authed,
+            "main",
+        )
         if r.returncode != 0:
             sys.exit(f"[refs-dist] pull 失败:\n{r.stdout}\n{r.stderr}")
-        print(f"[refs-dist] pull: {'已是最新' if 'up to date' in r.stdout.lower() or not r.stdout else r.stdout.strip().splitlines()[0]}")
+        print(
+            f"[refs-dist] pull: {'已是最新' if 'up to date' in r.stdout.lower() or not r.stdout else r.stdout.strip().splitlines()[0]}"
+        )
 
     files = manifest_files(worktree)
     if not files:
@@ -117,9 +143,14 @@ def main() -> None:
         scope = sorted(rel for rel in digest if in_consumer_scope(rel, skill))
         rel_troot = troot.relative_to(Path(args.state_dir).resolve())
         if args.check:
-            bad = [rel for rel in scope
-                   if not (troot / rel).is_file() or md5(troot / rel) != digest[rel]]
-            print(f"[refs-dist] 对账 {rel_troot}（{skill}）: {len(scope)} 文件，不一致/缺失 {len(bad)}")
+            bad = [
+                rel
+                for rel in scope
+                if not (troot / rel).is_file() or md5(troot / rel) != digest[rel]
+            ]
+            print(
+                f"[refs-dist] 对账 {rel_troot}（{skill}）: {len(scope)} 文件，不一致/缺失 {len(bad)}"
+            )
             for rel in bad[:10]:
                 print(f"    ✗ {rel}")
             failed += len(bad)
@@ -131,7 +162,10 @@ def main() -> None:
         print(f"[refs-dist] 分发 {len(scope)} 文件 → {rel_troot}（{skill}）")
 
     if args.check:
-        print("[refs-dist] 对账结论:", "一致" if not failed else f"{failed} 处漂移（先跑分发）")
+        print(
+            "[refs-dist] 对账结论:",
+            "一致" if not failed else f"{failed} 处漂移（先跑分发）",
+        )
         sys.exit(1 if failed else 0)
 
 

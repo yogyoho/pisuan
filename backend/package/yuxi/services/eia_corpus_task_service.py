@@ -301,7 +301,16 @@ async def run_eia_corpus_process(context: TaskContext) -> dict:
         },
         operator=operator_id,
     )
-    summary = {"compiled": len(entries)}
+    # 重编译产物落栈后传播 shared（与导出链同一传播原语；投影由 Agent Run 初始化自动刷）——
+    # 否则编译结果止步栈包，技能线程仍读旧备料清单（批次2 分发缺口同源，重启才收敛）。
+    from yuxi.services.eia_refs_propagate import propagate_refs_export  # 局部导入：api/worker 共用
+
+    # 必须入线程：传播是数十秒级的同步全树复制+哈希，直接跑会阻塞 worker 事件循环，
+    # 心跳（10s 续 30s 租）饿死 → reconcile 误判 worker_lease_expired（副作用其实完整）。
+    propagated = await asyncio.to_thread(propagate_refs_export)
+    logger.info(f"[eia-corpus] 重编译传播 shared：重播 {len(propagated['propagated'])} 技能")
+
+    summary = {"compiled": len(entries), "propagated_skills": len(propagated["propagated"])}
     await context.set_result(summary)
     await context.set_progress(100.0, f"加工完成（{len(entries)} 份入编）")
     return summary
