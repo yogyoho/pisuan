@@ -2137,3 +2137,18 @@
 
 - [2026-11-03] 服务层流测试禁止真跑 propagate/传播类副作用（会刷真实运行栈树 + 187s 假慢源）：打桩+间谍锁契约。summary 形状变更必须同提交跟测试断言（a052d635e 漏跟致 3 例红，今晨才被单测发现）。
 - [2026-11-03] 测试 helper 往 tmp 写文件前先 mkdir 父目录——write_text 不自动建目录，三连 FileNotFoundError 都是这一类。
+- (2026-11-03) pytest 收集陷阱：不同包下同名测试文件（如双包各有一份 test_progress_state_lock.py、无 __init__.py）不能一条 pytest 命令合跑——同 basename 模块名冲突收集报错；分两次单文件跑即可（容器验证 6+6）。另：E501 基线对比用 ruff 输出行号时，grep 模式必须匹配被检文件的实际文件名（拷成 head_prog.py 后 grep progress.py: 恒 0 假绿）；有插入偏移时逐行号 diff 无意义，数条数+Δ偏移对映判定零新增。
+
+## Key Learnings + DNR（2026-11-03 P2-8 资产单源化追加）
+
+### Key Learnings
+
+- P2-8 单源化后布局：chapter 包只带 SKILL.md+scripts（无 references/），消费 references 的脚本/测试一律经 `_paths.py` `refs_root()`（先自身包、缺则回落兄弟 `../coal-eia-writer/references`）；sync_chapter_skill.py 口径收窄 64 文件、chapter 侧 references 复活即清。DB `skill_dependencies` 需 api 重启才由 init_builtin_skills 解析 frontmatter 写入（psql 直查：`docker exec pisuan-localized-postgres-1 psql -U $POSTGRES_USER -c "select slug, skill_dependencies from skills"`；api 容器内 PostgresManager 无 .session() 别硬试）。
+- localized 服务层部署铁律（外推 cerebrum:2119 边界）：**有 yuxi import 的服务/测试文件进挂载层必须 `sed 's/yuxi/pisuan/g'`**——容器 /app/package 只有 pisuan 包（import yuxi 即 ModuleNotFoundError），api `--reload-dir /app/server /app/package` 对挂载层任何写入触发热重载，repo 版直拷=生产栈秒断（本批 7 文件事故实证，sed 恢复后 WatchFiles 自动重载回绿 /api/system/ready 200）。无 yuxi 导入的技能 scripts/测试仍字节直拷。
+- isort ASCII 序陷阱：`_paths`（下划线开头 0x5F）排在 `formula_runner`/`prepare_corpus`（小写 0x66+）**之前**——noqa: E402 局部 import 块插行按模块名排序，插反即 isort ERROR（HEAD 通过→NEW 报错即新引入，用 HEAD 副本同命令对照区分存量/新增）。
+- api 探活：`/health` 404 是路径不存在属正常；`/api/system/ready` 200 才是健康；重启后 init_builtin_skills 要 ~50s 才就绪（hash+copy 全部技能包），轮询别 12s 就判死。
+
+### Do-Not-Repeat
+
+- [2026-11-03] 别把 repo 版（yuxi import）服务/测试文件直接 cp 进 pisuan-localized 挂载层——必 sed 's/yuxi/pisuan/g'，否则 api 热重载即 ModuleNotFoundError 断链（本批 7 文件事故）。
+- [2026-11-03] 文案改动丢字面路径即丢契约：progress.py next 派发指引把 state/plan_{ch}.json 字面路径改写成自然语言，模型执行与测试断言双双失效（bug-4209）——面向模型的指引文案，路径/命令字面量不可改写成描述性语言。

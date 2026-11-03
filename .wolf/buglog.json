@@ -10948,7 +10948,7 @@
     "error_message": "容器守卫 test_assets_byte_identical 红：chapter 栈包 samples 缺失 planning_eia 18 文件/孤儿 openpit 18 文件，depth_targets/samples/samples_bank/section_expectations 四目录 719 文件 differ",
     "file": "backend/package/pisuan/agents/skills/buildin/coal-eia-chapter-writer/references",
     "root_cause": "第四漂移家族：bank_compile 全量输出家族（标定/章样本/切片/期望）运行时单写 writer 栈包（昨晚 E2E 关闸自动重编译 T1/T2 触发），chapter 栈包/skill-sources/admin 投影三面未跟上——导出链双包同步写只覆盖 overrides/meta annotations，银行输出家族无传播",
-    "fix": "eia_refs_propagate 传播头部新增 _mirror_bank_outputs()：四输出目录 writer→chapter 原子替换（_replace_skill_target 同原语）+内容跳过，references 内 .tmp-/.bak- 残留先行清扫；单接线点让导出链与重编译链都获得双包一致不变量。容器 138 passed；E2E：无漂移 mirrored=0 全跳过，注入残留→重编译 mirrored=1 自动清除、五面 md5 归一、守卫绿",
+    "fix": "eia_refs_propagate 传播头部新增 _mirror_bank_outputs()：四输出目录 writer→chapter 原子替换（_replace_skill_target 同原语）+内容跳过，references 内 .tmp-/.bak- 残留先行清扫；单接线点让导出链与重编译链都获得双包一致不变量。容器 138 passed；E2E：无漂移 mirrored=0 全跳过，注入残留→重编译 mirrored=1 自动清除、五面 md5 归一、守卫绿【结构性关闭（P2-8 单源化，2026-11-03）】chapter 包不再携带 references/（脚本经 _paths.py 回落 writer 包），漂移面本身消失——_mirror_bank_outputs 镜像随之退役（保留反而会复活 chapter references），回归锁定 test_propagate_never_revives_chapter_references；本条镜像方案退役，家族问题以单源化终结。",
     "tags": [
       "drift",
       "chapter-writer",
@@ -10999,6 +10999,26 @@
       "skills"
     ],
     "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-03"
+  },
+  {
+    "id": "bug-4209",
+    "timestamp": "2026-11-03",
+    "error_message": "test_interaction_cards::test_next_with_choice_notes_injection 断言 \"plan_ch2.json\" in out 失败（writer 全套复跑暴露）",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py",
+    "root_cause": "P1-5（28a941173）改写 next 派发指引文案时把 state/plan_{ch}.json 字面路径改丢（「计划卡要点（写作须回扣）」），测试断言字面路径不再匹配；提交时漏跑 interaction_cards 套件属收编疏漏",
+    "fix": "progress.py:419-421 补回字面路径——「计划卡（state/plan_{current}.json 的要点与用户补充意见，写作须回扣）」；模型执行需要字面契约，文案改动不得丢路径",
+    "tags": [
+      "progress.py",
+      "p1-5",
+      "regression",
+      "literal-path-contract",
+      "test-gap"
+    ],
+    "related_bugs": [
+      "bug-4208"
+    ],
     "occurrences": 1,
     "last_seen": "2026-11-03"
   }

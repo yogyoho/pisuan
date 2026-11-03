@@ -9058,3 +9058,53 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 |------|--------|---------|---------|--------|
 | 19:25 | Edited docs/develop-guides/changelog.md | modified fix() | ~195 |
 | 19:30 | P3-11 progress.py 状态锁收尾：ruff E501 基线对映零新增（36/36 全 Δ38 偏移）、format 跳过（HEAD 本就不 clean）、双包+新测试同步 sync 1161 OK、既有 5 套件 26 用例回归绿、changelog v0.7.3 补条目、buglog 登记 bug-4208 | progress.py, test_progress_state_lock.py, changelog.md, buglog.json | 完成，待提交 | ~25k |
+| 19:45 | P3-11 部署+容器验证：三面（localized buildin 挂载/skill-sources shared/admin 投影）×2 包×2 文件 12 拷贝 md5 全 OK；容器双包锁测试 6+6 全绿（合跑同名模块收集冲突须分跑）；提交 0080fbcd0+ d5a419a6c | progress.py 等 | 部署完成 | ~15k |
+| 19:42 | Created docs/vibe/2026-11-03-chapter-assets-single-source.md | — | ~696 |
+| 19:43 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/_paths.py | — | ~190 |
+| 19:43 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | added 1 import(s) | ~39 |
+| 19:43 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | 4→4 lines | ~59 |
+| 19:43 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | "references" → "samples_bank" | ~18 |
+| 19:44 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/derive_globals.py | added 1 import(s) | ~49 |
+| 19:44 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | inline fix | ~23 |
+| 19:44 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/corpus_meta.py | added 1 import(s) | ~36 |
+| 19:44 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/front_extract.py | inline fix | ~18 |
+| 19:45 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/front_extract.py | added 1 import(s) | ~42 |
+| 19:45 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/ingest.py | added 1 import(s) | ~42 |
+| 19:45 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/ingest.py | "references" → "stages" | ~27 |
+| 19:46 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/paradigm_role.py | added 1 import(s) | ~26 |
+| 19:46 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/paradigm_role.py | 1→3 lines | ~43 |
+| 19:46 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/paradigm_role.py | inline fix | ~9 |
+| 19:46 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | added 1 import(s) | ~41 |
+| 19:46 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | inline fix | ~9 |
+| 19:46 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/style_targets.py | added 1 import(s) | ~26 |
+| 19:46 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/style_targets.py | inline fix | ~7 |
+| 19:47 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | added 1 import(s) | ~152 |
+| 19:48 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | Path() → refs_root() | ~23 |
+| 21:10 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 6→9 lines | ~150 |
+| 21:11 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | "STAGE=references/stages/<" → "STAGE=/home/gem/skills/co" | ~45 |
+| 21:11 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | "corpus_meta.json" → "/home/gem/skills/coal-eia" | ~127 |
+| 21:12 | Edited scripts/sync_chapter_skill.py | 20→24 lines | ~256 |
+| 21:12 | Edited scripts/sync_chapter_skill.py | modified is_dir() | ~97 |
+| 21:12 | Edited scripts/sync_chapter_skill.py | "coal-eia-writer → coal-ei" → "coal-eia-writer → coal-ei" | ~44 |
+| 21:15 | Edited backend/package/yuxi/services/eia_refs_propagate.py | modified propagate_refs_export() | ~756 |
+| 21:15 | Edited backend/package/yuxi/services/eia_corpus_task_service.py | 5→4 lines | ~33 |
+| 21:15 | Edited backend/test/unit/services/test_eia_refs_propagate.py | "导出物化运行时传播的单测：重播/内容跳过/残留清理" → "导出物化运行时传播的单测：重播/内容跳过/残留清理" | ~22 |
+| 21:15 | Edited backend/test/unit/services/test_eia_refs_propagate.py | modified test_propagate_never_revives_chapter_references() | ~376 |
+| 21:16 | Edited backend/package/yuxi/services/eia_lexicon_service.py | 7→6 lines | ~64 |
+| 21:17 | Edited backend/package/yuxi/services/eia_meta_service.py | 7→6 lines | ~78 |
+| 21:17 | Edited backend/package/yuxi/services/eia_lexicon_service.py | inline fix | ~23 |
+| 21:17 | Edited backend/package/yuxi/services/eia_lexicon_service.py | inline fix | ~22 |
+| 21:17 | Edited backend/package/yuxi/services/eia_meta_service.py | inline fix | ~23 |
+| 21:17 | Edited backend/test/unit/agents/skills/test_chapter_skill_assets_sync.py | 6→7 lines | ~88 |
+| 21:18 | Edited backend/test/unit/agents/skills/test_chapter_skill_assets_sync.py | inline fix | ~7 |
+| 21:18 | Edited backend/test/unit/agents/skills/test_chapter_skill_assets_sync.py | modified test_assets_byte_identical() | ~245 |
+| 21:32 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 2→3 lines | ~70 |
+
+## Session: 2026-11-03 21:40
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:50 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/derive_globals.py | 2→2 lines | ~43 |
+| 21:50 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/front_extract.py | 2→2 lines | ~42 |
+| 21:52 | Edited docs/develop-guides/changelog.md | modified refactor() | ~442 |
+| 21:54 | P2-8 收尾：7 测试文件 refs_root 改造双布局 58+58 绿、sync 64 口径、三面部署、容器双包 251+251 全绿、DB skill_dependencies 生效、ruff 零新增净降14、isort 两处序修、changelog/buglog-4209/cerebrum/anatomy 簿记 | scripts/_paths.py+9脚本+7测试、SKILL.md、sync_chapter_skill.py、eia_refs_propagate 等 svc×4、test×3、changelog | 待提交 | ~45000 |
