@@ -51,16 +51,18 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from _paths import refs_root  # 同目录：references 根解析（P2-8 单源化回落）
+
 EXIT_OK, EXIT_ERROR = 0, 1
 
 # finalize 的 consistency --standards 默认 = 技能规范索引（CC3 规范编号枚举门的真源；
 # 缺文件时省略该旗标 → CC1/CC3 降为 manual，rc=2 由调用方按门拦语义处理）。
 # coal-eia T1：references/standards_index.json 尚未落地（一期任务4），在册即自动启用。
-STANDARDS_INDEX = Path(__file__).resolve().parent.parent / "references" / "standards_index.json"
+STANDARDS_INDEX = refs_root() / "standards_index.json"
 
 # finalize 的 consistency --contracts 默认 = 技能合约注册表（T1b 改造点①条件激活门的真源；
 # T4 并行会话维护，本脚本只读——在册即自动启用，缺文件时省略旗标，注册表门整体跳过）。
-CONTRACTS_INDEX = Path(__file__).resolve().parent.parent / "references" / "consistency_contracts.json"
+CONTRACTS_INDEX = refs_root() / "consistency_contracts.json"
 
 # 派发额度：700 页 ≈ 77+ 节派发（D10 规模约束），batch_task 分波是默认生存方式。
 # 本脚本内预算只做展示与 WAVE1 路由提示；硬执行在 harness SubagentLimitMiddleware。
@@ -415,7 +417,8 @@ def next_action_chapter(doc: dict, state_dir: Path) -> str:
             lines += [
                 "动作: ① 本章资料汇集（首章门1 全局包 `ingest.py check --global-only`，后续章冻结层已在）→ ② 模板推荐（按范式角色查 references/paradigms/roles/<stage>.json + 模板库，呈用户可跳过）→ ③ batch_task 分波派发子代理直写节稿（派发契约同 full：stage sections 要素链+范文索引+节级深度目标）",
                 f"范例: 已选定 {'不用范例（派发契约如实注明用户选择）' if rid is None else rid}——③ 派发契约注入 sample_fragments 对应节包"
-                f"（state/fragment_packs_{current}/<样例节号>.md，缺失退章包）与计划卡要点（写作须回扣）",
+                f"（state/fragment_packs_{current}/<样例节号>.md，缺失退章包）与计划卡"
+                f"（state/plan_{current}.json 的要点与用户补充意见，写作须回扣）",
             ]
         lines += [
             f"记账: 节批量 mark --sections <节id csv> DRAFTED --state-dir {sd}（批量原语）→ 章稿齐后 progress.py mark {current} DRAFTED --state-dir {sd}",
@@ -444,7 +447,7 @@ def _blank_section(s: dict) -> dict:
 
 
 def builtin_stages_dir() -> Path:
-    return (Path(__file__).resolve().parent.parent / "references" / "stages").resolve()
+    return (refs_root() / "stages").resolve()
 
 
 def builtin_stage_missing_assets(stage_arg: str) -> list[Path]:

@@ -14,6 +14,8 @@ import json
 import sys
 from pathlib import Path
 
+from _paths import refs_root  # 同目录：references 根解析（P2-8 单源化回落）
+
 LEGAL_ROLES = {"opener", "baseline", "analysis", "measures", "conclusion", "process"}
 
 
@@ -41,7 +43,7 @@ def resolve(references_dir: Path, stage: str, section_id: str) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="节角色解析：stage+section -> paradigm role")
-    default_refs = Path(__file__).resolve().parent.parent / "references"
+    default_refs = refs_root()
     ap.add_argument("--references-dir", default=str(default_refs))
     ap.add_argument("--stage", required=True)
     ap.add_argument("--section", required=True)

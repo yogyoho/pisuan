@@ -1,8 +1,9 @@
-"""chapter-writer 资产同步守卫：两包 scripts/ + references/ 逐文件字节一致（spec §5 打包契约）。
+"""chapter-writer 资产守卫：scripts/ 与 writer 逐文件字节一致 + references/ 单源化不携带（spec §5 打包契约 + 评审 P2-8）。
 
-chapter-writer 包 = coal-eia-writer 的分章管线变体，脚本地基与参考资产由项目根
-scripts/sync_chapter_skill.py 单向镜像；本测试拦任何一包的手改漂移——
-改 writer 源后须重跑同步脚本再提交。
+chapter-writer 包 = coal-eia-writer 的分章管线变体，脚本地基由项目根
+scripts/sync_chapter_skill.py 单向镜像；references/ 自 P2-8（2026-11-03）单源在
+writer 包（chapter 脚本经 _paths.py 运行时回落解析），本测试拦脚本漂移与
+references 复活——改 writer 源后须重跑同步脚本再提交。
 """
 from __future__ import annotations
 
@@ -33,7 +34,7 @@ SYNC_SCRIPT = next(
 SRC = BUILDIN / "coal-eia-writer"
 DST = BUILDIN / "coal-eia-chapter-writer"
 REVIEWER = BUILDIN / "coal-eia-reviewer"
-SUBDIRS = ("scripts", "references")
+SUBDIRS = ("scripts",)
 # reviewer 最小副本清单（与 sync_chapter_skill.py REVIEWER_FILES 同源）
 REVIEWER_FILES = ("references/compliance_checklist.md", "references/standards_index.json")
 
@@ -56,6 +57,10 @@ def test_assets_byte_identical():
         for rel in sorted(src_files):
             assert filecmp.cmp(src_dir / rel, dst_dir / rel, shallow=False), (
                 f"{sub}/{rel} 两包字节不一致——重跑 scripts/sync_chapter_skill.py")
+    # references/ 单源化（P2-8）：chapter 不携带，复活即漂移面回归
+    assert not (DST / "references").exists(), (
+        "chapter 包不应携带 references/（P2-8 单源化，脚本经 _paths.py 回落 writer 包）——"
+        "重跑 scripts/sync_chapter_skill.py 清除")
 
 
 def test_sync_script_check_mode_passes():

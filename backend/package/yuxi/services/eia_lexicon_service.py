@@ -35,12 +35,11 @@ from yuxi.utils import logger
 from yuxi.utils.datetime_utils import format_utc_datetime, utc_now_naive
 
 OVERRIDES_PATH = _SKILL_ROOT / "references" / "overrides" / "curated_lexicon.json"
-# 覆盖层双包消费方：chapter-writer 的 bank_compile 字节一致、同样读 overrides，refs 分发
-# 清单也向其供给——导出/关闸必须双包同步，单写 writer 会滞留旧词表（此前靠手工
-# 「回流 chapter 包副本」收敛，6b9bb3180）。
+# 覆盖层单源化（评审 P2-8，2026-11-03）：chapter 包不携带 references，资产单源在 writer 包，
+# chapter 脚本经 scripts/_paths.py 运行时回落读同一份——导出/关闸单写 writer 即全量生效。
+# 此前的双包同步写（6b9bb3180 手工回流）与 bug-4206 镜像通道一并退役。
 _OVERRIDE_PATHS = (
     OVERRIDES_PATH,
-    _SKILL_ROOT.parent / "coal-eia-chapter-writer" / "references" / "overrides" / "curated_lexicon.json",
 )
 _SKILL_REFS = _SKILL_ROOT / "references"
 CURATED_LEXICON_KEY = "curated_lexicon"
@@ -387,7 +386,7 @@ class EiaLexiconService:
         switch = await self.repo.save_switch(dataset_key, enabled, username)
         recompile_task_id: str | None = None
         if not enabled:
-            for p in _OVERRIDE_PATHS:  # 双包同步删：单删 writer 会滞留 chapter 旧词表
+            for p in _OVERRIDE_PATHS:  # writer 单写（P2-8 单源化，chapter 运行时回落读同一份）
                 if p.is_file():
                     p.unlink()
             # 编译产物仍含 curated 区间（overrides 是 bank_compile 编译输入）：同导出链排队
@@ -460,7 +459,7 @@ class EiaLexiconService:
             "entries": doc_entries,
         }
         payload = json.dumps(doc, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
-        for p in _OVERRIDE_PATHS:  # 双包同步写（chapter-writer 同读 overrides）
+        for p in _OVERRIDE_PATHS:  # writer 单写（P2-8 单源化，chapter 运行时回落读同一份）
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text(payload, encoding="utf-8", newline="\n")
         await self.repo.save_switch(CURATED_LEXICON_KEY, True, username)

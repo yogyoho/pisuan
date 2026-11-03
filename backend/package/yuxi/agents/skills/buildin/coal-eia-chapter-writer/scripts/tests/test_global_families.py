@@ -14,6 +14,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from _paths import refs_root  # 同目录上一级：references 根解析（P2-8 单源化回落）
+
 import derive_globals
 import ingest
 
@@ -47,7 +49,7 @@ def test_derive_mini():
 
 def test_derive_real_planning_eia():
     """真实 planning_eia 派生：冻结依赖 7 族全在；跨章数据族/单章非冻结族不在。"""
-    refs = Path(__file__).resolve().parent.parent.parent / "references"
+    refs = refs_root()
     exp = json.loads((refs / "data_expectations.json").read_text(encoding="utf-8"))
     st = json.loads((refs / "stages" / "planning_eia.json").read_text(encoding="utf-8"))
     got = derive_globals.derive(exp, st)
@@ -64,7 +66,7 @@ def test_write_globals_zero_disturb_and_idempotent(tmp_path):
     对「文件尚无 global_families（插入行）」与「已有（原行替换）」两态都必须成立。"""
     import re
 
-    refs = Path(__file__).resolve().parent.parent.parent / "references"
+    refs = refs_root()
     target = tmp_path / "data_expectations.json"
     original_text = (refs / "data_expectations.json").read_text(encoding="utf-8", newline="")  # raw，不翻译换行
     original = json.loads(original_text)

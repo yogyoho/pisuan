@@ -13,6 +13,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from _paths import refs_root  # 同目录上一级：references 根解析（P2-8 单源化回落）
+
 import corpus_meta
 
 
@@ -44,7 +46,7 @@ def test_build_merges_manual_override(tmp_path):
 
 def test_add_variant_real_corpus(tmp_path):
     """真实 corpus_meta 副本：33 份全部带 variant；除新增字段外字节零扰动；计数符合 plan 口径。"""
-    src = Path(__file__).resolve().parent.parent.parent / "references" / "samples_bank" / "corpus_meta.json"
+    src = refs_root() / "samples_bank" / "corpus_meta.json"
     target = tmp_path / "corpus_meta.json"
     raw = src.read_bytes()
     target.write_bytes(raw)
@@ -74,7 +76,7 @@ def test_add_variant_real_corpus(tmp_path):
 
 def test_add_variant_manual_override(tmp_path):
     """annotations 显式 variant 优先于标题即判，basis=manual。"""
-    src = Path(__file__).resolve().parent.parent.parent / "references" / "samples_bank" / "corpus_meta.json"
+    src = refs_root() / "samples_bank" / "corpus_meta.json"
     target = tmp_path / "corpus_meta.json"
     target.write_bytes(src.read_bytes())
     corpus_meta.add_variant(target, annotations={"003-1-2024-1-30": {"variant": "new", "variant_basis": "人工裁定"}})

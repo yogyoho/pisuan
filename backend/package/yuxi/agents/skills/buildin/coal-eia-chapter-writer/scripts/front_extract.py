@@ -21,6 +21,7 @@ from pathlib import Path
 SCRIPTS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS_DIR))
 
+from _paths import refs_root  # noqa: E402  # 同目录：references 根解析（P2-8 单源化回落）
 from prepare_corpus import make_rid  # noqa: E402  rid 单一事实源，绝不复制实现
 
 # 前置区边界：首个节号标题（与 prepare_corpus 范围裁剪同一判据）
@@ -139,7 +140,7 @@ def extract_front(paras: list[str]) -> dict:
 def main_with_args(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="封面/前置区元数据抽取（front_matter.json，幂等）")
     ap.add_argument("--corpus-dir", required=True)
-    ap.add_argument("--references", default=str(SCRIPTS_DIR.parent / "references"))
+    ap.add_argument("--references", default=str(refs_root()))
     ap.add_argument("--exclude", action="append", default=[], help="排除文件名（可重复）——重复副本门")
     ap.add_argument("--workdir", default=None, help="排除日志输出目录；省略时仅 stderr")
     args = ap.parse_args(argv)

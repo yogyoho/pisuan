@@ -14,6 +14,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from _paths import refs_root  # 同目录上一级：references 根解析（P2-8 单源化回落）
+
 import build_output
 
 STAGE_CH2 = {
@@ -152,7 +154,7 @@ def test_depth_gate_message_carries_bound_note(bank_cache, monkeypatch, tmp_path
 def test_real_registry_floor_honors_calibration(bank_cache):
     """真注册表全章回归（评审 P0-1 标定合理性）：折算章地板不得穿透 median_eff×absolute_floor
     ——bank_compile 落盘的标定契约（absolute_floor）必须被门兑现；直通章保持注册地板语义。"""
-    refs = Path(__file__).resolve().parent.parent.parent / "references"
+    refs = refs_root()
     checked_folded = checked_all = 0
     for stage_path in sorted((refs / "stages").glob("*.json")):
         stage = json.loads(stage_path.read_text(encoding="utf-8"))

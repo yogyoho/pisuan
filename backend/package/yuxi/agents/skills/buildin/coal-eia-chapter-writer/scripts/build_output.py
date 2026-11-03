@@ -53,6 +53,7 @@ import sys
 from pathlib import Path
 
 import style_targets  # 同目录：文风门复用 _metrics/_eff/_strip_tables 口径（单一事实源）
+from _paths import refs_root  # 同目录：references 根解析（P2-8 单源化回落）
 
 EXIT_OK, EXIT_ERROR = 0, 1
 SLOT_RE = re.compile(r"\{\{SLOT:([^}]+)\}\}")
@@ -70,10 +71,10 @@ SLOT_DEFORM_CLOSE_RE = re.compile(r"\{\{SLOT:([^{}]+)\}(?!\})([^{}\n]*)\}")
 SLOT_DEFORM_OPEN_RE = re.compile(r"(?<!\{)\{SLOT:([^{}]+)\}")  # lookbehind 防 {{SLOT: 被当单括号形
 
 DEFAULT_CHAPTER_FLOOR_CHARS = 30000  # 一期绝对地板（无 depth 基线时的章级默认，spec L2 门）
-DEPTH_DIR = Path(__file__).resolve().parent.parent / "references" / "depth_targets"
-STYLE_TARGETS_DIR = Path(__file__).resolve().parent.parent / "references" / "style_targets"
-CONTRACTS_PATH = Path(__file__).resolve().parent.parent / "references" / "consistency_contracts.json"
-STANDARDS_PATH = Path(__file__).resolve().parent.parent / "references" / "standards_index.json"
+DEPTH_DIR = refs_root() / "depth_targets"
+STYLE_TARGETS_DIR = refs_root() / "style_targets"
+CONTRACTS_PATH = refs_root() / "consistency_contracts.json"
+STANDARDS_PATH = refs_root() / "standards_index.json"
 
 
 def sha256_file(p: Path) -> str:
@@ -724,7 +725,7 @@ _CALIB_CACHE: dict = {}
 def _bank_index() -> dict:
     """samples_bank/bank_index.json 懒装载缓存；缺失/损坏 → {}（折算退化为原地板，不阻断）。"""
     if "bank" not in _BANK_CACHE:
-        p = Path(__file__).resolve().parent.parent / "references" / "samples_bank" / "bank_index.json"
+        p = refs_root() / "samples_bank" / "bank_index.json"
         try:
             _BANK_CACHE["bank"] = json.loads(p.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError) as e:

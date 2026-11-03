@@ -1,4 +1,4 @@
-"""导出物化运行时传播的单测：重播/内容跳过/残留清理/bank 输出家族双包镜像（隔离 tmp 根，不触真实运行栈）。"""
+"""导出物化运行时传播的单测：重播/内容跳过/残留清理/chapter references 单源化不复活（隔离 tmp 根，不触真实运行栈）。"""
 
 import pytest
 from yuxi.services import eia_refs_propagate as prop
@@ -74,87 +74,27 @@ def test_propagate_cleans_interrupted_residue(fake_env, monkeypatch):
     assert (shared / "s-a" / "references" / "a.json").is_file()
 
 
-# ------------------------------------------------- bank 输出家族双包镜像（bug-4206）
-
-_BANK_DIRS = prop._BANK_OUTPUT_DIRS
+# ------------------------------------------------- chapter references 单源化（P2-8，镜像退役）
 
 
-def _mk_bank_output(skill_dir, depth_value: str = "1") -> None:
-    """writer 侧 bank 输出家族样例（四目录各一文件，内容可参数化）。"""
-    refs = skill_dir / "references"
+def test_propagate_never_revives_chapter_references(fake_env, monkeypatch):
+    """writer 带全量 bank 输出、chapter 无 references——传播后 chapter 源与 shared 均不复活 references。
+
+    旧镜像（bug-4206）会把 writer 资产带进 chapter；单源化后镜像已退役，
+    回归锁定「chapter 无资产即无漂移面」不变量。
+    """
+    shared, src_root = fake_env
+    w = _mk_skill(src_root, "coal-eia-writer")
+    c = _mk_skill(src_root, "coal-eia-chapter-writer")
+    import shutil as _shutil
+
+    _shutil.rmtree(c / "references")  # chapter 单源化态：不携带 references
     for p in ("depth_targets", "samples/planning_eia", "samples_bank", "section_expectations"):
-        (refs / p).mkdir(parents=True, exist_ok=True)
-    (refs / "depth_targets" / "planning_eia.json").write_text(f'{{"floor": {depth_value}}}', encoding="utf-8")
-    (refs / "samples" / "planning_eia" / "ch1__r1.md").write_text("sl3", encoding="utf-8")
-    (refs / "samples_bank" / "bank_index.json").write_text("{}", encoding="utf-8")
-    (refs / "section_expectations" / "planning_eia.json").write_text("[]", encoding="utf-8")
-
-
-def test_mirror_feeds_chapter_then_shared_replay(fake_env, monkeypatch):
-    """传播后双包栈内一致 + shared chapter 同步跟上（一个接线点，两条路径都收敛）。"""
-    shared, src_root = fake_env
-    _mk_skill(src_root, prop._WRITER_SLUG)
-    _mk_skill(src_root, prop._CHAPTER_SLUG)
-    _mk_bank_output(src_root / prop._WRITER_SLUG)
-    _patch_specs(monkeypatch, src_root, [prop._WRITER_SLUG, prop._CHAPTER_SLUG])
+        (w / "references" / p).mkdir(parents=True, exist_ok=True)
+    (w / "references" / "samples_bank" / "bank_index.json").write_text("{}", encoding="utf-8")
+    _patch_specs(monkeypatch, src_root, ["coal-eia-writer", "coal-eia-chapter-writer"])
 
     r = prop.propagate_refs_export()
-    assert sorted(r["mirrored"]) == sorted(_BANK_DIRS)
-    ch_refs = src_root / prop._CHAPTER_SLUG / "references"
-    for d in _BANK_DIRS:
-        assert (ch_refs / d).is_dir(), d
-    assert (ch_refs / "depth_targets" / "planning_eia.json").read_text(encoding="utf-8") == '{"floor": 1}'
-    # shared 重播携带收敛后的 chapter（传播在同一调用内完成）
-    assert (shared / prop._CHAPTER_SLUG / "references" / "samples_bank" / "bank_index.json").is_file()
-
-    # 二次传播：内容未变全跳过（镜像与重播双 skip）
-    r2 = prop.propagate_refs_export()
-    assert r2["mirrored"] == [] and r2["propagated"] == []
-
-
-def test_mirror_prunes_stale_keeps_chapter_only_assets(fake_env, monkeypatch):
-    """chapter 残留旧切片随镜像清除；chapter 独有静态资产（镜像射程外）原样保留。"""
-    shared, src_root = fake_env
-    w, c = _mk_skill(src_root, prop._WRITER_SLUG), _mk_skill(src_root, prop._CHAPTER_SLUG)
-    _mk_bank_output(w)
-    ch_refs = c / "references"
-    stale_dir = ch_refs / "samples" / "old_eia"  # writer 没有的 stage：整目录替换后必须消失
-    stale_dir.mkdir(parents=True)
-    (stale_dir / "ch1__stale.md").write_text("stale", encoding="utf-8")
-    (ch_refs / "stages").mkdir()
-    (ch_refs / "stages" / "planning_eia.json").write_text("{}", encoding="utf-8")  # chapter 独有
-    _patch_specs(monkeypatch, src_root, [prop._WRITER_SLUG, prop._CHAPTER_SLUG])
-
-    prop.propagate_refs_export()
-    assert not (ch_refs / "samples" / "old_eia" / "ch1__stale.md").exists()
-    assert (ch_refs / "stages" / "planning_eia.json").read_text(encoding="utf-8") == "{}"
-    assert (ch_refs / "samples" / "planning_eia" / "ch1__r1.md").exists()
-
-
-def test_mirror_noop_without_chapter_or_bank(fake_env, monkeypatch):
-    """chapter 未安装 / writer 尚无 bank 输出（首次编译前）→ 空镜像不报错。"""
-    shared, src_root = fake_env
-    _mk_skill(src_root, prop._WRITER_SLUG)  # 只有 writer
-    _patch_specs(monkeypatch, src_root, [prop._WRITER_SLUG])
-    assert prop.propagate_refs_export()["mirrored"] == []
-
-    # chapter 在场但 writer 无 bank 输出（首次编译前）→ 跳过不误伤
-    _mk_skill(src_root, prop._CHAPTER_SLUG)
-    _mk_bank_output(src_root / prop._CHAPTER_SLUG)  # chapter 自带旧产物，writer 没有
-    r = prop.propagate_refs_export()
-    assert r["mirrored"] == []
-    assert (src_root / prop._CHAPTER_SLUG / "references" / "samples_bank" / "bank_index.json").exists()
-
-
-def test_mirror_cleans_in_references_residue(fake_env, monkeypatch):
-    """references 内的中断残留（skills_root 级清理够不到的 .{name}.tmp-）随镜像清扫。"""
-    shared, src_root = fake_env
-    w, c = _mk_skill(src_root, prop._WRITER_SLUG), _mk_skill(src_root, prop._CHAPTER_SLUG)
-    _mk_bank_output(w)
-    residue = c / "references" / ".depth_targets.tmp-deadbeef"
-    residue.mkdir()
-    (residue / "junk").write_text("x", encoding="utf-8")
-    _patch_specs(monkeypatch, src_root, [prop._WRITER_SLUG, prop._CHAPTER_SLUG])
-
-    prop.propagate_refs_export()
-    assert not residue.exists()
+    assert sorted(r["propagated"]) == ["coal-eia-chapter-writer", "coal-eia-writer"]
+    assert not (c / "references").exists()  # 源不被复活
+    assert not (shared / "coal-eia-chapter-writer" / "references").exists()  # shared 不复活

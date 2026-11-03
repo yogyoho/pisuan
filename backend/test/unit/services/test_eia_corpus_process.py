@@ -132,7 +132,7 @@ def _stub_propagate(monkeypatch) -> list[int]:
 
     def _fake():
         calls.append(1)
-        return {"propagated": [], "mirrored": []}
+        return {"propagated": []}
 
     monkeypatch.setattr(prop_mod, "propagate_refs_export", _fake)
     return calls
@@ -250,7 +250,7 @@ def test_process_compiles_kb_set_excluding_library_only_rows(tmp_path, monkeypat
     ctx = FakeContext()
     ctx.payload = {"scope": "all", "operator_id": "tester"}
     summary = asyncio.run(svc.run_eia_corpus_process(ctx))
-    assert summary == {"compiled": 1, "propagated_skills": 0, "bank_output_mirrored": 0}
+    assert summary == {"compiled": 1, "propagated_skills": 0}
     assert calls == [1]  # 尾部必传播（bug-4206 收敛不变量的接线点）
     detail = repo.logs[0]["detail"]
     assert detail["library_not_in_kb"] == ["002-unpushed"]
@@ -269,7 +269,7 @@ def test_process_full_run_updates_processed_at_and_logs(tmp_path, monkeypatch):
     ctx = FakeContext()
     ctx.payload = {"scope": "all", "operator_id": "tester"}
     summary = asyncio.run(svc.run_eia_corpus_process(ctx))
-    assert summary == {"compiled": 1, "propagated_skills": 0, "bank_output_mirrored": 0}
+    assert summary == {"compiled": 1, "propagated_skills": 0}
     assert calls == [1]
     assert repo.updated and repo.updated[0][1].get("processed_at") is not None
     assert repo.logs[0]["action"] == "recompile"
@@ -297,7 +297,7 @@ def test_process_file_ids_scope_only_stamps_processed_at(tmp_path, monkeypatch):
     ctx = FakeContext()
     ctx.payload = {"file_ids": [1], "operator_id": "tester"}
     summary = asyncio.run(svc.run_eia_corpus_process(ctx))
-    assert summary == {"compiled": 2, "propagated_skills": 0, "bank_output_mirrored": 0}  # 编译恒为 KB 全集
+    assert summary == {"compiled": 2, "propagated_skills": 0}  # 编译恒为 KB 全集
     assert [fid for fid, _ in repo.updated] == [1]  # processed_at 仅登记目标
 
     ctx.payload = {"file_ids": [99], "operator_id": "tester"}

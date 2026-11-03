@@ -18,9 +18,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _paths import refs_root  # noqa: E402  # 同目录：references 根解析（P2-8 单源化回落）
 from formula_runner import FORMULA_FORM_DEPS, resolve_scope  # noqa: E402
 
-REFS = Path(__file__).resolve().parent.parent / "references"
+REFS = refs_root()
 EXPECTATIONS_PATH = REFS / "data_expectations.json"
 
 

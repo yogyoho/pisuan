@@ -13,9 +13,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from _paths import refs_root  # 同目录上一级：references 根解析（P2-8 单源化回落）
+
 import progress
 
-REFS = Path(progress.__file__).resolve().parent.parent / "references"
+REFS = refs_root()
 STAGE = {
     "chapters": {
         "ch2": {"sections": [{"id": "ch2_S01", "title": "总则"}]},

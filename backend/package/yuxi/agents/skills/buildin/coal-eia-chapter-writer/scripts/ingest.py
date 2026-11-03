@@ -35,6 +35,7 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 import derive_globals  # 门1 --global-only 读 global_families（派生自 derive_globals，禁手拍）
+from _paths import refs_root  # 同目录：references 根解析（P2-8 单源化回落）
 
 EXIT_OK = 0
 EXIT_ERROR = 1
@@ -135,7 +136,7 @@ def load_stage(stage_path: Path) -> dict:
     # 自动补全到技能内置 references/stages/<name>.json；仍找不到给可读错误。
     p = Path(stage_path)
     if not p.exists():
-        alt = Path(__file__).resolve().parent.parent / "references" / "stages" / (p.name if p.suffix == ".json" else p.name + ".json")
+        alt = refs_root() / "stages" / (p.name if p.suffix == ".json" else p.name + ".json")
         if alt.exists():
             p = alt
         else:

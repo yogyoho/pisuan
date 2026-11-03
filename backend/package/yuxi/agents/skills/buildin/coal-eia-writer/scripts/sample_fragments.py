@@ -33,6 +33,8 @@ import re
 import sys
 from pathlib import Path
 
+from _paths import refs_root  # 同目录：references 根解析（P2-8 单源化回落）
+
 HEADING_RE = re.compile(r"^#{2,4} \d", re.MULTILINE)
 SECTION_HEADING_RE = re.compile(r"^### (\d[\d.]*) ?(.*)$", re.MULTILINE)
 CHAPTER_HEADING_RE = re.compile(r"^## \d[^\n]*", re.MULTILINE)
@@ -213,7 +215,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(
         description="stage+章节 → samples_bank 同章真实切片包（bug-4147；范例挑选卡候选/取件）"
     )
-    default_refs = Path(__file__).resolve().parent.parent / "references"
+    default_refs = refs_root()
     ap.add_argument("--references-dir", default=str(default_refs))
     ap.add_argument(
         "--stage", required=True, help="stages/*.json 路径或裸 stage id（如 planning_eia；路径自动取回 id）"

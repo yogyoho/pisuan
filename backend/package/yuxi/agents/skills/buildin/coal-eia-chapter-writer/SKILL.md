@@ -8,10 +8,13 @@ description: >
   审查+用户确认卡（发卡即停）再进下一章；共享 writer 全部数据纪律与脚本地基。
 version: "2026.10.24"
 tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query_kb"]
+skill_dependencies: ["coal-eia-writer"]
 # 分章管线设计：docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md §3。
-# scripts/ 与 references/ 由项目根 scripts/sync_chapter_skill.py 从 coal-eia-writer 单向同步
-# （字节一致守卫：backend/test/unit/skills/test_chapter_skill_assets_sync.py）；本 SKILL.md 为
-# chapter-writer 专属，不在同步范围。
+# scripts/ 由项目根 scripts/sync_chapter_skill.py 从 coal-eia-writer 单向同步（字节一致
+# 守卫：backend/test/unit/skills/test_chapter_skill_assets_sync.py）；references/ 资产单源
+# 在 coal-eia-writer 包（评审 P2-8），本包不携带——脚本经 scripts/_paths.py 自动回落解析，
+# 模型侧读文件一律用依赖包全路径 /home/gem/skills/coal-eia-writer/references/...。
+# 本 SKILL.md 为 chapter-writer 专属，不在同步范围。
 ---
 
 # 煤炭环境影响评价报告分章编写技能
@@ -91,7 +94,7 @@ tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query
 ```
 
 脚本调用统一前缀：`python -X utf8 /home/gem/skills/coal-eia-chapter-writer/scripts/<脚本> …`
-（`STAGE=references/stages/<stage>.json` 相对技能根；`--stage S` 的 S 一律填文件路径）。
+（`STAGE=/home/gem/skills/coal-eia-writer/references/stages/<stage>.json`——本章包不携带 references（P2-8 单源化），stage 契约在依赖包；裸 stage id 亦可，脚本自动归一。`--stage S` 的 S 一律填文件路径或裸 id）。
 
 ## 管线（步骤 0–7，分章模式：单章聚焦，每章确认卡为天然停车点）
 
@@ -205,4 +208,4 @@ rc 取法：`<命令> > /tmp/o 2>&1; echo rc=$?`——**禁 `| head` 后 `echo $
 
 ## KF 契约 / 能力边界 / 参考文件
 
-全套继承 coal-eia-writer 同名章节（结构真源=内置 references/；模板=派生工件；样例库变体标注 `corpus_meta.json` 的 `variant` 字段供模板检索过滤；`references/style_targets/<stage>.json` 为文风门基准；`references/paradigms/roles/<stage>.json` 六型角色映射 + conclusion/process 范式）。脚本地基（ingest/formula_runner/chapter_planner/build_output/progress/consistency/snapshot/mapping/sample_fragments）与 writer 字节一致（sync_chapter_skill.py 同步守卫），语义与行为以 coal-eia-writer SKILL.md 对应章节为准。
+全套继承 coal-eia-writer 同名章节（结构真源=依赖包 references/——`/home/gem/skills/coal-eia-writer/references/`，单源化 P2-8；模板=派生工件；样例库变体标注 `corpus_meta.json` 的 `variant` 字段供模板检索过滤；`references/style_targets/<stage>.json` 为文风门基准；`references/paradigms/roles/<stage>.json` 六型角色映射 + conclusion/process 范式）。脚本地基（ingest/formula_runner/chapter_planner/build_output/progress/consistency/snapshot/mapping/sample_fragments）与 writer 字节一致（sync_chapter_skill.py 同步守卫），语义与行为以 coal-eia-writer SKILL.md 对应章节为准。

@@ -18,6 +18,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from _paths import refs_root  # 同目录上一级：references 根解析（P2-8 单源化回落）
+
 import derive_globals
 import ingest
 
@@ -121,7 +123,7 @@ def test_check_unknown_chapter_falls_back_full(scope_env, capsys):
 
 def test_scope_real_planning_eia_ch2_mine_plan_only():
     """真实 planning_eia 健全性：第2章裁剪后全局族只剩 mine_plan（bug-4143 用户故事口径）。"""
-    refs = Path(__file__).resolve().parent.parent.parent / "references"
+    refs = refs_root()
     st = json.loads((refs / "stages" / "planning_eia.json").read_text(encoding="utf-8"))
     exp = json.loads((refs / "data_expectations.json").read_text(encoding="utf-8"))
     scoped = derive_globals.scope_globals(st, {"ch2"})

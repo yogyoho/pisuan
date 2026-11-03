@@ -6,6 +6,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from _paths import refs_root  # 同目录上一级：references 根解析（P2-8 单源化回落）
+
 from bank_compile import (
     QUANTITY_RE,
     SECTION_EXPECTATION_STAGES,
@@ -219,7 +221,7 @@ _FIVE_CALIBER_FIELDS = [
 
 def _real_label_map() -> dict:
     """按 bank_compile 主循环同法构建真实跨 stage label_map（先到先得合并）。"""
-    refs = Path(__file__).resolve().parents[2] / "references"
+    refs = refs_root()
     label_map: dict = {}
     for st in SECTION_EXPECTATION_STAGES:
         stage_doc = json.loads((refs / "stages" / f"{st}.json").read_text(encoding="utf-8"))

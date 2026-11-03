@@ -10,9 +10,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from _paths import refs_root  # 同目录上一级：references 根解析（P2-8 单源化回落）
+
 from paradigm_role import LEGAL_ROLES, resolve
 
-REFS = Path(__file__).resolve().parent.parent.parent / "references"
+REFS = refs_root()
 
 
 def _roles() -> dict:

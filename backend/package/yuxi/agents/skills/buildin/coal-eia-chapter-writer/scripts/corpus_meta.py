@@ -18,6 +18,8 @@ from pathlib import Path
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
 
+from _paths import refs_root  # noqa: E402  # 同目录：references 根解析（P2-8 单源化回落）
+
 PROVINCES = (
     "北京 天津 河北 山西 内蒙古 辽宁 吉林 黑龙江 上海 江苏 浙江 安徽 福建 江西 "
     "山东 河南 湖北 湖南 广东 广西 海南 重庆 四川 贵州 云南 西藏 陕西 甘肃 青海 宁夏 新疆"
@@ -265,7 +267,7 @@ def add_variant(meta_path: Path, annotations: dict | None = None) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="编译语料元数据与附件必备清单（幂等）")
-    ap.add_argument("--slices-root", default=str(SCRIPTS_DIR.parent / "references" / "samples_bank"))
+    ap.add_argument("--slices-root", default=str(refs_root() / "samples_bank"))
     ap.add_argument("--annotations", default=None, help="默认 slices-root 下 corpus_meta_annotations.json")
     ap.add_argument(
         "--front-matter",

@@ -29,6 +29,8 @@ import statistics
 import sys
 from pathlib import Path
 
+from _paths import refs_root  # 同目录：references 根解析（P2-8 单源化回落）
+
 # AI 腔禁用词（2026-10-24 横城 B 测试实测裁定，AI 稿 30 处 vs 原文 6 处）
 BANNED_PHRASES = [
     "总体而言",
@@ -135,7 +137,7 @@ def generate(stage: str, bank_dir: Path, stage_json: Path) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="从 bank 实测生成文风基准 style_targets/<stage>.json")
-    refs = Path(__file__).resolve().parent.parent / "references"
+    refs = refs_root()
     ap.add_argument("--stage", required=True)
     ap.add_argument("--bank", default=str(refs / "samples_bank"))
     ap.add_argument("--stage-json", default=str(refs / "stages"))
