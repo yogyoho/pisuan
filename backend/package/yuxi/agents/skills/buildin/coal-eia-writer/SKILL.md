@@ -164,6 +164,7 @@ progress.py run-stage freeze --state-dir T   # 冻结二连一次 bash：chapter
   references/sample_entities/_index.json（范文实体禁入清单）
   references/paradigms/<paradigm_role>.md（行文范式——<paradigm_role> 由 scripts/paradigm_role.py --stage <stage> --section <节id> 解析（映射在 references/paradigms/roles/<stage>.json），查不到=拒派报错，禁静默跳过；范文仅示范句法与信息组织，其中实体与数值一律替换为本项目实体与冻结值）
   references/section_expectations/<stage>.json（写前对账：本节 expected_quantities 逐项与 data/ 现值核对，tier=required 缺项在节稿对应位置标 [待确认]（缺项：<字段>），禁臆造或四舍五入改写既有值；条目带 range（语料 P5–P95）时，data/ 现值出界在对应位置标 [待复核：<字段> 偏离语料区间 P5–P95]——warn 级不阻断、禁据此改值，供人工复核）
+  state/fragment_packs/<ch>/<对应样例节号>.md（范例节包——取件后 sample_fragments.py --per-section 切出，节号按 stage 章的 sample_anchor/节题对应样例节；节包缺失→注入章包 state/sample_fragments_<ch>.md→均缺→仅范式文档；范文数值/实体禁入正文）
 输出契约：直写 /home/gem/user-data/workspace/eia-report/state/sections/chNN_SNN.md（绝对沙箱路径），
   首行 ### <节号> <节标题>（与 stage 节题语义相符），一节一稿，新增小节用 ####，禁写 #/## 章级标题；
   缺数标 [待确认]/[数据未提供]，软件成果值走 {{TABLE:族}} 转录禁硬算；

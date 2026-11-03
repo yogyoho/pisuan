@@ -366,14 +366,18 @@ def next_action_chapter(doc: dict, state_dir: Path) -> str:
                 + current
                 + ".json 列 3 份同类范例候选，呈用户挑选（编号选定或『不用范例』，业务语体呈现）→ "
                 + _self_cmd("fragment-choice", current, "--report-id", "<选定id>|--none", "--state-dir", sd)
-                + "；无 choice 禁派发（红线 P13）；选定后 sample_fragments.py --report-id <id> 取包注入派发契约",
+                + "；无 choice 禁派发（红线 P13）；选定后 sample_fragments.py --report-id <id> 取章包，"
+                + "再 --per-section --out-dir state/fragment_packs_"
+                + current
+                + " 按节切包（bug P1-5）——派发每节注入对应节包，节包缺失退章包",
             ]
         else:
             choice = json.loads(choice_p.read_text(encoding="utf-8"))
             rid = choice.get("report_id")
             lines += [
                 "动作: ① 本章资料汇集（首章门1 全局包 `ingest.py check --global-only`，后续章冻结层已在）→ ② 模板推荐（按范式角色查 references/paradigms/roles/<stage>.json + 模板库，呈用户可跳过）→ ③ batch_task 分波派发子代理直写节稿（派发契约同 full：stage sections 要素链+范文索引+节级深度目标）",
-                f"范例: 已选定 {'不用范例（派发契约如实注明用户选择）' if rid is None else rid}——③ 派发契约注入 sample_fragments 包与计划卡（state/plan_{current}.json 的要点与用户补充意见，写作须回扣）",
+                f"范例: 已选定 {'不用范例（派发契约如实注明用户选择）' if rid is None else rid}——③ 派发契约注入 sample_fragments 对应节包"
+                f"（state/fragment_packs_{current}/<样例节号>.md，缺失退章包）与计划卡要点（写作须回扣）",
             ]
         lines += [
             f"记账: 节批量 mark --sections <节id csv> DRAFTED --state-dir {sd}（批量原语）→ 章稿齐后 progress.py mark {current} DRAFTED --state-dir {sd}",

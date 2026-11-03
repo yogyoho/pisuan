@@ -19,7 +19,10 @@ CLI 用法：
     python sample_fragments.py --stage planning_eia --chapter ch2 --candidates 3 \
         --out state/sample_candidates_ch2.json --content-dir state/candidates_content_ch2
     python sample_fragments.py --stage planning_eia --chapter ch2 --report-id 2201 --out state/sample_fragments_ch2.md
-rc：0=成包/候选列出；2=样例库无本章切片（降级范式文档并如实告知用户）；1=参数/文件错误（含 --report-id 不在候选）。
+    python sample_fragments.py --stage planning_eia --chapter ch2 --report-id 2201 \
+        --per-section --out-dir state/fragment_packs/ch2   # 按 ### 节级逐节切包（bug P1-5：每节派发注入对应节包）
+rc：0=成包/候选列出/节包落盘；2=样例库无本章切片或切不出 ### 节（降级范式文档/章包并如实告知用户）；
+1=参数/文件错误（含 --report-id 不在候选、--per-section 参数冲突）。
 """
 
 from __future__ import annotations
@@ -31,6 +34,14 @@ import sys
 from pathlib import Path
 
 HEADING_RE = re.compile(r"^#{2,4} \d", re.MULTILINE)
+SECTION_HEADING_RE = re.compile(r"^### (\d[\d.]*) ?(.*)$", re.MULTILINE)
+CHAPTER_HEADING_RE = re.compile(r"^## \d[^\n]*", re.MULTILINE)
+
+
+def top_level_secs(secs: set[str]) -> set[str]:
+    """节级口径（卡B「覆盖节数」）：无其它 sec 以「sec.」为前缀扩展者。
+    2 被 2.1 扩展=章题、2.1.1 被 2.1.x 扩展=小节；2.1/2.2 无扩展=真节——标题级条目计数含子节虚高（56 vs 实节 8）。"""
+    return {s for s in secs if not any(t != s and t.startswith(s + ".") for t in secs)}
 
 
 def load_bank(references_dir: Path) -> dict:
@@ -69,7 +80,8 @@ def pick_candidates(bank: dict, stage: str, chapter: str, top: int, references_d
         rel = sorted(set(per_report[rid]))[0]
         p = Path(references_dir) / rel
         chars = len(p.read_text(encoding="utf-8").strip()) if p.exists() else 0
-        out.append({"report_id": rid, "sections": len(secs), "chars": chars, "file": rel})
+        # 覆盖节数=节级口径（### 级真节数）：标题级条目把 #### 小节也计入，卡面虚高误导选型
+        out.append({"report_id": rid, "sections": len(top_level_secs(secs)), "chars": chars, "file": rel})
     return out
 
 
@@ -140,6 +152,63 @@ def build_pack(
     return head + body + "\n", rid, clipped
 
 
+def split_sections(text: str) -> tuple[str, list[tuple[str, str]]]:
+    """按 ### 节级标题切节：返回 (章题行, [(节号, 节文本含标题行与 #### 子节)])。
+    同节号重复出现（脏切片）按文档序并包不丢内容；无 ### 节标题返回空清单（薄 stage/脏切片 → 调用方降级章包）。"""
+    matches = list(SECTION_HEADING_RE.finditer(text))
+    chapter = CHAPTER_HEADING_RE.search(text)
+    chapter_line = chapter.group(0).strip() if chapter else ""
+    chunks: dict[str, list[str]] = {}
+    order: list[str] = []
+    for i, m in enumerate(matches):
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+        sec = m.group(1).strip()
+        body = text[m.start() : end].strip()
+        if sec not in chunks:
+            chunks[sec] = []
+            order.append(sec)
+        chunks[sec].append(body)
+    return chapter_line, [(s, "\n\n".join(chunks[s])) for s in order]
+
+
+def build_section_packs(
+    bank: dict,
+    stage: str,
+    chapter: str,
+    max_chars: int,
+    references_dir: Path,
+    out_dir: Path,
+    report_id: str | None = None,
+) -> tuple[list[dict], str]:
+    """--per-section：选定（缺省主导）报告整章切片按 ### 节级逐节落盘 <out_dir>/<节号>.md（bug P1-5）。
+    每节派发注入对应节包；节包自带包头红线注释 + 章题行上下文；预算按节独立截断（预算内最后一个 #### 小节标题处收口）。
+    返回 (节清单 [{sec, chars, file}], report_id)；无切片/切不出节返回 ([], "")。"""
+    hit = pick_report_file(bank, stage, chapter, report_id)
+    if hit is None:
+        return [], ""
+    rid, rel = hit
+    p = Path(references_dir) / rel
+    if not p.exists():
+        return [], ""
+    chapter_line, sections = split_sections(p.read_text(encoding="utf-8").strip())
+    if not sections:
+        return [], ""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    manifest: list[dict] = []
+    for sec, body in sections:
+        clipped = clip_at_heading(body, max_chars)
+        note = f"截断自 {len(body)} 字符（预算内最后一个节标题处）" if len(clipped) < len(body) else "全节"
+        head = (
+            f"# 样例片段包 · {stage} {chapter} §{sec}（写作参照——禁抄数值/实体入正文，红线「样例/范文禁抄」把守）\n"
+            f"<!-- source: bank_index {'选定' if report_id else '主导'}报告 {rid} · {rel} · §{sec} {note} -->\n"
+        )
+        ctx = f"{chapter_line}\n\n" if chapter_line else ""
+        f = out_dir / f"{sec}.md"
+        f.write_text(head + ctx + clipped + "\n", encoding="utf-8", newline="\n")
+        manifest.append({"sec": sec, "chars": len(clipped), "file": str(f)})
+    return manifest, rid
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="stage+章节 → samples_bank 同章真实切片包（bug-4147；范例挑选卡候选/取件）"
@@ -151,8 +220,14 @@ def main() -> int:
     )
     ap.add_argument("--chapter", required=True, help="章 id，如 ch2（bank_index 章键）")
     ap.add_argument(
-        "--out", required=True, help="落盘路径（建议 state/sample_fragments_<ch>.md 或 candidates_<ch>.json）"
+        "--out", help="落盘路径（章包/候选 JSON；建议 state/sample_fragments_<ch>.md 或 candidates_<ch>.json）"
     )
+    ap.add_argument(
+        "--per-section",
+        action="store_true",
+        help="按 ### 节级逐节切包落盘 --out-dir（bug P1-5：每节派发注入对应节包；与 --candidates/--content-dir 互斥）",
+    )
+    ap.add_argument("--out-dir", help="节包落盘目录（与 --per-section 同用；建议 state/fragment_packs/<ch>）")
     ap.add_argument("--max-chars", type=int, default=12000, help="包正文字符预算（缺省 12000）")
     ap.add_argument(
         "--candidates", type=int, metavar="N", help="列 top-N 候选摘要 JSON 到 --out（范例挑选卡数据面，不取件）"
@@ -172,6 +247,42 @@ def main() -> int:
     if stage not in bank:
         print(
             f"SAMPLE_FRAGMENTS_FAIL: stage '{a.stage}'（归一为 '{stage}'）不在样例库（顶层键：{'、'.join(bank)}）",
+            file=sys.stderr,
+        )
+        return 1
+    if a.per_section:
+        if a.candidates or a.content_dir:
+            print(
+                "SAMPLE_FRAGMENTS_FAIL: --per-section 与 --candidates/--content-dir 互斥（候选卡走章级口径）",
+                file=sys.stderr,
+            )
+            return 1
+        if not a.out_dir:
+            print("SAMPLE_FRAGMENTS_FAIL: --per-section 需 --out-dir（节包落盘目录）", file=sys.stderr)
+            return 1
+        if a.report_id:
+            valid = {c["report_id"] for c in pick_candidates(bank, stage, a.chapter, 10**9, Path(a.references_dir))}
+            if a.report_id not in valid:
+                print(
+                    f"SAMPLE_FRAGMENTS_FAIL: 候选中无报告 {a.report_id}（先 --candidates 查看在库候选）",
+                    file=sys.stderr,
+                )
+                return 1
+        manifest, rid = build_section_packs(
+            bank, stage, a.chapter, a.max_chars, Path(a.references_dir), Path(a.out_dir), a.report_id
+        )
+        if not manifest:
+            print(
+                f"SAMPLE_FRAGMENTS_EMPTY: {stage}/{a.chapter} 无样例切片或切不出 ### 节——节级降级用章包，如实告知用户",
+                file=sys.stderr,
+            )
+            return 2
+        detail = " ".join(f"{m['sec']}={m['chars']}字" for m in manifest)
+        print(f"SAMPLE_FRAGMENTS_PER_SECTION_OK: {len(manifest)} 节 → {a.out_dir}（{rid}；{detail}）")
+        return 0
+    if not a.out:
+        print(
+            "SAMPLE_FRAGMENTS_FAIL: 需 --out（章包/候选落盘路径）或 --per-section --out-dir（节包目录）",
             file=sys.stderr,
         )
         return 1
