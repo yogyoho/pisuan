@@ -129,3 +129,29 @@ def test_outline_unknown_stage_rc1(tmp_path):
                    out=str(tmp_path / "o.md"))
     rc, _, se = _capture(briefing.cmd_outline, ns)
     assert rc == briefing.EXIT_ERROR and "ERROR" in se
+
+
+def test_chapter_renders(tmp_path):
+    fx = _fixtures(tmp_path)
+    out = tmp_path / "brief_ch2.md"
+    ns = Namespace(stage=str(fx["stage"]), standards_file=str(fx["std"]), formulas_file=str(fx["fx"]),
+                   chapter="ch2", out=str(out))
+    rc, so, _ = _capture(briefing.cmd_chapter, ns)
+    assert rc == briefing.EXIT_OK and "BRIEF_CHAPTER_OK" in so
+    text = out.read_text(encoding="utf-8")
+    for frag in ["第2章「规划方案概况及分析」编写说明", "前承：第1章「总则」", "后启", "双口径表述必须成对带标签",
+                 "依据的标准规范", "本章计算说明", "概率积分法地表沉陷预测", "输入：下沉系数",
+                 "区域自然环境概况", "各节写法注记", "上承「地理位置」", "下启「本章小结」",
+                 "涉及计算：概率积分法地表沉陷预测", "用到资料：区域自然环境概况"]:
+        assert frag in text, f"章说明缺「{frag}」"
+    assert "{{TABLE:mine_plan}} 直渲表格" not in text  # 机制词行整行弃
+    assert "规模数值全槽位" not in text  # 原行含模板记号（{{…}} 记号即内容）→ 整行弃
+    _assert_clean(text)
+
+
+def test_chapter_unknown_rc1(tmp_path):
+    fx = _fixtures(tmp_path)
+    ns = Namespace(stage=str(fx["stage"]), standards_file=str(fx["std"]), formulas_file=str(fx["fx"]),
+                   chapter="ch9", out=str(tmp_path / "b.md"))
+    rc, _, se = _capture(briefing.cmd_chapter, ns)
+    assert rc == briefing.EXIT_ERROR and "ERROR" in se
