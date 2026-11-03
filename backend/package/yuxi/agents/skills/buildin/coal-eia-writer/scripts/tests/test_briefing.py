@@ -64,6 +64,10 @@ STAGE_MINI = {
             ],
         },
         "mon": {"label": "环境质量监测", "required": False, "chapters": ["ch3"], "fields": []},
+        "subsidence_params": {"label": "沉陷预测参数", "required": True, "chapters": ["ch6"], "fields": [
+            {"name": "param_source", "label": "参数来源", "type": "string", "required": True,
+             "note": "三值枚举（user_monitoring/analog_mine/user_provided）"},
+        ]},
     },
 }
 STDS = {"standards": [
@@ -154,4 +158,37 @@ def test_chapter_unknown_rc1(tmp_path):
     ns = Namespace(stage=str(fx["stage"]), standards_file=str(fx["std"]), formulas_file=str(fx["fx"]),
                    chapter="ch9", out=str(tmp_path / "b.md"))
     rc, _, se = _capture(briefing.cmd_chapter, ns)
+    assert rc == briefing.EXIT_ERROR and "ERROR" in se
+
+
+def test_data_request_renders(tmp_path):
+    fx = _fixtures(tmp_path)
+    outdir = tmp_path / "requests"
+    ns = Namespace(stage=str(fx["stage"]), standards_file=str(fx["std"]), formulas_file=str(fx["fx"]),
+                   families="geo,mon,subsidence_params", out_dir=str(outdir))
+    rc, so, _ = _capture(briefing.cmd_data_request, ns)
+    assert rc == briefing.EXIT_OK and "BRIEF_REQUEST_OK" in so
+    md = (outdir / "资料需求单.md").read_text(encoding="utf-8")
+    for frag in ["资料需求单", "区域自然环境概况（必需）", "环境质量监测（可选）", "沉陷预测参数（必需）",
+                 "供「概率积分法地表沉陷预测」等计算使用", "报告编写直接引用；第1章、第2章要用",
+                 "位置与行政区划（必填）", "井田清单：表格", "参数来源（必填）"]:
+        assert frag in md, f"需求单缺「{frag}」"
+    assert "user_docs" not in md  # 机制 note 剔除
+    assert "user_monitoring" not in md  # 通道/枚举名不泄漏
+    _assert_clean(md)
+    csvs = sorted(outdir.glob("*.csv"))
+    assert len(csvs) == 1
+    raw = csvs[0].read_bytes()
+    assert raw[:3] == b"\xef\xbb\xbf"  # UTF-8 BOM
+    lines = raw.decode("utf-8-sig").splitlines()
+    assert lines[0] == "井田名称,设计能力(Mt/a)"
+    assert lines[1] == "【请填写】,【请填写】"
+    assert len(lines) == 2  # 无注释行（ingest 唯一写者防误解析）
+
+
+def test_data_request_unknown_family_rc1(tmp_path):
+    fx = _fixtures(tmp_path)
+    ns = Namespace(stage=str(fx["stage"]), standards_file=str(fx["std"]), formulas_file=str(fx["fx"]),
+                   families="nope", out_dir=str(tmp_path / "r"))
+    rc, _, se = _capture(briefing.cmd_data_request, ns)
     assert rc == briefing.EXIT_ERROR and "ERROR" in se

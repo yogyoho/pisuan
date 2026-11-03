@@ -32,7 +32,8 @@ EXIT_OK, EXIT_ERROR = 0, 1
 
 # 机制词标记：剔机制括注后正文仍命中 → 整行弃（宁缺毋滥，细节由卡A/对话承载）
 _MECH_RE = re.compile(
-    r"\{\{|\}\}|SLOT|TABLE|exact_match|ingest|FORM_|rc=|\bXS\d+|\bEO\d+|门\s?\d|\.json|param_source|--[a-z]"
+    r"\{\{|\}\}|SLOT|TABLE|exact_match|ingest|FORM_|rc=|\bXS\d+|\bEO\d+|门\s?\d|\.json|param_source|"
+    r"user_docs|user_monitoring|analog_mine|--[a-z]"
 )
 _PAREN_RE = re.compile(r"（[^（）]*）|\([^()]*\)")
 
@@ -233,6 +234,85 @@ def cmd_outline(ns) -> int:
     return EXIT_OK
 
 
+def _csv_columns(arr_field: dict) -> list[str]:
+    """数组族字段 → CSV 列名。item fields 字符串形如 "element 要素(…)"：取首空格后中文；dict 取 label。"""
+    cols = []
+    for item in arr_field.get("fields", []):
+        if isinstance(item, str):
+            cols.append(item.split(" ", 1)[1] if " " in item else item)
+        elif isinstance(item, dict):
+            cols.append(str(item.get("label") or item.get("name", "")))
+    return [c for c in cols if c]
+
+
+def _csv_templates(stage: dict, fams: list[str], out_dir: Path) -> list[Path]:
+    forms = stage.get("forms", {})
+    out_dir.mkdir(parents=True, exist_ok=True)
+    paths = []
+    for fam in fams:
+        spec = forms.get(fam) or {}
+        for arr in [f for f in spec.get("fields", []) if str(f.get("type", "")).startswith("array")]:
+            cols = _csv_columns(arr)
+            if not cols:
+                continue
+            buf = io.StringIO()
+            csv.writer(buf).writerows([cols, ["【请填写】"] * len(cols)])
+            p = out_dir / f"{fam}_{arr.get('name', 'rows')}_模板.csv"
+            p.write_bytes(buf.getvalue().encode("utf-8-sig"))  # write_bytes 免 Windows \n→\r\n 翻译（csv 自带 \r\n）
+            paths.append(p)
+    return paths
+
+
+def _render_request(stage: dict, fams: list[str], csv_paths: list[Path], formulas: list[dict]) -> str:
+    forms = stage.get("forms", {})
+    known = [f for f in fams if f in forms]
+    L = ["# 资料需求单", "",
+         "> 请按下列条目准备资料：表格类条目已附 CSV 模板（Excel 打开、每行填一条、列顺序勿动，填完发回对话即可）；"
+         "文字类条目直接在对话里告诉我。", ""]
+    for fam in known:
+        spec = forms[fam]
+        users = _formula_fam_users(fam, formulas)
+        chs = "、".join(f"第{int(c[2:])}章" for c in spec.get("chapters", [])
+                        if str(c).startswith("ch") and c[2:].isdigit())
+        use = ("供「" + "」「".join(users[:3]) + "」等计算使用") if users else "报告编写直接引用"
+        tail = f"；{chs}要用" if chs else ""
+        req = "必需" if spec.get("required") else "可选"
+        L += [f"## {spec.get('label', fam)}（{req}）", f"- 用途：{use}{tail}。"]
+        for f in spec.get("fields", []):
+            if str(f.get("type", "")).startswith("array"):
+                cols = _csv_columns(f)
+                hit = next((p.name for p in csv_paths if p.name.startswith(f"{fam}_")), "")
+                cols_txt = "、".join(cols[:6]) + ("等" if len(cols) > 6 else "")
+                attach = f"（已附模板 {hit}）" if hit else ""
+                L.append(f"- {f.get('label', f['name'])}：表格，逐行填写{attach}（列：{cols_txt}）")
+            else:
+                note = _clean_lines([f.get("note", "")])
+                star = "必填" if f.get("required") else "可选"
+                L.append(f"- {f.get('label', f['name'])}（{star}）" + (f"——{note[0]}" if note else ""))
+        L.append("")
+    return "\n".join(L)
+
+
+def cmd_data_request(ns) -> int:
+    try:
+        stage, stds, formulas = _ctx(ns)
+    except FileNotFoundError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return EXIT_ERROR
+    forms = stage.get("forms", {})
+    fams = [f.strip() for f in ns.families.split(",") if f.strip()] if ns.families else list(forms)
+    unknown = [f for f in fams if f not in forms]
+    if unknown:
+        print(f"ERROR: 未知资料族：{'、'.join(unknown)}", file=sys.stderr)
+        return EXIT_ERROR
+    out_dir = Path(ns.out_dir)
+    csv_paths = _csv_templates(stage, fams, out_dir)
+    md = out_dir / "资料需求单.md"
+    md.write_text(_render_request(stage, fams, csv_paths, formulas), encoding="utf-8")
+    print(f"BRIEF_REQUEST_OK {md} ({len(csv_paths)} csv)")
+    return EXIT_OK
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description="Agent 业务内容简报渲染器（机械渲染，零 LLM）")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -251,6 +331,14 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--chapter", required=True)
     p.add_argument("--out", required=True)
     p.set_defaults(fn=cmd_chapter)
+
+    p = sub.add_parser("data-request", help="资料需求单 + 表格族 CSV 模板")
+    p.add_argument("--stage", required=True)
+    p.add_argument("--standards-file", default="")
+    p.add_argument("--formulas-file", default="")
+    p.add_argument("--families", default="")
+    p.add_argument("--out-dir", required=True)
+    p.set_defaults(fn=cmd_data_request)
 
     ns = ap.parse_args(argv)
     sys.exit(ns.fn(ns))
