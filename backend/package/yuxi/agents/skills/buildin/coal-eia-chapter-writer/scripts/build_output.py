@@ -718,6 +718,7 @@ def chapter_floor(targets: dict | None, ch_id: str) -> int:
 
 
 _BANK_CACHE: dict = {}
+_CALIB_CACHE: dict = {}
 
 
 def _bank_index() -> dict:
@@ -732,11 +733,47 @@ def _bank_index() -> dict:
     return _BANK_CACHE["bank"]
 
 
+def _calibration_record(stage_id: str) -> dict | None:
+    """矿种级标定记录装载（depth_targets/<stage_id>/coal.json，bank_compile 标定成功后落盘）。
+
+    文件不在册 → None（该 stage 尚未矿种级标定，折算下限不启用）；损坏 → stderr 告警退 None
+    （同 _bank_index 退化风格，不阻断门）。深度基线按 stage 不按矿种分流（resolve_targets 同
+    语义），coal.json 是当前唯一标定记录；多矿种记录出现时此处需按矿种路由。"""
+    if stage_id not in _CALIB_CACHE:
+        p = DEPTH_DIR / stage_id / "coal.json"
+        try:
+            _CALIB_CACHE[stage_id] = json.loads(p.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            _CALIB_CACHE[stage_id] = None
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"[build] 标定记录不可读（{p}：{e}）——折算下限不启用", file=sys.stderr)
+            _CALIB_CACHE[stage_id] = None
+    return _CALIB_CACHE[stage_id]
+
+
+def _fold_floor_bound(stage_id: str, ch_id: str) -> int | None:
+    """折算不可穿透下限 = median_eff × absolute_floor（评审 P0-1）。
+
+    bank_compile 标定时把 absolute_floor=0.4 写进记录（ABSOLUTE_FLOOR），但 bug-4148 的折算
+    只兑现了折算本身、从未读它——粒度错配（stage 聚合节 ÷ 样例标题级节）曾把 ch2 14599 洗成
+    1359（注册值的 1/18、真实中位 24332 的 5.6%），五 stage 全部 80 个折算章全数穿透。
+    章节无标定中位 → None（响亮退化，折算下限不启用）。"""
+    doc = _calibration_record(stage_id)
+    if not doc:
+        return None
+    ch = (doc.get("per_chapter") or {}).get(ch_id) or {}
+    median_eff, absolute_floor = ch.get("median_eff"), doc.get("absolute_floor")
+    if not median_eff or absolute_floor is None:
+        return None
+    return int(median_eff * float(absolute_floor))
+
+
 def chapter_floor_scaled(stage: dict, ch_id: str, targets: dict | None) -> tuple[int, int, str]:
     """投影折算章地板（bug-4148）：floor × 投影节数 / 样例章节数（中位），向上取整。
 
     样例章节数 = bank_index 该章各报告切片的标题级节计数中位（与 floor 同源语料的结构粒度，
     全部标题级——calibrate 抽样同口径）。投影节数 ≥ 样例节数 / 无 bank 数据 / 章无节 → 原地板直通。
+    折算不可穿透标定下限 median_eff × absolute_floor（评审 P0-1，见 _fold_floor_bound）。
     返回 (折算地板, 原地板, 折算说明)；说明空串 = 未折算。"""
     base = chapter_floor(targets, ch_id)
     ch = (stage.get("chapters") or {}).get(ch_id) or {}
@@ -752,7 +789,12 @@ def chapter_floor_scaled(stage: dict, ch_id: str, targets: dict | None) -> tuple
     if n_sample <= 0 or n_proj >= n_sample:
         return base, base, ""
     floor = max(1, -(-base * n_proj // n_sample))  # ceil 除法
-    return floor, base, f"（{base}×投影{n_proj}/样例中位{n_sample}节折算，bug-4148）"
+    note = f"（{base}×投影{n_proj}/样例中位{n_sample}节折算，bug-4148）"
+    bound = _fold_floor_bound(str(stage.get("stage_id") or ""), ch_id)
+    if bound is not None and floor < bound:
+        note = f"（{base}×投影{n_proj}/样例中位{n_sample}节折算 {floor} → 标定下限 {bound}，评审 P0-1）"
+        floor = bound
+    return floor, base, note
 
 
 def plan_depth_mode(state_dir: Path, ch_id: str) -> dict | None:
