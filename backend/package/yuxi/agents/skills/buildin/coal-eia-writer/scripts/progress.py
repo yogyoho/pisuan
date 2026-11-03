@@ -47,6 +47,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -125,6 +126,43 @@ def save(state_dir: Path, doc: dict) -> None:
     with open(tmp, "w", encoding="utf-8", newline="\n") as f:
         f.write(json.dumps(doc, ensure_ascii=False, indent=2) + "\n")
     os.replace(tmp, p)
+
+
+# 建议锁（bug P3-11）：同工作区并发 CLI（双线程/双会话）的读-改-写会丢更新——atomic replace
+# 只防撕裂不防丢改（两进程读到同一旧态各写各的，后写覆盖先写）。变更命令全程持锁串行化；
+# next/status 只读（读到的恒为某次原子写的完整快照）不持锁。
+LOCK_WAIT_SEC = 60    # 锁被占忙等上限（gate 批量门持锁可到分钟级；普通命令毫秒级让出）
+LOCK_STALE_SEC = 180  # 崩溃残留锁接管阈值（持锁进程死亡残留，超此时长可接管留证）
+
+
+def _state_lock(state_dir: Path) -> Path | None:
+    """独占创建 .progress.lock（O_EXCL，跨平台）；state 目录尚不存在（init 首跑）无从并发，返回 None。"""
+    if not state_dir.exists():
+        return None
+    lock = state_dir / ".progress.lock"
+    deadline = time.monotonic() + LOCK_WAIT_SEC
+    while True:
+        try:
+            fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            break
+        except FileExistsError:
+            try:
+                if time.time() - lock.stat().st_mtime > LOCK_STALE_SEC:
+                    # 崩溃残留接管：换名留证后重建（os.replace 原子——并发接管者仅一人成功，其余按占用重试）
+                    os.replace(lock, lock.with_name(".progress.lock.stale"))
+                    continue
+            except OSError:
+                pass  # 锁刚被释放或已被别人接管——原样重试
+            if time.monotonic() >= deadline:
+                print(
+                    f"[progress] 状态锁被占超 {LOCK_WAIT_SEC}s（另一进程正在改同一工作区？）: {lock}",
+                    file=sys.stderr,
+                )
+                raise SystemExit(EXIT_ERROR)
+            time.sleep(0.25)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(json.dumps({"pid": os.getpid()}, ensure_ascii=False) + "\n")
+    return lock
 
 
 def approved_set(doc: dict) -> set[str]:
@@ -1283,11 +1321,17 @@ def main() -> int:
     sp.add_argument("--note", default="")
     sp.set_defaults(fn=cmd_approve)
     args = p.parse_args()
+    if args.cmd in ("next", "status"):
+        return args.fn(args)
+    lock = _state_lock(Path(args.state_dir))
     try:
         return args.fn(args)
     except (json.JSONDecodeError, KeyError, TypeError, OSError) as e:
         print(f"[progress] progress.json/stage 文件损坏或不可读（手改特征或路径错误）: {e!r}", file=sys.stderr)
         return EXIT_ERROR
+    finally:
+        if lock is not None:
+            lock.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
