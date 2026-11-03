@@ -109,9 +109,14 @@ def _formula_fam_users(fam: str, formulas: list[dict]) -> list[str]:
 
 def _render_outline(stage: dict, stds: dict, formulas: list[dict]) -> str:
     forms, chs = stage.get("forms", {}), stage.get("chapters", {})
-    L = ["# 全书编写策划书", "",
-         "> 本策划书由系统按报告结构契约自动生成：全书怎么写、每章依据哪些标准规范、涉及哪些计算、需要准备哪些资料。", "",
-         "## 一、报告结构总览", ""]
+    L = [
+        "# 全书编写策划书",
+        "",
+        "> 本策划书由系统按报告结构契约自动生成：全书怎么写、每章依据哪些标准规范、涉及哪些计算、需要准备哪些资料。",
+        "",
+        "## 一、报告结构总览",
+        "",
+    ]
     for i, (cid, ch) in enumerate(chs.items(), 1):
         mode = _clean_lines([ch.get("mode", "")])
         L.append(f"{i}. 第{i}章「{ch.get('title', cid)}」" + (f"——{mode[0]}" if mode else ""))
@@ -144,9 +149,15 @@ def _render_chapter(stage: dict, ch_id: str, stds: dict, formulas: list[dict]) -
     ch = chs[ch_id]
     prev_txt = f"第{i - 1}章「{chs[order[i - 2]].get('title', '')}」" if i >= 2 else "报告开头部分"
     next_txt = f"第{i + 1}章「{chs[order[i]].get('title', '')}」" if i < len(order) else "结论与交付"
-    L = [f"# 第{i}章「{ch.get('title', ch_id)}」编写说明", "",
-         "> 本说明由系统按报告结构契约自动生成：这一章怎么写、依据哪些标准、涉及哪些计算、需要哪些资料、每节的上下文衔接。",
-         "", "## 一、本章定位与上下文", ""]
+    L = [
+        f"# 第{i}章「{ch.get('title', ch_id)}」编写说明",
+        "",
+        "> 本说明由系统按报告结构契约自动生成：这一章怎么写、依据哪些标准、"
+        "涉及哪些计算、需要哪些资料、每节的上下文衔接。",
+        "",
+        "## 一、本章定位与上下文",
+        "",
+    ]
     for m in _clean_lines([ch.get("mode", "")]):
         L.append(f"- 章定位：{m}")
     L.append(f"- 前承：{prev_txt}；后启：{next_txt}。")
@@ -266,14 +277,19 @@ def _csv_templates(stage: dict, fams: list[str], out_dir: Path) -> list[Path]:
 def _render_request(stage: dict, fams: list[str], csv_paths: list[Path], formulas: list[dict]) -> str:
     forms = stage.get("forms", {})
     known = [f for f in fams if f in forms]
-    L = ["# 资料需求单", "",
-         "> 请按下列条目准备资料：表格类条目已附 CSV 模板（Excel 打开、每行填一条、列顺序勿动，填完发回对话即可）；"
-         "文字类条目直接在对话里告诉我。", ""]
+    L = [
+        "# 资料需求单",
+        "",
+        "> 请按下列条目准备资料：表格类条目已附 CSV 模板（Excel 打开、每行填一条、列顺序勿动，填完发回对话即可）；"
+        "文字类条目直接在对话里告诉我。",
+        "",
+    ]
     for fam in known:
         spec = forms[fam]
         users = _formula_fam_users(fam, formulas)
-        chs = "、".join(f"第{int(c[2:])}章" for c in spec.get("chapters", [])
-                        if str(c).startswith("ch") and c[2:].isdigit())
+        chs = "、".join(
+            f"第{int(c[2:])}章" for c in spec.get("chapters", []) if str(c).startswith("ch") and c[2:].isdigit()
+        )
         use = ("供「" + "」「".join(users[:3]) + "」等计算使用") if users else "报告编写直接引用"
         tail = f"；{chs}要用" if chs else ""
         req = "必需" if spec.get("required") else "可选"
@@ -313,15 +329,20 @@ def cmd_data_request(ns) -> int:
     return EXIT_OK
 
 
-_SRC_ZH = (("derived:", "系统按公式计算"), ("user_monitoring", "您提供的监测数据"),
-           ("analog_mine", "类比矿井实测"), ("user_docs", "您上传的文件"), ("form:", "您登记的资料"))
+_SRC_ZH = (
+    ("derived:", "系统按公式计算"),
+    ("user_monitoring", "您提供的监测数据"),
+    ("analog_mine", "类比矿井实测"),
+    ("user_docs", "您上传的文件"),
+    ("form:", "您登记的资料"),
+)
 
 
 def _src_zh(src: str, forms: dict) -> str:
     for prefix, zh in _SRC_ZH:
         if src.startswith(prefix):
             if prefix == "form:":
-                fam = src[len(prefix):].split("(", 1)[0].strip()
+                fam = src[len(prefix) :].split("(", 1)[0].strip()
                 return f"来自{_fam_label(fam, forms)}资料"
             return zh
     return src
@@ -350,8 +371,11 @@ def _render_calc(stage: dict, state: dict, ch_id: str, fx_doc: dict) -> str:
     formulas = fx_doc.get("formulas", [])
     prefixes = _chapter_prefixes(stage, ch_id, fx_doc) if ch_id else None
     title = f"第{list(stage['chapters']).index(ch_id) + 1}章" if ch_id else "全书"
-    L = ["# 计算说明", "",
-         f"> 报告中的数字由系统按公式统一核算。下列为{title}本次核算结果与数据来源（自动生成，未经人工改动）。"]
+    L = [
+        "# 计算说明",
+        "",
+        f"> 报告中的数字由系统按公式统一核算。下列为{title}本次核算结果与数据来源（自动生成，未经人工改动）。",
+    ]
     cur_fam = None
     for key in sorted(state.get("values", {})):
         if prefixes is not None and not any(key.startswith(p + ".") for p in prefixes):
@@ -363,8 +387,14 @@ def _render_calc(stage: dict, state: dict, ch_id: str, fx_doc: dict) -> str:
         v = state["values"][key]
         desc = key.split(".", 1)[1]
         for f in formulas:
-            hit = next((o for o in f.get("outputs", [])
-                        if key == o.get("name") or key.startswith(o.get("name", "\0").split("[")[0])), None)
+            hit = next(
+                (
+                    o
+                    for o in f.get("outputs", [])
+                    if key == o.get("name") or key.startswith(o.get("name", "\0").split("[")[0])
+                ),
+                None,
+            )
             if hit:
                 desc = _strip_mech_parens(hit.get("desc") or hit.get("name", desc)) or desc
                 break

@@ -46,44 +46,91 @@ STAGE_MINI = {
             "forms": ["geo"],
             "formulas": ["subsidence"],
             "sections": [
-                {"id": "ch2_S01", "title": "地理位置", "slots": ["{{TABLE:geo}}", "{{SLOT:geo.location_text}}"],
-                 "uses": {"formulas": [], "slots": ["{{TABLE:geo}}"]}},
-                {"id": "ch2_S02", "title": "规划指标", "slots": ["{{SLOT:mine_plan.total}}"],
-                 "uses": {"formulas": ["subsidence"], "slots": []}},
+                {
+                    "id": "ch2_S01",
+                    "title": "地理位置",
+                    "slots": ["{{TABLE:geo}}", "{{SLOT:geo.location_text}}"],
+                    "uses": {"formulas": [], "slots": ["{{TABLE:geo}}"]},
+                },
+                {
+                    "id": "ch2_S02",
+                    "title": "规划指标",
+                    "slots": ["{{SLOT:mine_plan.total}}"],
+                    "uses": {"formulas": ["subsidence"], "slots": []},
+                },
             ],
         },
     },
     "forms": {
         "geo": {
-            "label": "区域自然环境概况", "required": True, "chapters": ["ch1", "ch2"],
+            "label": "区域自然环境概况",
+            "required": True,
+            "chapters": ["ch1", "ch2"],
             "fields": [
-                {"name": "location_text", "label": "位置与行政区划", "type": "string", "required": True,
-                 "note": "user_docs 录入，禁手算极值"},
-                {"name": "rows", "label": "井田清单", "type": "array<object>", "required": True,
-                 "fields": ["mine_name 井田名称", "capacity 设计能力(Mt/a)"]},
+                {
+                    "name": "location_text",
+                    "label": "位置与行政区划",
+                    "type": "string",
+                    "required": True,
+                    "note": "user_docs 录入，禁手算极值",
+                },
+                {
+                    "name": "rows",
+                    "label": "井田清单",
+                    "type": "array<object>",
+                    "required": True,
+                    "fields": ["mine_name 井田名称", "capacity 设计能力(Mt/a)"],
+                },
             ],
         },
         "mon": {"label": "环境质量监测", "required": False, "chapters": ["ch3"], "fields": []},
-        "subsidence_params": {"label": "沉陷预测参数", "required": True, "chapters": ["ch6"], "fields": [
-            {"name": "param_source", "label": "参数来源", "type": "string", "required": True,
-             "note": "三值枚举（user_monitoring/analog_mine/user_provided）"},
-        ]},
+        "subsidence_params": {
+            "label": "沉陷预测参数",
+            "required": True,
+            "chapters": ["ch6"],
+            "fields": [
+                {
+                    "name": "param_source",
+                    "label": "参数来源",
+                    "type": "string",
+                    "required": True,
+                    "note": "三值枚举（user_monitoring/analog_mine/user_provided）",
+                },
+            ],
+        },
     },
 }
-STDS = {"standards": [
-    {"code": "HJ 130-2019", "title": "规划环境影响评价技术导则 总纲", "role": "规划环评通用工作程序（结构主纲）"},
-    {"code": "HJ 464-2009", "title": "规划环境影响评价技术导则 煤炭矿区总体规划", "role": "煤炭矿区专项要求"},
-]}
-FORMULAS = {"formulas": [
-    {"id": "subsidence", "name": "概率积分法地表沉陷预测", "chapter": "ch2_S02", "expr": "W_max = q × m × cosα",
-     "inputs": [{"name": "q", "desc": "下沉系数", "unit": "-", "source": "subsidence_params（param_source 必填）"}],
-     "outputs": [{"name": "subsidence.W_max", "desc": "最大下沉值", "unit": "mm"}],
-     "slots": ["{{SLOT:subsidence.W_max}}"], "note": "多工作面需叠加（XS4）"}],
-    "derived_slots": []}
-STATE = {"version": 2, "values": {
-    "subsidence.W_max": {"value": 12.3, "display": "12.30", "unit": "mm", "source": "derived:subsidence"},
-    "geo.location_text": {"value": "某县某镇", "display": "某县某镇", "unit": "", "source": "form:geo(静态转录)"}},
-    "anomalies": ["13_subsidence_params 缺失/空白——subsidence 链未计算（缺参不编造）"]}
+STDS = {
+    "standards": [
+        {"code": "HJ 130-2019", "title": "规划环境影响评价技术导则 总纲", "role": "规划环评通用工作程序（结构主纲）"},
+        {"code": "HJ 464-2009", "title": "规划环境影响评价技术导则 煤炭矿区总体规划", "role": "煤炭矿区专项要求"},
+    ]
+}
+FORMULAS = {
+    "formulas": [
+        {
+            "id": "subsidence",
+            "name": "概率积分法地表沉陷预测",
+            "chapter": "ch2_S02",
+            "expr": "W_max = q × m × cosα",
+            "inputs": [
+                {"name": "q", "desc": "下沉系数", "unit": "-", "source": "subsidence_params（param_source 必填）"}
+            ],
+            "outputs": [{"name": "subsidence.W_max", "desc": "最大下沉值", "unit": "mm"}],
+            "slots": ["{{SLOT:subsidence.W_max}}"],
+            "note": "多工作面需叠加（XS4）",
+        }
+    ],
+    "derived_slots": [],
+}
+STATE = {
+    "version": 2,
+    "values": {
+        "subsidence.W_max": {"value": 12.3, "display": "12.30", "unit": "mm", "source": "derived:subsidence"},
+        "geo.location_text": {"value": "某县某镇", "display": "某县某镇", "unit": "", "source": "form:geo(静态转录)"},
+    },
+    "anomalies": ["13_subsidence_params 缺失/空白——subsidence 链未计算（缺参不编造）"],
+}
 
 
 def _capture(fn, ns) -> tuple[int, str, str]:
@@ -96,8 +143,7 @@ def _capture(fn, ns) -> tuple[int, str, str]:
 def _fixtures(tmp: Path) -> dict[str, Path]:
     d = tmp / "fx"
     d.mkdir(parents=True, exist_ok=True)
-    paths = {"stage": d / "stage.json", "std": d / "std.json", "fx": d / "fx.json",
-             "state": d / "formula_state.json"}
+    paths = {"stage": d / "stage.json", "std": d / "std.json", "fx": d / "fx.json", "state": d / "formula_state.json"}
     paths["stage"].write_text(json.dumps(STAGE_MINI, ensure_ascii=False), encoding="utf-8")
     paths["std"].write_text(json.dumps(STDS, ensure_ascii=False), encoding="utf-8")
     paths["fx"].write_text(json.dumps(FORMULAS, ensure_ascii=False), encoding="utf-8")
@@ -106,8 +152,20 @@ def _fixtures(tmp: Path) -> dict[str, Path]:
 
 
 # 机制词标记：产物正文禁出现（语体回归，与 P3-10 banlist 同口径）
-ARTIFACT_BAN = ["{{", "}}", "XS1", "XS2", "XS4", "exact_match", "ingest", "FORM_", "param_source",
-                "user_docs", ".json", "rc="]
+ARTIFACT_BAN = [
+    "{{",
+    "}}",
+    "XS1",
+    "XS2",
+    "XS4",
+    "exact_match",
+    "ingest",
+    "FORM_",
+    "param_source",
+    "user_docs",
+    ".json",
+    "rc=",
+]
 
 
 def _assert_clean(text: str) -> None:
@@ -122,16 +180,27 @@ def test_outline_renders(tmp_path):
     rc, so, _ = _capture(briefing.cmd_outline, ns)
     assert rc == briefing.EXIT_OK
     text = out.read_text(encoding="utf-8")
-    for frag in ["全书编写策划书", "第1章「总则」", "第2章「规划方案概况及分析」", "《HJ 130-2019》规划环境影响评价技术导则 总纲",
-                 "《HJ 464-2009》", "概率积分法地表沉陷预测", "区域自然环境概况"]:
+    for frag in [
+        "全书编写策划书",
+        "第1章「总则」",
+        "第2章「规划方案概况及分析」",
+        "《HJ 130-2019》规划环境影响评价技术导则 总纲",
+        "《HJ 464-2009》",
+        "概率积分法地表沉陷预测",
+        "区域自然环境概况",
+    ]:
         assert frag in text, f"策划书缺「{frag}」"
     _assert_clean(text)
 
 
 def test_outline_unknown_stage_rc1(tmp_path):
     fx = _fixtures(tmp_path)
-    ns = Namespace(stage=str(tmp_path / "nope.json"), standards_file=str(fx["std"]), formulas_file=str(fx["fx"]),
-                   out=str(tmp_path / "o.md"))
+    ns = Namespace(
+        stage=str(tmp_path / "nope.json"),
+        standards_file=str(fx["std"]),
+        formulas_file=str(fx["fx"]),
+        out=str(tmp_path / "o.md"),
+    )
     rc, _, se = _capture(briefing.cmd_outline, ns)
     assert rc == briefing.EXIT_ERROR and "ERROR" in se
 
@@ -139,15 +208,28 @@ def test_outline_unknown_stage_rc1(tmp_path):
 def test_chapter_renders(tmp_path):
     fx = _fixtures(tmp_path)
     out = tmp_path / "brief_ch2.md"
-    ns = Namespace(stage=str(fx["stage"]), standards_file=str(fx["std"]), formulas_file=str(fx["fx"]),
-                   chapter="ch2", out=str(out))
+    ns = Namespace(
+        stage=str(fx["stage"]), standards_file=str(fx["std"]), formulas_file=str(fx["fx"]), chapter="ch2", out=str(out)
+    )
     rc, so, _ = _capture(briefing.cmd_chapter, ns)
     assert rc == briefing.EXIT_OK and "BRIEF_CHAPTER_OK" in so
     text = out.read_text(encoding="utf-8")
-    for frag in ["第2章「规划方案概况及分析」编写说明", "前承：第1章「总则」", "后启", "双口径表述必须成对带标签",
-                 "依据的标准规范", "本章计算说明", "概率积分法地表沉陷预测", "输入：下沉系数",
-                 "区域自然环境概况", "各节写法注记", "上承「地理位置」", "下启「本章小结」",
-                 "涉及计算：概率积分法地表沉陷预测", "用到资料：区域自然环境概况"]:
+    for frag in [
+        "第2章「规划方案概况及分析」编写说明",
+        "前承：第1章「总则」",
+        "后启",
+        "双口径表述必须成对带标签",
+        "依据的标准规范",
+        "本章计算说明",
+        "概率积分法地表沉陷预测",
+        "输入：下沉系数",
+        "区域自然环境概况",
+        "各节写法注记",
+        "上承「地理位置」",
+        "下启「本章小结」",
+        "涉及计算：概率积分法地表沉陷预测",
+        "用到资料：区域自然环境概况",
+    ]:
         assert frag in text, f"章说明缺「{frag}」"
     assert "{{TABLE:mine_plan}} 直渲表格" not in text  # 机制词行整行弃
     assert "规模数值全槽位" not in text  # 原行含模板记号（{{…}} 记号即内容）→ 整行弃
@@ -156,8 +238,13 @@ def test_chapter_renders(tmp_path):
 
 def test_chapter_unknown_rc1(tmp_path):
     fx = _fixtures(tmp_path)
-    ns = Namespace(stage=str(fx["stage"]), standards_file=str(fx["std"]), formulas_file=str(fx["fx"]),
-                   chapter="ch9", out=str(tmp_path / "b.md"))
+    ns = Namespace(
+        stage=str(fx["stage"]),
+        standards_file=str(fx["std"]),
+        formulas_file=str(fx["fx"]),
+        chapter="ch9",
+        out=str(tmp_path / "b.md"),
+    )
     rc, _, se = _capture(briefing.cmd_chapter, ns)
     assert rc == briefing.EXIT_ERROR and "ERROR" in se
 
@@ -165,14 +252,27 @@ def test_chapter_unknown_rc1(tmp_path):
 def test_data_request_renders(tmp_path):
     fx = _fixtures(tmp_path)
     outdir = tmp_path / "requests"
-    ns = Namespace(stage=str(fx["stage"]), standards_file=str(fx["std"]), formulas_file=str(fx["fx"]),
-                   families="geo,mon,subsidence_params", out_dir=str(outdir))
+    ns = Namespace(
+        stage=str(fx["stage"]),
+        standards_file=str(fx["std"]),
+        formulas_file=str(fx["fx"]),
+        families="geo,mon,subsidence_params",
+        out_dir=str(outdir),
+    )
     rc, so, _ = _capture(briefing.cmd_data_request, ns)
     assert rc == briefing.EXIT_OK and "BRIEF_REQUEST_OK" in so
     md = (outdir / "资料需求单.md").read_text(encoding="utf-8")
-    for frag in ["资料需求单", "区域自然环境概况（必需）", "环境质量监测（可选）", "沉陷预测参数（必需）",
-                 "供「概率积分法地表沉陷预测」等计算使用", "报告编写直接引用；第1章、第2章要用",
-                 "位置与行政区划（必填）", "井田清单：表格", "参数来源（必填）"]:
+    for frag in [
+        "资料需求单",
+        "区域自然环境概况（必需）",
+        "环境质量监测（可选）",
+        "沉陷预测参数（必需）",
+        "供「概率积分法地表沉陷预测」等计算使用",
+        "报告编写直接引用；第1章、第2章要用",
+        "位置与行政区划（必填）",
+        "井田清单：表格",
+        "参数来源（必填）",
+    ]:
         assert frag in md, f"需求单缺「{frag}」"
     assert "user_docs" not in md  # 机制 note 剔除
     assert "user_monitoring" not in md  # 通道/枚举名不泄漏
@@ -190,19 +290,36 @@ def test_data_request_renders(tmp_path):
 def test_calc_summary_all_and_chapter(tmp_path):
     fx = _fixtures(tmp_path)
     out = tmp_path / "calc_all.md"
-    ns = Namespace(stage=str(fx["stage"]), standards_file=str(fx["std"]), formulas_file=str(fx["fx"]),
-                   state_dir=str(fx["state"].parent), chapter="", out=str(out))
+    ns = Namespace(
+        stage=str(fx["stage"]),
+        standards_file=str(fx["std"]),
+        formulas_file=str(fx["fx"]),
+        state_dir=str(fx["state"].parent),
+        chapter="",
+        out=str(out),
+    )
     rc, so, _ = _capture(briefing.cmd_calc_summary, ns)
     assert rc == briefing.EXIT_OK and "BRIEF_CALC_OK" in so
     text = out.read_text(encoding="utf-8")
-    for frag in ["计算说明", "最大下沉值：12.30 mm——系统按公式计算", "来自区域自然环境概况资料",
-                 "未完成计算（缺资料，未编造）", "沉陷预测参数"]:
+    for frag in [
+        "计算说明",
+        "最大下沉值：12.30 mm——系统按公式计算",
+        "来自区域自然环境概况资料",
+        "未完成计算（缺资料，未编造）",
+        "沉陷预测参数",
+    ]:
         assert frag in text, f"计算说明缺「{frag}」"
     _assert_clean(text)
 
     out2 = tmp_path / "calc_ch2.md"
-    ns2 = Namespace(stage=str(fx["stage"]), standards_file=str(fx["std"]), formulas_file=str(fx["fx"]),
-                    state_dir=str(fx["state"].parent), chapter="ch2", out=str(out2))
+    ns2 = Namespace(
+        stage=str(fx["stage"]),
+        standards_file=str(fx["std"]),
+        formulas_file=str(fx["fx"]),
+        state_dir=str(fx["state"].parent),
+        chapter="ch2",
+        out=str(out2),
+    )
     rc2, _, _ = _capture(briefing.cmd_calc_summary, ns2)
     assert rc2 == briefing.EXIT_OK
     t2 = out2.read_text(encoding="utf-8")
@@ -211,15 +328,26 @@ def test_calc_summary_all_and_chapter(tmp_path):
 
 def test_calc_summary_missing_state_rc1(tmp_path):
     fx = _fixtures(tmp_path)
-    ns = Namespace(stage=str(fx["stage"]), standards_file=str(fx["std"]), formulas_file=str(fx["fx"]),
-                   state_dir=str(tmp_path / "nostate"), chapter="", out=str(tmp_path / "c.md"))
+    ns = Namespace(
+        stage=str(fx["stage"]),
+        standards_file=str(fx["std"]),
+        formulas_file=str(fx["fx"]),
+        state_dir=str(tmp_path / "nostate"),
+        chapter="",
+        out=str(tmp_path / "c.md"),
+    )
     rc, _, se = _capture(briefing.cmd_calc_summary, ns)
     assert rc == briefing.EXIT_ERROR and "ERROR" in se
 
 
 def test_data_request_unknown_family_rc1(tmp_path):
     fx = _fixtures(tmp_path)
-    ns = Namespace(stage=str(fx["stage"]), standards_file=str(fx["std"]), formulas_file=str(fx["fx"]),
-                   families="nope", out_dir=str(tmp_path / "r"))
+    ns = Namespace(
+        stage=str(fx["stage"]),
+        standards_file=str(fx["std"]),
+        formulas_file=str(fx["fx"]),
+        families="nope",
+        out_dir=str(tmp_path / "r"),
+    )
     rc, _, se = _capture(briefing.cmd_data_request, ns)
     assert rc == briefing.EXIT_ERROR and "ERROR" in se
