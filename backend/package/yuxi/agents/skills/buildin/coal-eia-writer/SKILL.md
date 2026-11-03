@@ -82,7 +82,7 @@ tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query
 
 1. **开题首动作两件事（bug-2231/3066 页面实测纪律全套移植：开题第一轮一轮做完，不可拆分、不可只说不做）**——按序完成：① **结构真源声明**：向用户声明本次写作结构一律以技能内置 `references/` 为准，不查询知识工厂模板/大纲；声明按「用户沟通规范」用业务措辞（模板如下，禁出现技能名/目录名/占位符记号/脚本机制描述）——
    > 本次报告的章节结构以本系统内置的标准章节框架为准，不会去外部模板库搜索套用；正文中的所有数字都由系统从您已登记的资料自动核算带入，不经手写。
-   ② **数据预告必须用户可见**：读 `references/data_expectations.json`（per_chapter 13 章），把按章数据清单（每章所需数据族 + 条目 + source_hint）向用户预告，引导一次备齐；只在内部读了规划用、用户看不到 = 未做（bug-2231 实测踩过两次）；用户明确缺的族照常落 `[待确认]`，缺数不编造。
+   ② **数据预告必须用户可见**：读 `references/data_expectations.json`（per_chapter 13 章），把按章数据清单（每章所需数据族 + 条目 + source_hint）向用户预告，引导一次备齐；只在内部读了规划用、用户看不到 = 未做（bug-2231 实测踩过两次）；用户明确缺的族照常落 `[待确认]`，缺数不编造。预告同时生成《全书编写策划书》文件卡：`briefing.py outline --stage S --out T/state/brief_outline.md`（rc=0=BRIEF_OUTLINE_OK）经 `present_artifacts` 呈现——策划书含全书章链定位、各章标准依据、计算概览与资料需求总表，机械渲染稿照贴原文禁改写；与数据预告同轮完成，不另发消息、不停车。
    **①声明+②预告的载体 = 首张表单的 `question` 文本开头**——不另发独立消息，独立消息会被「只说不做」跳过。两件齐备前不做其他事。
 2. **stage 选择**：矿区总体规划环评 → `planning_eia`（一期唯一验收 stage）；井工矿建设项目环评 → `project_eia_underground`（stage 文件已随包就绪，一期未验收、暂不启用）；露天/后评价 stage 二期启用——未启用 stage 的场景**管线不可跑**（禁拿其他 stage 凑数、禁即兴自创章集），向用户如实声明。
 3. **章树绑定（项目路径专属，D6/D12；pisuan 一期缓行——本平台为独立路径交付，无项目树，本步整条跳过；以下为二期启用时的原文）**：门 1 前 `project_list_chapters` 拉树导出 JSON → `mapping.py bind --tree tree.json --stage S --output state/mapping.json`（核对=节序+标题一致性，非语义匹配；rc=0 才落盘）。**rc=2 不一致（树过期/被人工改动）→ 升用户确认，禁静默错写、禁带病续跑**；独立路径无项目树，跳过绑定（交付走单文件）。
@@ -92,7 +92,7 @@ tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query
    - **用户可见即表单**：`ask_user_question` 问题制卡片（1–5 问/卡），`question_id`=schema 英文键（内部）、`question` 文本=中文名+单位+填写说明（label+placeholder 合并），enum→options / 其余→自由文本填写（数值合法性由 `ingest.py` 落盘校验，rc=1 拒后译中文重问）；**单卡片 ≤5 项（平台上限）**，一份数据族分多卡，跨回合仍一回合至多一卡；面向用户一律称"数据项"，禁出现「JSON/字段/field」术语。
    - **字段构造反模式禁令（bug-3233）**：`question`/`options` 的文本必须纯中文（禁塞 JSON/字典/对象字符串）；数值数据项禁做成选择题形态（一律自由文本填写，校验交给 ingest）；同一数据项的填写说明禁在多卡间重复粘贴冗余文本。（bug-4011 页面实测：把委托单位/编制单位/文号等多个填写项并成一张单选题、选项=字段名、选项值=「如：XX公司」示例占位——用户只能选不能填；平台侧对此类卡片直接报错拒收，收到该报错必须拆成逐项自由文本问题重发，禁换措辞重试同形态）
    - **数组族批量收集三步协议（bug-3234）**：array<object> 族（targets/seams/plans/stages/rows 等）禁要求用户填 JSON——
-     ① agent 从 stage schema 子字段中文 label 生成 CSV 模板（UTF-8 **with BOM**，含 1 行示例）经 present_artifacts 呈现下载；
+     ① 跑 `briefing.py data-request --stage S --families <缺项族,逗号分隔> --out-dir T/data_requests/`（rc=0=BRIEF_REQUEST_OK）经 `present_artifacts` 呈现**资料需求单 + 各表格族 CSV 模板**（UTF-8 BOM、中文列名、1 行示例；填写说明在需求单内，CSV 内不放注释行防 ingest 误解析）——机械渲染稿禁手工改动列结构；多族缺项时一次全部生成，用户可离线一次备齐（≤5 行小数组可改逐项卡，既有口径不变）；
      ② 用户 Excel 填写后对话发回（uploads 通道）；
      ③ agent 取上传文件行构造数组 → `ingest.py forms --family F --values` 落盘 → FORM_WRITTEN 回执含行数。
      解析容错：列缺失/空行回执指明问题行引导修正。≤5 行小数组可改逐项卡；索要上传用普通消息收尾禁做卡（bug-2233）。
@@ -109,7 +109,7 @@ tool_dependencies: ["ask_user_question", "present_artifacts", "list_kbs", "query
 progress.py run-stage freeze --state-dir T   # 冻结二连一次 bash：chapter_planner manifest + formula_runner execute
 ```
 
-**门 2**：rc=0 干净通过；rc=3 = 有 `anomalies`（口径并存/类比来源/容量为 0 级/缺参降级），**必须逐条呈现用户并获确认**再派章——anomalies 是"计算完成了但你要知道这些事"，不是错误但不可隐瞒。**rc=3 一律发 `ask_user_question` 卡，即使用户此前要求「不再发问」——确认门是免打扰指令的法定例外；用户已预先豁免时，卡中只给「按冻结值继续」单选项，绝不静默放行**。公式结果全 0/空时同样走本门呈现。
+**门 2**：rc=0 干净通过；rc=3 = 有 `anomalies`（口径并存/类比来源/容量为 0 级/缺参降级），**必须逐条呈现用户并获确认**再派章——anomalies 是"计算完成了但你要知道这些事"，不是错误但不可隐瞒。**rc=3 一律发 `ask_user_question` 卡，即使用户此前要求「不再发问」——确认门是免打扰指令的法定例外；用户已预先豁免时，卡中只给「按冻结值继续」单选项，绝不静默放行**。公式结果全 0/空时同样走本门呈现。门 2 处置完成后呈现《计算说明》文件卡：`briefing.py calc-summary --stage S --state-dir T --out T/state/calc_summary.md`（rc=0=BRIEF_CALC_OK）——冻结值、算法与数据来源的机械渲染稿照贴原文禁改写，与 anomalies 卡同轮呈出，不新增停车点。
 （5 域 Decimal 计算函数：概率积分法多采空区叠加/A 值法/噪声多源叠加/水量平衡/导水裂隙带；值+display+source+口径标签冻结进 formula_state.json，手改=build 门直接 FAIL。）
 
 ### 步骤 4 · 节级派发（两层模型核心，控制器模式）
@@ -133,6 +133,8 @@ progress.py run-stage freeze --state-dir T   # 冻结二连一次 bash：chapter
 | 「摘要里说这节写完了」 | 只信 state/sections/*.md + progress.json，不信对话记忆 |
 
 **4.0 初始化**：`progress.py init --stage S --state-dir T --data-dir D`（**必带 --data-dir**，run-stage 依赖；全 PENDING；已存在=续跑拒重置）。此后每轮动作由 `progress.py next` 决定——它输出**恰好一个**下一步（动作+精确命令+期望 rc），照做，不自创顺序、不跳步。
+
+**4.0.5 每章开写说明（非停车）**：每章首波派发前 `briefing.py chapter --stage S --chapter chN --out T/state/brief_chN.md`（rc=0=BRIEF_CHAPTER_OK）经 `present_artifacts` 呈《第N章编写说明》文件卡——含本章定位与前后章衔接、标准规范（中文名+作用）、计算说明、资料清单、**各节写法注记**。此后每节稿呈现时，头部先贴该节注记原文（取自本文件「各节写法注记」块，照贴禁改写；文件缺失时按同口径自拟：依据标准/用到资料与计算/上下文衔接，≤3 句）。
 
 **4.1 派发契约**（每 PENDING 章按波一次；重派=原 prompt 原文 + 门 stderr 原文，**不重新组装**——防逐次漂移）：
 
