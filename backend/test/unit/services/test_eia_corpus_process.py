@@ -124,6 +124,20 @@ def _stub_kb_id(monkeypatch, kb_id="kb_x"):
     monkeypatch.setattr(svc, "_resolve_kb_id", _resolve)
 
 
+def _stub_propagate(monkeypatch) -> list[int]:
+    """传播尾部打桩+间谍：单测不触真实运行栈（真实传播此前在单测里重播真树，187s 假慢源）。"""
+    from yuxi.services import eia_refs_propagate as prop_mod
+
+    calls: list[int] = []
+
+    def _fake():
+        calls.append(1)
+        return {"propagated": [], "mirrored": []}
+
+    monkeypatch.setattr(prop_mod, "propagate_refs_export", _fake)
+    return calls
+
+
 def test_materialize_workdir(tmp_path, monkeypatch):
     monkeypatch.setattr(svc, "knowledge_base", FakeKB({"样例报告": ("file_1", MINI_CANONICAL_MD)}))
     rows = [{**_make_row(), "kb_file_id": "file_1"}]
@@ -232,10 +246,12 @@ def test_process_compiles_kb_set_excluding_library_only_rows(tmp_path, monkeypat
     monkeypatch.setattr(svc, "_repo", repo)
     monkeypatch.setattr(svc, "knowledge_base", FakeKB({"样例报告": ("file_1", MINI_CANONICAL_MD)}))  # 002 不在 KB
     _stub_kb_id(monkeypatch)
+    calls = _stub_propagate(monkeypatch)
     ctx = FakeContext()
     ctx.payload = {"scope": "all", "operator_id": "tester"}
     summary = asyncio.run(svc.run_eia_corpus_process(ctx))
-    assert summary == {"compiled": 1}
+    assert summary == {"compiled": 1, "propagated_skills": 0, "bank_output_mirrored": 0}
+    assert calls == [1]  # 尾部必传播（bug-4206 收敛不变量的接线点）
     detail = repo.logs[0]["detail"]
     assert detail["library_not_in_kb"] == ["002-unpushed"]
     assert detail["kb_id"] == "kb_x"
@@ -249,10 +265,12 @@ def test_process_full_run_updates_processed_at_and_logs(tmp_path, monkeypatch):
     monkeypatch.setattr(svc, "_repo", repo)
     monkeypatch.setattr(svc, "knowledge_base", FakeKB({"样例报告": ("file_1", MINI_CANONICAL_MD)}))
     _stub_kb_id(monkeypatch)
+    calls = _stub_propagate(monkeypatch)
     ctx = FakeContext()
     ctx.payload = {"scope": "all", "operator_id": "tester"}
     summary = asyncio.run(svc.run_eia_corpus_process(ctx))
-    assert summary == {"compiled": 1}
+    assert summary == {"compiled": 1, "propagated_skills": 0, "bank_output_mirrored": 0}
+    assert calls == [1]
     assert repo.updated and repo.updated[0][1].get("processed_at") is not None
     assert repo.logs[0]["action"] == "recompile"
     doc = json.loads((refs / "samples_bank" / "corpus_meta.json").read_text(encoding="utf-8"))
@@ -275,10 +293,11 @@ def test_process_file_ids_scope_only_stamps_processed_at(tmp_path, monkeypatch):
         FakeKB({"样例报告": ("file_1", MINI_CANONICAL_MD), "第二份报告": ("file_2", MINI_CANONICAL_MD)}),
     )
     _stub_kb_id(monkeypatch)
+    _stub_propagate(monkeypatch)
     ctx = FakeContext()
     ctx.payload = {"file_ids": [1], "operator_id": "tester"}
     summary = asyncio.run(svc.run_eia_corpus_process(ctx))
-    assert summary == {"compiled": 2}  # 编译恒为 KB 全集
+    assert summary == {"compiled": 2, "propagated_skills": 0, "bank_output_mirrored": 0}  # 编译恒为 KB 全集
     assert [fid for fid, _ in repo.updated] == [1]  # processed_at 仅登记目标
 
     ctx.payload = {"file_ids": [99], "operator_id": "tester"}

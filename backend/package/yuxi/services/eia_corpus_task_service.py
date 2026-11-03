@@ -310,7 +310,11 @@ async def run_eia_corpus_process(context: TaskContext) -> dict:
     propagated = await asyncio.to_thread(propagate_refs_export)
     logger.info(f"[eia-corpus] 重编译传播 shared：重播 {len(propagated['propagated'])} 技能")
 
-    summary = {"compiled": len(entries), "propagated_skills": len(propagated["propagated"])}
+    summary = {
+        "compiled": len(entries),
+        "propagated_skills": len(propagated["propagated"]),
+        "bank_output_mirrored": len(propagated["mirrored"]),  # bug-4206：writer→chapter 栈内镜像目录数
+    }
     await context.set_result(summary)
     await context.set_progress(100.0, f"加工完成（{len(entries)} 份入编）")
     return summary

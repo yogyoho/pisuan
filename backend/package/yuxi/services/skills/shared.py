@@ -5,6 +5,7 @@ import copy
 import hashlib
 import shutil
 import stat
+import time
 import uuid
 from pathlib import Path
 from typing import Any
@@ -564,6 +565,20 @@ def _compute_dir_hash(source_dir: Path) -> str:
     return hasher.hexdigest()
 
 
+def _rename_dir_with_transient_retry(src: Path, dst: Path, attempts: int = 3, backoff: float = 0.4) -> None:
+    """目录 rename 带瞬态重试：Docker Desktop Windows bind mount（gRPC-FUSE）在
+    「A→B 改名后立刻 C→A 抢同名位」时会 EACCES——FUSE 层名条未释放（bug-4206 演练
+    实证，同型 rename 稍后手测即成功）。真权限错误重试后原样上浮，只是多花退避时长。"""
+    for i in range(attempts):
+        try:
+            src.rename(dst)
+            return
+        except PermissionError:
+            if i == attempts - 1:
+                raise
+            time.sleep(backoff * (i + 1))
+
+
 def _replace_skill_target(
     target_dir: Path,
     source_dir: Path,
@@ -578,8 +593,8 @@ def _replace_skill_target(
     try:
         if target_dir.exists():
             trash_dir = target_dir.with_name(f".{target_dir.name}.bak-{uuid.uuid4().hex[:8]}")
-            target_dir.rename(trash_dir)
-        temp_target.rename(target_dir)
+            _rename_dir_with_transient_retry(target_dir, trash_dir)
+        _rename_dir_with_transient_retry(temp_target, target_dir)
     except Exception:
         shutil.rmtree(temp_target, ignore_errors=True)
         if trash_dir and trash_dir.exists() and not target_dir.exists():
