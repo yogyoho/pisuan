@@ -313,6 +313,92 @@ def cmd_data_request(ns) -> int:
     return EXIT_OK
 
 
+_SRC_ZH = (("derived:", "系统按公式计算"), ("user_monitoring", "您提供的监测数据"),
+           ("analog_mine", "类比矿井实测"), ("user_docs", "您上传的文件"), ("form:", "您登记的资料"))
+
+
+def _src_zh(src: str, forms: dict) -> str:
+    for prefix, zh in _SRC_ZH:
+        if src.startswith(prefix):
+            if prefix == "form:":
+                fam = src[len(prefix):].split("(", 1)[0].strip()
+                return f"来自{_fam_label(fam, forms)}资料"
+            return zh
+    return src
+
+
+def _chapter_prefixes(stage: dict, ch_id: str, fx_doc: dict) -> set[str]:
+    """章口径槽位前缀 = 本章公式 slots + 本章消费的派生槽。"""
+    prefixes = set()
+    fids = stage["chapters"].get(ch_id, {}).get("formulas", [])
+    for f in fx_doc.get("formulas", []):
+        if f.get("id") in fids:
+            for s in f.get("slots", []):
+                m = re.match(r"\{\{SLOT:([^.}]+)", str(s))
+                if m:
+                    prefixes.add(m.group(1))
+    for d in fx_doc.get("derived_slots", []):
+        if ch_id in str(d.get("chapter", "")):
+            m = re.match(r"\{\{SLOT:([^.}]+)", str(d.get("slot", "")))
+            if m:
+                prefixes.add(m.group(1))
+    return prefixes
+
+
+def _render_calc(stage: dict, state: dict, ch_id: str, fx_doc: dict) -> str:
+    forms = stage.get("forms", {})
+    formulas = fx_doc.get("formulas", [])
+    prefixes = _chapter_prefixes(stage, ch_id, fx_doc) if ch_id else None
+    title = f"第{list(stage['chapters']).index(ch_id) + 1}章" if ch_id else "全书"
+    L = ["# 计算说明", "",
+         f"> 报告中的数字由系统按公式统一核算。下列为{title}本次核算结果与数据来源（自动生成，未经人工改动）。"]
+    cur_fam = None
+    for key in sorted(state.get("values", {})):
+        if prefixes is not None and not any(key.startswith(p + ".") for p in prefixes):
+            continue
+        fam = key.split(".", 1)[0]
+        if fam != cur_fam:
+            cur_fam = fam
+            L += ["", f"## {_fam_label(fam, forms)}", ""]
+        v = state["values"][key]
+        desc = key.split(".", 1)[1]
+        for f in formulas:
+            hit = next((o for o in f.get("outputs", [])
+                        if key == o.get("name") or key.startswith(o.get("name", "\0").split("[")[0])), None)
+            if hit:
+                desc = _strip_mech_parens(hit.get("desc") or hit.get("name", desc)) or desc
+                break
+        unit = f" {v['unit']}" if v.get("unit") else ""
+        L.append(f"- {desc}：{v.get('display', v.get('value'))}{unit}——{_src_zh(str(v.get('source', '')), forms)}")
+    anomalies = _clean_lines(state.get("anomalies", []))
+    if anomalies:
+        L += ["", "## 未完成计算（缺资料，未编造）", ""]
+        for a in anomalies:
+            txt = a
+            for fam, spec in forms.items():
+                txt = re.sub(rf"(\d*_)?{re.escape(fam)}\b", spec.get("label", fam), txt)
+            L.append(f"- {txt}")
+    return "\n".join(L) + "\n"
+
+
+def cmd_calc_summary(ns) -> int:
+    try:
+        stage, stds, formulas = _ctx(ns)
+        fx_path = Path(ns.formulas_file) if ns.formulas_file else refs_root() / "formulas.json"
+        fx_doc = {"formulas": formulas, "derived_slots": _load_json(fx_path).get("derived_slots", [])}
+        state = _load_json(Path(ns.state_dir) / "formula_state.json")
+        if ns.chapter and ns.chapter not in stage.get("chapters", {}):
+            raise KeyError(ns.chapter)
+    except (FileNotFoundError, KeyError) as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return EXIT_ERROR
+    out = Path(ns.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(_render_calc(stage, state, ns.chapter, fx_doc), encoding="utf-8")
+    print(f"BRIEF_CALC_OK {out}")
+    return EXIT_OK
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description="Agent 业务内容简报渲染器（机械渲染，零 LLM）")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -339,6 +425,15 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--families", default="")
     p.add_argument("--out-dir", required=True)
     p.set_defaults(fn=cmd_data_request)
+
+    p = sub.add_parser("calc-summary", help="计算说明（冻结值 + 数据来源）")
+    p.add_argument("--stage", required=True)
+    p.add_argument("--standards-file", default="")
+    p.add_argument("--formulas-file", default="")
+    p.add_argument("--state-dir", required=True)
+    p.add_argument("--chapter", default="")
+    p.add_argument("--out", required=True)
+    p.set_defaults(fn=cmd_calc_summary)
 
     ns = ap.parse_args(argv)
     sys.exit(ns.fn(ns))

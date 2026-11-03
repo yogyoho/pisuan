@@ -96,7 +96,8 @@ def _capture(fn, ns) -> tuple[int, str, str]:
 def _fixtures(tmp: Path) -> dict[str, Path]:
     d = tmp / "fx"
     d.mkdir(parents=True, exist_ok=True)
-    paths = {"stage": d / "stage.json", "std": d / "std.json", "fx": d / "fx.json", "state": d / "fs.json"}
+    paths = {"stage": d / "stage.json", "std": d / "std.json", "fx": d / "fx.json",
+             "state": d / "formula_state.json"}
     paths["stage"].write_text(json.dumps(STAGE_MINI, ensure_ascii=False), encoding="utf-8")
     paths["std"].write_text(json.dumps(STDS, ensure_ascii=False), encoding="utf-8")
     paths["fx"].write_text(json.dumps(FORMULAS, ensure_ascii=False), encoding="utf-8")
@@ -184,6 +185,36 @@ def test_data_request_renders(tmp_path):
     assert lines[0] == "井田名称,设计能力(Mt/a)"
     assert lines[1] == "【请填写】,【请填写】"
     assert len(lines) == 2  # 无注释行（ingest 唯一写者防误解析）
+
+
+def test_calc_summary_all_and_chapter(tmp_path):
+    fx = _fixtures(tmp_path)
+    out = tmp_path / "calc_all.md"
+    ns = Namespace(stage=str(fx["stage"]), standards_file=str(fx["std"]), formulas_file=str(fx["fx"]),
+                   state_dir=str(fx["state"].parent), chapter="", out=str(out))
+    rc, so, _ = _capture(briefing.cmd_calc_summary, ns)
+    assert rc == briefing.EXIT_OK and "BRIEF_CALC_OK" in so
+    text = out.read_text(encoding="utf-8")
+    for frag in ["计算说明", "最大下沉值：12.30 mm——系统按公式计算", "来自区域自然环境概况资料",
+                 "未完成计算（缺资料，未编造）", "沉陷预测参数"]:
+        assert frag in text, f"计算说明缺「{frag}」"
+    _assert_clean(text)
+
+    out2 = tmp_path / "calc_ch2.md"
+    ns2 = Namespace(stage=str(fx["stage"]), standards_file=str(fx["std"]), formulas_file=str(fx["fx"]),
+                    state_dir=str(fx["state"].parent), chapter="ch2", out=str(out2))
+    rc2, _, _ = _capture(briefing.cmd_calc_summary, ns2)
+    assert rc2 == briefing.EXIT_OK
+    t2 = out2.read_text(encoding="utf-8")
+    assert "最大下沉值" in t2 and "来自区域自然环境概况资料" not in t2  # 章口径只含本章消费公式槽位
+
+
+def test_calc_summary_missing_state_rc1(tmp_path):
+    fx = _fixtures(tmp_path)
+    ns = Namespace(stage=str(fx["stage"]), standards_file=str(fx["std"]), formulas_file=str(fx["fx"]),
+                   state_dir=str(tmp_path / "nostate"), chapter="", out=str(tmp_path / "c.md"))
+    rc, _, se = _capture(briefing.cmd_calc_summary, ns)
+    assert rc == briefing.EXIT_ERROR and "ERROR" in se
 
 
 def test_data_request_unknown_family_rc1(tmp_path):
