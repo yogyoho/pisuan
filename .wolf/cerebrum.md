@@ -2157,3 +2157,19 @@
 
 - ruff E501 的 line-width 按 Unicode 显示宽计（CJK 字符算 2 列）——line-length=120 下约 80 个中文字符即超限；中文话术行写 f-string 隐式拼接拆行（不改变输出内容），别用 awk length 判定（按字节 CJK×3，口径完全不同）。
 - progress.py 的 USER_MESSAGE 话术契约（P3-10）：机制行是脚本间/模型执行契约一字不动，面向用户话术只在行尾追加 `USER_MESSAGE: ` 前缀行；章名靠 init 时存的 chapters[c].title（旧 state 无键 → _ch_label 退化「第N章」）；banlist 禁用词约束已从 SKILL.md 移到 test_user_message.py 的 BANLIST 回归。
+
+## Key Learnings + DNR（2026-11-04 briefing 层批追加）
+
+### Key Learnings
+
+- briefing.py 渲染器四子命令口径：outline/chapter/data-request/calc-summary 全部机械模板拼接零 LLM；_MECH_RE 剔机制词括注（词表含 user_docs/user_monitoring/analog_mine 通道枚举名）；_clean_lines 整行弃条件 = 原行含 `{{`（模板记号即内容，剔后失义）或剔后仍命中机制词。
+- stage forms 数组字段形状：`type: "array<object>"` 且 fields 是字符串列表（`"element 要素(…)"` 首空格后中文）——CSV 列名 = `item.split(" ", 1)[1]`。
+- CSV 模板零注释行（对设计文档的已记录偏差）：ingest 是 CSV 唯一写者，模板被用户填回后 ingest 直接解析，注释行会进字段；防误解析从源头去掉。UTF-8 BOM 写法必须 `write_bytes(buf.getvalue().encode("utf-8-sig"))`——`write_text(encoding="utf-8-sig")` 仍走 Windows 默认 newline 翻译，csv 自带 `\r\n` 变 `\r\r\n` splitlines 出空行。
+- calc-summary source 译法：derived:→系统按公式计算 / user_monitoring→您提供的监测数据 / analog_mine→类比矿井实测 / user_docs→您上传的文件 / form:族→来自{label}资料；anomalies 中族键带文件号前缀（`13_subsidence_params`），替换用 `(\d*_)?{fam}\b` 正则吃掉前缀。
+- 双包测试同名文件（sync 字节一致设计使然）同进程收集必 basename 冲突 34 errors——双包全量必须分两次 pytest 调用（repo/container 惯例本来如此）；P2-8 链挂载层→skill-sources→projections 有自动投影（scripts 文件），但 SKILL.md 不自动投影，接线后须手工拷三面。
+- uvx 拉 pypi 超时（网络封锁）时用 backend/.venv/Scripts/ruff.exe（0.15.12 与 repo ruff cache 版本一致）+ 系统 python -m isort（venv 无 isort）。
+
+### Do-Not-Repeat
+
+- [2026-11-04] 计划文档断言 grep 层级写错（outline 章标题是 `### 第N章「title」` 不是 `## 第`）——冒烟断言先看产物实际格式再 grep。
+- [2026-11-04] fixture state 文件名必须与 cmd 读取路径一致（formula_state.json），写 fs.json 会 FileNotFoundError 假红。

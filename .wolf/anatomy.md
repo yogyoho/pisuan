@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-03T14:31:50.226Z
-> Files: 5 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-03T17:41:30.096Z
+> Files: 7 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -200,7 +200,7 @@
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/
 
-- `SKILL.md` — 分章管线设计：docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md §3。 (~4956 tok)
+- `SKILL.md` — 分章管线设计：docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md §3。 (~5183 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/references/stages/
 
@@ -216,7 +216,7 @@
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/
 
-- `SKILL.md` — pisuan 移植（2026-09-30）：运行时映射与改编范围见 (~6383 tok)
+- `SKILL.md` — pisuan 移植（2026-09-30）：运行时映射与改编范围见 (~6591 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/paradigms/
 
@@ -229,12 +229,11 @@
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/
 
-- `progress.py` — coal-eia-report v2 — progress.py：两层状态机（章级门禁 × 节级派发，步骤4 控制器）。 (~17741 tok)
+- `briefing.py` — Agent 业务内容简报渲染器（交互体验重塑 2026-11-04，docs/vibe/2026-11-04-agent-briefing-layer.md）。 (~5208 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/
 
-- `test_user_message.py` — 话术下沉测试（评审 P3-10）：next 全态 USER_MESSAGE 断言/gate PASS+FAIL 话术/confirm 下一章预告/旧 state 退化「第N章」/banlist 零机制词回归。 (~800 tok)
-- `test_user_message.py` — 话术下沉测试（评审 P3-10）：next/gate/confirm-chapter 输出 USER_MESSAGE 成文中文话术。 (~2842 tok)
+- `test_briefing.py` — briefing 渲染器测试：outline/chapter/data-request/calc-summary 四子命令。 (~2817 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/compliance-checker/
 
@@ -475,19 +474,21 @@
 
 ## docs/develop-guides/
 
-- `changelog.md` — 版本变更记录 (~44388 tok)
+- `changelog.md` — 版本变更记录 (~44551 tok)
 
 ## docs/intro/
 
 
 ## docs/superpowers/plans/
 
+- `2026-11-04-agent-briefing-layer.md` — Agent 业务简报渲染层（briefing 层）实施计划 (~11591 tok)
 
 ## docs/superpowers/specs/
 
 
 ## docs/vibe/
 
+- `2026-11-04-agent-briefing-layer.md` — Agent 交互体验重塑：业务内容分层渲染层（briefing 层） (~1398 tok)
 
 ## docs/vibe/assets/2026-09-30-coal-eia-v2-port/
 
