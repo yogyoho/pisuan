@@ -8539,3 +8539,481 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 14:58 | Session end: 15 writes across 6 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 9 reads | ~139733 tok |
 | 14:59 | Session end: 15 writes across 6 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 9 reads | ~139733 tok |
 | 15:01 | Created ../../Users/Lenovo/AppData/Local/Temp/wolf-commit-msg2.txt | — | ~62 |
+| 15:04 | 用户令提交：Task1本体早已在3e573ed68；wolf簿记曾batch被7723a6a62收编，本回合补提935fe9677（六账本文件,+2580/-231,bug-4186/4187）；untracked杂物未动，未push | .wolf/（六tracked账本） | 已提交并终验干净 | ~3k |
+| 15:05 | Session end: 16 writes across 7 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 9 reads | ~139800 tok |
+| 15:06 | Session end: 16 writes across 7 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 9 reads | ~139800 tok |
+| 15:09 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~75 |
+| 15:10 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/progress.py | 1→3 lines | ~50 |
+| 15:10 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 1→3 lines | ~50 |
+| 15:10 | Edited docs/develop-guides/changelog.md | inline fix | ~103 |
+| 15:10 | Edited docs/vibe/2026-10-27-chapter-writer-user-test-plan.md | 7→7 lines | ~170 |
+| 15:13 | Session end: 21 writes across 10 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 9 reads | ~140272 tok |
+| 15:18 | Session end: 21 writes across 10 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 9 reads | ~140272 tok |
+| 15:18 | Session end: 21 writes across 10 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 9 reads | ~140272 tok |
+| 15:28 | Session end: 21 writes across 10 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 13 reads | ~140272 tok |
+| 15:32 | Edited web/src/utils/messageGrouping.js | 2→5 lines | ~70 |
+| 15:32 | Edited web/src/utils/messageGrouping.js | added 1 condition(s) | ~72 |
+| 15:32 | Edited web/src/utils/conversationProcessGrouping.js | added 1 condition(s) | ~75 |
+| 15:32 | Edited web/src/components/ToolCallsGroupComponent.vue | expanded (+10 lines) | ~159 |
+| 15:32 | Edited web/src/components/ToolCallsGroupComponent.vue | 6→6 lines | ~54 |
+| 15:33 | Session end: 26 writes across 13 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 14 reads | ~140717 tok |
+| 15:35 | Session end: 26 writes across 13 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 15 reads | ~140717 tok |
+| 15:40 | Session end: 26 writes across 13 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 15 reads | ~140717 tok |
+| 15:44 | Session end: 26 writes across 13 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 15 reads | ~140717 tok |
+| 15:51 | Session end: 26 writes across 13 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 15 reads | ~140717 tok |
+| 15:53 | Session end: 26 writes across 13 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 15 reads | ~140717 tok |
+| 16:02 | Session end: 26 writes across 13 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 15 reads | ~140717 tok |
+| 16:03 | Session end: 26 writes across 13 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 15 reads | ~140717 tok |
+| 16:19 | Session end: 26 writes across 13 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 15 reads | ~140717 tok |
+| 16:20 | Session end: 26 writes across 13 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 15 reads | ~140717 tok |
+| 16:40 | Session end: 26 writes across 13 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 15 reads | ~140717 tok |
+| 16:46 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/sample_fragments.py | 6→7 lines | ~136 |
+| 16:46 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/sample_fragments.py | modified export_candidates() | ~406 |
+| 16:47 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/sample_fragments.py | 1→5 lines | ~66 |
+| 16:47 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/sample_fragments.py | expanded (+6 lines) | ~178 |
+| 16:47 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/tests/test_sample_fragments.py | modified getattr() | ~164 |
+| 16:48 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/tests/test_sample_fragments.py | modified test_candidates_empty_rc2() | ~413 |
+| 16:48 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 2→2 lines | ~225 |
+| 16:48 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 2→4 lines | ~55 |
+| 16:49 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | 1→3 lines | ~69 |
+| 16:52 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/sample_fragments.py | 2→2 lines | ~50 |
+| 16:52 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/tests/test_sample_fragments.py | modified getattr() | ~105 |
+| 16:53 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/tests/test_sample_fragments.py | 3→5 lines | ~59 |
+| 16:55 | Edited docs/develop-guides/changelog.md | modified feat() | ~178 |
+| 16:58 | Session end: 39 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 18 reads | ~151875 tok |
+| 17:06 | Session end: 39 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 18 reads | ~151875 tok |
+| 17:17 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 1→3 lines | ~88 |
+| 17:17 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~27 |
+| 17:17 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~64 |
+| 17:25 | Session end: 42 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152067 tok |
+| 17:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 3→5 lines | ~76 |
+| 17:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | 3→5 lines | ~76 |
+| 17:27 | Session end: 44 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152231 tok |
+| 17:40 | Session end: 44 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152231 tok |
+| 17:56 | Session end: 44 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152231 tok |
+| 18:05 | Session end: 44 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152231 tok |
+| 18:19 | Session end: 44 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152231 tok |
+| 18:31 | Session end: 44 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152231 tok |
+| 18:34 | Session end: 44 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152231 tok |
+| 18:47 | Session end: 44 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152231 tok |
+| 18:51 | Session end: 44 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152231 tok |
+| 19:01 | Session end: 44 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152231 tok |
+| 19:12 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | expanded (+7 lines) | ~230 |
+| 19:12 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | expanded (+7 lines) | ~211 |
+| 19:15 | Session end: 46 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152987 tok |
+| 19:18 | Session end: 46 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152987 tok |
+| 19:26 | Session end: 46 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152987 tok |
+| 19:27 | Session end: 46 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152987 tok |
+| 19:47 | Session end: 46 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152987 tok |
+| 19:47 | Session end: 46 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152987 tok |
+| 19:48 | Session end: 46 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152987 tok |
+| 19:49 | Session end: 46 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152987 tok |
+| 19:50 | Session end: 46 writes across 15 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 19 reads | ~152987 tok |
+| 19:59 | Created ../pisuan-localized/docker/volumes/pisuan/threads/shared/admin/workspace/workspace/eia-report/hengcheng-ch3/data/08_eco.json | — | ~707 |
+| 20:00 | Session end: 47 writes across 16 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 20 reads | ~153694 tok |
+| 20:03 | Session end: 47 writes across 16 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 20 reads | ~153694 tok |
+| 20:07 | Session end: 47 writes across 16 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 20 reads | ~153694 tok |
+| 20:12 | Session end: 47 writes across 16 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 20 reads | ~153694 tok |
+| 20:23 | Session end: 47 writes across 16 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 20 reads | ~153694 tok |
+| 20:27 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/references/stages/planning_eia.json | expanded (+16 lines) | ~159 |
+| 20:28 | Session end: 48 writes across 17 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 21 reads | ~153853 tok |
+| 22:44 | Session end: 48 writes across 17 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 21 reads | ~153853 tok |
+| 22:47 | Session end: 48 writes across 17 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 21 reads | ~153853 tok |
+| 23:18 | Session end: 48 writes across 17 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 21 reads | ~153853 tok |
+| 23:48 | Session end: 48 writes across 17 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 21 reads | ~153853 tok |
+| 00:21 | Session end: 48 writes across 17 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 21 reads | ~153853 tok |
+| 00:57 | Session end: 48 writes across 17 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 21 reads | ~153853 tok |
+| 01:01 | Session end: 48 writes across 17 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 21 reads | ~153853 tok |
+| 01:03 | Session end: 48 writes across 17 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 21 reads | ~153853 tok |
+| 10:10 | Session end: 48 writes across 17 files (domain_factory_service.py, test_etl_normalization.py, test_report_repo.py, test_domain_factory_outline_repo.py, test_chapter_writer_subagent.py) | 21 reads | ~153853 tok |
+
+## Session: 2026-11-01 10:59
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-01 11:00
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:27 | Edited docker/api.Dockerfile | 3→3 lines | ~76 |
+| 11:29 | Session end: 1 writes across 1 files (api.Dockerfile) | 1 reads | ~81 tok |
+| 11:39 | Session end: 1 writes across 1 files (api.Dockerfile) | 1 reads | ~81 tok |
+| 11:50 | Session end: 1 writes across 1 files (api.Dockerfile) | 1 reads | ~81 tok |
+| 11:52 | Session end: 1 writes across 1 files (api.Dockerfile) | 1 reads | ~81 tok |
+| 14:07 | Session end: 1 writes across 1 files (api.Dockerfile) | 1 reads | ~81 tok |
+| 14:14 | Edited docker/minio/Dockerfile | 1→3 lines | ~23 |
+| 14:14 | Edited docker/minio/Dockerfile | 2→2 lines | ~50 |
+| 14:16 | Session end: 3 writes across 2 files (api.Dockerfile, Dockerfile) | 1 reads | ~159 tok |
+| 14:37 | Edited docker/minio/Dockerfile | 2→3 lines | ~49 |
+| 14:38 | Session end: 4 writes across 2 files (api.Dockerfile, Dockerfile) | 2 reads | ~661 tok |
+| 14:40 | Session end: 4 writes across 2 files (api.Dockerfile, Dockerfile) | 2 reads | ~661 tok |
+| 14:43 | Created ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/docker-build-mirror-map.md | — | ~276 |
+| 14:46 | localized 栈误删重建完成：6 阻塞逐一修复（镜像源地图化 bug-456），10 容器 healthy，三存储数据完好 | docker/*, buglog | done | 12k |
+| 14:44 | Session end: 5 writes across 3 files (api.Dockerfile, Dockerfile, docker-build-mirror-map.md) | 2 reads | ~957 tok |
+| 15:29 | Session end: 5 writes across 3 files (api.Dockerfile, Dockerfile, docker-build-mirror-map.md) | 2 reads | ~957 tok |
+
+## Session: 2026-11-01 17:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-01 17:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-01 17:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-01 17:33
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-01 18:01
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-01 18:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 18:05 | 评估外部评审报告：3 项 P0 全实锤（同步漂移/篇幅折算/双卡绕过），登记 bug-4188~4190，裁定分级待用户批 |
+| 18:40 | 环评域DB→技能供应链分析：5通道核验（KB/样例bank/标准限值/元注记/注册表），KB通而不用、标准限值脑裂登记 bug-4191 |
+| 19:45 | 上游比对：xerrors/Yuxi force-push 重写 main，274 提交落后，0.8.0 beta 重构 web→frontend/views→pages | .wolf/memory.md | 已出升级评估报告 | ~8k |
+| 20:56 | Created ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/upstream-080-restructure-pending.md | — | ~317 |
+| 20:56 | Edited ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/MEMORY.md | 1→2 lines | ~69 |
+| 20:57 | Session end: 2 writes across 2 files (upstream-080-restructure-pending.md, MEMORY.md) | 11 reads | ~17790 tok |
+| 19:10 | 环评域加工模块全链路查证：覆盖层架构v1还原+7闭环实测；修正上轮两误判；词表真相倒挂登记 bug-4192 |
+| 21:10 | Session end: 2 writes across 2 files (upstream-080-restructure-pending.md, MEMORY.md) | 15 reads | ~17790 tok |
+| 21:28 | Created docs/vibe/2026-11-01-eia-refs-local-git-chain.md | — | ~927 |
+| 19:35 | 数据文件git链路设计定稿落docs/vibe（用户拍板Gitea+排P0后）；批次0=bug-4192词表回灌待令 |
+| 21:29 | Session end: 3 writes across 3 files (upstream-080-restructure-pending.md, MEMORY.md, 2026-11-01-eia-refs-local-git-chain.md) | 15 reads | ~18783 tok |
+| 22:10 | 批次0完成：词表回灌8行+重导出6条(2条4<5跳过)+四层8位镜像md5一致；bug-4192闭合 |
+| 22:05 | Session end: 3 writes across 3 files (upstream-080-restructure-pending.md, MEMORY.md, 2026-11-01-eia-refs-local-git-chain.md) | 17 reads | ~18783 tok |
+
+## Session: 2026-11-01 23:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:53 | Edited docs/develop-guides/changelog.md | modified fix() | ~197 |
+| 23:53 | P0-2 同步漂移回灌：5 文件 chapter→writer 反向回灌（bug-4162 中位化保留），sync --check 归零+守卫 4 用例+writer 全量 225 passed，四层镜像归零（含 pytest_user projection 积垢 1 处）；bug-4188 fix 闭合+changelog 登记 | scripts/sync_chapter_skill.py 相关 5 文件 + docs/develop-guides/changelog.md + .wolf/buglog.json | 完成，待提交 | ~45k |
+| 23:53 | Session end: 1 writes across 1 files (changelog.md) | 4 reads | ~40528 tok |
+| 23:54 | Session end: 1 writes across 1 files (changelog.md) | 4 reads | ~40528 tok |
+| 23:58 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/ingest.py | modified family_filename() | ~110 |
+| 23:58 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/ingest.py | modified exists() | ~317 |
+| 23:59 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/ingest.py | modified prediction_prereq_errors() | ~44 |
+| 23:59 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 4→3 lines | ~32 |
+| 23:59 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~56 |
+| 23:59 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~16 |
+| 23:59 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~9 |
+| 23:59 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | 4→3 lines | ~32 |
+| 23:59 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~56 |
+| 23:59 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~21 |
+| 23:59 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~26 |
+| 00:00 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | inline fix | ~27 |
+| 00:00 | Edited docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md | inline fix | ~22 |
+| 00:03 | Edited docs/develop-guides/changelog.md | modified fix() | ~207 |
+| 00:1x | P2-6/P2-7 修订：删双包 SKILL.md 硬编码译名表→stage forms label 权威+ingest check 中文名直出（fam_disp）；consistency 23条/XS1–XS20 三处对齐+播报类正文≤3句豁免成品+spec 门1 7族；sync 归零+守卫 4/4+225 passed+四层镜像 8 位 | ingest.py + 双包 SKILL.md + spec 设计文档 + changelog | 完成，待提交 | ~40k |
+| 00:04 | Session end: 15 writes across 4 files (changelog.md, ingest.py, SKILL.md, 2026-10-24-chapter-writer-reviewer-design.md) | 6 reads | ~46500 tok |
+| 00:05 | Edited ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/upstream-080-restructure-pending.md | 1→3 lines | ~250 |
+| 20:05 | 0.8.0 价值分析（读上游 releases/0.8.0.md）；用户决策选A等正式版 | docs/develop-guides/releases/0.8.0.md@upstream | 记忆已更新 | ~6k |
+| 00:05 | Session end: 16 writes across 5 files (changelog.md, ingest.py, SKILL.md, 2026-10-24-chapter-writer-reviewer-design.md, upstream-080-restructure-pending.md) | 6 reads | ~46768 tok |
+| 00:18 | Created docs/vibe/2026-11-02-upstream-080-migration-preresearch.md | — | ~2860 |
+| 00:25 | 迁移预研完成：新旧架构对照表/定制三类清单(A搬家B重放C被替代)/数据三选项/工具链改造/迁移日checklist | docs/vibe/2026-11-02-upstream-080-migration-preresearch.md | 待RC触发 | ~5k |
+| 00:19 | Session end: 17 writes across 6 files (changelog.md, ingest.py, SKILL.md, 2026-10-24-chapter-writer-reviewer-design.md, upstream-080-restructure-pending.md) | 7 reads | ~65219 tok |
+| 00:19 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | expanded (+22 lines) | ~330 |
+| 00:19 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | expanded (+17 lines) | ~256 |
+| 00:19 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | expanded (+18 lines) | ~274 |
+| 00:20 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/paradigm_role.py | modified exists() | ~33 |
+| 00:21 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | reduced (-8 lines) | ~210 |
+| 00:21 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | modified builtin_stages_dir() | ~237 |
+| 00:21 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_gate_credential_link.py | modified _doc() | ~294 |
+| 00:21 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_gate_credential_link.py | 1→2 lines | ~25 |
+| 00:22 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_gate_credential_link.py | modified test_reviewed_keeps_gate_credential_and_confirm_passes() | ~74 |
+| 00:22 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_gate_credential_link.py | modified test_confirm_with_fail_credential_requires_downgrade() | ~82 |
+| 00:22 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_init_stage_precheck.py | — | ~537 |
+| 00:23 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | inline fix | ~30 |
+| 00:24 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_chapter_state_machine.py | modified _plan_card() | ~182 |
+| 00:24 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_chapter_state_machine.py | modified test_next_skips_confirmed_chapters() | ~48 |
+| 00:24 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_chapter_state_machine.py | 3→2 lines | ~20 |
+| 00:24 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_chapter_state_machine.py | 6→8 lines | ~105 |
+| 00:25 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_chapter_state_machine.py | 3→6 lines | ~88 |
+| 00:25 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_chapter_state_machine.py | modified test_confirmed_rework_via_mark_draft() | ~41 |
+| 00:25 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_chapter_state_machine.py | modified test_blocked_does_not_block_later_chapters() | ~131 |
+| 00:25 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_chapter_state_machine.py | 2→3 lines | ~22 |
+| 00:25 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_chapter_state_machine.py | 2→3 lines | ~35 |
+| 00:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 2→2 lines | ~19 |
+| 00:28 | Edited docs/develop-guides/changelog.md | modified fix() | ~206 |
+| 01:0x | P0-3/P1-4 闭合：progress.py 双卡凭据硬校验（mark/gate 分章模式，--none 豁免）+ init 内置 stage 预检（roles/style_targets 缺失 rc=1 列可跑）+ paradigm_role 文案；测试 +9 用例、既有 9 处无卡直 mark 补凭据；CLI 冒烟两复现路径 rc=1；234 passed/守卫 4/4/ruff 0/四层归零；bug-4190 闭合+changelog | progress.py + paradigm_role.py + 双包 3 测试文件 + changelog | 完成，待提交 | ~55k |
+| 00:29 | Session end: 40 writes across 11 files (changelog.md, ingest.py, SKILL.md, 2026-10-24-chapter-writer-reviewer-design.md, upstream-080-restructure-pending.md) | 9 reads | ~70858 tok |
+| 01:10 | Edited docs/develop-guides/changelog.md | removed 5 lines | ~18 |
+| 01:11 | Edited docs/develop-guides/changelog.md | modified fix() | ~187 |
+| 01:11 | Edited docs/develop-guides/changelog.md | modified fix() | ~362 |
+| 01:12 | Edited docs/develop-guides/changelog.md | modified fix() | ~206 |
+| 01:14 | Edited docker-compose.yml | expanded (+31 lines) | ~445 |
+| 01:15 | Edited ../pisuan-localized/docker-compose.yml | expanded (+31 lines) | ~361 |
+| 01:16 | Edited docker-compose.yml | 2→3 lines | ~35 |
+
+## Session: 2026-11-01 01:19
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 01:20 | Edited docker-compose.yml | 5→6 lines | ~65 |
+| 01:20 | Edited ../pisuan-localized/docker-compose.yml | 5→6 lines | ~66 |
+| 01:30 | langfuse 重部署完成：四镜像补拉+复用原五卷，数据全保留（CH events 14756/минio 10GiB）；cgr.dev 直连可达新增入镜像地图 | docker-compose.langfuse.yml | web 3100 v4.72.0 OK | ~9k |
+| 01:24 | Edited ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/docker-build-mirror-map.md | inline fix | ~116 |
+| 01:24 | Created ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/langfuse-stack-deploy-runbook.md | — | ~289 |
+| 01:25 | Edited ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/MEMORY.md | 1→2 lines | ~74 |
+| 01:25 | Created scripts/governance/refs_repo_seed.py | — | ~1894 |
+| 01:25 | Session end: 6 writes across 5 files (docker-compose.yml, docker-build-mirror-map.md, langfuse-stack-deploy-runbook.md, MEMORY.md, refs_repo_seed.py) | 3 reads | ~17483 tok |
+| 01:25 | Edited scripts/governance/refs_repo_seed.py | 16→14 lines | ~224 |
+| 01:32 | Created backend/package/yuxi/services/eia_refs_git.py | — | ~1010 |
+| 01:32 | Edited backend/package/yuxi/services/eia_refs_git.py | modified _git() | ~147 |
+| 01:33 | Edited backend/package/yuxi/services/eia_refs_git.py | 3→2 lines | ~22 |
+| 01:33 | Edited backend/package/yuxi/services/eia_formula_service.py | added 1 import(s) | ~62 |
+| 01:33 | Edited backend/package/yuxi/services/eia_formula_service.py | 9→12 lines | ~184 |
+| 01:34 | Edited backend/package/yuxi/services/eia_meta_service.py | added 1 import(s) | ~73 |
+| 01:34 | Edited backend/package/yuxi/services/eia_meta_service.py | 7→10 lines | ~155 |
+| 01:34 | Edited backend/package/yuxi/services/eia_lexicon_service.py | added 1 import(s) | ~53 |
+| 01:34 | Edited backend/package/yuxi/services/eia_lexicon_service.py | 4→4 lines | ~54 |
+| 01:34 | Edited backend/package/yuxi/services/eia_lexicon_service.py | 7→10 lines | ~156 |
+| 01:34 | Edited backend/package/yuxi/services/eia_stage_service.py | added 1 import(s) | ~63 |
+| 01:35 | Edited backend/package/yuxi/services/eia_stage_service.py | modified _export_one() | ~401 |
+| 01:35 | Edited backend/package/yuxi/services/eia_stage_service.py | added 1 import(s) | ~30 |
+| 01:35 | Edited backend/package/yuxi/services/eia_standard_service.py | added 1 import(s) | ~53 |
+| 01:36 | Edited backend/package/yuxi/services/eia_standard_service.py | 7→10 lines | ~151 |
+| 01:36 | Edited backend/package/yuxi/services/eia_paradigm_service.py | added 1 import(s) | ~54 |
+| 01:36 | Edited backend/package/yuxi/services/eia_paradigm_service.py | 6→9 lines | ~146 |
+| 01:36 | Edited backend/package/yuxi/services/eia_entity_service.py | added 1 import(s) | ~62 |
+| 01:36 | Edited backend/package/yuxi/services/eia_entity_service.py | modified _export_one() | ~708 |
+| 01:37 | Edited backend/test/conftest.py | modified _isolate_refs_git_chain() | ~150 |
+| 01:37 | Created backend/test/unit/extensions/test_eia_refs_git.py | — | ~1470 |
+| 01:38 | Created backend/test/unit/extensions/test_eia_refs_git.py | — | ~1317 |
+| 01:38 | Edited backend/test/unit/extensions/test_eia_refs_git.py | modified worktree() | ~62 |
+| 01:39 | Edited docker-compose.yml | expanded (+6 lines) | ~122 |
+| 01:39 | Edited docker-compose.yml | 2→7 lines | ~99 |
+| 01:39 | Edited docker-compose.yml | 2→2 lines | ~66 |
+| 01:39 | Edited ../pisuan-localized/docker-compose.yml | 2→2 lines | ~66 |
+| 01:39 | Edited ../pisuan-localized/docker-compose.yml | expanded (+6 lines) | ~115 |
+| 01:40 | Edited ../pisuan-localized/docker-compose.yml | 2→7 lines | ~99 |
+| 01:53 | Created scripts/governance/refs_repo_distribute.py | — | ~1310 |
+| 01:54 | Edited scripts/governance/refs_repo_distribute.py | modified as_posix() | ~443 |
+| 01:55 | Edited docs/vibe/2026-10-22-refs-governance-refresh.md | expanded (+13 lines) | ~175 |
+| 01:56 | Created web/src/components/eia-data/refsCommitNote.js | — | ~89 |
+| 01:59 | Edited docs/develop-guides/changelog.md | fix() → feat() | ~362 |
+| 02:00 | Edited docs/develop-guides/changelog.md | modified fix() | ~34 |
+| 02:06 | Gitea 无头初始化（INSTALL_LOCK env 锁安装页 + migrate + admin CLI -u 1000）+ API 建 eia-refs 仓 | docker-compose.yml ×2 | healthy，refsadmin 建号 | ~3k |
+| 02:06 | refs_repo_seed.py 播种：committed refs 39 文件 → 工作树 → push；幂等重跑零 commit；blob 级对账 diff=0 | scripts/governance/refs_repo_seed.py | 首播 e641b10 验证通过 | ~8k |
+| 02:06 | eia_refs_git.py 导出 git 链 + 7 服务接线 + conftest 隔离 + 7 单测（真 git/bare 远端）；容器冒烟 commit+push 通、验毕复位 | backend/package/yuxi/services/eia_refs_git.py 等 10 文件 | 32071eb13 | ~30k |
+| 02:06 | refs_repo_distribute.py 分发对账：pull→shared/projections 清单 overlay，--check 39×3 全一致 | scripts/governance/refs_repo_distribute.py | 8eb47f1a9 前端配套同轮 | ~6k |
+| 02:06 | 专家只读账号 expert（read 协作者）；治理文档 2026-10-22 增补代际指向；changelog 批次2 条目 | docs/vibe/2026-10-22-refs-governance-refresh.md | 完成 | ~4k |
+| 02:07 | Session end: 42 writes across 19 files (docker-compose.yml, docker-build-mirror-map.md, langfuse-stack-deploy-runbook.md, MEMORY.md, refs_repo_seed.py) | 11 reads | ~37478 tok |
+
+## Session: 2026-11-02 08:04
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:19 | Created backend/test/integration/services/_flow_isolation.py | — | ~307 |
+| 08:19 | Edited backend/test/integration/services/test_eia_lexicon_service_flow.py | 5→6 lines | ~65 |
+| 08:19 | Edited backend/test/integration/services/test_eia_lexicon_service_flow.py | modified _clean_state() | ~337 |
+| 08:19 | Edited backend/test/integration/services/test_eia_meta_service_flow.py | 3→3 lines | ~32 |
+| 08:19 | Edited backend/test/integration/services/test_eia_meta_service_flow.py | modified _wipe() | ~187 |
+| 08:19 | Edited backend/test/integration/services/test_eia_standard_service_flow.py | 3→3 lines | ~31 |
+| 08:19 | Edited backend/test/integration/services/test_eia_standard_service_flow.py | modified _wipe() | ~147 |
+| 08:28 | Edited docs/develop-guides/changelog.md | modified fix() | ~232 |
+| 08:40 | bug-4198 流测试抹库事故处置：诊断（3 fixture delete 全表）→ 数据恢复（词表 8+开关/meta 20/导出 commit 22c32ed0）→ 根治（_flow_isolation.py 快照恢复）→ 容器验证运营行存活 | backend/test/integration/services/×4, changelog.md, buglog.json | 修复完成 5 passed+1 基线红 | ~90k |
+| 08:31 | Created ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/integration-flow-tests-wiped-shared-db.md | — | ~256 |
+| 08:32 | Session end: 9 writes across 6 files (_flow_isolation.py, test_eia_lexicon_service_flow.py, test_eia_meta_service_flow.py, test_eia_standard_service_flow.py, changelog.md) | 0 reads | ~1629 tok |
+| 08:35 | Edited docs/develop-guides/changelog.md | inline fix | ~29 |
+| 08:55 | bug-4198 修复两笔提交：c94acfeb2 测试隔离整改（_flow_isolation + 3 fixture + changelog）/ 6b9bb3180 chapter 包词表副本回流（c07bbd1d→bebcf6ff） | backend/test/, backend/package/, changelog.md | 已提交未推送，工作树净 | ~8k |
+| 08:37 | Session end: 10 writes across 6 files (_flow_isolation.py, test_eia_lexicon_service_flow.py, test_eia_meta_service_flow.py, test_eia_standard_service_flow.py, changelog.md) | 0 reads | ~1660 tok |
+| 08:48 | Edited backend/package/yuxi/services/eia_meta_service.py | modified export_annotations() | ~440 |
+| 08:48 | Edited backend/test/integration/services/test_eia_meta_service_flow.py | 4→6 lines | ~42 |
+| 08:48 | Edited backend/test/integration/services/test_eia_meta_service_flow.py | expanded (+11 lines) | ~380 |
+| 08:49 | Edited backend/test/integration/services/test_eia_meta_service_flow.py | run_in_threadpool() → _load_corpus_meta() | ~178 |
+| 08:49 | Edited backend/test/integration/services/test_eia_meta_service_flow.py | added 1 condition(s) | ~221 |
+| 08:49 | Edited backend/test/integration/services/test_eia_meta_service_flow.py | 10→10 lines | ~196 |
+| 08:50 | Edited backend/test/integration/services/test_eia_meta_service_flow.py | 7→9 lines | ~153 |
+| 08:50 | Edited backend/test/integration/services/test_eia_meta_service_flow.py | 3→3 lines | ~38 |
+| 08:57 | Edited backend/package/yuxi/services/eia_meta_service.py | modified any() | ~89 |
+| 09:00 | bug-4196 闭合（裁定 A）：rid 映射 Jaccard 终审 6/6 → 文件双包回种 21 条 → DB API 落注 → 导出 e35913cc → 分发归零；伴随修 export 文件独有层携带 + 强守卫 | eia_meta_service.py, test_eia_meta_service_flow.py, corpus_meta_annotations.json×2 | 容器 6/6 全绿 | ~60k |
+| 09:00 | Edited docs/develop-guides/changelog.md | modified fix() | ~291 |
+| 09:00 | Edited ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/integration-flow-tests-wiped-shared-db.md | inline fix | ~134 |
+| 09:05 | bug-4196 提交 f8613a14c（服务 export 携带语义 + 测试现读锚 + 双包数据回种 + changelog）；pisuan-custom 未推送 | git | 工作树净（web 噪声/ch3 挂起除外） | ~5k |
+| 09:01 | Session end: 21 writes across 7 files (_flow_isolation.py, test_eia_lexicon_service_flow.py, test_eia_meta_service_flow.py, test_eia_standard_service_flow.py, changelog.md) | 0 reads | ~3853 tok |
+
+## Session: 2026-11-02 10:13
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:05 | 推送 9 笔提交至 origin/pisuan-custom（bug-4198 修复+恢复+bug-4196 闭合等，16c70ed98..f8613a14c），余量 0；清理误留空文件 .wolf/admin_token.txt | - | 成功 | ~1k |
+| 10:40 | 环评域数据加工×技能链路全面核查：导出链7服务/Gitea/writer分发实证打通；chapter-writer+reviewer 走慢链（栈包回流提交+重启 reseed），distribute 硬编码 writer 为唯一机制缺口；四层 md5 当前全一致 | eia_refs_git.py,refs_repo_distribute.py,shared.py,projection.py | 结论已报 | ~25k |
+| 11:40 | Edited scripts/governance/refs_repo_distribute.py | 5→8 lines | ~143 |
+| 11:41 | Edited scripts/governance/refs_repo_distribute.py | modified in_consumer_scope() | ~206 |
+| 11:41 | Edited scripts/governance/refs_repo_distribute.py | modified targets_for() | ~186 |
+| 11:41 | Edited scripts/governance/refs_repo_distribute.py | 16→17 lines | ~245 |
+| 11:51 | Edited scripts/governance/refs_repo_distribute.py | 1→2 lines | ~30 |
+| 11:51 | Edited scripts/governance/refs_repo_distribute.py | modified md5() | ~43 |
+| 11:53 | Edited docs/develop-guides/changelog.md | modified feat() | ~209 |
+| 11:20 | 方案1落地：refs_repo_distribute 消费面扩容（CONSUMERS 白名单 writer40/chapter10/reviewer1，stages 同名异义禁收）+ 对账改 CRLF 归一内容级 md5（字节级 61 误报=纯 EOL）；真分发收掉 chapter 两 projection 真漂移，9 消费侧 --check 归零；changelog 已记；gitea expert 密码证实失效待用户裁定 | scripts/governance/refs_repo_distribute.py,changelog.md | 完成 | ~40k |
+| 11:54 | Session end: 7 writes across 2 files (refs_repo_distribute.py, changelog.md) | 9 reads | ~42876 tok |
+| 12:20 | Edited web/src/components/eia-data/LexiconPanel.vue | added 1 condition(s) | ~223 |
+| 12:20 | Edited docs/develop-guides/changelog.md | modified feat() | ~84 |
+| 12:24 | Edited docs/develop-guides/changelog.md | modified feat() | ~29 |
+
+## Session: 2026-11-02 12:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:26 | Edited docs/develop-guides/changelog.md | modified feat() | ~84 |
+| 12:27 | 重置 Gitea expert 密码（PATCH /api/v1/admin/users/expert，验证 200） | /tmp/gitea_expert_pw.txt | 新密码生效 | ~1.5k |
+| 12:27 | LexiconPanel 覆盖层开关补关闭 Modal.confirm（开关本已存在） | web/src/components/eia-data/LexiconPanel.vue | 语法验证过 | ~2k |
+| 12:27 | 两笔提交：C1 distribute 消费面扩容 + C2 开关二次确认 | scripts/governance/refs_repo_distribute.py, web/src/components/eia-data/LexiconPanel.vue, changelog | 7afa28a29 + 19e77eb53，未推送 | ~1k |
+| 12:28 | Created ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/gitea-admin-api-quirks.md | — | ~127 |
+| 12:28 | Session end: 2 writes across 2 files (changelog.md, gitea-admin-api-quirks.md) | 0 reads | ~226 tok |
+| 13:47 | Session end: 2 writes across 2 files (changelog.md, gitea-admin-api-quirks.md) | 0 reads | ~226 tok |
+| 23:21 | 三问审计：两技能×数据加工打通态/tab 开关面/overrides 生效链（只读分析） | - | 结论已汇报：词表+meta 两个真覆盖层；生效链差 bank_compile+distribute 两个手动点 | ~8k |
+| 23:21 | Session end: 2 writes across 2 files (changelog.md, gitea-admin-api-quirks.md) | 2 reads | ~226 tok |
+| 23:28 | Session end: 2 writes across 2 files (changelog.md, gitea-admin-api-quirks.md) | 2 reads | ~226 tok |
+| 23:39 | Created backend/package/yuxi/services/eia_refs_propagate.py | — | ~1084 |
+| 23:39 | Edited backend/package/yuxi/services/eia_refs_git.py | 9→13 lines | ~158 |
+| 23:39 | Edited backend/package/yuxi/services/eia_refs_git.py | modified commit_refs_export() | ~164 |
+| 23:40 | Edited backend/package/yuxi/services/eia_refs_git.py | modified strip() | ~419 |
+| 23:40 | Edited backend/package/yuxi/services/eia_lexicon_service.py | 4→5 lines | ~75 |
+| 23:40 | Created backend/test/unit/services/test_eia_refs_propagate.py | — | ~784 |
+| 23:49 | Created backend/package/yuxi/services/eia_refs_propagate.py | — | ~619 |
+| 23:49 | Edited backend/package/yuxi/services/eia_refs_git.py | 3→3 lines | ~41 |
+| 23:49 | Edited backend/package/yuxi/services/eia_refs_git.py | modified commit_refs_export() | ~79 |
+| 23:49 | Edited backend/package/yuxi/services/eia_refs_git.py | 6→6 lines | ~67 |
+| 23:50 | Edited backend/package/yuxi/services/eia_lexicon_service.py | expanded (+11 lines) | ~287 |
+| 23:50 | Edited backend/package/yuxi/services/eia_corpus_task_service.py | expanded (+7 lines) | ~156 |
+| 23:50 | Created backend/test/unit/services/test_eia_refs_propagate.py | — | ~664 |
+| 23:55 | Edited backend/package/yuxi/services/eia_refs_propagate.py | modified iterdir() | ~134 |
+| 00:12 | Edited backend/package/yuxi/services/eia_lexicon_service.py | expanded (+7 lines) | ~108 |
+| 00:12 | Edited backend/package/yuxi/services/eia_lexicon_service.py | modified is_file() | ~46 |
+| 00:12 | Edited backend/package/yuxi/services/eia_lexicon_service.py | 4→4 lines | ~80 |
+| 00:12 | Edited backend/package/yuxi/services/eia_meta_service.py | expanded (+6 lines) | ~124 |
+| 00:12 | Edited backend/package/yuxi/services/eia_meta_service.py | modified _write() | ~92 |
+
+## Session: 2026-11-02 00:27
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:30 | Edited backend/package/yuxi/services/eia_corpus_task_service.py | propagate_refs_export() → to_thread() | ~80 |
+| 00:46 | Edited docs/develop-guides/changelog.md | modified feat() | ~404 |
+| 00:47 | Edited docs/vibe/2026-11-01-eia-refs-local-git-chain.md | expanded (+14 lines) | ~452 |
+| 00:47 | Edited docs/vibe/2026-11-01-eia-refs-local-git-chain.md | 2→1 lines | ~21 |
+| 00:48 | Edited docs/vibe/2026-11-01-eia-refs-local-git-chain.md | 3→6 lines | ~77 |
+| 00:48 | Edited docs/vibe/2026-11-01-eia-refs-local-git-chain.md | removed 5 lines | ~5 |
+| 00:49 | Edited scripts/governance/refs_repo_distribute.py | modified main() | ~72 |
+| 00:31 | 定位 worker_lease_expired 根因：传播同步直跑阻塞事件循环→心跳饿死→reconcile 翻红（传播完成1秒后） | run_worker.py/task_service.py/eia_corpus_task_service.py | 根因闭环，晨间成功=当时无传播调用 | ~6k |
+| 00:33 | 修复：传播改 asyncio.to_thread；ruff 绿；docker cp+sed 部署双容器并核对 | eia_corpus_task_service.py | 双容器语法 OK | ~3k |
+| 00:39 | E2E 复验：重编译任务 c574c9b8 success 50.3s compiled=33 propagated=0（幂等跳过） | tasks 表 | 假失败修复确认 | ~2k |
+| 00:46 | host distribute --check：4 漂移全为投影 lazy 滞后；刷新 admin+残留 pytest_user 投影后 9 消费侧全绿「一致」 | refs_repo_distribute.py | 终验通过（Gitea 1e191c0e） | ~4k |
+| 00:52 | changelog 条目 + vibe 批次2.5 章节（含 checklist 归位返工一次）+ buglog 4201-4203 + cerebrum/memory | docs+/.wolf | 文档收尾 | ~6k |
+| 00:54 | distribute 脚本 GBK 崩溃修复（stdout.reconfigure errors=replace）+ruff format 补课 | refs_repo_distribute.py | 原生控制台 exit=0 | ~2k |
+| 00:58 | 功能提交 a052d635e（8 文件：传播模块+双包同步+to_thread 修复+测试+changelog+distribute GBK 修复） | git | pisuan-custom ahead 3 | ~3k |
+| 00:54 | Session end: 7 writes across 4 files (eia_corpus_task_service.py, changelog.md, 2026-11-01-eia-refs-local-git-chain.md, refs_repo_distribute.py) | 7 reads | ~44844 tok |
+| 01:02 | 推送 origin 成功：f8613a14c..a052d635e（3 笔积压清零） | git | pisuan-custom 与 origin 同步 | ~1k |
+| 00:58 | Session end: 7 writes across 4 files (eia_corpus_task_service.py, changelog.md, 2026-11-01-eia-refs-local-git-chain.md, refs_repo_distribute.py) | 7 reads | ~44844 tok |
+| 01:02 | Session end: 7 writes across 4 files (eia_corpus_task_service.py, changelog.md, 2026-11-01-eia-refs-local-git-chain.md, refs_repo_distribute.py) | 7 reads | ~44844 tok |
+| 01:12 | Session end: 7 writes across 4 files (eia_corpus_task_service.py, changelog.md, 2026-11-01-eia-refs-local-git-chain.md, refs_repo_distribute.py) | 7 reads | ~44844 tok |
+| 01:16 | Session end: 7 writes across 4 files (eia_corpus_task_service.py, changelog.md, 2026-11-01-eia-refs-local-git-chain.md, refs_repo_distribute.py) | 7 reads | ~44844 tok |
+| 01:20 | Session end: 7 writes across 4 files (eia_corpus_task_service.py, changelog.md, 2026-11-01-eia-refs-local-git-chain.md, refs_repo_distribute.py) | 7 reads | ~44844 tok |
+| 01:29 | Session end: 7 writes across 4 files (eia_corpus_task_service.py, changelog.md, 2026-11-01-eia-refs-local-git-chain.md, refs_repo_distribute.py) | 7 reads | ~44844 tok |
+| 01:37 | Edited backend/package/yuxi/services/eia_paradigm_service.py | 2→2 lines | ~46 |
+| 01:37 | Edited backend/package/yuxi/services/eia_paradigm_service.py | modified _read_text() | ~185 |
+| 01:37 | Edited backend/package/yuxi/services/eia_paradigm_service.py | modified _overview_sync() | ~50 |
+| 01:37 | Edited backend/test/unit/test_eia_paradigm_service.py | modified _write_roles() | ~151 |
+| 01:43 | Edited docs/develop-guides/changelog.md | modified fix() | ~170 |
+| 01:40 | 判据章节写入词表栈 vibe 文档 §9（三条件+资产判定表+语义澄清+关闸重编译挂起决策） | 2026-10-09-eia-lexicon-stack.md | 完成（vibe 不入库） | ~3k |
+| 01:45 | 范式 tab 500 查证：10-24 roles 目录化，服务层未跟进读旧 _roles.json（预存断裂，fixture 掩盖） | eia_paradigm_service.py | 修复+双容器部署+15 用例过+端点实测恢复 | ~6k |
+| 01:43 | Session end: 12 writes across 6 files (eia_corpus_task_service.py, changelog.md, 2026-11-01-eia-refs-local-git-chain.md, refs_repo_distribute.py, eia_paradigm_service.py) | 9 reads | ~45458 tok |
+| 01:50 | 推送 00a991d47（范式 roles 目录化跟进修复） | git | origin 同步 ahead 0 | ~1k |
+| 09:16 | Session end: 12 writes across 6 files (eia_corpus_task_service.py, changelog.md, 2026-11-01-eia-refs-local-git-chain.md, refs_repo_distribute.py, eia_paradigm_service.py) | 9 reads | ~45458 tok |
+| 09:24 | Edited backend/package/yuxi/services/eia_corpus_task_service.py | modified enqueue_full_corpus_recompile() | ~220 |
+| 09:24 | Edited backend/package/yuxi/services/eia_lexicon_service.py | modified set_switch() | ~301 |
+| 09:24 | Edited backend/package/yuxi/services/eia_lexicon_service.py | enqueue() → enqueue_full_corpus_recompile() | ~210 |
+| 09:25 | Edited backend/server/routers/domain_factory_router.py | added 1 import(s) | ~130 |
+| 09:25 | Edited backend/server/routers/domain_factory_router.py | "切换数据集开关（admin；关闭即删 overri" → "切换数据集开关（admin；关闭即删 overri" | ~20 |
+| 09:25 | Edited web/src/components/eia-data/LexiconPanel.vue | 9→9 lines | ~82 |
+| 09:25 | Edited web/src/components/eia-data/LexiconPanel.vue | modified catch() | ~123 |
+| 09:25 | Edited web/src/components/eia-data/LexiconPanel.vue | 4→4 lines | ~41 |
+| 09:26 | Edited web/src/components/eia-data/LexiconPanel.vue | 21→20 lines | ~243 |
+| 09:26 | Edited web/src/components/eia-data/LexiconPanel.vue | CSS: recompile | ~196 |
+| 09:26 | Edited web/src/components/eia-data/LexiconPanel.vue | "@/apis/eia_data_api" → "@/apis/eia_lexicon_api" | ~15 |
+| 09:26 | Edited web/src/components/eia-data/LexiconPanel.vue | 2→1 lines | ~15 |
+| 09:27 | Edited web/src/components/eia-data/LexiconPanel.vue | 2→2 lines | ~39 |
+| 09:27 | Edited backend/test/integration/services/test_eia_lexicon_service_flow.py | modified test_lexicon_service_full_flow() | ~190 |
+| 09:28 | Edited backend/test/integration/services/test_eia_lexicon_service_flow.py | 2→4 lines | ~96 |
+| 09:28 | Edited backend/test/integration/services/test_eia_lexicon_service_flow.py | 3→7 lines | ~122 |
+
+## Session: 2026-11-03 09:34
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:51 | Edited docs/develop-guides/changelog.md | modified feat() | ~234 |
+| 09:51 | Edited docs/vibe/2026-10-09-eia-lexicon-stack.md | 4→6 lines | ~232 |
+| 09:44 | 部署 4 文件进 localized 树（sed yuxi.→pisuan.）+ 容器流测试 | eia_lexicon_service/eia_corpus_task_service/domain_factory_router/flow_test | 2 passed 71s | ~5k |
+| 09:45 | E2E 关闸/二次关闸/开闸 | PUT switches | 去重位同任务号/开闸 null 不排队 | ~3k |
+| 09:47 | E2E T1 重编译等待 + 导出排队 T2 | tasks 表轮询 | 双 success 33 份 | ~4k |
+| 09:50 | 投影刷新 + md5 五方归一 + changelog/vibe/cerebrum 收口 | projection/changelog/vibe | ef2da5cc 归一 | ~6k |
+| 09:54 | Session end: 2 writes across 2 files (changelog.md, 2026-10-09-eia-lexicon-stack.md) | 4 reads | ~43024 tok |
+| 10:11 | Session end: 2 writes across 2 files (changelog.md, 2026-10-09-eia-lexicon-stack.md) | 4 reads | ~43024 tok |
+| 10:20 | Session end: 2 writes across 2 files (changelog.md, 2026-10-09-eia-lexicon-stack.md) | 4 reads | ~43024 tok |
+| 10:30 | 评审报告逐项核验（12 断言 vs 当前 HEAD）| chapter-writer 技能包 | 6 项已于 11-02 修复；P0-1/P1-5/P2-8/P3-10/P3-11 仍成立；repo 树 curated_lexicon 又漂移（writer 6 条/chapter 8 条）| ~40k |
+| 10:46 | Session end: 2 writes across 2 files (changelog.md, 2026-10-09-eia-lexicon-stack.md) | 4 reads | ~43024 tok |
+| 11:12 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | modified _bank_index() | ~566 |
+| 11:12 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | 1→2 lines | ~14 |
+| 11:13 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | expanded (+6 lines) | ~364 |
+| 11:13 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py | 5→5 lines | ~72 |
+| 11:14 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_depth_floor_projection.py | 24→25 lines | ~206 |
+| 11:14 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_depth_floor_projection.py | modified bank_cache() | ~124 |
+| 11:14 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_depth_floor_projection.py | modified test_floor_direct_when_projection_covers_sample() | ~75 |
+| 11:15 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_depth_floor_projection.py | modified test_depth_gate_unscaled_without_stage() | ~1067 |
+| 11:18 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_depth_floor_projection.py | 5→6 lines | ~96 |
+| 11:18 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_depth_floor_projection.py | 3→4 lines | ~72 |
+
+## Session: 2026-11-03 11:22
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:32 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_depth_floor_projection.py | modified test_resolve_targets_by_stage_id() | ~194 |
+| 11:49 | Edited docs/develop-guides/changelog.md | modified fix() | ~410 |
+| 11:49 | Edited docs/develop-guides/changelog.md | inline fix | ~10 |
+| 11:55 | P0-1 折算标定下限实现+测试（_fold_floor_bound 接线 absolute_floor 契约） | coal-eia-writer/scripts/build_output.py + 双包镜像 | 提交 7905baffc | ~18k |
+| 11:58 | 词表双包漂移收敛（writer ef2da5cc 字节刷新→sync→--check 1160 归零）+ 容器 bank 输出四家族漂移收敛（buildin/skill-sources/admin 投影） | chapter overrides + 五面运行树 | 提交 b228b4325；守卫回绿 3 passed；bug-4205/4206 登记 | ~12k |
+| 11:53 | Session end: 3 writes across 2 files (test_depth_floor_projection.py, changelog.md) | 1 reads | ~43371 tok |
+| 12:15 | Session end: 3 writes across 2 files (test_depth_floor_projection.py, changelog.md) | 1 reads | ~43371 tok |
+| 12:20 | Edited backend/package/yuxi/services/eia_refs_propagate.py | expanded (+7 lines) | ~305 |
+| 12:20 | Edited backend/package/yuxi/services/eia_refs_propagate.py | modified _mirror_bank_outputs() | ~799 |
+| 12:20 | Edited backend/package/yuxi/services/eia_corpus_task_service.py | 1→5 lines | ~61 |
+| 12:20 | Edited backend/test/unit/services/test_eia_refs_propagate.py | 6→6 lines | ~48 |
+| 12:21 | Edited backend/test/unit/services/test_eia_refs_propagate.py | modified test_propagate_cleans_interrupted_residue() | ~1196 |
+| 12:26 | Edited backend/test/unit/services/test_eia_corpus_process.py | modified _stub_kb_id() | ~148 |
+| 12:26 | Edited backend/test/unit/services/test_eia_corpus_process.py | 11→13 lines | ~190 |
+| 12:26 | Edited backend/test/unit/services/test_eia_corpus_process.py | 7→9 lines | ~143 |
+| 12:26 | Edited backend/test/unit/services/test_eia_corpus_process.py | 5→6 lines | ~88 |
+| 12:30 | Edited backend/test/unit/services/test_eia_refs_propagate.py | modified _mk_bank_output() | ~173 |
+| 12:31 | Edited backend/test/unit/services/test_eia_refs_propagate.py | modified in() | ~53 |
+| 12:32 | Edited backend/test/unit/services/test_eia_refs_propagate.py | 9→11 lines | ~191 |
+| 12:33 | Edited backend/test/unit/services/test_eia_refs_propagate.py | 1→2 lines | ~37 |
+| 12:47 | Edited backend/package/yuxi/services/skills/shared.py | modified _rename_dir_with_transient_retry() | ~422 |
+| 12:48 | Edited backend/package/yuxi/services/skills/shared.py | added 1 import(s) | ~26 |
+| 12:52 | Edited docs/develop-guides/changelog.md | inline fix | ~43 |
+| 12:52 | Edited docs/develop-guides/changelog.md | modified fix() | ~508 |
+| 13:05 | bug-4206 传播缺口修复：propagate 头部 writer→chapter bank 输出镜像 + 流测试打桩修 3 例预存红 + FUSE rename 瞬态重试（bug-4207） | eia_refs_propagate.py + eia_corpus_task_service.py + skills/shared.py + 两测试 | 容器 138 passed；E2E 漂移注入→mirrored=1 自动修复五面归一 | ~25k |
+| 12:54 | Session end: 20 writes across 7 files (test_depth_floor_projection.py, changelog.md, eia_refs_propagate.py, eia_corpus_task_service.py, test_eia_refs_propagate.py) | 6 reads | ~53243 tok |
+| 18:31 | Session end: 20 writes across 7 files (test_depth_floor_projection.py, changelog.md, eia_refs_propagate.py, eia_corpus_task_service.py, test_eia_refs_propagate.py) | 6 reads | ~53243 tok |
+| 18:35 | Session end: 20 writes across 7 files (test_depth_floor_projection.py, changelog.md, eia_refs_propagate.py, eia_corpus_task_service.py, test_eia_refs_propagate.py) | 6 reads | ~53243 tok |
+
+## Session: 2026-11-03 18:47
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 18:48 | 收编 R5 漏收的 fig 占位回归测试（全历史零提交/非忽略，4691a7738 纯遗漏）；裁定收编双包 | test_build_output_fig.py ×2 | c7274879d | ~3k |

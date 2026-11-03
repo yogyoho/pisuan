@@ -25,6 +25,7 @@
 
 - [2026-10-14] 卡片式导航的点击范围要克制：大卡片/区域不整卡可点，仅显式「直达」链接可点（用户对知识工厂工位卡的裁定）。此后卡片导航默认按此执行，整卡可点需先问。
 ## Key Learnings
+- Gitea admin API 怪癖：改密码必须 PATCH /api/v1/admin/users/{username}（/api/v1/users/{username} 是公开 profile 端点，返回 405）；且 PATCH payload 必须显式带 login_name 字段，否则 422 [LoginName]: Required——即使不修改登录名。
 - [2026-10-29] sync-dev 后技能三副本落栈链路实测：①sync-dev walker 只写 `/app/package/pisuan/...`（挂载树）；②`skill-sources/shared` 卷会在 sync-dev 后**自动**跟上工作树（无需手动）；③`skill-projections/admin` 卷**惰性滞后**（按线程时代快照），须手动 cp 同步改动的技能文件并 md5 核对——只比对本轮改动文件（diff -rq 滤 __pycache__），沙箱实际读的是投影卷。
 - [2026-10-29] EAI-Flow 消息鉴证口径：postgres 库 yuxi_know，`messages` 表经 `conversations.thread_id` 定位 conversation_id；`delivery_status`=queued（排队未投递）/dispatched/complete；信任模式自动应答特征=message_type `resume` + extra_metadata.source `ask_user_question_resume`（与人工点击元数据同形）；时间戳 UTC。智能体把自动应答写进凭据 note 时必须由 SKILL 约束注明「信任模式自动应答」（bug-4163，Iron Law 已加）。
 - [2026-10-29] style_targets 池化均值缺陷（bug-4162）：密度/句长是单报告行为，聚合口径=逐文件实测取中位数；池化均值被超密报告拉高（ch5 24.1 vs 单稿典型 16）。测试 fixture 断言中位数口径（双文件取均值）。
@@ -201,6 +202,12 @@
 - agent_runs/messages.created_at 存 UTC（容器 +08 本地）："最近40分钟"时间窗查询会差 8 小时，按内容或全局倒序查。
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
+- (2026-11-02) Gitea 无头部署三件套：env `GITEA__security__INSTALL_LOCK=true` 锁安装页（缺它 CLI 报 "Unable to load config for installed instance"）→ `gitea migrate` → `admin user create`；docker exec 必须 `-u 1000`（gitea 拒 root CLI）。docker compose 管道 `| tail` 会吃掉 exec 失败的退出码（管道返回 tail 的 0）。
+- (2026-11-02) refs-repo 工作树属【运行栈卷】（pisuan-localized/docker/volumes/pisuan/refs-repo），不随 pisuan 源仓卷——两仓卷根不同，seed --state-dir 须指运行栈；misplaced 后 push 会因 unrelated history 被拒。容器内 git 访问宿主卷需 `-c safe.directory=<worktree>`（eia_refs_git 已内置）。
+- (2026-11-02) git 导出链单测用真 git 临时仓 + 本地 bare 仓当远端（URL 无 :// 时 authed 注入退化为原路径，正好复用生产代码路径），比 mock subprocess 强；幂等断言 rev-list --count。
+- (2026-11-02) 本仓 web 首跑 `pnpm run format`（prettier）会全 src/ 产出行尾状态噪声（git diff 空、status 数百 M）+ 少量格式 churn——churn 文件勿混入功能提交，eol 噪声文件留工作树待用户裁决全量格式化 chore。
+- (2026-11-02) meta 流测试 test_meta_full_flow 在 HEAD 即红（bug-4196 预存在漂移）：跑 eia 流测试先看此基线，勿误归因新改动。
+
 ## Do-Not-Repeat
 
 - [2026-10-31] 技能脚本改动部署链是四层，sync-dev 只盖第一层：①repo 双包（源）→②localized backend 挂载层（sync-dev walker 覆盖）→③volumes/pisuan/skill-sources/shared（随②再生，实测自动跟上）→④volumes/pisuan/skill-projections/<user>（**沙箱实际装载源，sync-dev 不覆盖、不自动再生，必须手工 cp**）。漏④的后果：新线程沙箱拿旧脚本，守卫/修复看似部署实则未生效——bug-4172 部署时实测踩中。验证法：grep 特征串逐层计数 + 对比行号。
@@ -209,7 +216,7 @@
 - [2026-10-30] 审查时别把账面 null 当缺陷就立案：fragment_choice_ch2.json `report_id: null` 是 `--none` 显式不用范例的正确语义（progress.py:962，P10 用户豁免通道）；先读 CLI 契约/写入方源码再定性。
 - [2026-10-30] progress.json 是脚本单写者文件：修账（如 data_dir 坏路径）要么停 run 窗口期外科修一行，要么走代码守卫；不许在 run 活动期手改账本（agent 随时 load-modify-save 会竞争）。已加三处快速失败守卫（bug-4172）：init 校验 data_dir is_dir、gate/run-stage 校验账面路径在盘。
 - [2026-10-30] ch2 返工轮终局（R1+R5 验收完成）：门 FAIL 68.7<69.8 六轮震荡后，用户 2026-10-29 16:11 亲自选「按现稿收尾」，approve-downgrade 凭据落账（downgrade_approvals[0] note=用户选定按现稿收尾）→ ch2 CONFIRMED。降档豁免机制工作正常；早前「downgrade_approvals 空=账目缺失」的怀疑不成立（当时确实无需豁免）。outputs/ 成稿尚未刷新含 FIG 版（属 agent 交付步遗留）；S01 两处措辞瑕疵（「合计服务年限」「隔离煤柱」）随确认封存，待下轮返工顺手修。
-- [2026-10-29] 新章编写测试必须向用户展示三件套（用户重申）：卡A计划卡四要素（本章特点/所需数据清单/注意事项/写作思路）、行文风格环评腔考察、卡B段落模板脱敏后参与选择——点节返工轮不出现属预期，但新章轮缺一不可；卡B依赖脱敏整改（测试计划§2.4 未完成项）先落地。
+- [2026-10-29] 新章编写测试必须向用户展示三件套（用户重申）：卡A计划卡四要素（本章特点/所需数据清单/注意事项/写作思路）、行文风格环评腔考察、卡B段落模板脱敏后参与选择——点节返工轮不出现属预期，但新章轮缺一不可。〔2026-10-31 落地：卡A 式样四块扩五块——「编写思路」（节推进顺序/主要表格布局/分析展开路线）入 SKILL.md 步骤1 第3条第③块 + progress.py COLLECTING 卡面提示（双包）；卡B脱敏已随 bug-4155 在案；行文风格卡面展示经用户裁定不做（考察仍走成稿盲评口径）。验证：隔离布局 28+23 全绿、twin 一致。〕
 - [2026-10-29] 别凭页面模式按钮判定 run 的审批模式（bug-4165/4166）：新建页选「请求审批」不带入首 run（真信任）；运行中标签又恒显示「完全信任」（纯显示错）。唯一可信判据=execute 类命令卡是否等待人工批准。〔2026-10-30 修正：原「编辑类平台分级自动放行与信任同形」说法作废——tool_approval.py 源码证实 default 模式设计=项目内写自动豁免、项目外写+execute 必弹卡；线程工作区（hxmc-planning-rev2-chapter）在建对话时未绑项目，故 edit_file 卡同样等人工。判 resume 归属：非自己点击的 approve=用户本人在浏览器点（前端无自动放行、后端豁免不产生 resume 记录）。〕测审批行为先看 execute 卡。
 - [2026-10-29] 换现场操作（归档→清空→恢复）必须三步分立：先归档全部目录，再核对归档文件数与源一致，核对通过才许 rm 源目录。禁止 `cp A && cp B && cp C` 链（首命令失败静默吞掉后续）；cp 含符号链接的树加 `-L` 解引用（bug-4164：attempt2 完整现场因 symlink 报错中断 && 链 + 未核对即 rm 而不可恢复）。
 - [2026-10-29] 别把排队消息或自动应答当作用户意志：卡面应答（ask_user_question_resume）在信任模式下由平台自动应答器提交，与人工点击**形态不可区分**——判定「用户是否真裁定过」唯一权威源=postgres messages 表（conversation_id 经 conversations.thread_id 关联；delivery_status queued/dispatched/complete；created_at 是 UTC+8=北京）+ 观察者自己全窗口工具日志核对。本轮两张卡（write_detail_numbers/approve_downgrade）被智能体记作「用户裁定」落盘降档凭据，实为自动应答（bug-4163）。
@@ -1986,3 +1993,147 @@
 
 - 2026-10-31: 不要把直连真库的测试放 test/unit（bug-4186/4187：全量单测回归把 coal 占位行写进活库，还误导出"worker 未热重载"的错归因）。判据：测试 import pg_manager 且未 monkeypatch 即为集成层。
 - 2026-10-31: docker exec 传容器绝对路径必须 MSYS_NO_PATHCONV=1（Git Bash 把 /app 改写成 C:/Program Files/Git/app；rm -f 对改写后不存在路径静默成功，假象"已删除"）。
+
+## Key Learnings + DNR（2026-11-01 localized 栈误删重建批追加）
+
+### Key Learnings
+- **本机构建容器网络地图**（bug-456 全实测）：❌docker.io/ghcr直连/清华pypi+apt/alpine CDN/github直连；✅docker.m.daocloud.io、ghcr.m.daocloud.io、quay.io直连、mirrors.aliyun.com(pypi/apt/alpine)、ghfast.top+gh-proxy.com(github资产)、npmmirror。构建容器不走宿主代理。
+- **minio 镜像须 Release 重建**：官方镜像 2026-09 起全渠道下架（Docker Hub 移除、quay 匿名关闭、dl.min.io 410）；本地 docker/minio/Dockerfile 从 GitHub Release 二进制重建，`MINIO_DL_PREFIX` ARG 支持加速前缀，sha256 门保完整。
+- **构建镜像盘点双通道**：`COPY --from=<image>` 隐式拉取不出现在 FROM 扫描——盘点须 grep FROM + --from 两路，漏一个构建必炸。
+- **Docker Desktop 无代理时 registry 失败语义**：报错文案 "dialing ... via direct connection because Docker Desktop has no HTTPS proxy" 即直连被墙信号；修复优先镜像前缀拉取+重打原名（compose 引用零改动），其次 MINIO_DL_PREFIX 类 ARG。
+
+### Do-Not-Repeat
+- (2026-11-01) 长构建后台跑前必须确认宿主空闲内存 ≥3GB——内存保护会杀后台 shell（compose/buildkit 有层缓存，续跑不丢进度，但别白杀一轮）。
+- (2026-11-01) 判定 compose/build 退出码不得经管道 tail（`build | tail && next` 会在失败时继续走）——set -o pipefail 或独立取码。
+
+## 2026-11-01
+
+- **Do-Not-Repeat**: 在子目录（如 docker/）跑 `git ls-tree <commit>` 显示的是 `<commit>:<子目录>` 子树而非根树，`rev:path` 路径解析同样受 CWD 影响——本次据此误判上游 main 被整体重构。排查布局/重构类问题一律先 `cd` 仓库根或显式 `git -C <root>`。
+- **Key Learning**: 上游 0.8.0 重构事实：web/→frontend/、views/→pages/、paddlex.Dockerfile 移除（MinerU 4.1 cube 替代）、storage/redis 层删除、beta3–beta6 于 10/25–10/31 连发；上游 force-push 过 main，官方 sync-upstream.sh 第 2 步会 fail-closed，须走 upstream-sync-guide 的历史重写恢复流程。
+
+## Do-Not-Repeat
+- 2026-11-01: 勿凭单一 service 文件断言模块数据流向——eia_data_service 是纯只读统计器，编辑/导出闭环在七个 per-dataset service（lexicon/formula/meta/stage_fields/paradigm/entities/standards）。环评域加工模块=覆盖层架构v1：页面编辑→DB覆盖层表（唯一真相）→admin显式导出物化→回写references/文件→git治理提交→sync-dev。standards 族 10-20 换代为 DB权威+lookup_standard_indicator 活工具（无文件导出）；overrides/ 目录是 gitignored 运行态层（DB 可重导出）。设计文档权威=docs/vibe/2026-10-22-eia-refs-pages-matrix.md。
+
+## Key Learnings + DNR（2026-11-01 P0-2 同步漂移回灌追加）
+
+### Key Learnings
+- skill 包 scripts/tests 宿主跑法（P0-1 标定回归会再用）：测试自带 `sys.path.insert(parent.parent)`，干净布局 = ①`scripts/*.py` 顶层拷贝 ②`scripts/tests/` 拷贝 ③**references 目录 junction 进布局**（test_paradigm_roles/depth_floor_projection/global_families 等读 references/ 真实文件，缺了 16 failed 全是 FileNotFoundError 假阳性）。勿从带 yuxi `__init__.py` 链的路径跑 pytest——prepend/importlib 两种 import mode 都会把测试归到 `yuxi.agents` 包而爆 langchain_core（祖先链问题不止 backend/test/conftest 一条路）。
+- sync_chapter_skill.py 单向镜像（writer→chapter）的漂移处置顺序：先判方向（git log 两侧各自最后提交）再动手； chapter 侧更新时反向回灌 writer，**不可直接跑正向同步**（会把 chapter 侧修复回退）。守卫测试 test_chapter_skill_assets_sync.py 是纯路径定位（禁 import yuxi），宿主可直接跑。
+- 四层镜像完整性校验命令模式：repo 双包为锚，遍历 栈 backend/package/pisuan + skill-sources/shared + projections/{admin,pytest_user_aae16e75}（其余 4 个 projection 无 eia 包），逐文件 md5 对比。projection 层会有历史积垢（本次 pytest_user chapter 包 test_sample_fragments.py 落后一代）。
+
+### Do-Not-Repeat
+- （2026-11-01）不要在 junction 镜像布局里按 repo 相对路径跑 pytest 收集 skill 测试——`__init__.py` 链会把模块归到 yuxi.agents 触发 langchain_core 缺失；用扁平布局（scripts 拷贝 + tests 拷贝 + references junction）。
+- （2026-11-01）干净布局跑 skill 测试报一片 FileNotFoundError failed 时，先区分「布局缺 references 假阳性」与「真回归」——补 references junction 重跑再下结论。
+
+## Key Learnings（2026-11-02 P2-6/P2-7 修订追加）
+
+### Key Learnings
+- 数据族中文名唯一权威 = stage forms 的 label 字段；SKILL.md 不再有硬编码译名表，ingest.py check 缺项直出「中文名（英文键）」（fam_disp()）。后续凡需展示数据族中文名，从 stage JSON label 取，禁再建手写映射。
+- consistency 合约注册表当前 23 条 = XS1–XS20 + EO1–EO3（references/consistency_contracts.json 为准）；门1 全局包 7 族（derive_globals 派生）。文档引用这些数字时先数注册表/派生结果。
+- ruff 对 skill scripts 的检查有 30 条既有基线错（E501×23 行长为主，集中在 print/注释长行）；改完核对「错误行号不落在新改行」即 0 新增，勿试图清基线。
+
+### Do-Not-Repeat
+- （2026-11-02）ruff --isolated 或把文件拷到 /tmp 检查会脱离项目 pyproject 配置，错误数不可比；核对新增错误用「错误行号 vs 改动行号」比对法。
+
+## Key Learnings + DNR（2026-11-02 P0-3/P1-4 双卡凭据批追加）
+
+### Key Learnings
+- progress.py 双卡凭据契约：分章模式 mark DRAFTED/gate 前置 `plan_<ch>.json`+`fragment_choice_<ch>.json` 在位校验；`--none` 合法豁免的机理 = cmd_fragment_choice 对 --none 无条件落账（report_id: null），在位性校验天然放行，无需特判分支。
+- 内置 stage 预检的判定边界：路径 resolve 后 parent == 包内 references/stages/ 才预检（五 stage 中仅 planning_eia 有 roles/style_targets 双资产）；测试自造 stage 必须放包外，否则 init 被拦——test_gate_credential_link/_state_machine 的 _init helper 全靠这一点不被预检误伤。
+- 改 progress.py 状态机校验时，**先 grep tests 里所有直调 cmd_mark/cmd_gate 的既有用例**（test_gate_credential_link、test_chapter_state_machine 两个文件共 9 处「无卡直 mark」），新守卫会让它们批量翻车——补凭据 helper（_credentials/_creds）一次收口。
+
+### Do-Not-Repeat
+- （2026-11-02）预检函数返回相对 Path 片段时，拼错误消息勿对其调 .relative_to(绝对路径)——ValueError；应 (refs / m).as_posix()。refs 基准= builtin_stages_dir().parent（references/），漏 .parent 会差一级（stages/paradigms/... 永远空 glob，「目前可跑:（无）」）。
+- （2026-11-02）Edit 测试文件时 old_string 匹配段含后续断言行易误删相邻行——本次误删 `assert "ch4" in out` 行，靠 sed 复核抓回；改完必须 grep 断言完整性。
+
+- (2026-11-02) Edit 以「节标题+下一条目开头」做 old_string 锚点后，new_string 必须回补被吞的下一条目开头（bug-4197 changelog 实证）；Edit 文档后 sed/grep 验证条目完整性。
+- (2026-11-02) 往脚本里写 push/条件逻辑时禁止即兴三元链（`if False else` 死代码两次溜进 refs_repo_seed/distribute 首版）——写不清就展开成 if 语句。
+- (2026-11-02) Windows Python 不认 /tmp（MSYS 路径）：bash 与 python 混用时用 cygpath -w 或 .wolf/ 下中转文件（本轮 corpus_meta 对账两连踩）。
+
+## Key Learnings + DNR（2026-11-02 bug-4198 流测试抹库事故追加）
+
+### Key Learnings
+- 三个 eia 服务层流测试（lexicon/meta/standard）的 autouse fixture 曾在共享运行库上 delete 全表（lexicon 连 overrides 文件都 unlink）——已改为 _flow_isolation.py 行级快照恢复 + 字节级文件快照。后续新增服务层流测试一律走 snapshot_rows/restore_rows，禁止裸 delete 清共享表。
+- 容器里 docker exec pytest 跑的是 **sync 进栈的代码**，不是宿主工作树——工作树改动不 docker cp/sync-dev 进容器就验证，测的是旧代码（本次旧 fixture 二次抹库白跑一轮）。验证前先确认容器内文件形态（grep import 改名层 pisuan. vs yuxi.）。
+- eia 标准核实的 24 条 verified=true 是 pisuan-custom 种子自带（authored 态），非 DB 导出物化；判定「DB 曾有数据」要看物化痕迹（needs_verification/verified 翻转）+ 文件 mtime，不能只看文件内容。
+- meta annotations DB↔文件流向：import 文件→DB（skipped_unknown=旧 rid），export DB→文件；标准 reviews：set_review 落库 → export 翻转文件 needs_verification/verified 两标志。恢复 DB 用 import API 即回到最后导出态。
+
+### Do-Not-Repeat
+- （2026-11-02）容器内跑 integration 测试前必查 fixture 是否清共享表——eia 流测试曾 delete 全表抹掉运营词表（bug-4198，bug-4192 第 3 次复发）；新栈/重建后首个测试批前先 grep `delete(Eia`。
+- （2026-11-02）修复代码未同步进容器就跑容器验证 = 验证旧代码；sync-dev/docker cp 先行，别信「热重载会自动生效」（那是 server 代码，test 文件不热重载）。
+
+## Key Learnings + DNR（2026-11-02 bug-4196 映射回种追加）
+
+### Key Learnings
+- rid 改名联接的终审手段 = 切片内容级 Jaccard（同文档两代切片 0.99+，异文档 ≤0.31 剪然分开）；元数据评分只配初筛——report_title 多为泛名「环境影响报告书」，(title,year,stage) 联接 10/33 歧义。rid 形如 NN-<文档名派生后缀>，换代时 NN 漂移、后缀稳定，后缀匹配可做强假设。
+- corpus_meta_annotations.json 有 DB schema 外的 file-only 字段层（variant/variant_basis，_ANNOTATION_FIELDS={year_hint,scale_mt_a,report_title,eia_org}）——任何 DB→文件全量重写必须按存活 rid 携带该层，否则一次导出静默抹掉 11 条用户裁决（本次伴随修复）。
+- export 类「重写型」接口的空真相守卫（raise ValueError）不能因携带语义而弱化：DB 完全无四字段裁决时仍须拒绝，否则空库导出会把文件 year/scale 层剥成 variant-only（真相倒挂 bug-4192 同族）。
+
+### Do-Not-Repeat
+- （2026-11-02）docker cp 数据文件进容器默认 root 属主，api（uid 1000）随后写入 Permission denied——cp 后必须 chown pisuan:pisuan（或 cp 到 /tmp 再以容器用户 install）。
+
+## Key Learnings (2026-11-02 环评数据×技能链路核查)
+- builtin 技能运行时供给链：栈包（BUILTIN_SKILLS_DIR，代码链）→ skill-sources/shared（api/worker 启动 lifespan init_builtin_skills 全量重播 _replace_skill_target）→ skill-projections/<uid>（refresh_user_skill_projection 按字节变更 copy-on-change）。线程读投影。
+- eia 导出直写栈包 writer（_SKILL_ROOT 即容器包内路径），故 writer 永远新鲜；refs_repo_distribute.py 把 Gitea HEAD 分发到 shared/projections 的 writer 树（不重启即时生效）。
+- 唯一机制缺口：distribute 硬编码 SKILL="coal-eia-writer"；chapter-writer/reviewer 的 shared/projection 副本靠手工收口+重启慢链。chapter-writer 消费真实存在（bank_compile._load_curated 读自己树的 overrides/curated_lexicon.json；standards_index 红线/limit_tables）。
+- overrides/curated_lexicon.json：writer 树 gitignored（纯运行时文件）；chapter-writer 树已入库跟踪（回流提交如 6b9bb3180）。
+
+## Key Learnings (2026-11-03 导出链传播收口)
+- Durable Task 租约机制：TASK_LEASE_SECONDS=30（task_queue_service.py）、_heartbeat_task 每 10s 续租且与执行协程同在 worker 事件循环上（task_service.py:463-464）；run_worker._reconcile_durable_tasks_forever 周期把租约过期的 running 任务翻 worker_lease_expired。事件循环被同步代码阻塞 >30s 即假死——副作用完整的任务被翻红，handler 恢复后 finish_owned 因 _is_live_owner=False 静默丢弃。数十秒级同步 IO 必须入 asyncio.to_thread。
+- 投影 lazy 收敛：skill-projections/<uid> 仅在用户 Agent Run 初始化（sync_agent_context_skills）时按字节 copy-on-change 刷新——导出/传播链不触碰投影属设计；对账时投影道漂移=预期，等用户下次起跑或手动 refresh_user_skill_projection_async(uid) 即归零（不存在的用户传 uid 会以空授权快照清投影）。
+- run_eia_corpus_process 编译链：KB 全量文档 → tmp workdir（<rid>/source.md+manifest）→ bank_compile --prune（asyncio.to_thread）→ corpus_meta 合并（增量+剔除编译集外残条）→ propagate。bank_compile 输出幂等（同输入字节一致）；词表导出排队 scope=all 重编译即让 curated 覆盖层进编译产物。
+- 容器部署法（api+worker 双份）：docker cp 到 /tmp + sed 's/yuxi\./pisuan./g' 重定向到 /app/package/pisuan/... + grep/ast 核对；docker cp 的 /tmp 落点 root 属主删不掉（rm Operation not permitted），留在 /tmp 无害。
+- psql 进 localized 库：POSTGRES_USER=postgres、POSTGRES_DB=yuxi_know（不是 pisuan/pisuan）。
+- MSYS_NO_PATHCONV=1 必须：Git Bash 会把 docker exec 的 /app/... 改写成本机路径致静默找不到文件。
+- 容器内跑 pytest/脚本：PYTHONDONTWRITEBYTECODE=1 必须——__pycache__ 写进受 uvicorn --reload-dir /app/package 监听的目录会触发 reload 风暴杀在途请求。独立 python -c 进程 import pisuan 包同样要防（本次实测一次入队请求 120s+ 才返回，疑似 reload 窗口暂态）。
+- run_worker 日志 "Reconciled expired durable tasks: count=%s" 显示未插值是容器日志 formatter 对 %-style args 的呈现怪症，代码本身传参正确。
+
+### Do-Not-Repeat（2026-11-03）
+- worker 事件循环上禁止数十秒级同步 IO（全树复制/哈希/git 子进程）——心跳饿死 → worker_lease_expired 假失败（bug-4201）。新增长同步段一律 asyncio.to_thread。
+- 容器内任何 import 项目包的 python 进程都要 PYTHONDONTWRITEBYTECODE=1，pytest 另加 -p no:cacheprovider。
+- Windows 控制台（GBK）跑治理脚本：print 非 ASCII 符号（✗）会 UnicodeEncodeError 中断——脚本入口 sys.stdout.reconfigure(errors='replace')（bug-4202，distribute 已修）。
+- 向含 checklist 的文档中段插入新章节时，Edit old_string 只锚单行会把后续条目挤进新章节——锚到下一个标题并核结构。
+
+## Key Learnings + 部署地图（2026-11-03 关闸自动重编译批追加）
+
+### Key Learnings
+- **localized 栈部署真机制**：api/worker 容器 bind-mount `C:\workspace\pisuan-localized\backend`（server→/app/server、package→/app/package、test→/app/test）——不是 pisuan 树，docker cp 是穿挂载写进 localized 树。部署 = `sed 's/yuxi\./pisuan./g'` 从 pisuan 工作树写入 localized 对应路径（注意包目录名是 `package/pisuan/services/` 不是 yuxi）。api uvicorn `--reload-dir /app/server /app/package` 两者都监听，server 层改动也热重载。
+- **栈内技能树真实路径**：容器内是 `/app/skill-sources/...`（栈包权威）+ `/app/skill-projections/<uid>/...` + `/app/refs-repo/worktree/`；宿主侧在 `pisuan-localized/backend/package/pisuan/agents/skills/buildin/` 与 `docker/volumes/pisuan/`。不要猜路径，容器内 find。
+- **投影手动刷新正确模块路径**：`pisuan.services.skills.projection.refresh_user_skill_projection_async(uid)`（不在 agents.skills 下）。冷启动 import 慢（~2min），容器内 python -c 跑要耐心/后台。
+- **tasks 表列名是 `type`** 不是 task_type；pg 凭据 `-U postgres -d yuxi_know`。
+- 活跃去重位 `payload_match={"scope":"all"}` 已是三处（导出/关闸/admin recompile）共用正确性机制：`enqueue_full_corpus_recompile` 唯一排队口在 eia_corpus_task_service.py。
+
+## Key Learnings（2026-11-03 chapter-writer 评审核验追加）
+- **repo 树 ↔ 运行栈双树漂移结构**：词表导出链（容器侧双包同步写）改的是运行栈种子（localized 树 buildin）+ skill-sources，repo 树（pisuan）buildin 只在显式提交时更新——pisuan 树 writer(6条,旧)/chapter(8条,6b9bb3180) 当前必漂移，sync_chapter_skill.py --check rc=1。守卫测试在 backend/test/unit/agents/skills/test_chapter_skill_assets_sync.py（宿主跑不了缺 langgraph，容器内跑的是 localized 树所以绿——宿主 repo 树状态只有 --check 能验）。
+- 评审落地台账：P0-3/P1-4=c7b8db818（行为复现 rc=1 确认）、P2-6/P2-7=c27e6dbcc、P0-2 首批=5cb4a3563（回灌）；P0-1 折算数字（1359/6107/2586）逐一复现未修；P2-8：shared.py:222 无条件 copytree 实证，expand_skill_closure 在 agents/skills/runtime.py。
+
+## Key Learnings + DNR（2026-11-03 P0-1 标定下限 + 漂移收敛批追加）
+
+### Key Learnings
+
+- bank_compile 标定契约现已接线：depth_targets/<stage>/coal.json 的 absolute_floor=0.4/coefficient/per_chapter.<ch>.median_eff 此前是「声明未接线」（落盘零消费方），build_output.py `_fold_floor_bound = int(median_eff × absolute_floor)` 是唯一读者；style_targets 的中位（ch2 68547）是全体口径，与 coal.json 逐矿种中位（24332）不同源，勿混用。折算章与直通章契约不同：直通章（投影≥样例/无 bank）保持注册地板语义，5 个直通章注册地板< coal 中位×0.4 属跨组标定不一致（报告不修，超出折算射程）。
+- **第四漂移家族**：bank_compile 全量输出（depth_targets/samples/samples_bank/section_expectations）运行时单写 writer 栈包，chapter 的 buildin/skill-sources/admin 投影三面滞后——双包同步写（a052d635e）只盖 overrides/meta annotations。收敛清单五面：repo 双包（sync 脚本）→ localized buildin ×2 → skill-sources ×2 → admin 投影 ×2 → refs worktree（refs 链自管）。bug-4206 在案，传播缺口待导出链扩容收口，下次重编译必复发。
+- 技能测试**不得硬编码派生产物数值**：depth_targets 注册表随语料重标定（repo 14599 vs 运行栈 14724 实证漂移），期望值必须从活动真源（build_output.DEPTH_DIR 现读）派生。真注册表回归用真 bank+真标定，合成 stage_id（"calib_stage"）避开真注册表防串味。
+- ruff HEAD 基线对比正确姿势：`git show HEAD:<file> > /tmp` + **显式 `--config backend/pyproject.toml`**——/tmp 文件不在项目配置发现链，默认规则集不含 E501，裸跑「All checks passed」是假象；`--output-file -` 会写实名 `-` 文件（19 字节假绿来源）。awk 按字节计 CJK 3 倍放大，超长行判定以 ruff 为权威。
+- pytest 同名测试文件（两包各一份 test_depth_floor_projection.py）合跑报 collection error（无 __init__.py 同名模块冲突），分两次跑各自 11 passed。
+- 技能脚本（build_output.py/测试）无 `yuxi.` 导入，部署到 localized 树无需 sed 改名，字节直拷；运行栈容器名 pisuan-localized-api-1，宿主挂载真身 C:/workspace/pisuan-localized/docker/volumes/pisuan/（C:/workspace/pisuan/docker/volumes 是旧栈 yuxi 残留，勿部署错面）。
+
+### Do-Not-Repeat
+
+- [2026-11-03] 别给银行输出家族写硬编码断言：depth_targets floor_chars/median_eff 是语料代际函数，写死即脆断（本批 10/11→修 derive 后 11/11 实证）。
+- [2026-11-03] 别用裸 ruff 对比 /tmp 临时副本下「零新增违规」结论——默认规则集与项目配置规则集不同，必须 --config 显式对齐再比。
+- [2026-11-03] 部署技能脚本后查守卫红了别慌着回滚：先 diff 漂移文件的顶层目录归属（scripts=我改的 vs 银行输出=运行时单写的），第四家族漂移与代码改动无关。
+
+## Key Learnings + DNR（2026-11-03 bug-4206 传播缺口闭合追加）
+
+### Key Learnings
+
+- 传播链现形状：`propagate_refs_export` 头部先 `_mirror_bank_outputs()`（四 bank 输出目录 writer→chapter 栈内原子替换+内容跳过）再重播 buildin→shared，投影由 Agent Run copy-on-change 自动跟上——「传播完成后双包一致」不变量由单接线点保证，导出链与重编译链共用。任务 summary `bank_output_mirrored` 可观测。
+- 语料重编译幂等性可当验证工具：同语料二次 bank_compile 字节一致 → 全 skip（mirrored=0/propagated=0）；注入人造残留后再跑即可演练修复路径，无需等真实语料换代。
+- Docker Desktop Windows bind mount（gRPC-FUSE）瞬态 EACCES：「A→B 目录改名后立刻 C→A 抢同名位」报 Permission denied，稍后同型 rename 即成功——`_replace_skill_target` 已带 3 次退避重试（bug-4207）。宿主侧 exec 进容器跑 rename 类操作遇到 EACCES 先想这条再查 ACL。
+- 单测里 import-in-function 的依赖（如 run_eia_corpus_process 尾部局部导入 propagate）打桩要 patch 源模块属性而非调用方，调用时取属性自然命中。
+
+### Do-Not-Repeat
+
+- [2026-11-03] 服务层流测试禁止真跑 propagate/传播类副作用（会刷真实运行栈树 + 187s 假慢源）：打桩+间谍锁契约。summary 形状变更必须同提交跟测试断言（a052d635e 漏跟致 3 例红，今晨才被单测发现）。
+- [2026-11-03] 测试 helper 往 tmp 写文件前先 mkdir 父目录——write_text 不自动建目录，三连 FileNotFoundError 都是这一类。

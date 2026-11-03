@@ -1,17 +1,18 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-31T07:01:10.549Z
-> Files: 68 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-03T04:52:51.710Z
+> Files: 24 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
 
 ## ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/
 
+- `gitea-admin-api-quirks.md` (~148 tok)
+- `integration-flow-tests-wiped-shared-db.md` (~295 tok)
 
 ## ../../Users/Lenovo/AppData/Local/Temp/
 
-- `wolf-commit-msg2.txt` (~58 tok)
 
 ## ../../Users/Lenovo/AppData/Local/Temp/claude/
 
@@ -28,18 +29,20 @@
 ## ../../项目管理/环评引用的国标/
 
 
+## ../pisuan-localized/
+
+
 ## ../pisuan-localized/docker/volumes/pisuan/threads/shared/admin/workspace/workspace/
 
-- `DEPRECATED-首次尝试遗留现场说明.md` — ⚠️ 本目录下的 state/ data/ outputs/ 为首次编写尝试遗留（勿复用） (~119 tok)
+
+## ../pisuan-localized/docker/volumes/pisuan/threads/shared/admin/workspace/workspace/eia-report/hengcheng-ch3/data/
+
 
 ## ../pisuan-localized/docker/volumes/pisuan/threads/shared/admin/workspace/workspace/hxmc-planning-rev2-chapter/state/
 
-- `progress.json` (~3790 tok)
 
 ## ./
 
-- `.git-commit-msg-bug4176.txt` (~164 tok)
-- `.git-commit-msg-wolf.txt` (~116 tok)
 
 ## .archify/workflow-corpus-writer-20261023-071348/
 
@@ -199,29 +202,21 @@
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/
 
-- `SKILL.md` — 分章管线设计：docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md §3。 (~4625 tok)
+
+## backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/references/stages/
+
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/
 
-- `progress.py` — coal-eia-report v2 — progress.py：两层状态机（章级门禁 × 节级派发，步骤4 控制器）。 (~15368 tok)
-- `style_targets.py` — 文风基准生成：从 samples_bank/<stage>/slices/ 实测每章指标，产出 style_targets/<stage>.json。 (~1568 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/tests/
 
-- `test_build_output_fig.py` — R5 插图占位回归：{{FIG:图名}} 合法保留 + 空图名/畸形 FAIL + SLOT/TABLE 残留不回归。 (~480 tok)
-- `test_chapter_state_machine.py` — 分章模式状态机测试：REVIEWED/CONFIRMED 增态 + confirm-chapter + 分章 next 编排。 (~2346 tok)
-- `test_gate_credential_link.py` — 门凭据时效链测试（bug-4146）：VERIFIED/REVIEWED/CONFIRMED 三通道全部凭「最近一次真跑门」放行。 (~1576 tok)
-- `test_interaction_cards.py` — 章节编写交互卡点测试（卡A计划卡 + 卡B范例挑选 + next 联动 + 篇幅模式）： (~1793 tok)
-- `test_progress_path_guard.py` — 账面路径守卫测试（bug-4172）：init/gate/run-stage 对 stage_path/data_dir 的存在性快速失败。 (~951 tok)
-- `test_run_stage_chapters.py` — run-stage freeze --chapters 透传（bug-4143 方案A）：目标章集模式切片冻结，缺省全量零变化。 (~575 tok)
-- `test_style_targets.py` — style_targets 生成测试：mini-bank fixture 精确数值 + 章目录对齐纪律（清单外目录忽略上报）。 (~1180 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-reviewer/
 
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/
 
-- `SKILL.md` — pisuan 移植（2026-09-30）：运行时映射与改编范围见 (~6343 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/paradigms/
 
@@ -234,16 +229,11 @@
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/
 
-- `progress.py` — coal-eia-report v2 — progress.py：两层状态机（章级门禁 × 节级派发，步骤4 控制器）。 (~15368 tok)
-- `sample_fragments.py` — 样例片段包生成器：stage + 章节 → samples_bank 同章真实切片（派发注入唯一参照来源，bug-4147）。 (~2000 tok)
+- `build_output.py` — coal-eia-report v2 — build_output.py：单次原子组装（步骤5–7）+ 章门（两层模型）。 (~17668 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/
 
-- `test_chapter_state_machine.py` — 分章模式状态机测试：REVIEWED/CONFIRMED 增态 + confirm-chapter + 分章 next 编排。 (~2346 tok)
-- `test_interaction_cards.py` — 章节编写交互卡点测试（卡A计划卡 + 卡B范例挑选 + next 联动 + 篇幅模式）： (~1793 tok)
-- `test_progress_path_guard.py` — 账面路径守卫测试（bug-4172）：init/gate/run-stage 对 stage_path/data_dir 的存在性快速失败。 (~951 tok)
-- `test_run_stage_chapters.py` — run-stage freeze --chapters 透传（bug-4143 方案A）：目标章集模式切片冻结，缺省全量零变化。 (~575 tok)
-- `test_sample_fragments.py` — 样例片段包测试（bug-4147）：主导报告选择 / 预算节标题截断 / 空章降级 rc=2 / 确定性。 (~2302 tok)
+- `test_depth_floor_projection.py` — 深度基线投影折算与真源统一测试（bug-4148/4149 + 评审 P0-1）： (~2223 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/compliance-checker/
 
@@ -265,7 +255,6 @@
 
 ## backend/package/yuxi/agents/toolkits/buildin/
 
-- `tools.py` — Pydantic: DoubaoSearchInput (~13276 tok)
 
 ## backend/package/yuxi/agents/toolkits/debug/
 
@@ -329,46 +318,41 @@
 
 ## backend/package/yuxi/repositories/
 
-- `domain_entity_repository.py` — Domain Entity Builder 数据访问层 - Repository (~3642 tok)
-- `domain_factory_repository.py` — Domain Factory 数据访问层 - Repository (~13976 tok)
 
 ## backend/package/yuxi/services/
 
-- `domain_factory_service.py` — Domain Factory Service - 领域知识工厂服务层 (~80069 tok)
-- `graph_builder.py` — 知识图谱构建服务：将领域工厂结构化数据写入 Neo4j 图谱 (~19261 tok)
-- `graph_query_service.py` — 图谱查询服务:封装 Cypher,供工具直查 Neo4j 图谱。 (~4951 tok)
+- `eia_corpus_task_service.py` — eia_corpus_task_service.py — 环评文件库 P2 后台任务（KB 推送 / 语料加工 / 绑定）。 (~4112 tok)
+- `eia_lexicon_service.py` — 环评数值护栏词表运营服务（DB 覆盖层 + overrides 物化）。 (~6198 tok)
+- `eia_meta_service.py` — 环评语料元数据人工标注服务（P2：DB 运营唯一真相 + 显式导出物化人工层文件）。 (~3151 tok)
+- `eia_paradigm_service.py` — 写作范式层编辑服务（s12/s13：DB 草稿=编辑唯一真相 + admin 导出物化回写 references/paradigms/*）。 (~4171 tok)
+- `eia_refs_git.py` — 环评 refs 数据仓 git 链（批次2）：导出物化 → refs-repo 工作树 commit → push 本地 Gitea。 (~1178 tok)
+- `eia_refs_propagate.py` — 导出物化后的运行时传播：双包收敛（bank 输出家族镜像）→ 栈包 → skill-sources/shared（投影由 Agent Run 初始化自动刷）。 (~1211 tok)
 
 ## backend/package/yuxi/services/skills/
 
+- `shared.py` — get_skill_dependency_options, confirm_skill_install_draft, delete_skill, delete_skills_batch (~6916 tok)
 
 ## backend/package/yuxi/storage/minio/
 
 
 ## backend/package/yuxi/storage/postgres/
 
-- `manager.py` — PostgreSQL 数据库管理器 - 支持知识库和业务数据 (~33526 tok)
-- `models_domain_entity.py` — Domain Entity Builder - 领域实体 Schema 定义模型 (~953 tok)
 
 ## backend/package/yuxi/utils/
 
-- `__init__.py` — get_docker_safe_url (~181 tok)
-- `string_utils.py` — 通用字符串处理工具。 (~345 tok)
 
 ## backend/scripts/
 
 
 ## backend/scripts/governance/
 
-- `dedomain_chapter_templates_graph.py` — 去领域化图谱侧存量迁移：ChapterTemplate / DomainOutline 的 domain 'coal' → 'general'，并重写内嵌域的节点 id。 (~1425 tok)
-- `merge_chapter_templates.py` — 存量 ChapterTemplate 治理脚本（bug-4167 spec §4.4）：归一 canonical、合并重复、纠挂、编号结构化、删测试子树、meta 回写。 (~9250 tok)
 
 ## backend/server/
 
 
 ## backend/server/routers/
 
-- `domain_entity_builder_router.py` — Domain Entity Builder API Router - 领域实体构建器路由 (~3354 tok)
-- `domain_factory_router.py` — Domain Factory API Router - 领域知识工厂路由 (~23002 tok)
+- `domain_factory_router.py` — Domain Factory API Router - 领域知识工厂路由 (~23027 tok)
 
 ## backend/server/utils/
 
@@ -402,27 +386,26 @@
 
 ## backend/test/integration/api/
 
-- `test_domain_factory_api.py` — 领域知识工厂 router 集成测试（/api/domain-factory/*）。 (~1332 tok)
 
 ## backend/test/integration/services/
 
+- `_flow_isolation.py` — eia 服务层流测试的共享运行库隔离助手。 (~307 tok)
+- `test_eia_lexicon_service_flow.py` — eia_lexicon 服务层全链路集成测试（不经 HTTP，无凭据依赖）。 (~2393 tok)
+- `test_eia_meta_service_flow.py` — eia_meta 服务层全链路集成测试（不经 HTTP，无凭据依赖）。 (~1670 tok)
+- `test_eia_standard_service_flow.py` — eia_standard 服务层全链路集成测试（不经 HTTP，无凭据依赖）。 (~1703 tok)
 
 ## backend/test/integration/storage/
 
-- `test_chapter_writer_subagent.py` — chapter-writer 预置子智能体落库幂等集成测试：直连真实 PostgreSQL。 (~252 tok)
-- `test_domain_factory_outline_repo.py` — domain_factory_outlines repository 落库链路集成测试：直连真实 PostgreSQL。 (~732 tok)
-- `test_report_repo.py` — report/chapter/pps repository 落库链路集成测试：直连真实 PostgreSQL。 (~432 tok)
 
 ## backend/test/scripts/
 
-- `test_merge_chapter_templates.py` — merge_chapter_templates 治理脚本单测：纯函数规划逻辑 + dry-run 零写断言（不连库）。 (~6015 tok)
 
 ## backend/test/unit/
 
+- `test_eia_paradigm_service.py` — eia_paradigm_service 单元测试：锚点校验 / 两键纪律 / preview 不写盘 / 导出字节纪律 / 漂移 / 回滚 / 撤回 / 空批拒绝。 (~4322 tok)
 
 ## backend/test/unit/agents/
 
-- `test_builtin_discovery.py` — 内置定义发现与失败边界。 (~2345 tok)
 
 ## backend/test/unit/agents/skills/
 
@@ -450,23 +433,17 @@
 
 ## backend/test/unit/repositories/
 
-- `test_agent_repository_deep_research.py` — CollectingDb: add, test_discovered_presets_creates_orchestrator_and_subagents, get_by_slug, test_dis (~694 tok)
-- `test_agent_repository.py` — FakeDb: add, test_merge_agent_config_json_preserves_omitted_context_fields_and_hidden_skills, test_m (~4132 tok)
-- `test_domain_factory_domain_aliases.py` — 去领域化常量与别名归一单元测试（设计 docs/vibe/2026-10-29-etl-pipeline-dedomain-design.md）。 (~213 tok)
 
 ## backend/test/unit/routers/
 
-- `test_domain_factory_dedomain_contract.py` — 去领域化 HTTP 契约的 CI 通道单测。 (~997 tok)
 
 ## backend/test/unit/server/
 
 
 ## backend/test/unit/services/
 
-- `test_etl_normalization.py` — Task 9: ETL report_type 归一化测试。 (~204 tok)
-- `test_normalize_chapter_key.py` — 章节标题归一化与聚合身份键解析单测（不连图库）。 (~1311 tok)
-- `test_outline_detail_assembler.py` — get_outline_template_detail 薄装配测试：图谱 meta + PG 大纲行富字段合并（bug-4167）。 (~1158 tok)
-- `test_outline_producer.py` — test_group_assets_by_chapter_buckets_by_chapter, test_assemble_deterministic_outline_fields, test_ll (~2228 tok)
+- `test_eia_corpus_process.py` — eia_corpus_process 单测：KB 为准选集 / workdir 物化 / 真 bank_compile 迷你重编译 / corpus_meta 合并 / fail fast。 (~3356 tok)
+- `test_eia_refs_propagate.py` — 导出物化运行时传播的单测：重播/内容跳过/残留清理/bank 输出家族双包镜像（隔离 tmp 根，不触真实运行栈）。 (~1818 tok)
 
 ## backend/test/unit/services/skills/
 
@@ -475,6 +452,9 @@
 
 
 ## docker/
+
+
+## docker/minio/
 
 
 ## docker/nginx/
@@ -509,26 +489,21 @@
 
 ## docs/develop-guides/
 
-- `changelog.md` — 版本变更记录 (~40110 tok)
-- `upstream-sync-guide.md` — 上游代码同步与本地化扩展实施方案 (~4100 tok)
+- `changelog.md` — 版本变更记录 (~43376 tok)
 
 ## docs/intro/
 
 
 ## docs/superpowers/plans/
 
-- `2026-10-29-dedomain-behavioral.md` — 方案 B：通用域去领域化（行为级）Implementation Plan (~6751 tok)
 
 ## docs/superpowers/specs/
 
-- `2026-10-29-outline-template-idempotency-design.md` — 大纲模板幂等与缺项修复设计（bug-4167） (~1316 tok)
 
 ## docs/vibe/
 
-- `2026-10-27-chapter-writer-user-test-plan.md` — 分章节环评报告写作 · 用户测试方案 (~1123 tok)
-- `2026-10-27-post-confirm-revision-and-figure-slots.md` — 交付后章节修改 + 插图占位 · 需求文档 (~476 tok)
-- `2026-10-29-chapter-writer-clear-rerun-test.md` — 分章管线清空重测报告（planning_eia / ch2 全自主轮） (~2270 tok)
-- `2026-10-29-etl-pipeline-dedomain-design.md` — 通用域知识工厂 ETL 管线：现状梳理与去领域化设计 (~3062 tok)
+- `2026-10-09-eia-lexicon-stack.md` — 数值护栏词表全栈设计与实现记录（环评域数据工厂 · 一期主体） (~1729 tok)
+- `2026-11-01-eia-refs-local-git-chain.md` — 2026-11-01 环评域数据文件本地 git 化链路（Gitea + docker 卷）设计定稿 (~1372 tok)
 
 ## docs/vibe/assets/2026-09-30-coal-eia-v2-port/
 
@@ -544,7 +519,7 @@
 
 ## scripts/governance/
 
-- `dedomain_coal_to_general.py` — 去领域化存量迁移：domain_code 'coal' 等历史域值 → 'general'（设计 docs/vibe/2026-10-29-etl-pipeline-dedomain-design.m (~1812 tok)
+- `refs_repo_distribute.py` — refs 数据仓分发：Gitea pull → skill-sources/shared → projections（批次2 分发步）。 (~1687 tok)
 
 ## web/
 
@@ -557,7 +532,6 @@
 
 ## web/src/apis/
 
-- `domain_factory_api.js` — Domain Knowledge Factory API (~3016 tok)
 
 ## web/src/assets/css/
 
@@ -570,12 +544,10 @@
 
 ## web/src/components/domain-factory/
 
-- `AttributionTaskTable.vue` — Vue: setup (~1209 tok)
-- `DataSourceDashboard.vue` — Vue: setup (~8137 tok)
-- `OutlineTemplate.vue` — Vue: setup (~6104 tok)
 
 ## web/src/components/eia-data/
 
+- `LexiconPanel.vue` — Vue component (~12496 tok)
 
 ## web/src/components/factory-core/
 
@@ -600,10 +572,6 @@
 
 ## web/src/views/
 
-- `DomainEntityBuilderView.vue` — Vue component (~13556 tok)
-- `GeneralDataView.vue` — Vue: setup (~139 tok)
-- `GeneralOverviewView.vue` — Vue: setup (~5655 tok)
-- `PromptConfigView.vue` — Vue: setup (~3069 tok)
 
 ## web/test/unit/
 

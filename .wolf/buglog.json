@@ -10580,5 +10580,408 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-10-31"
+  },
+  {
+    "id": "bug-456",
+    "timestamp": "2026-11-01T14:45:00+08:00",
+    "error_message": "误操作删除 pisuan-localized 全部容器与镜像（数据卷完好），重建历经 6 连败：docker.io 直连被墙 / 清华 pypi 403 / 清华 apt 403 / COPY--from 隐式镜像缺失 / minio github 资产被重置 / alpine CDN 不可达；另遭内存保护杀后台构建一次",
+    "file": "docker-compose.yml + docker/*.Dockerfile（pisuan-localized 栈）",
+    "root_cause": "构建容器不走宿主代理：docker.io/ghcr/清华(pypi+apt)/alpine CDN 全不可达；minio 官方镜像已全渠道下架只能从 GitHub Release 重建；api.Dockerfile 以 COPY--from=node:24-slim 隐式引用镜像不出现在 FROM 扫描",
+    "fix": "基础镜像经 docker.m.daocloud.io(+ghcr.m.daocloud.io/quay直连) 拉取重打原名；清华→阿里云（0b9f30d67）；minio 加 MINIO_DL_PREFIX ARG 经 ghfast.top 代理同一资产 URL 保 sha256 门（96989519f）+ apk 换阿里云（16c70ed98）；盘点须 grep FROM+--from 双通道；10 容器全 healthy 数据三存储完好",
+    "tags": [
+      "docker",
+      "redeploy",
+      "mirror",
+      "minio",
+      "network",
+      "memory-pressure"
+    ],
+    "related_bugs": [
+      "bug-453"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-01T14:45:00+08:00"
+  },
+  {
+    "id": "bug-4188",
+    "timestamp": "2026-11-01T18:05:00",
+    "error_message": "sync_chapter_skill.py --check rc=1：5 文件漂移（style_targets.py、test_gate_credential_link.py、test_sample_fragments.py、test_style_targets.py、style_targets/planning_eia.json）",
+    "file": "scripts/sync_chapter_skill.py（涉及 coal-eia-writer/coal-eia-chapter-writer 双包）",
+    "root_cause": "同步模型单向 writer→chapter 无回灌；chapter 侧 4691a7738（bug-4162 文风基准中位化）修复未反向落 writer，方向=writer 滞后。正向同步会把线上已部署的中位化修复回退成池化口径",
+    "fix": "2026-11-01 回灌闭合：5 漂移文件自 chapter 包反向回灌 writer 包（style_targets.py、planning_eia.json 及 3 个测试文件，保留 bug-4162 中位化修复为当前真相）；sync --check rc=0（1159 文件一致）、守卫测试 4 用例通过、writer scripts/tests 全量 225 passed。四层镜像：栈 backend/package + skill-sources + projections(admin/pytest_user) writer 侧 4 位手工 cp 归零；顺带修复 pytest_user projection chapter 包 test_sample_fragments.py 历史积垢。待提交。",
+    "tags": [
+      "skills",
+      "sync",
+      "drift",
+      "bug-4162"
+    ],
+    "related_bugs": [
+      "bug-4162"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-01"
+  },
+  {
+    "id": "bug-4189",
+    "timestamp": "2026-11-01T18:05:00",
+    "error_message": "ch2 篇幅地板 14599 被折算成 1359（约真实中位 24332 的 1/18），L2 篇幅门形同失效",
+    "file": "coal-eia-chapter-writer/scripts/build_output.py:754 chapter_floor_scaled",
+    "root_cause": "bug-4148 折算粒度错配：分子=stage 聚合节（ch2=4 个），分母=bank_index 标题级节计数中位（ch2=43），分子分母不同粒度（代码 docstring :738 自证），折算必然 ~9%",
+    "fix": "待办（评审 P0-1 采纳）：floor=max(折算, 注册×0.5) 绝对下限 + 5 stage 标定合理性回归（折算≥真实中位×0.4）；同步改 test_depth_floor_projection.py 固化断言；时机=ch3 验收收尾后",
+    "tags": [
+      "gate",
+      "depth",
+      "calibration",
+      "bug-4148"
+    ],
+    "related_bugs": [
+      "bug-4148"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-01"
+  },
+  {
+    "id": "bug-4190",
+    "timestamp": "2026-11-01T18:05:00",
+    "error_message": "红线 P13（无计划卡不开工、无范例卡不派发）无脚本强制：init 后直接 mark DRAFTED 成功，next 跳 GATE，两卡凭据可完全绕过",
+    "file": "coal-eia-chapter-writer/scripts/progress.py:155,496,656",
+    "root_cause": "phase 纯由 status 推导（CHAPTER_PHASE_BY_STATUS），cmd_mark/cmd_gate 均不校验 plan_<ch>.json / fragment_choice_<ch>.json 在位；COLLECTING 分支只在 PENDING 态进入，mark 过 DRAFTED 后卡点信息永久蒸发",
+    "fix": "2026-11-02 闭合（评审 P0-3 + P1-4 顺带）：①progress.py cmd_mark 章分支 mode=chapter 下 mark DRAFTED 硬校验 plan_<ch>.json/fragment_choice_<ch>.json 在位，缺失 rc=1 并指明补卡命令（--none 为合法豁免——cmd_fragment_choice 对 --none 同样落账，在位性校验天然支持）；②cmd_gate 同款整批拒（防绕过 mark 直跑门）；③P1-4 init stage 可用性预检——builtin_stage_missing_assets() 仅对内置 stage（路径在包内 references/stages/ 下）校验 roles/style_targets 双资产，缺失 rc=1 列出可跑阶段（自造 stage 跳过预检由调用方自责）；④paradigm_role.load_roles 文案改「该阶段尚未启用」。测试：P0-3 五用例（无 plan 拒/无 choice 拒/--none 豁免/gate 拦截+补卡重试/full 模式回归）+ P1-4 四用例；既有 test_gate_credential_link 4 用例与 test_chapter_state_machine 5 用例原走「无卡直 mark」路径，按新契约补 _credentials。CLI 冒烟：评审复现路径 init→mark DRAFTED rc=1、未启用 stage init rc=1 列 planning_eia。234 passed、守卫 4/4、ruff 0 错、四层镜像归零。",
+    "tags": [
+      "state-machine",
+      "credentials",
+      "P13"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-02"
+  },
+  {
+    "id": "bug-4191",
+    "timestamp": "2026-11-01T18:40:00",
+    "error_message": "标准限值双权威源脑裂：技能红线只认静态 standards_index.json（2026-09-06 快照，scope 131），DB standard_indicators（667 行，持续富化）的活工具 lookup_standard_indicator 被模型注释自证为权威层（models_domain_factory.py:547 已退役：export/list 通道已废）",
+    "file": "coal-eia-chapter-writer/SKILL.md:66 + scripts/build_output.py:76 + agents/toolkits/buildin/tools.py:1232",
+    "root_cause": "P1 合流时废弃了 DB→技能快照的导出通道，但技能红线与 consistency CC3 门未同步改造，静态快照近两个月未更新",
+    "fix": "待办：口径统一（活工具优先+CC3 认活工具结果）或复活导出通道纳入 bank_compile/部署链",
+    "tags": [
+      "standards",
+      "split-brain",
+      "drift",
+      "eia-data"
+    ],
+    "related_bugs": [
+      "bug-4188"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-01"
+  },
+  {
+    "id": "bug-4192",
+    "timestamp": "2026-11-01T19:10:00",
+    "error_message": "词表覆盖层真相倒挂：eia_lexicon_entries=0（DB 唯一真相为空），但 repo 工作树与 skill-projections 四处均存活的 overrides/curated_lexicon.json（8 条，exported_at=2026-10-11）仍在被沙箱技能消费——gitignored 运行态文件成了事实真相，DB 无法复现它",
+    "file": "coal-eia-writer/references/overrides/curated_lexicon.json + eia_lexicon_service.py",
+    "root_cause": "localized 重建后 DB 词表行丢失（suppressions=7 幸存），gitignored 导出物跨代残留并被 projections 复制；「DB 重导出可再现」的前提失效",
+    "fix": "已修复（2026-11-01 批次0）：①孤儿 8 条回灌 eia_lexicon_entries（id 1055-1062，status=approved，values_json=NULL 走语料现算，decided_by=bug-4192-backfill）；②走页面同款 POST /api/domain-factory/eia/lexicon/export 重导出：6 条物化、2 条跳过（生活污水回用率/除尘效率 distinct 4<5，语料 10-22 换代所致，DB 行保留待语料恢复）；③新文件（6 条，md5 c07bbd1d）镜像至四层全部 8 位（栈双包/repo 双包回流/projections 四份）；④开关 curated_lexicon enabled=t。孤儿备份 .wolf/bug4192-backup/（含逐条 diff-report）",
+    "tags": [
+      "lexicon",
+      "override",
+      "truth-inversion",
+      "eia-data"
+    ],
+    "related_bugs": [
+      "bug-4191",
+      "bug-4198"
+    ],
+    "occurrences": 3,
+    "last_seen": "2026-11-02"
+  },
+  {
+    "id": "bug-4193",
+    "timestamp": "2026-11-02",
+    "error_message": "评审 P2-6：数据族中文名存在三份真源——stage forms label（权威 33 族）/ SKILL.md 硬编码译名表（8 项过期，与 global_families 7 族交集仅 3）/英文裸键；air、noise、solid_waste、subsidence_params、investment 五个最常问的族无中文名可依",
+    "file": "coal-eia-{writer,chapter-writer}/SKILL.md + scripts/ingest.py",
+    "root_cause": "SKILL.md 手写译名表早于 stage forms label 字段普及，无单一权威；ingest check 缺项清单直出英文键，模型被迫背表翻译",
+    "fix": "删两包 SKILL.md 硬编码译名表行，指引句改为「中文名一律取 stage forms 的 label 字段（check 缺项清单已直出中文名（英文键））」；ingest.py 新增 fam_disp()，check 缺项 6 处输出改「中文名（英文键）」直出（GLOBAL_SCOPE 机制日志保留英文键）",
+    "tags": [
+      "review",
+      "skill",
+      "doc-drift",
+      "ingest",
+      "P2-6"
+    ],
+    "related_bugs": [
+      "bug-4194"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-02"
+  },
+  {
+    "id": "bug-4194",
+    "timestamp": "2026-11-02",
+    "error_message": "评审 P2-7：文档数字与实际注册表漂移——①SKILL.md「每条正文≤3句」与「节稿即产即呈」两条硬约束互斥；②consistency 合约数 SKILL.md 写 XS1–XS18（chapter :155）/21条+XS1–XS18（writer :217）/XS1–XS12（writer :316），注册表实为 23 条 XS1–XS20+EO1–EO3；③设计文档验收「门1只查全局包≤5族」与实际派生 7 族矛盾",
+    "file": "coal-eia-{writer,chapter-writer}/SKILL.md + docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md",
+    "root_cause": "合约注册表从 21 条扩到 23 条（XS19/XS20）与派生族数 5→7 演进后文档未同步；正文≤3句约束在「节稿即产即呈」特性加入时未豁免成品正文",
+    "fix": "①改「每条播报类正文≤3句；章/节成品正文不计入此限（节稿/章稿全文照贴）」双包落地；②三处数字统一改 23 条/XS1–XS20；③spec 验收行改「（7 族，以 derive_globals 派生为准）」",
+    "tags": [
+      "review",
+      "skill",
+      "doc-drift",
+      "P2-7"
+    ],
+    "related_bugs": [
+      "bug-4193"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-02"
+  },
+  {
+    "id": "bug-4195",
+    "timestamp": "2026-11-02",
+    "error_message": "用户误删 langfuse 全部容器（此前 docker 服务被删，五卷仍在），需要重新部署",
+    "file": "docker-compose.langfuse.yml",
+    "root_cause": "langfuse 是独立 compose 项目（name: langfuse），不在主栈 compose 内，日常 up -d 不会自动拉起；误删后无容器残留",
+    "fix": "按镜像源地图补拉四镜像（postgres:17/redis:7 经 daocloud、clickhouse:25.12 经 daocloud、cgr.dev/chainguard/minio 直连可达）；docker compose -f docker-compose.langfuse.yml up -d 自动复用原五卷；web 3100 健康 v4.72.0，org/project/api_keys 与 CH events_core 14756 行、minio 10GiB 事件全部保留。v4 查询注意：数据在 events_core/events_full，旧 traces/observations 表恒为 0",
+    "tags": [
+      "langfuse",
+      "compose",
+      "redeploy",
+      "docker",
+      "mirror"
+    ],
+    "related_bugs": [
+      "bug-456"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-02"
+  },
+  {
+    "id": "bug-4196",
+    "timestamp": "2026-11-01",
+    "error_message": "test_meta_full_flow FAILED: assert r1['added'] == r1['scanned'] → (20 == 26)；批次2 跑 eia 流测试时暴露",
+    "file": "backend/test/integration/services/test_eia_meta_service_flow.py",
+    "root_cause": "预存在数据漂移（HEAD 基线同样 6 条 unknown，与批次2 改动无关）：corpus_meta_annotations.json 6 条旧 rid（002-016-2024-7-9 / 016-2021-12 / 026-2023-9 / 034-2024-12 / 039-1000 / 041-2000）∉ corpus_meta.reports（33 reports）——83e5b6951 变体终值回写轮改了 corpus_meta reports 集，标注文件旧 rid 未跟进；import_annotations 按设计拒收越界 rid（skipped_unknown 上浮），测试断言 added==scanned 因此恒红",
+    "fix": "已闭合（2026-11-02 用户裁定 A 映射回种）：旧代 corpus_meta（a46bef409^）与新代 33↔33 纯改名做元数据评分联接初筛 + 切片内容级 Jaccard 终审（6/6 唯一命中 0.991-0.997，次优≤0.31，difflib 歧义消解）：002-016-2024-7-9→038-2024-7-9 / 016-2021-12→040-2021-12 / 026-2023-9→041-2023-9 / 034-2024-12→036-2024-12 / 039-1000→043-1000 / 041-2000→037-2000。5 条与 83e5b6951 变体回写的新 rid 条目纯并集合并（互补零碰撞，值域交叉印证）。文件双包回种 21 条；DB 6 条 API 落注（decided_by=admin）；导出物化 commit e35913ccf021 → 分发对账归零 → repo 双包字节一致。伴随修复 export_annotations 破坏性（全量重写只认 4 标注字段会抹掉 variant 文件独有层）：改按存活 rid 携带 + 漂移残留剔除 + DB 无四字段裁决时强守卫拒绝。测试断言改现读锚 + added==scanned-skipped_unknown；容器 6/6 全绿。",
+    "tags": [
+      "eia-meta",
+      "data-drift",
+      "test",
+      "corpus_meta",
+      "variant-renaming"
+    ],
+    "related_bugs": [
+      "bug-4192"
+    ],
+    "occurrences": 2,
+    "last_seen": "2026-11-02"
+  },
+  {
+    "id": "bug-4197",
+    "timestamp": "2026-11-01",
+    "error_message": "changelog.md Edit 后下一条目（fix(skills) bug-4190）开头被吞，两条目正文粘连",
+    "file": "docs/develop-guides/changelog.md",
+    "root_cause": "Edit old_string 取「### 功能与修复 + 下一条目前半句」作锚点，new_string 只写了新条目未回补被锚点吞掉的下一条目开头",
+    "fix": "二次 Edit 以悬空残句「此前「每章先计划卡」」为锚，回补 '- fix(skills): 红线 P13…闭合。' 条目头；sed 验证两条目分离",
+    "tags": [
+      "edit-mishap",
+      "changelog",
+      "doc"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-01"
+  },
+  {
+    "id": "bug-4198",
+    "timestamp": "2026-11-02T08:30:00",
+    "error_message": "用户报：数值护栏词表tab词表为空，点导出物化报\"无 approved 条目可导出：请先在词表页完成确认\"。DB 四表被清空（eia_lexicon_entries=0/eia_dataset_switches=0/eia_meta_annotations=0/eia_standard_reviews=0），栈包 overrides/curated_lexicon.json 被删。",
+    "file": "backend/test/integration/services/test_eia_lexicon_service_flow.py + test_eia_meta_service_flow.py + test_eia_standard_service_flow.py",
+    "root_cause": "三个 eia 服务层流测试的 autouse _clean_state fixture 在共享运行库上 delete 全表（lexicon 连 overrides 文件都 unlink）——在容器里跑 pytest -k eia 时把运营数据当测试数据抹掉（bug-4192 数据丢失第 3 次复发，触发器是测试而非重建）。文件侧 meta/standard 有字节快照恢复、DB 侧三者全无恢复。docstring 声称\"绝不污染运行库\"与实际行为相反。",
+    "fix": "新建 _flow_isolation.py（snapshot_rows/restore_rows 行级快照助手），三个 fixture 改为 DB 行快照恢复 + lexicon overrides 文件也改字节快照；容器内验证 6 测试跑完运营行 8/20/1 原地存活。数据恢复配方：8 条 approved 从 .wolf/bug4192-backup/ 回灌 + curated_lexicon 开关 + meta import API（added=20 skipped=6 旧rid=bug-4196）+ lexicon export API 重物化（8 物化 0 跳过，Gitea commit 22c32ed08ee5）+ distribute --check 3 处全一致。注意：容器跑的是 sync 进栈的代码，工作树修复须 docker cp/同步后才生效（第一次验证因容器仍旧代码而白跑并二次抹库）。",
+    "tags": [
+      "integration-tests",
+      "shared-db",
+      "fixture-isolation",
+      "lexicon",
+      "data-loss",
+      "eia-data"
+    ],
+    "related_bugs": [
+      "bug-4192",
+      "bug-4186",
+      "bug-4187"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-02"
+  },
+  {
+    "id": "bug-4199",
+    "timestamp": "2026-11-02",
+    "error_message": "Gitea PATCH /api/v1/users/expert 返回 405",
+    "file": "(运维操作，无代码改动)",
+    "root_cause": "/api/v1/users/{username} 是公开 profile 端点，不支持改密码；改密须走管理员端点 /api/v1/admin/users/{username}",
+    "fix": "改用 PATCH /api/v1/admin/users/{username}（basic auth 管理员）",
+    "tags": [
+      "gitea",
+      "api",
+      "password-reset"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-02"
+  },
+  {
+    "id": "bug-4200",
+    "timestamp": "2026-11-02",
+    "error_message": "Gitea PATCH /api/v1/admin/users/expert 返回 422 [LoginName]: Required",
+    "file": "(运维操作，无代码改动)",
+    "root_cause": "Gitea admin PATCH payload 必须显式携带 login_name 字段，即使不修改登录名",
+    "fix": "payload 补 \"login_name\": \"expert\" 后 200",
+    "tags": [
+      "gitea",
+      "api",
+      "422"
+    ],
+    "related_bugs": [
+      "bug-4199"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-02"
+  },
+  {
+    "id": "bug-4201",
+    "timestamp": "2026-11-03T00:50:00Z",
+    "error_message": "重编译任务行 failed: worker_lease_expired 执行 worker 的 lease 已过期，任务副作用结果未知（但 bank_compile j_complete=1、传播日志在案，副作用实际完整）",
+    "file": "backend/package/yuxi/services/eia_corpus_task_service.py",
+    "root_cause": "新增的 propagate_refs_export（数十秒级同步全树复制+哈希）直跑 worker 事件循环，阻塞致任务心跳 _heartbeat_task（10s 续 30s 租）饿死，_reconcile_durable_tasks_forever 在传播完成 1 秒后误判任务死亡并翻红；handler 恢复后 finish_owned 因 _is_live_owner=False 静默丢弃结果",
+    "fix": "传播调用改 asyncio.to_thread(propagate_refs_export)，事件循环畅通心跳续租；修复后同型任务实测 success（50.3s，compiled=33）",
+    "tags": [
+      "worker",
+      "lease",
+      "heartbeat",
+      "event-loop-blocking",
+      "eia-corpus",
+      "reconcile"
+    ],
+    "related_bugs": [],
+    "occurrences": 2,
+    "last_seen": "2026-11-03T00:50:00Z"
+  },
+  {
+    "id": "bug-4202",
+    "timestamp": "2026-11-03T00:50:00Z",
+    "error_message": "refs_repo_distribute.py --check 对账中途 UnicodeEncodeError: 'gbk' codec can't encode character '✗'（Windows 控制台 cp936）",
+    "file": "scripts/governance/refs_repo_distribute.py",
+    "root_cause": "✗ 等字符超出 GBK 编码域，print 直崩；此前靠 PYTHONIOENCODING=utf-8 绕过",
+    "fix": "main() 入口 sys.stdout.reconfigure(errors='replace')——保编码仅替换不可编码符，原生 GBK 控制台不崩、中文正常",
+    "tags": [
+      "windows",
+      "gbk",
+      "unicode",
+      "governance-script"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-03T00:50:00Z"
+  },
+  {
+    "id": "bug-4203",
+    "timestamp": "2026-11-03T00:50:00Z",
+    "error_message": "init_builtin_skills 残留清理条件永不命中：'-tmp-'/-'bak-' vs 实际残留目录名 .{slug}.tmp-{hex}（点号前缀）",
+    "file": "backend/package/yuxi/services/skills/shared.py",
+    "root_cause": "清理条件匹配 '-tmp-'/'-bak-'，而 _replace_skill_target 生成的临时/备份目录是点号前缀 .{slug}.tmp-{hex}——条件为死代码，中断残留永不清理（上游既有）",
+    "fix": "上游共有代码未动；我方 eia_refs_propagate.propagate_refs_export 以正确模式（'.tmp-'/'.bak-' + 点号前缀）实现同款清理并注释标注",
+    "tags": [
+      "upstream-dead-code",
+      "skills",
+      "residue-cleanup",
+      "not-fixed-upstream"
+    ],
+    "related_bugs": [
+      "bug-4201"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-03T00:50:00Z"
+  },
+  {
+    "id": "bug-4204",
+    "timestamp": "2026-11-03T01:45:00Z",
+    "error_message": "写作范式和句式方式 tab 初始化报错：数据文件未找到: .../coal-eia-writer/references/paradigms/_roles.json（GET /eia/paradigms 500）",
+    "file": "backend/package/yuxi/services/eia_paradigm_service.py",
+    "root_cause": "2026-10-24 chapter-writer Task 1 将 _roles.json 单份 planning 形状目录化为 roles/<stage>.json（sync 双包），技能侧 paradigm_role.py 按新形状读，但 eia_paradigm_service._overview_sync 未跟进仍读旧单文件——自 10-24 起 tab 即 500（预存断裂，非导出链改动引入）；单测 fixture 同在 tmp_path 写旧形状文件，绿灯掩盖漂移",
+    "fix": "_load_roles_map() 逐 stage 文件合并节→角色映射（glob *.json 文件名序确定性，roles 缺键 KeyError 响亮，延续 bug-4022 不静默兜底）；单测 fixture 拆 ch1/ch2 两 stage 文件锁定合并契约。容器 15 用例过；端点实测 role_counts {opener 12, baseline 16, analysis 30, measures 11}、roles_map 77 节",
+    "tags": [
+      "eia-paradigm",
+      "roles-directory-shape",
+      "skill-service-shape-drift",
+      "fixture-masking"
+    ],
+    "related_bugs": [
+      "bug-4022"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-03T01:45:00Z"
+  },
+  {
+    "id": "bug-4205",
+    "timestamp": "2026-11-03T11:50:00Z",
+    "error_message": "评审 P0-1：折算粒度错配把 ch2 真实中位 24332 洗到注册值 1359（真实值 5.6%），5 stage 全部 80 个折算章同时穿透注册半值与标定下限",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/build_output.py",
+    "root_cause": "bank_compile 标定时把 absolute_floor=0.4 写进 depth_targets/<stage>/coal.json（ABSOLUTE_FLOOR），但零消费方——bug-4148 的折算只兑现折算本身、从未读标定下限，声明与接线脱节",
+    "fix": "build_output.py 新增 _fold_floor_bound(stage,ch)=int(median_eff×absolute_floor)（标定缺文件/缺章节/缺字段→None 响亮退化不启用），chapter_floor_scaled 折算值<下限时托底，note 带「折算 X → 标定下限 Y」证据；直通章保持注册地板语义；测试 +4（托底/不抬杠/门消息/真注册表全章回归），既有 bug-4149 用例去硬编码改活动 DEPTH_DIR 派生（注册表为派生产物两树快照漂移 14599/14724）",
+    "tags": [
+      "depth-gate",
+      "calibration",
+      "absolute_floor",
+      "P0-1",
+      "bug-4148"
+    ],
+    "related_bugs": [
+      "bug-4148",
+      "bug-4149"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-03"
+  },
+  {
+    "id": "bug-4206",
+    "timestamp": "2026-11-03T11:52:00Z",
+    "error_message": "容器守卫 test_assets_byte_identical 红：chapter 栈包 samples 缺失 planning_eia 18 文件/孤儿 openpit 18 文件，depth_targets/samples/samples_bank/section_expectations 四目录 719 文件 differ",
+    "file": "backend/package/pisuan/agents/skills/buildin/coal-eia-chapter-writer/references",
+    "root_cause": "第四漂移家族：bank_compile 全量输出家族（标定/章样本/切片/期望）运行时单写 writer 栈包（昨晚 E2E 关闸自动重编译 T1/T2 触发），chapter 栈包/skill-sources/admin 投影三面未跟上——导出链双包同步写只覆盖 overrides/meta annotations，银行输出家族无传播",
+    "fix": "eia_refs_propagate 传播头部新增 _mirror_bank_outputs()：四输出目录 writer→chapter 原子替换（_replace_skill_target 同原语）+内容跳过，references 内 .tmp-/.bak- 残留先行清扫；单接线点让导出链与重编译链都获得双包一致不变量。容器 138 passed；E2E：无漂移 mirrored=0 全跳过，注入残留→重编译 mirrored=1 自动清除、五面 md5 归一、守卫绿",
+    "tags": [
+      "drift",
+      "chapter-writer",
+      "bank_compile",
+      "sync",
+      "propagation-gap"
+    ],
+    "related_bugs": [
+      "bug-4188",
+      "bug-4204"
+    ],
+    "occurrences": 2,
+    "last_seen": "2026-11-03"
+  },
+  {
+    "id": "bug-4207",
+    "timestamp": "2026-11-03T12:43:00Z",
+    "error_message": "PermissionError [Errno 13] on _replace_skill_target 的 temp.rename(target)：'.samples.tmp-xxx' -> 'samples'，重编译任务失败；同型 rename 稍后手测即成功",
+    "file": "backend/package/yuxi/services/skills/shared.py",
+    "root_cause": "Docker Desktop Windows bind mount（gRPC-FUSE）瞬态 quirk：A→B 目录改名后立刻 C→A 抢同名位，FUSE 层名条未释放报 EACCES（非真权限问题）；原子原语回滚把现场恢复干净（trash→target），但任务被误判失败",
+    "fix": "shared.py 新增 _rename_dir_with_transient_retry（3 次退避重试 0.4/0.8s），_replace_skill_target 两处 rename 换用；真权限错误重试后原样上浮。出处 bc5232c42 自有代码非上游共有，改动合规",
+    "tags": [
+      "docker-desktop",
+      "bind-mount",
+      "fuse",
+      "rename",
+      "transient",
+      "atomic-replace"
+    ],
+    "related_bugs": [
+      "bug-4206"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-03"
   }
 ]
