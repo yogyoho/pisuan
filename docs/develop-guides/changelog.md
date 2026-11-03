@@ -362,6 +362,10 @@ DomainFactoryView 纯增量挂载
 - style(domain-factory): 词表列表单位列加宽（用户见 dB(A) 折行）：单位 6%→8%、口径 19%→17%，其余列不动；Range API 实测 dB(A) 单行渲染。
 - feat(domain-factory): 公式参数核对页黑框公式 KaTeX 排版。formulas.json 的 expr 为伪数学串（×−·√Σ 与中文注释混排），新增纯函数模块 `expr_latex.js`：按中文/全角/~ 切「数学段/文本段」交替序列（拼接无损），数学段消解伪符号后交给 katex 内联渲染（多字母符号直立、下划线键名整名不拆、aM 小写大写边界拆两因子、2.68e-3→×10⁻³），文本段原样输出享受块内换行；任一数学段 KaTeX 抛错整条回落原 token 着色视图。单测 `web/test/unit/exprLatex.test.js` 以公式库全量 7 条 expr 为夹具（切段无损/伪符号消解/括号配平/无裸下划线 + 典型片段断言）。黑框背景钉死 #18181b：暗色主题灰阶整体反转（--gray-1000→#fafafa）致「暗块」变白底浅字（既有缺陷，本次一并修）。验证：7/7 公式 KaTeX 渲染零回落、明暗截图（.wolf/fml_latex_*.jpeg）、console 净、eslint 0 / prettier 全过。
 
+### pisuan 定制增量（2026-11-04）
+
+- feat(skills): Agent 业务简报渲染层（briefing 层）——交互体验重塑（用户实测反馈：管线播报式输出缺业务层引导）。新增 `briefing.py` 四子命令（outline 全书策划书 / chapter 章说明+每节注记 / data-request 资料需求单+表格族 CSV 模板 / calc-summary 计算说明冻结值+来源），references 结构化资产机械渲染零 LLM、机制词剔除（P3-10 banlist 语体纪律沿用）；writer SKILL.md 四触点、chapter-writer 五触点接线（开题策划书、卡A 附章说明+资料带用途、缺项首动作需求单+CSV 模板、冻结后计算说明、节稿注记照贴）；**零新增停车点**，progress/ingest/formula_runner/build_output 零改动。CSV 内不放注释行（ingest 唯一写者防误解析，对设计文档的偏差已记录）。测试：`scripts/tests/test_briefing.py` 8 用例 + banlist 语体回归；宿主双包全量各 271 passed；双布局容器全绿；四面部署（repo → localized 挂载层 → skill-sources/shared → skill-projections/admin）哈希一致；hengcheng-ch3 真实工作区数据冒烟通过。
+
 ## v0.7.2 (2026-09-02)
 
 ::: warning Beta 升级说明
