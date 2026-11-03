@@ -1,15 +1,13 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-03T13:52:13.984Z
-> Files: 40 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-03T14:31:50.226Z
+> Files: 5 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
 
 ## ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/
 
-- `gitea-admin-api-quirks.md` (~148 tok)
-- `integration-flow-tests-wiped-shared-db.md` (~295 tok)
 
 ## ../../Users/Lenovo/AppData/Local/Temp/
 
@@ -202,7 +200,7 @@
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/
 
-- `SKILL.md` — 分章管线设计：docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md §3。 (~5186 tok)
+- `SKILL.md` — 分章管线设计：docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md §3。 (~4956 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/references/stages/
 
@@ -218,7 +216,7 @@
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/
 
-- `SKILL.md` — pisuan 移植（2026-09-30）：运行时映射与改编范围见 (~6608 tok)
+- `SKILL.md` — pisuan 移植（2026-09-30）：运行时映射与改编范围见 (~6383 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/paradigms/
 
@@ -231,24 +229,12 @@
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/
 
-- `_paths.py` — references 根解析（评审 P2-8 资产单源化）。 (~190 tok)
-- `build_output.py` — coal-eia-report v2 — build_output.py：单次原子组装（步骤5–7）+ 章门（两层模型）。 (~17626 tok)
-- `corpus_meta.py` — 切片 + 人工核正 (~3982 tok)
-- `derive_globals.py` — global_families 派生：data_expectations.json 顶层增 global_families（build 派生，不手拍）。 (~1438 tok)
-- `front_extract.py` — front_extract.py — 语料封面/前置区元数据抽取器（spec 2026-10-16-corpus-meta-pipeline-refactor）。 (~2216 tok)
-- `ingest.py` — coal-eia-report v2 (T1 副本——geo 逻辑原样，见 docs/designs/coal-eia-report-v2.md 两层模型改造点清单) — ingest.py：data (~10872 tok)
-- `paradigm_role.py` — 节角色解析器：stage + section_id -> paradigm role（派发契约查表唯一入口）。 (~587 tok)
-- `progress.py` — coal-eia-report v2 — progress.py：两层状态机（章级门禁 × 节级派发，步骤4 控制器）。 (~16821 tok)
-- `sample_fragments.py` — 样例片段包生成器：stage + 章节 → samples_bank 同章真实切片（派发注入唯一参照来源，bug-4147）。 (~3837 tok)
-- `style_targets.py` — 文风基准生成：从 samples_bank/<stage>/slices/ 实测每章指标，产出 style_targets/<stage>.json。 (~1588 tok)
+- `progress.py` — coal-eia-report v2 — progress.py：两层状态机（章级门禁 × 节级派发，步骤4 控制器）。 (~17741 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/
 
-目录注（P2-8 单源化，2026-11-03）：消费 references 的测试一律经 `from _paths import refs_root` 解析资产根（先自身包、缺则回落兄弟 coal-eia-writer 包），不再硬编码 `Path(__file__)...parent.../references`——chapter 包布局下即回落实战。受影响：bank_compile_expectations/corpus_variant/depth_floor_projection/global_families/ingest_global_scope/init_stage_precheck/paradigm_roles 七件。
-
-- `test_depth_floor_projection.py` — 深度基线投影折算与真源统一测试（bug-4148/4149 + 评审 P0-1）： (~2223 tok)
-- `test_progress_state_lock.py` — 状态锁测试（bug P3-11）：变更命令互斥持锁/next·status 只读不持锁/崩溃残留超时接管/异常释放。 (~822 tok)
-- `test_sample_fragments.py` — 样例片段包测试（bug-4147）：主导报告选择 / 预算节标题截断 / 空章降级 rc=2 / 确定性。 (~4629 tok)
+- `test_user_message.py` — 话术下沉测试（评审 P3-10）：next 全态 USER_MESSAGE 断言/gate PASS+FAIL 话术/confirm 下一章预告/旧 state 退化「第N章」/banlist 零机制词回归。 (~800 tok)
+- `test_user_message.py` — 话术下沉测试（评审 P3-10）：next/gate/confirm-chapter 输出 USER_MESSAGE 成文中文话术。 (~2842 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/compliance-checker/
 
@@ -336,16 +322,9 @@
 
 ## backend/package/yuxi/services/
 
-- `eia_corpus_task_service.py` — eia_corpus_task_service.py — 环评文件库 P2 后台任务（KB 推送 / 语料加工 / 绑定）。 (~4084 tok)
-- `eia_lexicon_service.py` — 环评数值护栏词表运营服务（DB 覆盖层 + overrides 物化）。 (~6180 tok)
-- `eia_meta_service.py` — 环评语料元数据人工标注服务（P2：DB 运营唯一真相 + 显式导出物化人工层文件）。 (~3131 tok)
-- `eia_paradigm_service.py` — 写作范式层编辑服务（s12/s13：DB 草稿=编辑唯一真相 + admin 导出物化回写 references/paradigms/*）。 (~4171 tok)
-- `eia_refs_git.py` — 环评 refs 数据仓 git 链（批次2）：导出物化 → refs-repo 工作树 commit → push 本地 Gitea。 (~1178 tok)
-- `eia_refs_propagate.py` — 导出物化后的运行时传播：栈包 → skill-sources/shared（投影由 Agent Run 初始化自动刷）。 (~756 tok)
 
 ## backend/package/yuxi/services/skills/
 
-- `shared.py` — get_skill_dependency_options, confirm_skill_install_draft, delete_skill, delete_skills_batch (~6916 tok)
 
 ## backend/package/yuxi/storage/minio/
 
@@ -367,7 +346,6 @@
 
 ## backend/server/routers/
 
-- `domain_factory_router.py` — Domain Factory API Router - 领域知识工厂路由 (~23027 tok)
 
 ## backend/server/utils/
 
@@ -404,10 +382,6 @@
 
 ## backend/test/integration/services/
 
-- `_flow_isolation.py` — eia 服务层流测试的共享运行库隔离助手。 (~307 tok)
-- `test_eia_lexicon_service_flow.py` — eia_lexicon 服务层全链路集成测试（不经 HTTP，无凭据依赖）。 (~2393 tok)
-- `test_eia_meta_service_flow.py` — eia_meta 服务层全链路集成测试（不经 HTTP，无凭据依赖）。 (~1670 tok)
-- `test_eia_standard_service_flow.py` — eia_standard 服务层全链路集成测试（不经 HTTP，无凭据依赖）。 (~1703 tok)
 
 ## backend/test/integration/storage/
 
@@ -417,14 +391,12 @@
 
 ## backend/test/unit/
 
-- `test_eia_paradigm_service.py` — eia_paradigm_service 单元测试：锚点校验 / 两键纪律 / preview 不写盘 / 导出字节纪律 / 漂移 / 回滚 / 撤回 / 空批拒绝。 (~4322 tok)
 
 ## backend/test/unit/agents/
 
 
 ## backend/test/unit/agents/skills/
 
-- `test_chapter_skill_assets_sync.py` — chapter-writer 资产守卫：scripts/ 与 writer 逐文件字节一致 + references/ 单源化不携带（spec §5 打包契约 + 评审 P2-8）。 (~1076 tok)
 
 ## backend/test/unit/backends/
 
@@ -458,8 +430,6 @@
 
 ## backend/test/unit/services/
 
-- `test_eia_corpus_process.py` — eia_corpus_process 单测：KB 为准选集 / workdir 物化 / 真 bank_compile 迷你重编译 / corpus_meta 合并 / fail fast。 (~3356 tok)
-- `test_eia_refs_propagate.py` — 导出物化运行时传播的单测：重播/内容跳过/残留清理/chapter references 单源化不复活（隔离 tmp 根，不触真实运行栈）。 (~1014 tok)
 
 ## backend/test/unit/services/skills/
 
@@ -505,7 +475,7 @@
 
 ## docs/develop-guides/
 
-- `changelog.md` — 版本变更记录 (~44143 tok)
+- `changelog.md` — 版本变更记录 (~44388 tok)
 
 ## docs/intro/
 
@@ -518,9 +488,6 @@
 
 ## docs/vibe/
 
-- `2026-10-09-eia-lexicon-stack.md` — 数值护栏词表全栈设计与实现记录（环评域数据工厂 · 一期主体） (~1729 tok)
-- `2026-11-01-eia-refs-local-git-chain.md` — 2026-11-01 环评域数据文件本地 git 化链路（Gitea + docker 卷）设计定稿 (~1372 tok)
-- `2026-11-03-chapter-assets-single-source.md` — chapter-writer 资产单源化（评审 P2-8） (~652 tok)
 
 ## docs/vibe/assets/2026-09-30-coal-eia-v2-port/
 
@@ -533,11 +500,9 @@
 
 ## scripts/
 
-- `sync_chapter_skill.py` — chapter-writer 技能包资产同步：coal-eia-writer 的 scripts/ 单向镜像覆盖 + references/ 单源化清除。 (~1350 tok)
 
 ## scripts/governance/
 
-- `refs_repo_distribute.py` — refs 数据仓分发：Gitea pull → skill-sources/shared → projections（批次2 分发步）。 (~1687 tok)
 
 ## web/
 
@@ -565,7 +530,6 @@
 
 ## web/src/components/eia-data/
 
-- `LexiconPanel.vue` — Vue component (~12496 tok)
 
 ## web/src/components/factory-core/
 

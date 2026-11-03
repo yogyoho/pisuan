@@ -9108,3 +9108,44 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 21:50 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/front_extract.py | 2→2 lines | ~42 |
 | 21:52 | Edited docs/develop-guides/changelog.md | modified refactor() | ~442 |
 | 21:54 | P2-8 收尾：7 测试文件 refs_root 改造双布局 58+58 绿、sync 64 口径、三面部署、容器双包 251+251 全绿、DB skill_dependencies 生效、ruff 零新增净降14、isort 两处序修、changelog/buglog-4209/cerebrum/anatomy 簿记 | scripts/_paths.py+9脚本+7测试、SKILL.md、sync_chapter_skill.py、eia_refs_propagate 等 svc×4、test×3、changelog | 待提交 | ~45000 |
+| 22:09 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 6→7 lines | ~79 |
+| 22:09 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | modified _ch_label() | ~117 |
+| 22:10 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | expanded (+7 lines) | ~838 |
+| 22:10 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 13→15 lines | ~203 |
+| 22:11 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 17→19 lines | ~310 |
+| 22:11 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 5→6 lines | ~106 |
+| 22:11 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 7→8 lines | ~135 |
+| 22:11 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 3→4 lines | ~65 |
+| 22:12 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 4→5 lines | ~75 |
+| 22:12 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 4→9 lines | ~150 |
+| 22:12 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 16→19 lines | ~328 |
+| 22:12 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | modified _fail() | ~89 |
+| 22:12 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | expanded (+9 lines) | ~186 |
+| 22:13 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | expanded (+6 lines) | ~188 |
+| 22:13 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | reduced (-19 lines) | ~246 |
+| 22:14 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | reduced (-20 lines) | ~250 |
+| 22:16 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_user_message.py | — | ~2817 |
+| 22:20 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_user_message.py | modified _capture() | ~128 |
+| 22:20 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_user_message.py | modified _capture() | ~71 |
+| 22:20 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_user_message.py | modified _choice() | ~74 |
+| 22:21 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_user_message.py | modified test_full_wave1_dispatch_and_gate() | ~328 |
+| 22:21 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_user_message.py | modified test_chapter_gate_review_confirm_phases() | ~82 |
+| 22:21 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_user_message.py | 5→6 lines | ~113 |
+| 22:25 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 1→2 lines | ~36 |
+| 22:25 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 5→6 lines | ~54 |
+| 22:25 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 3→4 lines | ~46 |
+| 22:25 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 1→2 lines | ~36 |
+| 22:25 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 1→2 lines | ~33 |
+| 22:25 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 5→6 lines | ~83 |
+| 22:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 2→4 lines | ~41 |
+| 22:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 2→5 lines | ~56 |
+| 22:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_user_message.py | 6→9 lines | ~82 |
+| 22:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_user_message.py | modified _init() | ~139 |
+| 22:26 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_user_message.py | modified _choice() | ~78 |
+| 22:27 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_user_message.py | 2→5 lines | ~56 |
+| 22:27 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_user_message.py | modified _plan() | ~97 |
+| 22:28 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_user_message.py | 3→4 lines | ~73 |
+| 22:28 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_user_message.py | 4→5 lines | ~76 |
+| 22:30 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | inline fix | ~17 |
+| 22:31 | Edited docs/develop-guides/changelog.md | modified feat() | ~278 |
+| 22:32 | P3-10 话术下沉全链：progress.py 23 处 USER_MESSAGE（full 7 态+chapter 8 态+gate+confirm）、init 存章 title、SKILL.md 双包收缩 30→9 行、test_user_message 12 用例、双布局 263+263、容器 263+263+15、CLI 真冒烟、E501 基线持平 | progress.py、SKILL.md×2、tests/test_user_message.py、changelog、vibe | 待提交 | ~60000 |

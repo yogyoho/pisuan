@@ -228,6 +228,17 @@ def _self_cmd(*extra: str) -> str:
     return "python -X utf8 " + str(Path(__file__).resolve()) + " " + " ".join(extra)
 
 
+def _ch_label(doc: dict, c: str) -> str:
+    """章的用户话术名（P3-10）：stage 章名（init 已存 title）或退化「第N章」（旧 state 兼容）。"""
+    t = (doc["chapters"][c].get("title") or "").strip()
+    n = c[2:] if c.startswith("ch") else c
+    return f"第{n}章「{t}」" if t else f"第{n}章"
+
+
+def _chs_label(doc: dict, cs: list[str]) -> str:
+    return "、".join(_ch_label(doc, c) for c in cs)
+
+
 def next_action(doc: dict, state_dir: Path) -> str:
     phase = derive_phase(doc)
     chs = doc["chapters"]
@@ -248,6 +259,7 @@ def next_action(doc: dict, state_dir: Path) -> str:
                 f"命令: {_self_cmd('gate', '--state-dir', sd)}",
                 "期望 rc: 0（GATE_BATCH_DONE passed=N failed=0，PASS 章及其全部节由 gate 自动转 VERIFIED）",
                 '        1 → failed 章按 stderr 原文重派（原 prompt + stderr，每章 ≤1 次）；重派仍 FAIL → mark <chN> BLOCKED --gate FAIL --detail "<一句话差距>"',
+                f"USER_MESSAGE: {_chs_label(doc, drafted)}已编写完成，正在逐章质量校验；校验通过后请您确认。",
             ]
             return "\n".join(lines)
         pending = [c for c in wave1 if chs[c]["status"] == "PENDING"]
@@ -255,16 +267,21 @@ def next_action(doc: dict, state_dir: Path) -> str:
             lines += [
                 f"[NEXT] 额度耗尽: 总派发 {doc.get('total_dispatches', 0)}/{DISPATCH_BUDGET}，剩余 PENDING 章 {pending}",
                 f'动作: 逐章 progress.py mark <chN> BLOCKED --state-dir {sd} --detail "派发额度耗尽" → 进协商（或请用户新会话续跑，progress 无损）',
+                f"USER_MESSAGE: 本轮编写的章节数已到上限，{_chs_label(doc, pending)}尚未开始"
+                "——进度已保存，您可以新开会话继续，或先就已完成章节收尾。",
             ]
             return "\n".join(lines)
         c = pending[0]
         ps = pending_sections(c)
+        total = len(chs[c].get("sections", []))
+        done_n = total - len(ps)
         lines += [
             f"[NEXT] 按波派发: {c}（PENDING，wave1 独立章；节级派发，D9 粒度分层）",
             "动作: 按 SKILL.md 步骤4 派发契约组装 prompt（stage sections 要素链+范文索引+节级深度目标），batch_task 分波派子代理直写 state/sections/<节id>.md（每波 5–10 节）",
             "约束: 每轮 ≤3 个并发 task()（超发被运行时静默丢弃）；子代理只回 ≤10 行摘要（含本节要点）",
             f"记账（批量原语，节粒度禁逐节单发——bug-3048）: progress.py mark --sections {','.join(ps[:5])}{'…' if len(ps) > 5 else ''} DRAFTED --state-dir {sd}",
             f"收口: 波内节稿拼章稿 state/chapters/{c}.md → mark {c} DRAFTED → gate（PASS 章与其全部节自动转 VERIFIED）",
+            f"USER_MESSAGE: 正在组织编写{_ch_label(doc, c)}（共 {total} 节，已完成 {done_n} 节），编写期间无需您操作。",
         ]
         return "\n".join(lines)
 
@@ -277,6 +294,8 @@ def next_action(doc: dict, state_dir: Path) -> str:
             f'  ② 批准降档（progress.py approve-downgrade --state-dir {sd} --chapters {",".join(un)} --note "<用户批准依据>"）',
             "  ③ [待确认] 收尾（缺数信号放宽覆盖缩放，重写即可能达标）",
             "期望: 用户答复后才推进（单回合至多一次 ask_clarification；挂起即停，不推进）",
+            f"USER_MESSAGE: {_chs_label(doc, un)}的质量校验未达标，需要您拿主意："
+            "补充资料后重写、按当前成稿收尾（注明差距），或先收尾其余章节。",
         ]
         return "\n".join(lines)
 
@@ -287,6 +306,7 @@ def next_action(doc: dict, state_dir: Path) -> str:
             '      写 state/key_points.json: {"chapters":{"ch1":[...],...},"highlights":{...},"issues":[...]}',
             f"      单表单 ask_clarification 呈现用户确认 → progress.py confirm-key-points --state-dir {sd}",
             "要点包 = ch13 结论章唯一事实来源（不重读 wave1 全文）",
+            "USER_MESSAGE: 各章编写完成，要点已汇总——请您过目确认后我们生成结论章。",
         ]
         return "\n".join(lines)
 
@@ -296,11 +316,13 @@ def next_action(doc: dict, state_dir: Path) -> str:
                 f"[NEXT] 跑门: {last}（DRAFTED，wave2 结论章——同款批量 gate 命令）",
                 f"命令: {_self_cmd('gate', '--state-dir', sd)}",
                 "期望 rc: 同 WAVE1 批量跑门分支（PASS→章与节 VERIFIED / FAIL→重派 ≤1 次→BLOCKED）",
+                f"USER_MESSAGE: 结论章{_ch_label(doc, last)}已生成，正在质量校验。",
             ]
             return "\n".join(lines)
         lines += [
             f"[NEXT] 派发: {last}（PENDING，wave2 结论章）",
             "动作: 派发契约同 wave1，输入追加 state/key_points.json——只依据要点包写投影式结论，不引入 wave1 之外的新数字",
+            f"USER_MESSAGE: 正在生成结论章{_ch_label(doc, last)}，内容全部依据您确认的要点汇总。",
         ]
         return "\n".join(lines)
 
@@ -316,6 +338,7 @@ def next_action(doc: dict, state_dir: Path) -> str:
             "说明: 已批准降档自动加 --allow-partial（stdout PARTIAL_DELIVERY 行明示 N 章降档；manifest.partial 逐章留痕）——交付时向用户汇报降档章节与差距",
             "期望 rc: 0 → stdout 含 BUILD_READY/MANIFEST_READY（整行+退出码原样粘贴进回复）→ 交付（项目路径=交付子代理分波逐节 write_chapter；独立路径=present_files）",
             "        consistency rc=3（WARN/MANUAL 透传）→ 逐条汇报用户后交付；rc=1/2 → stderr 原样呈现，修章重跑",
+            f"USER_MESSAGE: 全部章节已完成（{_chs_label(doc, blocked)}按当前成稿收尾并注明差距），正在汇总成稿。",
         ]
         return "\n".join(lines)
     lines += [
@@ -324,6 +347,7 @@ def next_action(doc: dict, state_dir: Path) -> str:
         "说明: run-stage finalize 一次 bash 完成 build_output → consistency.py → snapshot.py save（交付名由脚本从 data/ 拼，stdout 原样透传）",
         "期望 rc: 0 → stdout 含 BUILD_READY/MANIFEST_READY（整行+退出码原样粘贴进回复）→ 交付（项目路径=交付子代理分波逐节 write_chapter；独立路径=present_files）",
         "        consistency rc=3（WARN/MANUAL 透传）→ 逐条汇报用户后交付；rc=1/2 → stderr 原样呈现，修章重跑",
+        "USER_MESSAGE: 全部章节校验通过，正在汇总成稿，完成后即可交付。",
     ]
     return "\n".join(lines)
 
@@ -351,6 +375,8 @@ def next_action_chapter(doc: dict, state_dir: Path) -> str:
                     f'  ② 批准降档（progress.py approve-downgrade --state-dir {sd} --chapters {",".join(un)} --note "<用户批准依据>"）',
                     "  ③ [待确认] 收尾（分级交付，终验 --allow-partial）",
                     "期望: 用户答复后才推进（挂起即停，不推进）",
+                    f"USER_MESSAGE: {_chs_label(doc, un)}的质量校验未达标，需要您拿主意："
+                    "补充资料后重写、按当前成稿收尾（注明差距），或先收尾其余章节。",
                 ]
             )
         finalize_cmd = _self_cmd(
@@ -371,6 +397,7 @@ def next_action_chapter(doc: dict, state_dir: Path) -> str:
                 "说明: run-stage finalize 一次 bash 完成 build_output → consistency.py → snapshot.py save",
                 "期望 rc: 0 → stdout 含 BUILD_READY/MANIFEST_READY（整行+退出码原样粘贴进回复）→ 交付",
                 "        consistency rc=3（WARN/MANUAL 透传）→ 逐条汇报用户后交付；rc=1/2 → stderr 原样呈现，修章重跑",
+                "USER_MESSAGE: 全部章节已确认，正在汇总成稿，完成后即可交付。",
             ]
         )
     phase = CHAPTER_PHASE_BY_STATUS[chs[current]["status"]]
@@ -395,6 +422,8 @@ def next_action_chapter(doc: dict, state_dir: Path) -> str:
                 f"记账: {_self_cmd('plan-confirm', current, '--summary-file', '<卡面md>', '--notes', notes_ph, '--state-dir', sd)}"
                 f"（篇幅: 缺省详实版；精简版 --depth compact；自定义 --depth custom --target N）",
                 "修订: 用户补充意见合入后重发修订版卡再确认（plan-confirm 幂等覆盖）——未确认前禁进资料汇集",
+                f"USER_MESSAGE: {_ch_label(doc, current)}的编写计划已拟好，"
+                "正呈您确认（含编写要点与篇幅规模三选）——确认后即开始汇集资料组织编写。",
             ]
             return "\n".join(lines)
         if not choice_p.exists():
@@ -410,6 +439,8 @@ def next_action_chapter(doc: dict, state_dir: Path) -> str:
                 + "再 --per-section --out-dir state/fragment_packs_"
                 + current
                 + " 按节切包（bug P1-5）——派发每节注入对应节包，节包缺失退章包",
+                f"USER_MESSAGE: 正在收集{_ch_label(doc, current)}的资料与同类报告范例，"
+                "稍后请您挑选参考范例（也可选择不用范例）。",
             ]
         else:
             choice = json.loads(choice_p.read_text(encoding="utf-8"))
@@ -419,6 +450,12 @@ def next_action_chapter(doc: dict, state_dir: Path) -> str:
                 f"范例: 已选定 {'不用范例（派发契约如实注明用户选择）' if rid is None else rid}——③ 派发契约注入 sample_fragments 对应节包"
                 f"（state/fragment_packs_{current}/<样例节号>.md，缺失退章包）与计划卡"
                 f"（state/plan_{current}.json 的要点与用户补充意见，写作须回扣）",
+                (
+                    f"USER_MESSAGE: 正在组织编写{_ch_label(doc, current)}，将以您选定的范例为参照；编写期间无需您操作。"
+                    if rid is not None
+                    else f"USER_MESSAGE: 正在组织编写{_ch_label(doc, current)}"
+                    "（按您的选择不使用参考范例）；编写期间无需您操作。"
+                ),
             ]
         lines += [
             f"记账: 节批量 mark --sections <节id csv> DRAFTED --state-dir {sd}（批量原语）→ 章稿齐后 progress.py mark {current} DRAFTED --state-dir {sd}",
@@ -427,17 +464,20 @@ def next_action_chapter(doc: dict, state_dir: Path) -> str:
         lines += [
             f"命令: {_self_cmd('gate', '--chapters', current, '--state-dir', sd)}",
             "期望 rc: 0（PASS 章及其全部节自动转 VERIFIED）；1 → stderr 差距原文重派 ≤1 次 → 仍 FAIL 则 mark BLOCKED",
+            f"USER_MESSAGE: {_ch_label(doc, current)}已编写完成，正在质量校验；校验通过后将送审。",
         ]
     elif phase == "REVIEW":
         lines += [
             "动作: 按 coal-eia-reviewer 规程本章审查（--chapter，发现单 [PASS/WARN/FAIL] 条目|定位|证据摘录|修复建议；只审不改）",
             f"记账: 发现可收口 → progress.py mark {current} REVIEWED --state-dir {sd}；FAIL 退回 → progress.py mark {current} DRAFTED --state-dir {sd}（改后重跑门）",
+            f"USER_MESSAGE: {_ch_label(doc, current)}已通过质量校验，正在进行章内审查。",
         ]
     else:  # CONFIRM——发卡即停
         lines += [
             "动作: 单表单呈用户确认卡——章稿全文 + 审查发现单 + 本章要点；三选项 ① 确认进下一章 ② 修改意见（返工重写）③ 停车",
             f'确认: progress.py confirm-chapter {current} --highlights "要点1|要点2" --state-dir {sd}（highlights 并入 state/key_points.json）',
             "返工: progress.py mark " + current + " DRAFTED --state-dir " + sd + "（确认卡意见进重写 prompt）",
+            f"USER_MESSAGE: {_ch_label(doc, current)}编写完成且审查通过——请您过目章稿，确认后我们进入下一章。",
         ]
     return "\n".join(lines)
 
@@ -521,6 +561,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         sections.sort(key=section_sort_key)
         n_sections += len(sections)
         chapters[c] = {
+            "title": ch.get("title", ""),  # 章名供 USER_MESSAGE 话术（P3-10）；旧 state 无此键→退化「第N章」
             "status": "PENDING",
             "dispatches": 0,
             "last_gate": None,
@@ -812,9 +853,11 @@ def cmd_gate(args: argparse.Namespace) -> int:
     )  # EAI-CUSTOM (geo-sample-bank Phase 2 T4)
     passed: list[str] = []
     failed: list[str] = []
+    fail_msgs: dict[str, str] = {}  # 章 → 差距首句（USER_MESSAGE 话术用，P3-10）
 
     def _fail(ch: str, msg: str) -> None:
         failed.append(ch)
+        fail_msgs[ch] = msg.splitlines()[0][:120]
         print(f"CHAPTER_GATE_FAIL: {ch}\n{msg}", file=sys.stderr)
         ent = doc["chapters"][ch]
         if ent["status"] not in ("VERIFIED", "REVIEWED"):
@@ -869,6 +912,17 @@ def cmd_gate(args: argparse.Namespace) -> int:
     print(
         f"GATE_BATCH_DONE: passed={len(passed) - len(skipped)} failed={len(failed)}（failed: {', '.join(failed) or '无'}；skipped: {', '.join(skipped) or '无'}——stderr 逐条差距，原 prompt 重派 ≤1 次）"
     )
+    # P3-10 话术下沉：面向用户的成文话术（模型转述；PASS 章名 + FAIL 章差距首句）
+    um_parts = []
+    ok = [c for c in passed if c not in skipped]
+    if ok:
+        um_parts.append(f"{_chs_label(doc, ok)}质量校验通过。")
+    for ch in failed:
+        um_parts.append(
+            f"{_ch_label(doc, ch)}质量校验未通过：{fail_msgs.get(ch, '')}——将按差距修订后重写，无需您操作。"
+        )
+    if um_parts:
+        print(f"USER_MESSAGE: {' '.join(um_parts)}")
     if skipped:
         print(
             f"[progress] 门过但未推进（状态机不允许直接 {skipped}；先 mark DRAFTED 复活）: {skipped}", file=sys.stderr
@@ -1169,6 +1223,15 @@ def cmd_confirm_chapter(args: argparse.Namespace) -> int:
         f"CONFIRMED_CHAPTER: {ch_id}（highlights {len(highlights)} 条并入 state/key_points.json；phase={doc['phase']}"
         + ("；降档豁免——门凭据非 PASS，凭 approve-downgrade 放行）" if waived else "）")
     )
+    # P3-10 话术下沉：确认话术 + 下一章预告（无未确认章则预告汇总成稿）
+    nxt = next(
+        (c for c in chapter_order(doc["chapters"]) if doc["chapters"][c]["status"] not in ("CONFIRMED", "ABSENT")),
+        None,
+    )
+    if nxt:
+        print(f"USER_MESSAGE: {_ch_label(doc, ch_id)}已确认登记。下一章{_ch_label(doc, nxt)}即将开始编写。")
+    else:
+        print(f"USER_MESSAGE: {_ch_label(doc, ch_id)}已确认登记——全部章节确认完毕，即将汇总成稿。")
     return EXIT_OK
 
 

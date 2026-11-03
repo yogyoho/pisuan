@@ -2152,3 +2152,8 @@
 
 - [2026-11-03] 别把 repo 版（yuxi import）服务/测试文件直接 cp 进 pisuan-localized 挂载层——必 sed 's/yuxi/pisuan/g'，否则 api 热重载即 ModuleNotFoundError 断链（本批 7 文件事故）。
 - [2026-11-03] 文案改动丢字面路径即丢契约：progress.py next 派发指引把 state/plan_{ch}.json 字面路径改写成自然语言，模型执行与测试断言双双失效（bug-4209）——面向模型的指引文案，路径/命令字面量不可改写成描述性语言。
+
+### Key Learnings (P3-10 追加)
+
+- ruff E501 的 line-width 按 Unicode 显示宽计（CJK 字符算 2 列）——line-length=120 下约 80 个中文字符即超限；中文话术行写 f-string 隐式拼接拆行（不改变输出内容），别用 awk length 判定（按字节 CJK×3，口径完全不同）。
+- progress.py 的 USER_MESSAGE 话术契约（P3-10）：机制行是脚本间/模型执行契约一字不动，面向用户话术只在行尾追加 `USER_MESSAGE: ` 前缀行；章名靠 init 时存的 chapters[c].title（旧 state 无键 → _ch_label 退化「第N章」）；banlist 禁用词约束已从 SKILL.md 移到 test_user_message.py 的 BANLIST 回归。
