@@ -51,10 +51,24 @@ async def _clean_state():
     await restore_rows(EiaDatasetSwitch, saved_switches)
 
 
-async def test_lexicon_service_full_flow():
-    """导入幂等 → 状态分布 → PATCH 状态机 → 拆分 → 导出物化 → 开关闭环。"""
+async def test_lexicon_service_full_flow(monkeypatch):
+    """导入幂等 → 状态分布 → PATCH 状态机 → 拆分 → 导出物化 → 开关闭环。
+
+    tasker 间谍化：导出/关闸的重编译排队不打真实任务进共享运行库，同时锁定
+    三处共用活跃去重位的契约（task_type/payload_match=scope）。"""
     if not _skill_root_exists():
         pytest.skip("coal-eia-writer 技能目录不存在")
+    from types import SimpleNamespace
+
+    from yuxi.services.task_service import tasker
+
+    enqueued: list[dict] = []
+
+    async def _spy_enqueue_unique(**kwargs):
+        enqueued.append(kwargs)
+        return SimpleNamespace(id="fake-recompile-task"), True
+
+    monkeypatch.setattr(tasker, "enqueue_unique_by_payload", _spy_enqueue_unique)
     svc = get_eia_lexicon_service()
 
     # 1) 导入幂等：二次导入零新增；抑制表（种子 7 + 运行态）中的旧指纹计 skipped
@@ -111,6 +125,8 @@ async def test_lexicon_service_full_flow():
     # 故 materialized ≤ measure 且 range_ready 的条目数（父条目已 rejected 不再占位）
     result = await svc.export_overrides("tester")
     assert result["materialized"] == len(json.loads(OVERRIDES_PATH.read_text(encoding="utf-8"))["entries"])
+    assert result["recompile_task_id"] == "fake-recompile-task"
+    assert enqueued[-1]["task_type"] == "eia_corpus_process" and enqueued[-1]["payload_match"] == {"scope": "all"}
     assert 1 <= result["materialized"] <= sum(1 for e in _scan_all() if e["category"] == "measure" and e["range_ready"])
     doc = json.loads(OVERRIDES_PATH.read_text(encoding="utf-8"))
     assert doc["source"] == "eia_lexicon_entries" and doc["entries"]
@@ -119,9 +135,13 @@ async def test_lexicon_service_full_flow():
     sw = (await svc.get_switches())[0]
     assert sw["enabled"] is True and sw["overrides_file"] is True
 
-    # 6) 开关关闭 → 物化文件删除（管线回 builtin 的前提）
-    await svc.set_switch("curated_lexicon", False, "tester")
+    # 6) 开关关闭 → 物化文件删除（管线回 builtin 的前提）+ 同链排队重编译（共用去重位）
+    sw = await svc.set_switch("curated_lexicon", False, "tester")
     assert not OVERRIDES_PATH.exists()
+    assert sw["recompile_task_id"] == "fake-recompile-task"
+    assert enqueued[-1]["payload_match"] == {"scope": "all"}
+    sw_on = await svc.set_switch("curated_lexicon", True, "tester")
+    assert sw_on["recompile_task_id"] is None and len(enqueued) == 2  # 开闸不排队
 
 
 async def test_rename_suppress_and_fallback_flow():

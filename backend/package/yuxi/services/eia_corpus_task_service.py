@@ -316,5 +316,24 @@ async def run_eia_corpus_process(context: TaskContext) -> dict:
     return summary
 
 
+async def enqueue_full_corpus_recompile(name: str, operator_id: str | None) -> str:
+    """全库重编译唯一排队口：词表导出 / 关闸 / admin 期望重编译三处共用活跃去重位。
+
+    payload_match 只取 scope——bank_compile 编译输入运行时读盘，活跃期连环排队（如
+    关闸→重开→再导出）收敛为单任务，跑到时读到的必是最新盘面：去重在此是正确性
+    机制（消任务间顺序反转），兼消 DURABLE_TASK_MAX_RUNNING 下两任务并发写同一
+    references 树的竞态。任务尾部自行传播 shared，排队方无需等待。
+    """
+    from yuxi.services.task_service import tasker  # 局部导入：api/worker 共用，先例 router
+
+    task, _created = await tasker.enqueue_unique_by_payload(
+        name=name,
+        task_type="eia_corpus_process",
+        payload={"scope": "all", "operator_id": operator_id},
+        payload_match={"scope": "all"},
+    )
+    return task.id
+
+
 async def _repo_log(*, action: str, detail: dict | None, operator: str | None) -> None:
     await _repo.insert_process_log(file_id=None, content_sha1=None, action=action, detail=detail, operator=operator)

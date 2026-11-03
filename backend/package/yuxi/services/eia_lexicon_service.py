@@ -385,12 +385,20 @@ class EiaLexiconService:
         if dataset_key != CURATED_LEXICON_KEY:
             raise ValueError(f"未知数据集开关: {dataset_key}")
         switch = await self.repo.save_switch(dataset_key, enabled, username)
+        recompile_task_id: str | None = None
         if not enabled:
             for p in _OVERRIDE_PATHS:  # 双包同步删：单删 writer 会滞留 chapter 旧词表
                 if p.is_file():
                     p.unlink()
-            logger.info(f"[eia-lexicon] 关闭 {dataset_key}：物化文件已删除（管线回到 builtin）")
-        return {**switch.to_dict(), "overrides_file": OVERRIDES_PATH.is_file()}
+            # 编译产物仍含 curated 区间（overrides 是 bank_compile 编译输入）：同导出链排队
+            # 全库重编译，「回内置」由重编译兑现；共用活跃去重位防连环切换堆任务。
+            from yuxi.services.eia_corpus_task_service import enqueue_full_corpus_recompile  # 局部导入防环
+
+            recompile_task_id = await enqueue_full_corpus_recompile("关闸后语料重编译", username)
+            logger.info(
+                f"[eia-lexicon] 关闭 {dataset_key}：物化文件已删除，已排队重编译 {recompile_task_id}（管线回 builtin）"
+            )
+        return {**switch.to_dict(), "overrides_file": OVERRIDES_PATH.is_file(), "recompile_task_id": recompile_task_id}
 
     async def export_overrides(self, username: str) -> dict[str, Any]:
         """物化 approved 条目 → overrides 文件 + 开关置位。range 一律现算（不信任 DB 快照）。
@@ -462,22 +470,18 @@ class EiaLexiconService:
             f"export: curated_lexicon 词表 {len(doc_entries)} 条（跳过 {len(skipped)}）（by {username}）",
         )
         # overrides 是 bank_compile 的编译输入（curated 区间编译期挂载）：排队全库重编译任务
-        # 把新词表挂进 section_expectations——「不做局部重编译」防口径与切片漂移（与
-        # /eia/stages/expectations/recompile 同链）；任务尾部自行传播 shared，导出方无需等待。
-        from yuxi.services.task_service import tasker  # 局部导入：与 task 体系解耦，先例 router:547
+        # 把新词表挂进 section_expectations——「不做局部重编译」防口径与切片漂移；与关闸/
+        # admin 期望重编译共用活跃去重位（enqueue_full_corpus_recompile），任务尾部自行传播。
+        from yuxi.services.eia_corpus_task_service import enqueue_full_corpus_recompile  # 局部导入防环
 
-        recompile_task = await tasker.enqueue(
-            name="词表导出后语料重编译",
-            task_type="eia_corpus_process",
-            payload={"scope": "all", "operator_id": username},
-        )
-        logger.info(f"[eia-lexicon] 已排队语料重编译任务 {recompile_task.id}（挂载新词表 → section_expectations）")
+        recompile_task_id = await enqueue_full_corpus_recompile("词表导出后语料重编译", username)
+        logger.info(f"[eia-lexicon] 已排队语料重编译任务 {recompile_task_id}（挂载新词表 → section_expectations）")
         return {
             "materialized": len(doc_entries),
             "skipped": skipped,
             "path": "references/overrides/curated_lexicon.json",
             "commit": sha,
-            "recompile_task_id": recompile_task.id,
+            "recompile_task_id": recompile_task_id,
         }
 
 

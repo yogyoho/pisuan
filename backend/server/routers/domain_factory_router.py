@@ -1039,7 +1039,7 @@ async def set_eia_dataset_switch(
     payload: dict[str, Any] = Body(...),
     current_user: User = Depends(get_admin_user),
 ) -> dict[str, Any]:
-    """切换数据集开关（admin；关闭即删 overrides 物化文件 → 管线回 builtin）"""
+    """切换数据集开关（admin；关闭即删 overrides 物化文件并自动排队全库重编译 → 管线回 builtin）"""
     try:
         enabled = payload.get("enabled")
         if not isinstance(enabled, bool):
@@ -1607,14 +1607,13 @@ async def recompile_eia_stage_expectations(
 
     与 /eia/library/process scope=all 同链（eia_corpus_process），本端点是期望视图的重编译入口；
     不做仅 section_expectations 的局部重编译——切片库/bank_index/深度基线与口径产物同源血缘，
-    局部重建会造成口径与切片漂移。
+    局部重建会造成口径与切片漂移。与词表导出/关闸共用活跃去重位：已有未终态全库重编译时
+    返回现有任务（编译输入运行时读盘，天然收敛最新盘面）。
     """
-    task = await tasker.enqueue(
-        name="章节口径重编译",
-        task_type="eia_corpus_process",
-        payload={"scope": "all", "operator_id": current_user.uid},
-    )
-    return {"status": "queued", "task_id": task.id}
+    from yuxi.services.eia_corpus_task_service import enqueue_full_corpus_recompile  # 局部导入防环
+
+    task_id = await enqueue_full_corpus_recompile("章节口径重编译", current_user.uid)
+    return {"status": "queued", "task_id": task_id}
 
 
 @domain_factory.get("/eia/standards/gate1")

@@ -374,7 +374,7 @@
       <Info :size="14" />
       <span>
         导出物化仅合并已入选条目到 references/overrides/curated_lexicon.json（range
-        一律现算）；未映射范式字段的条目会跳过（先行内「未映射字段」标记）；导出后需「立即重编译」值域才挂到章节期望。
+        一律现算）；未映射范式字段的条目会跳过（先行内「未映射字段」标记）；导出后自动排队全库重编译，值域即挂到章节期望（任务中心跟踪）。
       </span>
     </div>
 
@@ -547,7 +547,7 @@
     <a-modal v-model:open="exportResult.open" title="导出物化结果" :footer="null" width="560px">
       <p class="split-tip">
         已物化 <b>{{ exportResult.materialized }}</b> 条 →
-        <code>references/overrides/curated_lexicon.json</code>（管线消费，重启或热重载后生效）；
+        <code>references/overrides/curated_lexicon.json</code>（已传播运行栈，无需重启）；
         跳过 {{ exportResult.skipped?.length ?? 0 }} 条：
       </p>
       <div class="skip-list">
@@ -557,11 +557,10 @@
         </div>
       </div>
       <div class="export-actions">
-        <span class="export-hint">值域落章节期望需重编译（任务中心跟踪）</span>
+        <span class="export-hint">
+          已自动排队全库重编译<template v-if="exportResult.recompile">（任务 {{ exportResult.recompile }}）</template>，完成后值域挂到章节期望——任务中心跟踪
+        </span>
         <button class="btn btn-sm" @click="exportResult.open = false">稍后</button>
-        <button class="btn btn-pri btn-sm" :disabled="recompiling" @click="onRecompileExpectations">
-          <RefreshCw :size="13" />{{ recompiling ? '提交中…' : '立即重编译期望' }}
-        </button>
       </div>
     </a-modal>
   </div>
@@ -571,7 +570,6 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { Ban, BookOpen, Download, Info, Pencil, RefreshCw } from '@lucide/vue'
-import { eiaDataApi } from '@/apis/eia_data_api'
 import { eiaLexiconApi } from '@/apis/eia_lexicon_api'
 import { useUserStore } from '@/stores/user'
 import FilterSelect from './FilterSelect.vue'
@@ -675,7 +673,7 @@ const setStatus = (key) => {
 }
 
 const switchHint = computed(() => {
-  if (!switchState.enabled) return '关闭：管线用内置词表'
+  if (!switchState.enabled) return '关闭：重编译完成后管线用内置词表'
   return switchState.file ? '开启：管线消费覆盖层' : '开启但文件缺失：待导出物化'
 })
 
@@ -1032,23 +1030,7 @@ const onWithdraw = (row) => {
 
 // ── 导出物化与开关（admin） ─────────────────────────────
 
-const exportResult = reactive({ open: false, materialized: 0, skipped: [] })
-const recompiling = ref(false)
-
-// 导出物化只更新覆盖层文件；值域要挂到章节期望必须重编译（P1 闭环：导出 → 一键重编译）
-const onRecompileExpectations = () => {
-  recompiling.value = true
-  eiaDataApi
-    .recompileExpectations()
-    .then(() => {
-      exportResult.open = false
-      message.success('已提交重编译任务，完成后词表值域即挂到章节期望')
-    })
-    .catch((e) => message.error(e?.message || '任务提交失败'))
-    .finally(() => {
-      recompiling.value = false
-    })
-}
+const exportResult = reactive({ open: false, materialized: 0, skipped: [], recompile: null })
 
 const onExport = () => {
   message.loading({ content: '正在物化…', key: 'lexicon-export', duration: 0 })
@@ -1061,6 +1043,7 @@ const onExport = () => {
       })
       exportResult.materialized = r.materialized
       exportResult.skipped = r.skipped
+      exportResult.recompile = r.recompile_task_id
       exportResult.open = true
       fetchSwitches()
     })
@@ -1073,7 +1056,7 @@ const onToggleSwitch = (enabled) => {
     Modal.confirm({
       title: '关闭词表覆盖层？',
       content:
-        '将删除 references/overrides/curated_lexicon.json，写作技能的数值护栏口径回落内置词表；DB 裁决保留，重新「导出物化」即可恢复。',
+        '将删除 references/overrides/curated_lexicon.json，写作技能的数值护栏口径回落内置词表；DB 裁决保留，重新「导出物化」即可恢复。关闭后将自动排队全库重编译（约 1 分钟），期间技能仍读旧编译产物。',
       okText: '确认关闭',
       okType: 'danger',
       cancelText: '取消',
@@ -1090,7 +1073,11 @@ const doSetSwitch = async (enabled) => {
     const r = await eiaLexiconApi.setSwitch('curated_lexicon', enabled)
     switchState.enabled = r.switch.enabled
     switchState.file = r.switch.overrides_file
-    message.success(enabled ? '覆盖层已开启' : '覆盖层已关闭（物化文件已删除，管线回内置词表）')
+    message.success(
+      enabled
+        ? '覆盖层已开启'
+        : '覆盖层已关闭（物化文件已删除，已自动排队重编译，约 1 分钟后管线回内置词表）'
+    )
   } catch (e) {
     message.error(e?.message || '开关切换失败')
   } finally {
