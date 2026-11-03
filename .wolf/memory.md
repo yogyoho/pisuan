@@ -9017,3 +9017,44 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 18:48 | 收编 R5 漏收的 fig 占位回归测试（全历史零提交/非忽略，4691a7738 纯遗漏）；裁定收编双包 | test_build_output_fig.py ×2 | c7274879d | ~3k |
+| 18:58 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | 7→10 lines | ~198 |
+| 18:58 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | modified top_level_secs() | ~130 |
+| 18:58 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | 7→8 lines | ~136 |
+| 18:58 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | modified split_sections() | ~666 |
+| 18:58 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | expanded (+6 lines) | ~114 |
+| 18:59 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | expanded (+27 lines) | ~476 |
+| 18:59 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | modified getattr() | ~327 |
+| 18:59 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | modified _run() | ~230 |
+| 18:59 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | modified getattr() | ~91 |
+| 18:59 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | 3→5 lines | ~92 |
+| 19:00 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | modified test_unknown_stage_rc1_not_empty() | ~1392 |
+| 19:00 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | modified _refs_full() | ~136 |
+| 19:01 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | 120 → 40 | ~30 |
+| 19:03 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | modified test_per_section_writes_packs() | ~396 |
+| 19:03 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | modified test_per_section_report_id_pick() | ~144 |
+| 19:04 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | 3→3 lines | ~61 |
+| 19:04 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | 5→5 lines | ~50 |
+| 19:04 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | modified test_per_section_report_id_pick() | ~36 |
+| 19:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | 1→2 lines | ~111 |
+| 19:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~158 |
+| 19:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 1→2 lines | ~125 |
+| 19:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~35 |
+| 19:08 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 1→3 lines | ~63 |
+| 19:08 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | inline fix | ~58 |
+| 19:09 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 3→4 lines | ~68 |
+| 19:09 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 1→2 lines | ~54 |
+| 19:09 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_sample_fragments.py | modified test_per_section_report_id_pick() | ~34 |
+| 19:11 | Edited docs/develop-guides/changelog.md | modified feat() | ~500 |
+| 19:18 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | added 1 import(s) | ~41 |
+| 19:19 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | modified save() | ~498 |
+| 19:19 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | modified in() | ~74 |
+| 19:19 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | modified in() | ~128 |
+| 19:20 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | modified _state_lock() | ~62 |
+| 19:20 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_progress_state_lock.py | — | ~822 |
+
+## Session: 2026-11-03 19:23
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:25 | Edited docs/develop-guides/changelog.md | modified fix() | ~195 |
+| 19:30 | P3-11 progress.py 状态锁收尾：ruff E501 基线对映零新增（36/36 全 Δ38 偏移）、format 跳过（HEAD 本就不 clean）、双包+新测试同步 sync 1161 OK、既有 5 套件 26 用例回归绿、changelog v0.7.3 补条目、buglog 登记 bug-4208 | progress.py, test_progress_state_lock.py, changelog.md, buglog.json | 完成，待提交 | ~25k |

@@ -10983,5 +10983,23 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-11-03"
+  },
+  {
+    "id": "bug-4208",
+    "timestamp": "2026-11-03",
+    "error_message": "progress.py 同工作区并发 CLI（双线程/双会话）读-改-写丢更新——atomic replace 只防撕裂不防丢改，后写整文件覆盖先写（评审 P3-11）",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py",
+    "root_cause": "save() 的 os.replace 原子替换保证单次写不撕裂，但两进程各自读到同一旧快照后各写各的完整文件，后写覆盖先写，一方变更静默丢失",
+    "fix": "新增 _state_lock()：.progress.lock O_EXCL 独占创建写 pid；忙等 0.25s×60s 上限 SystemExit；残留锁 mtime>180s 经 os.replace 换名 .progress.lock.stale 原子接管留证；变更命令全程持锁 finally 释放；next/status 只读豁免；init 首跑 state 目录不存在返回 None",
+    "tags": [
+      "progress",
+      "concurrency",
+      "file-lock",
+      "lost-update",
+      "skills"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-03"
   }
 ]

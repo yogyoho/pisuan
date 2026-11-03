@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-03T04:52:51.710Z
-> Files: 24 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-03T11:25:58.352Z
+> Files: 30 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
@@ -202,6 +202,7 @@
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/
 
+- `SKILL.md` — 分章管线设计：docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md §3。 (~5103 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/references/stages/
 
@@ -217,6 +218,7 @@
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/
 
+- `SKILL.md` — pisuan 移植（2026-09-30）：运行时映射与改编范围见 (~6608 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/paradigms/
 
@@ -230,10 +232,14 @@
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/
 
 - `build_output.py` — coal-eia-report v2 — build_output.py：单次原子组装（步骤5–7）+ 章门（两层模型）。 (~17668 tok)
+- `progress.py` — coal-eia-report v2 — progress.py：两层状态机（章级门禁 × 节级派发，步骤4 控制器）。 (~16822 tok)
+- `sample_fragments.py` — 样例片段包生成器：stage + 章节 → samples_bank 同章真实切片（派发注入唯一参照来源，bug-4147）。 (~3831 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/
 
 - `test_depth_floor_projection.py` — 深度基线投影折算与真源统一测试（bug-4148/4149 + 评审 P0-1）： (~2223 tok)
+- `test_progress_state_lock.py` — 状态锁测试（bug P3-11）：变更命令互斥持锁/next·status 只读不持锁/崩溃残留超时接管/异常释放。 (~822 tok)
+- `test_sample_fragments.py` — 样例片段包测试（bug-4147）：主导报告选择 / 预算节标题截断 / 空章降级 rc=2 / 确定性。 (~4629 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/compliance-checker/
 
@@ -489,7 +495,7 @@
 
 ## docs/develop-guides/
 
-- `changelog.md` — 版本变更记录 (~43376 tok)
+- `changelog.md` — 版本变更记录 (~43744 tok)
 
 ## docs/intro/
 
