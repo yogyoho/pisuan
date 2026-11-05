@@ -1115,12 +1115,17 @@ def build_chapter(
     return raw_text, injected, rows, errors
 
 
-def run_chapter_gate(stage: dict, data_dir: Path, state_dir: Path, ch_id: str, targets: dict | None) -> None:
+def run_chapter_gate(
+    stage: dict, data_dir: Path, state_dir: Path, ch_id: str, targets: dict | None, *, emit_doc: bool = False
+) -> None:
     """--chapter 单章全门（两层模型改造点③：门对象 = 拼装章稿）。
 
     节级门（形状/节题/深度/槽位/残留）逐节跑 → 错误**归因到节**一行一节（OV#7）；
     章级门（章稿形状/章最小字符/L2 章地板）跑拼装注入稿；L2 FAIL 附节级 eff 明细
     （由低到高——修复派发直达最薄节）。不产交付物、不写 progress.json（唯一写者=progress.py）。
+    emit_doc=True：PASS 后把注入章稿原子写 <工作区>/章稿/第N章-{章名}.md（章级成稿文档，
+    FAIL 不写盘）——以真跑章门 PASS 为唯一凭据；该文档落工作区章稿目录，非 outputs/
+    交付物，不受交付名门约束（章稿目录唯一写者 = 本参数）。
     PASS 打 CHAPTER_GATE_PASS 行（eff/地板/节计数——mark VERIFIED 与重派决策的数据面）。
     ABSENT 章 → CHAPTER_GATE_SKIP（门/组装同语义跳过，rc=0）。
     """
@@ -1179,6 +1184,25 @@ def run_chapter_gate(stage: dict, data_dir: Path, state_dir: Path, ch_id: str, t
         f"CHAPTER_GATE_PASS: {ch_id} sections {len(rows)}/{len(stage_secs)}"
         f"（ABSENT 豁免 {n_absent}）eff {eff} ≥ 章地板 {floor}（{src_desc}）"
     )
+    if emit_doc:
+        doc_path = _chapter_doc_path(stage, state_dir, ch_id)
+        doc_path.parent.mkdir(parents=True, exist_ok=True)
+        changed = atomic_write(doc_path, injected)
+        print(f"EMIT_DOC_OK: {doc_path}" + ("" if changed else "（内容未变化，未重写）"))
+
+
+_DOC_UNSAFE_RE = re.compile(r'[/\\:*?"<>|\r\n\t]+')
+
+
+def _chapter_doc_path(stage: dict, state_dir: Path, ch_id: str) -> Path:
+    """章级成稿文档路径：<工作区根>/章稿/第N章-{章名}.md（工作区根 = state_dir.parent）。
+
+    章名取 stage chapters[chN].title，过文件系统安全化（剔除路径/保留中文）；
+    title 缺失退化为 ch_id。章号取 ch_id 数字段（ch3 → 第3章）。
+    """
+    title = _DOC_UNSAFE_RE.sub("", str(stage["chapters"][ch_id].get("title") or "")).strip() or ch_id
+    no = ch_id[2:] if ch_id[2:].isdigit() else ch_id
+    return state_dir.parent / "章稿" / f"第{no}章-{title}.md"
 
 
 def atomic_write(path: Path, content: str) -> bool:
@@ -1323,6 +1347,11 @@ def main() -> int:
     )
     p.add_argument("--chapter", help="单章门模式：拼装该章节稿过全门（ch_id 如 ch6），不产交付物/不写 progress.json")
     p.add_argument(
+        "--emit-doc",
+        action="store_true",
+        help="与 --chapter 连用：章门 PASS 后把注入章稿原子写 <工作区>/章稿/第N章-{章名}.md（章级成稿文档，FAIL 不写盘）",
+    )
+    p.add_argument(
         "--allow-partial",
         action="store_true",
         help="分级交付：progress.json 已批准的 BLOCKED 章跳过 L2 章地板门（节级/目录/槽位门仍在场），manifest 留痕",
@@ -1332,6 +1361,9 @@ def main() -> int:
     if args.chapter and (args.output or args.allow_partial):
         print("[build] --chapter 与 --output/--allow-partial 互斥（单章门不产交付物）", file=sys.stderr)
         return EXIT_ERROR
+    if args.emit_doc and not args.chapter:
+        print("[build] --emit-doc 需与 --chapter 连用（章级成稿文档以章门 PASS 为唯一凭据）", file=sys.stderr)
+        return EXIT_ERROR
     if not args.chapter and not args.output:
         print("[build] 需要 --output（或用 --chapter 走单章门）", file=sys.stderr)
         return EXIT_ERROR
@@ -1339,7 +1371,9 @@ def main() -> int:
         stage = json.loads(Path(args.stage).read_text(encoding="utf-8"))
         targets, targets_src = resolve_targets(args.targets, Path(args.stage), data_dir=Path(args.data_dir))
         if args.chapter:
-            run_chapter_gate(stage, Path(args.data_dir), Path(args.state_dir), args.chapter, targets)
+            run_chapter_gate(
+                stage, Path(args.data_dir), Path(args.state_dir), args.chapter, targets, emit_doc=args.emit_doc
+            )
             return EXIT_OK
         # ── bug-2223 交付名门：文件名规范 + outputs/ 无管线外散文件 ──
         out_path = Path(args.output)
