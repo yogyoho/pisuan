@@ -133,7 +133,7 @@ def save(state_dir: Path, doc: dict) -> None:
 # 建议锁（bug P3-11）：同工作区并发 CLI（双线程/双会话）的读-改-写会丢更新——atomic replace
 # 只防撕裂不防丢改（两进程读到同一旧态各写各的，后写覆盖先写）。变更命令全程持锁串行化；
 # next/status 只读（读到的恒为某次原子写的完整快照）不持锁。
-LOCK_WAIT_SEC = 60    # 锁被占忙等上限（gate 批量门持锁可到分钟级；普通命令毫秒级让出）
+LOCK_WAIT_SEC = 60  # 锁被占忙等上限（gate 批量门持锁可到分钟级；普通命令毫秒级让出）
 LOCK_STALE_SEC = 180  # 崩溃残留锁接管阈值（持锁进程死亡残留，超此时长可接管留证）
 
 
@@ -278,6 +278,13 @@ def next_action(doc: dict, state_dir: Path) -> str:
         lines += [
             f"[NEXT] 按波派发: {c}（PENDING，wave1 独立章；节级派发，D9 粒度分层）",
             "动作: 按 SKILL.md 步骤4 派发契约组装 prompt（stage sections 要素链+范文索引+节级深度目标），batch_task 分波派子代理直写 state/sections/<节id>.md（每波 5–10 节）",
+            "取件: sample_fragments.py --stage <stage> --chapter "
+            + c
+            + " --out state/sample_fragments_"
+            + c
+            + ".md（主导报告章包，每章首波派发前一次；rc=2 无切片如实告知）→ "
+            "--per-section --out-dir state/fragment_packs/" + c + " 节级切包（bug P1-5）——"
+            "派发每节注入对应节包，节包缺失退章包，均缺退范式文档",
             "约束: 每轮 ≤3 个并发 task()（超发被运行时静默丢弃）；子代理只回 ≤10 行摘要（含本节要点）",
             f"记账（批量原语，节粒度禁逐节单发——bug-3048）: progress.py mark --sections {','.join(ps[:5])}{'…' if len(ps) > 5 else ''} DRAFTED --state-dir {sd}",
             f"收口: 波内节稿拼章稿 state/chapters/{c}.md → mark {c} DRAFTED → gate（PASS 章与其全部节自动转 VERIFIED）",
@@ -431,12 +438,17 @@ def next_action_chapter(doc: dict, state_dir: Path) -> str:
                 "动作: ① 本章资料汇集（首章门1 全局包 `ingest.py check --global-only`，后续章冻结层已在）→ ② 模板推荐（按范式角色查 references/paradigms/roles/<stage>.json + 模板库，呈用户可跳过）→ ③ batch_task 分波派发子代理直写节稿（派发契约同 full：stage sections 要素链+范文索引+节级深度目标）",
                 "派发前置（② 后 ③ 前必做）: sample_fragments.py --stage <stage> --chapter "
                 + current
-                + " --candidates 3 --out state/sample_candidates_"
+                + " --candidates 3 --out state/candidates_"
                 + current
-                + ".json 列 3 份同类范例候选，呈用户挑选（编号选定或『不用范例』，业务语体呈现）→ "
+                + ".json --content-dir state/candidates_content_"
+                + current
+                + " 列 3 份同类范例候选（整章原文逐份落盘供用户通读），"
+                "呈用户挑选（全文文件卡+脱敏挑选卡，编号选定或『不用范例』，业务语体呈现）→ "
                 + _self_cmd("fragment-choice", current, "--report-id", "<选定id>|--none", "--state-dir", sd)
-                + "；无 choice 禁派发（红线 P13）；选定后 sample_fragments.py --report-id <id> 取章包，"
-                + "再 --per-section --out-dir state/fragment_packs_"
+                + "；无 choice 禁派发（红线 P13）；选定后 sample_fragments.py --report-id <id> --out "
+                "state/sample_fragments_"
+                + current
+                + ".md 取章包，再 --per-section --out-dir state/fragment_packs/"
                 + current
                 + " 按节切包（bug P1-5）——派发每节注入对应节包，节包缺失退章包",
                 f"USER_MESSAGE: 正在收集{_ch_label(doc, current)}的资料与同类报告范例，"
@@ -448,7 +460,7 @@ def next_action_chapter(doc: dict, state_dir: Path) -> str:
             lines += [
                 "动作: ① 本章资料汇集（首章门1 全局包 `ingest.py check --global-only`，后续章冻结层已在）→ ② 模板推荐（按范式角色查 references/paradigms/roles/<stage>.json + 模板库，呈用户可跳过）→ ③ batch_task 分波派发子代理直写节稿（派发契约同 full：stage sections 要素链+范文索引+节级深度目标）",
                 f"范例: 已选定 {'不用范例（派发契约如实注明用户选择）' if rid is None else rid}——③ 派发契约注入 sample_fragments 对应节包"
-                f"（state/fragment_packs_{current}/<样例节号>.md，缺失退章包）与计划卡"
+                f"（state/fragment_packs/{current}/<样例节号>.md，缺失退章包）与计划卡"
                 f"（state/plan_{current}.json 的要点与用户补充意见，写作须回扣）",
                 (
                     f"USER_MESSAGE: 正在组织编写{_ch_label(doc, current)}，将以您选定的范例为参照；编写期间无需您操作。"
@@ -710,10 +722,7 @@ def cmd_mark(args: argparse.Namespace) -> int:
         # COLLECTING 分支只在 PENDING 态给卡点提示，状态乱序（重试/上下文丢失后补 mark/
         # 并行线程）会让提示蒸发——硬校验兜底。plan-confirm/fragment-choice 幂等覆盖，
         # 补卡后重试即可；--none 是合法「不用范例」豁免（同样落账）。
-        missing = [
-            n for n in (f"plan_{ch_id}.json", f"fragment_choice_{ch_id}.json")
-            if not (state_dir / n).exists()
-        ]
+        missing = [n for n in (f"plan_{ch_id}.json", f"fragment_choice_{ch_id}.json") if not (state_dir / n).exists()]
         if missing:
             print(
                 f"[progress] {ch_id} 双卡凭据缺失: {', '.join(missing)}"
@@ -831,9 +840,9 @@ def cmd_gate(args: argparse.Namespace) -> int:
         # P0-3 双卡凭据守卫（防绕过 mark 直接跑门）：缺凭据章说明状态乱序（PENDING 章不该
         # 出现在门的待跑列表），快速失败整批拒——与 mark 同语义，补卡后重跑。
         no_cred = [
-            ch for ch in wanted
-            if not (state_dir / f"plan_{ch}.json").exists()
-            or not (state_dir / f"fragment_choice_{ch}.json").exists()
+            ch
+            for ch in wanted
+            if not (state_dir / f"plan_{ch}.json").exists() or not (state_dir / f"fragment_choice_{ch}.json").exists()
         ]
         if no_cred:
             for ch in no_cred:

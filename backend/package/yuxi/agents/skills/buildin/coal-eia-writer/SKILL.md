@@ -136,6 +136,8 @@ progress.py run-stage freeze --state-dir T   # 冻结二连一次 bash：chapter
 
 **4.0.5 每章开写说明（非停车）**：每章首波派发前 `briefing.py chapter --stage S --chapter chN --out T/state/brief_chN.md`（rc=0=BRIEF_CHAPTER_OK）经 `present_artifacts` 呈《第N章编写说明》文件卡——含本章定位与前后章衔接、标准规范（中文名+作用）、计算说明、资料清单、**各节写法注记**。此后每节稿呈现时，头部先贴该节注记原文（取自本文件「各节写法注记」块，照贴禁改写；文件缺失时按同口径自拟：依据标准/用到资料与计算/上下文衔接，≤3 句）。
 
+**4.0.6 范例取件（非停车）**：每章首波派发前取本章写作参照片段包（与 4.0.5 同轮完成）——`sample_fragments.py --stage S --chapter chN --out T/state/sample_fragments_chN.md`（主导报告整章切片章包，rc=0=SAMPLE_FRAGMENTS_OK）→ `sample_fragments.py --stage S --chapter chN --per-section --out-dir T/state/fragment_packs/chN`（按样例章 ### 节级逐节切包 `<节号>.md`，bug P1-5——4.1 派发契约每节注入对应节包，节包缺失退章包，均缺退范式文档）。rc=2=样例库无本章切片或切不出节 → 一句业务语体告知「本章暂无同类报告范例，按内置标准写法编写」，不停车。范文数值/实体禁入正文（4.1 契约红线与 `sample_entities` 禁入清单把守）。
+
 **4.1 派发契约**（每 PENDING 章按波一次；重派=原 prompt 原文 + 门 stderr 原文，**不重新组装**——防逐次漂移）：
 
 ```
@@ -268,6 +270,8 @@ run 级预算硬顶（按 run 计）：recursion_limit 1000 步、LoopDetection 
 | `progress.py confirm-key-points --state-dir T` | 要点包已经用户单表单确认（解锁投影章） | 0 |
 | `progress.py approve-downgrade --state-dir T --chapters ch3,ch8 --note "…"` | 用户批准降档留痕（--allow-partial 放行凭据） | 0 / 1 未知章 |
 | `progress.py delivered --sections ch1_S01,ch1_S02 --wave N --state-dir T` | 交付子代理按波回执 delivered（仅 VERIFIED 节；幂等） | 0=DELIVERED_BATCH |
+| `sample_fragments.py --stage S --chapter chN --out T/state/sample_fragments_chN.md` | **范例章包（4.0.6 每章首波派发前）**：主导报告整章切片，派发注入写作参照（4.1 契约） | 0=SAMPLE_FRAGMENTS_OK / 2 无切片（一句业务语体告知，降级范式文档）/ 1 参数错误 |
+| `sample_fragments.py --stage S --chapter chN --per-section --out-dir T/state/fragment_packs/chN` | **范例节包（bug P1-5）**：按样例章 ### 节级逐节切包 `<节号>.md`（每节派发注入对应节包；缺失退章包） | 0 节包落盘 / 2 切不出节（节级退章包）/ 1 参数错误 |
 | `consistency.py --report R --data-dir D --stage S --state F --standards IDX --contracts CT --output C` | geo 四类合约 + 环评注册表门（条件激活/表格感知/口径标签/呼应义务） | 0 / 1 fail>0 / 2 manual>0 / 3 warn>0（skip 不计） |
 | `mapping.py bind --tree tree.json --stage S --output state/mapping.json` | **门 1 前章树绑定**（节序+标题一致性核对；不一致不落盘） | 0 / 1 用法·形状 / 2 不一致需人工 |
 | `mapping.py check --mapping M --tree tree.json [--stage S]` | 复核已落绑定（UUID 双射；+stage 全量复核） | 0 / 1 / 2 绑定失效 |

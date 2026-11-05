@@ -17,7 +17,7 @@
 CLI 用法：
     python sample_fragments.py --stage planning_eia --chapter ch2 --out state/sample_fragments_ch2.md
     python sample_fragments.py --stage planning_eia --chapter ch2 --candidates 3 \
-        --out state/sample_candidates_ch2.json --content-dir state/candidates_content_ch2
+        --out state/candidates_ch2.json --content-dir state/candidates_content_ch2
     python sample_fragments.py --stage planning_eia --chapter ch2 --report-id 2201 --out state/sample_fragments_ch2.md
     python sample_fragments.py --stage planning_eia --chapter ch2 --report-id 2201 \
         --per-section --out-dir state/fragment_packs/ch2   # 按 ### 节级逐节切包（bug P1-5：每节派发注入对应节包）
