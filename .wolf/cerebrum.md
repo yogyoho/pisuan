@@ -2173,3 +2173,12 @@
 
 - [2026-11-04] 计划文档断言 grep 层级写错（outline 章标题是 `### 第N章「title」` 不是 `## 第`）——冒烟断言先看产物实际格式再 grep。
 - [2026-11-04] fixture state 文件名必须与 cmd 读取路径一致（formula_state.json），写 fs.json 会 FileNotFoundError 假红。
+
+### DNR（2026-11-04 冒烟诊断追加）
+- **探针必须打对容器**：`/home/gem/*` 只存在于沙箱容器（provisioner 动态创建/回收），api 容器没有该路径——`docker exec api-1 ls /home/gem/...` 必然 No such file，与沙箱无关。验证沙箱文件面：按 provisioner 挂载源起一次性容器 bind mount 验证，或抓住活跃沙箱容器 exec。
+- **沙箱技能挂载链**（已实证）：provisioner（docker/sandbox_provisioner/app.py）env `DOCKER_SKILL_PROJECTIONS_HOST_PATH` 为空时从 api 容器 `/app/skill-projections` 挂载源推导宿主路径（Windows 盘符转 `/run/desktop/mnt/host/c/...`），bind mount `projections/<uid>` → 沙箱 `/home/gem/skills`，实时可见；挂载过期强制重建沙箱（app.py:1032,1220）。
+
+### Key Learnings（2026-11-04 冒烟追加：占位符两层模型）
+- **coal-eia 管线占位符两层设计**：节稿/拼章稿（state/sections/、state/chapters/）含 `{{SLOT:族.键}}`/`{{TABLE:族}}` 是**设计内**——数据纪律「数字不经过LLM」；注入发生在章门（run_chapter_gate 用 make_inject 重新拼装注入）与全书组装（build_output --output）时，SL1 门要求注入稿残留=0。`{{FIG:图名}}` 唯一合法保留到交付稿（R5 插图占位）。
+- **VERIFIED 状态不可手动 mark**（bug-3049）：唯一通道 `progress.py gate` 真跑章门 rc=0 自动回写——progress.json 里 VERIFIED/PASS 即真门凭据。
+- **chapters/chX.md 是无注入拼章稿**（agent 手工收口产物），章门不读它——用户在对话里看到它带占位符属呈报层体验问题，非管线缺陷。

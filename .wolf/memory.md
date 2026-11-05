@@ -9212,3 +9212,21 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 01:57 | T8 chapter-writer SKILL.md 五触点接线提交（f39ed311e） | chapter-writer SKILL.md | 锚点全中 | ~0.9k |
 | 02:00 | T9 沙箱两面部署 + SKILL.md 补拷三面 + hengcheng-ch3 真数据冒烟（13 章全链/真实冻结值/未完成段） | skill-sources, projections | 四面哈希一致 | ~1.1k |
 | 02:03 | T10 changelog + cerebrum/memory 簿记 | changelog.md, cerebrum.md | 完成 | ~0.8k |
+| 01:43 | Session end: 13 writes across 3 files (briefing.py, SKILL.md, changelog.md) | 3 reads | ~17816 tok |
+
+## Session: 2026-11-04 08:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:40 | 冒烟缺陷调查反转：沙箱缺 briefing.py 系误报（探针打错容器：api 无 /home/gem；provisioner bind mount projections/admin→/home/gem/skills 实证可见） | docker/sandbox_provisioner/app.py + throwaway mount test | 部署链四面一致无缺陷 | 12k |
+| 20:13 | Created docs/vibe/2026-11-05-chapter-doc-delivery.md | — | ~671 |
+| 20:14 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/build_output.py | 1→6 lines | ~73 |
+| 20:14 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/build_output.py | modified and() | ~97 |
+| 20:14 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/build_output.py | 3→3 lines | ~51 |
+| 20:15 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/build_output.py | modified run_chapter_gate() | ~179 |
+| 20:15 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/build_output.py | modified _chapter_doc_path() | ~271 |
+| 20:18 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/tests/test_emit_chapter_doc.py | — | ~1214 |
+| 20:20 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/build_output.py | modified run_chapter_gate() | ~41 |
+| 20:22 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~220 |
+| 20:22 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 6→8 lines | ~186 |
+| 20:31 | Edited docs/develop-guides/changelog.md | modified feat() | ~216 |
