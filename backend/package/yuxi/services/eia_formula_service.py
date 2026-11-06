@@ -115,9 +115,12 @@ class EiaFormulaService:
         }
 
     async def set_input_value(
-        self, formula_id: str, input_name: str, value: str, note: str | None, username: str
+        self, formula_id: str, input_name: str, value: Any, note: str | None, username: str
     ) -> dict[str, Any]:
-        """参考值裁决落库（同键覆盖）；锚点寻址校验先行。"""
+        """参考值裁决落库（同键覆盖）；锚点寻址校验先行。
+
+        value 接受 JSON 标量：数字/布尔统一 json.dumps 成 JSON 字面量文本入库
+        （TEXT 存储契约不变），导出侧 _normalize_value 解析保型回填。"""
         doc = json.loads(_load_formulas_text())
         formula = next((f for f in doc.get("formulas", []) if f["id"] == formula_id), None)
         if formula is None:
@@ -127,8 +130,12 @@ class EiaFormulaService:
             raise KeyError(f"未知参数: {formula_id}.{input_name}")
         if inp.get("type") != "user_input":
             raise ValueError(f"仅 user_input 参数可设参考值: {input_name}({inp.get('type')})")
-        if not value or not value.strip():
+        if value is None or (isinstance(value, str) and not value.strip()):
             raise ValueError("参考值不能为空")
+        if not isinstance(value, str):
+            value = json.dumps(value, ensure_ascii=False)
+        else:
+            value = value.strip()
 
         row = await self.repo.upsert_override(formula_id, input_name, value, note, username)
         logger.info(f"[eia-formula] 参考值裁决 {formula_id}.{input_name} = {value!r}（by {username}）")

@@ -140,6 +140,23 @@ async def test_set_input_value_upserts_and_validates(formulas_file):
 
 
 @pytest.mark.asyncio
+async def test_set_input_value_accepts_json_scalars(formulas_file):
+    """数字/布尔标量走查回归（bug-4218）：API 直传数值不再 AttributeError 500，
+    统一 json.dumps 成 JSON 字面量文本入库（TEXT 契约不变，导出保型回填）。"""
+    repo = _FakeRepo()
+    await _svc(repo).set_input_value("subsidence_max", "q", 0.65, None, "admin")
+    await _svc(repo).set_input_value("subsidence_max", "b", True, None, "admin")
+    await _svc(repo).set_input_value("subsidence_max", "q", " 0.7 ", None, "admin")
+    assert repo.upserts == [
+        ("subsidence_max", "q", "0.65", None, "admin"),
+        ("subsidence_max", "b", "true", None, "admin"),
+        ("subsidence_max", "q", "0.7", None, "admin"),
+    ]
+    with pytest.raises(ValueError, match="参考值不能为空"):
+        await _svc(_FakeRepo()).set_input_value("subsidence_max", "q", None, None, "admin")
+
+
+@pytest.mark.asyncio
 async def test_export_splices_value_into_target_line_only(formulas_file):
     repo = _FakeRepo([_row()])
     out = await _svc(repo).export_formulas("admin")
