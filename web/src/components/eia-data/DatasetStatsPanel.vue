@@ -366,10 +366,15 @@ const goLexicon = () => router.push('/domain-factory/eia-data/lexicon')
 
 // 体检项「去处理」锚点（原型 s8）：有真实运营入口的项直达；空标题/乱码标题属语料清洗批次，无页可去不加锚
 const QUALITY_ACTIONS = {
-  standards_verify: { type: 'route', to: '/domain-factory/eia-data/standards' },
-  unmapped_pool: { type: 'unmapped' },
-  attachment_insufficient: { type: 'drawer', key: 'attachment_checklist', name: '附件核对清单' },
-  meta_annotation_coverage: { type: 'route', to: '/domain-factory/eia-data/meta' }
+  standards_verify: { type: 'route', to: '/domain-factory/eia-data/standards', label: '进入标准与限值库' },
+  unmapped_pool: { type: 'unmapped', label: '查看未归并明细' },
+  attachment_insufficient: {
+    type: 'drawer',
+    key: 'attachment_checklist',
+    name: '附件核对清单',
+    label: '查看附件核对清单'
+  },
+  meta_annotation_coverage: { type: 'route', to: '/domain-factory/eia-data/meta', label: '进入元数据标注' }
 }
 const qualityAction = (key) => QUALITY_ACTIONS[key]
 const runQualityAction = (q) => {
