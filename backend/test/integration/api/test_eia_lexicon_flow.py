@@ -1,8 +1,10 @@
 """eia_lexicon 全链路集成测试：导入幂等 → 确认流 → 拆分 → 导出物化 → 开关闭环。
 
 依赖：PG（test_client fixture）+ 仓库内置 coal-eia-writer 语料（宿主无技能目录时跳过）。
-自清理：前后删除 eia_lexicon_entries / eia_dataset_switches 行并移除 overrides 文件，
-测试绝不污染运行库与技能目录。
+关键隔离（bug-4217）：运行库为共享生产库，此前「前后裸 delete 全表 + 删物化文件」曾把
+运营词表整体抹掉——autouse fixture 在用例 skip 时同样执行，裸 wipe 不可接受。现改为
+行级/字节级快照恢复：测试前整表快照 + 文件字节快照，清理后原样回灌；导出侧的 refs-repo
+git 链与重编译排队同样不打真实共享态（用例内 monkeypatch，见 test_lexicon_full_flow）。
 """
 
 from __future__ import annotations
@@ -24,11 +26,19 @@ EXPORT_PATH = "/api/domain-factory/eia/lexicon/export"
 
 @pytest.fixture(autouse=True)
 async def _clean_lexicon_state():
-    """前后清理：词表行、开关行、物化文件。"""
+    """快照 → 清理 → 测试 → 回灌（bug-4217：运行库为共享库，禁止裸 wipe）。"""
     from sqlalchemy import delete
 
     from yuxi.storage.postgres.manager import pg_manager
     from yuxi.storage.postgres.models_domain_factory import EiaDatasetSwitch, EiaLexiconEntry
+
+    from test.integration.services._flow_isolation import restore_rows, snapshot_rows
+
+    pg_manager.initialize()  # 幂等；pytest-asyncio 函数级 loop 不容模块级 async fixture
+
+    saved_entries = await snapshot_rows(EiaLexiconEntry)
+    saved_switches = await snapshot_rows(EiaDatasetSwitch)
+    overrides_snapshot = OVERRIDES_PATH.read_bytes() if OVERRIDES_PATH.is_file() else None
 
     async def _wipe():
         async with pg_manager.get_async_session_context() as session:
@@ -36,12 +46,15 @@ async def _clean_lexicon_state():
             await session.execute(delete(EiaDatasetSwitch))
 
     await _wipe()
-    if OVERRIDES_PATH.is_file():
-        OVERRIDES_PATH.unlink()
+    OVERRIDES_PATH.unlink(missing_ok=True)
     yield
     await _wipe()
-    if OVERRIDES_PATH.is_file():
-        OVERRIDES_PATH.unlink()
+    if overrides_snapshot is None:
+        OVERRIDES_PATH.unlink(missing_ok=True)
+    else:
+        OVERRIDES_PATH.write_bytes(overrides_snapshot)
+    await restore_rows(EiaLexiconEntry, saved_entries)
+    await restore_rows(EiaDatasetSwitch, saved_switches)
 
 
 async def test_lexicon_requires_auth(test_client):
@@ -50,10 +63,22 @@ async def test_lexicon_requires_auth(test_client):
     assert (await test_client.post(IMPORT_PATH)).status_code == 401
 
 
-async def test_lexicon_full_flow(test_client, admin_headers):
+async def test_lexicon_full_flow(test_client, admin_headers, monkeypatch):
     """导入幂等 → 状态分布 → PATCH 状态机 → 拆分 → 导出物化 → 开关闭环。"""
     if not _skill_root_exists():
         pytest.skip("coal-eia-writer 技能目录不存在")
+
+    # 共享态隔离：导出不抄送 refs-repo git、重编译排队不打真实任务（同服务层测试口径）
+    monkeypatch.delenv("REFS_REPO_WORKTREE", raising=False)
+    from types import SimpleNamespace
+
+    from yuxi.services.task_service import tasker
+
+    monkeypatch.setattr(
+        tasker,
+        "enqueue_unique_by_payload",
+        lambda *a, **k: (SimpleNamespace(id="test-suppressed"), True),
+    )
 
     # 1) 导入幂等：二次导入零新增（绝不覆盖人工决策）
     r1 = (await test_client.post(IMPORT_PATH, headers=admin_headers)).json()
