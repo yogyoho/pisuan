@@ -11175,5 +11175,23 @@
     ],
     "occurrences": 4,
     "last_seen": "2026-11-06T23:59:00+08:00"
-  }
+  },
+{
+  "id": "bug-4218",
+  "timestamp": "2026-11-06T18:40:00+08:00",
+  "error_message": "PUT /eia/formulas/{fid}/inputs/{name} 传数值标量 500：保存参数参考值失败: 'float' object has no attribute 'strip'（eia_formula_service.py:130）",
+  "file": "backend/package/yuxi/services/eia_formula_service.py",
+  "root_cause": "set_input_value 假定 value 恒为 str 直接 .strip()——路由模型对 value 不做 str 强转（JSON 标量原样透传），API 直传数值 0.123 / 布尔 true 即 AttributeError 500；formulas tab 参考值裁决对数值输入完全不可用（11 tab 走查写链批实测发现）",
+  "fix": "set_input_value 签名 value: Any：空值守卫（None 或空白字符串抛『参考值不能为空』）后，非字符串 JSON 标量统一 json.dumps 成 JSON 字面量文本入库（TEXT 存储契约不变），字符串仍 strip；导出侧 _normalize_value 既有 json.loads 保型回填（'0.123'→0.123、'true'→true）天然兼容零改动。验证：单测 test_set_input_value_accepts_json_scalars（0.65/true/' 0.7 ' 三形态 upsert 断言 + None 守卫）容器 7/7；localized 栈 F 链 PUT 0.123/true 均 200、GET pending=True、DELETE×2 撤清表 0 行零净差。运维注意：api 容器 uvicorn --reload（watchfiles）收不到 Windows bind mount 写入事件，sync-dev 后须 docker restart pisuan-localized-api-1（前端 Vite 轮询热载不受影响）",
+  "tags": [
+    "domain-factory",
+    "eia-formulas",
+    "type-assumption",
+    "api-500",
+    "json-scalar"
+  ],
+  "related_bugs": [],
+  "occurrences": 1,
+  "last_seen": "2026-11-06T18:40:00+08:00"
+}
 ]

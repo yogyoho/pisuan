@@ -1,16 +1,18 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-03T17:41:30.096Z
-> Files: 7 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-06T10:40:24.402Z
+> Files: 20 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../Users/Lenovo/.claude/plans/
 
 
 ## ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/
 
+- `localhost-5173-is-localized-stack.md` (~371 tok)
 
 ## ../../Users/Lenovo/AppData/Local/Temp/
 
+- `fill_yining_csvs.py` — Fill Yining ch3 data-request CSVs (test data, C route). (~1545 tok)
 
 ## ../../Users/Lenovo/AppData/Local/Temp/claude/
 
@@ -200,23 +202,25 @@
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/
 
-- `SKILL.md` — 分章管线设计：docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md §3。 (~5183 tok)
+- `SKILL.md` — 分章管线设计：docs/superpowers/specs/2026-10-24-chapter-writer-reviewer-design.md §3。 (~5326 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/references/stages/
 
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/
 
+- `build_output.py` — coal-eia-report v2 — build_output.py：单次原子组装（步骤5–7）+ 章门（两层模型）。 (~18002 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/tests/
 
+- `test_emit_chapter_doc.py` — 章级成稿文档（--emit-doc）测试：门 PASS 凭据写盘 / FAIL 不写盘 / 文件名安全化 / 幂等。 (~1214 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-reviewer/
 
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/
 
-- `SKILL.md` — pisuan 移植（2026-09-30）：运行时映射与改编范围见 (~6591 tok)
+- `SKILL.md` — pisuan 移植（2026-09-30）：运行时映射与改编范围见 (~6803 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/paradigms/
 
@@ -230,10 +234,13 @@
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/
 
 - `briefing.py` — Agent 业务内容简报渲染器（交互体验重塑 2026-11-04，docs/vibe/2026-11-04-agent-briefing-layer.md）。 (~5208 tok)
+- `progress.py` — coal-eia-report v2 — progress.py：两层状态机（章级门禁 × 节级派发，步骤4 控制器）。 (~17886 tok)
+- `sample_fragments.py` — 样例片段包生成器：stage + 章节 → samples_bank 同章真实切片（派发注入唯一参照来源，bug-4147）。 (~3835 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/
 
 - `test_briefing.py` — briefing 渲染器测试：outline/chapter/data-request/calc-summary 四子命令。 (~2817 tok)
+- `test_progress_guidance_paths.py` — progress.py next 指引路径口径回归（bug-4213）：COLLECTING 两分支（无 choice/已选）指引的 (~526 tok)
 
 ## backend/package/yuxi/agents/skills/buildin/compliance-checker/
 
@@ -321,6 +328,7 @@
 
 ## backend/package/yuxi/services/
 
+- `eia_formula_service.py` — 环评 formulas 参数参考值编辑服务（P3-1：DB 覆盖唯一真相 + 显式导出物化 formulas.json）。 (~2356 tok)
 
 ## backend/package/yuxi/services/skills/
 
@@ -378,6 +386,7 @@
 
 ## backend/test/integration/api/
 
+- `test_eia_lexicon_flow.py` — eia_lexicon 全链路集成测试：导入幂等 → 确认流 → 拆分 → 导出物化 → 开关闭环。 (~1848 tok)
 
 ## backend/test/integration/services/
 
@@ -429,6 +438,7 @@
 
 ## backend/test/unit/services/
 
+- `test_eia_formula_service.py` — EiaFormulaService 单测（P3-1：formulas 参数参考值 DB 覆盖 + 文本级导出物化）。 (~2370 tok)
 
 ## backend/test/unit/services/skills/
 
@@ -474,7 +484,7 @@
 
 ## docs/develop-guides/
 
-- `changelog.md` — 版本变更记录 (~44551 tok)
+- `changelog.md` — 版本变更记录 (~45494 tok)
 
 ## docs/intro/
 
@@ -489,6 +499,8 @@
 ## docs/vibe/
 
 - `2026-11-04-agent-briefing-layer.md` — Agent 交互体验重塑：业务内容分层渲染层（briefing 层） (~1398 tok)
+- `2026-11-05-chapter-doc-delivery.md` — 章级交付文档与用户可选合并（2026-11-05） (~629 tok)
+- `2026-11-05-template-recommendation-fix.md` — 段落模板推荐口径统一与 writer 范例链接线（2026-11-05） (~536 tok)
 
 ## docs/vibe/assets/2026-09-30-coal-eia-v2-port/
 
@@ -531,6 +543,7 @@
 
 ## web/src/components/eia-data/
 
+- `DatasetStatsPanel.vue` — Vue component (~8712 tok)
 
 ## web/src/components/factory-core/
 

@@ -212,6 +212,8 @@
 - (2026-11-02) meta 流测试 test_meta_full_flow 在 HEAD 即红（bug-4196 预存在漂移）：跑 eia 流测试先看此基线，勿误归因新改动。
 
 ## Do-Not-Repeat
+- [2026-11-06] 后端 Python 改动的「热重载」在 localized api 容器不成立：uvicorn --reload 的 watchfiles 用 inotify，收不到 Windows 侧 bind mount 写入事件（sync-dev 完成提示「容器热重载即会生效」只对前端 Vite 轮询成立）——sync-dev 后须 docker restart pisuan-localized-api-1 再验证，否则单测绿了实栈仍旧代码（bug-4218 验证时踩中：容器文件已含修复、PUT 仍 500 旧报错）。
+
 - [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 
 - [2026-10-31] 技能脚本改动部署链是四层，sync-dev 只盖第一层：①repo 双包（源）→②localized backend 挂载层（sync-dev walker 覆盖）→③volumes/pisuan/skill-sources/shared（随②再生，实测自动跟上）→④volumes/pisuan/skill-projections/<user>（**沙箱实际装载源，sync-dev 不覆盖、不自动再生，必须手工 cp**）。漏④的后果：新线程沙箱拿旧脚本，守卫/修复看似部署实则未生效——bug-4172 部署时实测踩中。验证法：grep 特征串逐层计数 + 对比行号。
@@ -2576,7 +2578,7 @@
 
 ## Do-Not-Repeat (2026-11-06 bug-4217 清库事故)
 
-- **禁止再跑 `backend/test/integration/api/test_eia_*_flow.py`（两树都是）**：autouse `_clean_lexicon_state` fixture 对共享运行库裸 DELETE 全表（eia_lexicon_entries/eia_dataset_switches）+ unlink 包树 overrides 文件，即使测试因缺 TEST_USERNAME/TEST_PASSWORD 被 skip，fixture 仍执行。bug-4198 修复只盖 integration/services/ 族，API 族从未移植快照恢复。跑前必须先修 fixture。
+- **禁止再跑 `backend/test/integration/api/test_eia_*_flow.py`（两树都是）**：autouse `_clean_lexicon_state` fixture 对共享运行库裸 DELETE 全表（eia_lexicon_entries/eia_dataset_switches）+ unlink 包树 overrides 文件，即使测试因缺 TEST_USERNAME/TEST_PASSWORD 被 skip，fixture 仍执行。bug-4198 修复只盖 integration/services/ 族，API 族从未移植快照恢复。【已修 2026-11-06 dc45c20c6：fixture 快照恢复 + full-flow 用例 delenv REFS_REPO_WORKTREE + tasker 桩，integration/api 全目录跑前跑后指纹逐项相等，可安全重跑；其余 api 目录 fixture 普查确认零共享表破坏面】
 - 容器内长跑 python 遇 `error connecting in 'pool-1'` 挂死时：TaskStop 只杀宿主客户端，容器侧 `python -` 进程残留并持续占 postgres 连接（idle 可累积到 30），必须 `docker exec sh -c "ps aux | grep 'python -'"` 找 PID kill -9；恢复类数据操作优先 psql 直连（`-U postgres -d yuxi_know`），不走容器 python。
 
 ## Key Learnings (append 2026-11-06 bug-4217 恢复)

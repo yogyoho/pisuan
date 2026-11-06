@@ -9329,3 +9329,14 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 18:10 | Edited backend/test/integration/api/test_eia_lexicon_flow.py | modified _clean_lexicon_state() | ~355 |
 | 18:10 | Edited backend/test/integration/api/test_eia_lexicon_flow.py | modified test_lexicon_full_flow() | ~163 |
 | 18:17 | Edited docs/develop-guides/changelog.md | modified fix() | ~241 |
+| 00:10 | bug-4217 修码：API 族 fixture 移植快照恢复 + full-flow 补 delenv REFS/tasker 桩；sync-dev 进栈（停 web 69s）；容器跑 integration/api 全目录 33p/230s/3e 指纹全等 | test_eia_lexicon_flow.py, changelog.md | dc45c20c6+698a89c8f 提交，L4 基线闭环 | ~6000 |
+| 18:23 | Edited web/src/components/eia-data/DatasetStatsPanel.vue | 6→11 lines | ~111 |
+| 18:30 | Edited backend/package/yuxi/services/eia_formula_service.py | modified set_input_value() | ~310 |
+| 18:31 | Edited backend/test/unit/services/test_eia_formula_service.py | modified test_set_input_value_accepts_json_scalars() | ~276 |
+
+## Session: 2026-11-06 18:33
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 18:40 | Edited docs/develop-guides/changelog.md | modified fix() | ~222 |
+| 18:45 | bug-4218 闭合：eia_formula set_input_value 接受 JSON 标量（数值/布尔 500→200，TEXT 契约不变 _normalize_value 保型回填）+ 回归单测；顺带发现 api 容器 watchfiles 不热载 Windows 写入（须 restart） | backend/package/yuxi/services/eia_formula_service.py, backend/test/unit/services/test_eia_formula_service.py, docs/develop-guides/changelog.md | 容器 7/7 + 实栈 F 链零净差（PUT 0.123/true→200、撤后表 0 行） | ~18k |
