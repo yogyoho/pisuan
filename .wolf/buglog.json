@@ -11074,5 +11074,106 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-04T08:40:00"
+  },
+  {
+    "id": "bug-4213",
+    "timestamp": "2026-11-05T21:45:00+08:00",
+    "error_message": "progress.py COLLECTING 指引的候选/切包路径与 chapter-writer SKILL.md 3a-3/3b 契约不一致；实栈工作区（hengcheng-ch3）无任何 fragment_packs 目录——节级切包未落地，3b 恒退章包",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py",
+    "root_cause": "progress 指引用 sample_candidates_<ch>.json 与 fragment_packs_<ch>（下划线后缀），SKILL 契约用 candidates_chN.json 与 fragment_packs/chN（斜杠子目录）；agent 每轮同时看到两种口径致行为不确定，--per-section 切包从未以任一口径落地",
+    "fix": "已修（commit 58c330607，已推送）：progress.py 三处指引口径统一（candidates_<ch>.json + --content-dir / fragment_packs/<ch> 斜杠），full 模式 WAVE1 补取件行；writer SKILL.md 新增 4.0.6 范例取件（非停车）+ 命令速查；sample_fragments docstring 异端清除；新增回归 test_progress_guidance_paths.py 双包镜像（旧下划线口径禁回流断言）；hengcheng-ch3 存量 candidates 重生成（节级真口径 + content_file，report_id 集不变）。验证：双包 278×2 + 守卫绿 + 真样例库 E2E 4 节包落盘 + E501 基线 36×2 零新增 + 运行栈 24/24 md5 归一",
+    "tags": [
+      "progress",
+      "path-mismatch",
+      "fragment-packs",
+      "per-section",
+      "ux"
+    ],
+    "related_bugs": [
+      "bug-4147",
+      "bug-4155"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-05"
+  },
+  {
+    "id": "bug-4214",
+    "timestamp": "2026-11-05T23:30:00+08:00",
+    "error_message": "技能四面部署终审：宿主审计 9/16 DRIFT、容器与宿主视图分歧，重启容器乃至 Docker Desktop(WSL VM) 均不收敛",
+    "file": "scripts/sync-dev.ps1（缺席）——部署走了错误通道",
+    "root_cause": "/app/package 挂载源是 C:/workspace/pisuan-localized/backend/package（改名树）而非 pisuan 工作树；docker inspect 挂载清单被 grep 过滤漏看该行，误诊为 Docker Desktop mount 缓存幻象。直接 cp 进 docker/volumes 的 shared/projections 被 api lifespan reseed（init_builtin_skills _replace_skill_target 目录级原子替换）用挂载源旧快照整目录回灌（连新 cp 的文件一起清掉）——所谓双向幻象实为跨树对比 + reseed 覆写时机",
+    "fix": "按正道重走：停 web → sync-dev.ps1（78.6s，279 文件含未提交改动落 localized 树）→ 起 web → 重启 api/worker 触发 lifespan reseed → shared 由挂载源重建（含新测试文件）→ PowerShell Get-FileHash 全链 24/24（repo/localized/shared/投影）+ 容器 exec 抽查确认。教训：挂载源分歧先 docker inspect 全量挂载清单再谈缓存",
+    "tags": [
+      "deployment",
+      "sync-dev",
+      "reseed",
+      "localized-stack",
+      "misdiagnosis",
+      "docker-mounts"
+    ],
+    "related_bugs": [
+      "bug-4213"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-05"
+  },
+  {
+    "id": "bug-4215",
+    "timestamp": "2026-11-06",
+    "error_message": "S02 扩写子代理手写字面 markdown 表格绕过 {{TABLE:}} 占位符登记通道，另留 5 处「详见表（…）」悬空引用——章门结构期待均未报，仅 3d 独立审查兜底抓获",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/progress.py (gate 结构期待)",
+    "root_cause": "章门占位符检查只验已有标记的摆位（bug-394 摆位门），不验「计划卡声明了 {{TABLE:economy}} 而节稿零标记+字面表格出现」的绕过形态；悬空表引用（引用不存在的表）也不在门检清单",
+    "fix": "本次为测试观察未改码；候选加固：章门增加「计划卡占位符清单 vs 节稿标记清点」对账 + 悬空引用扫描（详见 3e 发现单 D-5）",
+    "tags": [
+      "gate-coverage",
+      "placeholder-bypass",
+      "review-layer",
+      "coal-eia"
+    ],
+    "related_bugs": [
+      "bug-394",
+      "bug-4213"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-06"
+  },
+  {
+    "id": "bug-4216",
+    "timestamp": "2026-11-06",
+    "error_message": "approve-downgrade 后降档 FAIL 章走 3e 成稿确认卡：确认卡命令硬性要求 REVIEWED 前置，但 REVIEWED 不在状态机词表、VERIFIED 唯一通道是真门 PASS——agent 花 4+ 工具调用探索才经 DRAFTED 中转+next 指引找到合法收口路径",
+    "file": "backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/scripts/progress.py (next 指引降档分支)",
+    "root_cause": "降档章（approve-downgrade 凭据放行）通往成稿确认卡的状态机路线未在 SKILL.md 或 progress.py next 指引中一处写明，agent 只能自行探索",
+    "fix": "未改码（流程最终走通）；候选改进：next 指引降档分支直接给出「DRAFTED 中转→确认卡」收口路径",
+    "tags": [
+      "state-machine",
+      "downgrade-path",
+      "agent-friction",
+      "coal-eia"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-06"
+  },
+  {
+    "id": "bug-4217",
+    "timestamp": "2026-11-06T22:40:00+08:00",
+    "error_message": "跑 integration/api eia 流测试（test_eia_*_flow.py）即清空共享运行库：eia_lexicon_entries(89+)/eia_dataset_switches(1)/eia_standard_reviews(1) 全表 DELETE + 包树 overrides 文件 unlink——即使测试本身因缺 TEST_USERNAME/TEST_PASSWORD 被 skip，autouse fixture 仍执行",
+    "file": "backend/test/integration/api/test_eia_lexicon_flow.py (及 test_eia_*_flow.py 同族；两树 pisuan 与 pisuan-localized 均存在)",
+    "root_cause": "API 测试族的 autouse _clean_lexicon_state fixture 对 pg_manager 指向的库做裸 DELETE 全表 + OVERRIDES_PATH.unlink()，无快照/恢复保护；bug-4198 的修复（integration/services/_flow_isolation.py 行级快照恢复）只覆盖 services 族，API 族从未移植。第四次数据丢失复发。",
+    "fix": "已修复并验证（2026-11-06）：API 族 fixture 移植 services 族 _flow_isolation 快照恢复模式（行级快照 EiaLexiconEntry/EiaDatasetSwitch + overrides 文件字节快照），并在 test_lexicon_full_flow 内 monkeypatch 堵住两个测试可达的共享写点——delenv REFS_REPO_WORKTREE（导出不抄送 refs-repo git 链）+ tasker.enqueue_unique_by_payload 桩（导出/关闸不排队真实全库重编译任务）。容器实测：integration/api 全目录 33 passed/230 skipped/3 errors（FK 种子用户缺失，环境前置非回归），跑前跑后 DB 指纹（8/50/39+开关t+抑制7）与 overrides 文件 sha256（cdf8792dbb80c8ce）逐项相等。",
+    "tags": [
+      "test-isolation",
+      "destructive-fixture",
+      "eia-lexicon",
+      "data-loss",
+      "shared-db",
+      "pytest-autouse",
+      "regression-of-4198"
+    ],
+    "related_bugs": [
+      "bug-4198"
+    ],
+    "occurrences": 4,
+    "last_seen": "2026-11-06T23:59:00+08:00"
   }
 ]

@@ -25,6 +25,9 @@
 
 - [2026-10-14] 卡片式导航的点击范围要克制：大卡片/区域不整卡可点，仅显式「直达」链接可点（用户对知识工厂工位卡的裁定）。此后卡片导航默认按此执行，整卡可点需先问。
 ## Key Learnings
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - Gitea admin API 怪癖：改密码必须 PATCH /api/v1/admin/users/{username}（/api/v1/users/{username} 是公开 profile 端点，返回 405）；且 PATCH payload 必须显式带 login_name 字段，否则 422 [LoginName]: Required——即使不修改登录名。
 - [2026-10-29] sync-dev 后技能三副本落栈链路实测：①sync-dev walker 只写 `/app/package/pisuan/...`（挂载树）；②`skill-sources/shared` 卷会在 sync-dev 后**自动**跟上工作树（无需手动）；③`skill-projections/admin` 卷**惰性滞后**（按线程时代快照），须手动 cp 同步改动的技能文件并 md5 核对——只比对本轮改动文件（diff -rq 滤 __pycache__），沙箱实际读的是投影卷。
 - [2026-10-29] EAI-Flow 消息鉴证口径：postgres 库 yuxi_know，`messages` 表经 `conversations.thread_id` 定位 conversation_id；`delivery_status`=queued（排队未投递）/dispatched/complete；信任模式自动应答特征=message_type `resume` + extra_metadata.source `ask_user_question_resume`（与人工点击元数据同形）；时间戳 UTC。智能体把自动应答写进凭据 note 时必须由 SKILL 约束注明「信任模式自动应答」（bug-4163，Iron Law 已加）。
@@ -209,6 +212,7 @@
 - (2026-11-02) meta 流测试 test_meta_full_flow 在 HEAD 即红（bug-4196 预存在漂移）：跑 eia 流测试先看此基线，勿误归因新改动。
 
 ## Do-Not-Repeat
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 
 - [2026-10-31] 技能脚本改动部署链是四层，sync-dev 只盖第一层：①repo 双包（源）→②localized backend 挂载层（sync-dev walker 覆盖）→③volumes/pisuan/skill-sources/shared（随②再生，实测自动跟上）→④volumes/pisuan/skill-projections/<user>（**沙箱实际装载源，sync-dev 不覆盖、不自动再生，必须手工 cp**）。漏④的后果：新线程沙箱拿旧脚本，守卫/修复看似部署实则未生效——bug-4172 部署时实测踩中。验证法：grep 特征串逐层计数 + 对比行号。
 - [2026-10-30] 技能脚本测试别在仓库内宿主跑：pytest 会沿 `__init__.py` 链拉起 yuxi 祖先包（import langchain_core，宿主 3.14 没有）28 全 ERROR——importlib 模式也躲不开。stdlib-only 的技能脚本测试用 /tmp 干净布局（拷 progress.py/build_output.py/style_targets.py + 目标 test 文件，保 scripts/tests 相对结构）宿主直跑；全套件仍须容器（changelog「容器 pytest N passed」惯例）。
@@ -363,10 +367,14 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 
 - [2026-09-30] **派发实现子代理必须禁用后台监视器模式**：首个 Tasks 1+2 实现者把文件拷贝委派给「后台监视器」异步执行，两轮 ~67k tokens 后目标目录不存在、零提交，且中途汇报听起来进展正常（buglog-319 同源）。修复：提示词开头加 CRITICAL 铁律（每条命令同步亲自跑、逐步核对 Expected、禁 watcher/deferred）；控制器在派发前与收到完成通知后都先做只读状态核查（目录存在性/git log），不轻信汇报文字。
 
 ## Key Learnings (append 2026-09-30 task3)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
@@ -393,6 +401,9 @@
 - 2026-10-02 测量教训（bug-338）：PG ARE 无 lookbehind，(?!\{)\{ 自废恒0；\{[^{] 把双括号内部{也计数。正确法=先剥双括号再数剩余。修正后bug-335真实规模：修复前49处/修复后1处（残留=模型畸形括号组，非归一化缺口）。任何正则计数先用构造样本双向验证。
 
 ## Key Learnings (append 2026-10-04 D1-D6 + graph build)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
@@ -415,6 +426,7 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat (2026-10-04)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 
 - 不要在上一个 graph-build job 未到终态时触发第二个（不同 KB 可并行 → agnes 429 风暴）。触发前用 worker 日志确认前一个已 构建完成/构建失败。
 - 不要给容器内 pytest 传 //app 或未 tr 的 CRLF 脚本；一次污染整个文件的 pyc。
@@ -427,6 +439,9 @@
 - lightrag.py 删除与 pyproject.toml 残留依赖（上游共有）按"最大限度不动上游"原则推迟，已记录在 vibe 文档 deferred 清单。
 
 ## Key Learnings (append 2026-10-04 ETL 数据平面裁决)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
@@ -443,12 +458,16 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat (2026-10-04 ETL 数据平面)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 
 - 不要把「模板 0 复用」单归因于槽名碎片化就设计观察期判停——match_count 增量断链（bug-353）不修，观察期数据恒为 0，会误判停回流。
 - 校验/守卫类改动不要再写合成 type 字段的 fixture（bug-354 教训）；改前先 grep 生产赋值链确认字段名（classify_type）。
 - 「写而无读」判定必须全仓 grep（web/src + backend/test + scripts + agents md），只查 service 会漏掉 OutlineTemplate.vue 这类 UI 人工闭环消费者（expected_charts 差点误删列）。
 
 ## Key Learnings (append 2026-10-04 KF×v2 整合设计)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
@@ -462,12 +481,18 @@
 - check_content_contract 从未接线（tools.py 仅 L880 定义+单测引用）——v2 语境翻案依据：consistency.py 23 合约终验能力覆盖面远超它，且它对 {{SLOT}} 注入正文会系统性误报。
 
 ## Key Learnings (append 2026-10-04 样例报告价值分析 ch1-3)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
 - backend/test/横城矿区总体规划环评报告书.md 是 coal-eia-writer v2 的样例语料（即红线3/standards_index「横城 9 处实证」来源）；该 md 副本所有表格仅存表题（表1.4-1…表3.4-25），表体数值在 md 中不可得，引用样例表值必须回查原始 PDF/DOCX。
 
 ## Key Learnings (append 2026-10-04 样例报告与导则)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - (2026-10-05) TemplateLibrary 加载机制：TEMPLATES_DIR 递归 rglob 所有 json（跳过 routing_* 文件），目录名不参与加载；领域过滤只认模板 JSON 的 domain 字段（get_templates_by_domain）与 matcher.match 的 context.domain 严格相等。templates/coal_mining/ 整目录 pisuan-owned（upstream main 无此路径），30 个 headers json 全带 domain: coal_mining
@@ -510,6 +535,7 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat (2026-10-05 bug-354 qualrev)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - 2026-10-05: 不要假设 pisuan-localized 工作树文件内容 == 其 git HEAD。sync-dev.ps1 会把源仓未提交改动同步过去（工作树 HEAD 可能停在旧 commit 但文件已是新版）。做"对旧代码跑测试"的变异验证前，先 grep 实际文件内容确认基线，否则红/绿侧结论会反转。
 
 ### Key Learnings (2026-10-15 页面测试第二轮)
@@ -519,6 +545,7 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat (2026-10-05 W0 收尾)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - 2026-10-05: 宿主机 `cd backend && uv run ...` 会改写 backend/uv.lock（本机 uv 与锁定 lock 版本漂移），跑 ruff 后必须 `git checkout -- backend/uv.lock`，否则会把锁文件噪声带进提交。
 - 2026-10-05: 上游共享文件做定向 format 前先验证基线干净：`git show <base>:<file> | ruff format --check --stdin-filename <path> -` 通过 ⇒ 整文件 format 的 diff 只会落在新增块，可安全执行；基线不干净才需要手动只排新增行。
 
@@ -548,6 +575,7 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat (2026-10-05 bug-359 W1 Task 2)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - 2026-10-05: 追加任务书提供的测试代码块时必须逐字照抄，不要即兴加"占位/防御"行——本次混入一行任务文本中不存在的 `add_templates_from_from_list = None`（自纠错，未进测试运行即删）。追加后固定两步核对：git diff 纯新增+零删除、与任务文本逐行比对（bug-361）。
 - (2026-10-05, W1/bug-359 Task 3) Key Learning ×2: ①容器运行栈内 /app/templates 不存在——compose api 服务只 bind mount server/package/test，镜像层也无 backend/templates；TEMPLATES_DIR 落空 → 容器栈 ETL 静态模板从未参与匹配（learned-only）。冒烟断言"静态共存"在本栈不可满足。已立案 bug-363（Dockerfile+compose 补挂载是 W1 候选，需评估静态模板突然参匹配的行为影响）。②pisuan.storage.postgres 是 namespace 包无 re-export，pg_manager 必须从 pisuan.storage.postgres.manager 导入（冒烟脚本曾踩坑，bug-362）。Do-Not-Repeat: 写跨栈验证脚本前先确认容器内路径/挂载布局与包导入路径。
 
@@ -566,6 +594,9 @@
 - 可逆清淤模式：同盘 `mv` 陈旧目录至 `.wolf/` 备份位（字节保全 + 镜像 tip git 对象双重可恢复），替代 `git checkout -f` + `git clean -fd`（auto-mode 分类器正确拦截了不可逆删除：用户未点名目标，且指令链源自子代理报告）。
 
 ## Key Learnings (append 2026-10-05 bug-363 Task 2)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - 领域工厂 ETL 两阶段结构：phase-1（parse/split/classify/模板匹配）在 PARSING 态完成并持久化 source_paragraphs，phase-2（GENERALIZING，LLM 泛化）失败不回滚 phase-1 产物；模板匹配（TemplateMatcher.match，仅 is_title 段）在 phase-1 尾部执行，matched>0 时自增学习模板 match_count（bug-353 链路已在真实 ETL 验证：命中模板 match_count 落库为 1）
@@ -580,6 +611,7 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat (2026-10-05 bug-363 Task 2)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - (2026-10-05) 容器内 LLM 探活用 select_model(...).call()，不用 .ainvoke（AttributeError 假报不可达）；宿主侧 kill docker exec 会在容器内留孤儿 python 进程，须 docker exec kill 清理
 - (2026-10-05) 长时间任务轮询不用 docker exec python 循环（后台输出缓冲丢失 + worker 忙时拖死），改用 postgres 容器 psql 直查状态表
 - (2026-10-05) ETL 重跑观测对象要选 2026-10 以后上传的任务（storage_path 为绝对路径）；2026-07 旧任务 retry 会因 saves/ 相对路径直接 PackageNotFoundError（bug-365）
@@ -591,6 +623,7 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat（2026-10-05 bug-363 终审追加）
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - 2026-10-05: `.wolf/buglog.json` 仓库惯例是 json `indent=2`——用 python json.dump 打补丁必须 indent=2，写 indent=1 会整文件重排（5258+/5258- 的噪声提交）；amend 前被 `git show --stat` 拦下。同理一切 JSON 台账补丁：先 `git show HEAD:file | head -3` 看缩进惯例再动手，提交后必看 stat 数字是否与预期改动面相符。
 - 2026-10-05（同日修订）: 容器内裸 `python -u -c` + pg_manager「挂池」根因已查明=对同步函数做 await（`initialize()` 是同步的，manager.py:373，await 它直接 TypeError 且被管道吞掉；进程不退是 psycopg 池后台线程）。已验证正确姿势：同步 `pg_manager.initialize()`（langgraph psycopg 池会报 "AsyncConnectionPool open with no running loop"，对纯 repo 路径无害）→ `asyncio.run(服务方法)` → 末尾 `os._exit(0)`。一次性查 DB 仍优先 psql 通道；杀宿主侧 docker exec 后容器内 python 会残留孤儿，kill 后必须容器内 ps 复核。
 
@@ -606,6 +639,9 @@
 - [2026-10-05] agnes 免费档是耗尽型配额非冷却型（实测：报错语義 reached the API rate limit for free users/upgrade to Token Plan；等 2h 后 resume 仍 45 秒即触熔断）。「等窗口再试」对该档位无效，方向只有换 provider/升级 key/接受本地模型质量折衷。- **2026-10-05 横城 retry 第 2 跑后拍板**：agnes 免费档耗尽型配额（第 3 次观测），用户选择 D=挂起静置横城 a44afc93（FAILED_PROVIDER 安全终态，resume 点 p222）。不换模型、不重试、不设自动探活；重启用 = 用户提供新 key/换 provider 后一条 retry_task。Step 2 口径采集（bug-363 挂起判定）继续挂起，阻塞点=外部配额而非代码。
 
 ## Key Learnings 重建 + DNR（2026-10-06 spec-W1 收口窗口；14:12 stash 事故后工作区版本重建）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
@@ -639,6 +675,9 @@
 ) 写回可字节级复刻原格式
 - [2026-10-06] 派工词自洽性检查：派 Task 前把指令里的每条断言与 cerebrum 已记事实交叉核对（本次 Task 5 派工词写「planning revision 产物 15 章含 R3」，与已记事实「R3×R4 语料交集为空，revision 全 legacy」直接矛盾，致实现者推理卡死 600s 被 watchdog 杀）。修法：派工前重读相关 DNR/Learnings 条目
 ## Key Learnings (append 2026-10-06 W2 Task5 渲染存档+seed_gen 冒烟)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - conditions.json universe 中 R3×R4 交集为空：唯一 revised2019 规划语料是五间房且 round=first，15 份 planning revision 全 legacy——「revision 且 revised2019」的渲染存档不存在，R3 触发与 round 无关。
@@ -654,8 +693,12 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat 追加（2026-10-06 bug-355 窗口）
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - 计划内嵌测试 fixture 涉及合成 docx/OPC 时：关系 Type 必须用真实 officeDocument reltype（python-docx 按精确 Type 找主部件）；.rels 内相对 Target 的 base = .rels 所在部件目录（word/_rels/document.xml.rels → word），写 word/document.xml 会解析成 word/word/... 恒假悬空。先在解释器里验证 fixture 可被真实实现满足，再定稿计划。
 ## Key Learnings 追加（2026-10-06 bug-355 窗口）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - `.wolf/corpus-census/patched/` 两份（九龙川 145MB/巴拉素 39MB）是普查术后**修复副本**，docx_guard.diagnose 判 ok 属正确直通；要在真实大文件上验证悬空修复路径，须内存注入 Target=NULL 病灶（zip 内重写 .rels 后 BytesIO 喂入），不要期待 patched 原样判 dangling。
@@ -665,16 +708,25 @@
 - domain_factory_service._UNIT_RE 单位字符类 m[²23]/[dha] 只认 ASCII m3，不含上标 ³——docx 语料相关 fixture/正则凡涉及 m³/h 一律写 m3/h。
 - DNR(2026-10-06): 计划里测试期望值必须对照 fixture 数据重算再落笔——Task2 的 (2,3) 算术笔误（散文三值分母应为 4）被 TDD 红相揭出，实现者依规停手报告而非改实现，流程正确。
 ## Key Learnings 追加（2026-10-06 spec-W1 Task3 质量修复窗口）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - ruff 不在 pisuan-api:0.7.3 镜像内（无 ruff 二进制也无 python -m ruff）——ruff check/format 用宿主道：`cd backend && python -m ruff ...`（宿主 3.14 虽缺项目依赖但 ruff 自身可跑，config 由 pyproject.toml 就近发现，0.15.12 实测）
 - ruff 0.15.12 E501 计宽口径【两轮探针实证修正 2026-10-06】：按**字符数**计，非 unicode 显示宽（复筛者探针：120 字符/160 显示宽的 CJK 行未被标记；此前"unicode width"记载系 impl-t3-fix 误报）。实操结论不变：以 `ruff check` 输出为准收行，勿目测字符数或显示宽推断
 - dict(model_dump()) 与 json.loads 的 key 存在性语义不同：前者恒物化默认字段（空串占位），setdefault 兜底网对其失效——泛化双通道（structured/prompt）做同构兜底时须用空值判定（if not d.get(k)）而非 setdefault（377440fc I-1）
 ## Key Learnings (append 2026-10-06 spec-W1 Task5)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - docker run ro 挂载跑实例化 DomainFactoryService 的单测（test_commit_pipeline_status 等）会炸在 __init__ 的 mkdir user-data（Read-only file system）——加 `-w /tmp` 让相对路径落可写层即可，勿误判为代码回归。服务类单测容器道模板：`-e PYTHONPATH=/app/package -w /tmp -v ...:ro`（PYTHONPATH 保证挂载代码优先于镜像 site-packages）。
 ## Key Learnings 追加（2026-10-06 spec-W1 Task5 窗口）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - services 单测道分野：test_w1/test_docx_guard 自包含（__new__ 绕 __init__）→ :ro 挂载可跑；但任何实例化 DomainFactoryService() 的单测（pre_commit_validator/validate_task_report/commit_pipeline_status）在 __init__ 里 mkdir user-data/domain_factory → :ro 道必炸（OSError 30），失败形态与回归不可分辨。有效道：`docker run --rm -w /tmp -v ".../backend:/app" pisuan-api:0.7.3 pytest /app/test/unit/services/... -q`（rw 挂载 + 容器临时 workdir，不污染宿主）。判回归先跑批前基线 worktree 对照
@@ -697,6 +749,7 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat 追加（2026-10-06 W3 Task2）
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - 2026-10-06: 任务书「照抄即可」的实现代码也可能有逻辑 bug 且与其自带测试矛盾（W3 Task2 min_permissive_scope 片段把最窄者胜写成最宽者胜，1 failed 揭出）。TDD 红相时先裁决哪侧错：测试名/docstring/合同语义三方一致时测试即规格，改实现不属 bug-361 的「即兴篡改」；裁决不了才停手报 BLOCKED。与 2026-10-06 早前 DNR（测试期望算术错须停手）互补：看错的是测试还是实现。
 
 ### Key Learnings (2026-10-15 页面测试第二轮)
@@ -706,9 +759,13 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat (2026-10-06 W3 Task 3)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - 2026-10-06: 任务书测试块逐字照抄后仍可能红——本次 baseline 断言期望 ["measurable"] 漏了「涌水量」命中槽名模式产生的 reusable。红相判定顺序：先对拍现场既有同 fixture 测试（test_w1_prose_pipeline.py:46 成员断言）确认真实基线，再决定修测试期望还是修实现；禁止为了让测试过而改实现语义。本次实现零改动、仅修断言（bug-378）。
 
 ## Key Learnings (append 2026-10-06 W3-T3 qualrev)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - _etl_pipeline_async 泛化块（:898-1003）的 except Exception as para_error 会吞掉块内一切异常——W3 归属挂钩插在熔断分支（:988）之前且无独立守卫，repo 瞬时故障会静默跳过 FAILED_PROVIDER 持久化（bug-342 同族）。挂建议层钩子进这个 try 必须自带 try/except，否则熔断可靠性降级。
@@ -732,6 +789,7 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - [2026-10-07] 排查 agent run 报错先查 worker 日志不是 api（arq 任务跑在 worker）；错误时间要换算时区（日志 CST=UTC+8，agent_runs 是 UTC）。
 - [2026-10-07] tool_audit 守卫的 sequence 是「事件流内序号」非稳定事实——每次 resume/checkpoint 重放都重新编号；判断幂等冲突时不能把流序号当持久化事实。
 
@@ -741,6 +799,9 @@
 - [2026-10-07] coal-eia-writer 交付现场唯一路径是工作区 outputs/（agent finalize 生成）；外部验证勿另建 deliveries/ 之类并行目录，会造成 delivery_manifest 分裂。
 
 ## Key Learnings（2026-10-07 范式库 P0 会话追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - sample_entities 黑名单含类别级通用名词（自然保护区/水源地/基本农田/地下水/国道/边沟…来自 ETL 抽取噪音）；实体扫描必须用「≥3 份语料黑名单子串共现→通用词豁免」规则，否则 15+ 处误报。运行时泄露门不在 build_output.py（grep 无 sample_entities 引用），防线在契约指令层。
@@ -759,6 +820,9 @@
 - 2026-10-08：对带既有格式漂移的文件（如 consistency.py）跑整文件 ruff format 会把无关重排卷进提交（236 行噪音）——先 `ruff format --diff` 看作用面，只手工格式化自己新增的 hunk；漂移是历史遗留，不顺手「修」。
 
 ## Key Learnings（2026-10-08 Task2 schema_linter 追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - 任务书 CLI 代码片段（counts.get 式增量）与其自带测试断言（零违规 stage 取 counts["L1"]==0）矛盾——原样实现必 KeyError。裁决沿用 W3 规则：测试+契约一致时以测试为准，实现侧零填充 dict.fromkeys(CHECKS,0)（第 4 起「计划代码块未实跑」族，bug-377/378 同根因）。
@@ -768,6 +832,9 @@
 - [2026-10-08] 宿主 pytest 跑不了 coal-eia-writer skill 子树测试：pytest 从 scripts/tests 上溯 rootdir=backend/pyproject.toml，按包链 import yuxi/__init__.py → 宿主无 langchain_core 必炸（从 skill workdir 跑也一样）。正解=按 plan「docker cp 后容器内跑」：docker cp scripts pisuan-localized-api-1:/tmp/xx && cd /tmp/xx && pytest tests/ -q（容器 py3.13）；容器内 /app/skill-sources 与 /app/package/pisuan 两投影可能滞后 git HEAD，别拿它们当真。
 
 ## Key Learnings (2026-10-08 coal-eia-writer hardening 追加)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
@@ -801,6 +868,9 @@
 - **Do-Not-Repeat**: (2026-10-09) web 项目 icon 包实装是 `@lucide/vue`（package.json L24，lucide 官方继任包），**不是** CLAUDE.md 前端规范文字所写的 lucide-vue-next（已过时）——import 用错包名 vite 直接 500（Failed to resolve import）。核实现役写法：grep src 的 `from '@lucide/vue'`。
 
 ## Key Learnings + DNR + Decision Log（2026-10-09 数值护栏词表全栈批次追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
@@ -819,6 +889,7 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - pytest-asyncio 模块级 async fixture 必 ScopeMismatch（_function_scoped_runner 冲突）；async fixture 一律函数级，幂等初始化（pg_manager.initialize()）放进 autouse 函数 fixture。
 - 服务层导出断言勿写 `materialized >= range_ready`（拆分语义使其天然可小于）。
 - 宿主 curl localhost:5050 不通（端口映射差异）——API 自检用容器内 urllib。
@@ -829,6 +900,9 @@
 - E2E 隔离方案：宿主 + references 副本（bank_compile 纯 stdlib）；零风险不动 dev 树。
 
 ## Key Learnings + DNR（2026-10-10 语料元数据标注页批次追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
@@ -845,10 +919,14 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat（2026-10-10 P2 对抗评审追加）
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - BUSINESS_SCHEMA_VERSION 每次递增必须同步两份迁移测试：①test_storage_migration.py 六处 SimpleNamespace fake——main() 每新增一个 pg_manager.upgrade_* 调用点，fake 就缺属性 await 即 AttributeError（v10 起已红两个版本没人跑单测）；②test_schema_migration_version.py 的 `assert BUSINESS_SCHEMA_VERSION == N` 版本钉随递增手改。新迁移函数落库时这两个文件与 storage_migration.py 一并改。
 - P2 修复提交 b7f63ece（对抗评审 7 条全坐实全修）：导入幽灵行过滤/迁移测试 fake/前端 min-precision-tabindex/测试判别断言。评审工作流脚本存 session workflows/scripts/p2-adversarial-review-*.js，resumeFromRunId wf_be922093-a83 可复用。
 
 ## Key Learnings (append 2026-10-10 技能图示)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
@@ -856,6 +934,9 @@
 - **图示时最易画错的三个机制事实**：①子代理直写 state/sections/*.md 绕过脚本层（不经过 build_output）；②progress.py next 是控制器唯一导航（每轮恰好一个下一步）；③formula_state.json 手改=build 门直接 FAIL（唯一写者纪律不只 data/ 有）。
 
 ## Key Learnings + DNR（2026-10-10 P3 标准与限值库追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
@@ -872,6 +953,7 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat（2026-10-10 P3 对抗评审追加）
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - 别在测试里钉注册表数据指纹（62 条/7 表/2 行）：合法演进（加标准/加表/加样例行）必误红。期望值从文件 `json.loads` 自算（exp_total/exp_pending/exp_rows），与 needs_verification 的 sum 自洽范式同构。
 - 版本表真名是 `pisuan_schema_migrations`（列 domain/version/applied_at），不是 schema_versions——DB 直查版本用 `SELECT version FROM pisuan_schema_migrations WHERE domain='business'`。
 - api 容器 startup 失败（如 schema 版本落后）后进程死透不再自动重启，迁移修复后必须 `docker restart pisuan-localized-api-1`；.restart 前先看 logs 尾部判因。
@@ -883,6 +965,7 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat（2026-10-10 bug-383 追加）
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - standards[].chapters 是分号分隔字符串（"；"），不是数组——Vue 模板里直接插值渲染，别 .join()。前端消费新 JSON 字段前先看实际类型（一句 python type 统计的事），字段名复数 ≠ 数组。
 
 ### 三页面深度评审实证（2026-10-10，wf_9e47706a）
@@ -902,6 +985,9 @@
 - LexiconPanel.vue filters.status 默认 ''（全部视图）——「rejected 默认隐藏」是想当然，9 条留档行用户看得到
 
 ## Key Learnings + DNR（2026-10-10 方案B 词表修复执行追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
@@ -919,10 +1005,14 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat（2026-10-10 方案B 执行追加）
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - 验收脚本里的诊断表达式改版后必须重跑取新版输出再引用：renamed_zero_count=[] 曾是旧版脚本残留输出，与地面真值（7 行 n_reports=0 全部成立）矛盾，为它白查一轮——诊断输出与数据操作输出分开看，异常先复算再归因
 - python -c 多行中文脚本在 MSYS bash 下引号脆弱（exit 2 无输出）——一律 Write 落盘 .py 再执行（本会话再次验证）
 
 ## Key Learnings + DNR（2026-10-10 词表 92 条全量审计追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
@@ -941,10 +1031,14 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat（2026-10-10 全量审计追加）
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - 容器内脚本读宿主 Windows 路径必 FileNotFoundError——先 docker cp 送 /tmp 再引用容器路径
 - 对「改名行/子口径」跑 get_mentions 验证值集是空转（机制上恒 0），直接读 values_json
 
 ## Key Learnings + DNR（2026-10-10 P4 改名对话框设计评审追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
@@ -965,6 +1059,7 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat（2026-10-10 P4 设计评审追加）
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - 别在 unique 键表上裸 INSERT：循环操作（改名 A→B→A）必撞键 IntegrityError→500，一律 ON CONFLICT DO UPDATE/NOTHING
 - 验收样例的行状态别凭记忆写（解性总固体超标率是 candidate 非 rejected）——写前查库，评审员连 id 都会核
 - 2026-10-10：前端错误提示契约——backend router 把 ValueError 映射成 HTTPException(400, detail=字符串)，但 web/src/apis/base.js 的 publicErrorMessage 把 400 一律映射为通用「请求参数错误」，extractBusinessErrorDetail 只透传 {code,message} 对象形态 detail（字符串 detail 被有意丢弃）。词表/拆分等对话框里「口径已存在/口径名过短」等后端中文报错到 UI 全变成「请求参数错误」。要透出业务错误信息必须走 {code,message} 结构化 detail 通道。
@@ -994,6 +1089,9 @@
 - （无新增，沿用 surgical changes / 方案乙同构既好）
 
 ## Key Learnings + DNR（2026-10-12 P2 数据工厂页批次追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
@@ -1027,6 +1125,7 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - （bug-424）文本级插接注入偏移忽略行首缩进——`_input_line_span` 返回的行带缩进，注入点 = 缩进宽 + 标记串长，裸用标记长度会把 value 插进键名中间（`{"name"value": 0.65, ": "q"`）。
 
 #### Key Learnings (2026-10-15 页面测试第二轮)
@@ -1036,12 +1135,16 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - （bug-422）schema 加档后只 grep 方法名确认≠常量已改——四触点逐一 grep：`BUSINESS_SCHEMA_VERSION =` 行值、manager 方法、storage_migration dispatch、upgrade_from 元组；迁移测试必须加「已当前版」档位。
 - （bug-423）Vue 模板插值里写含 `}}` 的字面量（含 JS 字符串）。
 - 宿主直接跑 `pnpm`（不存在）——web 工具链全走 pisuan-localized-web-1 容器。
 - 容器内 `cp` 回工作树用臆测路径（/workspace 不存在）——回传用 `docker cp 容器名:/app/... 宿主相对路径`。
 
 ## Key Learnings + DNR（2026-10-13 P2/P3 原型复刻改造执行追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
@@ -1061,6 +1164,7 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - （bug-429）数据形状假设（数组 vs 对象）放进 try/catch 大包——TypeError 被静默吞掉后页面大面积空白且无任何报错线索；形状解析要么显式炸要么拆出 try 块，勿与业务赋值同 catch。
 - （bug-430）对可能已是全记法的字符串无条件二次包裹——先 startsWith 守卫。
 - （bug-431）对象数组直接 join('、')——得到 [object Object]；先取字段。
@@ -1070,6 +1174,9 @@
 - **诚实数据映射边界（改造期沿用）：** 原型虚构指标不伪造——命中拦截无数据则删该格、P5/P50/P95 无字段则以 corpus_freq 计量条替代、导出 CSV 无端点则去掉按钮、添加人有 decided_by 无时间戳则只出人名；functional no-regression 优先于像素复刻（撤回列保留、样本下拉新增均属数据驱动必要）。
 
 ## Key Learnings + DNR（2026-10-13 词表页 s9 复刻追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
@@ -1087,6 +1194,7 @@
 - 运行栈 thread 工作区 CSV 上传链路：POST /api/chat/attachments/tmp（逐文件）→ POST /attachments/confirm → 文件落 workspace uploads/。
 
 ## Do-Not-Repeat
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - 原型屏的表格列按虚构短标识（mono 短 id）设计列宽——套用到真实长文案数据前先扫一遍实况数据的长度分布，别等截图才发现撑爆。
 
 ## 2026-10-13 元数据页 s10 复刻追加
@@ -1177,6 +1285,9 @@
 - 子代理模型解析顺序（agent_run_service.resolve_agent_run_model_spec）：请求 model_spec > Agent 自身 config_json.context.model > 系统默认 default_model；Agent 配置优先于线程模型——子代理卡死时先查其 agents 行的 context.model 是否指向不可达端点。
 
 ## Key Learnings (append 2026-10-15 Task7 范式页)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - **Learning**: base.css 没有 --color-warning-bg / --color-border-secondary / --color-bg-layout / 裸 --color-error 这些 token（计划草稿易臆造）。房屋真实等价：warn 底=--color-warning-50、err 文本=--color-error-700（factory-ui .pill-* 惯用法）、弱底=--gray-50、发丝线=面板 scoped 根上定义 --hairline: var(--gray-200)（StandardsPanel/DatasetStatsPanel 惯用法）后引 var(--hairline)。
@@ -1185,6 +1296,9 @@
 - **Learning**: chrome-devtools-mcp 的 profile（~/.cache/chrome-devtools-mcp/chrome-profile）被孤儿 chrome 占用时 MCP 全部工具报 "browser is already running"；勿杀进程（可能压着先前任务的 tab/登录态/在跑的兄弟 agent）。替代冒烟：curl http://localhost:5173/src/...vue 强制 vite 按需编译（200=可编译，500=坏），加 API 代理 401（非 404）验端点在位。
 
 ## Key Learnings + DNR（2026-10-15 bug-4015 定案批追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
@@ -1202,6 +1316,9 @@
 - （2026-10-15）bug-4015/4014 均定案为测试事故（错误选择器 / 误点附件移除），不改产品代码——遵循"行为正确勿乱修"；bug-4016（agent 模型配置漂移）才是真缺陷且已修复验证。
 
 ## Key Learnings + 裁定（2026-10-15 改名对话框重排追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
@@ -1216,6 +1333,9 @@
 - 本机运行栈容器实名：`pisuan-localized-api-1` / `pisuan-localized-web-1` / `pisuan-localized-worker-1`（CLAUDE.md 里的 api-dev/worker-dev 已过时）；容器内模块路径是改名层 `pisuan.*`（非 `yuxi.*`），/app ≈ backend/ 但包名已被机械改名。容器内单测路径：`docker exec pisuan-localized-api-1 pytest /app/test/unit/...`。容器内**无 ruff**——ruff 只在宿主跑：`cd backend && python -m ruff format/check <file>`（0.15.12）。
 
 ## Key Learnings（2026-10-16 抑制名单 UI 特性收官追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 
@@ -1246,6 +1366,9 @@
 - Task2 工件链证据：AC1 零漂移 0 违例（stage/scale_mt_a/16 注释 year_hint+manual basis/27 组 scale_candidates 值全保）；省份 0 值漂移（22 regex→cover 同值迁移+9 留 regex）；编译双跑 sha1 91b17cf5 字节幂等。
 
 ## Key Learnings (2026-10-16 Task3 corpus 入库)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 2026-10-16: pytest.raises(match=key) 对"未知字段"类白名单校验不判别——旧错误消息内嵌键名集合，红阶段可空过（match 命中错误原因）。判别性须靠值级断言或确认实现后该键的 ValueError 只能来自新校验分支。
 - 2026-10-16: 运行栈登录凭据不在 .env（仅有 API keys/JWT/PG）；repo 种子管理员密码对运行栈无效；admin 密码历来由用户当场提供。QA 前先问用户，勿试种子凭据/勿造 token 注入（权限系统会拒）。API 容器应用监听 :5050；裸容器内起服务会挂 DB pool，读数用直读文件/psql。
 - ruff 0.15 E501 行宽按东亚宽度计（CJK=2 列），不是 codepoint 数——CJK 密集行 `len()<=120` 仍可爆 120；头内长注释行用独立注释行规避。
@@ -1255,6 +1378,7 @@
 - corpus_meta/bank_compile 重编译对未变输入字节级幂等：git status 的 " M" 多为 stat-dirty（`git diff` 空）；真改动用 `git diff --name-only` 认定。
 
 ## Do-Not-Repeat
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - 2026-10-17 弹窗「空值守卫」QA 测试：MetaPanel 标注弹窗 openAnnotate 会预填 auto 层值（报告名/编制单位常非空），直接点保存会绕过全空守卫真实落库。测守卫必须先清空全部预填输入再提交；事前想清楚哪些字段有预填。
 - antd-vue 两字中文按钮文本带空格（「取 消」），按 textContent 匹配按钮时先 `replace(/\s/g,'')`。
 - 2026-10-17 浏览器 QA 暗色态：本应用暗色 = localStorage `theme=dark`（store 初始化读，JS 端切 antd darkAlgorithm）+ `html.dark` 类（CSS 变量/base.dark.css）两套机制。只 `classList.add('dark')` 不设 localStorage+reload 会得到半暗态（antd 弹窗白底、CSS 变量元素已翻暗），会误判组件暗色缺陷。正确做法：设 localStorage 后整页 reload 再验。
@@ -1263,14 +1387,23 @@
 - (2026-10-17) 按钮文案必须名实相符：弹框可编辑就别叫「查看」；标注可反复保存（覆盖式 upsert），操作按钮统一叫「标注」。用户对"同一弹框换名字装只读"这种设计零容忍。
 
 ## Key Learnings
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - (2026-10-17) 元数据标注页领域规则：自动层 needs_review 信号（报告名/编制单位/规模 basis）在对应字段被 DB 标注层人工决策后必须隐藏——人工覆盖自动层不确定性；未标注时照旧显示提醒。signal 判定 = basis==='needs_review' && annotation.<field> == null。
 
 ## Key Learnings (append 2026-10-17 文件库 P1)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 运行栈（pisuan-localized）DB 的迁移版本表名是 `pisuan_schema_migrations`（改名层连 SQL 字面量一起改），源仓代码里写 `yuxi_schema_migrations`。容器内 ad-hoc asyncpg 查版本/表名一律用 pisuan_ 前缀。
 - schema 迁移在 dev 运行栈不会随 api 启动自动执行：`storage_migration.py` 是独立脚本（`__main__` 入口），需 `docker exec pisuan-localized-api-1 python -m pisuan.storage_migration` 手动跑；其 `_require_supported_version(upgrade_from=...)` 元组每升一版要显式补允许来源（本次漏 17 已补）。
 - 容器内 yuxi 包路径是 `/app/package/pisuan/`（改名层），不是 /app/package/yuxi；pytest 等仍走 /app/test。
 
 ## Key Learnings (append 2026-10-18 PaddleOCR-VL 本地引擎)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 本机 PaddleOCR-VL 部署（C:\Users\Lenovo\paddleocr-vl-1.6）是双层结构：llama.cpp llama-server（turboquant b9082，GGUF Q8_0，8111 端口 OpenAI 兼容 API，无鉴权）+ 本地 venv 的 paddleocr 3.7 CLI（doc_parser 完整管线，VL 识别后端指向 llama-server）。**没有 PaddleOCR jobs API**（AI Studio `/api/v2/ocr/jobs` 协议），既有 `paddleocr_vl_1_6` 处理器无法指向它。
 - 容器直调宿主 8111 走 `host.docker.internal`（实测 worker 容器 200；172.17.0.1 拒连）。服务须以 0.0.0.0 监听（`paddleocr_vl.cmd start` 的 HOST=0.0.0.0）容器才可达；`start_llama_server.cmd` 绑 127.0.0.1 仅宿主自用。
 - PaddleOCR-VL 直调铁律（DEPLOY_PLAN 实测）：消息必须用官方训练指令（`OCR:` 整页转写 / `Table Recognition:` 表格 / `Formula Recognition:` 公式），自然语言提问在 temp 0 贪心解码下死循环重复；表格输出是单元格标记流（`<fcel>/<ecel>/<lcel>/<ucel>/<nl>`）非 HTML；mmproj `clip.vision.image_max_pixels`≈1MP 是训练甜点勿改。约 15.7-21s/页（T1200 4GB）。
@@ -1279,6 +1412,7 @@
 - OCR 引擎设置页配置注入链（新增引擎要设置页可配时照抄三处）：① `config/options.py` 加 Option（fields 的 key 必须等于解析器构造参数名，`environment` 指向 env 回退，`Option.resolve` 按 DB→env→default 合并）并挂进 OPTION_DEFINITIONS；② `services/ocr_service.py::_build_processor_kwargs` 加分支返回非空字段；③ 前端 `OCRSettingsSection.vue` 的 OCR_OPTION_KEYS 加 key。设置弹窗是 SettingsModal（无独立路由）。
 
 ## Do-Not-Repeat (append 2026-10-18 热重载静默死亡)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - (2026-10-18) 容器内 uvicorn/watchfiles 的重载器会因 inotify ENOMEM（WatchfilesRustInternalError: Cannot allocate memory）**静默死亡**：之后 sync-dev 的文件变更不再触发重载，旧进程继续服务旧代码。判别特征：`docker exec` 新进程能看到新代码、但 HTTP 行为是旧的。修复：`docker restart pisuan-localized-api-1`（worker 的 watchfiles 监督进程同理，查 `docker logs ... | grep -c "Cannot allocate memory"`）。sync-dev 后若改动未生效，先查 api 日志有无该报错再排查别的。
 
 ## Decision Log (append 2026-10-18 A/B 再裁定)
@@ -1286,6 +1420,7 @@
 - (2026-10-18 更新) **B 定案（终局）**：用户问「B 是否改动风险更小」→ 我如实确认（规则零重调/KB 纯加法/无断粮依赖 vs A 的 Docling md 规则重调不可预估 + 状态机耦合）并澄清 VL 接入对 A/B 中性（docx 不走 VL）→ 用户裁定「选择B方案，请指定任务计划，然后执行」。上一条 A 翻转记录作废。关键事实：三脚本在 repo 内 backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/；extract_front 是纯函数（前置区文本行即可喂）；canonical md 前置区标记方案 = 首个节号标题前保留封面 + 明确边界标记。
 
 ## Do-Not-Repeat
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - (2026-10-18) WSL2 全栈基线已占 ~7.3GB/7.7GB：80MB docx 的 md 迁移峰值会把 api 驻留推到 4.27GiB 并挤爆 worker(watchfiles ENOMEM)/milvus/minio(cannot allocate memory→S3 InvalidPart)。批量迁移/重编译必须后台跑 + 监控邻容器存活；api 驻留内存 reload 不释放，只能 docker restart 回收；/api/system/ready 从 503 退化为 curl 000 即进程僵死信号。
 
 - (2026-10-18) 运行栈是改名层：docker cp 原始 yuxi 测试文件进容器必 ModuleNotFoundError（No module named yuxi）——同步测试文件一律走 scripts/sync-dev.ps1（自动 yuxi→pisuan 改名）。
@@ -1293,6 +1428,9 @@
 - (2026-10-18) bank_index.json 实际形状 {stage:{chN:[{report_id,sec,file:"slices/chN/<rid>__<sec>.md"}]}}——章号在 dict 键名，切片文件名是 <rid>__<sec>，与计划假设 ch<N>__<rid> 不同。
 
 ## Key Learnings（2026-10-18 P2 QA 会话追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - **Option 配置写后必须 invalidate**：`update_option_value` 写库后必须 `await invalidate_option_cache(key)`（`yuxi.config.options`），否则 `Option.get()` 命中 Redis 缓存（TTL 300s + version CAS）返回旧值最长 5 分钟（bug-4044）。凡新增写 system_options/其他 Option 的代码路径都要检查。
 - **模型缓存（Redis `pisuan:model_cache`）只在 provider CRUD 后重建**：直接改 DB 的 enabled_models 不会生效；spec 格式 `provider_id:model_id`（如 `ollama:bge-m3:latest`）。手动重建：容器内 `model_cache.rebuild(await get_all_model_providers(session))`。
@@ -1313,11 +1451,17 @@
 - (2026-10-19) norm_code（eia_limit_extract_core）保留号-年连字符（GB3095-2012），而 eia_standard_service._norm_std 全剥成 GB30952012——两处「归一标准号」口径不同，跨模块互比必须再剥连字符归一同形；任务书规格自带的正则与其测试断言矛盾时，按「断言语义不放松」调实现（TDD 红相当场暴露）。
 
 ## Key Learnings (append 2026-10-19 限值提取 API Task5)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - (2026-10-19) dev 运行栈的迁移滞后会在 api 重启时引爆：代码已到 business v20 而 DB 仍 v19 时，`docker restart pisuan-localized-api-1` 直接 startup failed（RuntimeError: business=19 (required 20)），容器反复重启起不来。修复序：`docker exec pisuan-localized-api-1 python -m pisuan.storage_migration` → `docker restart pisuan-localized-api-1`。凡是合入了新迁移的任务，同步运行栈后必须主动跑一次迁移，不要等重启暴露。
 - (2026-10-19) watchfiles 静默死亡的第二种形态：日志里**没有** ENOMEM 报错也能死（本次 --since 30m 内零 reload 痕迹、零报错，但 sync-dev 全量同步后新路由 404）。判据从「找 ENOMEM」改为「文件已进容器 + 行为仍旧 + 无任何 reload 日志」三者齐即按死处理，直接 restart，别再找报错。
 - (2026-10-19) 集成测试凭据基线：运行栈容器无 TEST_USERNAME/TEST_PASSWORD（/app/.env 无该键、无 /app/test/.env.test），integration conftest 的凭据用例（403/未知 404/形状 400）在此栈恒 skip，401 用例恒跑。判读结果时 1 passed + 3 skipped 即本栈全绿基线，勿当失败。
 
 ## Key Learnings (append 2026-10-19 varchar 守卫字节修正)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - Milvus varchar `max_length=65535` 按 **UTF-8 字节**计，不是字符。中文密集文本 2.3+ 字节/字符，任何按字符数做的长度守卫都会漏。chunking 层所有长度上限判断一律用 `len(s.encode("utf-8"))`。
 - 语义切分 special_element 整体发射路径覆盖的不只 Table：ordered_list_open / bullet_list_open 等列表块也走 `_flush_content(special_element=token.type)` 整发分支，中文标准的巨型清单（如 HJ 2.3 附录 B）会从这条路漏过守卫。
@@ -1325,17 +1469,27 @@
 - 容器内诊断套路：`docker exec pisuan-localized-worker-1 python -c "..."` + minio 客户端直拉 `knowledgebases/{kb_id}/parsed/{file_id}.md` → 本地调 chunk_markdown 复现，比看日志猜快得多。
 
 ## Key Learnings + DNR（2026-10-19 Task8 spec 审查追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - queryApi.queryTest 响应多态：Milvus 返回裸 chunk 数组（content/score/metadata.source），另有 string/其他对象形态；既有消费 QuerySection.vue:46-56 按三态分支渲染。新消费方照此三态处理即可，非过度防御。
 - Windows 检出工作树存在 CRLF 文件（如 StandardsPanel.vue），`prettier --check` 会对 blob 本身 clean 的文件报格式问题（autocrlf 下 git diff 不可见）。判定 commit 是否引入格式问题须用 `prettier --stdin-filepath <仓库内路径> < git show blob` 对照，勿信工作树 --check。
 
 ## Do-Not-Repeat (append 2026-10-19 Task 8)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - 实现 agent 的 worktree 与主检出共享对象库：agent 可能自行 reset/移动 pisuan-custom 分支引用，导致控制器的 cherry-pick 变 empty、分支谱系意外。控制器合并前先 `git log --oneline -3 <commit>` 查父谱系；已是指定 tip 的直接后代时用 `git merge --ff-only` 而非 cherry-pick。需在任务书里明示「不得移动 pisuan-custom 引用，分支移动归控制器」。
 
 ## Key Learnings (append 2026-10-19 T8 quality review)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - StandardsPanel KB 弹层竞态模式：重开式弹层的 in-flight 回包用自增 seq 令牌作废（openKbQuery/onKbSearch 各 ++）；关键坑——旧请求的 finally 若只做 `submitting = false` 会被 seq 守卫拦掉，入口 openKbQuery 必须显式复位 submitting，否则重开弹层永久卡「查询中…」。引用清单失败缓存 error 哨兵而非空清单：接口故障不得伪装成「语料 0 引用」业务事实，重试=删缓存键再拉（loadCitations 的 `code in cache` 守卫天然放行）。
 
 ## Key Learnings + DNR（2026-10-20 GBT14848 Semantic 分块实测追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - **解析层决定 Semantic 表格 KV 的生死**：`html_table_to_key_value` 只认 markdown html_block 里的 `<table>`（semantic.py 判 `"<table" in content`）。引擎输出无 HTML 表格 → KV 通路整个死掉，此时 Semantic 退化为普通语义分块。验证新引擎先看解析产物有无 `<table>`，别先调分块。
 - 栈上引擎健康实测（localized 栈）：可用 = paddleocr_vl_local（默认）/ rapid_ocr / deepseek_ocr；不可用 = mineru_ocr（未部署）、mineru_official（无 KEY）、pp_structure_v3、paddleocr 云端系（无 PADDLEOCR_API_TOKEN）。deepseek_ocr 走 siliconflow-cn 供应商凭证，实测对 GBT 14848 输出 12 个 `<table>`（含 colspan 合并单元格）+ 真 markdown 标题，53 chunks 中 27 个 KV 化，硝酸盐行"III 类：≤20.0"精确可检。代价：限值以 LaTeX 形式出现（`\(\leq 2.0\)`），且约 6-8s/页需等待。
@@ -1344,12 +1498,18 @@
 - 临时验证知识库用完即删（本会话 kb_57k28wepd1/kb_pjxwaoe85r 已删）；deepseek 版解析产物存档在 .wolf/gbt_content_ds.md + gbt_lines_ds.json 供后续调分块参考。
 
 ## Key Learnings + DNR（2026-10-20 限值判别 llama-server 卡死追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - fast_model = gemma-4-E4B GGUF，经 openai 供应商 `host.docker.internal:8080/v1`（宿主机 llama-server.exe，turboquant 构建）。判别器 `model.call` 是普通 chat 调用且未设 max_tokens 上限——服务端病态无限生成时会占死推理槽，CPU 满负载 + 所有 completions 请求排队挂起，而 /health、/v1/models 秒回（可用性假象）。
 - 诊断签名：日志异常消息为空（`fail-closed: `后空白）≈ asyncio TimeoutError；轻量端点 200 + 生成端点 hang = 服务 wedged 而非网络不通；`/slots` 未启用时无法远程看槽位。
 - eia_limit_llm_classifier 双通道语义：结构化通道调用失败→进程内按模型拉黑（仅探测缓存，输出校验失败不拉黑）→降级 prompt 通道；任一失败 fail-closed 计入 stats.failed，不放行。修复服务后已失败区块需重跑提取任务，无需重启 api 容器。
 
 ## Key Learnings（2026-10-20 生产库重导入完成追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - 生产库"环评引用标准规范库"(kb_yn2req38m2) 已完成 semantic + deepseek_ocr 全量重导入：31/31 indexed，3068 chunks（旧导入 1145），0 失败。虚拟目录下的文档 API 列表要用 `path_prefix=环评引用标准` 查（recursive=true 对虚拟目录无效）。
 - knowledge_files.processing_params 列记录每文件最终生效的解析/分块参数——核验"某批文件到底用了什么配置"以此列为准，worker 的 Merged params 日志行可能是中间态，勿当裁决依据。
@@ -1357,6 +1517,9 @@
 - 检索冒烟基线（生产库 31 标准）：Q"硝酸盐Ⅲ类限值" Top-2 命中表 KV 块；Q"36600 筛选值" Top-1 命中（0.748）。已知噪声：表格首行/合并表头会产出"序号：序号；筛选值：第一类用地；筛选值：第二类用地"类 KV 头噪音行，无害。
 
 ## Key Learnings (2026-10-20 限值提取链路)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 平台模型 spec 必须取自 select_model 注册清单（报错消息会列出全部可用项）；改 fast_model 前先在容器内 `python -c "select_model(...)"` 冒烟。
 - EiaLimitLLMClassifier 单例永久缓存已解析模型：切 fast_model 后必须重启 api 才生效（bug-4104）。
 - EIA 限值提取管线读 samples_bank 磁盘切片（512 个 md，container: package/pisuan/agents/skills/buildin/coal-eia-writer/references/samples_bank），与知识库无关；confidence 是 multi/single/conflict 三档枚举非数值。
@@ -1365,14 +1528,19 @@
 - Git Bash 下 docker cp 源路径必须是 Windows 路径（/tmp 会被解析成 C:	mp）。
 
 ## Do-Not-Repeat (2026-10-20 web 改动丢同步)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - **运行栈 (pisuan-localized-*) 的 web/api 挂载的是 C:\workspace\pisuan-localized 树，不是 pisuan 树**！在 pisuan 改完 web 代码必须跑 `powershell -File scripts/sync-dev.ps1`（勿加 -ExecutionPolicy Bypass，会被安全策略拦）才到运行栈；否则改动"无效"的假象会引出错误的 vite 缓存/挂载诊断。容器内 prettier --write 只作用于 localized 副本，别当成同步验证。
 - 本容器 OCR 解析产物（deepseek_ocr）的 HTML 表格全部用 <td>，无 <th>：预览表头加粗对这类表格天然不生效；用户已决策不做表头识别，统一网格边框即可。
 
 ## Do-Not-Repeat (append 2026-10-20 markdown 预览)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 
 - 经 Git Bash 向 `docker exec <web> node -e '...'` 传含正则反斜杠（如 /\\[...\\]/）的脚本会被 MSYS 参数转换吃掉一层反斜杠，容器收到残缺正则直接 SyntaxError。要验正则逻辑：Write 到 .wolf/*.mjs → docker cp（Windows 路径）→ docker exec node /tmp/x.mjs，跑完删。
 
 ## Key Learnings + DNR（2026-10-20 上游同步与 localized 重建批追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 - **localized 仓库状态模型**：单分支 `pisuan-localized`，每次重建 = detach 到 origin/pisuan-custom（yuxi 命名）→ apply_pisuan_rename.py → 单提交 "chore: 机械改名层 yuxi→pisuan"。`origin`=本地 C:/workspace/pisuan（fetch 无需网络），`github`=发布远端。树会被脚本翻成 yuxi 命名再翻回，运行栈热重载在窗口期报 ModuleNotFoundError 属预期自愈。
@@ -1389,16 +1557,23 @@
 - (2026-10-20) 上游 delta 低风险（compose/docs/OCR 门控），裁定不做全量单元回归，只做：三 tip 对齐验证 + 栈重启 + /api/system/ready + 错误扫描。
 
 ## Do-Not-Repeat
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 
 - [2026-10-20] 禁止 import 带 module-level main() 的 controller scratch 脚本——continue_a_channel.py 被 import 复用 call() 时整链重跑，把解析中的两个文档删了重传，白耗一轮 deepseek 配额。要复用 helper 就复制函数，不 import。
 
 ## Key Learnings
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - [2026-10-20] KB 上传端点响应字段是 `file_path`/`minio_path`（不是 url/minio_url），无 file_id；file_id 在 documents/add 响应里，可递归找 "file_" 前缀值。
 - [2026-10-20] MinIOClient.download_file(bucket, object)：markdown_file URL 形如 http://host:9000/<bucket>/<object>，切 bucket 时先去掉 host:port 段。容器内跑一次性脚本结尾常挂住（async engine 未 dispose），外层 timeout + 容器内日志文件 + docker exec cat 取结果是可靠模式（管道 grep 会块缓冲吞输出）。
 - [2026-10-20] deepseek_ocr（siliconflow-cn）对 GB 3838-2002 扫描件解析质量极高：表1 24项×I~V类全对，含溶解氧≥方向列、总磷湖库括号值、水温/pH colspan、汞 0.00005。扫描件重解析路线可行。解析任务只做 parse（文档状态 parsed/0分块），index 是独立动作，中间可插人工质量门。
 
 ## Key Learnings
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - [2026-10-20] KB 运行配置（additional_params 含 chunk_parser_config）走 Redis 缓存（knowledge/cache.py get_cached_kb_config），直连 SQL 改库**不会失效缓存**——改 KB 配置必须走 API 或先调 delete_cached_kb_config(kb_id)。已验证：SQL 改 chunk_token_num=4096 后重索引 chunk 完全不变（旧 512 配置），失效缓存后重跑才生效。
 - [2026-10-20] 分块对 HTML 表格的 token 密度约 2.9 token/字符（HTML 标记密集），4096 token ≈ 1400 字符表格 HTML——GB 8978 的 72 行大表在 4096 token 下仍会被拦腰切。根治需表格感知分块（table 整体不切），已列为待立项工单。
@@ -1408,12 +1583,18 @@
 - [2026-10-20] 表格感知工单（R1+R2 已立项）：超大表嵌入截断选 a) 允许截断+日志。依据：写作侧权威接口是 lookup_standard_indicator 结构化指标行而非表格 chunk 向量检索；b) 续切分与 R1 续表归并联动复杂度过高。
 
 ## Key Learnings（2026-10-20 Task 15 表格感知分块追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - **worktree 宿主跑后端测试的正确姿势**：`cd <worktree>\backend && uv run --frozen --with pytest --with pytest-asyncio python -m pytest <paths> -q --noconftest`。裸 `python -m pytest` 因缺 sqlalchemy 收集失败；`--frozen` 防 uv.lock 漂移改写（呼应 [[2026-10-05]] uv.lock 教训）。worktree 单提交评审两阶段均实测可跑。
 - **R1/R2 拆分边界（评审确认的自洽设计）**：R2 分块层把未闭合 `<table` 残段当普通文本保留（分块保数据），R1 enrich 层把残段丢弃不识别（enrich 拒绝误识别，宁可漏不可错）——同一现象两层相反策略是有意的，不是 bug。
 - **presets 前端零改动扩展点**：knowledge_router.py:1779 `get_chunk_preset_options()` 动态读 CHUNK_PRESETS，新增预设无需动 web/src。
 
 ## Key Learnings (append 2026-10-20 跨页断表+表格编辑)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - 知识库文档 markdown 正源：MinIO 确定性键 `{kb_id}/parsed/{file_id}.md`（base.py `_save_markdown_to_minio` 原键覆盖即更新，不动 meta）；router 的 `knowledge_base` 是 **KnowledgeBaseManager 分发器**——新增文档级方法必须 Manager（get_kb_executor 转发）+ KnowledgeBase 基类（具体方法，可调 get_file_basic_info/MinIO 助手）各一份，只加基类会 AttributeError。
 - OCR 逐页转写断表三信号（GB 国标语料实测）：`表N（续）/续表N` 标记行、逐字重复表头（含 `I/1` 噪声需 NFKC+折叠归一）、序号跨片连续。合并纯函数在 `yuxi/knowledge/parser/table_merge.py`，钩点 = 两处 `"\n\n".join(full_text)`（deepseek_ocr.py / paddleocr_vl_local.py）。
@@ -1421,6 +1602,7 @@
 - 前端验证浏览器会话常已登录（chrome-devtools MCP 直连 localhost:5173 即达知识库页）；a11y 快照中 popover/dialog 内容首次点击可能未捕获，重开一次即现。
 
 ## Do-Not-Repeat (append 2026-10-20 断表合并)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 
 - 纯函数多段装配循环：输出拼装用「原文切片」而非「累积变量」且漏拼首表前/末表后正文——单测只断言表数会漏过，**必须断言首尾文本保留与字符守恒**（真实 GB/T 14848 验证揪出：正文丢了 2497+788 字符）。
 - dirty/变更比对基准：编辑态存的是格式化文本时，比对对象必须是 formatted 基准而非原始 html（否则「还原」按钮初始常显）。
@@ -1428,42 +1610,64 @@
 - 宿主机 Windows 跑 `test_parser_capabilities` 的子进程导入用例必挂（`yuxi/utils/paths.py` 用 `os.O_DIRECTORY` Linux-only）——该套件只能在容器跑。
 
 ## Key Learnings + DNR（2026-10-20 Task 15 冒烟批追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - **分块参数三级优先链（实测）**：request params > 文件级 processing_params（入库时快照） > KB additional_params。给 KB 换 preset 后重索引**不会**用新预设——文件级快照仍是旧值！必须 `POST documents/index` 请求级带 `params={"chunk_preset_id": "table"}`。worker 日志 `[index_file] processing_params=...` 是裁决依据。
 - **容器冒烟 enrich 的日志指纹**：structured 降级=恰 60s 空错误（_structured_support 缓存后同进程只烧一次）；prompt 通道再 60s 空错误=超时 fail-closed。表1 120 行输出必超 60s → timeout=300s 修复（d318c4440）。
 - **续表形态（deepseek OCR）**：跨页表会成多个 <table> 块，续块标题只剩「表N（续）」/「表N（完）」，且可能落到 chunk 头部无主表（表?（续）占位）。角色必须按主表序号继承（d318c4440 role_memo）。
 
 ## Key Learnings + DNR（2026-10-20 FileDetailModal markdown 编辑追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - **FileDetailModal 的 file 是 fileId prop 驱动的 ref**：watch [open, kbId, fileId] 仅在 open=false 时 resetLocalState；弹窗开着切换 fileId 只跑 loadBasicInfo。凡加可编辑态，必须在 fileId 变化分支显式丢弃（本次 editing/editText），否则 A 文档编辑内容残留到 B 文档。QA 实测触发路径：文件行单击即开弹窗（customRow onClick + 文件名 @click.stop），双击的第二次 click 会落在重渲染后的相邻行 → 弹窗切到别的文件。浏览器脚本 QA 时用 getComputedStyle(wrap).display!=='none' 判断弹窗可见，ant 保留隐藏 wrap，querySelector 存在≠打开。
 - **chrome-devtools uid 极易失效**：弹窗内容周期性重渲染（状态轮询）后 uid 全部作废，点击报 "no longer exists"。改用 evaluate_script 直接 DOM 查询+dispatchEvent（querySelector('.file-detail button')按 aria-label 找）。
 - **QA 约束延续**：保存链路验证用无改动保存（内容逐字节一致才允许 PUT），真实修改只入 textarea 不保存。
 
 ## Key Learnings（2026-10-20 GB 8978 人工门追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - **热重载杀在途请求实证**：并行会话改运行栈文件（knowledge/base.py）→ WatchFiles 重载 → "Cancel 1 running task(s)" 掐死在途 enrich（客户端 ~5 分钟后才收到 500，服务端无 500 访问行只有 shutdown ERROR）。跑长 enrich 前先确认无并行改动；失败先查 "graceful shutdown exceeded" 再怀疑代码。
 - **GB 8978 提取形态**：461 行。表2（现有）与表4（新改扩）是两张时段表，同因子同档位同值会双录（16 组良性）；45 组「同因子同档位不同值」靠 condition 里的行业条件区分（黄磷工业/低氟地区等），是正确的行不是冲突。category 命名有 LLM 方差（二级标准/二级），精确查询前需归一（打磨项）。
 - **enrich 端点是同步 HTTP**：GB 8978（14 表）约 5-7 分钟；客户端 urlopen 需 timeout≥1800，且中间被重载杀掉时只收 ConnectionReset/500，服务端无对应访问行。
 
 ## Key Learnings + DNR（2026-10-20 KaTeX 尾随空格吞噬追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - **@vscode/markdown-it-katex 1.1.2 单行 `$$x$$` 判定坑**：blockMath 用 `endIndexes[0].index === firstLine.length - 2` 定位闭合符，行尾任何尾随空格（OCR 硬换行双空格是本项目标配）都会判定失败，块规则向后吞到下一个 `$$` 结尾行——中间标题/段落全部进入公式体，KaTeX `Can't use function '$'` 红字回退。修法在 normalizeLatexDelimiters 末步 `^(.*\$\$)[ \t]+$ → $1`（markdown_preview.js）。**DNR**：诊断此类渲染问题别盯转换正则，用项目同款依赖写 node 复现脚本（web/ 下临时 .mjs，import markdown-it + 插件）直接看产出 HTML，一次定位；插件 dist 源码在 node_modules/.pnpm/@vscode+markdown-it-katex@1.1.2/。
 - **QA 素材即证据**：复现脚本跑完即删，但源文档 dump（.wolf/gb8978_source.md）留着——后续语料缺陷（如本文档 D3.5 起 9.3k 字符 `\dots` 幻觉复读到 EOF 且缺 `\]`，OCR 循环噪声）还要引用。
 
 ## Key Learnings（2026-10-20 markdown 预览字体对齐追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - **MarkdownPreview 正文栈已收编 var(--font-sans)**（2026-10-20 用户裁定与标准页对齐）：此前组件自带旧栈缺 Segoe UI，Windows 上英文/数字落字与站内不一致。全站正文单一真相 = base.css `--font-sans`（body 继承），mono = `--font-mono`；新组件不要再写裸字体栈。验证手法：evaluate_script 对 .yk-markdown-preview getComputedStyle 看 fontFamily 是否含 Segoe UI。
 
 ## Key Learnings（2026-10-20 标准面板 W1 后端追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - **standard_indicators 三新列与核验语义**：verified_at/verified_by/source（DEFAULT 'enrich'）经 models._DDL 幂等 ALTER 迁移；核验动作 UPDATE now()/NULL（DB 端 now()，不落 Python 时区）；enrich 重跑按 doc_code 删旧插新使核验态随行消失（重跑即重验，有意设计，勿加「保留核验态」防御）。enrich 冲突守护在首会话（读 chunks 前）SELECT count(*) WHERE source='expert'，检测点唯一，StandardConflictError→路由 409。测试桩注意：既有 enrich 流 FakeSession 需 count(*) 分支返回 scalar_one()（test_regulation_enrich_routing/test_table_splitter 已补）。
 - **norm_code 口径扩了全角－**：eia_limit_extract_core.norm_code 的 _STD_DASH_RE 现为 [—–－]；标准号归一一律复用它（手工查重与缺源候选差集同源），勿再手写归一。缺源候选 diff 语义：同归一码变体合并（ref_count 累加、samples 并集截 3、code 取先见原文）——GB 与 GBT 是不同标准号，变体合并只在 T 缺省/全半角/连字符写法间成立。
 - **手工行 born-verified 契约**：expert 行 unit_no='手录'、verified_at=now()、source='expert'，保存即核验；PUT/DELETE 仅认 expert 行（DELETE rowcount=0 即 409，单语句守护）；doc_code 路径参数用 {doc_code:path} 转换器（编号含 / 可过）。doc_name/doc_type 仅入 API 契约未落表（standard_indicators 无此两列，挂图/元数据延后）。
 
 ## Key Learnings (appended 2026-10-21)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - eia-data 各面板凡涉 md 预览一律接 `common/MarkdownPreview.vue`（:content + 可选 :compact），底层是 utils/markdown_preview.js（markdown-it+KaTeX+DOMPurify+shiki）；裸 `{{ text }}` 插值=源码态。给组件容器套样式时勿用 white-space:pre-wrap（与块级 HTML 冲突双倍换行），排版交组件自带。
 
 ## Do-Not-Repeat (2026-10-21)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - 新面板预览 tab 别再写纯文本插值 div；预览用 v-if 挂载（v-show 会在编辑态每个键击触发整条渲染管线 watch）。
 - MarkdownPreview 组件带形态开关：`compact`（聊天气泡扁平）与 `bordered`（表格完整网格边框含暗色，is-bordered 变体，MarkdownPreview.vue:837）；文档类预览场景默认应加 bordered，否则表格只有 td 底发丝线。
 - KB 文档内容端点（GET /api/knowledge/databases/{kb}/documents/{id}/content）返回 `content`（全文 markdown 正源）+ `lines`——对 LightRAG 型库 lines 即**分片**（键 chunk_order_index/content/start_char_pos/end_token_pos/graph_indexed/tags），不是逐行文本；chunks 键不存在。做全文档处理用 content 字段，勿 join lines。
@@ -1494,6 +1698,9 @@
 - (2026-10-21) buglog id 有非 bug-NNN 形态（如 bug-t14），取最大号要 re.fullmatch 过滤否则 int() 炸。
 
 ## Key Learnings (2026-10-21 corpus compile)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - autocrlf=true 仓库被批量覆盖 LF 文件后：`git status` 报 ~180 个 EOL round-trip 幻影 M，`git diff --name-only` 才是真实内容变更（且 stderr 警告风暴会拖慢 git diff 数分钟——务必 2>/dev/null 并耐心等待）。
 - `git checkout -- <path>` 会丢弃工作树新拷贝的产物；正确顺序：先 checkout 清幻影，再回拷真实变更文件。
 - bank_compile refs 契约：必须指向真实 references/（读 stages/*.json + overrides/curated_lexicon.json，:272/:573），不能空目录起跑；--prune 是 opt-in；同输入必同字节（幂等）。api-1 的 skills references 是挂载=镜像目录，容器内写即落 pisuan-localized。
@@ -1501,6 +1708,9 @@
 - MSYS_NO_PATHCONV=1 必须加在每条含容器路径的 docker exec/cp 上，逐命令生效。
 
 ## Key Learnings (2026-10-21 milvus 清理)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - milvus `num_entities` 含已删除未 compact 的行，会虚高（清理前显示 13517，实际存活 11748）；真实存活数用 `query(expr='id != ""', output_fields=["count(*)"])`。
 - 对账铁律：postgres `knowledge_chunks`（yuxi_know 库）是逐文件 chunk 权威台账，milvus count(*) 应与其总和精确一致。
 - 容器内 pymilvus 版本 `query(iterator=True)` kwarg 有 bug（bad argument type）；定向操作直接用 `query(expr=..., limit=16384)`（残留量级远小于上限）。
@@ -1508,6 +1718,9 @@
 - docker cp 进容器的文件属 root，exec 用户在 /tmp（sticky）删不掉——临时脚本要么 docker exec 写入，要么接受残留。
 
 ## Key Learnings + DNR + Decision Log（2026-10-21 章节口径重编译端点批追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 - POST /domain-factory/eia/stages/expectations/recompile 是薄别名端点：直接 enqueue `eia_corpus_process` scope=all 后台任务（get_admin_user 门控，tasker.enqueue），复用 P2 全库重编译链（_materialize_workdir → bank.main_with_args → 台账）。运行栈 e2e：queued → worker 14.2s {"compiled":33} success。
@@ -1528,6 +1741,9 @@
 
 
 ## Key Learnings + DNR + Decision Log（2026-10-21 KB 为准编译语义批追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Decision Log
 - (2026-10-21) 用户裁定语料权威 = 绑定语料 KB（eia_corpus_kb_id）：编译选集 = KB 全量文档；文件库是加工/推送暂存面（就绪未推送不入编，台账 library_not_in_kb 可见）。线下编译产物=初始化种子（历史快照，不追字节一致）；上线后新增样例走 推送→编译 循环。增量编译暂不做（33 份全量 14s 幂等，量级不到不优化）。
@@ -1545,6 +1761,9 @@
 
 
 ## Key Learnings + DNR（2026-10-22 P1+P2 词表联动批追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 - `Path.read_text()` 默认 universal newline 会把 CRLF 静默转 LF——对仓库文件做行级编辑须用 `read_bytes().decode()`（splitlines(keepends=True) 保留 \r\n）；此前 LexiconPanel/test 文件已被转为纯 LF（git autocrlf 会归一，diff 无噪声，无实害）。
@@ -1572,6 +1791,9 @@
 - (2026-10-22) coal-eia-writer 剥离知识工厂模板依赖：写作链路恒用内置 references/ 结构真源，不 resolve KF 模板/大纲。理由=KF 模板是 stage JSON 派生工件（seed_gen 导出）+ 大纲库 1055 条零消费（埋点 2 次）；resolve 优先=结构性循环。平台侧工具（list_report_types/get_templates/get_chapter_outline）与大纲模板页保留，其他技能（compliance-checker 等）不受影响。开题首动作由三件套改两件事。
 
 ## Key Learnings + DNR（2026-10-22 供应商 logo 本地化 + localized 重建撞车批追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 - **localhost:5173 = pisuan-localized 栈**：容器 pisuan-localized-web-1（compose 项目 pisuan-localized）bind-mount `C:\workspace\pisuan-localized\web\{public,src,test}` + vite.config.js + index.html。在 pisuan 侧改前端，必须经 sync-dev（秒级）或 localized 官方重建链才进栈；直接在 pisuan 提交推送不改变运行栈。
@@ -1585,6 +1807,9 @@
 - 2026-10-22：改 modelIcon.js 等前端引用后，不要用「第一次截图正常」当通过证据——那可能是栈内旧代码（CDN 图标）的缓存假象；必须以 content-type / 网络面板 + 最终栈态复验。
 
 ## Key Learnings + DNR（2026-10-22 文件库阶段下拉 + sync-dev 瞬态锁批追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 **Key Learnings**
 - bind-mount 运行栈树（pisuan-localized）上新写入文件有瞬态锁窗口：写入后数秒内宿主 open 读报 `OSError [Errno 22] Invalid argument`（exists()=True 但不可开，即 Windows 删除挂起态表现），数秒后自愈。持有者 = web 容器 vite/chokidar 对挂载新文件的监听反应（Docker 挂载桥代持宿主句柄）。sync-dev 的 walker→git add→apply_pisuan_rename 每步都会回读新文件，与该窗口赛跑必输——**同步前先 `docker stop pisuan-localized-web-1`，完成后 start**（实测停容器后 36-39s 干净通过，4 连崩 → 一次通过）。
@@ -1597,6 +1822,9 @@
 - (2026-10-22) Edit 工具锚点用长行截断前缀会把原行从中间切开（changelog 实翻车一次，三轮才复原）——old_string 必须包含完整行或以行尾边界结尾；改完长行文件后立即回读受影响行复核。
 
 ## Key Learnings（2026-10-22 语料管线对照追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - bank_compile.py 产物面远大于 samples_bank：slices/SL3 指纹池(samples/)、bank_index.json、paradigms/forms_catalog.json、section_expectations/<stage>.json、depth_targets/<stage>.json + per-mineral 全是其产物；线上 run_eia_corpus_process 直写容器内技能 refs 目录（_SKILL_ROOT），git 面靠手工治理提交（gov_refs_refresh）。「矩阵统一模式」的 DB 覆盖层+admin 导出对编译产物面不适用——它是唯一「任务直写 refs」的例外。
 - corpus_meta.py（离线）与线上 _merge_corpus_meta 是两套生产者：province 频次判定、standards_cited 归一、attachment_checklist 只有离线脚本会产；线上新 rid 只得 cover 层字段（basis=cover/needs_review）。front_matter.json（samples_bank/）仍是离线脚本输入，线上改走 DB front_meta 列——双载体无同步。
 - KB 绑定 eia_corpus_kb_id（system_options）是编译集权威（2026-10-21 裁定 KB 为准）；KB 既是 RAG 检索面又是编译权威面，双角色寄生。join 键 = KB 文档名 <stem>.md ↔ original_filename stem，同名 stem 在编译时 ValueError（上传不拦）。
@@ -1610,32 +1838,46 @@
 - 宽度封顶原本有双层：EiaDataLayout `.chrome-canvas`（不居中，宽屏右侧堆空档的元凶）+ factory-ui.less `.ewp`（margin auto 居中）。改布局宽度时先 grep 两处，只改一层会互相掩护。
 
 ## Key Learnings (2026-10-22)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - standard_indicators（regulation_library）无 ORM 模型：raw SQL + `models.py ensure_schema()`（ALTER TABLE IF NOT EXISTS 幂等追加列的既有模式）；extensions→services 的 import 已有先例（norm_code/_SKILL_ROOT）。
 - regulation_library 已有 born-verified 手工行机制（create/replace/delete_manual_standard，source='expert'+now()，_MANUAL_UNIT_NO='手录'）；StandardsPanel 合流通道与之并存，靠 create 的 doc_code 查重防混写。
 - eia_standard_limit_rows 实测 0 行、standard_indicators 667 行全 enrich 0 核验（2026-10-22 普查）——限值权威层现状完全靠文件锚点。
 - 裁决类 API 是逐行触发：转正/确认不能用整表替换语义（会冲掉先确认行），幂等键用 page_row_id（行形内容 md5 确定性派生）。
 
 ## Key Learnings + DNR（2026-10-22 P1-T3 born-verified 追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - 任务书给的 verbatim 实现 snippet 可能与自己 Step 1 的 verbatim 测试契约矛盾（本例：简写参数键 :code/:tk/:prid + 内联 'expert' 字面量 vs 测试断言全名键；saved 返回页面行数 vs 测试要拍平行数）。处置：以 Step 1 测试为契约修实现，任务书「修到全绿、限两文件」即此授权；报告须明示偏离点。
 - pg_manager.get_async_session_context 退出即 commit（manager.py:2190）——任何经真 Session 的旧测试（如 test_eia_standard_service.py::test_save_limit_rows_happy_path，现 stale 断言 repo.replace_rows 旧契约）在容器跑会向 standard_indicators 提交测试行且 DELETE 可能删真实 expert 行；stale 测试禁跑，留 Task 7 清理。
 - save_limit_rows 现写 standard_indicators（source='expert'，verified_at=SQL now()，day/night 拆两行共享 page_row_id）；repo.replace_rows 仍留存未删（Task 7 清）。
 
 ## Do-Not-Repeat (2026-10-23)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - 共享分支上控制器与子代理绝不可并发 git 写操作（含 --amend）：T4 补强 amend 抓错 HEAD 混入 docs 提交（bug-4017）。流程：派发评审/修复子代理前，控制器先清完自己的提交；子代理 amend/commit 期间不发新指令。
 - 修复类子代理中途 429 死亡时，控制器先 `git log/reflog + status` 核对现场再接管，不重派（现场可能半途态）。
 
 ## Do-Not-Repeat (2026-10-23 T5 enrich 删旧收窄)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 
 - **asyncio.run + pg_manager 必挂死（本栈实证）**：pg_manager.initialize() 在当前 loop 拉起 LangGraph psycopg AsyncConnectionPool 后台 worker/scheduler 任务，asyncio.run 收尾 _cancel_all_tasks 取消不掉它们（psycopg_pool worker 靠 StopWorker 优雅退出，裸 cancel 无效）→ 永久挂死且无任何输出。裸 python -c 同序列却不复现——**不能用「脚本里跑通」推断 pytest 里能跑通**。修法：协程 finally 内 `await pg_manager.close()`（graceful，≤5s），让池在 loop 死前收尾；下个 loop _ensure_loop_fresh 自动重建。定位手段：`PYTHONFAULTHANDLER=1` 起进程 + `kill -ABRT <pid>` dump 全线程栈；临时 debug 测试里 `print(repr(asyncio.all_tasks(loop)))` 直接点名元凶任务。另：docker cp 源文件必须在 Windows 可见路径（Git Bash /tmp 会被 docker.exe 解析成 C:	mp），且 `sed a > a` 自截断——变换输出一律落不同文件名。实证 commit 5e1549092。
 - **集成测试容器部署链**：仓库正典 `yuxi.*` 前缀 → `sed 's/yuxi\./pisuan./g'` 变换 → docker cp 进 pisuan-localized 容器；/app/test 与 /app/package 是 bind-mount（写穿到 C:\workspace\pisuan-localized 对应路径，属预期，勿当异常），且 docker cp 不触发热重载。
 
 ## Key Learnings + DNR（2026-10-23 T7 转正重指向追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - **monkeypatch 模块级 seam 红灯形态**：新测试把写路径桩 patch 到模块级名字（pg_manager/ensure_schema/_load_standards_index）时，旧实现没有这些模块属性 → 红灯表现为 fixture setup 的 AttributeError 而非断言失败。这同样是合法红灯（旧实现不满足新契约的设计缝），且因 patch 先于写路径执行，红灯期零真库写——比「调用断言失败」更安全。TDD 红→绿报告应如实写明红灯形态。
 - **test_eia_canonical_md_goldens.py 容器集合期必炸（既有缺陷，非本次引入）**：模块级 `@pytest.mark.parametrize("entry", _manifest(), ...)` 在 import 时求值，绕过自身的 skipif 守卫；容器内 _REPO 解析为 `/` → `/.wolf/corpus-workdir/manifest.json` 不存在 → 全目录跑 /app/test/unit/services/ 必带 1 collection error。处置：--continue-on-collection-errors 跑其余；宿主跑该文件正常。修复归属语料工作流。
 - **跨文件构造点引用决定参数去留**：删服务构造参数前先 grep 构造点（含测试），如 EiaLimitExtractService(std_repo=...) 被 test_standards_panel_w1.py:480 引用——若该测试文件不在本次提交许可清单，参数保留加注释而非硬删，否则 Step F 全目录验证直接 TypeError。
 - 任务书提交清单列的文件不一定全有 diff（本次 eia_standard_service.py 经 grep 确认零改动，git add 为 no-op，提交 stat 5 文件属预期）。
 
 ## Key Learnings + DNR（2026-10-23 T8 导出废除批追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 - **遗留契约点（未修，下批跟进）**：`backend/test/integration/services/test_eia_standard_service_flow.py:31-34,63` 的 `exp_pending` 仍按文件 `needs_verification` flag 自算（T8 之前旧口径）；T8 已把 `list_standards.limit_tables_pending` 切到 `list_limit_tables()` 的 `source != 'expert'` 派生。当前不红仅因 7 张表文件 flag 全 true 且 expert=0（两口径数值巧合相等）；一旦任一表落 expert 行或文件 flag 翻 false 即红。修法：exp_pending 改按 `svc.list_limit_tables()` 的 dict 值 `source != 'expert'` 自算（该测试不在 T8 六文件提交范围）。
@@ -1646,10 +1888,14 @@
 - python 正则改文件时锚点必须来自实际读到的字节（grep/sed 输出逐字复制），不许凭记忆重构：本次连续两失——漏 `(self, ` 参数、发明文件里不存在的全角 `（`/`〉` 锚字符。失败时先 `sed -n` 对照原文再改 pattern。
 
 ## Do-Not-Repeat (2026-10-23 T8 质量评审)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 
 - **绝对禁跑 `backend/test/integration/services/test_eia_standard_service_flow.py`（运行栈）**：其 fixture 对 `eia_standard_review` 表前后全量 DELETE **无备份**（JSON 侧有字节快照恢复，DB 侧没有）；docstring「绝不污染运行库」对 DB 行是夸大。与 `test_eia_lexicon_service_flow.py` 同一车道纪律。修它后验证 = 单测全绿 + 只读探针（counts 与 source 分布一致性），或可弃栈/CI。
 
 ## Key Learnings + DNR（2026-10-23 Task 9 收官批追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 - **localized 栈单文件部署正道 = docker cp 直达最终路径（root 身份）**：此前任务经 docker cp 部署的文件落盘为 root 属主 755；`docker exec <c> cp` 以容器用户 pisuan(uid 1000) 运行，覆盖它们必 Permission denied。cp 直达最终路径则由 docker daemon 以 root 写入，与既有部署链同权。exec cp 只对 777（Windows bind-mount 默认）文件有效。
@@ -1663,10 +1909,16 @@
 - python 改 JSON 字段勿在 -c/heredoc 里嵌中文长串（Windows 控制台 GBK 引爆引用）——写成 .wolf/task9-workdir/ 下的 UTF-8 脚本文件再执行。
 
 ## Key Learnings (2026-10-23 P1 合流收尾)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - **Skill 投影自动刷新**：`/app/skill-projections/<scope>/` 是运行时派生缓存；`composite.sync_agent_context_skills` 在每次 Agent Run 初始化时调 `refresh_user_skill_projection_async(uid)` 从 buildin 源重刷。改 buildin 技能文件后无需手工同步投影（重启也不必）——下次运行自动生效。投影与 buildin 源行尾不同（CRLF/LF），diff 全文件形态是行尾差异不是内容差异。
 
 ## Key Learnings (2026-10-23 写作测试)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - coal-eia-writer 写作测试/正式跑必须用专用智能体「环评写作助手」(agent-b8decd45b324, 入口 /agent?agent_id=agent-b8decd45b324)：它预配 max_execution_steps=1000 + skills=[coal-eia-writer] + subagents=[eia-section-writer] + 双知识库 + 写作工具集(save_chapter/create_report/query_kb)。用默认「智能助手」跑=预算300步+无工具集+无子代理，必然 GRAPH_RECURSION_LIMIT 撞墙（bug-4130）。
 - agent 默认模型是本地 gemma gguf；会话级须手动切 glm-5.3-flash（附件创建线程会把模型重置回 agent 默认，须建线程后再切）。
@@ -1674,6 +1926,9 @@
 - /api/agent 鉴权用 Bearer token（localStorage），页面内 fetch 带 Authorization 头可查 agent 配置。
 
 ## Key Learnings + DNR（2026-10-24 横城 B 测试对比评估追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - **深度对比必须修正切片归属再下结论**：原文切片在章中间断开（ch5/ch6 同切片、ch6 后半切片无章号标题），按切片首标题归属会把 ch6 的 72,730 字错标为「残片」，ch5 比值从 0.30 修正到 0.73。DNR：对比脚本按切片首标题归属原文深度前，先核对切片数（13）与章数（13）是否一一对应，不等则必须做切片内二次切分。
 - **横城 B 测试终局数字**（引用口径）：总量 0.92（AI 336,842 / 原文 367,009 有效字符）；薄 ch2 0.43 / ch4 0.35（表格量不足：AI 1436 表行 vs 原文约 2669）；厚 ch8 2.88 / ch10 2.45 / ch13 2.45（论证散文膨胀）；红线 3 命中全在自动生成合规性附录（formula_state/英文槽位键/告警混入交付物）；ch13 结论章 28 个待确认收敛性不足。
@@ -1687,6 +1942,9 @@
 - **文表割裂是最典型非工程师特征**（正文零「见表」引用）：工程师文风=复合数据长句+表格引用解读段，AI 默认风格=碎句+孤立表格+AI腔过渡词（总体而言/值得注意）。style_targets/<stage>.json 基准从 samples_bank 实测生成（0.8 宽松系数），机制同 depth_targets。
 
 ## Key Learnings（2026-10-24 范式角色体系追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - **派发契约已有节级分型**：references/paradigms/_roles.json 把 77 节映射到 4 角色（opener 12/baseline 17/analysis 37/measures 11），每节派发注入对应范式文件（结构骨架+去实体化范文+反模式硬禁令+节尾收束段）。缺口：ch13 结论章 V1 就近归类无专属 conclusion 范式（_comment 自认 P2 细分）；_roles.json 是 planning_eia 形状单份文件（section_expectations/depth_targets 均已 per-stage，唯角色映射没有）。
 - **设计裁定（2026-10-24）**：角色（文体型）跨 stage 通用——人类工程师各类型环评用同一套文体技能；映射（节→角色）必须 per-stage——章节树不同。_roles.json → paradigms/roles/<stage>.json 目录化，六角色共享，范文段内分 stage 小节渐进扩充。
@@ -1696,12 +1954,18 @@
 - **用户选模板仿写机制**（用户提出）：章节编写前 agent 从 KB 检索同型样例段落→脱敏（禁入清单机械校验）→推荐候选→用户选定→注入派发契约优先于默认范式。裁定三默认：按章不按节（13 次非 77 次）、可选不强制（常设「按默认范式」选项）、检索无果降级不阻塞。writer 全书模式不做（波次自动化冲突）。脱敏校验复用 sample_entities 禁入清单机制，仿写红线继承（句法参照、实体数值一律冻结值）。
 
 ## Key Learnings（2026-10-24 样例库分类学追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - **样例库实况**：samples_bank 33 份五 stage——planning_eia 17（238 切片）/井工 7（125）/露天 6（105）/post 2（33，薄）/tracking 1（11，极薄）。corpus_meta.json（dict reports）字段无 variant；标题可判 planning 修编 13/新编 3；11 份 project/post 封面标题提取失败（空或仅「环境影响报告书」）。
 - **bank slices 章目录有碎片段**（ch0/ch0101/ch1200/ch1600 等瑕疵名）——凡按章聚合 bank 的脚本必须对齐 stages/<stage>.json 章清单，不盲信目录名。
 - **分类学裁定**：主路由=评价层级（stage，五值，章节树分水岭）；变体=建设性质（planning 修编/新编、project 新建/改扩建）影响写作内容不切章节树；规模/省份/年份非路由属性仅类比过滤。路由=单子代理 eia-section-writer 分型注入，不建多写作子代理。
 
 ## Key Learnings + DNR（2026-10-24 chapter-writer Task 1 追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 **Key Learnings:**
 - 容器内技能脚本测试真实路径：`MSYS_NO_PATHCONV=1 docker exec pisuan-localized-api-1 pytest /app/skill-sources/shared/coal-eia-writer/scripts/tests -q`。容器布局是 `/app/skill-sources/shared/`（sync-dev 目标）+ `/app/skill-projections/admin/`（投影），**无 /app/package 路径**；plans 文档原写的 /app/package/... 路径实测 No such file（已修正文档）。
@@ -1712,6 +1976,9 @@
 - 容器 docker exec pytest 别照抄文档里的 /app/package/... 路径——先 `docker exec ... ls` 核实容器内真实布局（本次实测 0 collected + No such file 才发现）。
 
 ## Key Learnings + DNR（2026-10-24 chapter-writer Task 2 追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 **Key Learnings:**
 - bank slices 章目录 37 个中 24 个是 OCR 噪声碎段（n=1、首标题乱码如「## 1600 ∞」），文件名 __N 后缀与目录名一致地坏——对齐策略只能是「stage 章清单白名单，清单外整体忽略」，不存在可靠归章线索。
@@ -1722,6 +1989,9 @@
 - band 区间基于未取整原始值计算，测试从取整后 obs 反算会有 ≤0.05×系数+0.05 的偏差——断言用 approx abs=0.12 而非精确相等。
 
 ## Key Learnings + DNR（2026-10-24 chapter-writer Task 3 追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 **Key Learnings:**
 - build_output.py 有存量 ruff E501 基线（25 处，全在中文长消息 f-string）。判据=git diff hunk 行号与 ruff 违规行号求交集，零交集即不新增、可直接提交；只修自己引入的行。
@@ -1732,12 +2002,18 @@
 - 小尺度 fixture 上走钢丝（min 值贴近底噪）必翻车：数字密度下限 40 vs 标题号贡献 52.6/千字——用例稿要么长正文稀释，要么每用例基准只聚焦自己规则的触发条件（其余规则 min=0 恒过）。
 
 ## Key Learnings（Task 4, 2026-10-24）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - formula_runner compute 块级 scope guard 模式：`if <原条件> and _in(族): ... elif _in(族): <原else告警>` ——到 elif 意味着原条件 False，_in 重判区分「scope 外静默」vs「真缺失告警」；零重排保语义。subsidence 缺失告警跨 subsidence+fracture_zone 两族（fz 依赖 sp），用 `elif not sp and _in("subsidence","fracture_zone")` 而非裸 _in（否则 sp 在场但 subsidence 出 scope 时误报「缺失」）。
 - formula_state.json write_state 无时间戳、json.dumps 确定性序列化——同值重跑字节一致，幂等断言可写 read_bytes 相等。
 - 测试直调 cmd_execute 的 Namespace 须带 output=None（cmd_execute 先查 args.output）；二度调用同 tmp 的 _setup 须 mkdir(exist_ok=True)。
 - 派生工件不做 scope 源：plan 写 dependency_manifest，实际直读 stage sections uses.formulas——manifest 是 uses 的派生物，单一事实源取上游（commit message 记录偏离）。
 
 ## Key Learnings（Task 5, 2026-10-24）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - corpus_meta.json 是 corpus_meta.py 构建产物但 committed 件与 main() 输出（sort_keys/indent=1）已漂移，实际为 indent=2 保序格式——任何补标注走「载入→补键→indent=2 保序写回」就地模式，禁整档重生成（会产生全量噪声 diff）。
 - references JSON 多为 CRLF + 紧凑数组手写风格：写回必须 open(newline="") raw I/O（Path.read_text/write_text 的 universal-newline 翻译会破坏字节保形），换行符从原文探测沿用。
 - Python Path.read_text/write_text 的 newline 参数 3.13+ 才有；容器/宿主 3.12+ 约定下用 open() 显式形式最稳。
@@ -1745,6 +2021,9 @@
 - ingest check 有 data/ 外来文件+指纹（sha256）blocking 检查：测试直写 data/ 文件必须写 state_manifest.json 且带 ingest.sha256_file 指纹，否则 rc=2。
 
 ## Key Learnings（Task 5 收尾, 2026-10-24）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - global_families 口径用户裁定（2026-10-24）：仅冻结公式依赖族（7 族），跨章数据族 clause 废弃；裁定理由在 data_expectations._comment。变体判定用户通道 = corpus_meta_annotations.json（{rid:{variant,variant_basis}}，人工 basis 引证据+日期）。
 
 ## Task 6 分章态机（2026-10-24）
@@ -1759,6 +2038,9 @@
 - sync_chapter_skill.py 镜像：__pycache__ 两侧不入比对集（容器跑测试再生，删了反复横跳）
 
 ## Key Learnings (2026-10-24 reviewer 冒烟)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - bank 切片布局：`slices/chN/<report_id>__N.md` 的 `__N` 是章号——每章每报告**恰一个文件**，不存在章内多切片；任何「拆分取最长块」启发式都会丢内容（ch4/ch5 切片内部有 `## 数字` 头）。测量永远逐文件直测。
 - style_targets 基准键名是 `avg_sent_len`（不是 `_metrics` 返回的 `avg_sent`）；用 `b.get('avg_sent', {})` 会静默跳过均句长判定——核对脚本必须与 gate 同源读键。
@@ -1766,6 +2048,9 @@
 - reviewers --full 冒烟方法定稿：D/C 用原始切片机械全量直测（_metrics + 标准号正则×standards_index），A/B 用条款定向 grep 取证（关键词计数 + ch1 精读）。
 
 ## Key Learnings (2026-10-24 运行栈技能注册与挂载)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - 新 buildin 技能包进运行栈三步：sync-dev 进 /app/package → **init_builtin_skills 不会因热重载自动跑**（容器直调 pisuan.services.skills.shared.init_builtin_skills 或管理端「同步内置技能」）→ 管理端智能体挂载（agents.config_json.context.skills，PUT /api/agent/{slug} body 只带 config_json）。
 - 运行栈登录：POST /api/auth/token（form: username/password）；admin 密码=123（用户口头确认）；seed 脚本 superadmin 15251638888/zwj12138 与运行栈不符勿再试（有锁定风险）。
@@ -1775,24 +2060,37 @@
 - MSYS /tmp 路径容器内可用但 Windows 原生 python 看不见 /tmp/…——宿主与容器交换文件用仓库内实体路径（.wolf/）。
 
 ## Key Learnings (2026-10-24 bug-4135)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - 容器内跑集成测试要带凭据 env：`docker exec -e TEST_USERNAME=admin -e TEST_PASSWORD=123 … pytest /app/test/integration/...`（skip 提示 TEST_USERNAME/TEST_PASSWORD 未配置）。
 - docker cp 宿主文件进 localized 容器会破坏改名孪生（内容里 yuxi→pisuan）：cp 后必须 `sed -i "s/yuxi/pisuan/g"` 容器副本，否则 ModuleNotFoundError: yuxi；MSYS_NO_PATHCONV=1 时 docker cp 源路径要用 Windows 风格 `C:/...`。
 - 裸 v1 scope dict 一旦进 skills.share_config，/api/skills 整表 strict 500（一行坏全局炸）——新增任何写 share_config 的代码路径必须产出 v2 信封。
 
 ## Do-Not-Repeat 追加 (2026-10-24)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - **amend 陷阱（本日三次重建）**：`git reset --soft HEAD~N` 之后 `git commit --amend` 修订的是新 HEAD（错误父节点），会静默把两个提交合并成一个。soft reset 后要拆提交，一律 `git restore --staged .` 后按文件重新 `git add` + 新 `git commit`，不用 amend。每次 commit 前必看 `git diff --cached --stat` 逐文件核对（行数+文件清单）。
 - **共享备份先验证来源**：从 dangling commit 取回内容时先 `git show <sha>:<file> | grep <特征串>` 确认是哪个版本——本例 f8b5c3afe 与 f70d5cc3c 名字接近、changelog 内容一纯一全，取错会静默丢失 41 行他人条目。
 
 ## Key Learnings 追加 (2026-10-24)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - **常量双语义位风险（bug-4135 深层教训）**：同一常量若同时充当「行创建默认值」（需完整 v2 信封）和「normalize 返回值的槽位」（需裸 scope），修 bug 时只改一处会造出双嵌套。正确做法：拆成两个同名源常量（BUILTIN_SKILL_READ_SCOPE 裸形态 / BUILTIN_SKILL_SHARE_CONFIG 信封），后者由前者派生，一处修改处处生效。
 - bug-4135 最终修复提交 4a7982503；Task 9 冒烟记录提交 f08fae576。
 
 ## Key Learnings 追加 (2026-10-24)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - **agents.config_json.context.skills 支持 "all" 选择器**：字符串 "all" = 挂载全部启用技能（validate_resource_selection/_resolve_resource_selection，context.py:569）。新增/停用技能会影响所有 "all" 智能体（现 data-survey-writer/prediction-writer/regulation-writer）——技能描述里的触发词会被这些智能体看到。
 - **API 认证调试路径**：登录是 OAuth2 表单 POST /api/auth/token（username/password 表单字段，非 JSON）；经 5173 代理时 Bearer token 可用。直接 docker exec python 里 localhost:8000 不通（端口未映射到容器 network namespace 内回环），多行 python -c 经 sh -c 易挂起等 stdin，用 psql 直查 postgres 容器（库名 yuxi_know）更可靠。
 
 ## Key Learnings 追加 (2026-10-24 对话冒烟)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - **沙箱 Python 是旧版（<3.12）**：技能脚本真正跑在沙箱（runtime_profile=core），开发容器 3.13 编译过 ≠ 沙箱能跑。技能脚本语法必须兼容 3.8/3.11（禁 PEP 701 f-string：表达式内不得有反斜杠/引号复用）；扫描器见 .wolf/chapter-smoke/scan_fstring2.py 思路（f-string 表达式段扫反斜杠）。bug-4136。
 - **execute 类工具默认逐条人工审批**：每次 execute → run 变 interrupted（human_approval_required），前端 HumanApprovalModal 渲染审批卡。续跑协议：POST /api/agent/runs {query:null, resume:{decisions:[{type:'approve'}|{type:'reject',message}]}, created_by_run_id:<中断runid>}。审计里工具调用「空结果」=待审批态，非执行失败。
 - **沙箱工作区持久性**：/home/gem/user-data 挂载用户持久工作区（provision 时回挂），沙箱 idle 210s 销毁只杀容器不丢数据；/home/gem/skills 技能投影源=api 容器 /app/skill-sources/shared/<slug>。这些路径在 api 容器不存在——查工作区别在 api 容器里 ls。
@@ -1813,6 +2111,9 @@
 - steer 通道：resume 决策 {"type":"reject","message":"…"} 即纠偏；reject 消息会被模型当作指令执行。bash 传 JSON 含反斜杠必炸（MSYS heredoc 吃 \），用 python 构造 payload。
 
 ## Key Learnings (2026-10-24 分章冒烟追加)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - 章级状态机降档语义：`downgrade_approvals` 凭据只被全文 `finalize --allow-partial` 消费；`run_chapter_gate` 无降档感知（L2 FAIL 必 raise，gate PASS 是 VERIFIED 唯一通道）；`confirm-chapter` 仅接受 REVIEWED→CONFIRMED——分章模式降档章无 CONFIRMED 合法通道（bug-4140 待裁决）。键名是 downgrade_approvals（复数 approvals），LLM 易误记为 approved_downgrades。
 - 沙箱容器按 run 供给/回收（`pisuan-localized-sandbox-<id>` 名随会话变，勿按旧 id docker exec）；工作区持久层在 `C:\workspace\pisuan-localized\docker\volumes\pisuan\threads\shared\admin\workspace\workspace\<proj>\`（state/chapters、outputs 都从这里捞）。
@@ -1820,17 +2121,24 @@
 - agnes-3.0-flash 超长上下文（40+ 工具轮后）尾部会 132KB 级同句重复退化，run 记 completed 但零推进——长会话要设轮次上限、给键名级精确 steer 才能拉回。
 
 ## Do-Not-Repeat (2026-10-24)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 
 - 双通道同时 resume 同一线程（drive.py 自动批准 + 用户 web UI 应答）互报 409「中断运行已被后续运行超越」——用户在 UI 侧活动时立即停自动批准循环，只做只读监控。
 - git-bash heredoc 会吞反斜杠、展开 $var——补丁脚本用 Write 工具落盘（chr(92) 造反斜杠）；`docker exec python - <<EOF` 在本机 bash 不喂 stdin，改 `docker exec -i ... python - < file`。
 
 ## Key Learnings (2026-10-25 消歧事件追加)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - 沙箱工作区按用户共享（`threads/shared/<user>/workspace/workspace/<工程>`），跨线程可见、跨会话续作是设计意图（上游 v0.7.3 废 per-thread）——遗留工程对新会话是可见干扰源。已归档 `eia-report-hengcheng`/`eia-report-test2` 至 `workspace/__archived/`；`eia-report`=王坡在办勿动，jia/qinglong 无 progress.json 惰性。
 - SKILL.md 步骤0 新增消歧硬约束：续跑只认 mode=chapter；多候选/用户意图冲突必发卡（bug-4141）。
 - (2026-10-25) flex 槽位内子元素 `height: 100%` + 自带 `margin-top` = 必然溢出槽位 margin 的高度，溢出被下方 z-index 兄弟盖住或 overflow:hidden 裁掉（bug-4124 对话列表最后一条缺 16px）。间距应写在 flex 槽位（flex item 的 margin 参与分配），不要写在与 height:100% 同一个元素上。判这类遮挡：getBoundingClientRect 对比 last item bottom vs 容器 bottom，比截图快。
 
 ## Key Learnings (append 2026-10-26 langfuse-selfhost)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - Langfuse v4 默认 events_only：SDK/OTLP 经 /api/public/otel/v1/traces 写入 ClickHouse 新表 events_core/events_full；旧 /api/public/ingestion 的 trace-create 被拒。查数据用 events_full，不是 traces；traces 表只在 LANGFUSE_MIGRATION_V4_WRITE_MODE=dual 双写模式才填充。
 - LANGFUSE_INIT_* 引导变量必须显式设置 LANGFUSE_INIT_ORG_ID 才生效（v4.70），否则整组被静默忽略。
@@ -1840,6 +2148,7 @@
 - chainguard/minio 镜像预置 alias 'local' 凭据陈旧（mc ls local/ 报 Access Denied 是误导），验证需用 $MINIO_ROOT_USER/$MINIO_ROOT_PASSWORD 重设 alias；健康检查 mc ready local 走匿名端点所以照常通过。
 
 ## Do-Not-Repeat (append 2026-10-26 langfuse-selfhost)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 
 - 2026-10-26：转写第三方 docker-compose 时禁止凭记忆或聊天摘录，必须拉官方原文件（本例 .wolf/langfuse-deploy/official-ref.yml）逐项 grep 对齐环境变量。本次 v4 改名导致两次启动失败：缺 CLICKHOUSE_MIGRATION_URL（web crash-loop）、NEXTAUTH_SECRET 漏放在 web 节（500 Invalid environment variables）。
 
@@ -1847,21 +2156,31 @@
 - 门1/门2 工程级硬门 vs 「只写第N章」单章任务口径错配（ch2 实际只消费 mine_plan，7 族里 6 族是 ch6/7/9 的）。用户三案裁决选 **A 按目标章裁剪**；B 规程降档放行否（矛盾后移）、C 维持现状否（解释解决不了被卡）。裁剪口径 = 目标章 {{SLOT}}/{{TABLE}} 引用族 ∪ 消费公式 FORMULA_FORM_DEPS 依赖 ∩ global_families；未知章回退全量（正确性优先，同 resolve_scope）。
 
 ## Key Learnings (append 2026-10-26)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - skill-sources 栈目录不经 sync-dev：技能脚本改动须两包全目录落栈 + sha256 逐文件核对（容器内 python 哈希法）；**双包测试数不一致 = 漂移信号**（bug-4144：栈 chapter 缺 bug-4138/4139 的 4 个回归测试，文件在内容旧）。
 - 容器内 docker cp 落栈文件为 root 属主，exec 用户 rm 不掉（pytest .pytest_cache 残留，无害）。
 - Windows 宿主 uv run 无 pytest：技能包测试只能容器内跑；宿主只做 ruff + sync_chapter_skill.py --check（与守卫测试同断言）。
 
 ## Key Learnings (append)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - 2026-10-26 Langfuse v4 events_only：v1 trace/observation REST API 已禁用（报 not available）；查 trace 直接进 `langfuse-clickhouse-1` 容器查 `default.events_core`（列：trace_id/span_id/session_id/type/name/input/output/start_time），密钥在 pisuan-localized/.env（LANGFUSE_PUBLIC_KEY/SECRET_KEY）。
 - 2026-10-26 栈上技能三副本布局：`/app/skill-sources/shared/`（共享源）、`/app/skill-projections/<uid>/`（**运行时激活 + 沙箱活挂载到 /home/gem/skills**，供给器 pisuan-localized/docker/sandbox_provisioner/app.py 把 projections/<uid> bind 进沙箱）、`/app/package/pisuan/agents/skills/buildin/`（安装包副本，**非激活来源**，随 localized worktree 挂载，当前停留在 10-25 旧版待重建链）。技能同步后须验 projections/<uid> 这份——沙箱执行的就是它。
 - 2026-10-26 沙箱内路径：技能=/home/gem/skills/<skill>，工作区=/home/gem/user-data/workspace/<project>（对应宿主 volumes/pisuan/threads 挂载）。
 
 ## Do-Not-Repeat (append)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 
 - 2026-10-26 判「agent 用了旧脚本」前必须先读 trace 里工具调用的**输出**（input 只见命令，output 才见结果）——本次 grep 输出证明沙箱脚本是新版，旧版假设错了。
 
 ## Key Learnings + DNR（2026-10-26 bug-4146~4151 实施收尾追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - 深度折算分支条件：n_proj < n_sample 才折算（ceil(base×n_proj/n_sample)）；测试数据若投影节 ≥ 样例中位，会静默走直通分支，断言折算值必失败——先对分支条件设计测试数据，再写断言。
 - 懒加载缓存的测试隔离：`_BANK_CACHE.clear()` 后函数会重读真实库文件（容器里真库存在）→「无 bank」用例须 setitem 注入 `{}` 而非清缓存。
@@ -1869,11 +2188,15 @@
 - chapter-writer 速查表的「关键退出码」列是 agent 运行时契约：改脚本退出语义（回落/豁免/凭据）必须同步改表，否则 agent 按 rc=0/1 二分理解。
 
 ## Do-Not-Repeat (append)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 
 - 2026-10-26 禁对 skill scripts 整目录跑 `ruff format`/`make format`——该目录非 ruff-clean 基线，会重排几十个存量文件（本次 68 个，已逐文件 checkout 回滚）；只 format 本次触碰的文件。
 - 2026-10-26 `git checkout -- $(cat /tmp/xx)` 在 Git Bash/Windows 下 /tmp 不持久且空参 checkout 变成无参形式（打印状态不回滚）——批量回滚用显式变量列表 `git checkout -- $FILES`。
 
 ## Key Learnings + DNR + Decision Log（2026-10-26 交互卡点批追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 - 分章管线交互卡点凭据语义：`state/plan_<ch>.json`（卡A 计划卡）与 `state/fragment_choice_<ch>.json`（卡B 范例挑选）是纯工件凭据，**不进 TRANSITIONS**（与 bug-4146 门凭据策略一致）；`progress.py next` COLLECTING 分支按工件存在性裁决动作可见性（无 plan 只出计划卡、有 plan 无 choice 加派发前置候选卡提示）。
@@ -1905,6 +2228,9 @@
 - (2026-10-28) `uv run --with pytest` 拉最新 pytest（9.x）且默认环境缺 pytest-asyncio（asyncio_mode=auto 报 Unknown option 警告）；skill 脚本测试 stdlib-only 不受影响，但 yuxi 应用单测须容器内完整 test 组。ruff 存量基线：build_output.py 各 24 条 E501（长中文报错文案），改动后须与 HEAD 基线逐条对齐（错误分布一致=零新增）。
 
 ## Key Learnings + DNR（2026-10-29 通用域死码清除批追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 - 通用域（写手供应链）消费契约四工具全在 `agents/toolkits/buildin/tools.py`：get_chapter_outline（图谱→DB 大纲模板）、get_templates（图谱→DB 学习模板）、lookup_regional_fact（confirmed 区域事实，fact_type 四类枚举带环评语义）、lookup_limit（规范库富化限值）。键控 (domain, report_type, chapter_key) 机制通用，语义层是环评专用——「机制通用/语义单域」是当前基本盘。
@@ -1925,6 +2251,9 @@
 - [2026-10-30] 本机不存在 api-dev 容器（CLAUDE.md 的 docker logs api-dev 已过时）：compose 只有服务名 api 且 pisuan 项目栈未启动；在跑的是 pisuan-localized-* 栈，docker inspect 证实挂载源全在 C:/workspace/pisuan-localized（非工作目录）。pisuan 改动不经 sync-dev 链不进栈。另：domain_factory_repository.py 常有他人 in-flight 未提交 diff（如 bug-4167），提交目标文件前先 git diff 该文件，必要时用 git apply --cached 选择性暂存只含自己 hunks 的 patch。
 
 ## Key Learnings + DNR（2026-10-30 大纲模板幂等实施批追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 - ChapterTemplate 聚合身份键已落地（bug-4167）：`resolve_chapter_id(domain, rt, 归一canonical, level, 父解析id)`，std 命中复用种子节点且 is_std_reuse 跳过 frequency/rigidity 重算 MERGE——种子脚本与 ETL 聚合双写源共存时，节点语义归谁 own 必须显式声明并跳过对方的重算。
@@ -1981,6 +2310,9 @@
 - 不要把「爆炸半径」清单当完备：本次设计清单只盘 domain_factory_router，漏 entity-builder 路由 coal 默认值（bug-4184）与 manager.py 种子层（bug-4183）。凡 domain 语义收敛，grep 必须含默认值字面量（payload.get("domain_code", "coal") 型）与 DDL/ORM 列默认。
 
 ## Key Learnings (append 2026-10-31 dedomain 终审收口)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 - **容器内 pytest test/unit 会写活库**：docker exec 进 api 容器跑全量单测时，任何直连 pg_manager（继承容器 DATABASE_URL=活栈库）的伪 unit 测试都会真实落库。backend/test/integration/storage/ 现收容此类测试（report_repo/outline_repo/chapter_writer_subagent 三件，pytestmark integration）。跑测试前后如发现"莫名新数据"，先查测试层是否漏库。
 - **库行取证法**：数据溯源先比对"哪条代码路径能写出该字段值组合"——占位值（thread_id=t1/kb_x/created_by=admin）与测试代码逐字吻合=测试写入指纹；生产路径 tools.py create_report 恒传 created_by=None、domain 强制 general。
@@ -1990,11 +2322,15 @@
 - **ruff 基线剖面比对法**：同 config 下 current 与 `git show HEAD:file` 副本各跑 ruff，对照 (rule, count) 剖面而非逐行 diff——两个副本 config 一致时结论有效。
 
 ## Do-Not-Repeat (append 2026-10-31)
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 
 - 2026-10-31: 不要把直连真库的测试放 test/unit（bug-4186/4187：全量单测回归把 coal 占位行写进活库，还误导出"worker 未热重载"的错归因）。判据：测试 import pg_manager 且未 monkeypatch 即为集成层。
 - 2026-10-31: docker exec 传容器绝对路径必须 MSYS_NO_PATHCONV=1（Git Bash 把 /app 改写成 C:/Program Files/Git/app；rm -f 对改写后不存在路径静默成功，假象"已删除"）。
 
 ## Key Learnings + DNR（2026-11-01 localized 栈误删重建批追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 - **本机构建容器网络地图**（bug-456 全实测）：❌docker.io/ghcr直连/清华pypi+apt/alpine CDN/github直连；✅docker.m.daocloud.io、ghcr.m.daocloud.io、quay.io直连、mirrors.aliyun.com(pypi/apt/alpine)、ghfast.top+gh-proxy.com(github资产)、npmmirror。构建容器不走宿主代理。
@@ -2012,9 +2348,13 @@
 - **Key Learning**: 上游 0.8.0 重构事实：web/→frontend/、views/→pages/、paddlex.Dockerfile 移除（MinerU 4.1 cube 替代）、storage/redis 层删除、beta3–beta6 于 10/25–10/31 连发；上游 force-push 过 main，官方 sync-upstream.sh 第 2 步会 fail-closed，须走 upstream-sync-guide 的历史重写恢复流程。
 
 ## Do-Not-Repeat
+- [2026-11-05] ①禁止绕过 sync-dev 直接 cp 部署到 docker/volumes（reseed 原子替换回灌=白忙，且引发误诊 bug-4214 浪费一次 Docker Desktop 重启与多个停机窗）。②docker inspect 挂载清单勿 grep 过滤后下结论。③docker cp 源路径用 Windows 风格 C:/...（MSYS /c/... 被改写成 C:\c: 报 GetFileAttributesEx 错；docker exec 的 /app/... 则相反须 MSYS_NO_PATHCONV=1）。④查证结论里的'缓存幻象'类定性，落簿记前必须先排除'比对对象本就不是同一物理文件'。
 - 2026-11-01: 勿凭单一 service 文件断言模块数据流向——eia_data_service 是纯只读统计器，编辑/导出闭环在七个 per-dataset service（lexicon/formula/meta/stage_fields/paradigm/entities/standards）。环评域加工模块=覆盖层架构v1：页面编辑→DB覆盖层表（唯一真相）→admin显式导出物化→回写references/文件→git治理提交→sync-dev。standards 族 10-20 换代为 DB权威+lookup_standard_indicator 活工具（无文件导出）；overrides/ 目录是 gitignored 运行态层（DB 可重导出）。设计文档权威=docs/vibe/2026-10-22-eia-refs-pages-matrix.md。
 
 ## Key Learnings + DNR（2026-11-01 P0-2 同步漂移回灌追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 - skill 包 scripts/tests 宿主跑法（P0-1 标定回归会再用）：测试自带 `sys.path.insert(parent.parent)`，干净布局 = ①`scripts/*.py` 顶层拷贝 ②`scripts/tests/` 拷贝 ③**references 目录 junction 进布局**（test_paradigm_roles/depth_floor_projection/global_families 等读 references/ 真实文件，缺了 16 failed 全是 FileNotFoundError 假阳性）。勿从带 yuxi `__init__.py` 链的路径跑 pytest——prepend/importlib 两种 import mode 都会把测试归到 `yuxi.agents` 包而爆 langchain_core（祖先链问题不止 backend/test/conftest 一条路）。
@@ -2026,6 +2366,9 @@
 - （2026-11-01）干净布局跑 skill 测试报一片 FileNotFoundError failed 时，先区分「布局缺 references 假阳性」与「真回归」——补 references junction 重跑再下结论。
 
 ## Key Learnings（2026-11-02 P2-6/P2-7 修订追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 - 数据族中文名唯一权威 = stage forms 的 label 字段；SKILL.md 不再有硬编码译名表，ingest.py check 缺项直出「中文名（英文键）」（fam_disp()）。后续凡需展示数据族中文名，从 stage JSON label 取，禁再建手写映射。
@@ -2036,6 +2379,9 @@
 - （2026-11-02）ruff --isolated 或把文件拷到 /tmp 检查会脱离项目 pyproject 配置，错误数不可比；核对新增错误用「错误行号 vs 改动行号」比对法。
 
 ## Key Learnings + DNR（2026-11-02 P0-3/P1-4 双卡凭据批追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 - progress.py 双卡凭据契约：分章模式 mark DRAFTED/gate 前置 `plan_<ch>.json`+`fragment_choice_<ch>.json` 在位校验；`--none` 合法豁免的机理 = cmd_fragment_choice 对 --none 无条件落账（report_id: null），在位性校验天然放行，无需特判分支。
@@ -2051,6 +2397,9 @@
 - (2026-11-02) Windows Python 不认 /tmp（MSYS 路径）：bash 与 python 混用时用 cygpath -w 或 .wolf/ 下中转文件（本轮 corpus_meta 对账两连踩）。
 
 ## Key Learnings + DNR（2026-11-02 bug-4198 流测试抹库事故追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 - 三个 eia 服务层流测试（lexicon/meta/standard）的 autouse fixture 曾在共享运行库上 delete 全表（lexicon 连 overrides 文件都 unlink）——已改为 _flow_isolation.py 行级快照恢复 + 字节级文件快照。后续新增服务层流测试一律走 snapshot_rows/restore_rows，禁止裸 delete 清共享表。
@@ -2063,6 +2412,9 @@
 - （2026-11-02）修复代码未同步进容器就跑容器验证 = 验证旧代码；sync-dev/docker cp 先行，别信「热重载会自动生效」（那是 server 代码，test 文件不热重载）。
 
 ## Key Learnings + DNR（2026-11-02 bug-4196 映射回种追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 - rid 改名联接的终审手段 = 切片内容级 Jaccard（同文档两代切片 0.99+，异文档 ≤0.31 剪然分开）；元数据评分只配初筛——report_title 多为泛名「环境影响报告书」，(title,year,stage) 联接 10/33 歧义。rid 形如 NN-<文档名派生后缀>，换代时 NN 漂移、后缀稳定，后缀匹配可做强假设。
@@ -2073,12 +2425,18 @@
 - （2026-11-02）docker cp 数据文件进容器默认 root 属主，api（uid 1000）随后写入 Permission denied——cp 后必须 chown pisuan:pisuan（或 cp 到 /tmp 再以容器用户 install）。
 
 ## Key Learnings (2026-11-02 环评数据×技能链路核查)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - builtin 技能运行时供给链：栈包（BUILTIN_SKILLS_DIR，代码链）→ skill-sources/shared（api/worker 启动 lifespan init_builtin_skills 全量重播 _replace_skill_target）→ skill-projections/<uid>（refresh_user_skill_projection 按字节变更 copy-on-change）。线程读投影。
 - eia 导出直写栈包 writer（_SKILL_ROOT 即容器包内路径），故 writer 永远新鲜；refs_repo_distribute.py 把 Gitea HEAD 分发到 shared/projections 的 writer 树（不重启即时生效）。
 - 唯一机制缺口：distribute 硬编码 SKILL="coal-eia-writer"；chapter-writer/reviewer 的 shared/projection 副本靠手工收口+重启慢链。chapter-writer 消费真实存在（bank_compile._load_curated 读自己树的 overrides/curated_lexicon.json；standards_index 红线/limit_tables）。
 - overrides/curated_lexicon.json：writer 树 gitignored（纯运行时文件）；chapter-writer 树已入库跟踪（回流提交如 6b9bb3180）。
 
 ## Key Learnings (2026-11-03 导出链传播收口)
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - Durable Task 租约机制：TASK_LEASE_SECONDS=30（task_queue_service.py）、_heartbeat_task 每 10s 续租且与执行协程同在 worker 事件循环上（task_service.py:463-464）；run_worker._reconcile_durable_tasks_forever 周期把租约过期的 running 任务翻 worker_lease_expired。事件循环被同步代码阻塞 >30s 即假死——副作用完整的任务被翻红，handler 恢复后 finish_owned 因 _is_live_owner=False 静默丢弃。数十秒级同步 IO 必须入 asyncio.to_thread。
 - 投影 lazy 收敛：skill-projections/<uid> 仅在用户 Agent Run 初始化（sync_agent_context_skills）时按字节 copy-on-change 刷新——导出/传播链不触碰投影属设计；对账时投影道漂移=预期，等用户下次起跑或手动 refresh_user_skill_projection_async(uid) 即归零（不存在的用户传 uid 会以空授权快照清投影）。
 - run_eia_corpus_process 编译链：KB 全量文档 → tmp workdir（<rid>/source.md+manifest）→ bank_compile --prune（asyncio.to_thread）→ corpus_meta 合并（增量+剔除编译集外残条）→ propagate。bank_compile 输出幂等（同输入字节一致）；词表导出排队 scope=all 重编译即让 curated 覆盖层进编译产物。
@@ -2095,6 +2453,9 @@
 - 向含 checklist 的文档中段插入新章节时，Edit old_string 只锚单行会把后续条目挤进新章节——锚到下一个标题并核结构。
 
 ## Key Learnings + 部署地图（2026-11-03 关闸自动重编译批追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 - **localized 栈部署真机制**：api/worker 容器 bind-mount `C:\workspace\pisuan-localized\backend`（server→/app/server、package→/app/package、test→/app/test）——不是 pisuan 树，docker cp 是穿挂载写进 localized 树。部署 = `sed 's/yuxi\./pisuan./g'` 从 pisuan 工作树写入 localized 对应路径（注意包目录名是 `package/pisuan/services/` 不是 yuxi）。api uvicorn `--reload-dir /app/server /app/package` 两者都监听，server 层改动也热重载。
@@ -2104,10 +2465,16 @@
 - 活跃去重位 `payload_match={"scope":"all"}` 已是三处（导出/关闸/admin recompile）共用正确性机制：`enqueue_full_corpus_recompile` 唯一排队口在 eia_corpus_task_service.py。
 
 ## Key Learnings（2026-11-03 chapter-writer 评审核验追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 - **repo 树 ↔ 运行栈双树漂移结构**：词表导出链（容器侧双包同步写）改的是运行栈种子（localized 树 buildin）+ skill-sources，repo 树（pisuan）buildin 只在显式提交时更新——pisuan 树 writer(6条,旧)/chapter(8条,6b9bb3180) 当前必漂移，sync_chapter_skill.py --check rc=1。守卫测试在 backend/test/unit/agents/skills/test_chapter_skill_assets_sync.py（宿主跑不了缺 langgraph，容器内跑的是 localized 树所以绿——宿主 repo 树状态只有 --check 能验）。
 - 评审落地台账：P0-3/P1-4=c7b8db818（行为复现 rc=1 确认）、P2-6/P2-7=c27e6dbcc、P0-2 首批=5cb4a3563（回灌）；P0-1 折算数字（1359/6107/2586）逐一复现未修；P2-8：shared.py:222 无条件 copytree 实证，expand_skill_closure 在 agents/skills/runtime.py。
 
 ## Key Learnings + DNR（2026-11-03 P0-1 标定下限 + 漂移收敛批追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 
@@ -2125,6 +2492,9 @@
 - [2026-11-03] 部署技能脚本后查守卫红了别慌着回滚：先 diff 漂移文件的顶层目录归属（scripts=我改的 vs 银行输出=运行时单写的），第四家族漂移与代码改动无关。
 
 ## Key Learnings + DNR（2026-11-03 bug-4206 传播缺口闭合追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 
@@ -2140,6 +2510,9 @@
 - (2026-11-03) pytest 收集陷阱：不同包下同名测试文件（如双包各有一份 test_progress_state_lock.py、无 __init__.py）不能一条 pytest 命令合跑——同 basename 模块名冲突收集报错；分两次单文件跑即可（容器验证 6+6）。另：E501 基线对比用 ruff 输出行号时，grep 模式必须匹配被检文件的实际文件名（拷成 head_prog.py 后 grep progress.py: 恒 0 假绿）；有插入偏移时逐行号 diff 无意义，数条数+Δ偏移对映判定零新增。
 
 ## Key Learnings + DNR（2026-11-03 P2-8 资产单源化追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 
@@ -2159,6 +2532,9 @@
 - progress.py 的 USER_MESSAGE 话术契约（P3-10）：机制行是脚本间/模型执行契约一字不动，面向用户话术只在行尾追加 `USER_MESSAGE: ` 前缀行；章名靠 init 时存的 chapters[c].title（旧 state 无键 → _ch_label 退化「第N章」）；banlist 禁用词约束已从 SKILL.md 移到 test_user_message.py 的 BANLIST 回归。
 
 ## Key Learnings + DNR（2026-11-04 briefing 层批追加）
+- [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
+- [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
+- [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
 
 ### Key Learnings
 
@@ -2182,3 +2558,30 @@
 - **coal-eia 管线占位符两层设计**：节稿/拼章稿（state/sections/、state/chapters/）含 `{{SLOT:族.键}}`/`{{TABLE:族}}` 是**设计内**——数据纪律「数字不经过LLM」；注入发生在章门（run_chapter_gate 用 make_inject 重新拼装注入）与全书组装（build_output --output）时，SL1 门要求注入稿残留=0。`{{FIG:图名}}` 唯一合法保留到交付稿（R5 插图占位）。
 - **VERIFIED 状态不可手动 mark**（bug-3049）：唯一通道 `progress.py gate` 真跑章门 rc=0 自动回写——progress.json 里 VERIFIED/PASS 即真门凭据。
 - **chapters/chX.md 是无注入拼章稿**（agent 手工收口产物），章门不读它——用户在对话里看到它带占位符属呈报层体验问题，非管线缺陷。
+
+### 2026-11-05 模板推荐查证发现（Key Learnings）
+- 段落模板推荐=三层供给：范式文件层（paradigm_role→paradigms/<role>.md 六型，强制基线）→ 3a-2 可选模板推荐（query_kb 检索样例库，无果不阻塞）→ 3a-3 必做卡B范例挑选（sample_fragments→全文文件卡+脱敏挑选卡→fragment-choice→章包/节包→3b 注入；红线 P13 无 choice 禁派发）
+- progress.py COLLECTING 指引路径（state/sample_candidates_<ch>.json、state/fragment_packs_<ch> 下划线口径）与 chapter-writer SKILL.md 3a-3/3b 契约（state/candidates_chN.json、state/fragment_packs/chN 斜杠口径）不一致；hengcheng-ch3 现场无任何 fragment_packs 目录——节级切包 P1-5 未落地，3b 恒退章包
+- bank_index.json 条目字段仅 file/mineral/report_id/sec/title：候选排序=条目数降序+report_id 字典序，无主题/规模/地区相似度信号；bug-4147 卡B交互契约只进了 chapter-writer，coal-eia-writer SKILL.md 缺位
+
+### Key Learnings（2026-11-06 伊宁 ch3 全链实测追加）
+
+- **限流停车/恢复协议（实测两次）**：agent 侧 429 触发纪律停车（存盘+交接单+待办清单），对话发「继续」即从断点干净续起——「继续」属机械恢复可由测试驱动者代发；审批/裁决卡（协商卡、篇幅裁决卡、3e 成稿确认卡）必须用户本人点。
+- **分层质量链实战表现**：扩写子代理会幻觉（无登记数据处臆造气象区间/农业段/派生加总值，派发指令「不新增数据口径」仍被违反）；3c 章门拦不住手写字面表格绕过 {{TABLE:}} 登记通道 + 悬空「详见表（…）」引用（bug-4215）；3d 独立审查（只审不改）是实际有效 catch 点——FAIL 0/WARN 6/PASS 14 发现单全抓获，红线修复波词级替换时子代理又引入新编造值（25%），须明示「整句删除、禁引入任何数值」。
+- **economy 族是文本型字段**（forms 无表结构可渲染）——S02 不得有 {{TABLE:economy}} 标记，手写表格/悬空表引用均属违规；水环境逐矿涌水量走表格承载，无句中槽位（冻结槽位全部来自其他族）。
+- **降档章（approve-downgrade）收口路径**：确认卡命令硬性要求 REVIEWED 前置，但 REVIEWED 不在状态机词表、VERIFIED 唯一通道是真门 PASS——合法路径=DRAFTED 中转+progress.py next 指引，agent 自行探索成功但多花 4+ 工具调用（bug-4216 friction）。
+- **监控与探针法**：change-only 监控（读 progress.json+节稿字节数拼摘要、变化才 echo）替代定时轮询；页面态用 evaluate_script 过滤 className 含 chat 的大 div 取 innerText.slice(-N) 廉价探针替代 take_snapshot（全页 80K 字符会超限）；快照过大时从保存文件 grep 目标 uid。
+- **C 路线注意事项**：测试类比数据（如涌水量 720~2600 m³/d 带「——测试类比值」标注）会原样进入终稿出处句（A-1）——真实报告交付前必须替换为具体类比报告名；实证数值（伊宁报告第三章 7.9℃/731.57km²/NPP 202.84 等）全链无幻觉复现。
+- **init 预检（bug-4190 P1-4 实证）**：builtin stage 强制 paradigms/roles/<stage>.json + style_targets/<stage>.json 双资产，缺一 rc=1 拒绝；当前仅 planning_eia 可跑（project_eia_*/post/tracking 缺 roles/style 资产）。
+
+## Do-Not-Repeat (2026-11-06 bug-4217 清库事故)
+
+- **禁止再跑 `backend/test/integration/api/test_eia_*_flow.py`（两树都是）**：autouse `_clean_lexicon_state` fixture 对共享运行库裸 DELETE 全表（eia_lexicon_entries/eia_dataset_switches）+ unlink 包树 overrides 文件，即使测试因缺 TEST_USERNAME/TEST_PASSWORD 被 skip，fixture 仍执行。bug-4198 修复只盖 integration/services/ 族，API 族从未移植快照恢复。跑前必须先修 fixture。
+- 容器内长跑 python 遇 `error connecting in 'pool-1'` 挂死时：TaskStop 只杀宿主客户端，容器侧 `python -` 进程残留并持续占 postgres 连接（idle 可累积到 30），必须 `docker exec sh -c "ps aux | grep 'python -'"` 找 PID kill -9；恢复类数据操作优先 psql 直连（`-U postgres -d yuxi_know`），不走容器 python。
+
+## Key Learnings (append 2026-11-06 bug-4217 恢复)
+
+- 词表 import 幂等语义：existing skip、suppressed skip、`_preset_status`（measure→approved/site→candidate/junk→rejected）、`_SPLIT_CALIBERS={"控制效率"}`→splitting；export 内部自动 save_switch(True) 且 approved 全出（护栏推入），所以 approved 数量治理=护栏口径治理，恢复数据时绝不留多余 approved。
+- 事故恢复数据源优先级：.wolf/corpus-workdir/lexicon_full_audit.json（决策记录）→ 11-03 事实基线（overrides 文件 6 条 + bug-4198 验证记录 approved=8）→ git refs-repo 历史。当 audit 快照与最近事实基线冲突时（audit=10-10 态 approved 29，11-03 事实 approved 8），按**最近事实基线**回位，差异行降 candidate + 标注待复核，不猜 rejected。
+- overrides 文件有四处同内容副本：包树（api 侧 bank_compile 读）+ skill-sources/shared + skill-projections/admin + refs-repo worktree；恢复时五方（含基线备份）hash 对齐才算闭环，只回填包树会让其他三处漂移。
+- 不可复原项的如实交代是事故汇报的一部分：本次 standard_reviews 1 行（无物化无备份）、拆分子口径的精确 12 值集（p5 将漂移 p50/p95 不变）、~21 条人工降级决策（candidate 待复核）——恢复完成≠无损，分歧点要让用户显式知情。

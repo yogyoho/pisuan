@@ -9230,3 +9230,102 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 20:22 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | inline fix | ~220 |
 | 20:22 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-chapter-writer/SKILL.md | 6→8 lines | ~186 |
 | 20:31 | Edited docs/develop-guides/changelog.md | modified feat() | ~216 |
+| 20:45 | 章级成稿文档+可选合并落地：build_output --emit-doc（章门PASS凭据写盘章稿/）+ SKILL.md 双触点；writer单源镜像纪律修正；双包276×2+守卫4+容器双布局全过；四面部署（api重启窗口） | backend/.../coal-eia-{writer,chapter-writer}/scripts/build_output.py + SKILL.md | 提交 aafd3af8c 推送 | 28k |
+| 20:34 | Session end: 11 writes across 5 files (2026-11-05-chapter-doc-delivery.md, build_output.py, test_emit_chapter_doc.py, SKILL.md, changelog.md) | 6 reads | ~53044 tok |
+| 21:13 | Session end: 11 writes across 5 files (2026-11-05-chapter-doc-delivery.md, build_output.py, test_emit_chapter_doc.py, SKILL.md, changelog.md) | 6 reads | ~53044 tok |
+
+## Session: 2026-11-05 21:36
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:45 | 查证 coal-eia-writer/chapter-writer 段落模板推荐机制与交互（三层供给+五问题点）| progress.py/SKILL.md/sample_fragments.py/bank_index.json/hengcheng-ch3 现场 | 报告交付待裁决 | ~45k |
+| 22:06 | Created docs/vibe/2026-11-05-template-recommendation-fix.md | — | ~556 |
+| 22:06 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | 10→13 lines | ~224 |
+| 22:06 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | "（state/fragment_packs_{cu" → "（state/fragment_packs/{cu" | ~21 |
+| 22:06 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/progress.py | expanded (+7 lines) | ~170 |
+| 22:06 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/sample_fragments.py | 2→2 lines | ~48 |
+| 22:06 | Created backend/package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests/test_progress_guidance_paths.py | — | ~526 |
+| 22:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | 1→3 lines | ~196 |
+| 22:07 | Edited backend/package/yuxi/agents/skills/buildin/coal-eia-writer/SKILL.md | 1→3 lines | ~142 |
+
+## Session: 2026-11-05 22:36
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:51 | Edited docs/develop-guides/changelog.md | modified fix() | ~378 |
+| 23:05 | bug-4213 A+B 修复收口：progress.py 三处口径统一+full 流取件行、writer SKILL.md 4.0.6、存量 candidates 重生成、changelog 条目，提交 58c330607 推送 | progress.py×2/sample_fragments×2/SKILL.md/test_progress_guidance_paths×2/changelog.md | 双包 278×2 绿+E2E 4 节包+E501 零新增 | ~60k
+| 23:40 | 部署误诊纠偏（bug-4214）：「mount 缓存幻象」实为 /app/package 挂载源=localized 树+reseed 原子回灌；正道 sync-dev 重走，四面 24/24 md5 归一 | sync-dev.ps1/buglog/cerebrum | 部署闭环，教训入册 | ~25k
+| 22:55 | Edited docs/vibe/2026-11-05-template-recommendation-fix.md | 6→6 lines | ~75 |
+| 22:56 | Edited ../../Users/Lenovo/.claude/projects/C--workspace-pisuan/memory/localhost-5173-is-localized-stack.md | 1→3 lines | ~227 |
+| 22:56 | Session end: 3 writes across 3 files (changelog.md, 2026-11-05-template-recommendation-fix.md, localhost-5173-is-localized-stack.md) | 3 reads | ~45473 tok |
+| 23:07 | Session end: 3 writes across 3 files (changelog.md, 2026-11-05-template-recommendation-fix.md, localhost-5173-is-localized-stack.md) | 3 reads | ~45473 tok |
+| 23:10 | Session end: 3 writes across 3 files (changelog.md, 2026-11-05-template-recommendation-fix.md, localhost-5173-is-localized-stack.md) | 3 reads | ~45473 tok |
+| 08:35 | Session end: 3 writes across 3 files (changelog.md, 2026-11-05-template-recommendation-fix.md, localhost-5173-is-localized-stack.md) | 3 reads | ~45473 tok |
+| 08:46 | Session end: 3 writes across 3 files (changelog.md, 2026-11-05-template-recommendation-fix.md, localhost-5173-is-localized-stack.md) | 3 reads | ~45473 tok |
+
+## Session: 2026-11-06 08:59
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-06 09:50
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:59 | Created ../../Users/Lenovo/AppData/Local/Temp/fill_yining_csvs.py | — | ~1545 |
+| 10:05 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:07 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:11 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:12 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:12 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:13 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:15 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:16 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:17 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:20 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:33 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:35 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:35 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:36 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:37 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:39 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:40 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:47 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:56 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:57 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:58 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 10:59 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 11:00 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 11:02 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 11:05 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 11:05 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 11:09 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 11:12 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 11:17 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 11:17 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 11:18 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 11:23 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 11:25 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 11:26 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 11:37 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 11:41 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 11:43 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 11:44 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+| 11:48 | Session end: 1 writes across 1 files (fill_yining_csvs.py) | 1 reads | ~1545 tok |
+
+| 12:05 | 伊宁ch3全链测试：C路线数据提交(7 CSV)→登记+冻结12槽位→回填/扩写两波→文风尾差降档→3d审查抓子代理编造→终验红线清零→3e成稿确认卡呈出待用户 | data_requests/*.csv, state/sections/ch3_S0*.md, state/chapters/ch3.md, 合规审查.md | 分章流全链通过，红线清零，bug-4215/4216 登记 | ~大量 |
+
+## Session: 2026-11-06 12:09
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-06 14:25
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:45 | bug-4217 收尾：终验 DB 态（switch t/7 suppress/8-50-39）+ 五方 overrides hash 归一 cdf8792dbb80c8ce + 登记 buglog(627) + cerebrum DNR/Learnings | .wolf/buglog.json, .wolf/cerebrum.md | 恢复闭环，待向用户汇报 | ~3000 |
+| 18:10 | Edited backend/test/integration/api/test_eia_lexicon_flow.py | 4→6 lines | ~84 |
+| 18:10 | Edited backend/test/integration/api/test_eia_lexicon_flow.py | modified _clean_lexicon_state() | ~355 |
+| 18:10 | Edited backend/test/integration/api/test_eia_lexicon_flow.py | modified test_lexicon_full_flow() | ~163 |
+| 18:17 | Edited docs/develop-guides/changelog.md | modified fix() | ~241 |
