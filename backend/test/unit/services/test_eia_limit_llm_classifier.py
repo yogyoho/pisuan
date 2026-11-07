@@ -11,9 +11,9 @@ from types import SimpleNamespace
 
 import pytest
 
-import yuxi.services.eia_limit_llm_classifier as cls_mod
-from yuxi.services.eia_limit_extract_service import EiaLimitExtractService
-from yuxi.services.eia_limit_llm_classifier import (
+import pisuan.services.eia_limit_llm_classifier as cls_mod
+from pisuan.services.eia_limit_extract_service import EiaLimitExtractService
+from pisuan.services.eia_limit_llm_classifier import (
     EiaLimitLLMClassifier,
     GateStats,
     JudgeResult,

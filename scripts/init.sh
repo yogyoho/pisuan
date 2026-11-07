@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Yuxi Initialization Script for Bash/Linux/macOS
-# This script helps set up the environment for the Yuxi project
+# Pisuan Initialization Script for Bash/Linux/macOS
+# This script helps set up the environment for the Pisuan project
 
 set -e
 umask 077
@@ -151,15 +151,15 @@ ensure_jwt_env() {
     ensure_security_secret "JWT_SECRET_KEY"
     ensure_security_secret "API_KEY_DERIVATION_SECRET" "JWT_SECRET_KEY"
 
-    if ! grep -Eq '^YUXI_INSTANCE_ID=.+' .env; then
-        echo "YUXI_INSTANCE_ID is missing in .env."
-        read -p "Please enter your YUXI_INSTANCE_ID (press Enter to auto-generate): " YUXI_INSTANCE_ID
-        if [ -z "$YUXI_INSTANCE_ID" ]; then
-            YUXI_INSTANCE_ID="instance-$(generate_hex 8)"
-            echo "Generated YUXI_INSTANCE_ID and saved it to .env."
+    if ! grep -Eq '^PISUAN_INSTANCE_ID=.+' .env; then
+        echo "PISUAN_INSTANCE_ID is missing in .env."
+        read -p "Please enter your PISUAN_INSTANCE_ID (press Enter to auto-generate): " PISUAN_INSTANCE_ID
+        if [ -z "$PISUAN_INSTANCE_ID" ]; then
+            PISUAN_INSTANCE_ID="instance-$(generate_hex 8)"
+            echo "Generated PISUAN_INSTANCE_ID and saved it to .env."
         fi
 
-        set_env_value "YUXI_INSTANCE_ID" "$YUXI_INSTANCE_ID"
+        set_env_value "PISUAN_INSTANCE_ID" "$PISUAN_INSTANCE_ID"
     fi
 }
 
@@ -187,7 +187,7 @@ skip_existing_image() {
     return 0
 }
 
-echo "🚀 Initializing Yuxi project..."
+echo "🚀 Initializing Pisuan project..."
 echo "=================================="
 
 # Check if .env file exists
@@ -246,10 +246,10 @@ else
     read_security_secret "API_KEY_DERIVATION_SECRET" "$JWT_SECRET_KEY"
     API_KEY_DERIVATION_SECRET="$SECURITY_SECRET_VALUE"
 
-    read -p "Please enter your YUXI_INSTANCE_ID (press Enter to auto-generate): " YUXI_INSTANCE_ID
-    if [ -z "$YUXI_INSTANCE_ID" ]; then
-        YUXI_INSTANCE_ID="instance-$(generate_hex 8)"
-        echo "Generated YUXI_INSTANCE_ID and saved it to .env."
+    read -p "Please enter your PISUAN_INSTANCE_ID (press Enter to auto-generate): " PISUAN_INSTANCE_ID
+    if [ -z "$PISUAN_INSTANCE_ID" ]; then
+        PISUAN_INSTANCE_ID="instance-$(generate_hex 8)"
+        echo "Generated PISUAN_INSTANCE_ID and saved it to .env."
     fi
 
     read_security_secret "SANDBOX_PROVISIONER_TOKEN" "$JWT_SECRET_KEY" "$API_KEY_DERIVATION_SECRET"
@@ -278,7 +278,7 @@ EOF
 # JWT security settings
 JWT_SECRET_KEY=${JWT_SECRET_KEY}
 API_KEY_DERIVATION_SECRET=${API_KEY_DERIVATION_SECRET}
-YUXI_INSTANCE_ID=${YUXI_INSTANCE_ID}
+PISUAN_INSTANCE_ID=${PISUAN_INSTANCE_ID}
 SANDBOX_PROVISIONER_TOKEN=${SANDBOX_PROVISIONER_TOKEN}
 EOF
 

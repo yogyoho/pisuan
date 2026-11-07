@@ -8,11 +8,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "package"))
 
-from yuxi.services.domain_factory_region import (  # noqa: E402
+from pisuan.services.domain_factory_region import (  # noqa: E402
     derive_template_region,
     region_label_for_key,
 )
-from yuxi.services.domain_factory_service import DomainFactoryService  # noqa: E402
+from pisuan.services.domain_factory_service import DomainFactoryService  # noqa: E402
 
 
 def run(coro):

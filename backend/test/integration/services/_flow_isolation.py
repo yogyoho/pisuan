@@ -15,7 +15,7 @@ from sqlalchemy import delete, insert, select
 
 async def snapshot_rows(model: Any) -> list[dict[str, Any]]:
     """整表行级快照（列名 → 值，含主键与 JSON 列）。"""
-    from yuxi.storage.postgres.manager import pg_manager
+    from pisuan.storage.postgres.manager import pg_manager
 
     async with pg_manager.get_async_session_context() as session:
         rows = (await session.execute(select(model))).scalars().all()
@@ -24,7 +24,7 @@ async def snapshot_rows(model: Any) -> list[dict[str, Any]]:
 
 async def restore_rows(model: Any, saved: list[dict[str, Any]]) -> None:
     """清表后回灌快照行（显式主键直插，autoincrement 序列不受影响）。"""
-    from yuxi.storage.postgres.manager import pg_manager
+    from pisuan.storage.postgres.manager import pg_manager
 
     async with pg_manager.get_async_session_context() as session:
         await session.execute(delete(model))

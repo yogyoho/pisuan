@@ -6,12 +6,12 @@
 - _derive_chapter_no：section_path → 点分编号
 """
 
-from yuxi.services.graph_builder import (
+from pisuan.services.graph_builder import (
     _derive_canonical_key,
     _derive_chapter_no,
     resolve_chapter_id,
 )
-from yuxi.utils import hashstr, normalize_chapter_key
+from pisuan.utils import hashstr, normalize_chapter_key
 
 
 # ---- normalize_chapter_key：标题归一化 ----

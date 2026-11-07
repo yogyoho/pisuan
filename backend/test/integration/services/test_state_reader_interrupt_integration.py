@@ -17,8 +17,8 @@ import pytest
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 from psycopg_pool import AsyncConnectionPool
-from yuxi.services import chat_service as svc
-from yuxi.storage.postgres.manager import PostgresManager
+from pisuan.services import chat_service as svc
+from pisuan.storage.postgres.manager import PostgresManager
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
@@ -46,7 +46,7 @@ def _new_manager() -> PostgresManager:
 async def test_pending_interrupt_recovered_from_real_postgres_checkpoint(monkeypatch):
     """真实 PG：停在 interrupt 的 checkpoint，其 pending writes 里的中断可被恢复。"""
     manager = _new_manager()
-    monkeypatch.setattr("yuxi.services.chat_service.pg_manager", manager)
+    monkeypatch.setattr("pisuan.services.chat_service.pg_manager", manager)
     thread_id = f"pytest-interrupt-{uuid.uuid4()}"
     uid = "pytest-user"
 
@@ -75,7 +75,7 @@ async def test_pending_interrupt_recovered_from_real_postgres_checkpoint(monkeyp
 async def test_completed_checkpoint_returns_no_interrupt(monkeypatch):
     """真实 PG：已完成、无中断的 checkpoint 不得被误判为等待审批。"""
     manager = _new_manager()
-    monkeypatch.setattr("yuxi.services.chat_service.pg_manager", manager)
+    monkeypatch.setattr("pisuan.services.chat_service.pg_manager", manager)
     thread_id = f"pytest-complete-{uuid.uuid4()}"
     uid = "pytest-user"
 

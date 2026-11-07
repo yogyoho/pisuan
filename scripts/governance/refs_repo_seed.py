@@ -26,7 +26,7 @@ import sys
 from pathlib import Path, PurePosixPath
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SKILL_REFS = "backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references"
+SKILL_REFS = "backend/package/pisuan/agents/skills/buildin/coal-eia-writer/references"
 BOT_NAME, BOT_EMAIL = "pisuan-refs-bot", "refs-bot@pisuan.local"
 
 # 手列文件（目录规则见 in_manifest）
@@ -93,8 +93,8 @@ def materialize(worktree: Path, ref: str, files: list[str]) -> tuple[int, int]:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--ref", default="HEAD", help="播种源（pisuan-custom 的 commit，默认 HEAD）")
-    ap.add_argument("--state-dir", default=os.environ.get("YUXI_STATE_DIR", "docker/volumes"),
-                    help="卷根（默认 docker/volumes，与 compose YUXI_STATE_DIR 同源）")
+    ap.add_argument("--state-dir", default=os.environ.get("PISUAN_STATE_DIR", "docker/volumes"),
+                    help="卷根（默认 docker/volumes，与 compose PISUAN_STATE_DIR 同源）")
     ap.add_argument("--remote", default="http://127.0.0.1:3000/refsadmin/eia-refs.git",
                     help="Gitea 仓 URL")
     ap.add_argument("--user", default="refsadmin")

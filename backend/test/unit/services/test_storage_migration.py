@@ -5,8 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from yuxi import storage_migration
-from yuxi.storage_migrations.v071_workdirs import (
+from pisuan import storage_migration
+from pisuan.storage_migrations.v071_workdirs import (
     V071ConversationBinding,
     V071WorkdirBinding,
     V071WorkdirMigrationPlan,
@@ -155,8 +155,8 @@ async def test_storage_migration_rejects_v071_schema_without_quiescence_proof(mo
     monkeypatch.setattr(storage_migration, "_legacy_skill_roots_exist", lambda: False)
     monkeypatch.setattr(storage_migration, "_legacy_system_config_exists", lambda: False)
     monkeypatch.setattr(storage_migration, "runtime_storage_requires_quiescence", lambda: False)
-    monkeypatch.setenv("YUXI_STORAGE_MIGRATION_QUIESCENCE_FILE", str(tmp_path / "missing"))
-    monkeypatch.delenv("YUXI_STORAGE_MIGRATION_QUIESCENCE_TOKEN", raising=False)
+    monkeypatch.setenv("PISUAN_STORAGE_MIGRATION_QUIESCENCE_FILE", str(tmp_path / "missing"))
+    monkeypatch.delenv("PISUAN_STORAGE_MIGRATION_QUIESCENCE_TOKEN", raising=False)
 
     with pytest.raises(RuntimeError, match="migrate-storage.sh"):
         await storage_migration.main()
@@ -492,8 +492,8 @@ def test_personal_workspace_skills_never_trigger_shared_skill_migration(monkeypa
 
 def test_v20_business_schema_version_and_limit_tables_registered():
     """v20：BUSINESS_SCHEMA_VERSION 升至 20，v19→v20 增量方法与两张限值新表就位。"""
-    from yuxi.storage.postgres.models_domain_factory import Base as DomainFactoryBase
-    from yuxi.storage.postgres.models_domain_factory import EiaLimitExtractRow, EiaLimitTableRegistry
+    from pisuan.storage.postgres.models_domain_factory import Base as DomainFactoryBase
+    from pisuan.storage.postgres.models_domain_factory import EiaLimitExtractRow, EiaLimitTableRegistry
 
     assert storage_migration.BUSINESS_SCHEMA_VERSION == 20
     assert hasattr(storage_migration.pg_manager, "upgrade_business_v19_to_v20")

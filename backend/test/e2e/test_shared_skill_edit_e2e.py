@@ -10,7 +10,7 @@ import asyncpg
 import httpx
 import pytest
 from e2e_helpers import cancel_run, delete_agent, postgres_dsn, wait_for_run
-from yuxi.services.skills.projection import get_user_skills_root_dir
+from pisuan.services.skills.projection import get_user_skills_root_dir
 
 from test_deterministic_agent_path_e2e import MODEL_SPEC, _create_provider, _delete_provider
 

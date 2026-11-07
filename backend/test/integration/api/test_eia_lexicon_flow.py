@@ -13,8 +13,8 @@ import json
 
 import pytest
 
-from yuxi.services.eia_data_service import _scan_all, _skill_root_exists
-from yuxi.services.eia_lexicon_service import OVERRIDES_PATH
+from pisuan.services.eia_data_service import _scan_all, _skill_root_exists
+from pisuan.services.eia_lexicon_service import OVERRIDES_PATH
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
@@ -29,8 +29,8 @@ async def _clean_lexicon_state():
     """快照 → 清理 → 测试 → 回灌（bug-4217：运行库为共享库，禁止裸 wipe）。"""
     from sqlalchemy import delete
 
-    from yuxi.storage.postgres.manager import pg_manager
-    from yuxi.storage.postgres.models_domain_factory import EiaDatasetSwitch, EiaLexiconEntry
+    from pisuan.storage.postgres.manager import pg_manager
+    from pisuan.storage.postgres.models_domain_factory import EiaDatasetSwitch, EiaLexiconEntry
 
     from test.integration.services._flow_isolation import restore_rows, snapshot_rows
 
@@ -72,7 +72,7 @@ async def test_lexicon_full_flow(test_client, admin_headers, monkeypatch):
     monkeypatch.delenv("REFS_REPO_WORKTREE", raising=False)
     from types import SimpleNamespace
 
-    from yuxi.services.task_service import tasker
+    from pisuan.services.task_service import tasker
 
     monkeypatch.setattr(
         tasker,

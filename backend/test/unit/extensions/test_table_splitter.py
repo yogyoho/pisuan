@@ -11,10 +11,10 @@ from types import SimpleNamespace
 
 import pytest
 
-import yuxi.extensions.regulation_library.enrichment_service as enrich_mod
-import yuxi.extensions.regulation_library.table_splitter as splitter_mod
-from yuxi.extensions.regulation_library.enrichment_service import enrich_regulation_file
-from yuxi.extensions.regulation_library.table_splitter import split_table_units
+import pisuan.extensions.regulation_library.enrichment_service as enrich_mod
+import pisuan.extensions.regulation_library.table_splitter as splitter_mod
+from pisuan.extensions.regulation_library.enrichment_service import enrich_regulation_file
+from pisuan.extensions.regulation_library.table_splitter import split_table_units
 
 
 def _tbl(body="a"):

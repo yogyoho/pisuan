@@ -5,7 +5,7 @@ sys.path.insert(0, '/app')
 sys.path.insert(0, '/app/package')
 
 async def main():
-    from yuxi.services.domain_factory_service import get_domain_factory_service
+    from pisuan.services.domain_factory_service import get_domain_factory_service
     service = get_domain_factory_service()
     task_id = '9475e881-d239-4bd6-ab1c-f5e7a553a790'
     detail = await service.get_task_detail(task_id)

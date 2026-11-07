@@ -3,7 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from yuxi.services.domain_factory_service import DomainFactoryService
+from pisuan.services.domain_factory_service import DomainFactoryService
 
 
 def _fake_detail() -> dict:
@@ -40,7 +40,7 @@ async def test_validate_task_sends_parameter_slots_to_l2():
     svc.repo.update_task = AsyncMock()
     with (
         patch.object(svc, "get_task_detail", new=AsyncMock(return_value=_fake_detail())),
-        patch("yuxi.services.slot_validation_service.SlotValidationService") as mock_cls,
+        patch("pisuan.services.slot_validation_service.SlotValidationService") as mock_cls,
     ):
         mock_cls.return_value.validate_slots = AsyncMock(return_value={"conflicts": [], "warnings": 0})
         report = await svc.validate_task("t1")

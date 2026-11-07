@@ -9,7 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 
-import yuxi.services.eia_lexicon_service as svc
+import pisuan.services.eia_lexicon_service as svc
 
 # 语料扫描替身：3 候选，其一已是词条
 SCAN_CANDS = [

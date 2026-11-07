@@ -14,8 +14,8 @@ from test.live_api_cleanup import (
     make_test_conversation_title,
     remove_e2e_thread_storage,
 )
-from yuxi.services.skills.projection import get_user_skills_root_dir
-from yuxi.workspace.paths import user_workspace_dir
+from pisuan.services.skills.projection import get_user_skills_root_dir
+from pisuan.workspace.paths import user_workspace_dir
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.e2e, pytest.mark.slow]
 

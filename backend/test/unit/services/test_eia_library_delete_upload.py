@@ -12,7 +12,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from yuxi.services import eia_library_service as svc
+from pisuan.services import eia_library_service as svc
 
 
 class FakeRepo:

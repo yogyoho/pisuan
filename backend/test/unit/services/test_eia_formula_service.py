@@ -10,8 +10,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from yuxi.services import eia_formula_service as svc_mod
-from yuxi.services.eia_formula_service import EiaFormulaService
+from pisuan.services import eia_formula_service as svc_mod
+from pisuan.services.eia_formula_service import EiaFormulaService
 
 # 实况同构最小夹具：LF、2 空格缩进、inputs 单行紧凑、尾随换行
 _FORMULAS_TEXT = (

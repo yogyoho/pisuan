@@ -14,7 +14,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from yuxi.services import eia_corpus_task_service as svc
+from pisuan.services import eia_corpus_task_service as svc
 
 MINI_CANONICAL_MD = (
     "某矿项目环境影响报告书\n\n"
@@ -126,7 +126,7 @@ def _stub_kb_id(monkeypatch, kb_id="kb_x"):
 
 def _stub_propagate(monkeypatch) -> list[int]:
     """传播尾部打桩+间谍：单测不触真实运行栈（真实传播此前在单测里重播真树，187s 假慢源）。"""
-    from yuxi.services import eia_refs_propagate as prop_mod
+    from pisuan.services import eia_refs_propagate as prop_mod
 
     calls: list[int] = []
 

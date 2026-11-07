@@ -1,4 +1,4 @@
-"""通过真实 Yuxi HTTP、SSE、worker 与模型链路执行轻量 Agent 压测。"""
+"""通过真实 Pisuan HTTP、SSE、worker 与模型链路执行轻量 Agent 压测。"""
 
 from __future__ import annotations
 
@@ -537,7 +537,7 @@ def record_run_timing(result: TaskResult, submit_started_at: datetime, payload: 
 
 
 class AgentLoadClient:
-    """封装压测所需的最小 Yuxi HTTP 与 SSE 协议。"""
+    """封装压测所需的最小 Pisuan HTTP 与 SSE 协议。"""
 
     def __init__(self, client: httpx.AsyncClient, headers: dict[str, str], timeout_seconds: float):
         self.client = client
@@ -976,14 +976,14 @@ def _safe_error(exc: BaseException) -> str:
 async def authenticate(client: httpx.AsyncClient) -> dict[str, str]:
     """从环境变量取得 API Key，或通过真实登录接口换取访问令牌。"""
 
-    api_key = os.getenv("YUXI_LOAD_API_KEY", "").strip()
+    api_key = os.getenv("PISUAN_LOAD_API_KEY", "").strip()
     if api_key:
         return {"Authorization": f"Bearer {api_key}", "Accept": "text/event-stream"}
 
-    username = (os.getenv("YUXI_LOAD_USERNAME") or os.getenv("TEST_USERNAME") or "").strip()
-    password = os.getenv("YUXI_LOAD_PASSWORD") or os.getenv("TEST_PASSWORD") or ""
+    username = (os.getenv("PISUAN_LOAD_USERNAME") or os.getenv("TEST_USERNAME") or "").strip()
+    password = os.getenv("PISUAN_LOAD_PASSWORD") or os.getenv("TEST_PASSWORD") or ""
     if not username or not password:
-        raise LoadTestError("请设置 YUXI_LOAD_API_KEY，或同时设置 YUXI_LOAD_USERNAME/YUXI_LOAD_PASSWORD")
+        raise LoadTestError("请设置 PISUAN_LOAD_API_KEY，或同时设置 PISUAN_LOAD_USERNAME/PISUAN_LOAD_PASSWORD")
     response = await client.post("/api/auth/token", data={"username": username, "password": password})
     _raise_for_status(response, "登录")
     token = str(response.json().get("access_token") or "")
@@ -1128,8 +1128,8 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     """注册容量压测参数。"""
     parser.add_argument(
         "--base-url",
-        default=os.getenv("YUXI_LOAD_BASE_URL", "http://localhost:5050"),
-        help="Yuxi API 根地址，默认 %(default)s",
+        default=os.getenv("PISUAN_LOAD_BASE_URL", "http://localhost:5050"),
+        help="Pisuan API 根地址，默认 %(default)s",
     )
     parser.add_argument("--agent-slug", help="测试 Agent slug；省略时使用默认 Agent")
     parser.add_argument("--scenario", choices=("chat", "sandbox"), default="sandbox")
@@ -1145,17 +1145,17 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--compose-project",
-        default=os.getenv("COMPOSE_PROJECT_NAME", "yuxi"),
+        default=os.getenv("COMPOSE_PROJECT_NAME", "pisuan"),
         help="资源采样使用的 Compose project，默认 %(default)s",
     )
     parser.add_argument(
         "--sandbox-container-prefix",
-        default=os.getenv("SANDBOX_DOCKER_SANDBOX_PREFIX") or f"{os.getenv('COMPOSE_PROJECT_NAME', 'yuxi')}-sandbox",
+        default=os.getenv("SANDBOX_DOCKER_SANDBOX_PREFIX") or f"{os.getenv('COMPOSE_PROJECT_NAME', 'pisuan')}-sandbox",
         help="动态 Sandbox 容器名称前缀",
     )
     parser.add_argument(
         "--sandbox-network-prefix",
-        default=os.getenv("SANDBOX_DOCKER_NETWORK_PREFIX") or f"{os.getenv('COMPOSE_PROJECT_NAME', 'yuxi')}-sandbox",
+        default=os.getenv("SANDBOX_DOCKER_NETWORK_PREFIX") or f"{os.getenv('COMPOSE_PROJECT_NAME', 'pisuan')}-sandbox",
         help="动态 Sandbox 网络名称前缀",
     )
     parser.add_argument("--resource-interval-seconds", type=float, default=2.0)

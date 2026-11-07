@@ -8,10 +8,10 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile
 
 from server.utils.auth_middleware import get_admin_user
-from yuxi.repositories.domain_factory_repository import GENERAL_DOMAIN_CODE
-from yuxi.services.domain_entity_service import get_entity_service
-from yuxi.storage.postgres.models_business import User
-from yuxi.utils import logger
+from pisuan.repositories.domain_factory_repository import GENERAL_DOMAIN_CODE
+from pisuan.services.domain_entity_service import get_entity_service
+from pisuan.storage.postgres.models_business import User
+from pisuan.utils import logger
 
 domain_entity_builder = APIRouter(
     prefix="/domain-entity-builder", tags=["Domain Entity Builder"]

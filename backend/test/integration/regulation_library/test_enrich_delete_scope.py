@@ -10,8 +10,8 @@ import asyncio
 
 from sqlalchemy import text as sql_text
 
-from yuxi.extensions.regulation_library.enrichment_service import ENRICH_DELETE_SQL
-from yuxi.storage.postgres.manager import pg_manager
+from pisuan.extensions.regulation_library.enrichment_service import ENRICH_DELETE_SQL
+from pisuan.storage.postgres.manager import pg_manager
 
 
 def _run(coro) -> None:

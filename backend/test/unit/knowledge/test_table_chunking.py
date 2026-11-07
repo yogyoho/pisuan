@@ -7,10 +7,10 @@ python -m pytest test/unit/knowledge/test_table_chunking.py -q --noconftest
 """
 
 import pytest
-from yuxi.knowledge.chunking.ragflow_like import nlp
-from yuxi.knowledge.chunking.ragflow_like.dispatcher import chunk_markdown
-from yuxi.knowledge.chunking.ragflow_like.parsers import table as table_parser
-from yuxi.knowledge.chunking.ragflow_like.presets import CHUNK_PRESETS, map_to_internal_parser_id
+from pisuan.knowledge.chunking.ragflow_like import nlp
+from pisuan.knowledge.chunking.ragflow_like.dispatcher import chunk_markdown
+from pisuan.knowledge.chunking.ragflow_like.parsers import table as table_parser
+from pisuan.knowledge.chunking.ragflow_like.presets import CHUNK_PRESETS, map_to_internal_parser_id
 
 
 def _big_table(rows: int, cols: int = 4) -> str:

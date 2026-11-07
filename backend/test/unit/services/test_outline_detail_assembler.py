@@ -4,7 +4,7 @@ import asyncio
 from typing import Any
 from unittest.mock import patch
 
-from yuxi.services.domain_factory_service import DomainFactoryService
+from pisuan.services.domain_factory_service import DomainFactoryService
 
 
 class _FakeGraphService:
@@ -66,7 +66,7 @@ def _make_svc(pg_row: dict[str, Any] | None) -> tuple[DomainFactoryService, _Fak
 
 
 def _patch_graph(outline: dict[str, Any] | None):
-    return patch("yuxi.services.graph_query_service.GraphQueryService", lambda: _FakeGraphService(outline))
+    return patch("pisuan.services.graph_query_service.GraphQueryService", lambda: _FakeGraphService(outline))
 
 
 def test_detail_merges_pg_rich_fields_and_falls_back_expected():

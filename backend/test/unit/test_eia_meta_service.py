@@ -8,8 +8,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from yuxi.services import eia_meta_service
-from yuxi.services.eia_meta_service import EiaMetaService, _validate_annotations
+from pisuan.services import eia_meta_service
+from pisuan.services.eia_meta_service import EiaMetaService, _validate_annotations
 
 
 def test_validate_annotations_accepts_valid_payload():

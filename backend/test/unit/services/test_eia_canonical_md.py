@@ -1,6 +1,6 @@
 """canonical md 内核单测（合成 docx 夹具，不依赖真实语料）。
 
-内核模块 yuxi.services.eia_canonical_md 的行为守护：
+内核模块 pisuan.services.eia_canonical_md 的行为守护：
 正文/前置边界/目录剔除/标题升级/表格前置段/零节号返回 None/extract_front/slice_report/make_rid。
 金标准回归（33 份真实语料）在宿主机 test_eia_canonical_md_goldens.py，不入容器门禁。
 """
@@ -12,7 +12,7 @@ import io
 import pytest
 from docx import Document
 
-from yuxi.services.eia_canonical_md import (
+from pisuan.services.eia_canonical_md import (
     FRONT_MARKER,
     docx_bytes_to_canonical_md,
     extract_front,

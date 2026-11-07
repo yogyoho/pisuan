@@ -94,7 +94,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument(
         "--state-dir",
-        default=os.environ.get("YUXI_STATE_DIR", ""),
+        default=os.environ.get("PISUAN_STATE_DIR", ""),
         help="运行栈卷根（含 pisuan/refs-repo、pisuan/skill-sources…）",
     )
     ap.add_argument("--remote", default="http://127.0.0.1:3000/refsadmin/eia-refs.git")

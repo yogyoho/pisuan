@@ -1,6 +1,6 @@
 """W2 v2 三条输入小窗——渲染器锚点机制 + 顶层 stage/std_ref 单测。
 
-自包含：importlib 渲染器 + 读 repo 真源 JSON，不依赖 yuxi 包（宿主 --noconftest 可跑）。
+自包含：importlib 渲染器 + 读 repo 真源 JSON，不依赖 pisuan 包（宿主 --noconftest 可跑）。
 spec: docs/superpowers/specs/2026-10-06-w2-v2-three-input-window-design.md
 """
 

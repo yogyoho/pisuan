@@ -1,10 +1,10 @@
-# spec-W1 分类器收敛/双产物/词表单测；依赖 yuxi 服务模块，宿主缺依赖不可 import——验证走容器道：MSYS_NO_PATHCONV=1 docker run --rm -v "C:\workspace\pisuan\backend:/app:ro" pisuan-api:0.7.3 pytest /app/test/unit/test_w1_prose_pipeline.py --noconftest -q
+# spec-W1 分类器收敛/双产物/词表单测；依赖 pisuan 服务模块，宿主缺依赖不可 import——验证走容器道：MSYS_NO_PATHCONV=1 docker run --rm -v "C:\workspace\pisuan\backend:/app:ro" pisuan-api:0.7.3 pytest /app/test/unit/test_w1_prose_pipeline.py --noconftest -q
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "package"))
 
-from yuxi.services.domain_factory_service import DomainFactoryService
+from pisuan.services.domain_factory_service import DomainFactoryService
 
 
 def make_svc() -> DomainFactoryService:
@@ -179,13 +179,13 @@ class TestStructuredChannel:
         DomainFactoryService._structured_support.clear()
 
     def _make_svc(self, monkeypatch, lc):
-        import yuxi.models.chat as chat_mod
+        import pisuan.models.chat as chat_mod
         svc = make_svc()
         monkeypatch.setattr(chat_mod, "select_model", lambda **kw: FakeAdapter(lc))
         # 裸容器无 Redis/Postgres：system_options.get() 在模型初始化 try 块内即抛
         # 'NoneType' object is not callable（pg_manager 未初始化），须一并 stub（仅测试侧）。
         # Option 是 frozen+slots dataclass，实例/类属性不可 setattr——改为替换服务模块的绑定
-        import yuxi.services.domain_factory_service as svc_mod
+        import pisuan.services.domain_factory_service as svc_mod
         class _FakeSystemOptions:
             async def get(self):
                 return {"default_model": "fake-model"}
@@ -197,7 +197,7 @@ class TestStructuredChannel:
         return svc
 
     def test_structured_success(self, monkeypatch):
-        from yuxi.services.domain_factory_service import GeneralizedTemplate
+        from pisuan.services.domain_factory_service import GeneralizedTemplate
         lc = FakeLCModel(data=GeneralizedTemplate(generalized="x {{A}}", slots=[], summary="s", key_points=["k"]))
         svc = self._make_svc(monkeypatch, lc)
         import asyncio
@@ -211,7 +211,7 @@ class TestStructuredChannel:
         → 回填原文截断 text[:500] + \"...\"，outcome 仍为 structured 成功通道"""
         import asyncio
 
-        from yuxi.services.domain_factory_service import GeneralizedTemplate
+        from pisuan.services.domain_factory_service import GeneralizedTemplate
 
         lc = FakeLCModel(data=GeneralizedTemplate(generalized="", slots=[]))
         svc = self._make_svc(monkeypatch, lc)
@@ -238,7 +238,7 @@ class TestStructuredChannel:
 
         from pydantic import ValidationError
 
-        from yuxi.services.domain_factory_service import GeneralizedTemplate
+        from pisuan.services.domain_factory_service import GeneralizedTemplate
 
         try:
             GeneralizedTemplate(slots=[{"name": "a", "type": "数值"}])  # type 在 Literal 词表外 → 构造即抛
@@ -298,7 +298,7 @@ class TestStructuredChannel:
 
 
 def test_narrative_path_symbols_extinct():
-    real = Path(__file__).resolve().parents[2] / "package" / "yuxi" / "services" / "domain_factory_service.py"
+    real = Path(__file__).resolve().parents[2] / "package" / "pisuan" / "services" / "domain_factory_service.py"
     src = real.read_text(encoding="utf-8")
     for sym in ("_extract_narrative_summaries", "NARRATIVE_SUMMARY_PROMPT",
                 "_parse_narrative_json", "_generalize_text("):
@@ -311,7 +311,7 @@ class TestValidatorProseGate:
     def _validate(self, paragraphs):
         import asyncio
 
-        from yuxi.services.pre_commit_validator import PreCommitValidator
+        from pisuan.services.pre_commit_validator import PreCommitValidator
 
         return asyncio.run(PreCommitValidator().validate({"source_paragraphs": paragraphs}))
 

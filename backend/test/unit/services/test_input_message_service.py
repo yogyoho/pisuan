@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-import yuxi.services.input_message_service as input_message_service
-from yuxi.services.input_message_service import (
+import pisuan.services.input_message_service as input_message_service
+from pisuan.services.input_message_service import (
     MAX_CHAT_IMAGES,
     build_chat_input_message,
     extract_image_contents,

@@ -8,8 +8,8 @@ import json
 
 import pytest
 
-from yuxi.services import eia_paradigm_scan
-from yuxi.services.eia_data_service import _SKILL_ROOT
+from pisuan.services import eia_paradigm_scan
+from pisuan.services.eia_data_service import _SKILL_ROOT
 
 _ENTITIES_DIR = _SKILL_ROOT / "references" / "sample_entities"
 

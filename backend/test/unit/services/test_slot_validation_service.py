@@ -1,5 +1,5 @@
 import pytest
-from yuxi.services.slot_validation_service import (
+from pisuan.services.slot_validation_service import (
     SlotValidationResult,
     SlotValidationService,
     ValidationLevel,

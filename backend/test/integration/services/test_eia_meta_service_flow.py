@@ -13,7 +13,7 @@ import json
 
 import pytest
 
-from yuxi.services.eia_meta_service import (
+from pisuan.services.eia_meta_service import (
     _ANNOTATION_FIELDS,
     META_ANNOTATIONS_PATH,
     _load_corpus_meta,
@@ -28,8 +28,8 @@ async def _clean_state():
     """DB 行自清理 + 人工层文件字节级快照恢复（pg_manager.initialize 幂等）。"""
     from sqlalchemy import delete
 
-    from yuxi.storage.postgres.manager import pg_manager
-    from yuxi.storage.postgres.models_domain_factory import EiaMetaAnnotation
+    from pisuan.storage.postgres.manager import pg_manager
+    from pisuan.storage.postgres.models_domain_factory import EiaMetaAnnotation
 
     pg_manager.initialize()
     from test.integration.services._flow_isolation import snapshot_rows, restore_rows

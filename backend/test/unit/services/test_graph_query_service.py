@@ -1,5 +1,5 @@
 import pytest
-from yuxi.services.graph_query_service import GraphQueryService
+from pisuan.services.graph_query_service import GraphQueryService
 
 
 @pytest.mark.asyncio

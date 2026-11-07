@@ -8,8 +8,8 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
 from server.utils.auth_middleware import get_admin_user
-from yuxi.storage.postgres.models_business import User
-from yuxi.utils import logger
+from pisuan.storage.postgres.models_business import User
+from pisuan.utils import logger
 
 entity_types = APIRouter(prefix="/entity-types", tags=["Entity Types"])
 

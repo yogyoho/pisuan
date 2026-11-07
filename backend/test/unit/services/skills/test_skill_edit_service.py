@@ -7,12 +7,12 @@ import os
 from pathlib import Path
 
 import pytest
-from yuxi.agents.toolkits import service as tool_service
-from yuxi.services import artifact_service
-from yuxi.services.skills import edit as edit_service
-from yuxi.services.skills import projection as projection_service
-from yuxi.services.skills import shared as skill_service
-from yuxi.storage.postgres.models_business import Skill, User
+from pisuan.agents.toolkits import service as tool_service
+from pisuan.services import artifact_service
+from pisuan.services.skills import edit as edit_service
+from pisuan.services.skills import projection as projection_service
+from pisuan.services.skills import shared as skill_service
+from pisuan.storage.postgres.models_business import Skill, User
 
 
 class _Session:

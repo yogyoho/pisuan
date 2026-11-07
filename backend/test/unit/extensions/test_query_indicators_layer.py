@@ -1,6 +1,6 @@
 """query_indicators 分层派生与锚点 join 纯函数单测（P1 合流 Task 6）。"""
 
-from yuxi.extensions.regulation_library.enrichment_service import _anchor_maps, _layer_of
+from pisuan.extensions.regulation_library.enrichment_service import _anchor_maps, _layer_of
 
 
 def test_layer_of_three_layers():

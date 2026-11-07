@@ -198,7 +198,7 @@ GENERAL_DOMAIN_NAME = "通用域"
 
 ## 6. 方案 A：domain_factory 包化拆分
 
-- 后端包 `yuxi/domain_factory/`：`pipeline.py`（解析+泛化主流程）/ `classify.py`（分类规则）/ `schemas.py`（LOCAL_SCHEMA_MAP+章节提取）/ `templates.py`（模板回流+大纲）/ `ingest.py`（commit+图谱+入库）/ `entities.py`（实体+槽位）；`yuxi/services/domain_factory_service.py` 留门面 shim，对外 import 路径不变。
+- 后端包 `pisuan/domain_factory/`：`pipeline.py`（解析+泛化主流程）/ `classify.py`（分类规则）/ `schemas.py`（LOCAL_SCHEMA_MAP+章节提取）/ `templates.py`（模板回流+大纲）/ `ingest.py`（commit+图谱+入库）/ `entities.py`（实体+槽位）；`pisuan/services/domain_factory_service.py` 留门面 shim，对外 import 路径不变。
 - 路由拆 `routers/domain_factory/general.py` + `eia.py`，`__init__.py` 汇总挂载，注册点不变。
 - 前端：EtlWorkbench 拆 ParseStep/EntityStep/CommitStep + `useEtlTask` composable；Dashboard 拆 UploadModal/HistoryTable。
 - 纯机械搬移：git mv + import 修复 + 全量回归验证。task_registry.py 保持纯追加声明不动。

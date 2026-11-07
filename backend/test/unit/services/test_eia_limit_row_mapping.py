@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from yuxi.services.eia_limit_row_mapping import flatten_limit_row, page_row_id_for, regroup_limit_rows
+from pisuan.services.eia_limit_row_mapping import flatten_limit_row, page_row_id_for, regroup_limit_rows
 
 
 def test_page_row_id_for_deterministic_and_table_scoped():

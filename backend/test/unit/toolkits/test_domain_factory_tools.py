@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock
-import yuxi.agents.toolkits.buildin.tools as tools_mod
+import pisuan.agents.toolkits.buildin.tools as tools_mod
 
 
 @pytest.mark.asyncio

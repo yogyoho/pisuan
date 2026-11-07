@@ -10,7 +10,7 @@ def test_calculate_a_value_computes_basic_case():
     # Import the underlying function (before @tool wraps it)
     import asyncio
 
-    from yuxi.agents.toolkits.buildin.tools import calculate_a_value
+    from pisuan.agents.toolkits.buildin.tools import calculate_a_value
 
     result = asyncio.run(calculate_a_value.ainvoke({"A": 3.5, "Ci": 0.07, "Si": 100.0}))
     assert result["capacity"] == 0.0025  # round(0.00245, 4) = 0.0025
@@ -22,7 +22,7 @@ def test_calculate_a_value_handles_zero_area():
     """Si=0 时应返回 capacity=0（不应崩溃）"""
     import asyncio
 
-    from yuxi.agents.toolkits.buildin.tools import calculate_a_value
+    from pisuan.agents.toolkits.buildin.tools import calculate_a_value
 
     result = asyncio.run(calculate_a_value.ainvoke({"A": 3.5, "Ci": 0.07, "Si": 0.0}))
     assert result["capacity"] == 0.0
@@ -32,7 +32,7 @@ def test_calculate_a_value_handles_large_values():
     """大面积矿区应返回合理的大容量值"""
     import asyncio
 
-    from yuxi.agents.toolkits.buildin.tools import calculate_a_value
+    from pisuan.agents.toolkits.buildin.tools import calculate_a_value
 
     result = asyncio.run(calculate_a_value.ainvoke({"A": 4.0, "Ci": 0.15, "Si": 500.0}))
     assert result["capacity"] > 0
@@ -47,7 +47,7 @@ def test_calculate_water_capacity_basic():
     """C0=10, K=0.15, x=1000, u=0.5 → 浓度应衰减"""
     import asyncio
 
-    from yuxi.agents.toolkits.buildin.tools import calculate_water_capacity
+    from pisuan.agents.toolkits.buildin.tools import calculate_water_capacity
 
     result = asyncio.run(calculate_water_capacity.ainvoke({"C0": 10.0, "K": 0.15, "x": 1000.0, "u": 0.5}))
     assert 0 < result["Cx"] < 10.0  # 浓度应小于初始值
@@ -59,7 +59,7 @@ def test_calculate_water_capacity_fast_flow_no_decay():
     """快速流动（u极大）时几乎不衰减"""
     import asyncio
 
-    from yuxi.agents.toolkits.buildin.tools import calculate_water_capacity
+    from pisuan.agents.toolkits.buildin.tools import calculate_water_capacity
 
     result = asyncio.run(calculate_water_capacity.ainvoke({"C0": 10.0, "K": 0.01, "x": 10.0, "u": 100.0}))
     # 流速极快 → 几乎无降解 → Cx 接近 C0
@@ -70,7 +70,7 @@ def test_calculate_water_capacity_stagnant_full_decay():
     """静止水体（u极小）长时间后几乎完全降解"""
     import asyncio
 
-    from yuxi.agents.toolkits.buildin.tools import calculate_water_capacity
+    from pisuan.agents.toolkits.buildin.tools import calculate_water_capacity
 
     result = asyncio.run(calculate_water_capacity.ainvoke({"C0": 10.0, "K": 1.0, "x": 50000.0, "u": 0.001}))
     assert result["Cx"] < 1.0  # 几乎完全降解
@@ -82,7 +82,7 @@ def test_calculate_water_capacity_stagnant_full_decay():
 @pytest.mark.asyncio
 async def test_lookup_subsidence_params_no_kb_available():
     """无 Milvus KB 时应返回 hint 而不是崩溃"""
-    from yuxi.agents.toolkits.buildin.tools import lookup_subsidence_params
+    from pisuan.agents.toolkits.buildin.tools import lookup_subsidence_params
 
     result = await lookup_subsidence_params.ainvoke({"depth": "300-500m", "coal_seam": "2-5m", "angle": "0-15°"})
     assert "matched" in result
@@ -95,7 +95,7 @@ async def test_lookup_subsidence_params_no_kb_available():
 @pytest.mark.asyncio
 async def test_save_chapter_rejects_invalid_status():
     """非法 status 应返回 error 消息"""
-    from yuxi.agents.toolkits.buildin.tools import save_chapter
+    from pisuan.agents.toolkits.buildin.tools import save_chapter
 
     result = await save_chapter.ainvoke(
         {
@@ -115,7 +115,7 @@ async def test_save_chapter_rejects_invalid_status():
 @pytest.mark.asyncio
 async def test_save_chapter_rejects_empty_content_on_done_and_review():
     """status=done/review 且 content_md 为空 → error"""
-    from yuxi.agents.toolkits.buildin.tools import save_chapter
+    from pisuan.agents.toolkits.buildin.tools import save_chapter
 
     for status in ("done", "review"):
         result = await save_chapter.ainvoke(
@@ -136,7 +136,7 @@ async def test_save_chapter_rejects_empty_content_on_done_and_review():
 @pytest.mark.asyncio
 async def test_save_chapter_accepts_all_valid_statuses():
     """所有合法 status 都不应因 status 字段本身报错"""
-    from yuxi.agents.toolkits.buildin.tools import save_chapter
+    from pisuan.agents.toolkits.buildin.tools import save_chapter
 
     valid = ["writing", "skipped", "pending_data"]
     for status in valid:
@@ -160,7 +160,7 @@ async def test_save_chapter_accepts_all_valid_statuses():
 
 def test_check_content_contract_all_covered():
     """所有 key_elements 都在 content_md 中出现 → 返回空 warnings"""
-    from yuxi.agents.toolkits.buildin.tools import check_content_contract
+    from pisuan.agents.toolkits.buildin.tools import check_content_contract
 
     cc = {"key_elements": ["气候类型", "气温", "降水"]}
     md = "本区气候类型为温带季风气候,年平均气温12.5℃,年降水量600mm。"
@@ -170,7 +170,7 @@ def test_check_content_contract_all_covered():
 
 def test_check_content_contract_missing_elements():
     """部分 key_elements 未出现 → 返回 warning 列出缺失项"""
-    from yuxi.agents.toolkits.buildin.tools import check_content_contract
+    from pisuan.agents.toolkits.buildin.tools import check_content_contract
 
     cc = {"key_elements": ["气候类型", "气温", "降水", "风向风速"]}
     md = "本区气候类型为温带季风气候,年平均气温12.5℃。"
@@ -182,14 +182,14 @@ def test_check_content_contract_missing_elements():
 
 def test_check_content_contract_none_contract():
     """content_contract 为 None → 返回空列表(无校验依据)"""
-    from yuxi.agents.toolkits.buildin.tools import check_content_contract
+    from pisuan.agents.toolkits.buildin.tools import check_content_contract
 
     assert check_content_contract("任意内容", None) == []
 
 
 def test_check_content_contract_no_key_elements():
     """content_contract 无 key_elements → 返回空列表"""
-    from yuxi.agents.toolkits.buildin.tools import check_content_contract
+    from pisuan.agents.toolkits.buildin.tools import check_content_contract
 
     cc = {"min_word_count": 800}
     assert check_content_contract("内容", cc) == []
@@ -197,7 +197,7 @@ def test_check_content_contract_no_key_elements():
 
 def test_check_content_contract_empty_key_elements():
     """key_elements 为空列表 → 返回空列表"""
-    from yuxi.agents.toolkits.buildin.tools import check_content_contract
+    from pisuan.agents.toolkits.buildin.tools import check_content_contract
 
     cc = {"key_elements": []}
     assert check_content_contract("内容", cc) == []
@@ -211,8 +211,8 @@ async def test_lookup_subsidence_params_no_milvus_kb(monkeypatch):
     """无 milvus 库 → 返回 hint,不崩溃"""
     from datetime import datetime
 
-    from yuxi.agents.toolkits.buildin.tools import lookup_subsidence_params
-    from yuxi.knowledge.read_models import KnowledgeBaseSummary
+    from pisuan.agents.toolkits.buildin.tools import lookup_subsidence_params
+    from pisuan.knowledge.read_models import KnowledgeBaseSummary
 
     async def fake_get_databases():
         return [
@@ -231,7 +231,7 @@ async def test_lookup_subsidence_params_no_milvus_kb(monkeypatch):
             )
         ]
 
-    import yuxi.knowledge.runtime as rt
+    import pisuan.knowledge.runtime as rt
 
     monkeypatch.setattr(rt.knowledge_base, "get_databases", fake_get_databases)
 
@@ -245,8 +245,8 @@ async def test_lookup_subsidence_params_merges_milvus_hits(monkeypatch):
     """多 milvus 库逐库 retrieve 并合并命中,带来源标注"""
     from datetime import datetime
 
-    from yuxi.agents.toolkits.buildin.tools import lookup_subsidence_params
-    from yuxi.knowledge.read_models import KnowledgeBaseSummary
+    from pisuan.agents.toolkits.buildin.tools import lookup_subsidence_params
+    from pisuan.knowledge.read_models import KnowledgeBaseSummary
 
     def _summary(kb_id, name):
         return KnowledgeBaseSummary(
@@ -275,7 +275,7 @@ async def test_lookup_subsidence_params_merges_milvus_hits(monkeypatch):
             }
         return {"kb_id": kb_id, "results": []}
 
-    import yuxi.knowledge.runtime as rt
+    import pisuan.knowledge.runtime as rt
 
     monkeypatch.setattr(rt.knowledge_base, "get_databases", fake_get_databases)
     monkeypatch.setattr(rt.knowledge_base, "retrieve", fake_retrieve)
@@ -292,7 +292,7 @@ async def test_lookup_subsidence_params_merges_milvus_hits(monkeypatch):
 @pytest.mark.asyncio
 async def test_get_templates_marks_db_fallback_on_graph_error(monkeypatch):
     """图谱查询异常 → DB 兜底条目带 _source=db_fallback + _degraded_note"""
-    from yuxi.agents.toolkits.buildin import tools as tools_mod
+    from pisuan.agents.toolkits.buildin import tools as tools_mod
 
     class _Boom:
         async def get_templates(self, *a, **k):
@@ -301,7 +301,7 @@ async def test_get_templates_marks_db_fallback_on_graph_error(monkeypatch):
         def close(self):
             pass
 
-    monkeypatch.setattr("yuxi.services.graph_query_service.GraphQueryService", _Boom)
+    monkeypatch.setattr("pisuan.services.graph_query_service.GraphQueryService", _Boom)
 
     rows = [{"generalized": "模板文本", "slots": []}]
 
@@ -322,7 +322,7 @@ async def test_get_templates_marks_db_fallback_on_graph_error(monkeypatch):
 @pytest.mark.asyncio
 async def test_get_templates_marks_graph_source(monkeypatch):
     """图谱命中 → 条目 _source=graph,不查 DB"""
-    from yuxi.agents.toolkits.buildin import tools as tools_mod
+    from pisuan.agents.toolkits.buildin import tools as tools_mod
 
     graph_rows = [{"generalized": "图谱模板", "slots": []}]
 
@@ -333,7 +333,7 @@ async def test_get_templates_marks_graph_source(monkeypatch):
         def close(self):
             pass
 
-    monkeypatch.setattr("yuxi.services.graph_query_service.GraphQueryService", _FakeGraphSvc)
+    monkeypatch.setattr("pisuan.services.graph_query_service.GraphQueryService", _FakeGraphSvc)
 
     def _no_repo(*a, **k):
         raise AssertionError("图谱命中时不应回退 DB")

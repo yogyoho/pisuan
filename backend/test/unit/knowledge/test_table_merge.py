@@ -4,7 +4,7 @@
 逐字重复表头、`1 类` vs `I 类` 噪声表头、colspan 分组行、链式续表。
 """
 
-from yuxi.knowledge.parser.table_merge import merge_split_tables
+from pisuan.knowledge.parser.table_merge import merge_split_tables
 
 
 def _table(rows: list[str], open_tag: str = "<table>") -> str:

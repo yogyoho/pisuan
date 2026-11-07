@@ -4,14 +4,14 @@ from contextlib import asynccontextmanager
 
 import pytest
 
-from yuxi.storage.postgres.manager import (
+from pisuan.storage.postgres.manager import (
     BUSINESS_SCHEMA_VERSION,
     KNOWLEDGE_SCHEMA_VERSION,
     BusinessBase,
     KnowledgeBase,
     PostgresManager,
 )
-from yuxi.storage.postgres.models_business import AgentRun
+from pisuan.storage.postgres.models_business import AgentRun
 
 
 def test_business_and_knowledge_metadata_are_disjoint():

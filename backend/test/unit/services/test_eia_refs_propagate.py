@@ -1,7 +1,7 @@
 """导出物化运行时传播的单测：重播/内容跳过/残留清理/chapter references 单源化不复活（隔离 tmp 根，不触真实运行栈）。"""
 
 import pytest
-from yuxi.services import eia_refs_propagate as prop
+from pisuan.services import eia_refs_propagate as prop
 
 pytestmark = [pytest.mark.unit]
 

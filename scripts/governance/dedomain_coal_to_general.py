@@ -1,7 +1,7 @@
 """去领域化存量迁移：domain_code 'coal' 等历史域值 → 'general'（设计 docs/vibe/2026-10-29-etl-pipeline-dedomain-design.md §4.1）。
 
 幂等可重跑。默认 dry-run 只统计；--apply 才写库。
-用法（宿主仓库根执行，脚本经 stdin 进容器；localized 栈容器包名为 pisuan 时先做 yuxi→pisuan 替换再入）：
+用法（宿主仓库根执行，脚本经 stdin 进容器；localized 栈容器包名为 pisuan 时先做 pisuan→pisuan 替换再入）：
     MSYS_NO_PATHCONV=1 docker exec -i api-dev python - --apply < scripts/governance/dedomain_coal_to_general.py
 （不带 --apply 即 dry-run）
 
@@ -22,12 +22,12 @@ import asyncio
 
 from sqlalchemy import text
 
-from yuxi.repositories.domain_factory_repository import (
+from pisuan.repositories.domain_factory_repository import (
     GENERAL_DOMAIN_CODE,
     GENERAL_DOMAIN_NAME,
     DomainFactoryRepository,
 )
-from yuxi.storage.postgres.manager import pg_manager
+from pisuan.storage.postgres.manager import pg_manager
 
 # (表, 域列)。表名列名已对照 models_domain_factory.py / models_domain_entity.py 核实（2026-10-30）。
 PLAIN_TARGETS = [

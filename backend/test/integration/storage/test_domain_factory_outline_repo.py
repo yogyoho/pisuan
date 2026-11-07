@@ -1,8 +1,8 @@
 """domain_factory_outlines repository 落库链路集成测试：直连真实 PostgreSQL。"""
 
 import pytest
-from yuxi.storage.postgres.manager import pg_manager
-from yuxi.repositories.domain_factory_repository import DomainFactoryRepository
+from pisuan.storage.postgres.manager import pg_manager
+from pisuan.repositories.domain_factory_repository import DomainFactoryRepository
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 

@@ -10,7 +10,7 @@ import { splitMathText, mathToLatex } from '../../src/components/eia-data/expr_l
 const here = path.dirname(fileURLToPath(import.meta.url))
 const formulasPath = path.resolve(
   here,
-  '../../../backend/package/yuxi/agents/skills/buildin/coal-eia-writer/references/formulas.json'
+  '../../../backend/package/pisuan/agents/skills/buildin/coal-eia-writer/references/formulas.json'
 )
 const exprs = JSON.parse(readFileSync(formulasPath, 'utf-8')).formulas.map((f) => f.expr)
 

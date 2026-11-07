@@ -2,7 +2,7 @@
 
 状态：archived
 类型：bug-fix
-Owner：backend/package/yuxi/repositories/knowledge_base_repository.py
+Owner：backend/package/pisuan/repositories/knowledge_base_repository.py
 
 ## 问题
 

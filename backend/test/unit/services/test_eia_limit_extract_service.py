@@ -5,11 +5,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from yuxi.services import eia_limit_extract_service as lex_svc
-from yuxi.services.eia_limit_extract_service import EiaLimitExtractService
-from yuxi.services.eia_limit_llm_classifier import GateStats, JudgeResult
-from yuxi.services.eia_limit_row_mapping import page_row_id_for
-from yuxi.services.eia_standard_service import EiaStandardService as _ESS
+from pisuan.services import eia_limit_extract_service as lex_svc
+from pisuan.services.eia_limit_extract_service import EiaLimitExtractService
+from pisuan.services.eia_limit_llm_classifier import GateStats, JudgeResult
+from pisuan.services.eia_limit_row_mapping import page_row_id_for
+from pisuan.services.eia_standard_service import EiaStandardService as _ESS
 
 
 class PassThroughGate:

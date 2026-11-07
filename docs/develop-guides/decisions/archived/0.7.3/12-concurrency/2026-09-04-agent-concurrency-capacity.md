@@ -66,7 +66,7 @@ API 使用同一 serializer 派生 `dispatch_latency_ms`（创建到开工）、
 - 预建或按 TTL 保留 Sandbox：预建让纯文本请求支付冷启动，TTL 会改变资源 Owner 与残留进程语义；当前只做首次访问惰性创建和终态清理。
 - 共用一个 Docker bridge 或修改 daemon 全局地址池：前者破坏 Sandbox 网络隔离，后者影响同机其他项目并要求重启 Docker。
 - 保存派生毫秒值、回放 Redis Stream 或逐 chunk 写 PostgreSQL：分别引入重复事实、受 TTL 限制或高频持久化；保存少量绝对时间点足以支持当前诊断。
-- 使用 Locust 取代单文件压测：适合未来分布式发压，但仍需实现 Yuxi 的 Request→Run SSE 和同 Run 因果校验；当前脚本满足本机容量验证。
+- 使用 Locust 取代单文件压测：适合未来分布式发压，但仍需实现 Pisuan 的 Request→Run SSE 和同 Run 因果校验；当前脚本满足本机容量验证。
 
 ## 后果
 

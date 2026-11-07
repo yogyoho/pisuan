@@ -7,7 +7,7 @@ from datetime import datetime
 
 import pytest
 
-from yuxi.services import eia_standard_service as svc
+from pisuan.services import eia_standard_service as svc
 
 
 def _flat(tk, prid, **kw):

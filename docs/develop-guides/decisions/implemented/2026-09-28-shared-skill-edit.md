@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：feature
-Owner：backend/package/yuxi/services/skills/edit.py
+Owner：backend/package/pisuan/services/skills/edit.py
 
 ## 问题
 

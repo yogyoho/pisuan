@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：simplification
-Owner：backend/package/yuxi/services/agent_request_queue_service.py
+Owner：backend/package/pisuan/services/agent_request_queue_service.py
 
 ## 问题
 

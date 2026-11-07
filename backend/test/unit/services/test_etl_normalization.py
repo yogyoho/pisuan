@@ -4,7 +4,7 @@
 （去领域化），原 domain 归一化方法及用例随之移除。
 """
 
-from yuxi.services.domain_factory_service import DomainFactoryService
+from pisuan.services.domain_factory_service import DomainFactoryService
 
 
 def test_normalize_report_type_general_to_code():

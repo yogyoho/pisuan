@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from yuxi.services.domain_factory_service import DomainFactoryService
+from pisuan.services.domain_factory_service import DomainFactoryService
 
 
 def test_group_assets_by_chapter_buckets_by_chapter():
@@ -73,12 +73,12 @@ def test_llm_chapter_meta_parses_json_and_reuses_seed_key():
         },
     )()
     with patch(
-        "yuxi.services.domain_factory_service.select_model_lazy",
+        "pisuan.services.domain_factory_service.select_model_lazy",
         AsyncMock(return_value=type("M", (), {"call": AsyncMock(return_value=fake_resp)})()),
         create=True,
     ):
         # select_model 是函数导入；按实际导入路径 mock（见 Step 3 实现）
-        import yuxi.services.domain_factory_service as mod
+        import pisuan.services.domain_factory_service as mod
 
         with patch.object(
             mod, "select_model", return_value=type("M", (), {"call": AsyncMock(return_value=fake_resp)})()
@@ -103,7 +103,7 @@ def test_llm_chapter_meta_fallback_key_normalized():
     """LLM 异常回退时 canonical 过 normalize_chapter_key，消灭带编号/含空白 PG key（bug-4167）"""
     svc = DomainFactoryService.__new__(DomainFactoryService)
     failing_model = type("M", (), {"call": AsyncMock(side_effect=RuntimeError("llm down"))})()
-    import yuxi.services.domain_factory_service as mod
+    import pisuan.services.domain_factory_service as mod
 
     with patch.object(mod, "select_model", return_value=failing_model), patch.object(
         mod,
@@ -148,7 +148,7 @@ async def test_produce_outlines_async_writes_rows_and_backfills(monkeypatch):
             "writing_hints": "h",
         }
     )
-    with patch("yuxi.services.graph_builder.GraphBuilder") as gb:
+    with patch("pisuan.services.graph_builder.GraphBuilder") as gb:
         gb.return_value._get_driver.return_value = None  # 图谱不可用 → 仅告警跳过
         n = await svc._produce_outlines_async("task-1", "coal", "eia_report")
     assert n == 1
@@ -184,7 +184,7 @@ async def test_produce_outlines_async_backfills_graph_meta():
     fake_session = MagicMock()
     fake_driver = MagicMock()
     fake_driver.session.return_value.__enter__.return_value = fake_session
-    with patch("yuxi.services.graph_builder.GraphBuilder") as gb:
+    with patch("pisuan.services.graph_builder.GraphBuilder") as gb:
         gb.return_value._get_driver.return_value = fake_driver
         n = await svc._produce_outlines_async("task-2", "coal", "eia_report")
     assert n == 1

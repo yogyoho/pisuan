@@ -1,7 +1,7 @@
 """存量 ChapterTemplate 治理脚本（bug-4167 spec §4.4）：归一 canonical、合并重复、纠挂、编号结构化、删测试子树、meta 回写。
 
 幂等可重跑：每步先算动作清单再执行，重跑零动作。默认 dry-run 只打印 JSON 报告，--apply 才落写。
-import 兼容 yuxi/pisuan 双包名（localized 容器内包名为 pisuan，脚本自动降级）。
+import 兼容 pisuan/pisuan 双包名（localized 容器内包名为 pisuan，脚本自动降级）。
 
 治理步骤（Neo4j 阶段按序）:
   1. 全量归一 canonical（normalize_chapter_key，「总  则」→「总则」）
@@ -33,7 +33,7 @@ import re
 import sys
 
 try:
-    from yuxi.utils import normalize_chapter_key
+    from pisuan.utils import normalize_chapter_key
 except ImportError:  # localized 容器内包名为 pisuan
     from pisuan.utils import normalize_chapter_key
 
@@ -602,7 +602,7 @@ def connect_pg():
     """psycopg3 直连（容器内 POSTGRES_URL 为 SQLAlchemy 方言 URL，剥掉方言后缀）。"""
     import psycopg
 
-    url = os.getenv("POSTGRES_URL", "postgresql+asyncpg://postgres:postgres@postgres:5432/yuxi")
+    url = os.getenv("POSTGRES_URL", "postgresql+asyncpg://postgres:postgres@postgres:5432/pisuan")
     return psycopg.connect(url.replace("+asyncpg", "").replace("+psycopg", ""))
 
 

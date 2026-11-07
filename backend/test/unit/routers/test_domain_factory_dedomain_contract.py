@@ -14,8 +14,8 @@ from fastapi import UploadFile
 
 from server.routers import domain_factory_router
 from server.routers import domain_entity_builder_router as deb_router
-from yuxi.repositories.domain_factory_repository import GENERAL_DOMAIN_CODE
-from yuxi.services.domain_factory_service import DomainFactoryService
+from pisuan.repositories.domain_factory_repository import GENERAL_DOMAIN_CODE
+from pisuan.services.domain_factory_service import DomainFactoryService
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.unit]
 

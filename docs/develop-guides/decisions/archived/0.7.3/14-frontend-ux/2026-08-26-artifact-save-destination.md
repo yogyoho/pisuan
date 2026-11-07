@@ -2,7 +2,7 @@
 
 状态：archived
 类型：feature
-Owner：backend/package/yuxi/services/artifact_service.py
+Owner：backend/package/pisuan/services/artifact_service.py
 
 ## 问题
 

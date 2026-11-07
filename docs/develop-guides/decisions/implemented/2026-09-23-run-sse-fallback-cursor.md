@@ -2,7 +2,7 @@
 
 状态：implemented
 类型：bug-fix
-Owner：backend/package/yuxi/services/agent_run_service.py
+Owner：backend/package/pisuan/services/agent_run_service.py
 
 ## 问题
 

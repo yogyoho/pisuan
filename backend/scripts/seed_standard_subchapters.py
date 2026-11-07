@@ -16,7 +16,7 @@ from neo4j import GraphDatabase
 OUTLINES_DIR = (
     Path(__file__).resolve().parent.parent
     / "package"
-    / "yuxi"
+    / "pisuan"
     / "agents"
     / "skills"
     / "buildin"

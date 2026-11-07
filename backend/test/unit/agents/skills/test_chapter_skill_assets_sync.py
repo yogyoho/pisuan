@@ -14,12 +14,12 @@ from pathlib import Path
 
 import pytest
 
-# 纯路径定位（禁 import yuxi：宿主 pytest 无 langgraph 依赖链）。两栖布局：
-#   宿主 repo：   <backend>/package/yuxi/agents/skills/buildin
+# 纯路径定位（禁 import pisuan：宿主 pytest 无 langgraph 依赖链）。两栖布局：
+#   宿主 repo：   <backend>/package/pisuan/agents/skills/buildin
 #   localized 容器：<app>/skill-sources/shared（pisuan 改名层把技能包挪到 skill-sources）
 _APP = Path(__file__).resolve().parents[4]
 BUILDIN = next(
-    (c for c in (_APP / "package" / "yuxi" / "agents" / "skills" / "buildin",
+    (c for c in (_APP / "package" / "pisuan" / "agents" / "skills" / "buildin",
                  _APP / "skill-sources" / "shared") if c.is_dir()),
     None,
 )

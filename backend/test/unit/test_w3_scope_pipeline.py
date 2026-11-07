@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "package"))
 
-from yuxi.services.domain_factory_service import (  # noqa: E402
+from pisuan.services.domain_factory_service import (  # noqa: E402
     DomainFactoryService,
     GeneralizedTemplate,
 )

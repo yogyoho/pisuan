@@ -1,6 +1,6 @@
 import pytest
 
-from yuxi.services.knowledge_folder_service import KnowledgeFolderService
+from pisuan.services.knowledge_folder_service import KnowledgeFolderService
 
 pytestmark = pytest.mark.asyncio
 

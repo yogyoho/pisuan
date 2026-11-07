@@ -1,6 +1,6 @@
 """去领域化常量与别名归一单元测试（设计 docs/vibe/2026-10-29-etl-pipeline-dedomain-design.md）。"""
 
-from yuxi.repositories.domain_factory_repository import (
+from pisuan.repositories.domain_factory_repository import (
     GENERAL_DOMAIN_CODE,
     GENERAL_DOMAIN_NAME,
     _normalize_domain,

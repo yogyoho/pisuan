@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from yuxi.services.conversation_service import get_thread_history_view
-from yuxi.storage.postgres.models_business import AgentRun, Base, Conversation, Message, Project, ToolCall
+from pisuan.services.conversation_service import get_thread_history_view
+from pisuan.storage.postgres.models_business import AgentRun, Base, Conversation, Message, Project, ToolCall
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 
@@ -348,7 +348,7 @@ async def test_thread_history_hides_internal_metadata_from_published_model_audit
             message_id=audit.id,
             langgraph_tool_call_id="call-a",
             tool_name="search",
-            tool_input={"q": "Yuxi"},
+            tool_input={"q": "Pisuan"},
             tool_output="safe result",
             status="success",
         )

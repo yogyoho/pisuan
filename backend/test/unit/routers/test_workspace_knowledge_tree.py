@@ -6,9 +6,9 @@ from fastapi.testclient import TestClient
 from server.routers import workspace_router
 from server.routers.workspace_router import workspace_knowledge
 from server.utils.auth_middleware import get_required_user
-from yuxi.knowledge import preview
-from yuxi.knowledge.read_models import KnowledgeBaseDetail
-from yuxi.storage.postgres.models_business import User
+from pisuan.knowledge import preview
+from pisuan.knowledge.read_models import KnowledgeBaseDetail
+from pisuan.storage.postgres.models_business import User
 
 
 class FakeKnowledgeBase:

@@ -11,8 +11,8 @@ import pytest
 from langchain.messages import AIMessageChunk, HumanMessage
 
 from test.unit.agent_context_fixtures import prepared_execution
-from yuxi.services import chat_service as svc
-from yuxi.services.input_message_service import build_chat_input_message
+from pisuan.services import chat_service as svc
+from pisuan.services.input_message_service import build_chat_input_message
 
 
 @pytest.mark.parametrize("mode", ["chat", "resume"])
@@ -23,8 +23,8 @@ async def test_service_consumer_cancel_closes_real_graph(monkeypatch, mode):
     from langgraph.config import get_stream_writer
     from langgraph.graph import END, START, MessagesState, StateGraph
     from langgraph.types import interrupt
-    from yuxi.agents.base import BaseAgent
-    from yuxi.services.run_worker import RunContext, _consume_stream_with_cancel
+    from pisuan.agents.base import BaseAgent
+    from pisuan.services.run_worker import RunContext, _consume_stream_with_cancel
 
     consuming, release, closed = (asyncio.Event() for _ in range(3))
     effects, runs = [], []
@@ -34,7 +34,7 @@ async def test_service_consumer_cancel_closes_real_graph(monkeypatch, mode):
         if mode == "resume":
             interrupt("continue")
         try:
-            get_stream_writer()({"type": "yuxi.context_compression", "stage": "waiting"})
+            get_stream_writer()({"type": "pisuan.context_compression", "stage": "waiting"})
             await release.wait()
             effects.append("late write")
             return {"messages": []}
@@ -648,7 +648,7 @@ async def test_stream_agent_chat_commits_before_stream_and_persists_langfuse_con
         build_run_context=lambda **kwargs: SimpleNamespace(
             callbacks=["handler-1"],
             metadata={"langfuse_user_id": kwargs["current_user"].uid, "langfuse_session_id": kwargs["thread_id"]},
-            tags=["yuxi", "chat"],
+            tags=["pisuan", "chat"],
             trace_id="trace-seeded",
         ),
         get_trace_info=lambda _run_context: {
@@ -693,7 +693,7 @@ async def test_stream_agent_chat_commits_before_stream_and_persists_langfuse_con
     assert calls["stream_kwargs"] == {
         "callbacks": ["handler-1"],
         "metadata": {"langfuse_user_id": "user-1", "langfuse_session_id": "thread-1"},
-        "tags": ["yuxi", "chat"],
+        "tags": ["pisuan", "chat"],
         "run_name": "测试智能体",
     }
     model_message = calls["stream_messages"][0]
@@ -904,7 +904,7 @@ async def test_stream_agent_chat_output_persistence_failure_is_terminal_error(
 
 
 @pytest.mark.asyncio
-async def test_stream_agent_chat_maps_raw_protocol_events_to_yuxi_stream_events(
+async def test_stream_agent_chat_maps_raw_protocol_events_to_pisuan_stream_events(
     monkeypatch: pytest.MonkeyPatch,
 ):
     class FakeGraph:
@@ -1066,12 +1066,12 @@ async def test_stream_agent_chat_maps_custom_compression_event_to_context_compre
         context_schema = _FakeContext
 
         async def stream_messages_with_state(self, messages, input_context=None, **kwargs):
-            yield "custom", {"type": "yuxi.context_compression", "status": "started"}
+            yield "custom", {"type": "pisuan.context_compression", "status": "started"}
             yield "messages", (AIMessageChunk(content="hi"), {"node": "llm"})
             yield (
                 "custom",
                 {
-                    "type": "yuxi.context_compression",
+                    "type": "pisuan.context_compression",
                     "status": "completed",
                     "cutoff_index": 5,
                     "file_path": "/conv/x.md",

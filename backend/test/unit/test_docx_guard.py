@@ -16,7 +16,7 @@ from docx import Document
 BACKEND = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BACKEND / "package"))
 
-from yuxi.services import docx_guard  # noqa: E402
+from pisuan.services import docx_guard  # noqa: E402
 
 RELS_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 

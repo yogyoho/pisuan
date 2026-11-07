@@ -29,7 +29,7 @@
 - [x] `GET http://host.docker.internal:3100/api/public/health` 返回 200（宿主 + localized api 容器内双向可达）
 - [x] `LANGFUSE_INIT_*` 生效：管理员/组织/项目/预置 API Key 全部落库
 - [x] localized 栈 `is_langfuse_enabled()` 在容器内返回 True（包名经改名层为 `pisuan.services.langfuse_service`）
-- [x] 端到端：经 yuxi 完整代码路径（`build_run_context` → CallbackHandler → flush）写入 trace，ClickHouse `events_full` 可查；`submit_user_feedback_score` 返回 True
+- [x] 端到端：经 pisuan 完整代码路径（`build_run_context` → CallbackHandler → flush）写入 trace，ClickHouse `events_full` 可查；`submit_user_feedback_score` 返回 True
 - [ ] 真实 agent 对话产生 trace（用户后续验证：对话后在 Langfuse 控制台按 session 筛选）
 
 ## 实际部署中的差异与坑（记录给后来者）
@@ -37,11 +37,11 @@
 1. **v4 环境变量对齐**：不能凭记忆/摘录转写官方 compose。v4 有大量改名（`CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000`、Redis 用 `REDIS_HOST/PORT/AUTH`、媒体系列 `LANGFUSE_S3_MEDIA_UPLOAD_*`），且 `NEXTAUTH_SECRET` 是 web 专属变量。权威底本存于 `.wolf/langfuse-deploy/official-ref.yml`。
 2. **`LANGFUSE_INIT_*` 必须显式给 `LANGFUSE_INIT_ORG_ID`**（v4.70 行为），否则全部 init 变量被静默忽略。
 3. **v4 `events_only` 模式**：OTLP（`/api/public/otel/v1/traces`）写入新表 `events_core`/`events_full`，旧 `/api/public/ingestion` 的 `trace-create` 被拒；**查数据查 `events_full`，不是 `traces`**。旧 SDK 才需要 `LANGFUSE_MIGRATION_V4_WRITE_MODE=dual` 桥接，本系统 SDK 4.14.5 原生走 OTLP 无需 dual。
-4. **兼容性验证结论**：SDK 4.14.5 `CallbackHandler` 与 v4 服务器完全兼容；`create_trace_id(seed)` 的确定性 ID 与 OTLP trace_id 一致（yuxi 调试面板跳转链路无恙）；`get_trace_url` 需关键字参数（yuxi 调用方式正确）。
+4. **兼容性验证结论**：SDK 4.14.5 `CallbackHandler` 与 v4 服务器完全兼容；`create_trace_id(seed)` 的确定性 ID 与 OTLP trace_id 一致（pisuan 调试面板跳转链路无恙）；`get_trace_url` 需关键字参数（pisuan 调用方式正确）。
 5. **Docker Hub 直连不通**：用 `docker.m.daocloud.io` / `docker.1panel.live` 前缀拉取后重打官方 tag；`cgr.dev`（chainguard）可直连。
 6. **宿主与容器统一 origin**：Windows 宿主可解析 `host.docker.internal`（Docker Desktop 写入 hosts 文件），实现浏览器/容器同源，cookie 不分裂。
 7. minio chainguard 镜像内置的 `local` alias 凭据陈旧（`mc ls local/` Access Denied 是红鲱鱼），验证用 `$MINIO_ROOT_USER/$MINIO_ROOT_PASSWORD` 重设 alias。
-8. **yuxi 集成入口与本次部署无关的既有事实**：trace_id 在模型执行前固化进 `agent_run` 表；超管调试面板经 `GET /agents/runs/{run_id}/langfuse` 跳转。
+8. **pisuan 集成入口与本次部署无关的既有事实**：trace_id 在模型执行前固化进 `agent_run` 表；超管调试面板经 `GET /agents/runs/{run_id}/langfuse` 跳转。
 
 ## 回滚
 

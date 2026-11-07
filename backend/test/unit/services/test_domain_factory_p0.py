@@ -12,8 +12,8 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-import yuxi.services.domain_factory_service as dfs_mod
-from yuxi.services.domain_factory_service import DomainFactoryService
+import pisuan.services.domain_factory_service as dfs_mod
+from pisuan.services.domain_factory_service import DomainFactoryService
 
 
 # ------------------------------------------------------------------
@@ -50,7 +50,7 @@ class FakeSystemOptions:
 
 def _make_service(monkeypatch, model: FakeModel) -> DomainFactoryService:
     monkeypatch.setattr(dfs_mod, "system_options", FakeSystemOptions())
-    monkeypatch.setattr("yuxi.models.chat.select_model", lambda model_spec: model)
+    monkeypatch.setattr("pisuan.models.chat.select_model", lambda model_spec: model)
     return DomainFactoryService()
 
 
@@ -274,7 +274,7 @@ async def test_stalled_endpoint_times_out_and_retries(monkeypatch):
 
 def test_domain_factory_failure_handler_registered():
     """domain_factory 任务类型必须注册 failure handler，否则 lease 过期后 domain 行变僵尸"""
-    from yuxi.services.task_registry import get_failure_task_definition
+    from pisuan.services.task_registry import get_failure_task_definition
 
     definition = get_failure_task_definition("domain_factory", 1)
     handler = definition.load_failure_handler()

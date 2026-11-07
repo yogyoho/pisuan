@@ -16,7 +16,7 @@ import shutil
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent / "backend" / "package" / "yuxi" / "agents" / "skills" / "buildin"
+ROOT = Path(__file__).resolve().parent.parent / "backend" / "package" / "pisuan" / "agents" / "skills" / "buildin"
 SRC = ROOT / "coal-eia-writer"
 DST = ROOT / "coal-eia-chapter-writer"
 SUBDIRS = ("scripts",)

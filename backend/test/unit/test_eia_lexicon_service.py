@@ -6,13 +6,13 @@ DB 流转（导入幂等 / PATCH 状态机 / 拆分 / 导出物化）在集成�
 
 import pytest
 
-from yuxi.services.eia_data_service import (
+from pisuan.services.eia_data_service import (
     _block_span,
     _load_quantity_re,
     _scan_all,
     _skill_root_exists,
 )
-from yuxi.services.eia_lexicon_service import (
+from pisuan.services.eia_lexicon_service import (
     _IMPORT_BLOCKLIST,
     _build_range,
     _load_bank_compile,

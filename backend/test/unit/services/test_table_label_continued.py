@@ -1,6 +1,6 @@
 """Test that table labels with (continued) suffix are recognized and merged."""
 
-from yuxi.services.domain_factory_service import DomainFactoryService
+from pisuan.services.domain_factory_service import DomainFactoryService
 
 
 def _service():

@@ -1,11 +1,11 @@
-# Yuxi Agent 开发约定
+# Pisuan Agent 开发约定
 
-Yuxi 是基于 LangGraph、FastAPI、Vue 和多种持久化服务构建的知识库与多智能体平台。Docker Compose 是开发拓扑的事实来源；修改不熟悉的模块前先阅读 [ARCHITECTURE.md](ARCHITECTURE.md)，再用符号搜索确认真实实现。
+Pisuan 是基于 LangGraph、FastAPI、Vue 和多种持久化服务构建的知识库与多智能体平台。Docker Compose 是开发拓扑的事实来源；修改不熟悉的模块前先阅读 [ARCHITECTURE.md](ARCHITECTURE.md)，再用符号搜索确认真实实现。
 
 ## 每次任务先加载什么
 
 - [ARCHITECTURE.md](ARCHITECTURE.md)：稳定边界、主链路和架构不变量。
-- [Yuxi Spec Loop](docs/develop-guides/spec-loop.md)：非平凡变更从提案、证据到收敛的流程。
+- [Pisuan Spec Loop](docs/develop-guides/spec-loop.md)：非平凡变更从提案、证据到收敛的流程。
 - [工程信任系统](docs/develop-guides/engineering-trust.md)：语义 Owner、证据、决策记录、派生审计和 gate 规则。
 - [测试规范](docs/develop-guides/testing-guidelines.md)：unit、integration、E2E 的职责与命令。
 - [贡献指南](docs/develop-guides/contributing.md)：分支、独立 Review、commit 和 PR 流程。
@@ -24,7 +24,7 @@ Yuxi 是基于 LangGraph、FastAPI、Vue 和多种持久化服务构建的知识
 
 ## 不能破坏的系统事实
 
-- HTTP 路由保持薄；用例流程属于 `yuxi.services`，持久化查询属于 `yuxi.repositories`。
+- HTTP 路由保持薄；用例流程属于 `pisuan.services`，持久化查询属于 `pisuan.repositories`。
 - 普通请求先在 PostgreSQL 中持久化 Message 和 AgentRunRequest；只有 ready FIFO 队头创建 AgentRun，且每次投递 ARQ 前 owning transaction 都已提交。Redis 负责投递、短期事件、取消和缓存，不拥有最终业务状态。
 - 同一用户、Agent、线程的普通请求按 FIFO 串行派发；Request 和 Run 是不同状态模型。
 - AgentRun 的输出、事件、artifact 和错误必须绑定同一 request/run；禁止从相邻 Run 猜测结果。
@@ -37,10 +37,10 @@ Yuxi 是基于 LangGraph、FastAPI、Vue 和多种持久化服务构建的知识
 
 ## 环评域（coal-eia-writer 与知识工厂）
 
-- 技能源码在 `backend/package/yuxi/agents/skills/buildin/coal-eia-writer/`；`docker/volumes/yuxi/{skill-sources,threads}` 是运行投影，`.claude/worktrees/` 是旧工作树副本，都不要直接改。改 `SKILL.md`/`scripts`/`references` 后走 `POST /api/system/skills/builtin/sync`（或重启）同步、重启 worker，并新开对话。
+- 技能源码在 `backend/package/pisuan/agents/skills/buildin/coal-eia-writer/`；`docker/volumes/pisuan/{skill-sources,threads}` 是运行投影，`.claude/worktrees/` 是旧工作树副本，都不要直接改。改 `SKILL.md`/`scripts`/`references` 后走 `POST /api/system/skills/builtin/sync`（或重启）同步、重启 worker，并新开对话。
 - 运行管线的红线：`data/` 只由 `scripts/ingest.py` 写，`formula_state.json` 只由 `formula_runner.py` 写，`state/progress.json` 是唯一进度真源；数值只经 `{{SLOT:key}}`/`{{TABLE:族}}` 注入；为过门手改 `references/` 或绕过 `build_output.py`/gate 等于伪造基准。
-- `scripts/` 保持纯 stdlib、零 DB/网络依赖（`eia_data_service.py` 直接 import 其 `QUANTITY_RE`）；脚本测试不在默认 `testpaths`：`docker compose exec api uv run --group test pytest package/yuxi/agents/skills/buildin/coal-eia-writer/scripts/tests`。
-- 知识工厂 EIA：路由 `server/routers/domain_factory_router.py`（`/api/domain-factory/eia/*`），服务/仓库 `yuxi/{services,repositories}/eia_*`，前端 `/domain-factory/eia-data`（`web/src/components/eia-data`）。`references/stages/*.json` 是唯一结构真源，KF 模板不一致时以 stage 为准；PostgreSQL 是运营态真相，显式导出才物化回 `references/`（词表 → gitignored `overrides/`）；`eia_data_service.py` 的统计直读技能文件，不走 DB。
+- `scripts/` 保持纯 stdlib、零 DB/网络依赖（`eia_data_service.py` 直接 import 其 `QUANTITY_RE`）；脚本测试不在默认 `testpaths`：`docker compose exec api uv run --group test pytest package/pisuan/agents/skills/buildin/coal-eia-writer/scripts/tests`。
+- 知识工厂 EIA：路由 `server/routers/domain_factory_router.py`（`/api/domain-factory/eia/*`），服务/仓库 `pisuan/{services,repositories}/eia_*`，前端 `/domain-factory/eia-data`（`web/src/components/eia-data`）。`references/stages/*.json` 是唯一结构真源，KF 模板不一致时以 stage 为准；PostgreSQL 是运营态真相，显式导出才物化回 `references/`（词表 → gitignored `overrides/`）；`eia_data_service.py` 的统计直读技能文件，不走 DB。
 - 设计上下文：`docs/design/eia-data-factory.md`、`docs/superpowers/specs/2026-09-30-coal-eia-writer-v2-port-design.md`。
 
 ## 证据规则

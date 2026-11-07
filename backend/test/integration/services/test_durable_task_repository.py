@@ -11,20 +11,20 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from yuxi.knowledge.eval.service import EvaluationService, finish_dataset_generation_task
-from yuxi.repositories import evaluation_repository as evaluation_repository_module
-from yuxi.repositories import knowledge_file_repository as knowledge_file_repository_module
-from yuxi.repositories import task_repository as task_repository_module
-from yuxi.repositories.evaluation_repository import EvaluationRepository
-from yuxi.repositories.knowledge_file_repository import KnowledgeFileRepository
-from yuxi.repositories.task_repository import TaskRepository
-from yuxi.services import task_queue_service
-from yuxi.services.task_queue_service import finalize_task_failure
-from yuxi.services.task_service import TaskContext, Tasker
-from yuxi.storage.postgres.manager import PostgresManager
-from yuxi.storage.postgres.models_business import TaskRecord
-from yuxi.storage.postgres.models_knowledge import EvaluationDataset, EvaluationRun, KnowledgeBase, KnowledgeFile
-from yuxi.utils.datetime_utils import utc_now_naive
+from pisuan.knowledge.eval.service import EvaluationService, finish_dataset_generation_task
+from pisuan.repositories import evaluation_repository as evaluation_repository_module
+from pisuan.repositories import knowledge_file_repository as knowledge_file_repository_module
+from pisuan.repositories import task_repository as task_repository_module
+from pisuan.repositories.evaluation_repository import EvaluationRepository
+from pisuan.repositories.knowledge_file_repository import KnowledgeFileRepository
+from pisuan.repositories.task_repository import TaskRepository
+from pisuan.services import task_queue_service
+from pisuan.services.task_queue_service import finalize_task_failure
+from pisuan.services.task_service import TaskContext, Tasker
+from pisuan.storage.postgres.manager import PostgresManager
+from pisuan.storage.postgres.models_business import TaskRecord
+from pisuan.storage.postgres.models_knowledge import EvaluationDataset, EvaluationRun, KnowledgeBase, KnowledgeFile
+from pisuan.utils.datetime_utils import utc_now_naive
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 

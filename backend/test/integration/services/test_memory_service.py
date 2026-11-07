@@ -13,10 +13,10 @@ import pytest_asyncio
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from yuxi.repositories.conversation_repository import ConversationRepository
-from yuxi.services import memory_service
-from yuxi.storage.postgres.manager import pg_manager
-from yuxi.storage.postgres.models_business import (
+from pisuan.repositories.conversation_repository import ConversationRepository
+from pisuan.services import memory_service
+from pisuan.storage.postgres.manager import pg_manager
+from pisuan.storage.postgres.models_business import (
     AgentRun,
     Conversation,
     Message,
@@ -26,9 +26,9 @@ from yuxi.storage.postgres.models_business import (
     User,
     UserConfig,
 )
-from yuxi.utils.datetime_utils import utc_now_naive
-from yuxi.workspace import paths as workspace_paths
-from yuxi.workspace.filesystem import Workspace
+from pisuan.utils.datetime_utils import utc_now_naive
+from pisuan.workspace import paths as workspace_paths
+from pisuan.workspace.filesystem import Workspace
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
@@ -50,7 +50,7 @@ async def memory_database(tmp_path, monkeypatch: pytest.MonkeyPatch):
                 raise
 
     monkeypatch.setattr(pg_manager, "get_async_session_context", local_session_context)
-    monkeypatch.setenv("YUXI_USER_DATA_DIR", str(tmp_path / "user-data"))
+    monkeypatch.setenv("PISUAN_USER_DATA_DIR", str(tmp_path / "user-data"))
 
     uid = f"pytest-memory-{uuid.uuid4().hex}"
     thread_id = f"thread-{uuid.uuid4().hex}"

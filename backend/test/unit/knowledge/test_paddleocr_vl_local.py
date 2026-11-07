@@ -7,8 +7,8 @@ from typing import Any
 import pytest
 from PIL import Image
 
-import yuxi.knowledge.parser.paddleocr_vl_local as mod
-from yuxi.knowledge.parser.paddleocr_vl_local import (
+import pisuan.knowledge.parser.paddleocr_vl_local as mod
+from pisuan.knowledge.parser.paddleocr_vl_local import (
     PaddleOCRVLLocalParser,
     _convert_table_markers,
 )

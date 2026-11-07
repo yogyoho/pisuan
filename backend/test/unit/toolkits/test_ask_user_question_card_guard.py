@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from yuxi.agents.toolkits.buildin import tools
+from pisuan.agents.toolkits.buildin import tools
 
 
 def _invoke(questions):

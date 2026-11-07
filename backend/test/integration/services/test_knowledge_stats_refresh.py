@@ -14,13 +14,13 @@ from fastapi import FastAPI
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from yuxi.knowledge.manager import KnowledgeBaseManager
-from yuxi.knowledge.implementations.milvus import MilvusKB
-from yuxi.repositories import knowledge_base_repository, knowledge_file_repository
-from yuxi.repositories.knowledge_base_repository import KnowledgeBaseRepository
-from yuxi.repositories.knowledge_file_repository import KnowledgeFileRepository
-from yuxi.storage.postgres.models_knowledge import KnowledgeBase, KnowledgeChunk, KnowledgeFile
-from yuxi.storage.redis import close_async_redis_client, get_async_redis_client
+from pisuan.knowledge.manager import KnowledgeBaseManager
+from pisuan.knowledge.implementations.milvus import MilvusKB
+from pisuan.repositories import knowledge_base_repository, knowledge_file_repository
+from pisuan.repositories.knowledge_base_repository import KnowledgeBaseRepository
+from pisuan.repositories.knowledge_file_repository import KnowledgeFileRepository
+from pisuan.storage.postgres.models_knowledge import KnowledgeBase, KnowledgeChunk, KnowledgeFile
+from pisuan.storage.redis import close_async_redis_client, get_async_redis_client
 from server.routers import knowledge_router
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
@@ -84,7 +84,7 @@ async def stats_store(monkeypatch):
             )
         yield schema, sessions, redis
     finally:
-        await redis.delete(f"yuxi:kb_file_stats:{schema}", f"yuxi:knowledge_base:{schema}:lock")
+        await redis.delete(f"pisuan:kb_file_stats:{schema}", f"pisuan:knowledge_base:{schema}:lock")
         await close_async_redis_client()
         await engine.dispose()
         async with admin.begin() as connection:
@@ -99,7 +99,7 @@ async def test_operation_refresh_ignores_cached_stats(stats_store, tmp_path, fai
     cached = await KnowledgeFileRepository().get_kb_file_stats(kb_id)
     assert cached["pending_index_count"] == 1
     # 延长本测试缓存存活期，消除慢 CI 下自然过期导致的假通过。
-    await redis.expire(f"yuxi:kb_file_stats:{kb_id}", 300)
+    await redis.expire(f"pisuan:kb_file_stats:{kb_id}", 300)
     manager = KnowledgeBaseManager(str(tmp_path))
 
     async def operation():
@@ -172,7 +172,7 @@ async def test_repair_returns_fresh_persisted_stats(stats_store, tmp_path, monke
     """文件缺失统计修复后，响应与持久投影都忽略旧缓存。"""
     kb_id, sessions, redis = stats_store
     await KnowledgeFileRepository().get_kb_file_stats(kb_id)
-    await redis.expire(f"yuxi:kb_file_stats:{kb_id}", 300)
+    await redis.expire(f"pisuan:kb_file_stats:{kb_id}", 300)
     async with sessions.begin() as session:
         row = (await session.execute(select(KnowledgeFile))).scalar_one()
         row.status = "indexed"

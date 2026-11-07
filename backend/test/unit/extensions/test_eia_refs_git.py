@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from yuxi.services.eia_refs_git import commit_refs_export
+from pisuan.services.eia_refs_git import commit_refs_export
 
 
 def _git(cwd: Path | str, *args: str) -> None:

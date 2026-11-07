@@ -5,8 +5,8 @@ hierarchical_merge 组内预算硬编码且标题组强制新块，chunk_token_n
 回填合并到 chunk_token_num，使其成为实际目标尺寸。
 """
 
-from yuxi.knowledge.chunking.ragflow_like.nlp import count_tokens
-from yuxi.knowledge.chunking.ragflow_like.parsers import book
+from pisuan.knowledge.chunking.ragflow_like.nlp import count_tokens
+from pisuan.knowledge.chunking.ragflow_like.parsers import book
 
 
 def _many_short_sections_md(n: int = 30) -> str:
