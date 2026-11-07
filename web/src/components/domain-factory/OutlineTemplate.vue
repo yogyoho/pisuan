@@ -49,9 +49,7 @@
                 node.order
               }}</span>
               <span class="node-title">{{
-                node.chapter_no && node._level > 0
-                  ? `${node.chapter_no} ${node.title}`
-                  : node.title
+                node.chapter_no && node._level > 0 ? `${node.chapter_no} ${node.title}` : node.title
               }}</span>
               <span v-if="node.content_contract_summary?.total_reports" class="cc-badge">
                 {{ node.content_contract_summary.total_reports }}报告
@@ -385,10 +383,10 @@ const hasSourceData = computed(() => {
   if (!sd) return false
   return Boolean(
     sd.overview ||
-      sd.content_requirements?.length ||
-      sd.entity_bindings?.length ||
-      sd.writing_example ||
-      sd.source_count
+    sd.content_requirements?.length ||
+    sd.entity_bindings?.length ||
+    sd.writing_example ||
+    sd.source_count
   )
 })
 

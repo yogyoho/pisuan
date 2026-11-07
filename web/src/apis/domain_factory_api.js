@@ -375,7 +375,11 @@ export const domainFactoryApi = {
             progress: 60,
             message: '正在提取信息...',
             created_at: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-            payload: { task_id: 'demo-1', domain_code: 'general', file_name: '示例环境评估报告2026.docx' }
+            payload: {
+              task_id: 'demo-1',
+              domain_code: 'general',
+              file_name: '示例环境评估报告2026.docx'
+            }
           }
         ]
       })
