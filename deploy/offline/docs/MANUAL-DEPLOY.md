@@ -163,7 +163,7 @@ docker exec pisuan-prod-api-1 curl -sS -m 5 <LLM_BASE_URL>/models
 - [ ] 沙盒代码执行
 - [ ] Langfuse 控制台 + trace（若启用）
 - [ ] refs 导出 → 历史可浏览（Gitea `http://127.0.0.1:${PISUAN_GITEA_HTTP_PORT:-3000}`，账号 refsadmin）
-- [ ] MinerU / PaddleX 各解析一份 PDF
+- [ ] MinerU / PaddleX 各解析一份 PDF（ENABLE_GPU=true 时）
 
 ## 7. 故障排查（按「最先失败的服务」看起）
 
