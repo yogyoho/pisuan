@@ -13,8 +13,7 @@
 | Docker | ≥28.0（无则先跑 install-docker.sh） | `docker --version` |
 | compose | ≥v2.33.1（gw_priority 需要） | `docker compose version` |
 | 磁盘 | ≥120GB | `df -h /opt` |
-| 内存 | ≥32GB（GPU 模式） | `free -g` |
-| GPU | NVIDIA 驱动 + Container Toolkit（ENABLE_GPU=true 时） | `nvidia-smi` |
+| 内存 | ≥32GB | `free -g` |
 | 架构 | x86_64（aarch64 需换对应 payload） | `uname -m` |
 
 **包完整性校验（解压前）**：在包所在目录执行 `sha256sum -c <包名>.tar.gz.sha256.txt`，校验失败勿解压部署。
@@ -45,7 +44,7 @@ cp deploy.conf.example deploy.conf && vi deploy.conf   # 填 3 个必填项
 chmod +x install.sh && sudo ./install.sh
 ```
 
-脚本依次：预检 → 生成 .env.prod（幂等）→ load 镜像 → GPU 层 → 落位预置状态 → up → 等健康 → 建管理员 → 沙盒冒烟 → 验证清单。
+脚本依次：预检 → 生成 .env.prod（幂等）→ load 镜像 → 落位预置状态（全量数据快照）→ up → 等健康 → 建管理员 → 沙盒冒烟 → 验证清单。
 每步失败即中止并打印手工等效命令；重跑安全（幂等）。
 
 ## 4. 手工逐步部署（脚本失败时）
@@ -73,56 +72,46 @@ docker images --format '{{.Repository}}:{{.Tag}}' | sort > /tmp/loaded.txt
 diff <(sort manifest.txt) <(grep -Fxf /tmp/loaded.txt manifest.txt | sort) && echo "镜像核对一致"
 ```
 
-### 4.3 GPU 层（ENABLE_GPU=true）
+### 4.3 落位预置状态
+
+包内 `state/` 为全量数据快照（知识库索引与文件、文件库、图谱、数据库、refs 数据仓），**原样含开发期数据**。
 
 ```bash
-nvidia-smi || { bash payload/nvidia/install-driver.sh; }
+sudo mkdir -p docker/volumes            # .env.prod 定义了 YUXI_STATE_DIR 时改为该目录
+sudo cp -rn state/. docker/volumes/     # -n：已存在绝不覆盖（重装幂等）
+# chown 只对非 root 服务做（uid 为镜像实测）：
+sudo chown -R 999:999 docker/volumes/postgresql        # postgres:16 镜内 postgres=999
+sudo chown -R 7474:7474 docker/volumes/neo4j/data      # neo4j:5.26.29 镜内 neo4j=7474
+sudo chown -R 1000:1000 docker/volumes/yuxi          # api 容器 user 1000:1000、gitea USER_UID=1000
+# milvus / etcd / minio 镜内进程以 root 运行 → 不 chown
 ```
 
-**⚠️ 装驱动后必须重启服务器，重启后从本节 toolkit 安装步骤继续（或直接重跑 install.sh，幂等可续）**
-
-```bash
-sudo apt-get install -y ./payload/nvidia/libnvidia-container*.deb \
-    ./payload/nvidia/nvidia-container-toolkit*.deb      # rpm 发行版用 yum localinstall
-sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
-docker info | grep -i nvidia            # 期望出现 nvidia runtime
-```
-
-### 4.4 落位预置状态
-
-```bash
-sudo mkdir -p docker/volumes/yuxi
-sudo cp -rn state/yuxi/. docker/volumes/yuxi/    # -n：已存在绝不覆盖
-sudo chown -R 1000:1000 docker/volumes/yuxi/refs-repo docker/volumes/yuxi/gitea-data   # api 与 gitea 容器都以 1000:1000 访问各自挂载
-```
-
-### 4.5 启动
+### 4.4 启动
 
 ```bash
 export COMPOSE="docker compose -p yuxi-prod --env-file .env.prod -f docker-compose.prod.yml"
-$COMPOSE --profile all up -d   # ENABLE_GPU=true 时（含 GPU OCR 层）
-$COMPOSE up -d                 # ENABLE_GPU=false 时（CPU-only，不启动 mineru/paddlex）
+$COMPOSE up -d
 # Langfuse（ENABLE_LANGFUSE=true 时）：
 docker compose -p langfuse --env-file .env.prod -f docker-compose.langfuse.yml up -d
 ```
 
-### 4.6 等健康
+### 4.5 等健康
 
 ```bash
-# 改过端口的先 export 再执行（YUXI_WEB_PORT；§4.8 同理用 YUXI_SANDBOX_PORT）
+# 改过端口的先 export 再执行（YUXI_WEB_PORT；§4.7 同理用 YUXI_SANDBOX_PORT）
 for i in $(seq 1 60); do curl -sf http://127.0.0.1:${YUXI_WEB_PORT:-80}/api/system/ready && break; sleep 10; done
 $COMPOSE ps                             # 全部 Up(healthy)；storage-migrator Exited(0) 属正常
 ```
 
 Milvus 冷启动最慢，请耐心等待；`storage-migrator` 显示 `Exited(0)` 是一次性迁移任务正常退出，不是故障。
 
-### 4.7 建管理员
+### 4.6 建管理员
 
 ```bash
 $COMPOSE exec api python -m scripts.seed_initial_users
 ```
 
-### 4.8 沙盒冒烟
+### 4.7 沙盒冒烟
 
 sandbox-provisioner 已发布到宿主机 `127.0.0.1:${YUXI_SANDBOX_PORT:-9002}`（容器内 8002，健康端点 `/health`）：
 
@@ -135,20 +124,9 @@ $COMPOSE exec api curl -sf http://sandbox-provisioner:8002/health
 
 ## 5. 部署后配置（浏览器）
 
-- 模型管理：对话 LLM / Embedding 全部指向内网地址（离线环境云端 API 不可用）。
-- Embedding 应急（内网无 Embedding 服务时，复用 mineru 镜像内 vLLM）：
-
-```bash
-docker run -d --runtime nvidia --name bge-m3 -p 19999:8000 \
-  -v $PWD/payload/models/bge-m3:/models yuxi-prod-mineru:latest \
-  vllm serve /models --task embed --port 8000
-```
-
-  然后在模型管理 UI 配置 Embedding 地址为 `http://<服务器IP>:19999/v1`。
-  注意：
-  1. 启动后先 `curl -s http://127.0.0.1:19999/v1/models` 确认服务在位再配 UI（`--task embed` 语法未在仓库内验证过；若报 invalid choice 改试 `--task embedding`）。
-  2. 该命令默认绑定 0.0.0.0，仅限可信内网，否则改 `-p 127.0.0.1:19999:8000`。
-  3. 无 --restart 策略，宿主重启后需手动重跑（依赖 GPU runtime）。
+- 模型管理 UI 配置对话 / 嵌入模型：内网 LLM/Embedding 服务按 OpenAI 兼容格式填地址与密钥（离线环境云端 API 不可用）。
+- 解析（OCR）：默认 `rapid_ocr` 开箱即用（api 镜像内置，CPU 零配置）；客户自有 OCR 引擎在设置 UI 运行时接入，无需改代码。
+  支持的引擎形状清单：自托管 MinerU HTTP / PaddleOCR 云端 API / OpenAI 兼容 PaddleOCR-VL / DeepSeek-OCR / PP-Structure-V3 等。
 - 内网 LLM 连通性检查：
 
 ```bash
@@ -161,11 +139,10 @@ docker exec yuxi-prod-api-1 curl -sS -m 5 <LLM_BASE_URL>/models
 - [ ] `/api/system/health` 与 `/api/system/ready` 通过
 - [ ] 管理员登录
 - [ ] 真实对话
-- [ ] 建知识库 → 上传 → 解析 → 索引
+- [ ] 建知识库 → 上传 → 解析 → 索引（默认 rapid_ocr）
 - [ ] 沙盒代码执行
 - [ ] Langfuse 控制台 + trace（若启用）
 - [ ] refs 导出 → 历史可浏览（Gitea `http://127.0.0.1:${YUXI_GITEA_HTTP_PORT:-3000}`，账号 refsadmin）
-- [ ] MinerU / PaddleX 各解析一份 PDF（ENABLE_GPU=true 时）
 
 ## 7. 故障排查（按「最先失败的服务」看起）
 
