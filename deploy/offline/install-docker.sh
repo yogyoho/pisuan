@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-[ "$(uname -m)" = "x86_64" ] || { echo "❌ 本包仅含 x86_64 payload（当前架构 $(uname -m)）——aarch64 见 MANUAL-DEPLOY 附录 A"; exit 1; }
+[ "$(uname -m)" = "x86_64" ] || { echo "❌ 本包仅含 x86_64 payload（当前架构 $(uname -m)）——aarch64 需另备对应架构 payload（本包不含，见 MANUAL-DEPLOY §0 架构行）"; exit 1; }
 
 need_engine=1; need_compose=1
 if command -v docker >/dev/null 2>&1; then

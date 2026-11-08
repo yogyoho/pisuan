@@ -28,7 +28,9 @@ MinIO 镜像由本仓库构建（`docker/minio/Dockerfile`）：Docker Hub 与 q
 不再公开分发，构建时从官方 GitHub Release 下载固定版本二进制并校验 sha256，运行与下架前
 镜像逐字节相同的 MinIO 二进制；基础镜像与镜像内附带文件不同。
 
-## 3. Langfuse 观测栈（docker-compose.langfuse.yml，ENABLE_LANGFUSE=true 时交付）
+## 3. Langfuse 观测栈（docker-compose.langfuse.yml；**未随离线包交付**——现场启用需自备下列镜像并 docker load）
+
+ENABLE_LANGFUSE 默认 false；置 true 仅在上述镜像已 load 入本地时有效。
 
 | 组件 | 镜像引用 | 许可证 |
 | --- | --- | --- |
