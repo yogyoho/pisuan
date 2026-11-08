@@ -17,9 +17,9 @@
     .env.prod(.example)                               # 环境变量（install.sh 自动补全密钥）
     docker-compose.prod.yml                           # 核心栈（含 gitea refs 链）
     docker-compose.langfuse.yml                       # Langfuse 观测栈（独立项目名）
-    images/core / images/gpu                          # 镜像 tar（gpu 可 --skip-gpu 跳过）
-    payload/docker|nvidia|models                      # Docker 引擎 / NVIDIA / bge-m3
-    state/pisuan                                      # 预置 refs 数据仓与 Gitea 账号数据
+    images/core                                       # 镜像 tar
+    payload/docker                                    # Docker 引擎 / compose 插件
+    state/pisuan|postgresql|milvus|neo4j              # 全量预置数据快照（知识库/文件库/图谱/数据库/refs，原样含开发期数据）
     manifest.txt / manifest.json / sha256.txt         # 镜像清单与校验
     docs/                                             # 手册与许可附录
 
