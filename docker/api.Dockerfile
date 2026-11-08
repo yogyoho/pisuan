@@ -73,6 +73,13 @@ RUN groupadd --gid 1000 yuxi \
 ENV HOME=/home/yuxi \
     RAPIDOCR_MODEL_DIR=/home/yuxi/.cache/rapidocr/models
 
+# 构建期烘焙 rapidocr 模型（构建机在线下载；离线客户机首解析靠本层烘焙产物，不再联网）。
+# 参数经 yuxi 侧解析器实时获取（与 rapid_ocr.py:57-71 同源，不在本文件复写防漂移）；
+# rapid_ocr.py 模型档位变更 → 产物文件名变化 → bake 脚本断言失败即拦截构建。
+COPY docker/api-bake-ocr-models.py /usr/local/bin/api-bake-ocr-models.py
+RUN python /usr/local/bin/api-bake-ocr-models.py \
+    && chown -R 1000:1000 "$RAPIDOCR_MODEL_DIR"
+
 USER 1000:1000
 
 ENTRYPOINT ["/usr/local/bin/yuxi-entrypoint"]
