@@ -161,24 +161,25 @@ if ($mountHit) { throw "数据卷正被运行栈写入（$mountHit）——先�
 $volRoot = Join-Path $Root 'docker\volumes'
 $stateDst = "$pkg\state"
 function Copy-Snapshot([string]$Src, [string]$Dst) {
-  if (-not (Test-Path $Src)) { throw "数据卷缺失：$Src——数据快照是本包交付内容，整卷缺失即中止（确认本机运行栈 docker\volumes 在位）" }
+  if (-not (Test-Path $Src)) { throw "数据卷缺失：$Src——数据快照是本包交付内容，缺失即拒绝导出（确认本机运行栈 docker\volumes 在位）" }
   if (Test-Path $Dst) { Remove-Item $Dst -Recurse -Force }   # 同日重跑幂等
   Copy-Item $Src $Dst -Recurse -Force
   $gb = [math]::Round((Get-ChildItem $Dst -Recurse | Measure-Object Length -Sum).Sum/1GB, 1)
   Write-Host "[state] $Dst ← $Src（$gb GB）"
 }
-# 整树：pisuan（知识库文件库/threads/refs-repo/gitea-data/eia-library 等）、postgresql
+# 整树：pisuan（知识库文件库/threads/refs-repo/gitea-data/eia-library 等）、postgresql、neo4j\data
+# ——缺失即拒绝导出（数据快照是裁定交付物，不完整的包不出手）
 foreach ($pair in @(
   @{ src = "$volRoot\pisuan";     dst = "$stateDst\pisuan" },
-  @{ src = "$volRoot\postgresql"; dst = "$stateDst\postgresql" }
-)) { Copy-Snapshot $pair.src $pair.dst }
-# 子目录：milvus 取 milvus/etcd/minio/minio_config（logs 不进包）；neo4j 只取 data（logs 不进包）；
+  @{ src = "$volRoot\postgresql"; dst = "$stateDst\postgresql" },
+  @{ src = "$volRoot\neo4j\data"; dst = "$stateDst\neo4j\data" }
+)) { Copy-Snapshot $pair.src $pair.dst }   # PS5.1 实测：Copy-Item -Recurse -Force 会自建中间父目录（state\neo4j 无需预建）
+# 子目录：milvus 取 milvus/etcd/minio/minio_config（logs 不进包；子目录缺失=警告，不阻塞导出）；
 # redis 不拷——现场从空卷起，避免陈旧 broker 队列重放
 foreach ($pair in @(
-  @{ src = "$volRoot\milvus"; dst = "$stateDst\milvus"; subs = @('milvus','etcd','minio','minio_config') },
-  @{ src = "$volRoot\neo4j";  dst = "$stateDst\neo4j";  subs = @('data') }
+  @{ src = "$volRoot\milvus"; dst = "$stateDst\milvus"; subs = @('milvus','etcd','minio','minio_config') }
 )) {
-  if (-not (Test-Path $pair.src)) { throw "数据卷缺失：$($pair.src)——数据快照是本包交付内容，整卷缺失即中止（确认本机运行栈 docker\volumes 在位）" }
+  if (-not (Test-Path $pair.src)) { throw "数据卷缺失：$($pair.src)——数据快照是本包交付内容，缺失即拒绝导出（确认本机运行栈 docker\volumes 在位）" }
   if (Test-Path $pair.dst) { Remove-Item $pair.dst -Recurse -Force }
   New-Item -ItemType Directory -Force -Path $pair.dst | Out-Null
   foreach ($s in $pair.subs) {
