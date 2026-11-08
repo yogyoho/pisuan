@@ -140,6 +140,7 @@ docker exec pisuan-prod-api-1 curl -sS -m 5 <LLM_BASE_URL>/models
 - [ ] 管理员登录
 - [ ] 真实对话
 - [ ] 建知识库 → 上传 → 解析 → 索引（默认 rapid_ocr）
+- [ ] 首启后上传任一 PDF 跑通一次解析（验证烘焙 OCR 模型生效）
 - [ ] 沙盒代码执行
 - [ ] Langfuse 控制台 + trace（若启用）
 - [ ] refs 导出 → 历史可浏览（Gitea `http://127.0.0.1:${PISUAN_GITEA_HTTP_PORT:-3000}`，账号 refsadmin）
