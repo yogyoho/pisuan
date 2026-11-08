@@ -134,7 +134,7 @@ summary(){
 ══════════════════════════════════════════════
   Pisuan 部署完成
   访问:  http://<服务器IP>:${port}
-  管理员账号见 deploy.conf（首登即改密）
+  管理员账号随预置快照交付（开发期原样数据；deploy.conf 种子密码仅对全新空库生效）
   下一步（MANUAL-DEPLOY §5-6）:
   [ ] 模型管理 UI 配内网 LLM/Embedding 地址（OpenAI 兼容）
   [ ] OCR 默认 rapid_ocr 开箱即用；客户自有引擎在设置 UI 接入

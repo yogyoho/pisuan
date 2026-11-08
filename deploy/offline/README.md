@@ -20,7 +20,7 @@
     images/core                                       # 镜像 tar
     payload/docker                                    # Docker 引擎 / compose 插件
     state/pisuan|postgresql|milvus|neo4j              # 全量预置数据快照（知识库/文件库/图谱/数据库/refs，原样含开发期数据）
-    manifest.txt / manifest.json / sha256.txt         # 镜像清单与校验
+    manifest.txt / manifest.json                        # 镜像清单（sha256.txt 在 tar.gz 旁）
     docs/                                             # 手册与许可附录
 
 ## 数据红线（绝不可执行）

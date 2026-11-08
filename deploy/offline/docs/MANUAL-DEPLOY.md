@@ -12,6 +12,8 @@
 | --- | --- | --- |
 | Docker | ≥28.0（无则先跑 install-docker.sh） | `docker --version` |
 | compose | ≥v2.33.1（gw_priority 需要） | `docker compose version` |
+| openssl | 系统自带（密钥生成必需，离线无法补装） | `openssl version` |
+| curl | 系统自带（健康检查必需，离线无法补装） | `curl --version` |
 | 磁盘 | ≥120GB | `df -h /opt` |
 | 内存 | ≥32GB | `free -g` |
 | 架构 | x86_64（aarch64 需换对应 payload） | `uname -m` |
@@ -54,6 +56,9 @@ cp deploy.conf.example deploy.conf && vi deploy.conf   # 填 3 个必填项
 必填项：`PISUAN_SEED_SUPERADMIN_PASSWORD`（种子管理员密码）、
 `PISUAN_SEED_DEFAULT_USER_PASSWORD`（批量默认账号初始密码）、
 `GITEA_REFS_PASSWORD`（refsadmin 密码，prod compose `:?` 强制校验，缺失则 compose 拒绝启动）。
+
+> 注：本包预置数据快照（数据库原样），users 表非空 → 部署时 seed 自动跳过，上述种子密码**不生效**；
+> 实际管理员账号为快照内开发期账号，交付方须随包移交账号清单，或部署后由该管理员改密交接。
 
 ## 3. 一键部署
 
@@ -108,7 +113,7 @@ sudo chown -R 1000:1000 docker/volumes/pisuan          # api 容器 user 1000:10
 ```bash
 export COMPOSE="docker compose -p pisuan-prod --env-file .env.prod -f docker-compose.prod.yml"
 $COMPOSE up -d
-# Langfuse（ENABLE_LANGFUSE=true 时）：
+# Langfuse（ENABLE_LANGFUSE=true 且镜像已 load 时；镜像未随包、deploy.conf 默认 false）：
 docker compose -p langfuse --env-file .env.prod -f docker-compose.langfuse.yml up -d
 ```
 
@@ -127,6 +132,8 @@ Milvus 冷启动最慢，请耐心等待；`storage-migrator` 显示 `Exited(0)`
 ```bash
 $COMPOSE exec api python -m scripts.seed_initial_users
 ```
+
+预置快照库已初始化 → 输出「系统已初始化」并以非零退出，属预期跳过（install.sh 捕获为 WARN，非失败）。
 
 ### 4.7 沙盒冒烟
 
@@ -159,7 +166,7 @@ docker exec pisuan-prod-api-1 curl -sS -m 5 <LLM_BASE_URL>/models
 - [ ] 建知识库 → 上传 → 解析 → 索引（默认 rapid_ocr）
 - [ ] 首启后上传任一 PDF 跑通一次解析（验证烘焙 OCR 模型生效）
 - [ ] 沙盒代码执行
-- [ ] Langfuse 控制台 + trace（若启用）
+- [ ] Langfuse 控制台 + trace（可选观测栈，镜像未随包交付、默认关闭——未部署则跳过本项）
 - [ ] refs 导出 → 历史可浏览（Gitea `http://127.0.0.1:${PISUAN_GITEA_HTTP_PORT:-3000}`，账号 refsadmin）
 
 ## 7. 故障排查（按「最先失败的服务」看起）
@@ -169,14 +176,17 @@ docker exec pisuan-prod-api-1 curl -sS -m 5 <LLM_BASE_URL>/models
 - Redis 重建后 worker 失联：`$COMPOSE restart worker`
 - 沙盒创建报镜像不存在：`docker images | grep all-in-one-sandbox`（缺 = 镜像没 load）
 - 登录/对话报模型不可达：模型管理 UI 地址/密钥核对 + 容器内 curl
+- 首登账号密码不对：库为预置快照（已初始化），deploy.conf 种子密码不生效——向交付方索取快照账号或由其改密交接
 - refs 导出报错：查 api 日志 `REFS_*` 变量与 gitea 容器状态（`$COMPOSE logs gitea`）
 - compose up 报 "GITEA_REFS_PASSWORD ... required a value"：deploy.conf 该项未填或为空 → 补填后重跑 install.sh
 - 首次现场问题记录在此节追加（实测坑实录模式）
 
 ## 附录 A. 信创发行版 Docker 安装（deb/rpm）
 
-`payload/docker/rpm-or-deb/` 内按发行版 `dpkg -i` / `rpm -ivh` 全量包安装，
-随后同第 1 节执行 `systemctl enable --now docker && docker --version` 验证。
+本包 Docker 引擎仅含 static tgz 路径（install-docker.sh）。若目标机为信创发行版必须走
+deb/rpm 路径：交付方须在导出前把对应发行版全量 deb/rpm 包预置到 `payload/docker/rpm-or-deb/`
+（导出脚本不自动收集），现场 `dpkg -i` / `rpm -ivh` 全量安装后，同第 1 节验证：
+`systemctl enable --now docker && docker --version`。
 
 ## 附录 B. 数据红线
 
