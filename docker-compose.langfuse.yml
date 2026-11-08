@@ -112,6 +112,9 @@ services:
       CLICKHOUSE_USER: clickhouse
       CLICKHOUSE_PASSWORD: "${LANGFUSE_STACK_CH_PASSWORD:?LANGFUSE_STACK_CH_PASSWORD missing in .env}"
       CLICKHOUSE_CLUSTER_ENABLED: "false"
+      # 数据保留清理器（worker 消费）：按项目级 retention_days（天，NULL=永久）周期删除过期 trace。
+      # 未给项目设 retention_days 前不会删除任何数据；可用 .env 覆盖为 false 关闭。
+      LANGFUSE_BATCH_DATA_RETENTION_CLEANER_ENABLED: "${LANGFUSE_BATCH_DATA_RETENTION_CLEANER_ENABLED:-true}"
       LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
       LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
       LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
