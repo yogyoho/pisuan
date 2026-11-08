@@ -25,7 +25,7 @@ preflight(){
     log_i "vm.max_map_count 已设为 262144（Milvus 硬需求）"
   fi
   # 沙盒地址池冲突警告（与宿主 IP 同 /20 即提示）
-  hostnet=$(ip -4 addr show scope global 2>/dev/null | grep -oE 'inet [0-9.]+' | awk '{print $2}' | head -1)
+  hostnet=$(ip -4 addr show scope global 2>/dev/null | grep -oE 'inet [0-9.]+' | awk '{print $2}' | head -1 || true)
   [ -n "$hostnet" ] && [ "${hostnet%%.*}" = "10" ] && [ "${hostnet#10.253.}" != "$hostnet" ] && \
     log_w "宿主 IP $hostnet 可能与沙盒地址池 10.253.240.0/20 冲突——部署前改 .env.prod 的 SANDBOX_DOCKER_ADDRESS_POOL"
   grep -E ':(80|6050|6432|7379|10000|10001|20530|10091|8474|8687|3000|30001|8080|9002)\b' /proc/net/tcp* >/dev/null 2>&1 && \
@@ -48,7 +48,7 @@ gen_env(){
   grep -q "^COMPOSE_PROJECT_NAME=" .env.prod || echo "COMPOSE_PROJECT_NAME=yuxi-prod" >> .env.prod
   [ -f VERSION ] || die "包根缺 VERSION（打包脚本应生成）"
   grep -q "^YUXI_VERSION=" .env.prod || echo "YUXI_VERSION=$(cat VERSION)" >> .env.prod
-  grep -q "^YUXI_ENV=" .env.prod || sed -i 's/^YUXI_ENV=.*/YUXI_ENV=production/' .env.prod
+  grep -q "^YUXI_ENV=" .env.prod || echo "YUXI_ENV=production" >> .env.prod
   # deploy.conf 注入（去行内注释与空白后追加；已存在跳过；空值不注入→必填校验兜底）
   while IFS='=' read -r k v; do
     case "$k" in ''|\#*) continue;; esac
@@ -110,7 +110,7 @@ up_stack(){
 
 # ─ [6] 等健康 ──────────────────────────────────────────────
 wait_ready(){
-  local port; port=$(grep '^YUXI_WEB_PORT=' .env.prod | cut -d= -f2); port=${port:-$WEB_PORT_DEFAULT}
+  local port; port=$(grep '^YUXI_WEB_PORT=' .env.prod | cut -d= -f2 || true); port=${port:-$WEB_PORT_DEFAULT}
   local i; for i in $(seq 1 60); do
     curl -sf "http://127.0.0.1:${port}/api/system/ready" >/dev/null 2>&1 && { log_i "API ready（$((i*10))s）"; return 0; }
     sleep 10
@@ -128,16 +128,16 @@ seed_admin(){
 
 # ─ [8] 沙盒冒烟 ────────────────────────────────────────────
 sandbox_smoke(){
-  local sbport; sbport=$(grep '^YUXI_SANDBOX_PORT=' .env.prod | cut -d= -f2); sbport=${sbport:-9002}
+  local sbport; sbport=$(grep '^YUXI_SANDBOX_PORT=' .env.prod | cut -d= -f2 || true); sbport=${sbport:-9002}
   curl -sf "http://127.0.0.1:${sbport}/health" >/dev/null && log_i "provisioner 健康" || log_w "provisioner /health 不通——查 $COMPOSE logs sandbox-provisioner"
-  local img; img=$(grep '^SANDBOX_IMAGE=' .env.prod | cut -d= -f2); img=${img:-enterprise-public-cn-beijing.cr.volces.com/vefaas-public/all-in-one-sandbox:1.11.0}
+  local img; img=$(grep '^SANDBOX_IMAGE=' .env.prod | cut -d= -f2 || true); img=${img:-enterprise-public-cn-beijing.cr.volces.com/vefaas-public/all-in-one-sandbox:1.11.0}
   docker image inspect "$img" >/dev/null 2>&1 \
     && log_i "沙盒镜像本地在位" || log_w "⚠️ 沙盒镜像缺失——首次建沙盒将联网拉取并失败！"
 }
 
 # ─ [9] 验证清单 ────────────────────────────────────────────
 summary(){
-  local port; port=$(grep '^YUXI_WEB_PORT=' .env.prod | cut -d= -f2); port=${port:-$WEB_PORT_DEFAULT}
+  local port; port=$(grep '^YUXI_WEB_PORT=' .env.prod | cut -d= -f2 || true); port=${port:-$WEB_PORT_DEFAULT}
   cat <<EOF
 
 ══════════════════════════════════════════════
