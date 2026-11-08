@@ -5,7 +5,6 @@
 #>
 param(
   [Parameter(Mandatory=$true)][string]$OutDir,       # 外置盘工作区
-  [switch]$SkipGpu,                                   # 跳过 GPU 镜像构建与导出
   [switch]$NoBuild,                                   # 不构建（要求镜像已在本地）
   [switch]$SkipPackage                                # 只 save 不 tar.gz（调试用）
 )
@@ -20,13 +19,12 @@ Set-Location $Root
 
 # ── 空间预检 ──
 $drive = (Get-PSDrive ($OutDir.Substring(0,1))).Free/1GB
-if ($drive -lt 90) { throw "工作区盘 $($OutDir[0]) 仅剩 $([int]$drive)G，需 ≥90G" }
+if ($drive -lt 55) { throw "工作区盘 $($OutDir[0]) 仅剩 $([int]$drive)G，需 ≥55G（staging 包目录 + tar.gz 同盘约 2×包体积；现包体约 25-30G）" }
 $cFree = (Get-PSDrive C).Free/1GB
-if (-not $NoBuild -and $cFree -lt 40) { throw "C 盘仅剩 $([int]$cFree)G，构建需 ≥40G" }
+if (-not $NoBuild -and $cFree -lt 20) { throw "C 盘仅剩 $([int]$cFree)G，构建需 ≥20G" }
 
-# ── 镜像清单（compose 管理 + 包外附加）──
+# ── 镜像清单（compose 管理 + 包外附加；GPU OCR 层已全裁，不再带 --profile all）──
 $composeArgs = @('compose','--env-file','.env.prod','-f','docker-compose.prod.yml')
-if (-not $SkipGpu) { $composeArgs += @('--profile','all') }
 if ($NoBuild) {
   $images = @(docker @composeArgs config --images)
   if ($LASTEXITCODE -ne 0) { throw "docker compose config --images 失败（退出码 $LASTEXITCODE）——检查 .env.prod 是否已准备、docker-compose.prod.yml 是否在位" }
@@ -72,20 +70,18 @@ Write-Host "[verify] 结构验证通过（amd64 + api 镜像 scripts 烘焙在�
 # ── save 到工作区（pisuan-offline-work\staging；payload 同层）──
 $work = Join-Path $OutDir "pisuan-offline-work"
 $staging = Join-Path $work "staging"
-New-Item -ItemType Directory -Force -Path "$staging\images\core","$staging\images\gpu" | Out-Null
+New-Item -ItemType Directory -Force -Path "$staging\images\core" | Out-Null
 $saved = @()
 foreach ($img in $images) {
-  if ($SkipGpu -and $img -match '-mineru:|-paddlex:') { continue }
   $safe = ($img -replace '[/:]','_') + '.tar'
-  $sub = if ($img -match '-mineru:|-paddlex:') { 'gpu' } else { 'core' }
-  $dest = "$staging\images\$sub\$safe"
+  $dest = "$staging\images\core\$safe"
   if (Test-Path $dest) {
     Write-Host "[save] 复用已有 $safe"
   } else {
     docker save -o $dest $img
   }
-  $saved += @{ tag=$img; file="images/$sub/$safe" }
-  Write-Host "[save] $img → $sub/$safe"
+  $saved += @{ tag=$img; file="images/core/$safe" }
+  Write-Host "[save] $img → core/$safe"
 }
 
 # ── 组装包目录 ──
@@ -97,20 +93,37 @@ $pkgName = "pisuan-offline-$version-$(Get-Date -Format yyyyMMdd)"
 $pkg = Join-Path $OutDir $pkgName
 New-Item -ItemType Directory -Force -Path $pkg | Out-Null
 Copy-Item "$Root\deploy\offline\*" $pkg -Recurse -Force                      # 模板/手册/脚本/assets 全量随包
-Copy-Item "$Root\docker-compose.prod.yml","$Root\docker-compose.langfuse.yml" $pkg
-New-Item -ItemType Directory -Force -Path "$pkg\docker\sandbox_provisioner","$pkg\docs","$pkg\payload\docker","$pkg\payload\nvidia","$pkg\payload\models","$pkg\state" | Out-Null
+Copy-Item "$Root\docker-compose.langfuse.yml" $pkg
+# 打包版 compose 剥离 GPU OCR 服务块（mineru/paddlex 全裁；仓库原文件不动，只裁打包副本）
+$prodLines = Get-Content "$Root\docker-compose.prod.yml" -Encoding UTF8
+$stripped = @(); $drop = $false
+foreach ($line in $prodLines) {
+  if ($line -match '^  (mineru-api|paddlex):') { $drop = $true; continue }
+  if ($drop) {
+    if ($line -match '^  \S' -or $line -match '^networks:') { $drop = $false }   # 下一个服务键 / 顶层键：停止删除
+    else { continue }
+  }
+  $stripped += $line
+}
+if (@($stripped -match '^  (mineru-api|paddlex):').Count -gt 0) { throw "打包版 compose 剥离失败：仍含 mineru-api/paddlex 服务块" }
+if (@($stripped -match '^networks:').Count -eq 0) { throw "打包版 compose 剥离失败：networks: 顶层键丢失" }
+if (@($stripped -match '-api:').Count -eq 0) { throw "打包版 compose 剥离失败：api 服务 image 行丢失" }
+[IO.File]::WriteAllLines("$pkg\docker-compose.prod.yml", $stripped)   # UTF-8 无 BOM；compose 对 CRLF/LF 均可解析
+New-Item -ItemType Directory -Force -Path "$pkg\docker\sandbox_provisioner","$pkg\docs","$pkg\payload\docker","$pkg\state" | Out-Null
 Copy-Item "$Root\docker\sandbox_provisioner\sandbox.env" "$pkg\docker\sandbox_provisioner\sandbox.env" -Force
 
-# payload（Docker 引擎 / NVIDIA / bge-m3）来自工作区 pisuan-offline-work\payload（Task 6 下载落位）
+# payload（Docker 引擎静态包 / compose 插件）来自工作区 pisuan-offline-work\payload（下载脚本落位）
 $payloadSrc = Join-Path $work "payload"
 if (Test-Path $payloadSrc) {
   Copy-Item "$payloadSrc\*" "$pkg\payload\" -Recurse -Force
   Write-Host "[payload] 已收入包内（$payloadSrc）"
 } else {
-  Write-Warning "[payload] $payloadSrc 不存在——包内 payload 为空，Docker 引擎/模型离线安装不可用"
+  Write-Warning "[payload] $payloadSrc 不存在——包内 payload 为空，Docker 引擎/compose 插件离线安装不可用"
 }
 
 # 镜像搬入包（同日重跑幂等：包内旧 images 先清除再搬入——Move-Item -Force 对已存在目录不合并会报错）
+# 旧版导出可能在工作区留有 images\gpu（mineru/paddlex tar）——全裁后一并清除，防陈旧 GPU 层流入包
+if (Test-Path "$staging\images\gpu") { Remove-Item "$staging\images\gpu" -Recurse -Force }
 if (Test-Path "$pkg\images") { Remove-Item "$pkg\images" -Recurse -Force }
 Move-Item "$staging\images" "$pkg\images" -Force
 
@@ -121,15 +134,57 @@ $tags = ($saved | ForEach-Object { $_.tag } | Sort-Object) -join "`n"
 $saved | ConvertTo-Json -Depth 3 | Set-Content "$pkg\manifest.json" -Encoding utf8
 Set-Content "$pkg\VERSION" -Value $version -Encoding ascii -NoNewline   # 无 EOL：防 cat VERSION 把 \r 带进 PISUAN_VERSION（离线 tag 失配即死）
 
-# 预置状态（refs-repo/gitea-data，来自本机运行栈 volumes）
-$volSrc = Join-Path $Root "docker\volumes\pisuan"
-foreach ($d in 'refs-repo','gitea-data') {
-  $src = Join-Path $volSrc $d
-  if (Test-Path $src) {
-    if (Test-Path "$pkg\state\pisuan\$d") { Remove-Item "$pkg\state\pisuan\$d" -Recurse -Force }
-    Copy-Item $src "$pkg\state\pisuan\$d" -Recurse -Force; Write-Host "[state] $d 已收入包"
+# ── 预置状态快照（数据卷原样进包；2026-11-08 裁定：含开发期数据，不脱敏）──
+# 停栈守卫：运行栈写入中拷贝会得到不一致快照，先实测有无容器挂载 docker\volumes 下的路径
+$ErrorActionPreference = 'Continue'
+$running = @(docker ps --format '{{.Names}}')
+$psFailed = ($LASTEXITCODE -ne 0)
+$mountHit = $null
+if (-not $psFailed) {
+  # Mounts.Source 在 Docker Desktop(WSL2) 下可能呈 Windows 形态（C:/...）或 /run/desktop/mnt/host/c/...，
+  # 统一归一成 C:/... 形态后再与仓库 volumes 根比对（以本机实测为准，勿臆测）
+  $volRootN = ($Root + '\docker\volumes').ToLower().Replace('\','/')
+  foreach ($c in $running) {
+    $srcs = @(docker inspect $c --format '{{range .Mounts}}{{println .Source}}{{end}}' | Where-Object { $_ -ne '' })
+    foreach ($s in $srcs) {
+      $n = $s.ToLower().Replace('\','/') -replace '^/run/desktop/mnt/host/',''
+      if ($n -match '^/([a-z])/') { $n = $n.Substring(1,1).ToUpper() + ':' + $n.Substring(2) }
+      if ($n -like "$volRootN*") { $mountHit = "容器 $c 挂载 $s"; break }
+    }
+    if ($mountHit) { break }
   }
-  else { Write-Warning "[state] $volSrc\$d 不存在——refs/gitea 预置缺失，部署后需手工补" }
+}
+$ErrorActionPreference = 'Stop'
+if ($psFailed) { throw "docker ps 失败（退出码 $LASTEXITCODE）——无法确认数据卷静态，中止导出" }
+if ($mountHit) { throw "数据卷正被运行栈写入（$mountHit）——先在仓库根执行 docker compose down（保留卷）再导出" }
+
+$volRoot = Join-Path $Root 'docker\volumes'
+$stateDst = "$pkg\state"
+function Copy-Snapshot([string]$Src, [string]$Dst) {
+  if (-not (Test-Path $Src)) { throw "数据卷缺失：$Src——数据快照是本包交付内容，整卷缺失即中止（确认本机运行栈 docker\volumes 在位）" }
+  if (Test-Path $Dst) { Remove-Item $Dst -Recurse -Force }   # 同日重跑幂等
+  Copy-Item $Src $Dst -Recurse -Force
+  $gb = [math]::Round((Get-ChildItem $Dst -Recurse | Measure-Object Length -Sum).Sum/1GB, 1)
+  Write-Host "[state] $Dst ← $Src（$gb GB）"
+}
+# 整树：pisuan（知识库文件库/threads/refs-repo/gitea-data/eia-library 等）、postgresql
+foreach ($pair in @(
+  @{ src = "$volRoot\pisuan";     dst = "$stateDst\pisuan" },
+  @{ src = "$volRoot\postgresql"; dst = "$stateDst\postgresql" }
+)) { Copy-Snapshot $pair.src $pair.dst }
+# 子目录：milvus 取 milvus/etcd/minio/minio_config（logs 不进包）；neo4j 只取 data（logs 不进包）；
+# redis 不拷——现场从空卷起，避免陈旧 broker 队列重放
+foreach ($pair in @(
+  @{ src = "$volRoot\milvus"; dst = "$stateDst\milvus"; subs = @('milvus','etcd','minio','minio_config') },
+  @{ src = "$volRoot\neo4j";  dst = "$stateDst\neo4j";  subs = @('data') }
+)) {
+  if (-not (Test-Path $pair.src)) { throw "数据卷缺失：$($pair.src)——数据快照是本包交付内容，整卷缺失即中止（确认本机运行栈 docker\volumes 在位）" }
+  if (Test-Path $pair.dst) { Remove-Item $pair.dst -Recurse -Force }
+  New-Item -ItemType Directory -Force -Path $pair.dst | Out-Null
+  foreach ($s in $pair.subs) {
+    if (Test-Path "$($pair.src)\$s") { Copy-Snapshot "$($pair.src)\$s" "$($pair.dst)\$s" }
+    else { Write-Warning "[state] $($pair.src)\$s 不存在——该子卷预置缺失，部署后该组件从空卷初始化" }
+  }
 }
 
 # ── tar.gz + sha256 ──

@@ -19,5 +19,3 @@ GITEA_REFS_PASSWORD=
 # ── 开关 ──
 # false=不启动观测栈
 ENABLE_LANGFUSE=true
-# false=跳过 GPU OCR 层（mineru/paddlex；部署命令不带 --profile all）
-ENABLE_GPU=true
