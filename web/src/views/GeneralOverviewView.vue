@@ -32,13 +32,6 @@
             <div class="dfp-top-cta reveal" :style="{ '--stagger': 1 }">
               <button
                 class="dfp-btn dfp-btn-primary"
-                @click="router.push('/domain-factory/general')"
-              >
-                <span>进入通用域</span>
-                <ArrowRight :size="16" />
-              </button>
-              <button
-                class="dfp-btn dfp-btn-outline"
                 @click="router.push('/domain-factory/eia-data')"
               >
                 <span>环评域入口</span>

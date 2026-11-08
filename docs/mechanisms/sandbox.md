@@ -86,15 +86,3 @@ API/worker 使用 `SANDBOX_PROVISIONER_TOKEN` 调用 provisioner。动态沙盒�
 
 Viewer 和 Agent 看到不同内容时，先核对同一 `uid`、Conversation 绑定的 `project_id`、Project 的 `workdir_path`、runtime scope、宿主 bind/PVC subPath 和 generation。不要用对象 URL 推断文件系统权限，也不要用相邻 Run 的路径猜测当前结果。
 
-## 源码定位与验证
-
-- [Sandbox provider](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/agents/backends/sandbox/provider.py)：runtime identity、缓存和 keepalive
-- [Workspace 路径](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/workspace/paths.py)：uid 与 Workdir 映射
-- [Workspace 文件系统](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/workspace/filesystem.py)：宿主 no-follow 文件原语
-- [provisioner](https://github.com/xerrors/Yuxi/blob/main/docker/sandbox_provisioner/app.py)：Docker/Kubernetes 创建、代理和回收
-- [storage migration](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/storage_migration.py)：历史布局迁移
-- [Sandbox backend unit tests](https://github.com/xerrors/Yuxi/tree/main/backend/test/unit/backends)
-- [Workspace/Workdir unit tests](https://github.com/xerrors/Yuxi/tree/main/backend/test/unit/workspace)
-- [Project Workdir provisioner integration](https://github.com/xerrors/Yuxi/blob/main/backend/test/integration/services/test_project_workdir_provisioner.py)
-
-修改 identity、挂载、路径或清理语义时，除了相关 unit，还要验证真实 Docker/PVC 挂载和最终 POSIX 文件字节。

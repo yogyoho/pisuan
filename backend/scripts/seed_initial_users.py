@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import sys
 from pathlib import Path
 from typing import TypedDict
@@ -15,11 +16,13 @@ for import_path in (APP_ROOT, APP_ROOT / "package"):
     if import_path_str not in sys.path:
         sys.path.insert(0, import_path_str)
 
-SUPERADMIN_UID = "zwj"
-SUPERADMIN_NAME = "张文杰"
-SUPERADMIN_PHONE_NUMBER = "15251638888"
-SUPERADMIN_PASSWORD = "zwj12138"
-DEFAULT_USER_PASSWORD = "yuxi123456"
+# [pisuan-custom] 2026-11-07 交付去个人化：种子账号凭据全部改为环境变量注入，
+# 代码内仅保留中性开发默认值；对外交付必须显式设置 PISUAN_SEED_*（见 .env.template）。
+SUPERADMIN_UID = os.getenv("PISUAN_SEED_SUPERADMIN_UID", "admin")
+SUPERADMIN_NAME = os.getenv("PISUAN_SEED_SUPERADMIN_NAME", "系统管理员")
+SUPERADMIN_PHONE_NUMBER = os.getenv("PISUAN_SEED_SUPERADMIN_PHONE_NUMBER", "")
+SUPERADMIN_PASSWORD = os.getenv("PISUAN_SEED_SUPERADMIN_PASSWORD", "pisuan123456")
+DEFAULT_USER_PASSWORD = os.getenv("PISUAN_SEED_DEFAULT_USER_PASSWORD", "pisuan123456")
 
 
 class DepartmentSeed(TypedDict):
@@ -138,8 +141,8 @@ def main() -> int:
         f"初始化完成：已创建超级管理员 {SUPERADMIN_NAME}（{SUPERADMIN_UID}）、"
         "3 个部门、6 个部门管理员和 14 个普通用户。"
     )
-    print("超级管理员密码：zwj12138")
-    print("部门管理员和普通用户默认密码：yuxi123456")
+    print(f"超级管理员密码：{SUPERADMIN_PASSWORD}")
+    print(f"部门管理员和普通用户默认密码：{DEFAULT_USER_PASSWORD}")
     return 0
 
 

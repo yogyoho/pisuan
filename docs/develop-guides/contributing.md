@@ -1,22 +1,22 @@
 # 参与贡献
 
-欢迎提交 Bug 修复、功能改进、测试和文档。本文是 Fork → 开发 → 验证 → PR 的完整流程；只想了解仓库入口时，可以先看根目录的 [CONTRIBUTING.md](https://github.com/xerrors/Yuxi/blob/main/CONTRIBUTING.md)。
+欢迎提交 Bug 修复、功能改进、测试和文档。本文是 Fork → 开发 → 验证 → PR 的完整流程；只想了解仓库入口时，可以先看根目录的 [CONTRIBUTING.md](https://github.com/yogyoho/pisuan/blob/main/CONTRIBUTING.md)。
 
 ## 开始前
 
-- 先搜索 [Issues](https://github.com/xerrors/Yuxi/issues)，确认问题没有重复。
+- 先搜索 [Issues](https://github.com/yogyoho/pisuan/issues)，确认问题没有重复。
 - 如果任务来自 GitHub Project，读完任务描述、关联 Issue、验收标准和讨论，并确认任务已经分配给你。
-- 需求会改变架构、权限、持久化、运行生命周期、公开接口或模型可见输入时，先在 Issue 或 [Discussions](https://github.com/xerrors/Yuxi/discussions) 对齐方案，并建立 [工程决策记录](./decisions/README.md)。
+- 需求会改变架构、权限、持久化、运行生命周期、公开接口或模型可见输入时，先在 Issue 或 [Discussions](https://github.com/yogyoho/pisuan/discussions) 对齐方案，并建立 [工程决策记录](./decisions/README.md)。
 - 一个 PR 解决一个清楚的问题。无关的格式化、重构和“顺手优化”请另开 PR。
 
-修改不熟悉的模块前，先读 [ARCHITECTURE.md](https://github.com/xerrors/Yuxi/blob/main/ARCHITECTURE.md)，再从真实的路由、service、repository、Schema、Compose 和测试中定位实现。源码和可执行测试比旧文档、历史 PR 或自动生成 Wiki 更可靠。
+修改不熟悉的模块前，先读 [ARCHITECTURE.md](https://github.com/yogyoho/pisuan/blob/main/ARCHITECTURE.md)，再从真实的路由、service、repository、Schema、Compose 和测试中定位实现。源码和可执行测试比旧文档、历史 PR 或自动生成 Wiki 更可靠。
 
 ## 1. Fork、同步和建分支
 
 ```bash
-git clone https://github.com/<your-username>/Yuxi.git
-cd Pisuan
-git remote add upstream https://github.com/xerrors/Yuxi.git
+git clone https://github.com/<your-username>/pisuan.git
+cd pisuan
+git remote add upstream https://github.com/yogyoho/pisuan.git
 git fetch upstream
 git switch main
 git merge --ff-only upstream/main
@@ -163,8 +163,8 @@ Agent 创建 PR 前，先把拟提交的标题和完整正文展示给用户，�
 
 PR 正文按创建方式选择模板：
 
-- Agent 创建的 PR 使用默认的 [Agent PR 模板](https://github.com/xerrors/Yuxi/blob/main/.github/PULL_REQUEST_TEMPLATE.md)；
-- 人工或其他非 Agent 方式创建的 PR 可使用[简化模板](https://github.com/xerrors/Yuxi/blob/main/.github/PULL_REQUEST_TEMPLATE/non-agent.md)。使用 GitHub compare 页面时增加 `template=non-agent.md` 查询参数，使用 GitHub CLI 时传入 `--template .github/PULL_REQUEST_TEMPLATE/non-agent.md`。
+- Agent 创建的 PR 使用默认的 [Agent PR 模板](https://github.com/yogyoho/pisuan/blob/main/.github/PULL_REQUEST_TEMPLATE.md)；
+- 人工或其他非 Agent 方式创建的 PR 可使用[简化模板](https://github.com/yogyoho/pisuan/blob/main/.github/PULL_REQUEST_TEMPLATE/non-agent.md)。使用 GitHub compare 页面时增加 `template=non-agent.md` 查询参数，使用 GitHub CLI 时传入 `--template .github/PULL_REQUEST_TEMPLATE/non-agent.md`。
 
 模板复杂度不同，不改变非平凡或高风险变更的工程证据要求。来自 Fork 的 PR 默认无法读取主仓库 Secrets；不要通过修改工作流、打印环境变量或扩大权限绕过这一限制。如果验证必须依赖受保护凭证，应在 PR 中说明并由维护者执行对应检查。
 
@@ -177,7 +177,7 @@ PR 正文按创建方式选择模板：
 3. 修复产生新提交时创建下一个候选 tag；已推送的候选 tag 保留原指向。
 4. 最终候选通过后，在同一提交新增正式 tag，并发布正式 Release。Release 正文保留相对上一正式版本的完整功能更新及升级注意事项。应用 tag 触发检查，文档站只在 main 分支推送时部署。
 
-CLI 使用 `packages/pisuan-cli/pyproject.toml` 中的独立版本。需要发布 CLI 时先提交包版本和锁文件更新，再对明确的提交或 tag 手动运行 [Publish pisuan-cli](https://github.com/xerrors/Yuxi/actions/workflows/publish-pisuan-cli.yml)；应用 Release 不触发 PyPI 上传。CLI 版本未变时无需重复发布，上传失败须检查版本与 PyPI 状态。
+CLI 使用 `packages/pisuan-cli/pyproject.toml` 中的独立版本。需要发布 CLI 时先提交包版本和锁文件更新，再对明确的提交或 tag 手动运行 [Publish pisuan-cli](https://github.com/yogyoho/pisuan/actions/workflows/publish-pisuan-cli.yml)；应用 Release 不触发 PyPI 上传。CLI 版本未变时无需重复发布，上传失败须检查版本与 PyPI 状态。
 
 ## 7. 文档维护
 
@@ -207,6 +207,6 @@ AI 可以帮助搜索、实现、测试和整理文档，但贡献者仍对最�
 
 ## 获取帮助
 
-- Bug 和功能讨论：[GitHub Issues](https://github.com/xerrors/Yuxi/issues)
-- 方案讨论：[GitHub Discussions](https://github.com/xerrors/Yuxi/discussions)
-- 贡献入口：[根目录 CONTRIBUTING.md](https://github.com/xerrors/Yuxi/blob/main/CONTRIBUTING.md)
+- Bug 和功能讨论：[GitHub Issues](https://github.com/yogyoho/pisuan/issues)
+- 方案讨论：[GitHub Discussions](https://github.com/yogyoho/pisuan/discussions)
+- 贡献入口：[根目录 CONTRIBUTING.md](https://github.com/yogyoho/pisuan/blob/main/CONTRIBUTING.md)

@@ -324,7 +324,7 @@ async def test_request_prefix_matching_treats_underscores_literally(cleanup_data
     conversation_ids: list[int] = []
     project_ids = [str(uuid.uuid4()), str(uuid.uuid4())]
     message_ids: list[int] = []
-    request_ids = [f"PISUAN_TEST_valid_{uuid.uuid4()}", f"YUXI-TEST-ordinary-{uuid.uuid4()}"]
+    request_ids = [f"PISUAN_TEST_valid_{uuid.uuid4()}", f"PISUAN-TEST-ordinary-{uuid.uuid4()}"]
     try:
         async with session_factory() as db:
             db.add(User(username=uid, uid=uid, password_hash="test"))

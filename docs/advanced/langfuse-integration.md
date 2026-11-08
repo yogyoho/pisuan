@@ -61,6 +61,6 @@ Pisuan 同时在 PostgreSQL 按运行生命周期保存本地 Model/Tool 审计�
 
 ## 代码和测试入口
 
-- [Langfuse 服务](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/services/langfuse_service.py)
-- [反馈服务](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/services/feedback_service.py)
-- [Langfuse 单元测试](https://github.com/xerrors/Yuxi/blob/main/backend/test/unit/services/test_langfuse_service.py)
+- [Langfuse 服务](https://github.com/yogyoho/pisuan/blob/main/backend/package/pisuan/services/langfuse_service.py)
+- [反馈服务](https://github.com/yogyoho/pisuan/blob/main/backend/package/pisuan/services/feedback_service.py)
+- [Langfuse 单元测试](https://github.com/yogyoho/pisuan/blob/main/backend/test/unit/services/test_langfuse_service.py)

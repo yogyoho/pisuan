@@ -1,7 +1,9 @@
 import { h } from 'vue'
 import { Database, DatabaseZap } from '@lucide/vue'
 
-const ICON_BASE = 'https://registry.npmmirror.com/@lobehub/icons-static-svg/latest/files/icons'
+// [pisuan-custom] 2026-11-07 交付改造：品牌图标随前端包本地发布（web/public/kb-icons/，
+// 取自 @lobehub/icons-static-svg，MIT），客户无网环境不再请求 npmmirror CDN。
+const ICON_BASE = '/kb-icons'
 
 const createBrandIcon = (url) => {
   const Icon = ({ size = 20 }) =>

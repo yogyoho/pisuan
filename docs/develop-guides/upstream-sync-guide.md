@@ -164,18 +164,24 @@ fetch origin → switch pisuan-localized → reset --hard origin/pisuan-custom
 | 类别 | 处数 | 位置 | 保留原因 |
 |------|------|------|----------|
 | 文档自描述行哨兵 | 16 | 本指南 / `CLAUDE.md` / `changelog.md` | 行内嵌 `<!-- rename-keep -->` 整行逐字存活（改名指令/口径自述）；行级保护，不伤同文件真实路径 |
-| 种子账号默认口令字面量 | 2 | `backend/scripts/seed_initial_users.py` | 口令字符串值，改名即无法登录（仅限开发环境，见 六） |
-| 测试夹具请求 ID | 1 | `backend/test/integration/services/test_live_api_cleanup_run_rows.py` | `YUXI-TEST-*` 历史数据对账取值 | <!-- rename-keep -->
+| 种子账号默认口令字面量 | 2 | `backend/scripts/seed_initial_users.py` | 口令字符串值，改名即无法登录（仅限开发环境，见 六）；**2026-11-07 交付批次已参数化，本项残余清零** |
+| 测试夹具请求 ID | 1 | `backend/test/integration/services/test_live_api_cleanup_run_rows.py` | `YUXI-TEST-*` 历史数据对账取值；2026-11-07 已改 `PISUAN-TEST-*`，本项残余清零 | <!-- rename-keep -->
 | 文档站部署 base 路径 | 3 | `docs/.vitepress/config.mts` | `/Yuxi/` 为 GitHub Pages 部署路径，改动即断链 | <!-- rename-keep -->
-| 上游克隆指引 | 1 | `docs/develop-guides/contributing.md` | 指引用户克隆上游仓库 |
+| 上游克隆指引 | 1 | `docs/develop-guides/contributing.md` | 指引用户克隆上游仓库；2026-11-07 已改指 yogyoho/pisuan，本项残余清零 |
 | 平行 worktree 环境命名 | 4 | `docs/develop-guides/parallel-worktree-environments.md` | 既有环境目录名，非本仓标识符 |
-| 运营渠道参数 | 1 | `web/src/components/model-management/ModelProviderManagePanel.vue` | `promo=YUXI` 为渠道方定义的取值 | <!-- rename-keep -->
+| 运营渠道参数 | 1 | `web/src/components/model-management/ModelProviderManagePanel.vue` | `promo=YUXI` 为渠道方定义的取值；2026-11-07 推广链接整体移除，本项残余清零 | <!-- rename-keep -->
 
 **核对方法论**：新增受保护行（保护词行或哨兵行随文档演进增长）= 预期；未知 / allowlist 外新增残余 = 改名脚本漏改，处理纪律是修脚本规则 → 重新生成本地化层，**禁止在 pisuan-localized 手工修补**。allowlist 与哨兵行均由 `scripts/test_apply_pisuan_rename.py` 机检（`ResidueAllowlistTest` / `ProtectedDocLinesTest`，防规则误伤与清单脱节双向漂移）。
 
+### 残余报告口径（2026-11-07 交付批次）
+
+2026-11-07 面向客户无网环境离线交付，本目录转为交付源（sync-dev 再生流程暂停），按用户四项决策做了一次品牌词与断链清扫：上游链接移除/中性化、库名迁移、种子凭据参数化、README/docs 品牌替换。批次后 allowlist 收敛为 **7 项**（`config.mts` 部署路径 ×3 + 平行 worktree 环境命名 ×4），9-26 清单中的种子口令 ×2、`YUXI-TEST-*` 夹具、克隆指引、推广链接 5 项已清零并从 fixtures 移除。 <!-- rename-keep -->
+
+交付口径：**代码与配置（backend / web / packages / scripts / compose）中 yuxi 字样清零**，仅余保护词行（对上游项目的指称）、哨兵行与 7 项 allowlist；docs 历史目录（decisions / postmortems / superpowers / changelog 历史段）按原样保留。残余总数以改名脚本 dry-run 输出为准（哨兵行随文档演进自然增长，不作硬性总数断言）。
+
 ### 已知保留：数据库库名
 
-`POSTGRES_DB=yuxi_know` 不属 `YUXI_*` 变量交换范围（库名不是前缀命名空间），本次改造未含库名迁移，记为**已知保留**。如需彻底更名须 `ALTER DATABASE` + 停机窗口，属可选独立决策。 <!-- rename-keep -->
+`POSTGRES_DB=yuxi_know` 不属 `YUXI_*` 变量交换范围（库名不是前缀命名空间），本次改造未含库名迁移，记为**已知保留**。如需彻底更名须 `ALTER DATABASE` + 停机窗口，属可选独立决策。**2026-11-07 交付批次已补做该迁移（ALTER DATABASE yuxi_know RENAME TO pisuan，停机窗口内执行，api/worker 强制重建后验证通过），本项保留解除。** <!-- rename-keep -->
 
 ## 四、切换日操作手册（一次性——已于 2026-09-26/27 实施完成）
 
@@ -197,7 +203,7 @@ fetch origin → switch pisuan-localized → reset --hard origin/pisuan-custom
 - **Milvus 就绪竞态（bug-280，实测补记）**：全栈 up 时 Milvus 需恢复 4.1G 数据卷，API 就绪早于 Milvus 可服务 → knowledge_base 组件首连被拒、API 首启失败一次。处置：**先等 milvus healthy 再起 api，或 api 起后 `docker compose restart api` 一次**即恢复。
 - **存量库凭据纪律（实测补记）**：迁移后的存量库**严禁**运行 `seed_initial_users.py`（会向生产数据插入默认账号）；e2e 凭据版仅适用全新栈，存量库一律按无凭据 12 skipped 口径如实记录，登录账号以库内实有为准。
 - **pkey 索引名残留（可选清理）**：表 RENAME 后 PK 索引名仍随旧表名（`*_pkey`），纯内部标识无功能影响，可按需 `ALTER INDEX ... RENAME` 清理。
-- **库名保留**：`POSTGRES_DB=yuxi_know` 不随 `.env` 置换自动更名（见 三）。 <!-- rename-keep -->
+- **库名保留**：`POSTGRES_DB=yuxi_know` 不随 `.env` 置换自动更名（见 三）；2026-11-07 已补做迁移，本项保留解除。 <!-- rename-keep -->
 - **探针口径**：`/health` 端点不存在（bug-273），以 `import pisuan` 路径检查 + `GET /api/system/ready` 全量 JSON + web 首页 200 为准。
 - **栈运行期间热写 pyc**：改名树运行时容器向 `backend/package/pisuan/**/__pycache__/` 热写 ignored 字节码，会物理占据重建目标路径（bug-272）。栈 down 后可选 scoped 清理：`git -C C:/workspace/pisuan-localized clean -fdX backend/package/pisuan`——**只许此等路径级清理，严禁 repo 级 `git clean -fdX`**（会抹掉 `.env` 与 bind-mount 部署数据）。改名脚本自身已内置"占据即 scoped 清理"逻辑，此步仅为运行时整洁。
 
@@ -217,8 +223,8 @@ e2e 已知限制：确定性回放路径依赖模型端点从容器内可达；�
 
 ## 六、品牌归属与账号安全
 
-- **campaign 归属（Minor-A）**：注册渠道链接 `fluxionai.space/...?campaign=pisuan` 的 `campaign=pisuan` 为 pisuan 侧投放归属参数；`promo=YUXI` 为渠道方定义的取值（在 12 项 allowlist 内，勿改）。统计口径按 `campaign=pisuan` 归属。 <!-- rename-keep -->
-- **种子账号口令（Minor-B）**：`seed_initial_users.py` 的 `DEFAULT_USER_PASSWORD = "yuxi123456"` 仅供开发环境种子；任何对外环境必须轮换。该字面量在改名 allowlist 内——若轮换口令须同步更新 `scripts/test_apply_pisuan_rename.py` 的 `ResidueAllowlistTest` fixtures。 <!-- rename-keep -->
+- **campaign 归属（Minor-A）**：注册渠道链接 `fluxionai.space/...?campaign=pisuan` 的 `campaign=pisuan` 为 pisuan 侧投放归属参数；`promo=YUXI` 为渠道方定义的取值。**2026-11-07 交付批次已将推广链接整体移除（README 赞助商段、模型面板注册链接），campaign 归属参数随之退场，本条留存作历史口径。** <!-- rename-keep -->
+- **种子账号口令（Minor-B）**：`seed_initial_users.py` 已于 2026-11-07 参数化——凭据全部改 `PISUAN_SEED_*` 环境变量注入，代码内仅余中性默认值；任何对外环境必须显式设置并轮换，勿用代码默认值。9-26 时的字面量 allowlist 项已随本批次清零并从 `ResidueAllowlistTest` fixtures 移除。 <!-- rename-keep -->
 - **存量库禁种（2026-09-27 实测补记）**：`seed_initial_users.py` 只允许在全新空库运行；迁移后的存量库运行会向真实数据插入默认账号（切换日实测：存量库无种子默认账号，误用种子凭据的 e2e 全部失败于登录 401）。存量部署的 e2e 一律按无凭据口径。
 
 ## 七、不可覆盖的本地定制清单

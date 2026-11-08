@@ -973,16 +973,9 @@ defineExpose({
             />
           </label>
           <label class="form-label">
+            <!-- [pisuan-custom] 2026-11-07 交付改造：移除上游渠道注册推广链接 -->
             <span class="api-key-label">
               API Key
-              <a
-                v-if="providerForm.provider_id === 'fluxionai'"
-                href="https://fluxionai.space/register?source=github&campaign=pisuan&promo=YUXI"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                注册送 $7 API 额度
-              </a>
             </span>
             <a-input-password
               v-model:value="providerForm.api_key"

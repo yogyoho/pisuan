@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { withBase } from 'vitepress'
 
-const GITHUB = 'https://github.com/xerrors/Yuxi'
+const GITHUB = 'https://github.com/yogyoho/pisuan'
 const DEMO = 'https://www.bilibili.com/video/BV1erE26iEgv/'
 const OSS_ASSET_BASE = 'https://xerrors.oss-cn-shanghai.aliyuncs.com/github/pisuan/docs/home'
 const MASCOT_IMAGE = `${OSS_ASSET_BASE}/pisuan-mascot-cutout.png`
@@ -690,7 +690,7 @@ onBeforeUnmount(() => {
             </div>
             <pre><code><span># 获取当前发布版本</span>
 git clone --branch v0.7.3 --depth 1 \
-  https://github.com/xerrors/Yuxi.git
+  https://github.com/yogyoho/pisuan.git
 cd Pisuan
 
 <span># 初始化并启动</span>

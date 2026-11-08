@@ -101,16 +101,3 @@ Summary 触发使用近似 token 统计；主模型返回的 `usage_metadata` �
 
 不要从相邻 Run 的摘要文件或消息推断当前 Run 的结果。
 
-## 源码定位与验证
-
-- [Summary middleware](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/agents/middlewares/summary.py)
-- [主动压缩 service](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/services/context_compression_service.py)
-- [Agent state repository](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/repositories/agent_state_repository.py)
-- [Agent 配置](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/agents/context.py)
-- [Chatbot graph](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/agents/buildin/chatbot/graph.py)
-- [Token usage](https://github.com/xerrors/Yuxi/blob/main/backend/package/pisuan/agents/middlewares/token_usage.py)
-- [Summary unit tests](https://github.com/xerrors/Yuxi/tree/main/backend/test/unit/middlewares)
-- [主动压缩 service tests](https://github.com/xerrors/Yuxi/blob/main/backend/test/unit/services/test_context_compression_service.py)
-- [真实模型 integration test](https://github.com/xerrors/Yuxi/blob/main/backend/test/integration/services/test_summary_middleware_real_model.py)
-
-修改压缩逻辑时，至少验证低于阈值、确定性压缩后低于同一阈值、进入摘要、结构化检索预览、历史写入失败、摘要模型失败、主动压缩 busy 拒绝、Sandbox 回收和 overflow 尾部裁剪；oracle 应读取消息视图、state update、Workdir 文件或协议结果。
