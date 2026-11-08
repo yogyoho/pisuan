@@ -12,7 +12,8 @@ COPY ./web/pnpm-lock.yaml* ./
 COPY ./web/pnpm-workspace.yaml ./
 
 # 安装依赖（--frozen-lockfile 保证 dev 与 build/CI 三处依赖与 pnpm-lock.yaml 一致，避免漂移）
-RUN pnpm install --frozen-lockfile --registry=https://registry.npmmirror.com
+# registry 用官方源：npmmirror CDN 对 @fontsource/noto-sans-sc（73MB）持续 ETIMEDOUT（2026-11-09 两轮构建实测），官方源实测可完整拉取
+RUN pnpm install --frozen-lockfile --registry=https://registry.npmjs.org
 
 # 复制源代码
 COPY ./web .
@@ -34,8 +35,8 @@ COPY ./web/package*.json ./
 COPY ./web/pnpm-lock.yaml* ./
 COPY ./web/pnpm-workspace.yaml ./
 
-# 安装依赖
-RUN pnpm install --frozen-lockfile --registry=https://registry.npmmirror.com
+# 安装依赖（registry 用官方源，理由同上）
+RUN pnpm install --frozen-lockfile --registry=https://registry.npmjs.org
 
 # 复制源代码并构建
 COPY ./web .
