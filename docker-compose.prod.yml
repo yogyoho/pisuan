@@ -84,7 +84,7 @@ services:
       REFS_REPO_WORKTREE: /app/refs-repo/worktree
       REFS_GITEA_PUSH_URL: http://gitea:3000/refsadmin/eia-refs.git
       GITEA_REFS_USER: refsadmin
-      GITEA_REFS_PASSWORD: ${GITEA_REFS_PASSWORD:-}
+      GITEA_REFS_PASSWORD: ${GITEA_REFS_PASSWORD:?Set GITEA_REFS_PASSWORD in .env.prod}
     # endregion api_envs
     command: uv run --no-sync --no-dev uvicorn server.main:app --host 0.0.0.0 --port 5050
     restart: unless-stopped
