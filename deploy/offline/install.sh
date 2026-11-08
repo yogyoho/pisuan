@@ -136,7 +136,8 @@ summary(){
   访问:  http://<服务器IP>:${port}
   管理员账号见 deploy.conf（首登即改密）
   下一步（MANUAL-DEPLOY §5-6）:
-  [ ] 模型管理 UI 配内网 LLM/Embedding 地址
+  [ ] 模型管理 UI 配内网 LLM/Embedding 地址（OpenAI 兼容）
+  [ ] OCR 默认 rapid_ocr 开箱即用；客户自有引擎在设置 UI 接入
   [ ] 验收清单逐项核对
 ══════════════════════════════════════════════
 EOF
