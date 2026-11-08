@@ -178,7 +178,7 @@ worker 的 Compose 健康检查通过 `python -m pisuan.services.worker_health` 
 
 ## 开发环境端口与入口
 
-开发 Compose 发布到宿主机的端口如下；生产 Compose 默认只发布 Web 入口，其余服务通过 Compose 内网访问。
+开发 Compose 发布到宿主机的端口如下；生产 Compose 仅发布 Web（80）与 API（6050）到所有网卡，其余服务只绑定 127.0.0.1 或留在 Compose 内网。
 
 | 端口 | 服务 | 用途 |
 | --- | --- | --- |
