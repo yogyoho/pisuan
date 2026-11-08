@@ -60,6 +60,8 @@ RUN uv sync --no-cache --group test --no-dev --frozen
 # 复制 server 代码
 COPY backend/server /app/server
 COPY backend/templates /app/templates
+# 运维脚本随镜像（离线部署 install.sh 经 compose exec 跑 seed_initial_users）
+COPY backend/scripts /app/scripts
 COPY docker/api-entrypoint.sh /usr/local/bin/yuxi-entrypoint
 
 RUN groupadd --gid 1000 yuxi \
