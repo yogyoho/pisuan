@@ -29,6 +29,7 @@ $composeArgs = @('compose','--env-file','.env.prod','-f','docker-compose.prod.ym
 if (-not $SkipGpu) { $composeArgs += @('--profile','all') }
 if ($NoBuild) {
   $images = @(docker @composeArgs config --images)
+  if ($LASTEXITCODE -ne 0) { throw "docker compose config --images 失败（退出码 $LASTEXITCODE）——检查 .env.prod 是否已准备、docker-compose.prod.yml 是否在位" }
 } else {
   # PS5.1 实测（5.1.19041）：EAP=Stop 下原生命令 2>&1 首行 stderr 即 NativeCommandError 终止——降级透传构建日志，退出码显式校验
   $ErrorActionPreference = 'Continue'
@@ -36,6 +37,7 @@ if ($NoBuild) {
   $ErrorActionPreference = 'Stop'
   if ($LASTEXITCODE -ne 0) { throw "镜像构建失败（docker build 退出码 $LASTEXITCODE）" }
   $images = @(docker @composeArgs config --images)
+  if ($LASTEXITCODE -ne 0) { throw "docker compose config --images 失败（退出码 $LASTEXITCODE）——检查 .env.prod 是否已准备、docker-compose.prod.yml 是否在位" }
 }
 $images += Get-Content "$Root\deploy\offline\assets\extra-images.txt" | Where-Object { $_ -and -not $_.StartsWith('#') }
 $images = $images | Select-Object -Unique
@@ -48,6 +50,7 @@ $ErrorActionPreference = 'Stop'
 if ($images -contains 'gitea/gitea:1.24' -and -not $giteaExists) {
   docker pull docker.m.daocloud.io/gitea/gitea:1.24
   docker tag docker.m.daocloud.io/gitea/gitea:1.24 gitea/gitea:1.24
+  if ($LASTEXITCODE -ne 0) { throw "gitea 镜像拉取/retag 失败（退出码 $LASTEXITCODE）" }
 }
 
 # ── 缺失镜像核对（save 前把关；EAP 降级同上）──
@@ -76,7 +79,11 @@ foreach ($img in $images) {
   $safe = ($img -replace '[/:]','_') + '.tar'
   $sub = if ($img -match '-mineru:|-paddlex:') { 'gpu' } else { 'core' }
   $dest = "$staging\images\$sub\$safe"
-  if (-not (Test-Path $dest)) { docker save -o $dest $img }
+  if (Test-Path $dest) {
+    Write-Host "[save] 复用已有 $safe"
+  } else {
+    docker save -o $dest $img
+  }
   $saved += @{ tag=$img; file="images/$sub/$safe" }
   Write-Host "[save] $img → $sub/$safe"
 }
@@ -91,8 +98,8 @@ $pkg = Join-Path $OutDir $pkgName
 New-Item -ItemType Directory -Force -Path $pkg | Out-Null
 Copy-Item "$Root\deploy\offline\*" $pkg -Recurse -Force                      # 模板/手册/脚本/assets 全量随包
 Copy-Item "$Root\docker-compose.prod.yml","$Root\docker-compose.langfuse.yml" $pkg
-Copy-Item "$Root\docker\sandbox_provisioner\sandbox.env" "$pkg\docker\sandbox_provisioner\" -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path "$pkg\docker\sandbox_provisioner","$pkg\docs","$pkg\payload\docker","$pkg\payload\nvidia","$pkg\payload\models","$pkg\state" | Out-Null
+Copy-Item "$Root\docker\sandbox_provisioner\sandbox.env" "$pkg\docker\sandbox_provisioner\sandbox.env" -Force
 
 # payload（Docker 引擎 / NVIDIA / bge-m3）来自工作区 yuxi-offline-work\payload（Task 6 下载落位）
 $payloadSrc = Join-Path $work "payload"
@@ -118,7 +125,10 @@ Set-Content "$pkg\VERSION" -Value $version -Encoding ascii -NoNewline   # 无 EO
 $volSrc = Join-Path $Root "docker\volumes\yuxi"
 foreach ($d in 'refs-repo','gitea-data') {
   $src = Join-Path $volSrc $d
-  if (Test-Path $src) { Copy-Item $src "$pkg\state\yuxi\$d" -Recurse -Force; Write-Host "[state] $d 已收入包" }
+  if (Test-Path $src) {
+    if (Test-Path "$pkg\state\yuxi\$d") { Remove-Item "$pkg\state\yuxi\$d" -Recurse -Force }
+    Copy-Item $src "$pkg\state\yuxi\$d" -Recurse -Force; Write-Host "[state] $d 已收入包"
+  }
   else { Write-Warning "[state] $volSrc\$d 不存在——refs/gitea 预置缺失，部署后需手工补" }
 }
 
@@ -127,6 +137,7 @@ if (-not $SkipPackage) {
   $tgz = Join-Path $OutDir "$pkgName.tar.gz"
   if (Test-Path $tgz) { Remove-Item $tgz -Force }
   tar -czf $tgz -C $OutDir $pkgName
+  if ($LASTEXITCODE -ne 0) { throw "tar 打包失败（退出码 $LASTEXITCODE）——常见原因：外置盘空间不足（包目录与 tgz 同盘约需 2×包体积）" }
   $hash = (Get-FileHash $tgz -Algorithm SHA256).Hash.ToLower()
   [IO.File]::WriteAllText("$OutDir\$pkgName.sha256.txt", "$hash  $pkgName.tar.gz`n")   # LF 行尾：客户侧 sha256sum -c 对行尾 \r 敏感
 }
