@@ -3,7 +3,6 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-SKIP_GPU=0; for a in "$@"; do case "$a" in --skip-gpu) SKIP_GPU=1;; esac; done
 COMPOSE="docker compose -p yuxi-prod --env-file .env.prod -f docker-compose.prod.yml"
 WEB_PORT_DEFAULT=80
 
@@ -19,7 +18,7 @@ preflight(){
   command -v openssl >/dev/null || die "缺 openssl（密钥生成必需）"
   command -v curl >/dev/null || die "缺 curl（健康检查必需）"
   disk=$(df -BG . | awk 'NR==2{print $4}' | sed 's/G//'); [ "$disk" -ge 120 ] || log_w "磁盘仅 ${disk}G（建议 ≥120G）"
-  mem=$(free -m 2>/dev/null | awk '/^Mem:/{print $2}' || echo 0); [ "$mem" -ge 30000 ] || log_w "内存不足 30G（GPU 模式建议 ≥32G）"
+  mem=$(free -m 2>/dev/null | awk '/^Mem:/{print $2}' || echo 0); [ "$mem" -ge 30000 ] || log_w "内存不足 30G（建议 ≥32G，Milvus 随知识库数据量线性增长）"
   mapcnt=$(cat /proc/sys/vm/max_map_count 2>/dev/null || echo 0)
   if [ "$mapcnt" -lt 262144 ]; then
     echo "vm.max_map_count=262144" | tee /etc/sysctl.d/99-yuxi.conf >/dev/null
@@ -30,7 +29,7 @@ preflight(){
   hostnet=$(ip -4 addr show scope global 2>/dev/null | grep -oE 'inet [0-9.]+' | awk '{print $2}' | head -1 || true)
   [ -n "$hostnet" ] && [ "${hostnet%%.*}" = "10" ] && [ "${hostnet#10.253.}" != "$hostnet" ] && \
     log_w "宿主 IP $hostnet 可能与沙盒地址池 10.253.240.0/20 冲突——部署前改 .env.prod 的 SANDBOX_DOCKER_ADDRESS_POOL"
-  grep -E ':(0050|17A2|1920|1CD3|2710|2711|5032|276B|211A|21EF|0BB8|7531|1F90|232A)\b' /proc/net/tcp* >/dev/null 2>&1 && \
+  grep -E ':(0050|17A2|1920|1CD3|2710|2711|5032|276B|211A|21EF|0BB8|232A)\b' /proc/net/tcp* >/dev/null 2>&1 && \
     log_w "部分端口可能被占用（/proc/net/tcp 粗检）——完整端口清单见 MANUAL-DEPLOY §0"
   return 0
 }
@@ -69,54 +68,38 @@ gen_env(){
 # ─ [2] 镜像导入 ────────────────────────────────────────────
 load_images(){ bash load-images.sh images || die "镜像导入失败（load-images.sh 输出见上）"; }
 
-# ─ [3] GPU 层 ──────────────────────────────────────────────
-gpu_layer(){
-  [ "$SKIP_GPU" -eq 1 ] && { log_i "跳过 GPU 层（--skip-gpu）"; return 0; }
-  grep -q "^ENABLE_GPU=true" .env.prod || { log_i "ENABLE_GPU≠true，跳过 GPU 层"; return 0; }
-  command -v nvidia-smi >/dev/null || die "无 nvidia-smi：先装驱动（payload/nvidia/，装后需重启再重跑本脚本）再继续"
-  if ! command -v nvidia-ctk >/dev/null; then
-    if command -v apt-get >/dev/null; then
-      apt-get install -y ./payload/nvidia/libnvidia-container*.deb ./payload/nvidia/nvidia-container-toolkit*.deb || die "toolkit 安装失败"
-    elif command -v rpm >/dev/null; then
-      rpm -ivh payload/nvidia/*.rpm || die "toolkit 安装失败"
-    else die "未知发行版：见 MANUAL-DEPLOY 附录 A"; fi
-  fi
-  docker info 2>/dev/null | grep -qi nvidia || {
-    nvidia-ctk runtime configure --runtime=docker && systemctl restart docker || die "nvidia runtime 配置失败"
-  }
-  docker info 2>/dev/null | grep -qi nvidia || die "docker info 无 nvidia runtime"
-  log_i "GPU runtime 就绪"
-}
-
-# ─ [4] 预置状态落位（绝不覆盖已有）─────────────────────────
+# ─ [3] 预置状态落位（绝不覆盖已有）─────────────────────────
+# 包内 state/ 为全量数据快照（知识库/文件库/图谱/数据库/refs，2026-11-08 裁定不脱敏）；
+# cp -rn：现场已产生数据一律跳过（幂等重装安全）
 state_sync(){
-  if [ -d state/yuxi ]; then
-    mkdir -p docker/volumes/yuxi
-    cp -rn state/yuxi/. docker/volumes/yuxi/ && log_i "预置状态落位（refs-repo/gitea-data；已存在项跳过）" || die "预置状态落位失败（磁盘/权限？）"
-    # install 以 root 拷贝，容器以 1000:1000 读写（api=refs-repo 工作树，gitea=/data）
-    [ -d docker/volumes/yuxi/refs-repo ] && chown -R 1000:1000 docker/volumes/yuxi/refs-repo
-    [ -d docker/volumes/yuxi/gitea-data ] && chown -R 1000:1000 docker/volumes/yuxi/gitea-data
-  fi
+  # YUXI_STATE_DIR 在 .env.prod（含 deploy.conf 注入）有定义时随其落位，否则用默认
+  local state_dir
+  state_dir=$(grep -E '^YUXI_STATE_DIR=' .env.prod | cut -d= -f2- || true)
+  state_dir=${state_dir:-./docker/volumes}
+  mkdir -p "$state_dir"
+  cp -rn state/. "$state_dir"/ && log_i "预置状态落位（全量数据快照；已存在项跳过）" || die "预置状态落位失败（磁盘/权限？）"
+  # chown 只对非 root 服务做（uid 均为镜像实测，勿凭记忆改）：
+  #   postgres:16 → 999:999（docker run --rm postgres:16 id postgres 实测）
+  #   neo4j:5.26.29 → 7474:7474（docker run --rm neo4j:5.26.29 id 实测）
+  #   milvusdb/milvus:v2.5.6、quay.io/coreos/etcd:v3.5.5 → root（id 实测）→ 不 chown
+  #   api 卷目录 → api 容器 user "1000:1000"（prod compose；api.Dockerfile USER 同值）
+  #   gitea → USER_UID=1000（prod compose）——故 yuxi/ 整树统一 1000:1000
+  [ -d "$state_dir/postgresql" ] && chown -R 999:999 "$state_dir/postgresql"
+  [ -d "$state_dir/neo4j/data" ] && chown -R 7474:7474 "$state_dir/neo4j/data"
+  [ -d "$state_dir/yuxi" ] && chown -R 1000:1000 "$state_dir/yuxi"
   return 0
 }
 
-# ─ [5] 启动 ────────────────────────────────────────────────
+# ─ [4] 启动 ────────────────────────────────────────────────
 up_stack(){
-  # --skip-gpu 优先于 ENABLE_GPU（无 GPU 机器按 flag 部署）；compose 不读 ENABLE_GPU，profile 是唯一机制
-  local prof=""
-  if [ "$SKIP_GPU" -eq 1 ]; then
-    log_i "跳过 GPU profile（--skip-gpu）"
-  elif grep -q "^ENABLE_GPU=true" .env.prod; then
-    prof="--profile all"
-  fi
-  $COMPOSE $prof up -d || die "compose up 失败"
+  $COMPOSE up -d || die "compose up 失败"
   if grep -q "^ENABLE_LANGFUSE=true" .env.prod; then
     docker compose -p langfuse --env-file .env.prod -f docker-compose.langfuse.yml up -d \
       || log_w "Langfuse 栈启动失败（观测能力暂缺，不阻塞核心交付；docker compose -p langfuse logs 排查后重跑该命令）"
   fi
 }
 
-# ─ [6] 等健康 ──────────────────────────────────────────────
+# ─ [5] 等健康 ──────────────────────────────────────────────
 wait_ready(){
   local port; port=$(grep '^YUXI_WEB_PORT=' .env.prod | cut -d= -f2 || true); port=${port:-$WEB_PORT_DEFAULT}
   local i; for i in $(seq 1 60); do
@@ -127,14 +110,14 @@ wait_ready(){
   die "10 分钟未就绪：按最先失败的服务排查（MANUAL-DEPLOY §7）"
 }
 
-# ─ [7] 建管理员 ────────────────────────────────────────────
+# ─ [6] 建管理员 ────────────────────────────────────────────
 seed_admin(){
   # 已初始化库会显式报"系统已初始化"并以非零退出——属预期跳过，非失败（与 MANUAL-UPGRADE §2 表述一致）
   $COMPOSE exec -T api python -m scripts.seed_initial_users && log_i "管理员已创建" || \
     log_w "seed 未执行（users 表非空=已初始化，属正常；其余情况查 api 日志）"
 }
 
-# ─ [8] 沙盒冒烟 ────────────────────────────────────────────
+# ─ [7] 沙盒冒烟 ────────────────────────────────────────────
 sandbox_smoke(){
   local sbport; sbport=$(grep '^YUXI_SANDBOX_PORT=' .env.prod | cut -d= -f2 || true); sbport=${sbport:-9002}
   curl -sf "http://127.0.0.1:${sbport}/health" >/dev/null && log_i "provisioner 健康" || log_w "provisioner /health 不通——查 $COMPOSE logs sandbox-provisioner"
@@ -143,7 +126,7 @@ sandbox_smoke(){
     && log_i "沙盒镜像本地在位" || log_w "⚠️ 沙盒镜像缺失——首次建沙盒将联网拉取并失败！"
 }
 
-# ─ [9] 验证清单 ────────────────────────────────────────────
+# ─ [8] 验证清单 ────────────────────────────────────────────
 summary(){
   local port; port=$(grep '^YUXI_WEB_PORT=' .env.prod | cut -d= -f2 || true); port=${port:-$WEB_PORT_DEFAULT}
   cat <<EOF
@@ -162,9 +145,9 @@ EOF
 guard_down(){ for a in "$@"; do case "$a" in -v|--volumes) log_e "禁止 down -v（销毁数据卷）"; exit 1;; esac; done; $COMPOSE down "$@"; }
 
 case "${1:-install}" in
-  install|--skip-gpu) preflight; gen_env; load_images; gpu_layer; state_sync; up_stack; wait_ready; seed_admin; sandbox_smoke; summary;;
+  install) preflight; gen_env; load_images; state_sync; up_stack; wait_ready; seed_admin; sandbox_smoke; summary;;
   down|stop) shift; guard_down "$@";;
   status) $COMPOSE ps;;
   logs) shift; $COMPOSE logs -f --tail=100 "$@";;
-  *) echo "用法: $0 [install|--skip-gpu|down|status|logs <svc>]"; exit 1;;
+  *) echo "用法: $0 [install|down|status|logs <svc>]"; exit 1;;
 esac
