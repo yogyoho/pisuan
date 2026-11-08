@@ -18,7 +18,7 @@ PostgreSQL 一致性备份：已停机状态下目录 tar 一致性足够。
 启用 Langfuse 观测栈时另有独立命名卷（langfuse 项目声明：`database_data` / `clickhouse_data` / `clickhouse_logs` / `minio_data` / `redis_data`，容器内实际卷名带 `langfuse_` 前缀，先 `docker volume ls` 核对）。如需一并备份，逐卷执行（可选，核心栈恢复不依赖它们；`clickhouse_logs` 为日志卷，可不备）：
 
 ```bash
-docker run --rm -v <卷名>:/v -v $PWD:/b alpine tar czf /b/<卷名>.tar.gz -C /v .
+docker run --rm -v <卷名>:/v -v $PWD:/b postgres:16 tar czf /b/<卷名>.tar.gz -C /v .
 ```
 
 ## 2. 部署新包
