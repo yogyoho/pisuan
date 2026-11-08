@@ -59,6 +59,11 @@ services:
       - ${PISUAN_STATE_DIR:-./docker/volumes}/pisuan/threads:/app/user-data
       - ${PISUAN_STATE_DIR:-./docker/volumes}/pisuan/skill-sources:/app/skill-sources
       - ${PISUAN_STATE_DIR:-./docker/volumes}/pisuan/skill-projections:/app/skill-projections
+      - type: bind
+        source: ${PISUAN_STATE_DIR:-./docker/volumes}/pisuan/eia-library
+        target: /app/eia-library
+        bind:
+          create_host_path: true
       # 环评 refs 数据仓工作树（批次2）：导出物化 → git commit → push 本地 Gitea
       - type: bind
         source: ${PISUAN_STATE_DIR:-./docker/volumes}/pisuan/refs-repo
