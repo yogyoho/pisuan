@@ -92,6 +92,9 @@ services:
   langfuse-worker:
     image: langfuse/langfuse-worker:4
     restart: unless-stopped
+    # Linux 宿主 host.docker.internal 不内建解析，host-gateway 指向宿主（与主栈 prod compose 同模式）
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on: &langfuse-depends-on
       langfuse-db:
         condition: service_healthy
@@ -160,6 +163,8 @@ services:
     depends_on: *langfuse-depends-on
     ports:
       - "3100:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       <<: *langfuse-env
       NEXTAUTH_SECRET: "${LANGFUSE_STACK_NEXTAUTH_SECRET:?LANGFUSE_STACK_NEXTAUTH_SECRET missing in .env}"

@@ -42,10 +42,20 @@ gen_env(){
     NEO4J_PASSWORD MINIO_ACCESS_KEY MINIO_SECRET_KEY YUXI_INSTANCE_ID
     LANGFUSE_STACK_NEXTAUTH_SECRET LANGFUSE_STACK_SALT LANGFUSE_STACK_ENCRYPTION_KEY LANGFUSE_STACK_PG_PASS
     LANGFUSE_STACK_CH_PASSWORD LANGFUSE_STACK_REDIS_AUTH LANGFUSE_STACK_MINIO_PASS
-    LANGFUSE_STACK_INIT_USER_PASSWORD LANGFUSE_STACK_INIT_PROJECT_PUBLIC_KEY LANGFUSE_STACK_INIT_PROJECT_SECRET_KEY"
+    LANGFUSE_STACK_INIT_USER_PASSWORD"
   for k in $gen_keys; do
     grep -q "^$k=..*" .env.prod || echo "$k=$(openssl rand -hex 32)" >> .env.prod
   done
+  # Langfuse 键三联动（幂等）：init 键必须带官方 pk-lf-/sk-lf- 前缀（init 校验拒收裸 hex），
+  # 且客户端键与 init 键同值——主栈 api/worker 凭 LANGFUSE_PUBLIC_KEY/SECRET_KEY 上报，
+  # 观测栈以 LANGFUSE_STACK_INIT_PROJECT_* 建同一对键（2026-11-09 镜像随包交付后此路径为启用路径）
+  grep -q "^LANGFUSE_PUBLIC_KEY=pk-lf-" .env.prod || echo "LANGFUSE_PUBLIC_KEY=pk-lf-$(openssl rand -hex 32)" >> .env.prod
+  grep -q "^LANGFUSE_SECRET_KEY=sk-lf-" .env.prod || echo "LANGFUSE_SECRET_KEY=sk-lf-$(openssl rand -hex 32)" >> .env.prod
+  local lf_pk lf_sk
+  lf_pk=$(grep '^LANGFUSE_PUBLIC_KEY=' .env.prod | head -1 | cut -d= -f2)
+  lf_sk=$(grep '^LANGFUSE_SECRET_KEY=' .env.prod | head -1 | cut -d= -f2)
+  grep -q "^LANGFUSE_STACK_INIT_PROJECT_PUBLIC_KEY=..*" .env.prod || echo "LANGFUSE_STACK_INIT_PROJECT_PUBLIC_KEY=$lf_pk" >> .env.prod
+  grep -q "^LANGFUSE_STACK_INIT_PROJECT_SECRET_KEY=..*" .env.prod || echo "LANGFUSE_STACK_INIT_PROJECT_SECRET_KEY=$lf_sk" >> .env.prod
   grep -q "^COMPOSE_PROJECT_NAME=" .env.prod || echo "COMPOSE_PROJECT_NAME=yuxi-prod" >> .env.prod
   [ -f VERSION ] || die "包根缺 VERSION（打包脚本应生成）"
   grep -q "^YUXI_VERSION=" .env.prod || echo "YUXI_VERSION=$(cat VERSION)" >> .env.prod
@@ -94,8 +104,21 @@ state_sync(){
 up_stack(){
   $COMPOSE up -d || die "compose up 失败"
   if grep -q "^ENABLE_LANGFUSE=true" .env.prod; then
-    docker compose -p langfuse --env-file .env.prod -f docker-compose.langfuse.yml up -d \
-      || log_w "Langfuse 栈启动失败（观测能力暂缺，不阻塞核心交付；docker compose -p langfuse logs 排查后重跑该命令）"
+    if docker compose -p langfuse --env-file .env.prod -f docker-compose.langfuse.yml up -d; then
+      # 保留期 30 天（清理器由 compose 默认开启；项目级 retention_days，NULL=永不清——
+      # trace 无界增长曾致开发机 ClickHouse 65G）。init 建项目为异步，轮询等待；已设过则跳过（幂等）。
+      local i n
+      for i in $(seq 1 12); do
+        n=$(docker compose -p langfuse exec -T langfuse-db psql -U postgres -d postgres -tAc \
+              "UPDATE projects SET retention_days=30 WHERE id='yuxi' AND retention_days IS NULL;
+               SELECT COUNT(*) FROM projects WHERE id='yuxi';" 2>/dev/null | tail -1 | tr -d '[:space:]') || n=''
+        [ "$n" = "1" ] && { log_i "Langfuse 项目保留期 = 30 天"; break; }
+        [ "$i" = "12" ] && log_w "Langfuse 项目 2 分钟未就绪，保留期未播种（控制台 Settings→Project→Retention days 手动设 30）"
+        sleep 10
+      done
+    else
+      log_w "Langfuse 栈启动失败（观测能力暂缺，不阻塞核心交付；docker compose -p langfuse logs 排查后重跑该命令）"
+    fi
   fi
 }
 
@@ -138,6 +161,7 @@ summary(){
   下一步（MANUAL-DEPLOY §5-6）:
   [ ] 模型管理 UI 配内网 LLM/Embedding 地址（OpenAI 兼容）
   [ ] OCR 默认 rapid_ocr 开箱即用；客户自有引擎在设置 UI 接入
+  [ ] Langfuse 控制台 http://<服务器IP>:3100（管理员 langfuse-admin@pisuan.local，密码见 .env.prod 的 LANGFUSE_STACK_INIT_USER_PASSWORD；ENABLE_LANGFUSE=false 时无此服务）
   [ ] 验收清单逐项核对
 ══════════════════════════════════════════════
 EOF
