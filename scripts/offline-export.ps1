@@ -23,6 +23,16 @@ if ($drive -lt 55) { throw "工作区盘 $($OutDir[0]) 仅剩 $([int]$drive)G，
 $cFree = (Get-PSDrive C).Free/1GB
 if (-not $NoBuild -and $cFree -lt 20) { throw "C 盘仅剩 $([int]$cFree)G，构建需 ≥20G" }
 
+# ── 版本与镜像名钉定（终审 C1：现场 install.sh 固定写 COMPOSE_PROJECT_NAME=yuxi-prod
+# 与 YUXI_VERSION=$(cat VERSION)，compose 镜像字段按二者插值；导出侧必须用进程环境
+# 钉成同名（进程 env 优先于 --env-file），否则 save 的镜像名随导出机漂移，现场 up 必失败）
+$ErrorActionPreference = 'Continue'
+$version = (git -C $Root describe --tags --abbrev=0 2>$null) -replace '^v',''
+$ErrorActionPreference = 'Stop'
+if (-not $version) { $version = (Select-String -Path "$Root\web\package.json" -Pattern '"version":\s*"([^"]+)"').Matches[0].Groups[1].Value }
+$env:COMPOSE_PROJECT_NAME = 'yuxi-prod'
+$env:YUXI_VERSION = $version
+
 # ── 镜像清单（compose 管理 + 包外附加；GPU OCR 层已全裁，不再带 --profile all）──
 $composeArgs = @('compose','--env-file','.env.prod','-f','docker-compose.prod.yml')
 if ($NoBuild) {
@@ -39,6 +49,11 @@ if ($NoBuild) {
 }
 $images += Get-Content "$Root\deploy\offline\assets\extra-images.txt" | Where-Object { $_ -and -not $_.StartsWith('#') }
 $images = $images | Select-Object -Unique
+
+# 钉定断言：必须出现 yuxi-prod-api:$version，且无 yuxi- 漂移前缀（外置镜像如 postgres:16 不受影响）
+if (-not ($images -contains "yuxi-prod-api:$version") -or @($images | Where-Object { $_ -match '^yuxi-(?!prod-)' }).Count -gt 0) {
+  throw "镜像名钉定断言失败：期望含 yuxi-prod-api:$version 且无 yuxi- 漂移前缀；实际: $($images -join ', ')"
+}
 
 # ── gitea retag 为官方名（必须在缺失核对之前，否则核对先 throw）──
 # PS5.1：2>$null 在 EAP=Stop 下镜像缺失即 NativeCommandError 终止——先降级再核对
@@ -75,20 +90,17 @@ $saved = @()
 foreach ($img in $images) {
   $safe = ($img -replace '[/:]','_') + '.tar'
   $dest = "$staging\images\core\$safe"
-  if (Test-Path $dest) {
+  if ((Test-Path $dest) -and ((Get-Item $dest).Length -gt 0)) {
     Write-Host "[save] 复用已有 $safe"
   } else {
     docker save -o $dest $img
+    if ($LASTEXITCODE -ne 0) { throw "docker save 失败（退出码 $LASTEXITCODE）：$img → $safe——磁盘满或镜像损坏，清理后重跑" }
   }
   $saved += @{ tag=$img; file="images/core/$safe" }
   Write-Host "[save] $img → core/$safe"
 }
 
 # ── 组装包目录 ──
-$ErrorActionPreference = 'Continue'
-$version = (git -C $Root describe --tags --abbrev=0 2>$null) -replace '^v',''
-$ErrorActionPreference = 'Stop'
-if (-not $version) { $version = (Select-String -Path "$Root\web\package.json" -Pattern '"version":\s*"([^"]+)"').Matches[0].Groups[1].Value }
 $pkgName = "yuxi-offline-$version-$(Get-Date -Format yyyyMMdd)"
 $pkg = Join-Path $OutDir $pkgName
 New-Item -ItemType Directory -Force -Path $pkg | Out-Null
@@ -103,6 +115,10 @@ foreach ($line in $prodLines) {
     if ($line -match '^  \S' -or $line -match '^networks:') { $drop = $false }   # 下一个服务键 / 顶层键：停止删除
     else { continue }
   }
+  # M2 终审修补：GPU OCR 服务已剥离，悬空默认值改空——客户切 mineru/paddlex 引擎时
+  # 经设置 UI 或 .env.prod 显式配置，而非连向不存在的内置服务名
+  if ($line -match '^  MINERU_API_URI:') { $stripped += '  MINERU_API_URI: ${MINERU_API_URI:-}   # 客户自有 MinerU 服务地址（设置 UI 或 .env.prod 配置；离线包无内置 mineru 服务）'; continue }
+  if ($line -match '^  PADDLEX_URI:') { $stripped += '  PADDLEX_URI: ${PADDLEX_URI:-}   # 客户自有 PaddleOCR 服务地址（设置 UI 或 .env.prod 配置；离线包无内置 paddlex 服务）'; continue }
   $stripped += $line
 }
 if (@($stripped -match '^  (mineru-api|paddlex):').Count -gt 0) { throw "打包版 compose 剥离失败：仍含 mineru-api/paddlex 服务块" }
