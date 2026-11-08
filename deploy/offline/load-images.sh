@@ -16,6 +16,7 @@ done
 if [ -f manifest.txt ]; then
   MISS=0
   while IFS= read -r tag; do
+    tag=${tag%$'\r'}
     [ -z "$tag" ] && continue
     docker image inspect "$tag" >/dev/null 2>&1 || { echo "❌ 缺镜像: $tag"; MISS=$((MISS+1)); }
   done < manifest.txt
