@@ -59,6 +59,11 @@ services:
       - ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/threads:/app/user-data
       - ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/skill-sources:/app/skill-sources
       - ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/skill-projections:/app/skill-projections
+      - type: bind
+        source: ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/eia-library
+        target: /app/eia-library
+        bind:
+          create_host_path: true
       # 环评 refs 数据仓工作树（批次2）：导出物化 → git commit → push 本地 Gitea
       - type: bind
         source: ${YUXI_STATE_DIR:-./docker/volumes}/yuxi/refs-repo
