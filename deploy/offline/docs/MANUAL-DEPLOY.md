@@ -34,6 +34,8 @@
 | 6432 | PISUAN_POSTGRES_PORT | 5432 | postgres | 127.0.0.1 |
 | 7379 | PISUAN_REDIS_PORT | 6379 | redis | 127.0.0.1 |
 | 3000 | PISUAN_GITEA_HTTP_PORT | 3000 | gitea | 127.0.0.1 |
+| 3100 | —（docker-compose.langfuse.yml 固定） | 3000 | langfuse-web（观测控制台；ENABLE_LANGFUSE=true 时） | 0.0.0.0 |
+| 9090 | —（docker-compose.langfuse.yml 固定） | 9000 | langfuse-minio（trace 附件签名 URL；ENABLE_LANGFUSE=true 时） | 0.0.0.0 |
 
 **包完整性校验（解压前）**：在包所在目录执行 `sha256sum -c <包名>.tar.gz.sha256.txt`，校验失败勿解压部署。
 
@@ -113,7 +115,7 @@ sudo chown -R 1000:1000 docker/volumes/pisuan          # api 容器 user 1000:10
 ```bash
 export COMPOSE="docker compose -p pisuan-prod --env-file .env.prod -f docker-compose.prod.yml"
 $COMPOSE up -d
-# Langfuse（ENABLE_LANGFUSE=true 且镜像已 load 时；镜像未随包、deploy.conf 默认 false）：
+# Langfuse（镜像已随包 load；deploy.conf ENABLE_LANGFUSE 默认 true，install.sh 自动执行本步）：
 docker compose -p langfuse --env-file .env.prod -f docker-compose.langfuse.yml up -d
 ```
 
@@ -166,7 +168,7 @@ docker exec pisuan-prod-api-1 curl -sS -m 5 <LLM_BASE_URL>/models
 - [ ] 建知识库 → 上传 → 解析 → 索引（默认 rapid_ocr）
 - [ ] 首启后上传任一 PDF 跑通一次解析（验证烘焙 OCR 模型生效）
 - [ ] 沙盒代码执行
-- [ ] Langfuse 控制台 + trace（可选观测栈，镜像未随包交付、默认关闭——未部署则跳过本项）
+- [ ] Langfuse 控制台 + trace（镜像已随包交付，deploy.conf ENABLE_LANGFUSE 默认 true；置 false 部署则跳过本项）
 - [ ] refs 导出 → 历史可浏览（Gitea `http://127.0.0.1:${PISUAN_GITEA_HTTP_PORT:-3000}`，账号 refsadmin）
 
 ## 7. 故障排查（按「最先失败的服务」看起）

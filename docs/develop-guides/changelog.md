@@ -374,6 +374,8 @@ DomainFactoryView 纯增量挂载
 - 镜像构建期烘焙：api 镜像内置 rapid_ocr 并烘焙 PP-OCRv5 mobile 模型（离线首解析开箱可用）；backend/scripts 烘焙进镜像（离线 seed 建号依赖）。
 - prod compose 补缺：eia-library 文件库挂载（环评样例报告/标准规范，此前 dev 有 prod 无）；gitea 服务与 REFS git 链 env/挂载随离线交付进 prod，GITEA_REFS_PASSWORD 改 `:?` 必填校验。
 - 文档与质量审查：MANUAL-DEPLOY/README/LICENSES 对齐模型全裁与数据快照口径，install 摘要补 OCR 引擎验收提示；多轮审查修补（包内脚本 13 项、导出脚本 4 项、守卫 WSL 归一/端口表/剥离守卫锚点/LICENSES tag、快照缺失分级）。
+- Langfuse 观测栈随包交付（2026-11-09 用户裁定，替代前述"镜像未随包、默认关闭"口径）：六个栈镜像（langfuse/web+worker、postgres:17、clickhouse:25.12、chainguard minio、redis:7）进 extra-images.txt 随 images/ 一并 save/load；deploy.conf `ENABLE_LANGFUSE` 默认 true，install.sh 自动启动并在 init 建项目后幂等播种保留期 30 天（清理器 compose 默认开启——trace 无界增长曾致开发机 ClickHouse 65G，客户磁盘同样不可无界）。install.sh gen_env 修复键三联动：INIT_PROJECT_* 必须带官方 pk-lf-/sk-lf- 前缀（init 校验拒收裸 hex）且与客户端 LANGFUSE_PUBLIC_KEY/SECRET_KEY 同值（主栈上报零配置衔接）；langfuse compose web/worker 补 `host.docker.internal:host-gateway` extra_hosts（Linux 宿主不内建解析该名，缺则 NEXTAUTH 回调与上报地址不可达）。MANUAL-DEPLOY 端口表补 3100/9090，LICENSES §3、MANUAL §4.4/§6、.env.prod.example 注释同步翻转交付口径。验证边界：本机（Windows）导出即含栈镜像；Linux 现场行为以 install.sh 门控路径为准。
+- fix(build): web.Dockerfile pnpm 源 npmmirror→官方 registry.npmjs.org——npmmirror CDN 对 @fontsource/noto-sans-sc（73MB）持续 ETIMEDOUT（导出构建两轮同文件失败实测），官方源 23s 完整拉取；frozen-lockfile 内容寻址不变，依赖一致性不受影响。
 
 ### pisuan 定制增量（2026-11-07）
 

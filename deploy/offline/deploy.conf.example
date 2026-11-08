@@ -17,5 +17,5 @@ PISUAN_SEED_DEFAULT_USER_PASSWORD=
 GITEA_REFS_PASSWORD=
 
 # ── 开关 ──
-# Langfuse 观测栈镜像未随离线包交付（启用需自备下列 LICENSES §3 镜像并 docker load）；默认关闭
-ENABLE_LANGFUSE=false
+# Langfuse 观测栈（镜像已随包交付，install.sh 自动启动）；置 false 可整体关闭观测能力
+ENABLE_LANGFUSE=true
