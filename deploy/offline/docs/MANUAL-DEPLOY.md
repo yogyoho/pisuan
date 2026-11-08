@@ -16,6 +16,23 @@
 | 内存 | ≥32GB | `free -g` |
 | 架构 | x86_64（aarch64 需换对应 payload） | `uname -m` |
 
+**宿主端口清单**（docker-compose.prod.yml 发布映射；改端口改 .env.prod 对应变量后重跑 install.sh）：
+
+| 宿主端口（默认） | .env.prod 变量 | 容器端口 | 服务 | 绑定 |
+| --- | --- | --- | --- | --- |
+| 6050 | YUXI_API_PORT | 5050 | api | 0.0.0.0 |
+| 9002 | YUXI_SANDBOX_PORT | 8002 | sandbox-provisioner | 127.0.0.1 |
+| 80 | YUXI_WEB_PORT | 80 | web | 0.0.0.0 |
+| 8474 | YUXI_NEO4J_HTTP_PORT | 7474 | graph（Neo4j HTTP） | 127.0.0.1 |
+| 8687 | YUXI_NEO4J_BOLT_PORT | 7687 | graph（Neo4j Bolt） | 127.0.0.1 |
+| 10000 | YUXI_MINIO_API_PORT | 9000 | minio（S3） | 127.0.0.1 |
+| 10001 | YUXI_MINIO_CONSOLE_PORT | 9001 | minio 控制台 | 127.0.0.1 |
+| 20530 | YUXI_MILVUS_PORT | 19530 | milvus | 127.0.0.1 |
+| 10091 | YUXI_MILVUS_HEALTH_PORT | 9091 | milvus 健康检查 | 127.0.0.1 |
+| 6432 | YUXI_POSTGRES_PORT | 5432 | postgres | 127.0.0.1 |
+| 7379 | YUXI_REDIS_PORT | 6379 | redis | 127.0.0.1 |
+| 3000 | YUXI_GITEA_HTTP_PORT | 3000 | gitea | 127.0.0.1 |
+
 **包完整性校验（解压前）**：在包所在目录执行 `sha256sum -c <包名>.tar.gz.sha256.txt`，校验失败勿解压部署。
 
 ## 1. 安装 Docker（无 Docker 时）

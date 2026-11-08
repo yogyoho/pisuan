@@ -57,7 +57,7 @@ MinIO 镜像由本仓库构建（`docker/minio/Dockerfile`）：Docker Hub 与 q
 
 ## 6. 现场核对
 
-按包内 `manifest.json` 的镜像 digest 逐项核对实际交付内容。`postgres:16`、`redis:7`、
+按包内 `manifest.json` 的镜像 digest 逐项核对实际交付内容。`postgres:16`、`redis:7.4.10-alpine`、
 本地构建的 `<项目名>-minio:RELEASE...` 等浮动或本地构建 tag 的内容以实际 digest 为准，本表只对写死的
 版本 tag 提供对应的版本预期；镜像还可能包含各自的基础系统和传递依赖，离线交付前按实际
 digest 核对许可证、版权声明和对应源码。

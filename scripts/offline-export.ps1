@@ -107,7 +107,7 @@ foreach ($line in $prodLines) {
 }
 if (@($stripped -match '^  (mineru-api|paddlex):').Count -gt 0) { throw "打包版 compose 剥离失败：仍含 mineru-api/paddlex 服务块" }
 if (@($stripped -match '^networks:').Count -eq 0) { throw "打包版 compose 剥离失败：networks: 顶层键丢失" }
-if (@($stripped -match '-api:').Count -eq 0) { throw "打包版 compose 剥离失败：api 服务 image 行丢失" }
+if (@($stripped -match '^  api:').Count -eq 0) { throw "打包版 compose 剥离失败：api 服务键丢失" }
 [IO.File]::WriteAllLines("$pkg\docker-compose.prod.yml", $stripped)   # UTF-8 无 BOM；compose 对 CRLF/LF 均可解析
 New-Item -ItemType Directory -Force -Path "$pkg\docker\sandbox_provisioner","$pkg\docs","$pkg\payload\docker","$pkg\state" | Out-Null
 Copy-Item "$Root\docker\sandbox_provisioner\sandbox.env" "$pkg\docker\sandbox_provisioner\sandbox.env" -Force
@@ -148,7 +148,7 @@ if (-not $psFailed) {
     $srcs = @(docker inspect $c --format '{{range .Mounts}}{{println .Source}}{{end}}' | Where-Object { $_ -ne '' })
     foreach ($s in $srcs) {
       $n = $s.ToLower().Replace('\','/') -replace '^/run/desktop/mnt/host/',''
-      if ($n -match '^/([a-z])/') { $n = $n.Substring(1,1).ToUpper() + ':' + $n.Substring(2) }
+      if ($n -match '^([a-z])/') { $n = $n.Substring(0,1).ToUpper() + ':' + $n.Substring(1) }
       if ($n -like "$volRootN*") { $mountHit = "容器 $c 挂载 $s"; break }
     }
     if ($mountHit) { break }
