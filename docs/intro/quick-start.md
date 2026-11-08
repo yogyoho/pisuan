@@ -2,7 +2,7 @@
 
 这份教程带你在本机启动一套 Yuxi，并完成第一次登录。走完流程后，你会有一个可以打开的 Web 界面和 API 文档；模型配置、知识库和生产部署分别在后续页面说明。
 
-## 你需要准备什么
+## 1. 你需要准备什么
 
 - 已安装 [Docker Engine](https://docs.docker.com/get-docker/) 和 Docker Compose v2。
 - 一个可用的大模型 API。下面的初始化脚本以 SiliconFlow 为例；也可以先复制 `.env.template`，改用其他受支持的供应商。
@@ -10,14 +10,6 @@
 
 默认开发拓扑不要求 GPU。MinerU 和 PP-Structure-V3 等本地 OCR 服务需要 GPU，配置方法见[文档处理与 OCR](../advanced/document-processing.md)。
 
-## 1. 获取代码
-
-仓库当前默认配置对应 `v0.7.3`。用于重要数据前，请先阅读[生产部署与升级](../advanced/deployment.md)中的备份和迁移说明。
-
-```bash
-git clone --branch v0.7.3 --depth 1 https://github.com/xerrors/Yuxi.git
-cd Yuxi
-```
 
 如果你要参与开发，可以改为克隆 `main`；开发分支的行为可能先于发布版本变化。
 

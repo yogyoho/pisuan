@@ -23,9 +23,3 @@ EAI-FLow不是单一的问答页面，而是一个面向开发者与团队的 AI
 - [知识库与知识图谱](/intro/knowledge-base)：查看知识导入、检索与图谱能力
 - [智能体开发](/agents/agents-config)：配置 Agent、Tools、MCP、Skills 与中间件
 - [生产部署](/advanced/deployment)：了解部署方式与上线建议
-
-
-自动生成文档镜像：
-
-- [Zread](https://zread.ai/xerrors/Yuxi)
-- [DeepWiki](https://deepwiki.com/xerrors/Yuxi)

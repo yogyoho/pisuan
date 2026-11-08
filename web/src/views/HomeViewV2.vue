@@ -35,7 +35,7 @@
           <div class="lp-hero-copy">
             <span class="lp-badge">
               <Sparkles :size="14" />
-              <span>AI 驱动 · 工程报告智能写作平台</span>
+              <span>AI 驱动 · 工程报告智能写智能体</span>
             </span>
             <h1 class="lp-hero-title">
               <template v-if="titleLines.length > 1">
@@ -103,25 +103,6 @@
               <Layers :size="14" />
               <span>装配完成 · assembled</span>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Metrics -->
-      <section class="lp-metrics">
-        <div class="lp-container lp-metrics-grid">
-          <div
-            class="lp-metric reveal"
-            v-for="(m, i) in metrics"
-            :key="m.value"
-            :style="{ '--stagger': i }"
-          >
-            <span class="lp-metric-ticks" aria-hidden="true"></span>
-            <span class="lp-metric-icon">
-              <component :is="m.icon" :size="19" />
-            </span>
-            <p class="lp-metric-value">{{ m.value }}</p>
-            <p class="lp-metric-desc">{{ m.desc }}</p>
           </div>
         </div>
       </section>
@@ -268,10 +249,6 @@ import {
   Database,
   FileText,
   PackageCheck,
-  ClipboardCheck,
-  FileSearch,
-  Tags,
-  Milestone,
   Rocket,
   Check
 } from '@lucide/vue'
@@ -323,14 +300,6 @@ const demoChapters = [
 ]
 const demoLines = [92, 100, 78, 96, 64, 88, 42]
 
-// Metrics reflect real platform mechanics (not fabricated ops data)
-const metrics = [
-  { icon: ClipboardCheck, value: '5 步加工', desc: '资料到知识，全程可复核' },
-  { icon: Tags, value: '6 大分类', desc: '工程知识结构化入图' },
-  { icon: Milestone, value: '3 步流转', desc: '草稿、写作、装配，状态全程可视' },
-  { icon: FileSearch, value: '章节级溯源', desc: '引用与依据，逐章可查' }
-]
-
 const features = [
   {
     icon: ListTree,
@@ -345,7 +314,7 @@ const features = [
   {
     icon: PenLine,
     title: '分章协同写作',
-    desc: '编排者统一派发章节任务，多个写手并行产出，章节状态与写作进度全程可视。'
+    desc: '编排者统一派发章节任务，多个写手智能体并行产出，章节状态与写作进度全程可视。'
   },
   {
     icon: ShieldCheck,
@@ -886,75 +855,6 @@ onUnmounted(() => {
   left: -10px;
 }
 
-/* ============ Metrics ============ */
-.lp-metrics {
-  border-top: 1px solid var(--gray-150);
-  border-bottom: 1px solid var(--gray-150);
-  background: var(--gray-25);
-}
-
-.lp-metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  padding-top: 36px;
-  padding-bottom: 36px;
-}
-
-.lp-metric {
-  position: relative;
-  padding: 2px 28px;
-
-  &:first-child {
-    padding-left: 0;
-  }
-
-  &:last-child {
-    padding-right: 0;
-  }
-
-  & + & {
-    border-left: 1px solid var(--gray-200);
-  }
-}
-
-/* Blueprint ruler ticks: small engineering accent */
-.lp-metric-ticks {
-  display: block;
-  width: 46px;
-  height: 6px;
-  margin-bottom: 16px;
-  background: repeating-linear-gradient(90deg, var(--main-200) 0 2px, transparent 2px 8px);
-}
-
-.lp-metric-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  margin-bottom: 14px;
-  border-radius: 9px;
-  background: var(--gray-0);
-  border: 1px solid var(--gray-150);
-  color: var(--main-600);
-}
-
-.lp-metric-value {
-  margin: 0 0 6px;
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: 0.3px;
-  color: var(--gray-1000);
-  font-variant-numeric: tabular-nums;
-}
-
-.lp-metric-desc {
-  margin: 0;
-  font-size: 13.5px;
-  line-height: 1.65;
-  color: var(--gray-600);
-}
-
 /* ============ Sections ============ */
 .lp-section {
   padding: 88px 0;
@@ -1287,19 +1187,6 @@ onUnmounted(() => {
   .lp-scenarios-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .lp-metrics-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 28px 24px;
-  }
-
-  .lp-metric {
-    padding: 0;
-  }
-
-  .lp-metric + .lp-metric {
-    border-left: none;
-  }
 }
 
 @media (max-width: 767px) {
@@ -1325,14 +1212,8 @@ onUnmounted(() => {
 
   .lp-features-grid,
   .lp-steps,
-  .lp-scenarios-grid,
-  .lp-metrics-grid {
+  .lp-scenarios-grid {
     grid-template-columns: 1fr;
-  }
-
-  .lp-metric + .lp-metric {
-    border-top: 1px solid var(--gray-200);
-    padding-top: 22px;
   }
 
   .lp-section {

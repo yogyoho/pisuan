@@ -10,8 +10,8 @@ organization:
 
 # 项目信息
 branding:
-  name: "HyIntelliAgent"
-  title: "华宇工程：工程报告智能写作平台"     # 系统标题
+  name: "CoalAgent"
+  title: "华宇工程：矿山工程设计报告智能写作平台"     # 系统标题
   subtitle: "企业智能体平台套件，融合 RAG 与知识图谱"          # 副标题（subtitles 为空时使用）
   subtitles:
     - "企业智能体平台套件，融合 RAG 与知识图谱"
@@ -38,19 +38,11 @@ features:
     description: "可支撑煤炭行业工程报告编写"
     icon: "license"
 
+# [pisuan-custom] 2026-11-07 交付改造：移除指向上游文档/Issue/路线图的入口，仅保留自有演示入口
 actions:
   - name: "演示视频"
     icon: "video"
     url: "https://www.bilibili.com/video/BV1DF14BTETq"
-  - name: "文档中心"
-    icon: "docs"
-    url: "https://xerrors.github.io/Yuxi/"
-  - name: "提交 Issue"
-    icon: "issue"
-    url: "https://github.com/xerrors/Yuxi/issues/new/choose"
-  - name: "开发路线图"
-    icon: "roadmap"
-    url: "https://xerrors.github.io/Yuxi/develop-guides/roadmap.html"
 
 
 

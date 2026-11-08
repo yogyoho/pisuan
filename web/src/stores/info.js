@@ -71,23 +71,14 @@ export const useInfoStore = defineStore('info', () => {
       ]
   )
 
+  // [pisuan-custom] 2026-11-07 交付改造：兜底 actions 移除上游文档/反馈链接
   const actions = computed(
     () =>
       infoConfig.value.actions || [
         {
-          name: '文档中心',
-          icon: 'docs',
-          url: 'https://xerrors.github.io/Yuxi/'
-        },
-        {
           name: '演示视频',
           icon: 'video',
           url: 'https://www.bilibili.com/video/xxx'
-        },
-        {
-          name: '提交反馈',
-          icon: 'feedback',
-          url: 'https://github.com/xerrors/Yuxi/issues'
         }
       ]
   )

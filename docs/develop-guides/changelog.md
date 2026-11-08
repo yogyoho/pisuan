@@ -365,6 +365,19 @@ DomainFactoryView 纯增量挂载
 - style(domain-factory): 词表列表单位列加宽（用户见 dB(A) 折行）：单位 6%→8%、口径 19%→17%，其余列不动；Range API 实测 dB(A) 单行渲染。
 - feat(domain-factory): 公式参数核对页黑框公式 KaTeX 排版。formulas.json 的 expr 为伪数学串（×−·√Σ 与中文注释混排），新增纯函数模块 `expr_latex.js`：按中文/全角/~ 切「数学段/文本段」交替序列（拼接无损），数学段消解伪符号后交给 katex 内联渲染（多字母符号直立、下划线键名整名不拆、aM 小写大写边界拆两因子、2.68e-3→×10⁻³），文本段原样输出享受块内换行；任一数学段 KaTeX 抛错整条回落原 token 着色视图。单测 `web/test/unit/exprLatex.test.js` 以公式库全量 7 条 expr 为夹具（切段无损/伪符号消解/括号配平/无裸下划线 + 典型片段断言）。黑框背景钉死 #18181b：暗色主题灰阶整体反转（--gray-1000→#fafafa）致「暗块」变白底浅字（既有缺陷，本次一并修）。验证：7/7 公式 KaTeX 渲染零回落、明暗截图（.wolf/fml_latex_*.jpeg）、console 净、eslint 0 / prettier 全过。
 
+### pisuan 定制增量（2026-11-07）
+
+无网环境离线交付批次（本目录即交付源，sync-dev 再生流程暂停）：localized 树品牌词与断链清扫 + 种子脚本去个人化 + 数据库改名。四项决策均经用户确认：上游链接移除/中性化、库名现在迁移、种子凭据参数化、README/docs 品牌词+断链替换（历史文档与改名工具本身不动）。
+
+- 上游入口移除/中性化：`info.template.yaml` actions 仅留演示视频；`stores/info.js` 兜底 actions 同步收缩；`BenchmarkUploadModal`/`BenchmarkGenerateModal` 移除上游评估文档链接（含孤儿样式清理）；`ModelProviderManagePanel` 移除 fluxionai 注册推广链接；`models/providers/service.py` 报错文案去掉上游文档 URL；`HomeView.vue` 注释去上游指称；`packages/pisuan-cli/pyproject.toml` 项目 URL 重指向 yogyoho/pisuan。
+- README/README.en/docs 品牌替换：徽章精简（去 Release/DeepWiki/trendshift）、赞助商段与 Star 横幅移除、文档导航改仓内相对路径、克隆指引与贡献文档全量重指向 `github.com/yogyoho/pisuan`；图片仍走 oss-img.xerrors.cn 原图（外观资产，另批处理）。
+- 种子脚本参数化：`seed_initial_users.py` 全部凭据改 `PISUAN_SEED_*` 环境变量注入（默认 admin/系统管理员/pisuan123456），移除个人真实信息硬编码；`.env.template` 增加键位说明。
+- 数据库改名：`.env` `POSTGRES_DB=yuxi_know` → `pisuan`，存量库停机窗口 `ALTER DATABASE yuxi_know RENAME TO pisuan`，api/worker 强制重建后验证。 <!-- rename-keep -->
+- 测试前缀中性化：`test_live_api_cleanup_run_rows.py` `YUXI-TEST-ordinary` → `PISUAN-TEST-ordinary`。 <!-- rename-keep -->
+- 改名工具夹具同步：`ResidueAllowlistTest` 12 项 → 7 项（种子口令 ×2、YUXI-TEST、克隆指引、推广链接均已清零移除）；`upstream-sync-guide` 残余口径表补 2026-11-07 批次注记。
+- 落地页 HomeViewV2 删除"5 步加工"指标横条（用户指示）：整段 lp-metrics 模板 + metrics 数组 + 4 个孤儿 icon import + 全部关联 CSS（含两处响应式块）。
+- 运行时联网图标本地化（用户报告无网环境智能体卡片图标全裂）：`pixelAvatar.js` 的 `generateAgentAvatar` 原请求 api.dicebear.com 外网 API，改为随前端包发布 12 张 DiceBear thumbs 风格本地图（`web/public/agent-avatars/`，固定 8 色底板、seed 哈希取图，thumbs 风格 CC0 1.0 权利声明内嵌 SVG）；`kb_utils.js` 知识库 dify/notion 品牌图标原请求 npmmirror CDN，改为本地 `web/public/kb-icons/`（取自 @lobehub/icons-static-svg，MIT）。全部消费组件经 HMR 验证更新，dev server 本地路径 200。
+
 ### pisuan 定制增量（2026-11-05）
 
 - feat(skills): 分章流章级成稿文档 + 用户可选合并下载（用户实测反馈：节稿粒度文件 13 章 50+ 且带占位符不可读）。`build_output.py --chapter chN --emit-doc`：真跑章门 PASS 为唯一凭据写盘 `<工作区>/章稿/第N章-{章名}.md`（注入后成稿：真数字+渲染表格+表号；FAIL 不写盘 rc≠0；幂等原子写内容不变保 mtime；title 过文件系统安全化保留中文；落章稿目录非 outputs/ 交付物，交付名门不破）；chapter-writer SKILL.md 双触点——3e 确认后同轮产成稿文件卡（不停车、返工确认后自动更新），步骤 4-7 合并入口对话指令式（末章确认后主动问 + 用户随时「合并完整报告」，缺章如实列清单禁静默合并）。`state/chapters/chNN.md`（raw 中间稿）与节稿层零改动（两层模型不变）；briefing.py 零改动。同步纪律修正：writer 包为 scripts/ 单源（sync_chapter_skill.py 单向镜像），本次改动先落 writer 源再镜像，守卫测试 4 passed 双包字节一致。测试：`scripts/tests/test_emit_chapter_doc.py` 5 用例（PASS 写盘/FAIL 不写盘/幂等/文件名安全化/--emit-doc 需连 --chapter）；双包全量各 276 passed（宿主+容器双布局）；hengcheng-ch3 真实工作区端到端验证（59KB 章稿、SL1 残留=0、FIG 5 处合法保留、268 行渲染表格）；四面部署哈希一致（api 重启窗口拷贝，避开热重载脆弱性）。

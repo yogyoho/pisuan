@@ -164,7 +164,7 @@ const userStore = useUserStore()
 const infoStore = useInfoStore()
 const agentStore = useAgentStore()
 
-// Hero 副标题轮播（参考上游 Yuxi HomeView 实现）
+// [pisuan-custom] Hero 副标题轮播
 const SUBTITLE_OPTIONS = [
   '企业智能体平台套件，融合 RAG 与知识图谱',
   '统一编排 Agent、知识库、图谱与工具链',

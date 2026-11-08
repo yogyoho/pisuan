@@ -79,5 +79,3 @@ evaluation_experiment_name=<experiment-name>
 - Trace 缺失：检查 API/worker 是否读取到 Langfuse 配置；Yuxi 业务结果仍以 PostgreSQL 的 Run 和消息为准。
 - 大量超时：降低 `--max-concurrency`，检查模型响应时间、worker 健康状态和沙盒创建耗时。
 - 实验部分成功：不要只看命令退出前的汇总，回到 Langfuse 检查每条 item 是否都有结果；CLI 会在成功写入数量与 Dataset 总数不一致时报告错误。
-
-实现入口见 [Agent Eval 路由](https://github.com/xerrors/Yuxi/blob/main/backend/server/routers/agent_invocation_eval_router.py)、[CLI 实验](https://github.com/xerrors/Yuxi/blob/main/packages/yuxi-cli/src/yuxi_cli/agent_eval.py) 和 [Langfuse 集成](../advanced/langfuse-integration.md)。
