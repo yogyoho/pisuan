@@ -1,0 +1,31 @@
+# Yuxi 生产离线部署包
+
+## 快速开始
+
+    1. （若服务器无 Docker）sudo bash install-docker.sh
+    2. cp deploy.conf.example deploy.conf && vi deploy.conf   # 填 3 个必填项
+    3. chmod +x install.sh && sudo ./install.sh
+    4. 按脚本末尾验证清单逐项核对
+
+详细步骤与故障排查见 docs/MANUAL-DEPLOY.md；升级见 docs/MANUAL-UPGRADE.md；
+第三方组件许可证义务见 docs/LICENSES.md。
+
+## 目录结构
+
+    install.sh / load-images.sh / install-docker.sh   # 部署脚本
+    deploy.conf(.example)                             # 唯一手写配置
+    .env.prod(.example)                               # 环境变量（install.sh 自动补全密钥）
+    docker-compose.prod.yml                           # 核心栈（含 gitea refs 链）
+    docker-compose.langfuse.yml                       # Langfuse 观测栈（独立项目名）
+    images/core / images/gpu                          # 镜像 tar（gpu 可 --skip-gpu 跳过）
+    payload/docker|nvidia|models                      # Docker 引擎 / NVIDIA / bge-m3
+    state/yuxi                                      # 预置 refs 数据仓与 Gitea 账号数据
+    manifest.txt / manifest.json / sha256.txt         # 镜像清单与校验
+    docs/                                             # 手册与许可附录
+
+## 数据红线（绝不可执行）
+
+    docker compose -p yuxi-prod down -v   # 删数据卷
+    docker volume prune / docker system prune --volumes
+    rm -rf docker/volumes                   # 删历史文件/Skill/refs 数据
+    docker system prune -af                 # 删已 load 未 up 的镜像
