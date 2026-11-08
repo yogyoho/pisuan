@@ -14,21 +14,23 @@ die(){ log_e "$*"; echo ">>> 手工续行见 docs/MANUAL-DEPLOY.md 对应章节"
 
 # ─ [0] 预检 ────────────────────────────────────────────────
 preflight(){
-  command -v docker >/dev/null || die "Docker 未安装：先执行 sudo bash install-docker.sh"
+  command -v docker >/dev/null || die "Docker 未安装：先执行 bash install-docker.sh"
   docker compose version >/dev/null || die "compose 插件缺失"
-  disk=$(df -BG . | awk 'NR==2{print $4}' | sed 's/G//'); [ "$disk" -ge 100 ] || log_w "磁盘仅 ${disk}G（建议 ≥120G）"
+  command -v openssl >/dev/null || die "缺 openssl（密钥生成必需）"
+  command -v curl >/dev/null || die "缺 curl（健康检查必需）"
+  disk=$(df -BG . | awk 'NR==2{print $4}' | sed 's/G//'); [ "$disk" -ge 120 ] || log_w "磁盘仅 ${disk}G（建议 ≥120G）"
   mem=$(free -m 2>/dev/null | awk '/^Mem:/{print $2}' || echo 0); [ "$mem" -ge 30000 ] || log_w "内存不足 30G（GPU 模式建议 ≥32G）"
   mapcnt=$(cat /proc/sys/vm/max_map_count 2>/dev/null || echo 0)
   if [ "$mapcnt" -lt 262144 ]; then
-    echo "vm.max_map_count=262144" | sudo tee /etc/sysctl.d/99-pisuan.conf >/dev/null
-    sudo sysctl -p /etc/sysctl.d/99-pisuan.conf
+    echo "vm.max_map_count=262144" | tee /etc/sysctl.d/99-pisuan.conf >/dev/null
+    sysctl -p /etc/sysctl.d/99-pisuan.conf
     log_i "vm.max_map_count 已设为 262144（Milvus 硬需求）"
   fi
   # 沙盒地址池冲突警告（与宿主 IP 同 /20 即提示）
   hostnet=$(ip -4 addr show scope global 2>/dev/null | grep -oE 'inet [0-9.]+' | awk '{print $2}' | head -1 || true)
   [ -n "$hostnet" ] && [ "${hostnet%%.*}" = "10" ] && [ "${hostnet#10.253.}" != "$hostnet" ] && \
     log_w "宿主 IP $hostnet 可能与沙盒地址池 10.253.240.0/20 冲突——部署前改 .env.prod 的 SANDBOX_DOCKER_ADDRESS_POOL"
-  grep -E ':(80|6050|6432|7379|10000|10001|20530|10091|8474|8687|3000|30001|8080|9002)\b' /proc/net/tcp* >/dev/null 2>&1 && \
+  grep -E ':(0050|17A2|1920|1CD3|2710|2711|5032|276B|211A|21EF|0BB8|7531|1F90|232A)\b' /proc/net/tcp* >/dev/null 2>&1 && \
     log_w "部分端口可能被占用（/proc/net/tcp 粗检）——完整端口清单见 MANUAL-DEPLOY §0"
   return 0
 }
@@ -36,7 +38,7 @@ preflight(){
 # ─ [1] deploy.conf → .env.prod（幂等定向注入）────────────────
 gen_env(){
   [ -f deploy.conf ] || die "缺 deploy.conf：cp deploy.conf.example deploy.conf 后填写必填项"
-  [ -f .env.prod ] || cp .env.prod.example .env.prod
+  [ -f .env.prod ] || sed 's/\r$//' .env.prod.example > .env.prod
   local gen_keys="JWT_SECRET_KEY API_KEY_DERIVATION_SECRET SANDBOX_PROVISIONER_TOKEN POSTGRES_PASSWORD
     NEO4J_PASSWORD MINIO_ACCESS_KEY MINIO_SECRET_KEY PISUAN_INSTANCE_ID
     LANGFUSE_STACK_NEXTAUTH_SECRET LANGFUSE_STACK_SALT LANGFUSE_STACK_ENCRYPTION_KEY LANGFUSE_STACK_PG_PASS
@@ -51,6 +53,7 @@ gen_env(){
   grep -q "^PISUAN_ENV=" .env.prod || echo "PISUAN_ENV=production" >> .env.prod
   # deploy.conf 注入（去行内注释与空白后追加；已存在跳过；空值不注入→必填校验兜底）
   while IFS='=' read -r k v; do
+    k="${k#"${k%%[![:space:]]*}"}"
     case "$k" in ''|\#*) continue;; esac
     v=$(printf '%s' "$v" | sed -e 's/[[:space:]]#.*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
     [ -z "$v" ] && continue
@@ -73,13 +76,13 @@ gpu_layer(){
   command -v nvidia-smi >/dev/null || die "无 nvidia-smi：先装驱动（payload/nvidia/，装后需重启再重跑本脚本）再继续"
   if ! command -v nvidia-ctk >/dev/null; then
     if command -v apt-get >/dev/null; then
-      sudo apt-get install -y ./payload/nvidia/libnvidia-container*.deb ./payload/nvidia/nvidia-container-toolkit*.deb || die "toolkit 安装失败"
+      apt-get install -y ./payload/nvidia/libnvidia-container*.deb ./payload/nvidia/nvidia-container-toolkit*.deb || die "toolkit 安装失败"
     elif command -v rpm >/dev/null; then
-      sudo rpm -ivh payload/nvidia/*.rpm || die "toolkit 安装失败"
+      rpm -ivh payload/nvidia/*.rpm || die "toolkit 安装失败"
     else die "未知发行版：见 MANUAL-DEPLOY 附录 A"; fi
   fi
   docker info 2>/dev/null | grep -qi nvidia || {
-    sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker || die "nvidia runtime 配置失败"
+    nvidia-ctk runtime configure --runtime=docker && systemctl restart docker || die "nvidia runtime 配置失败"
   }
   docker info 2>/dev/null | grep -qi nvidia || die "docker info 无 nvidia runtime"
   log_i "GPU runtime 就绪"
@@ -89,7 +92,7 @@ gpu_layer(){
 state_sync(){
   if [ -d state/pisuan ]; then
     mkdir -p docker/volumes/pisuan
-    cp -rn state/pisuan/. docker/volumes/pisuan/ && log_i "预置状态落位（refs-repo/gitea-data；已存在项跳过）"
+    cp -rn state/pisuan/. docker/volumes/pisuan/ && log_i "预置状态落位（refs-repo/gitea-data；已存在项跳过）" || die "预置状态落位失败（磁盘/权限？）"
     # install 以 root 拷贝，容器以 1000:1000 读写（api=refs-repo 工作树，gitea=/data）
     [ -d docker/volumes/pisuan/refs-repo ] && chown -R 1000:1000 docker/volumes/pisuan/refs-repo
     [ -d docker/volumes/pisuan/gitea-data ] && chown -R 1000:1000 docker/volumes/pisuan/gitea-data
@@ -99,8 +102,13 @@ state_sync(){
 
 # ─ [5] 启动 ────────────────────────────────────────────────
 up_stack(){
-  # ENABLE_GPU=false 时不带 --profile all（compose 不读 ENABLE_GPU，profile 是唯一机制）
-  local prof=""; grep -q "^ENABLE_GPU=true" .env.prod && prof="--profile all"
+  # --skip-gpu 优先于 ENABLE_GPU（无 GPU 机器按 flag 部署）；compose 不读 ENABLE_GPU，profile 是唯一机制
+  local prof=""
+  if [ "$SKIP_GPU" -eq 1 ]; then
+    log_i "跳过 GPU profile（--skip-gpu）"
+  elif grep -q "^ENABLE_GPU=true" .env.prod; then
+    prof="--profile all"
+  fi
   $COMPOSE $prof up -d || die "compose up 失败"
   if grep -q "^ENABLE_LANGFUSE=true" .env.prod; then
     docker compose -p langfuse --env-file .env.prod -f docker-compose.langfuse.yml up -d \

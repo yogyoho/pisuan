@@ -17,6 +17,8 @@
 | GPU | NVIDIA 驱动 + Container Toolkit（ENABLE_GPU=true 时） | `nvidia-smi` |
 | 架构 | x86_64（aarch64 需换对应 payload） | `uname -m` |
 
+**包完整性校验（解压前）**：在包所在目录执行 `sha256sum -c <包名>.tar.gz.sha256.txt`，校验失败勿解压部署。
+
 ## 1. 安装 Docker（无 Docker 时）
 
 ```bash
