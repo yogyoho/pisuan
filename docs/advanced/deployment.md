@@ -164,6 +164,18 @@ worker 的 Compose 健康检查通过 `python -m pisuan.services.worker_health` 
 
 公开头像和智能体图片通过同源 `/minio/public/...` 只读代理访问。不要把 MinIO 的 9000 对象 API 或 9001 控制台暴露到公网；知识库等私有 bucket 不经过该代理。需要单独的静态资源域名时，设置 `MINIO_PUBLIC_URL`，并在域名侧保持同样的只读限制。
 
+## 离线部署
+
+客户内网无外网访问、宿主机尚未安装 Docker 时的交付方式。交付包自带全部服务镜像、包内部署脚本（`install.sh` 幂等部署、`load-images.sh`、`install-docker.sh`）、Docker Engine 与 Compose 插件 payload，并附导出时点原样快照的业务数据（PostgreSQL、Milvus、Neo4j 数据与环评文件库），现场无需访问外网。构建侧的导出脚本与包结构见 [deploy/offline](https://github.com/yogyoho/pisuan/blob/main/deploy/offline/README.md)（导出前需 `docker compose down` 保证快照一致，导出与镜像构建有磁盘空间要求）；现场逐步操作以包内 `docs/MANUAL-DEPLOY.md` 为准，本页不重复部署步骤。
+
+与在线部署的主要差异：
+
+- 模型全部客户自备：对话、嵌入与 OCR 引擎经设置 UI 或 `MINERU_API_URI` 等变量接入客户自有服务，交付包不含预置模型与 GPU 相关层；
+- 文档解析默认使用 api 镜像内置的 rapid_ocr 引擎（PP-OCRv5 mobile 模型已在镜像构建期烘焙），开箱即可解析 PDF，无需外部 OCR 服务；
+- 预置数据随包：知识库、数据库与文件库快照含本地 Gitea 承载的环评 refs 链，均为导出时点原样数据（含开发期数据），交付前应确认内容边界。
+
+在线部署的其余事项（TLS 反向代理、密钥配置、验证与维护）对离线部署同样适用。
+
 ## 开发环境端口与入口
 
 开发 Compose 发布到宿主机的端口如下；生产 Compose 默认只发布 Web 入口，其余服务通过 Compose 内网访问。
@@ -253,7 +265,7 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml \
 
 Pisuan 本体使用 MIT License。Compose 依赖以独立进程运行，Pisuan 通过公开协议访问它们；第三方组件的许可证不会因为使用 Compose 就变成 MIT。
 
-当前 Compose 引用的主要组件如下。表中的版本是镜像 tag；只有明确写死的 tag 才能提供对应的版本预期，`postgres:16`、`mineru-vllm:latest` 和 `paddlex:latest` 仍可能随重新拉取而变化：
+当前 Compose 引用的主要组件如下。表中的版本是镜像 tag；只有明确写死的 tag 才能提供对应的版本预期，`postgres:16` 仍可能随重新拉取而变化：
 
 | 组件 | 镜像引用 | 许可证 |
 | --- | --- | --- |
@@ -263,7 +275,7 @@ Pisuan 本体使用 MIT License。Compose 依赖以独立进程运行，Pisuan �
 | etcd | `quay.io/coreos/etcd:v3.5.5` | Apache-2.0 |
 | PostgreSQL | `postgres:16` | PostgreSQL License |
 | Redis | `redis:7.4.10-alpine` | RSALv2 / SSPLv1（均非 OSI 许可证） |
-| MinerU / PaddleX（可选） | `mineru-vllm:latest` / `paddlex:latest` | 以各自 Dockerfile 和上游声明为准 |
+| MinerU / PaddleX（可选） | 本地构建：`<项目名>-mineru:latest` / `<项目名>-paddlex:latest`（`docker/mineru.Dockerfile` / `docker/paddlex.Dockerfile`） | 以各自 Dockerfile 和上游声明为准 |
 
 MinIO 的镜像由本仓库构建：MinIO 在 Docker Hub 与 quay.io 上的镜像已不再公开分发（同一 registry 上其他镜像仍可匿名拉取），`dl.min.io` 返回 410。Compose 按 `docker/minio/Dockerfile` 构建该镜像，构建时从官方 GitHub Release 下载固定版本的二进制并校验 sha256；它运行与下架前镜像逐字节相同的 MinIO 二进制，基础镜像与镜像内附带文件则不同（不再包含 `mc`、`minisig` 与 `*_FILE` 变量默认值）。
 

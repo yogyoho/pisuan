@@ -365,6 +365,16 @@ DomainFactoryView 纯增量挂载
 - style(domain-factory): 词表列表单位列加宽（用户见 dB(A) 折行）：单位 6%→8%、口径 19%→17%，其余列不动；Range API 实测 dB(A) 单行渲染。
 - feat(domain-factory): 公式参数核对页黑框公式 KaTeX 排版。formulas.json 的 expr 为伪数学串（×−·√Σ 与中文注释混排），新增纯函数模块 `expr_latex.js`：按中文/全角/~ 切「数学段/文本段」交替序列（拼接无损），数学段消解伪符号后交给 katex 内联渲染（多字母符号直立、下划线键名整名不拆、aM 小写大写边界拆两因子、2.68e-3→×10⁻³），文本段原样输出享受块内换行；任一数学段 KaTeX 抛错整条回落原 token 着色视图。单测 `web/test/unit/exprLatex.test.js` 以公式库全量 7 条 expr 为夹具（切段无损/伪符号消解/括号配平/无裸下划线 + 典型片段断言）。黑框背景钉死 #18181b：暗色主题灰阶整体反转（--gray-1000→#fafafa）致「暗块」变白底浅字（既有缺陷，本次一并修）。验证：7/7 公式 KaTeX 渲染零回落、明暗截图（.wolf/fml_latex_*.jpeg）、console 净、eslint 0 / prettier 全过。
 
+### pisuan 定制增量（2026-11-08）
+
+无网离线部署交付批次：面向客户内网无外网、宿主机未装 Docker 的现场，导出脚本一键打包「服务镜像 + 数据快照 + Docker 引擎 payload + 包内脚本」，现场以 `install.sh` 幂等部署。三项范围裁定均经用户确认：对话/OCR/嵌入模型与 GPU 层全裁出包（客户自有引擎经设置 UI 接入）、知识库+数据库+文件库数据原样快照进包（不脱敏）、prod compose 补齐文件库挂载。
+
+- 离线包脚本与导出工具链：`deploy/offline/` 包资产（`.env.prod.example`/`deploy.conf.example` 模板、MANUAL-DEPLOY/MANUAL-UPGRADE/LICENSES 手册与第三方许可附录、Docker Engine+compose 插件 payload——仅引擎层）；包内 `install.sh` 九步幂等部署（state 同步 `cp -rn` 不覆盖 + 按实测 uid chown：postgres 999/neo4j 7474/api 1000）、`load-images.sh`、`install-docker.sh`，卷备份改用包内镜像（离线无 alpine）；导出侧 `scripts/offline-export.ps1`（构建/结构验证/save/组装/tar.gz），含停栈守卫（检测到运行栈占用 docker/volumes 即拒绝——导出前需 `docker compose down`）与空间门槛（OutDir ≥55G、构建 C 盘 ≥20G）。
+- 范围裁定落地：模型全裁——bge-m3 嵌入权重、mineru/paddlex 镜像、NVIDIA payload 与 ENABLE_GPU/--skip-gpu/profile all 机制全部不进包，对话/OCR/嵌入引擎由客户自备经设置 UI 接入；数据原样快照——docker/volumes 的 pisuan 整树（含 eia-library 文件库与环评 refs 工作树）/postgresql/milvus 四子卷/neo4j data 拷入包内 state/（redis 与 logs 排除），原样含开发期数据，交付前须确认内容边界。
+- 镜像构建期烘焙：api 镜像内置 rapid_ocr 并烘焙 PP-OCRv5 mobile 模型（离线首解析开箱可用）；backend/scripts 烘焙进镜像（离线 seed 建号依赖）。
+- prod compose 补缺：eia-library 文件库挂载（环评样例报告/标准规范，此前 dev 有 prod 无）；gitea 服务与 REFS git 链 env/挂载随离线交付进 prod，GITEA_REFS_PASSWORD 改 `:?` 必填校验。
+- 文档与质量审查：MANUAL-DEPLOY/README/LICENSES 对齐模型全裁与数据快照口径，install 摘要补 OCR 引擎验收提示；多轮审查修补（包内脚本 13 项、导出脚本 4 项、守卫 WSL 归一/端口表/剥离守卫锚点/LICENSES tag、快照缺失分级）。
+
 ### pisuan 定制增量（2026-11-07）
 
 无网环境离线交付批次（本目录即交付源，sync-dev 再生流程暂停）：localized 树品牌词与断链清扫 + 种子脚本去个人化 + 数据库改名。四项决策均经用户确认：上游链接移除/中性化、库名现在迁移、种子凭据参数化、README/docs 品牌词+断链替换（历史文档与改名工具本身不动）。
