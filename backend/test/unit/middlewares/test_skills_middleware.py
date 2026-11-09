@@ -633,3 +633,23 @@ def test_read_file_denies_skill_outside_readable_scope() -> None:
     updated = middleware._process_tool_call_result(result, request)
 
     assert updated is result
+
+
+def test_gating_exempts_filesystem_tools() -> None:
+    """文件工具是文件系统中间件常驻基础能力且 read_file 是激活通道本身，技能声明它们不得门控（bug-4219）。"""
+    middleware = SkillsMiddleware()
+    context = SimpleNamespace(
+        tools=[],
+        _skill_runtime_snapshot={
+            "effective_skills": ["alpha"],
+            "runtime_skills": {
+                "alpha": _runtime_skill("alpha", tools=["read_file", "write_file", "web_search"]),
+            },
+        },
+    )
+
+    gated = middleware._resolve_gated_tool_names(context)
+
+    assert "read_file" not in gated
+    assert "write_file" not in gated
+    assert "web_search" in gated

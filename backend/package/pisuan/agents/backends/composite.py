@@ -20,7 +20,7 @@ _TOOL_RESULT_EVICTION_EXEMPT_TOOLS = frozenset(TOOLS_EXCLUDED_FROM_EVICTION) | {
 
 # 文件工具 allowlist：显式排除 destructive delete。Pisuan backend 未实现 delete，
 # 且删除语义需要审批与审计设计，开放前不应让模型看到该工具。
-_AGENT_FS_TOOLS: tuple[FsToolName, ...] = (
+AGENT_FS_TOOLS: tuple[FsToolName, ...] = (
     "ls",
     "read_file",
     "write_file",
@@ -133,5 +133,5 @@ def create_agent_filesystem_middleware(
     return PisuanFilesystemMiddleware(
         backend=backend,
         tool_token_limit_before_evict=tool_token_limit_before_evict,
-        tools=[name for name in _AGENT_FS_TOOLS if name not in disabled_tools],
+        tools=[name for name in AGENT_FS_TOOLS if name not in disabled_tools],
     )

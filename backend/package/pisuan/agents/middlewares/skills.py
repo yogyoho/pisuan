@@ -13,6 +13,7 @@ from langchain.agents.middleware import AgentMiddleware, ModelRequest, ModelResp
 from langchain.tools.tool_node import ToolCallRequest
 from langgraph.types import Command
 
+from pisuan.agents.backends import AGENT_FS_TOOLS
 from pisuan.agents.backends.paths import VIRTUAL_PERSONAL_SKILLS_PATH, VIRTUAL_SKILLS_PATH
 from pisuan.agents.mcp.service import get_enabled_mcp_tools
 from pisuan.agents.skills.runtime import RuntimeSkill, build_dependency_bundle
@@ -149,7 +150,10 @@ class SkillsMiddleware(AgentMiddleware):
         gated: set[str] = set()
         for slug in effective_skills:
             gated.update(runtime_skills.get(slug, {}).get("tools", []))
-        return gated - base_tool_names
+        # 文件工具是文件系统中间件常驻注册的平台基础能力（composite.AGENT_FS_TOOLS），
+        # 且 read_file 是技能激活通道本身（本中间件靠拦截 read_file(SKILL.md) 激活）。
+        # 技能 tool_dependencies 声明它们会造成死锁：工具不可见→无法激活→永不可见（bug-4219）。
+        return gated - base_tool_names - set(AGENT_FS_TOOLS)
 
     async def _get_mcp_tools_from_context(
         self,
