@@ -1,12 +1,14 @@
 ---
 name: slot-filler
-description: "根据上下文和用户提供的附件，智能填充段落模板中的插槽。在模板推荐完成后自动触发，为每个插槽填入数据并给出置信度，绝不编造数据，无法填充的插槽会提示用户补充。依赖 template-recommender 技能。"
+description: "【已被接管·存量兼容】逐节引导写作流程（模板候选自选→组装建议→补全确认→推进下一节）已由 template-recommender 技能一体承担，新会话勿单独触发本技能。本技能仅供存量会话按旧协议批量填槽：根据上下文和用户提供的附件，为段落模板中的插槽填入数据并给出置信度，绝不编造数据，无法填充的插槽提示用户补充。"
 version: "2026.04.29"
 tool_dependencies: ["query_kb", "ask_user_question", "get_templates", "list_report_types"]
 skill_dependencies: ["template-recommender"]
 ---
 
 # 智能填槽
+
+> **接管声明（2026-11-09）**：逐节引导写作流程（模板候选自选 → 组装建议 → 补全确认 → 推进下一节）已由 template-recommender 技能一体承担，新会话勿单独触发本技能；以下旧版批量填槽协议仅供存量会话兼容。
 
 在段落模板推荐（template-recommender）完成后，根据对话上下文、用户上传的附件文件以及知识库中的可用数据，智能填充模板中的每个插槽。所有填充数据必须可溯源，不允许编造任何事实性数据。
 
