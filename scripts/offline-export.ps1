@@ -17,9 +17,10 @@ if ($branch -ne 'pisuan-localized') { throw "必须在 pisuan-localized 分支�
 $Root = (Resolve-Path "$PSScriptRoot\..").Path
 Set-Location $Root
 
-# ── 空间预检 ──
+# ── 空间预检（SkipPackage 只做 staging 刷新：tar 复用不重写、快照逐目录先删后拷，增量远小于整包；55G 线是打包模式的 2× 包体积同盘余量）──
 $drive = (Get-PSDrive ($OutDir.Substring(0,1))).Free/1GB
-if ($drive -lt 55) { throw "工作区盘 $($OutDir[0]) 仅剩 $([int]$drive)G，需 ≥55G（staging 包目录 + tar.gz 同盘约 2×包体积；现包体约 25-30G）" }
+$floor = if ($SkipPackage) { 20 } else { 55 }
+if ($drive -lt $floor) { throw "工作区盘 $($OutDir[0]) 仅剩 $([int]$drive)G，需 ≥${floor}G（staging 包目录 + tar.gz 同盘约 2×包体积；现包体约 25-30G）" }
 $cFree = (Get-PSDrive C).Free/1GB
 if (-not $NoBuild -and $cFree -lt 20) { throw "C 盘仅剩 $([int]$cFree)G，构建需 ≥20G" }
 
@@ -56,9 +57,12 @@ if (-not ($images -contains "yuxi-prod-api:$version") -or @($images | Where-Obje
 }
 
 # ── gitea retag 为官方名（必须在缺失核对之前，否则核对先 throw）──
-# PS5.1：2>$null 在 EAP=Stop 下镜像缺失即 NativeCommandError 终止——先降级再核对
+# PS5.1 两个坑（19041 实测）：①2>$null 在 EAP=Stop 下原生命令写 stderr 即 NativeCommandError 终止——先降级；
+# ②不能用 [bool](inspect 2>$null) 判存在——stderr ErrorRecord 泄漏进成功流，缺失镜像也被判真，
+#   导致补拉分支被跳过、缺失核对漏报（2026-11-09 导出实测翻车）。存在性判定一律用 $LASTEXITCODE。
 $ErrorActionPreference = 'Continue'
-$giteaExists = [bool](docker image inspect 'gitea/gitea:1.24' 2>$null)
+docker image inspect 'gitea/gitea:1.24' 2>$null | Out-Null
+$giteaExists = ($LASTEXITCODE -eq 0)
 $ErrorActionPreference = 'Stop'
 if ($images -contains 'gitea/gitea:1.24' -and -not $giteaExists) {
   docker pull docker.m.daocloud.io/gitea/gitea:1.24
@@ -66,17 +70,20 @@ if ($images -contains 'gitea/gitea:1.24' -and -not $giteaExists) {
   if ($LASTEXITCODE -ne 0) { throw "gitea 镜像拉取/retag 失败（退出码 $LASTEXITCODE）" }
 }
 
-# ── 缺失镜像核对（save 前把关；EAP 降级同上）──
+# ── 缺失镜像核对（save 前把关；存在性判定用 $LASTEXITCODE，同上坑②）──
 $ErrorActionPreference = 'Continue'
-$missing = @($images | Where-Object { -not (docker image inspect $_ 2>$null) })
+$missing = @($images | Where-Object { docker image inspect $_ 2>$null | Out-Null; $LASTEXITCODE -ne 0 })
 $ErrorActionPreference = 'Stop'
 if ($missing.Count -gt 0) { throw "本地缺镜像（先 docker pull 或去掉 -NoBuild）: $($missing -join ', ')" }
 
-# ── 结构验证 ──
+# ── 结构验证（inspect 失败即缺失/损坏，显式报错而非空架构混过）──
+$ErrorActionPreference = 'Continue'
 foreach ($img in $images) {
-  $arch = (docker image inspect $img --format '{{.Architecture}}')
+  $arch = (docker image inspect $img --format '{{.Architecture}}' 2>$null)
+  if ($LASTEXITCODE -ne 0) { throw "本地缺镜像或 inspect 失败: $img" }
   if ($arch -ne 'amd64') { throw "$img 架构为 $arch，期望 amd64" }
 }
+$ErrorActionPreference = 'Stop'
 $apiImage = $images | Where-Object { $_ -match '-api:' } | Select-Object -First 1
 docker run --rm --entrypoint ls $apiImage /app/scripts /usr/local/bin/yuxi-entrypoint >$null
 if ($LASTEXITCODE -ne 0) { throw "api 镜像内 /app/scripts 抽查失败（Task 2 的 COPY 未生效？）" }
@@ -128,14 +135,17 @@ if (@($stripped -match '^  api:').Count -eq 0) { throw "打包版 compose 剥离
 New-Item -ItemType Directory -Force -Path "$pkg\docker\sandbox_provisioner","$pkg\docs","$pkg\payload\docker","$pkg\state" | Out-Null
 Copy-Item "$Root\docker\sandbox_provisioner\sandbox.env" "$pkg\docker\sandbox_provisioner\sandbox.env" -Force
 
-# payload（Docker 引擎静态包 / compose 插件）来自工作区 yuxi-offline-work\payload（下载脚本落位）
+# payload（Docker 引擎静态包 / compose 插件）来自导出工作区 yuxi-offline-work\payload
+# （按包内 payload/README.md 清单下载落位）。缺失即拒绝导出：2026-11-09 round 8 实测教训——
+# WARNING 不阻塞，带空 payload 出包，无预装 Docker 的客户现场 install-docker.sh 无料可装。
 $payloadSrc = Join-Path $work "payload"
-if (Test-Path $payloadSrc) {
-  Copy-Item "$payloadSrc\*" "$pkg\payload\" -Recurse -Force
-  Write-Host "[payload] 已收入包内（$payloadSrc）"
-} else {
-  Write-Warning "[payload] $payloadSrc 不存在——包内 payload 为空，Docker 引擎/compose 插件离线安装不可用"
+$payloadDocker = Join-Path $payloadSrc "docker"
+$tgz = if (Test-Path $payloadDocker) { @(Get-ChildItem $payloadDocker -Filter 'docker-*.tgz') } else { @() }
+if ($tgz.Count -eq 0 -or -not (Test-Path "$payloadDocker\docker-compose-linux-x86_64")) {
+  throw "payload 缺失：$payloadDocker 下需有 docker-*.tgz 与 docker-compose-linux-x86_64（按包内 payload/README.md 清单下载落位）——payload 是交付内容，缺失即拒绝导出"
 }
+Copy-Item "$payloadSrc\*" "$pkg\payload\" -Recurse -Force
+Write-Host "[payload] 已收入包内（$payloadSrc）"
 
 # 镜像搬入包（同日重跑幂等：包内旧 images 先清除再搬入——Move-Item -Force 对已存在目录不合并会报错）
 # 旧版导出可能在工作区留有 images\gpu（mineru/paddlex tar）——全裁后一并清除，防陈旧 GPU 层流入包
@@ -179,8 +189,15 @@ $stateDst = "$pkg\state"
 function Copy-Snapshot([string]$Src, [string]$Dst) {
   if (-not (Test-Path $Src)) { throw "数据卷缺失：$Src——数据快照是本包交付内容，缺失即拒绝导出（确认本机运行栈 docker\volumes 在位）" }
   if (Test-Path $Dst) { Remove-Item $Dst -Recurse -Force }   # 同日重跑幂等
-  Copy-Item $Src $Dst -Recurse -Force
-  $gb = [math]::Round((Get-ChildItem $Dst -Recurse | Measure-Object Length -Sum).Sum/1GB, 1)
+  # robocopy /MT 多线程拷贝：快照是万级小文件（如 milvus\minio 5.3GB/1 万文件），
+  # Copy-Item 单线程在本机实测仅 ~0.5MB/s（系统扫描服务放大逐文件开销），robocopy 快 10-50 倍。
+  # 退出码 0-7 均为成功（位标志：有跳过/多出文件也算），≥8 才是真失败。
+  robocopy $Src $Dst /E /MT:16 /R:2 /W:2 /NFL /NDL /NP /NJH | Out-Null
+  if ($LASTEXITCODE -ge 8) { throw "快照拷贝失败（robocopy 退出码 $LASTEXITCODE）：$Src → $Dst" }
+  # PS5.1：-Recurse 结果混入 DirectoryInfo（无 Length）或为空集（空子卷如 milvus\minio_config）时
+  # Measure-Object Length 直接抛错——用 -File 过滤并回退 0（空子卷合法，同 L209 警告不阻塞语义）
+  $files = @(Get-ChildItem $Dst -Recurse -File)
+  $gb = if ($files.Count -gt 0) { [math]::Round(($files | Measure-Object Length -Sum).Sum/1GB, 1) } else { 0 }
   Write-Host "[state] $Dst ← $Src（$gb GB）"
 }
 # 整树：yuxi（知识库文件库/threads/refs-repo/gitea-data/eia-library 等）、postgresql、neo4j\data
