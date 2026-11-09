@@ -48,7 +48,11 @@ if ($NoBuild) {
   $images = @(docker @composeArgs config --images)
   if ($LASTEXITCODE -ne 0) { throw "docker compose config --images 失败（退出码 $LASTEXITCODE）——检查 .env.prod 是否已准备、docker-compose.prod.yml 是否在位" }
 }
-$images += Get-Content "$Root\deploy\offline\assets\extra-images.txt" | Where-Object { $_ -and -not $_.StartsWith('#') }
+# PS5.1 坑③：Get-Content 不带 -Encoding 时按 ANSI/GBK 解码 UTF-8 无 BOM 文件——中文注释行
+# 末字节恰为 GBK 双字节前导字节时会吞掉换行符，把下一行镜像名合并进注释行一起被
+# StartsWith('#') 滤掉（2026-11-09 实测：langfuse/langfuse:4 因此八轮导出全部漏 save）。
+# 读仓库内含中文注释的资产文件一律显式 -Encoding UTF8。
+$images += Get-Content "$Root\deploy\offline\assets\extra-images.txt" -Encoding UTF8 | Where-Object { $_ -and -not $_.StartsWith('#') }
 $images = $images | Select-Object -Unique
 
 # 钉定断言：必须出现 pisuan-prod-api:$version，且无 pisuan- 漂移前缀（外置镜像如 postgres:16 不受影响）
