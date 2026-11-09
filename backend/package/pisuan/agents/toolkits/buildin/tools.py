@@ -762,7 +762,7 @@ async def list_chapter_keys(domain: str, report_type: str) -> list[str]:
 GET_TEMPLATES_DESCRIPTION = """
 取某章节（或全部）的结构化段落模板（来自 learned_templates）。
 返回 [{generalized, slots, chapter, sample_original, standard_code}]。
-template-recommender 用它推荐段落模板；slot-filler 用它取插槽定义。
+template-recommender 逐节引导流用它取模板候选；slot-filler（旧版批量填槽，已接管）用它取插槽定义。
 domain/report_type 必须使用数据字典中的 code（用 list_report_types 查询合法值）。
 """
 
