@@ -1,6 +1,6 @@
 # 离线包 payload 来源与版本记录
 
-本文件记录离线部署包 payload 的组件来源、版本与完整性校验值。权威副本存放于构建机 `D:\pisuan-offline-work\payload\`，由 export 脚本自动收入包内 `payload/`，本文件随 export 一并复制进包，是现场唯一来源说明。
+本文件记录离线部署包 payload 的组件来源、版本与完整性校验值。权威副本存放于构建机导出工作区 `<OutDir>\pisuan-offline-work\payload\`，由 export 脚本自动收入包内 `payload/`，本文件随 export 一并复制进包，是现场唯一来源说明。
 
 ## 范围裁定（2026-11-08）
 
