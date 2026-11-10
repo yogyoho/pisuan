@@ -1615,6 +1615,30 @@ class DomainFactoryService:
             return cn_num
         return str(total + section + number)
 
+    GENERALIZE_PROSE_BUDGET: ClassVar[int] = 4000
+
+    def _build_generalize_input(self, text: str, is_table: bool, chapter_hint: str) -> tuple[str, str, bool]:
+        """组装泛化输入（C-4 结构化组装，替代 text[:1200]/[:1500] 中间截断）。
+
+        - 表格段落整块传递、永不切碎（「表格整块不切碎」裁定），不设预算；
+        - prose 段落超预算时按块（句号/分号/换行边界）丢尾，保留头部（环评语义密度前置），
+          无块边界时保留整段头部（硬切）；
+        - 章节路径非空时前置标题行。
+        Returns: (带前缀的 prompt 输入, 不带前缀正文（供 LLM 失败兜底路径）, 是否发生丢尾)
+        """
+        if is_table:
+            return text, text, False
+        truncated = False
+        if len(text) > self.GENERALIZE_PROSE_BUDGET:
+            head = text[: self.GENERALIZE_PROSE_BUDGET]
+            cut = max(head.rfind("。"), head.rfind("；"), head.rfind("\n"))
+            body = head[: cut + 1] if cut > 0 else head
+            truncated = True
+        else:
+            body = text
+        prefix = f"【章节】{chapter_hint}\n" if chapter_hint else ""
+        return prefix + body, body, truncated
+
     def _compute_section_path(self, level: int, title: str, num_part: str | None = None) -> list[str]:
         """计算章节路径（已废弃，保持向后兼容）"""
         if num_part:
@@ -3430,11 +3454,17 @@ class DomainFactoryService:
                 stats["skipped"] += 1
                 return
 
+            # C-4 结构化组装：表格整块 / prose 块边界丢尾（替代 text[:1200] 中间截断）
+            generalize_input, fallback_text, input_truncated = self._build_generalize_input(
+                text, is_table, chapter_hint
+            )
+            if input_truncated:
+                logger.info(f"泛化输入超长丢尾: 段落 {para_id} {len(text)}→{len(generalize_input)} 字符")
             # 根据段落类型构建不同的 Prompt
             if is_table and table_format == "markdown":
                 # Markdown 表格类型的段落
                 prompt = self._build_table_generalize_prompt(
-                    text,
+                    generalize_input,
                     schema_text,
                     chapter_hint,
                     domain_label,
@@ -3443,7 +3473,7 @@ class DomainFactoryService:
             else:
                 # 普通文本段落
                 prompt = self._build_text_generalize_prompt(
-                    text,
+                    generalize_input,
                     schema_text,
                     chapter_hint,
                     domain_label,
@@ -3456,7 +3486,8 @@ class DomainFactoryService:
                     stats["skipped"] += 1
                     return
                 _breaker_context[0] = f"段落 {para_id}（章节 {chapter_hint or '未知'}）"
-                resp, outcome = await self._generalize_text_tracked(text[:1200], chapter_hint, prompt=prompt)
+                # 传不带前缀正文：兜底路径（数值 regex / text[:500] 回填）语义与 C-4 前一致
+                resp, outcome = await self._generalize_text_tracked(fallback_text, chapter_hint, prompt=prompt)
                 _record_outcome(outcome)
                 progress["done"] += 1
                 logger.info(
@@ -3464,6 +3495,12 @@ class DomainFactoryService:
                     f" {outcome['status']} 段落 {para_id}（章节 {chapter_hint or '未知'}）"
                 )
                 if resp is not None:
+                    if input_truncated:
+                        meta = resp.get("metadata")
+                        if not isinstance(meta, dict):
+                            meta = {}
+                            resp["metadata"] = meta
+                        meta["truncated"] = True
                     results[para_id] = resp
 
         await asyncio.gather(*(_run_for_paragraph(idx, p) for idx, p in enumerate(paragraphs)))
@@ -3484,17 +3521,18 @@ class DomainFactoryService:
         prompt_template: str | None = None,
     ) -> str:
         """构建文本段落泛化的 Prompt，优先使用配置的模板"""
+        # C-4：content 已由 _build_generalize_input 完成预算控制，此处不再中间截断
         if prompt_template:
             return self._render_prompt(
                 prompt_template,
-                content=text[:1200],
+                content=text,
                 schema_text=schema_text,
                 chapter_hint=chapter_hint,
                 domain_label=domain_label,
             )
         return self._render_prompt(
             self._PROMPT_DEFAULTS["template"],
-            content=text[:1200],
+            content=text,
             schema_text=schema_text,
             chapter_hint=chapter_hint,
             domain_label=domain_label,
@@ -3522,7 +3560,7 @@ class DomainFactoryService:
             "3. 数据行数\n"
             "4. 表格内容的语义描述\n\n"
             "文本：\n"
-            f'"""\n{table_text[:1500]}\n"""\n\n'
+            f'"""\n{table_text}\n"""\n\n'
             f"Schema 变量提示：\n{schema_text}\n\n"
             "输出 JSON 结构：\n"
             "{\n"
