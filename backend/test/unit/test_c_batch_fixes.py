@@ -52,3 +52,52 @@ class TestChineseToArabic:
 class TestNarrativeCleanupTombstones:
     def test_no_narrative_placeholders_field(self):
         assert "narrative_placeholders" not in GeneralizedTemplate.model_fields
+
+
+class TestGeneralizeInput:
+    def test_table_whole_never_truncated(self):
+        long_table = "| a | b |\n|---|---|\n" + "\n".join(f"| x{i} | y{i} |" for i in range(500))
+        out, body, truncated = make_svc()._build_generalize_input(long_table, True, "3.2")
+        assert truncated is False
+        assert out == long_table
+        assert body == long_table  # 表格整块：正文同样不切碎
+
+    def test_prose_under_budget_with_prefix(self):
+        out, body, truncated = make_svc()._build_generalize_input("短段落。", False, "1.2")
+        assert truncated is False
+        assert out == "【章节】1.2\n短段落。"
+        assert body == "短段落。"  # 正文不带前缀（兜底路径语义）
+
+    def test_prose_over_budget_drops_tail_at_boundary(self):
+        body = "首句内容。" + "后续句子。" * 2000
+        out, _, truncated = make_svc()._build_generalize_input(body, False, "")
+        assert truncated is True
+        assert len(out) <= make_svc().GENERALIZE_PROSE_BUDGET
+        assert out.endswith("。")
+        assert body.startswith(out)
+        assert "【章节】" not in out
+
+    def test_no_chapter_no_prefix(self):
+        out, body, _ = make_svc()._build_generalize_input("内容", False, "")
+        assert out == "内容"
+        assert body == "内容"
+
+    def test_exactly_at_budget_passthrough(self):
+        text = "字" * 4000
+        out, body, truncated = make_svc()._build_generalize_input(text, False, "1.2")
+        assert truncated is False
+        assert out == "【章节】1.2\n" + text
+        assert body == text
+
+    def test_no_boundary_hard_head(self):
+        text = "x" * 5000  # 前 4000 字符内无 。；\n
+        out, _, truncated = make_svc()._build_generalize_input(text, False, "")
+        assert truncated is True
+        assert len(out) == 4000
+
+    def test_boundary_at_index_zero(self):
+        text = "。" + "x" * 5000  # rfind=0 不满足 cut>0，应硬切头部而非产出单字符 body
+        out, _, truncated = make_svc()._build_generalize_input(text, False, "")
+        assert truncated is True
+        assert len(out) == 4000
+        assert out == text[:4000]
