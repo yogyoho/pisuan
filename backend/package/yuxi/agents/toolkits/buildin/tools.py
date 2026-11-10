@@ -508,8 +508,10 @@ ASK_USER_QUESTION_DESCRIPTION = """
 使用规范：
 1. questions 提供 1-5 个问题，每项包含 question，并可包含 options、multi_select、allow_other
 2. 纯问答不提供 options（或传空列表），用户将直接填写文本
-3. 选择题的 options 提供 2-5 个有区分度的选项，每项包含 label 和 value
-4. 若有推荐选项：把推荐项放在第一位，并在 label 末尾加 "(Recommended)"
+3. 选择题的 options 提供 2-5 个有区分度的选项，每项包含 label 和 value，可包含 description
+   （前端渲染为选项标题下方的说明行，适合放来源、结构特点等补充信息；标题本身保持简短）
+4. 若有推荐选项：把推荐项放在第一位，并在 label 末尾加推荐标记——中文界面用「（推荐）」，也可用
+   "(Recommended)"；前端识别这些标记对推荐项做高亮渲染
 5. 若需要多选：将该问题的 multi_select 设为 true
 6. allow_other 只用于选择题，通常保持 true，让用户可自行填写答案
 7. 填写类数据项（单位名/文号/数值/日期等）禁做成选择题——每项单独一条自由文本问题；
