@@ -42,7 +42,6 @@ const isResizingTableDetail = ref(false)
 
 // ========== 未识别实体相关 ==========
 const unrecognizedEntities = ref([])
-const rawSlots = ref([])
 const groupedUnrecognizedEntities = ref({})
 const loadingUnrecognizedEntities = ref(false)
 const selectedEntities = ref([])
@@ -1781,47 +1780,6 @@ watch(
                   </span>
                 </div>
 
-                <!-- 叙述型摘要 -->
-                <template
-                  v-if="
-                    selectedParagraph.classify_type === 'narrative' && selectedParagraph.template
-                  "
-                >
-                  <a-divider style="margin: 8px 0" />
-                  <div v-if="selectedParagraph.template.summary" class="detail-field">
-                    <span class="detail-label">摘要</span>
-                    <div class="detail-value" style="color: var(--gray-800); font-weight: 500">
-                      {{ selectedParagraph.template.summary }}
-                    </div>
-                  </div>
-                  <div
-                    v-if="selectedParagraph.template.key_points?.length"
-                    class="detail-field"
-                    style="flex-direction: column; align-items: flex-start"
-                  >
-                    <span class="detail-label" style="margin-bottom: 4px">关键要点</span>
-                    <ul
-                      style="margin: 0; padding-left: 16px; font-size: 12px; color: var(--gray-700)"
-                    >
-                      <li v-for="point in selectedParagraph.template.key_points" :key="point">
-                        {{ point }}
-                      </li>
-                    </ul>
-                  </div>
-                  <div v-if="selectedParagraph.template.entities?.length" class="detail-field">
-                    <span class="detail-label">关键实体</span>
-                    <div class="detail-value">
-                      <a-tag
-                        v-for="ent in selectedParagraph.template.entities"
-                        :key="ent"
-                        size="small"
-                        style="margin: 2px"
-                        >{{ ent }}</a-tag
-                      >
-                    </div>
-                  </div>
-                </template>
-
                 <a-divider style="margin: 8px 0" />
                 <div class="detail-label" style="margin-bottom: 4px">原文</div>
                 <div class="detail-text-block">{{ selectedParagraph.content }}</div>
@@ -1917,7 +1875,7 @@ watch(
           />
           <a-alert v-else type="info" show-icon style="margin-bottom: 16px">
             <template #message>
-              检测到 <strong>{{ rawSlots.length }}</strong> 个未识别插槽， 其中
+              检测到 <strong>{{ unrecognizedEntities.length }}</strong> 个未识别插槽， 其中
               <strong>{{ matchedCount }}</strong> 个可归入已有实体，
               <strong>{{ newCount }}</strong> 个建议为新实体。
               确认后将保存到实体库，下次提取时自动使用。
