@@ -76,7 +76,8 @@ const statusMap = {
   COMMITTED: { color: 'var(--color-success-500)', text: '已入库' },
   COMMIT_FAILED: { color: 'var(--color-error-500)', text: '入库失败' },
   COMMIT_PARTIAL: { color: 'var(--color-warning-500)', text: '部分入库' },
-  FAILED: { color: 'var(--color-error-500)', text: '失败' }
+  FAILED: { color: 'var(--color-error-500)', text: '失败' },
+  FAILED_PROVIDER: { color: 'var(--color-error-500)', text: '服务商中断' }
 }
 
 // 计算属性
@@ -508,7 +509,10 @@ defineExpose({ refresh })
                     <Eye :size="12" />
                   </a-button>
                 </a-tooltip>
-                <a-tooltip v-if="record.status === 'FAILED'" title="重新提取">
+                <a-tooltip
+                  v-if="record.status === 'FAILED' || record.status === 'FAILED_PROVIDER'"
+                  title="重新提取"
+                >
                   <a-button size="small" type="text" @click="handleRetryTask(record)">
                     <Redo2 :size="12" />
                   </a-button>
