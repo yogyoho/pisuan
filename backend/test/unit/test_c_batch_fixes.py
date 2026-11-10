@@ -146,11 +146,20 @@ class TestStatusTransition:
         # resume：FAILED_PROVIDER→GENERALIZING（断点续跑）
         _validate_status_transition("FAILED_PROVIDER", "GENERALIZING")
         # retry（对齐 retry_task 守卫现状）：非运行态均可重置 UPLOADED
-        for source in ("FAILED", "FAILED_PROVIDER", "WAITING_REVIEW",
-                       "COMMIT_FAILED", "COMMIT_PARTIAL", "COMMITTED"):
+        for source in ("FAILED", "FAILED_PROVIDER", "WAITING_REVIEW", "COMMIT_FAILED", "COMMIT_PARTIAL", "COMMITTED"):
             _validate_status_transition(source, "UPLOADED")
 
     def test_all_states_covered(self):
-        for status in ("UPLOADED", "PARSING", "GENERALIZING", "WAITING_REVIEW", "INGESTING",
-                       "FAILED", "FAILED_PROVIDER", "COMMITTED", "COMMIT_PARTIAL", "COMMIT_FAILED"):
+        for status in (
+            "UPLOADED",
+            "PARSING",
+            "GENERALIZING",
+            "WAITING_REVIEW",
+            "INGESTING",
+            "FAILED",
+            "FAILED_PROVIDER",
+            "COMMITTED",
+            "COMMIT_PARTIAL",
+            "COMMIT_FAILED",
+        ):
             assert status in TASK_STATUS_EDGES

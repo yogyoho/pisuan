@@ -32,7 +32,7 @@ from yuxi.services.domain_factory_region import (
 from yuxi.services.entity_meta_service import EntityMetaAdapter, EntityMetaMatcher, SlotEntityMapper
 from yuxi.services.task_service import TaskContext, tasker
 from yuxi.utils import hashstr, normalize_chapter_key
-from yuxi.utils.datetime_utils import utc_isoformat
+from yuxi.utils.datetime_utils import utc_isoformat, utc_now_naive
 from yuxi.utils.logging_config import logger
 
 
@@ -4552,8 +4552,8 @@ class DomainFactoryService:
             await context.set_progress(5.0, "正在准备入库...")
             await context.set_message("正在准备入库...")
 
-            # 更新任务状态为 COMMITTED
-            await service.repo.commit_task(task_id, reviewer, ingest_task_id=ingest_task_id)
+            # C-1 状态机收敛：先落 INGESTING（归属字段早写）；COMMITTED 只在入库成功后落
+            await service.repo.begin_ingest(task_id, reviewer, ingest_task_id=ingest_task_id)
 
             # ========== 阶段2: 同步到知识库 (SYNCING) ==========
             await context.set_progress(30.0, "正在同步数据到知识库...")
@@ -4575,7 +4575,7 @@ class DomainFactoryService:
                         raise ValueError(f"知识库 {knowledge_base_id} 不存在")
 
                     file_name = task_detail.get("file_name", f"domain_factory_{task_id}.md")
-                    file_id = f"df_{hashstr(task_id + str(uuid.uuid4()), 8)}"
+                    file_id = f"df_{hashstr(task_id, 12)}"  # C-1 幂等：确定性 ID，同 task 重复入库同 key 覆盖
 
                     # 同时生成 Markdown（用于 MinIO 存档）和结构化文档（用于向量化）
                     ingest_markdown = self._build_ingest_markdown(task_detail)
@@ -4626,7 +4626,7 @@ class DomainFactoryService:
                     await service.repo.update_task(
                         task_id,
                         {
-                            "status": "FAILED",
+                            "status": "COMMIT_FAILED",
                             "error_message": f"知识库入库失败: {e}",
                         },
                     )
@@ -4769,6 +4769,9 @@ class DomainFactoryService:
                 {
                     "status": pipeline_status,
                     "knowledge_base_id": knowledge_base_id,
+                    # C-1：committed_at 随早落 COMMITTED 移除而迁到终态写；此处仅可达
+                    # COMMITTED/COMMIT_PARTIAL（COMMIT_FAILED 路径均提前 return/raise）
+                    "committed_at": utc_now_naive(),
                     **({"error_message": "; ".join(partial_errors)} if partial_errors else {}),
                 },
             )
@@ -4787,7 +4790,10 @@ class DomainFactoryService:
 
         except Exception as e:
             logger.exception(f"入库流水线执行失败: {task_id}")
-            await service.repo.update_task(task_id, {"status": "FAILED", "error_message": str(e)})
+            await service.repo.update_task(
+                task_id,
+                {"status": "COMMIT_FAILED", "error_message": f"入库流水线执行失败: {e}"},
+            )
             await context.set_progress(100.0, f"入库失败: {str(e)}")
             await context.set_message(f"入库失败: {str(e)}")
             return {"error": str(e)}
@@ -5608,18 +5614,19 @@ class DomainFactoryService:
         if not task:
             return None
 
-        # 重置状态为待审核
+        # C-1：处理器只清归属字段；状态迁移（→INGESTING）由 worker 侧入口写点承担
+        # （fail_domain_factory_ingest 自 worker 起跑即覆盖收敛）；enqueue 失败时任务保持原终态，
+        # 可再次发起 reingest。
         task = await self.repo.update_task(
             task_id,
             {
-                "status": "WAITING_REVIEW",
                 "committed_at": None,
                 "reviewer": None,
             },
         )
 
         # 生成新的入库任务ID
-        ingest_task_id = f"reingest_{task_id}_{uuid.uuid4().hex[:8]}"
+        ingest_task_id = f"reingest_{task_id}"
 
         # 注册到任务中心进行重新入库
         try:
@@ -5662,6 +5669,8 @@ class DomainFactoryService:
             return {"error": "task not found"}
 
         try:
+            # C-1：再入库同样走 INGESTING 中间态，durable 中断由 fail_domain_factory_ingest 收敛
+            await service.repo.update_task(task_id, {"status": "INGESTING"})
             await context.set_progress(10.0, "正在准备再入库...")
             await context.set_message("正在准备再入库...")
 
@@ -5690,7 +5699,7 @@ class DomainFactoryService:
                     raise ValueError(f"知识库 {knowledge_base_id} 不存在")
 
                 file_name = task_detail.get("file_name", f"domain_factory_{task_id}.md")
-                file_id = f"df_ri_{hashstr(task_id + str(uuid.uuid4()), 8)}"
+                file_id = f"df_ri_{hashstr(task_id, 12)}"  # C-1 幂等：确定性 ID
 
                 # 1. 保存 Markdown 到 MinIO
                 markdown_url = ""
@@ -5770,7 +5779,9 @@ class DomainFactoryService:
                 task_id,
                 {
                     "status": "COMMITTED",
-                    "ingest_task_id": f"reingest_{task_id}_{uuid.uuid4().hex[:8]}",
+                    "ingest_task_id": f"reingest_{task_id}",  # C-1 幂等：确定性标识
+                    # C-1：终态时间随 reingest 成功落（对齐 commit 管线终态写）
+                    "committed_at": utc_now_naive(),
                 },
             )
 
@@ -5785,7 +5796,10 @@ class DomainFactoryService:
 
         except Exception as e:
             logger.exception(f"再入库流水线执行失败: {task_id}")
-            await service.repo.update_task(task_id, {"status": "FAILED", "error_message": str(e)})
+            await service.repo.update_task(
+                task_id,
+                {"status": "COMMIT_FAILED", "error_message": f"再入库流水线执行失败: {e}"},
+            )
             await context.set_progress(100.0, f"执行失败: {str(e)}")
             return {"error": str(e)}
 
@@ -5804,8 +5818,8 @@ class DomainFactoryService:
         task = await self.repo.get_task_with_domain(task_id)
         if not task:
             return None
-        # 运行中任务禁止重复重试（路由层捕获 ValueError 返回给前端）
-        if task.status in ("PARSING", "GENERALIZING"):
+        # 运行中/入库中任务禁止重复重试（路由层捕获 ValueError 返回给前端）
+        if task.status in ("PARSING", "GENERALIZING", "INGESTING"):
             raise ValueError(f"任务正在执行中（{task.status}），请稍后再试")
         # P0-3 断点续跑：仅 provider 熔断任务且已有解析产物时，只补泛化失败段
         resume = task.status == "FAILED_PROVIDER" and bool(task.source_paragraphs)
@@ -6861,6 +6875,26 @@ async def fail_domain_factory_etl(session, task_record, error: str) -> None:
     task.status = "FAILED"
     task.error_message = f"任务执行中断（durable 收敛）：{error}"
     logger.warning(f"ETL 任务 {task_id} 执行态残留，durable 收敛落为 FAILED: {error}")
+
+
+async def fail_domain_factory_ingest(session, task_record, error: str) -> None:
+    """任务失败收敛（C-1）：durable 层失败时把 INGESTING 残留的入库/再入库任务落为 COMMIT_FAILED。
+
+    domain_factory_ingest / domain_factory_reingest 此前未注册 failure handler，
+    worker lease 过期等异常终止会让任务滞留 INGESTING（或 COMMITTED 假象），用户不可见也无法重试。
+    """
+    from sqlalchemy import select
+    from yuxi.storage.postgres.models_domain_factory import DomainFactoryTask
+
+    task_id = (task_record.payload or {}).get("task_id")
+    if not task_id:
+        return
+    task = await session.scalar(select(DomainFactoryTask).where(DomainFactoryTask.id == task_id).with_for_update())
+    if task is None or task.status != "INGESTING":
+        return
+    task.status = "COMMIT_FAILED"
+    task.error_message = f"入库执行中断（durable 收敛）：{error}"
+    logger.warning(f"入库任务 {task_id} INGESTING 残留，durable 收敛落为 COMMIT_FAILED: {error}")
 
 
 def _build_form_schema(variables: list[dict[str, Any]], snapshot: dict[str, Any] | None) -> list[dict[str, Any]]:

@@ -84,12 +84,21 @@ def _normalize_report_type(report_type: str) -> str:
 # 已知写盘点普查（2026-11-10）：
 #   service create_task/retry_task/_etl_pipeline_async(:858 GENERALIZING, 终态 WAITING_REVIEW/
 #   FAILED/FAILED_PROVIDER)、commit 管线(:4493/:4510/:4583/:4666/:4721/:4744)、
-#   reingest 管线(:5723/:5742)、repo.commit_task(:280)、fail_domain_factory_etl(:6803 直写)。
+#   reingest 管线(:5723/:5742)、repo.commit_task(:280)、fail_domain_factory_etl(:6803 直写)、
+#   fail_domain_factory_ingest（INGESTING→COMMIT_FAILED 直写，durable 收敛豁免）。
+# 死代码豁免：update_task_form_data 的 UPLOADED→EXTRACTING 写点无调用方，未计入。
 # ---------------------------------------------------------------------------
 TASK_STATUS_EDGES: dict[str, set[str]] = {
     # UPLOADED→各终态/等待态：retry_task 入队失败恢复原状态（C-3）
-    "UPLOADED": {"PARSING", "FAILED", "FAILED_PROVIDER", "WAITING_REVIEW",
-                 "COMMITTED", "COMMIT_FAILED", "COMMIT_PARTIAL"},
+    "UPLOADED": {
+        "PARSING",
+        "FAILED",
+        "FAILED_PROVIDER",
+        "WAITING_REVIEW",
+        "COMMITTED",
+        "COMMIT_FAILED",
+        "COMMIT_PARTIAL",
+    },
     "PARSING": {"GENERALIZING", "FAILED"},
     "GENERALIZING": {"WAITING_REVIEW", "FAILED", "FAILED_PROVIDER"},
     # WAITING_REVIEW→COMMIT_FAILED：提交前校验中止（:4493 既有行为）
@@ -348,6 +357,9 @@ class DomainFactoryRepository:
                 task.reviewer = reviewer
             if ingest_task_id:
                 task.ingest_task_id = ingest_task_id
+            # [pisuan-custom] W3 兜底：入库时仍无归属判定 → project（最保守；已有值不动）
+            if task.scope is None:
+                task.scope = "project"
         return task
 
     async def delete_task(self, task_id: str) -> bool:

@@ -40,9 +40,10 @@ const DOMAIN_FACTORY_STATUS_MAP = {
   EXTRACTING: { status: 'running', progress: 55, message: '正在提取信息...' },
   GENERALIZING: { status: 'running', progress: 80, message: '正在生成槽位模板...' },
   WAITING_REVIEW: { status: 'running', progress: 95, message: '信息提取完成，等待人工审核...' },
+  INGESTING: { status: 'running', progress: 97, message: '报告入库中...' },
   COMMITTED: { status: 'success', progress: 100, message: '报告已入库完成' },
   COMMIT_FAILED: { status: 'failed', progress: 100, message: '入库失败，请检查后重试' },
-  COMMIT_PARTIAL: { status: 'running', progress: 95, message: '部分入库完成，大纲生成未完成' },
+  COMMIT_PARTIAL: { status: 'running', progress: 98, message: '部分入库完成，大纲生成未完成' },
   FAILED: { status: 'failed', progress: 100, message: '执行失败' },
   FAILED_PROVIDER: { status: 'failed', progress: 100, message: '服务商中断，可续跑仅补失败段' }
 }

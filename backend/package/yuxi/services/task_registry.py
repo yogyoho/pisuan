@@ -98,11 +98,13 @@ _TASK_DEFINITIONS = {
             "domain_factory_ingest",
             "yuxi.services.domain_factory_service",
             "run_domain_factory_ingest",
+            failure_function="fail_domain_factory_ingest",
         ),
         TaskDefinition(
             "domain_factory_reingest",
             "yuxi.services.domain_factory_service",
             "run_domain_factory_reingest",
+            failure_function="fail_domain_factory_ingest",
         ),
         # [pisuan-custom] 环评文件库 P2 任务：canonical md 推 KB / 语料加工（pisuan 领域扩展）
         TaskDefinition(

@@ -280,3 +280,8 @@ def test_domain_factory_failure_handler_registered():
     handler = definition.load_failure_handler()
     assert handler is not None
     assert handler.__name__ == "fail_domain_factory_etl"
+    # C-1b：入库/再入库同样注册 durable 收敛（INGESTING 残留 → COMMIT_FAILED）
+    for task_type in ("domain_factory_ingest", "domain_factory_reingest"):
+        ingest_handler = get_failure_task_definition(task_type, 1).load_failure_handler()
+        assert ingest_handler is not None
+        assert ingest_handler.__name__ == "fail_domain_factory_ingest"
