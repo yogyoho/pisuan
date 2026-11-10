@@ -78,6 +78,41 @@ def _normalize_report_type(report_type: str) -> str:
     return _REPORT_TYPE_ALIASES.get(report_type.strip(), report_type.strip())
 
 
+# ---------------------------------------------------------------------------
+# C-1 状态机：合法迁移表。键=当前状态，值=允许迁移到的目标集合。
+# 同值重写不计为迁移；非法迁移 raise ValueError（fail-loud，不用静默兜底掩盖）。
+# 已知写盘点普查（2026-11-10）：
+#   service create_task/retry_task/_etl_pipeline_async(:858 GENERALIZING, 终态 WAITING_REVIEW/
+#   FAILED/FAILED_PROVIDER)、commit 管线(:4493/:4510/:4583/:4666/:4721/:4744)、
+#   reingest 管线(:5723/:5742)、repo.commit_task(:280)、fail_domain_factory_etl(:6803 直写)。
+# ---------------------------------------------------------------------------
+TASK_STATUS_EDGES: dict[str, set[str]] = {
+    # UPLOADED→各终态/等待态：retry_task 入队失败恢复原状态（C-3）
+    "UPLOADED": {"PARSING", "FAILED", "FAILED_PROVIDER", "WAITING_REVIEW",
+                 "COMMITTED", "COMMIT_FAILED", "COMMIT_PARTIAL"},
+    "PARSING": {"GENERALIZING", "FAILED"},
+    "GENERALIZING": {"WAITING_REVIEW", "FAILED", "FAILED_PROVIDER"},
+    # WAITING_REVIEW→COMMIT_FAILED：提交前校验中止（:4493 既有行为）
+    "WAITING_REVIEW": {"INGESTING", "COMMIT_FAILED", "UPLOADED"},
+    "INGESTING": {"COMMITTED", "COMMIT_PARTIAL", "COMMIT_FAILED"},
+    "FAILED": {"UPLOADED"},
+    "FAILED_PROVIDER": {"UPLOADED", "GENERALIZING"},
+    # COMMITTED/PARTIAL/FAILED→UPLOADED：retry 现守卫允许；→INGESTING：reingest 入口
+    "COMMITTED": {"UPLOADED", "INGESTING", "COMMITTED"},
+    "COMMIT_PARTIAL": {"UPLOADED", "INGESTING", "COMMITTED"},
+    "COMMIT_FAILED": {"UPLOADED", "INGESTING", "COMMITTED"},
+}
+
+
+def _validate_status_transition(current: str | None, target: str) -> None:
+    """校验任务状态迁移合法性；同值重写放行，非法迁移 raise ValueError。"""
+    if current == target:
+        return
+    allowed = TASK_STATUS_EDGES.get(current or "", set())
+    if target not in allowed:
+        raise ValueError(f"非法状态迁移: {current or '<None>'} → {target}")
+
+
 class DomainFactoryRepository:
     """领域知识工厂数据访问层"""
 
@@ -258,6 +293,9 @@ class DomainFactoryRepository:
             task = result.unique().scalar_one_or_none()
             if task is None:
                 return None
+            target_status = data.get("status")
+            if target_status is not None:
+                _validate_status_transition(task.status, target_status)
             for key, value in data.items():
                 if key not in ("id",):
                     setattr(task, key, value)
@@ -277,11 +315,35 @@ class DomainFactoryRepository:
             task = result.unique().scalar_one_or_none()
             if task is None:
                 return None
+            _validate_status_transition(task.status, "COMMITTED")
             task.status = "COMMITTED"
             task.committed_at = utc_now_naive()
             # [pisuan-custom] W3 兜底：提交时仍无归属判定 → project（最保守；已有值不动）
             if task.scope is None:
                 task.scope = "project"
+            if reviewer:
+                task.reviewer = reviewer
+            if ingest_task_id:
+                task.ingest_task_id = ingest_task_id
+        return task
+
+    async def begin_ingest(
+        self, task_id: str, reviewer: str | None = None, ingest_task_id: str | None = None
+    ) -> DomainFactoryTask | None:
+        """C-1：入库链入口，落 INGESTING 中间态（归属字段早写，终态后置）。"""
+        async with pg_manager.get_async_session_context() as session:
+            from sqlalchemy.orm import joinedload
+
+            result = await session.execute(
+                select(DomainFactoryTask)
+                .options(joinedload(DomainFactoryTask.domain))
+                .where(DomainFactoryTask.id == task_id)
+            )
+            task = result.unique().scalar_one_or_none()
+            if task is None:
+                return None
+            _validate_status_transition(task.status, "INGESTING")
+            task.status = "INGESTING"
             if reviewer:
                 task.reviewer = reviewer
             if ingest_task_id:
