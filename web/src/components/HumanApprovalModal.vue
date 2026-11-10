@@ -161,7 +161,8 @@
                   class="option-label"
                   :class="{
                     recommended:
-                      optionIndex === 0 && String(optionItem.label).includes('(Recommended)')
+                      optionIndex === 0 &&
+                      ['(Recommended)', '（推荐）', '(推荐)'].some((mark) => String(optionItem.label).includes(mark))
                   }"
                 >
                   {{ optionItem.label }}

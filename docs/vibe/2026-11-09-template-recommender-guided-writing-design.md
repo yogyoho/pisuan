@@ -1,7 +1,7 @@
 # template-recommender 重构设计：逐节引导写作（高用户参与模式）
 
 - 日期：2026-11-09
-- 状态：设计已获用户批准（对话内交互卡 / 一体化单技能 / 落盘工作区 三项裁定）；2026-11-10 增补知识库检索参照轨（用户裁定）
+- 状态：设计已获用户批准（对话内交互卡 / 一体化单技能 / 落盘工作区 三项裁定）；2026-11-10 增补知识库检索参照轨（用户裁定）；2026-11-10 增补卡面推荐项高亮与选项 description 说明行
 - 关联：`backend/package/pisuan/agents/skills/buildin/template-recommender/SKILL.md`
 
 ## 1. 背景与目标
@@ -194,3 +194,11 @@ skill_dependencies: []
 - coal-eia-writer / coal-eia-chapter-writer 的任何改动；
 - 语料跨领域泛化（语料仅煤矿环评，其他领域自动 KB-only）；
 - 插槽计算/公式冻结等重管线能力（本技能数据一律来自检索或用户）。
+
+## 11. 增补：卡面推荐项高亮渲染（2026-11-10）
+
+用户实测反馈：提问卡选项只有标题、推荐项无视觉区分，无法快速定位推荐模板。考证结论：交互卡协议本就支持——选项 `label` 置首位且含 "(Recommended)" 时前端对推荐项高亮（HumanApprovalModal 标题主色加粗 / AskUserQuestionTool 药丸主色描边），选项 `description` 字段渲染为标题下方说明行（前后端归一化均透传）；缺口在触发标记仅认英文，而本技能沟通规范又禁英文标记，推荐项从未高亮。
+
+- 前端（各一处条件）：高亮触发标记扩为 "(Recommended)" /「（推荐）」/ "(推荐)" 任一，向后兼容其他技能既有约定；
+- tools.py：ASK_USER_QUESTION_DESCRIPTION 补 description 字段用法与推荐标记口径；
+- SKILL.md：沟通规范 6 改为「推荐选项置首位 + 标题末尾加「（推荐）」（确有推荐倾向才标，禁每题都标）」；卡2 第 4 步选项构成改为「脱敏短标题 + description（来源/结构特点/约多少段）」。

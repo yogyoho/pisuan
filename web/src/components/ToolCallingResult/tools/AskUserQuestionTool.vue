@@ -41,7 +41,9 @@
                   :key="`${opt.value}-${optIdx}`"
                   class="option-pill"
                   :class="{
-                    'is-recommended': optIdx === 0 && String(opt.label).includes('(Recommended)')
+                    'is-recommended':
+                      optIdx === 0 &&
+                      ['(Recommended)', '（推荐）', '(推荐)'].some((mark) => String(opt.label).includes(mark))
                   }"
                 >
                   <div class="option-pill-main">
