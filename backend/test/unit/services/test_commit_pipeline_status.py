@@ -136,7 +136,7 @@ def _partial_pipeline_env():
     }
     fake_service = MagicMock()
     fake_service.get_task_detail = AsyncMock(return_value=valid_detail)
-    fake_service.repo.commit_task = AsyncMock()
+    fake_service.repo.begin_ingest = AsyncMock()
     fake_service._save_learned_templates_from_task = AsyncMock(return_value=1)
     fake_service._produce_outlines_async = AsyncMock(return_value=1)
     fake_service._merge_cross_report_knowledge = AsyncMock(return_value={})
