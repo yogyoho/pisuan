@@ -197,7 +197,7 @@ const handleDeleteTask = async (task) => {
   }
 }
 
-// 重试任务（FAILED → 重新提取，重置为 UPLOADED 重跑整个 ETL）
+// 重试任务：FAILED → 重置为 UPLOADED 重跑整个 ETL；FAILED_PROVIDER → 断点续跑（仅补失败段）
 const handleRetryTask = async (task) => {
   try {
     await domainFactoryApi.retryTask(task.id || task.task_id)
