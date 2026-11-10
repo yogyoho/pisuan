@@ -3463,12 +3463,12 @@ class DomainFactoryService:
             # 根据段落类型构建不同的 Prompt
             if is_table and table_format == "markdown":
                 # Markdown 表格类型的段落
+                # bug-4227：表格泛化不套用域自定义模板（builder 文档语义：表格直接返回结构化信息）
                 prompt = self._build_table_generalize_prompt(
                     generalize_input,
                     schema_text,
                     chapter_hint,
                     domain_label,
-                    prompt_template=template_prompt,
                 )
             else:
                 # 普通文本段落
