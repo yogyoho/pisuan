@@ -603,7 +603,13 @@ class DomainFactoryService:
             )
             logger.info(f"已注册 ETL 任务到任务中心: {task_id}")
         except Exception as e:
-            logger.warning(f"注册任务中心失败，将继续执行: {e}")
+            logger.warning(f"注册任务中心失败: {e}")
+            # C-3 兜底：入队失败不再静默继续，任务落 FAILED 终态，用户可见可重试
+            await self.repo.update_task(
+                task_id,
+                {"status": "FAILED", "error_message": f"任务中心注册失败: {e}"},
+            )
+            task.status = "FAILED"
 
         return DomainTaskDTO(
             id=task.id,
@@ -5763,6 +5769,7 @@ class DomainFactoryService:
             raise ValueError(f"任务正在执行中（{task.status}），请稍后再试")
         # P0-3 断点续跑：仅 provider 熔断任务且已有解析产物时，只补泛化失败段
         resume = task.status == "FAILED_PROVIDER" and bool(task.source_paragraphs)
+        original_status = task.status  # C-3：入队失败时恢复原状态（保住 FAILED_PROVIDER 续跑资格）
 
         updated_task = await self.repo.update_task(task_id, {"status": "UPLOADED", "error_message": None})
 
@@ -5785,6 +5792,15 @@ class DomainFactoryService:
             logger.info(f"重试任务已注册到 Tasker: {task_id}")
         except Exception as e:
             logger.warning(f"重试任务注册 Tasker 失败: {e}")
+            # C-3 兜底：任务已置 UPLOADED 但无人执行，恢复重试前状态原值；
+            # 不得落 FAILED——否则 FAILED_PROVIDER 的 resume 判定丢失，退化为全卷重跑
+            restored = await self.repo.update_task(
+                task_id,
+                {"status": original_status, "error_message": f"任务队列注册失败，请重试: {e}"},
+            )
+            if restored is not None:
+                updated_task = restored
+            return updated_task.to_summary_dict()
 
         return updated_task.to_summary_dict()
 
