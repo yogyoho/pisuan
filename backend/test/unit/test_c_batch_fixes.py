@@ -7,6 +7,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "package"))
 
+from pisuan.repositories.domain_factory_repository import (
+    TASK_STATUS_EDGES,
+    _validate_status_transition,
+)
 from pisuan.services.domain_factory_service import DomainFactoryService, GeneralizedTemplate
 
 
@@ -101,3 +105,52 @@ class TestGeneralizeInput:
         assert truncated is True
         assert len(out) == 4000
         assert out == text[:4000]
+
+
+class TestStatusTransition:
+    MAIN_CHAIN = [
+        ("UPLOADED", "PARSING"),
+        ("PARSING", "GENERALIZING"),
+        ("GENERALIZING", "WAITING_REVIEW"),
+        ("WAITING_REVIEW", "INGESTING"),
+        ("INGESTING", "COMMITTED"),
+        ("INGESTING", "COMMIT_PARTIAL"),
+        ("INGESTING", "COMMIT_FAILED"),
+    ]
+
+    def test_main_chain_legal(self):
+        for cur, nxt in self.MAIN_CHAIN:
+            _validate_status_transition(cur, nxt)  # 不抛即合法
+
+    def test_same_value_noop(self):
+        _validate_status_transition("WAITING_REVIEW", "WAITING_REVIEW")
+        _validate_status_transition("COMMITTED", "COMMITTED")
+
+    def test_illegal_raises(self):
+        with pytest.raises(ValueError):
+            _validate_status_transition("COMMITTED", "PARSING")
+        with pytest.raises(ValueError):
+            _validate_status_transition("PARSING", "COMMITTED")
+        with pytest.raises(ValueError):
+            _validate_status_transition("INGESTING", "UPLOADED")
+
+    def test_retry_and_resume_edges(self):
+        # C-3 恢复边 + durable ETL 收敛边：UPLOADED→FAILED
+        _validate_status_transition("UPLOADED", "FAILED")
+        # 提交前校验中止边：WAITING_REVIEW→COMMIT_FAILED（既有行为）
+        _validate_status_transition("WAITING_REVIEW", "COMMIT_FAILED")
+        # 泛化失败收敛边
+        _validate_status_transition("PARSING", "FAILED")
+        _validate_status_transition("GENERALIZING", "FAILED")
+        _validate_status_transition("GENERALIZING", "FAILED_PROVIDER")
+        # resume：FAILED_PROVIDER→GENERALIZING（断点续跑）
+        _validate_status_transition("FAILED_PROVIDER", "GENERALIZING")
+        # retry（对齐 retry_task 守卫现状）：非运行态均可重置 UPLOADED
+        for source in ("FAILED", "FAILED_PROVIDER", "WAITING_REVIEW",
+                       "COMMIT_FAILED", "COMMIT_PARTIAL", "COMMITTED"):
+            _validate_status_transition(source, "UPLOADED")
+
+    def test_all_states_covered(self):
+        for status in ("UPLOADED", "PARSING", "GENERALIZING", "WAITING_REVIEW", "INGESTING",
+                       "FAILED", "FAILED_PROVIDER", "COMMITTED", "COMMIT_PARTIAL", "COMMIT_FAILED"):
+            assert status in TASK_STATUS_EDGES
