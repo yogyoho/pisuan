@@ -49,7 +49,6 @@ class GeneralizedSlot(BaseModel):
 class GeneralizedTemplate(BaseModel):
     generalized: str = ""
     slots: list[GeneralizedSlot] = Field(default_factory=list)
-    narrative_placeholders: list[dict[str, Any]] = Field(default_factory=list)
     condition: str = ""
     summary: str = ""
     key_points: list[str] = Field(default_factory=list)
@@ -337,13 +336,6 @@ class DomainFactoryService:
             '       "value": "被替换前的原文文字（必填，如 \\"7.9℃\\"）",\n'
             '       "description": "插槽含义描述",\n'
             '       "suggested_source": "推荐数据来源"\n'
-            "     }}\n"
-            "  ],\n"
-            '  "narrative_placeholders": [\n'
-            "     {{\n"
-            '       "mark": "叙述标记名称",\n'
-            '       "role": "描述该叙述区的用途",\n'
-            '       "sample": "原文中的参考文本"\n'
             "     }}\n"
             "  ],\n"
             '  "scope": "universal|regional|project（可选，不确定则省略）",\n'
@@ -863,19 +855,12 @@ class DomainFactoryService:
 
             await service.repo.update_task(task_id, {"status": "GENERALIZING"})
 
-            # ========== 阶段3: 泛化 (GENERALIZING) ==========
-            await service.repo.update_task(task_id, {"status": "GENERALIZING"})
-
             # 获取领域信息用于泛化
             domain = await service.repo.get_domain_by_id(task.domain_id) if task.domain_id else None
             domain_label = domain.name if domain else "通用"
 
-            # 全局模板不再单独生成 LLM 调用——前端从段落级 template 聚合
-            template_payload = {
-                "generalized": "",
-                "slots": [],
-                "metadata": {"chapter": "", "tags": []},
-            }
+            # 全局模板不再单独生成 LLM 调用——前端从段落级 template 聚合；
+            # 空壳 payload 不落库（C-5），template_payload 列留 NULL，读取侧 `or {}` 兜底
 
             # ========== 段落级泛化（参考源系统 pipeline.py）==========
             # 只对散文三值段落（prose/parameter/narrative）调用 LLM 泛化；断点续跑时仅补「无模板或上一轮兜底」的段落
@@ -1029,7 +1014,6 @@ class DomainFactoryService:
             await service.repo.update_task(
                 task_id,
                 {
-                    "template_payload": template_payload,
                     "base_info": form_data,
                     "ai_confidence": ai_confidence,
                     "coverage_ratio": coverage_ratio,
@@ -1593,26 +1577,43 @@ class DomainFactoryService:
         return paragraphs
 
     def _chinese_to_arabic(self, cn_num: str) -> str:
-        """将中文数字转换为阿拉伯数字"""
-        cn_map = {
-            "一": "1",
-            "二": "2",
-            "三": "3",
-            "四": "4",
-            "五": "5",
-            "六": "6",
-            "七": "7",
-            "八": "8",
-            "九": "9",
-            "十": "10",
-            "百": "100",
-            "千": "1000",
-            "万": "10000",
-        }
-        result = cn_num
-        for cn, num in cn_map.items():
-            result = result.replace(cn, num)
-        return result
+        """中文数字 → 阿拉伯数字（正规进位解析：十一→11、二十三→23、一百零三→103）。
+
+        含非中文数字字符或无法解析时原样返回（调用方有位置编号兜底）。
+        """
+        digits = {"零": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4,
+                  "五": 5, "六": 6, "七": 7, "八": 8, "九": 9}
+        units = {"十": 10, "百": 100, "千": 1000}
+        if not cn_num:
+            return cn_num
+        total = 0      # 万段以上累计
+        section = 0    # 当前万段累计
+        number = 0     # 待乘单位的悬挂数字
+        parsed = False
+        for ch in cn_num:
+            if ch in digits:
+                number = digits[ch]
+                parsed = True
+            elif ch in units:
+                section += (number if number else 1) * units[ch]
+                number = 0
+                parsed = True
+            elif ch == "万":
+                section = (section + number) * 10000
+                total += section
+                section = 0
+                number = 0
+                parsed = True
+            elif ch == "亿":
+                total = (total + section + number) * 100000000
+                section = 0
+                number = 0
+                parsed = True
+            else:
+                return cn_num
+        if not parsed:
+            return cn_num
+        return str(total + section + number)
 
     def _compute_section_path(self, level: int, title: str, num_part: str | None = None) -> list[str]:
         """计算章节路径（已废弃，保持向后兼容）"""
@@ -2211,7 +2212,8 @@ class DomainFactoryService:
     async def extract_legal_references_from_text(self, paragraphs: list[dict]) -> list[dict]:
         """场景B：从正文段落中用 LLM 提取标准引用
 
-        仅对 parameter/narrative 类型、且包含标准编号模式的段落调用。
+        对全部散文段（排除 legal_reference/heading/table/figure/formula 结构类）、
+        且包含标准编号模式的段落调用。
         """
         import re as _re
 
