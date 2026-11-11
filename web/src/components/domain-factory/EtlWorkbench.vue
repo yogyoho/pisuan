@@ -248,6 +248,12 @@ const CLASSIFY_TYPE_MAP = {
 const PROSE_TYPES = ['prose', 'parameter', 'narrative']
 const isProseType = (ct) => PROSE_TYPES.includes(ct)
 
+// 类型筛选组：排除 legacy parameter/narrative（spec-W1 合并后分类器只产 prose，
+// 新任务选这两项恒空；旧任务存量值仅经 CLASSIFY_TYPE_MAP 徽标兼容显示，不再进筛选）
+const FILTERABLE_CLASSIFY_TYPES = Object.fromEntries(
+  Object.entries(CLASSIFY_TYPE_MAP).filter(([key]) => key !== 'parameter' && key !== 'narrative')
+)
+
 const SLOT_TYPE_MAP = {
   parameter: { label: '参数型', color: 'blue' },
   enum: { label: '枚举型', color: 'green' },
@@ -1058,7 +1064,7 @@ watch(
             <span class="classify-filter-label">类型筛选:</span>
             <a-radio-group v-model:value="classifyFilter" size="small" button-style="solid">
               <a-radio-button :value="null">全部</a-radio-button>
-              <a-radio-button v-for="(info, key) in CLASSIFY_TYPE_MAP" :key="key" :value="key">
+              <a-radio-button v-for="(info, key) in FILTERABLE_CLASSIFY_TYPES" :key="key" :value="key">
                 {{ info.label }} <span class="classify-count">{{ classifyStats[key] || 0 }}</span>
               </a-radio-button>
             </a-radio-group>
