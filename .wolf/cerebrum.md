@@ -2587,3 +2587,92 @@
 - 事故恢复数据源优先级：.wolf/corpus-workdir/lexicon_full_audit.json（决策记录）→ 11-03 事实基线（overrides 文件 6 条 + bug-4198 验证记录 approved=8）→ git refs-repo 历史。当 audit 快照与最近事实基线冲突时（audit=10-10 态 approved 29，11-03 事实 approved 8），按**最近事实基线**回位，差异行降 candidate + 标注待复核，不猜 rejected。
 - overrides 文件有四处同内容副本：包树（api 侧 bank_compile 读）+ skill-sources/shared + skill-projections/admin + refs-repo worktree；恢复时五方（含基线备份）hash 对齐才算闭环，只回填包树会让其他三处漂移。
 - 不可复原项的如实交代是事故汇报的一部分：本次 standard_reviews 1 行（无物化无备份）、拆分子口径的精确 12 值集（p5 将漂移 p50/p95 不变）、~21 条人工降级决策（candidate 待复核）——恢复完成≠无损，分歧点要让用户显式知情。
+
+## Decision Log
+
+- [2026-11-09] template-recommender 重构方向裁定（用户明示）：①弹窗=对话内 ask_user_question 交互卡，非前端模态；②一体化单技能——四步流（推荐→选模板→补全→确认→推进）全归 template-recommender，slot-filler 仅改描述声明接管；③进度/节稿落盘沙箱工作区 progress.json（无脚本，agent 文件工具直维护）；④coal-eia-writer/chapter-writer 零改动（三模式定位：全书/分章管线 vs 本技能逐节高参与），其 references/ 语料（samples_bank/paradigms/sample_entities）只读引用+脱敏禁抄纪律。设计文档 docs/vibe/2026-11-09-template-recommender-guided-writing-design.md。
+
+## Key Learnings（2026-11-10 任务中心批追加）
+- 任务中心任务列表双路来源（通用 tasker 全量 + /tasks-center 专线，后者本就是前者 type=domain_factory 的同 id 行）：列表按 id 去重正确，但凡统计口径（summary/计数徽标）必须在去重后的合并列表上算——去重前统计知识工厂任务计数恒 ×2（bug-4220）。「知识工厂」类型筛选页已删（筛选项 5→4：全部/进行中/已完成/失败），任务卡「知识工厂报告解析」类型标签保留；同型改动勿再加按类型的专属筛选页。
+
+## Key Learnings (2026-11-10 图谱构建超时/租约架构)
+- durable task 双层超时：wrapper asyncio.wait 用 tasks.timeout_seconds（默认 TASKER_DEFAULT_TIMEOUT_SECONDS=6h），arq 函数级 func(process_task, timeout=21630s) 略大于前者 → 超 6h 任务先走 wrapper 的「任务执行超时」干净失败路径
+- TASK_LEASE_SECONDS=30s，心跳 TASK_HEARTBEAT_SECONDS 续租；renew_lease 单次抛异常（无重试）即 _request_cancel("lease_lost") 杀 execution；lease_lost 在 wrapper CancelledError 处理中被故意跳过清理 → 行留 running → reconcile_expired_leases 落 FAILED "worker_lease_expired: 执行 worker 的 lease 已过期，任务副作用结果未知"
+- KB 图谱构建 = 单 durable task 跑全量 pending 分片（milvus_graph_service.build_pending_chunks），dev 实测吞吐 0.06 chunk/s（LLM 抽取串行 concurrency=1），几千分片 ≈ 14h+，单次任务上限 6h → 规模失配
+- chunk 级有断点（mark_graph_structure_indexed），重跑只抽 pending；但任务级无自动续跑，需手动重触发
+
+## Do-Not-Repeat (2026-11-10 Docker 端口转发波次楔死)
+- dev 栈容器全部健康但主机访问部分端口报「连接被意外关闭」时，先按启动波次分组对照（docker ps STATUS）：同波启动的 published 端口全坏、后注册的端口正常 = Docker Desktop/WSL 端口转发按注册波次楔死，容器无辜（容器内 wget 127.0.0.1:PORT 返回 200 可证）。`docker compose restart` / sync-dev 的 stop-start 不重建 publish 注册、治不了本症；**唯一实测有效 = `docker compose up -d --force-recreate --no-deps <svc>` 删重建容器刷新转发**（实测 5173/3000/8002 三口全愈，5050 对照组正常）。TCP accept 后立即被关 = 转发代理层症状；防火墙故障表现为连接超时而非被关闭，别先入为主。环回监听 PID 是 com.docker.backend 或 wslrelay 都属正常转发链组件，不是抢占者。
+
+## Do-Not-Repeat（2026-11-10 ETL C批追加）
+
+- 2026-11-10: 设计状态机/迁移表前必须 grep 状态字面量核验，勿照抄旧设计文档——10-29 文档 §5 的 `REVIEW_PASSED` 全库零匹配（真实链 WAITING_REVIEW→COMMITTED），盲抄会把 INGESTING 插错位置。
+
+## Key Learnings（2026-11-10 ETL C批追加）
+
+- domain_factory 状态机事实（2026-11-10 复核）：无 REVIEW_PASSED 态；`domain_factory_ingest`/`domain_factory_reingest` 未注册 durable failure handler（task_registry:97-106）；retry_task:5765 已内建 FAILED_PROVIDER 断点续跑（resume 判定）；enqueue 失败仅 warning 的兜底缺失有两处（create_task:606、retry_task:5786）。
+- narrative 段落类型已于 2026-10-06 spec-W1 退役为 legacy 兼容读（分类器现值仅 prose，散文三值=prose/parameter/narrative 仅作集合判定）；EtlWorkbench:1785-1800 叙述摘要分支因 narrative∈PROSE_TYPES 而不可达；`narrative_placeholders`（service schema:52 + prompt:342）前后端零消费。兼容层（_PROSE_TYPES/D7 豁免/needsReview 豁免/SUBTYPE_MAP）有裁决背书勿动。
+
+## Key Learnings + DNR（2026-11-10 提问卡推荐高亮批追加）
+
+**Key Learnings**:
+- 提问卡（ask_user_question）协议能力比工具描述原本写的多：选项支持 description 字段（后端 pisuan/utils/question_utils.py 与前端 questionUtils.js 归一化均透传，HumanApprovalModal/AskUserQuestionTool 渲染为标题下方说明行）——候选类选择题标题保持短，来源/结构特点等说明放 description。
+- 推荐项高亮机制=「选项置首位 + label 含推荐标记」，此前仅认英文 "(Recommended)"（HumanApprovalModal .recommended 主色加粗 / AskUserQuestionTool .is-recommended 药丸描边两处）；2026-11-10 起 (Recommended)/（推荐）/(推荐) 任一触发（提交 a44754290）。
+- 反面教训：技能 SKILL.md 因全中文纪律禁英文标记时，必须同步给中文替代标记并核对前端识别逻辑——template-recommender 旧规范 6「不加 (Recommended)」静默关闭了高亮（bug-4222）。提示词层约束与平台既有 UI 机制冲突时，先查前端实际渲染条件再定措辞。
+
+**DNR**:
+- 改交互卡相关 SKILL.md 措辞前，先 grep web/src 中该卡的渲染条件（'(Recommended)' 检测、description 透传等），提示词与前端能力对齐；禁凭工具描述文本臆断协议边界。
+
+## Key Learnings + DNR（2026-11-10 服务端驱动页面测试批追加）
+
+### Key Learnings
+- **agent run 执行模型**：`submit_agent_request`/`create_resume_run_view` 只落库+`_commit_and_enqueue` → `enqueue_agent_run`（agent_run_service.py:745）往 arq 队列塞 `process_agent_run` job——**执行在 worker 容器**。免 HTTP 凭据的集成式验证姿势：api 容器内脚本用应用服务层建 run（admin uid='admin'，POSTGRES_URL 在容器 env），worker 真执行，脚本轮询 agent_runs（conversation_thread_id 最新 status）即可；resume 载荷 `{"q-<n>": "<选项label>"}`，created_by_run_id=被恢复 run 的 id。
+- **容器内服务层脚本**：api 容器 `import pisuan` 原生可用（editable install），backend→/app 挂载，backend/scripts/ 下脚本容器内 `/app/scripts/` 直跑；会话工厂自建 `create_async_engine(os.environ["POSTGRES_URL"])`，勿用 app 全局 manager（会带 init/迁移副作用）。
+- **web 容器挂载面**：web/ 根目录**不进**容器（只有 src/e2e/public 等子目录挂载）；vite 直挂验证页要放 `web/src/<name>.html`，访问 `localhost:5173/src/<name>.html`（SPA fallback 只劫持无扩展名/未命中文件路径）。HumanApprovalModal 是纯 props 组件（visible/questions/kind/actionRequests），import base.css 即可完整渲染，无 pinia 依赖。
+- **模板写作首轮很慢**：开局定位含 get_mindmap+KB 检索，单轮模型轮次可 >10 分钟（worker 侧 Milvus/embedding 日志为活动证据）；心跳（agent_runs.heartbeat_at）滞后 <1min 属正常执行中。
+
+### Do-Not-Repeat
+- Git Bash 里 `docker exec ... /app/...` 会被 MSYS 转成 Windows 路径（`C:/Program Files/Git/app/...`）——容器绝对路径写 `//app/...`。
+- 脚本模块级 create_async_engine + 两次 `asyncio.run()` = "Future attached to a different loop"；start+drive 必须包单个 asyncio.run。
+- 驱动脚本单轮轮询超时勿设 300s（首轮不够），900s 起。
+- **模型稳定性实证（2026-11-10）**：default-chatbot 默认 `openai2:agnes-2.5-flash` 晨(23:55Z)晚(14:57Z)两次 500 限流失败（Rate limit check failed，langchain 内部重试挂 20+ 分钟才报错）；`openai2:agnes-3.0-flash` 同晨连续 3 轮成功。免凭据驱动验证须显式 `model_spec`（AgentRequestInput.model_spec），resume 自动继承父 run。
+
+## Key Learnings（2026-11-11 追加）
+- web 前端 eslint 配置含 `@vue/eslint-config-prettier/skip-formatting`（web/eslint.config.js:5）——**eslint 通过 ≠ 格式合规**；格式校验必须单独跑 `pnpm exec prettier --check`（容器内可 `git show HEAD:<file> | docker exec -i pisuan-localized-web-1 sh -c "cd /app && pnpm exec prettier --check --stdin-filepath <path>"`）。
+- `web/.prettierrc.json` 为 `trailingComma: "none"`：JS 对象末项不得带尾逗号（后端 Python ruff 无此约束，两套规则勿混）。
+- 实现子代理自称「X 风格」的断言要抽验——本次「Prettier 风格尾逗号」恰与项目配置相反。
+
+## Do-Not-Repeat（2026-11-11）
+- 不要用 `pnpm run format` 修局部格式：工作树有在途未提交 hunks 时会全量卷入；改用精确 Edit + `git apply --cached` 部分暂存。
+- 提交前对 tasker.js/changelog.md 等「带在途改动」的文件，先 `git diff` 看 hunk 边界再决定整文件 add 还是补丁级暂存。
+- （2026-11-11 补充）Git Bash 不加 MSYS_NO_PATHCONV=1 跑 `docker exec ... /app/...` 的失败形态是**静默 collected 0 items**（session 正常启动、无 ERROR），不是报错——pytest 输出 0 items 即应怀疑路径被改写。
+
+## Do-Not-Repeat（2026-11-11 C-4 教训）
+- 给 LLM 输入做「装饰」（如加【章节】前缀）时，必须区分装饰后文本与原始正文的两条下游路径：prompt content 用装饰版可以，但喂给非 prompt 消费方（失败兜底、槽位替换 re.sub、截断摘录 text[:500]）的实参必须保持原始正文——本次三元组 (input, body, truncated) 分离即为此。写计划时按「一个组装函数一个返回值」直觉设计，被质量审查拦下。
+- （2026-11-11）「调用点 kwarg vs builder 签名漂移」类 bug pytest 抓不到（运行时才 TypeError），靠 review triage 发现（bug-4227 实例）；未来接入 mypy 类型检查可静态拦截，单行修复不必配 inspect.signature 断言测试（过度设计）。
+- （2026-11-11 DNR 强化）改 repo 层共享契约（如 commit_task→begin_ingest）后，验证面不能只跑本次新增/回归的两个测试文件——test/unit/services/ 下的存量夹具可能 mock 旧契约（qual-t5b 实证：test_commit_pipeline_status.py 3 failed + 1 空洞通过，夹具 :139 mock 已死的 commit_task）。规则：**凡动 repo/service 公共方法签名或调用点，pytest 范围至少含 test/unit/services 整目录**；空洞通过（夹具死在早退路径、断言从未到达目标分支）比失败更隐蔽，review 时看 failed+passed 总数与预期 collected 是否吻合。
+
+## Key Learnings（2026-11-11 终审收口期）
+- **评审员断言也要对码核实，再深的枚举也有盲区**：终审 Rec-7 断言「worker 崩在 claim 后 → INDEXING 滞留 → 每次重试 claim 失败 → COMMIT_FAILED 循环只能手工改库」，实核四环（milvus.py:710-715 白名单无 INDEXING ✓ / :722-726 domain factory 无租约 ✓ / upsert 冲突分支覆盖 status knowledge_file_repository.py:728-729 ✓ / _file_meta_to_record_data base.py:114 透传 status）后证伪——两管线每次重试都在 claim 前重写 file_meta PARSED（service :4630/:4638、:5765/:5772），陈旧 INDEXING 自愈；真实残留仅是放弃重试时 KB 文件列表显示性陈旧态。评审员看 claim 机制漏了 heal 写点；「机制A存在」≠「A 造成的后果不可恢复」。
+- domain factory 入库链 file_id 生命周期：service 写 meta（PARSED）→ index_file claim（INDEXING）→ 完成置 INDEXED；白名单 claim 用 update_fields_if_status，重试幂等靠 file_id 确定化 + meta 重写，两段拼起来才是完整幂等故事。
+- （2026-11-11 f25aa2de 教训）**测试桩必须复刻被 mock 方法的返回值契约，不是只记录调用**：update_task 真实契约=返回更新后 ORM 对象，时序桩返回 None 而生产代码成功路径会消费返回值（task = await update_task(...) 赋回）→ 容器首跑 TypeError。宿主无 pytest + 静态终审都抓不到 mock/运行时契约错位，只有实跑能。写桩时问一句：生产代码在这个路径拿返回值干什么。
+- （2026-11-11）Git Bash 长复合命令里 `var=$(python - <<'EOF' ... EOF)` 嵌 heredoc 子stitution 会炸 `/mingw64/bin/git: Argument list too long`（E2BIG，形状与此前成功调用一致也会炸，疑似长度阈值边缘）——稳定替代：python 逻辑写临时脚本文件，`blob=$(python /tmp/x.py | git hash-object -w --stdin)` 无 heredoc 纯管道，稳。
+
+## Key Learnings（2026-11-11 triage 分诊终局追加）
+- **test/unit/services 全量跑有 14 例已知既有失败，勿误判为新引入**：bug-4236 = eia 域 export 系 10 例（测试 tmp_path 与 eia_refs_git.py:55 _worktree_rel 路径契约不匹配）；bug-4237 = test_graph_query_service 4 例（真实 neo4j 数据依赖，查询返空）。104 文件 1150 passed / 14 failed / 4 skipped / 0 挂点，定责三证（diff 零触及+失败栈无本批符号+导入链零耦合）齐全。
+- **agents/toolkits/buildin/test_tools_graph_integration.py 用例1→2 文件内顺序状态污染挂死**（bug-4230 元凶，最终定位）：用例2单跑 4.66s 通过、两用例组合零增长挂死；pytest 收集序 agents 先于 services，全树主跑 10%（214/2141）即死于此文件——「services 整目录挂死」实为从未执行到 services。整目录批跑需 `--ignore` 该文件；根修（用例隔离/未恢复资源定位）是独立后续任务。
+- 分层扫批设计：每单元独立 docker exec + 容器内 timeout（agents 900s 带 --ignore / 其余 600s），循环自动跨单元继续——容器重启只打断当时单元，事后凭异常 RC 重跑，无需协调窗口；比单个长跑进程抗运维扰动。
+
+## Key Learnings + DNR（2026-11-11 FAILED_PROVIDER 砍除批追加）
+- **「4 连死同点位」≠内容触发，先查 provider 再疑内容**：纳林 4 次熔断全部死在「p20（章节 1.1.2.1.2.1）」，追内容白费——真凶是 default_model 绑定的本地 llama-server@8080 挂了（Connection error，provider-dead 时 breaker 必然落在首个 todo 段）；报错里的章节号还是 chapter_hint 伪影（section_path=["1","1.2","1.2.1"] 各元素自带前缀，"." .join 产出杂交串 1.1.2.1.2.1，bug-4239 立案未修）。探活先查 config_options.system_options.default_model 真实绑定与该端点健康（宿主 netstat 无 LISTENING + 容器内探测）。
+- **domain factory 断点续跑判定已数据驱动**（fe4ad80a）：FAILED_PROVIDER 状态砍除，失败统一 FAILED；resume = status==FAILED 且 source_paragraphs 非空 → 只补失败段，否则全卷重跑；TASK_STATUS_EDGES 补了 UPLOADED→GENERALIZING 边（C-1a 回归修复）。做状态机相关改动时要追**运行时两跳路径**（retry 先重置 UPLOADED 再入管线），不能只看写点直连边——旧测试断言 FAILED_PROVIDER→GENERALIZING 直达边就是运行时不可达的死边。
+- **ETL 工作台类型筛选**（eb4c5d04c）：spec-W1 后分类器只产 prose，parameter/narrative 是 legacy 只读值（存量旧任务 2333/3003 条，徽标映射保留、筛选组已排除）；判断「死选项」先查新任务真实分布再删。
+- **DNR（第二次踩，正式记档）：`git commit <pathspec>` 会先 stage 该路径的工作区内容再提交，直接覆盖手工 update-index 精心构造的 partial blob**——第一次 impl-final-fix 事故（sweep changelog 在途行），这次 473d7632b（提交了他线程 2 行、丢了我 2 行，靠 soft reset + 无 pathspec 重做修复）。手工 staging 后必须裸 `git commit`（无 pathspec）；pathspec 提交仅当工作区内容恰是想要的内容时才可用。验证提交内容永远 `git show HEAD:<file> | grep` 关键双向断言（我的标记在、他线程标记不在）。
+
+## Key Learnings + DNR（2026-11-11 章节解析追加）
+
+- **api 容器 bind mount 按子目录切分**（test/、package/、server/ 等各自挂载）：往 backend/ 根新写的文件不会出现在容器 /app/ 根——临时探针必须放进已挂载子目录（如 backend/test/unit/services/）。
+- **section_path 的元素契约 = 完整编号字符串前缀序列**："1.2.2" → ["1","1.2","1.2.2"]（docstring :1260 即契约）。不要 `"3.3".split(".")` 得 ["3","3"]——首版实现犯过，靠旧测试断言 ["3","3.3",...] 抓住。改任何 path 构建前先读 docstring 与 DB 真实样本。
+- **编号标题 pathology 的通用形态**：上游转换器会产出编号紧贴标题文本（无空格）的 markdown 标题；任何要求 `\s+` 的编号识别都会漏。放宽仅限已确认标题（# 前缀）内，裸文本保持严格（防「2024年…」正文误判）。
+- **源文本编号错误是独立层**：OCR/转换产物自身可能编号错乱（7b6364db「1.4.2 评价时段」出现在 1.3 节内，语义应为 1.3.2）。解析器修复后忠实保留源编号——树挂接正确但编号可能与语义不符，这是源文本信息，不是解析缺陷。
+- 回归面测试文件位置：状态机在 test/unit/test_c_batch_fixes.py（unit 根），管线 test/unit/services/test_commit_pipeline_status.py，熔断 test/unit/services/test_domain_factory_p0.py（无独立 c_batch/breaker 文件名，猜文件名会 collected 0）。

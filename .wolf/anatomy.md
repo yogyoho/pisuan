@@ -492,6 +492,7 @@
 ## docs/superpowers/plans/
 
 - `2026-11-04-agent-briefing-layer.md` — Agent 业务简报渲染层（briefing 层）实施计划 (~11591 tok)
+- `2026-11-09-template-recommender-guided-writing.md` — template-recommender 逐节引导写作重构实施计划（8 任务，含 SKILL.md 全文） (~4400 tok)
 
 ## docs/superpowers/specs/
 
@@ -501,6 +502,7 @@
 - `2026-11-04-agent-briefing-layer.md` — Agent 交互体验重塑：业务内容分层渲染层（briefing 层） (~1398 tok)
 - `2026-11-05-chapter-doc-delivery.md` — 章级交付文档与用户可选合并（2026-11-05） (~629 tok)
 - `2026-11-05-template-recommendation-fix.md` — 段落模板推荐口径统一与 writer 范例链接线（2026-11-05） (~536 tok)
+- `2026-11-09-template-recommender-guided-writing-design.md` — template-recommender 重构设计：逐节引导写作四卡循环（已获批，2026-11-09） (~1900 tok)
 
 ## docs/vibe/assets/2026-09-30-coal-eia-v2-port/
 

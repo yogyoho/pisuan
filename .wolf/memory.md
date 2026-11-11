@@ -9340,3 +9340,66 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 |------|--------|---------|---------|--------|
 | 18:40 | Edited docs/develop-guides/changelog.md | modified fix() | ~222 |
 | 18:45 | bug-4218 闭合：eia_formula set_input_value 接受 JSON 标量（数值/布尔 500→200，TEXT 契约不变 _normalize_value 保型回填）+ 回归单测；顺带发现 api 容器 watchfiles 不热载 Windows 写入（须 restart） | backend/package/yuxi/services/eia_formula_service.py, backend/test/unit/services/test_eia_formula_service.py, docs/develop-guides/changelog.md | 容器 7/7 + 实栈 F 链零净差（PUT 0.123/true→200、撤后表 0 行） | ~18k |
+| 18:32 | template-recommender 重构设计定稿：逐节引导写作四卡循环（交互卡/一体化/落盘工作区三项用户裁定），设计文档落 docs/vibe | docs/vibe/2026-11-09-template-recommender-guided-writing-design.md | 已获批待评审 | ~25k |
+| 18:41 | writing-plans：逐节引导写作重构实施计划落盘（8 任务，SKILL.md 全文内嵌，get_templates 双形态字段口径已核准） | docs/superpowers/plans/2026-11-09-template-recommender-guided-writing.md | 待执行 | ~18k |
+| 21:30 | spec-review: Task1-5 全过(SKILL.md 逐字节/f254f 逐字/红线零改动/FRONTMATTER_OK)；f267bc4f4 经控制器认可复核通过 | changelog.md,SKILL.md,tools.py | ✅合规 | ~3k |
+| 14:35 | 质量审查 NEEDS_FIXES 修复回环：E1-E16 清单派发 impl-prompt-layer，单提交 934b3eff（SKILL.md+changelog，16+/13-）收口，控制器核验通过，已派 qual-review-1 复审 | template-recommender/SKILL.md, changelog.md | 等复审 | ~8k |
+| 14:45 | 复审 APPROVED；残留 E17/E18 微提交 22dfa990（2+/2-）；Task 6 落栈任务书已派 impl-prompt-layer | SKILL.md | 落栈执行中 | ~5k |
+| 14:50 | Task 6 落栈完成：三面 md5 归一（8b392dac/cc788dc4），投影曾滞后手动 cp 补齐，api 重启 healthy；偏差=栈全停先 compose up | docker compose, skill-projections | ✅ | ~6k |
+| 15:05 | E2E 首测失败根因闭环：tool_dependencies 门控 read_file/write_file 等→激活死锁（skills.py Catch-22），buglog 已记；实测模型为 agnes-3.0-flash 非计划 deepseek-flash | skills.py, SKILL.md frontmatter | 已确诊待修 | ~10k |
+| 00:40 | 修复包落栈：f85807a9 门控豁免(单测过,21 passed)+0f48ccd9 检索参照轨，三面 md5=bd999d87，.bak 已清，api/milvus healthy | skills.py,SKILL.md | ✅待复测 | ~9k |
+
+## Session: 2026-11-10 (任务中心筛选项收敛)
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:0x | 任务中心去掉「知识工厂」筛选页 + summary 去重后计数（bug-4220）；eslint 过，changelog 已记 | TaskCenterDrawer.vue, tasker.js, changelog.md, buglog.json | 完成，待用户浏览器目验 | ~12k |
+| 16:2x | 上传→解析→泛化管线梳理收尾：LLM 调用段(:3451 text[:1200]+:3517 表格[:1500])、熔断 _record_outcome(:3341-3381，fallback 清零系文档化设计意图非缺陷)、task_registry 三 handler+fail_domain_factory_etl 僵尸收敛(bug-341)；复核 C批 5 项仍未修 | domain_factory_service.py task_registry.py 2026-10-29-etl设计文档 | 分析呈报+方向四选一 | ~25k |
+| 21:30 | 排查生产环境几千分片图谱构建 worker_lease_expired 失败：确认单 arq job 跑全量构建、函数级超时 21630s、wrapper 超时 21600s、TASK_LEASE_SECONDS=30s+心跳10s、renew 单次异常即 lease_lost 杀任务、reconcile 落 worker_lease_expired；实测吞吐 0.06 chunk/s（103分片1828s）→ 几千分片必然超 6h | task_service.py / task_repository.py / run_worker.py / milvus_graph_service.py | 根因链条闭合，待生产日志确认触发变体 | ~40k |
+| 16:4x | worker+api 启动崩溃（CannotConnectNow: PG starting up，机器 42h 前关机后整栈拉起竞态，require_current_schema 建连失败即死）；PG pg_isready 就绪后 docker restart worker+api → 双 healthy + /api/system/ready 200；bug-4050 同型复现已回写（occurrences=2，本次 api 也崩故连带重启） | pisuan-localized-worker-1 api-1 buglog.json | 已恢复，ready 200 | ~8k |
+| 20:40 | 诊断并修复 localhost:5173/3000/8002 主机不可达：容器健康、Docker 端口转发按启动波次楔死；compose force-recreate 三容器修复并验证 | .wolf/cerebrum.md, .wolf/buglog.json (bug-4221) | 三端口恢复 HTTP 200 | ~50k |
+| 17:0x | C批设计定稿：docs/vibe/2026-11-10-etl-c-batch-fix-design.md——C-3 双现场(create:606+retry:5786 恢复原值保resume资格)/C-2 纯前端(retry:5765 已有resume)/C-5 七项(含叙述死分支:1785-1800+narrative_placeholders 摘除)/C-4 结构化组装(表格整块不裁剪 prose 4000 块丢尾)/C-1 INGESTING+幂等+迁移表；勘误 REVIEW_PASSED 全库不存在；顺序先小后大 C-3→C-2→C-5→C-4→C-1 已批 | docs/vibe/2026-11-10-etl-c-batch-fix-design.md | 定稿，待用户审阅后进 writing-plans | ~18k |
+| 21:20 | 提问卡推荐项高亮打通：前端两处触发标记扩中文「（推荐）」（向后兼容英文旧标记）+ tools.py 描述补 description 字段用法 + SKILL.md 规范6/卡2 选项构成改「短标题+description+（推荐）」；定点 eslint 过、api reseed 后三面 md5=2b1d698d、admin 投影手动补齐；提交 a44754290（bug-4222） | AskUserQuestionTool.vue, HumanApprovalModal.vue, tools.py, SKILL.md, 设计文档 | 完成，待用户卡面目验 | ~15k |
+| 14:35 | 写 C批实施计划（6 任务/TDD/无占位符）+ Self-Review 修三缺口（迁移边测试、KB 覆盖语义核实步、fail handler 签名实测对齐） | docs/superpowers/plans/2026-11-10-etl-c-batch-fix.md | 计划定稿待执行 | ~9k |
+| 22:45 | 服务端驱动方案落地：driver 脚本 backend/scripts/verify_card2_highlight.py（服务层建 run + arq worker 真执行 + 自动应答推进到卡2） | backend/scripts/verify_card2_highlight.py | start 成功 dispatch，loop bug 修复后 drive 后台推进中 | ~4k |
+| 22:55 | 视觉 harness：web/src/harness-card2.html 直挂真实 HumanApprovalModal（web 根目录不进容器，src/ 才挂载）；占位 payload 冒烟一次通过（推荐高亮+说明行齐全） | web/src/harness-card2.html | 等真实卡2 payload 替换后终验 | ~2k |
+| 23:20 | agnes-2.5-flash 500 限流失败（22min 重试挂死）→ 显式 agnes-3.0-flash 重试成功；drive 连续踩坑修复（UUID 排序、questions 字符串化） | backend/scripts/verify_card2_highlight.py | 卡2 真实 payload 到手：推荐置首位+（推荐）+说明行全成立 | ~6k |
+| 23:50 | 真实卡2 payload 挂真实 HumanApprovalModal 截图：高亮 PASS；harness 删除；changelog/设计文档补 E2E 验证句；bug-4225/4226 记账 | docs/develop-guides/changelog.md 等 | 服务端驱动页面测试验证完成 | ~3k |
+| 23:51 | Code review Task 1 (C-3 enqueue fallback, a44754290..af257455): race-safe (publish failures swallowed upstream), detached-instance idiom matches file convention, edges match planned TASK_STATUS_EDGES; verdict ready-merge | backend/package/pisuan/services/domain_factory_service.py | review complete | ~8k |
+| 15:47 | Task1 C-3 兜底落地：create_task 落 FAILED+DTO 同步、retry_task 捕获 original_status 失败恢复 | domain_factory_service.py (commit af257455) | 规格✅质量✅(全 Minor 无需改) | ~6k |
+| 23:55 | spec-review Task2 C-2: commit 5247a184 verified (2 hunks verbatim, 1 file +6/-2, eslint exit 0, not pushed) | web/src/components/domain-factory/DataSourceDashboard.vue | pass |
+| 16:08 | Task2 C-2 前端落地+补遗闭环：Dashboard 状态/重试、tasker.js 映射、注释修正、尾逗号 prettier 修正 | DataSourceDashboard.vue/tasker.js (5247a184→amend 2d654183) | 复审 Approved；在途 summary 修复未卷入 | ~8k |
+| 00:20 | spec-t3 review of C-5 commit 7d749e90 (7 items, tests, greps) | domain_factory_service.py, EtlWorkbench.vue, test_c_batch_fixes.py | spec compliant, 34 passed | ~9k |
+| 00:27 | qual-t3 review of 7d749e90 (C-5): traced _chinese_to_arabic all edge cases incl 万段/亿 correct; template_payload NULL-safe (create_task never sets, sole reader or {} at 4093, no task-level FE reader); narrative_placeholders removal safe (no stored-JSON parse path); dead elif ch==零 at :1612 flagged; 万/亿 branch tests missing | domain_factory_service.py, test_c_batch_fixes.py, EtlWorkbench.vue | review sent: merge-yes | ~28k |
+| 00:33 | qual-t3 closure re-review of amend c192340c: delta 7d749e902..c192340c exactly 2-line dead-elif del + 4 tests; tree clean vs HEAD (no foreign edits from disk-modify episode); 12 passed EXIT=0 independently re-run in pisuan-localized-api-1; Bash-tool /app path MSYS-mangled (collected-0 masquerade) via PowerShell rerun; verdict merge-yes sent | domain_factory_service.py, test_c_batch_fixes.py | closure verified | ~14k |
+| 16:32 | Task3 C-5 七项+修补闭环：中文数字正规解析(12测)、双set、空壳payload、narrative摘除、死分支/rawSlots清理 | service/test_c_batch_fixes/EtlWorkbench (7d749e90→amend c192340c) | 规格✅质量✅(万/亿覆盖补齐) | ~9k |
+| 00:42 | spec-t4 review: 51cb6a8c6 C-4 verified vs spec (diff/test/scope/push) | domain_factory_service.py, test_c_batch_fixes.py | 42 passed, compliant; pre-existing table-builder kwarg bug flagged | ~30k |
+| 17:45 | Task4 C-4 组装+闭环：三元组解耦前缀/兜底、表格整块不切碎、45 测试；4b bug-4227 kwarg 修法 A 落地 | service/test_c_batch_fixes (51cb6a8c→bbfc6f35 + 6cc15373) | 终审双双通过 | ~12k |
+| 01:49 | C-1a 状态迁移校验 TDD：TASK_STATUS_EDGES 表 + _validate_status_transition + update_task/commit_task 守卫 + begin_ingest；测试 19→24 全过 | domain_factory_repository.py, test_c_batch_fixes.py | commit 48a73066 DONE | ~9k |
+| 02:05 | Task 5b C-1b 入库状态机收敛落地：INGESTING 中间态、file_id/ingest_task_id 确定化、fail_domain_factory_ingest durable 收敛、retry 禁 INGESTING；5b.9 普查发现 reingest 前置表外迁移边（bug-4228 未修复上报） | domain_factory_service.py, task_registry.py, tasker.js, DataSourceDashboard.vue | commit 4ea84547，50 测试过，eslint/prettier 过，BLOCKED 待裁决 | ~90k |
+| 02:20 | 5b 裁决落地：方案 C——reingest 前置重置去 status 键仅清归属字段，→INGESTING 由 worker 入口写点独占（bug-4228 修复） | domain_factory_service.py | amend 2997bd2c，50 测试过，ast 过，DONE | ~15k |
+| 02:35 | 5b 追加 qual I-2 修复：scope 兜底挪 begin_ingest（I-2a）+ committed_at 终态写（I-2b）+ 迁移表注释豁免行，与方案 C 并入同一 amend | domain_factory_repository.py, domain_factory_service.py | amend 61529982（5 文件），50 测试过，ast 过，DONE | ~20k |
+| 02:50 | 5b 终审裁决落地：reingest 成功写点补 committed_at（对齐 commit 管线终态写，确认无 PARTIAL 分支仅单点） | domain_factory_service.py | amend ab52600f（5 文件不变），50 测试过，ast 过，DONE | ~8k |
+| 02:20 | Task 5b spec review commit ab52600f: 8 groups all pass, 50 tests pass, tasker.js 1-line constraint held, no Missing/Extra/Drift | domain_factory_service.py, domain_factory_repository.py, task_registry.py, tasker.js, DataSourceDashboard.vue | verdict compliant, report sent to team-lead | ~12k |
+| 03:05 | 5b qual 收口：C1 夹具 commit_task→begin_ingest mock 替换（bug-4229）+ M1 入队侧 ingest_task_id 确定化 + M2 注释补条目 + M3 COMMIT_PARTIAL 98 + M4 注册断言扩展；全量跑批挂死立案 bug-4230 移交 Task 6 | service, repo, test x2, tasker.js | amend 016c9bc9（7 文件），范围化 18+50 过，prettier 过，DONE | ~35k |
+| 02:1x | Task6.2 范围化 lint 分账：本批 4 处新增（service:5616/:4772 注释 E501、repo UPLOADED 集合 format、test_c_batch format）修复+amend 5601b015；17 处 check + 3 hunk format 均实证预存归属 | service/repo/test_c_batch_fixes (016c9bc9→5601b015) | 68 passed，check/format 终态零新增 | ~6k |
+| 10:08 | C批changelog条目写入工作区+plumbing直构blob部分暂存(仅我的条目1行staged/在途2行unstaged/MM)；派final-review全批终审(base a44754290..head 5601b015,8提交9文件,静态审禁pytest防bug-4230/防干扰triage-t6) | docs/develop-guides/changelog.md | staged待triage verdict后提交 | ~4k |
+| 10:29 | 终审报告收全(Yes+2 Important+5 Minor+3 Rec)；核验Important1/2、Minor3/4/5全部属实；裁定修法并派impl-final-fix(A发起路径显式报错+三态守卫+ingest_确定id/B reingest清挪enqueue后/C file_id掺kb_id/D except终态守卫/E census补记/F数字序列累加/G begin_ingest断言)；容器pytest禁用等分诊 | domain_factory_service.py等 | 修复中,终审待复审 | ~12k |
+| 10:48 | impl-final-fix DONE commit 11fdd2669(4文件+190/-31,A-G全落地+6新测试)；亲核changelog MM态/暂存行/tasker.js均完好,孤儿4119d99d已弃；派final-review复审(静态,容器pytest等分诊后补跑) | domain_factory_service.py等4文件 | 复审中 | ~3k |
+| 10:50 | 证伪终审Rec-7四环核验(INDEXING重试自愈,残留仅显示陈旧)；cerebrum记评审断言须对码核实 | milvus.py/knowledge_file_repository.py/base.py | Rec-7降级为显示性小项 | ~2k |
+| 10:54 | final-review复审Approved(6落实/2偏差合理/0C/0I/3 Minor)；裁定吸收Minor1守卫收紧(commit=WAITING_REVIEW+3COMMIT_*,reingest=3COMMIT_*)+Minor3加|分隔符,Minor2跳过；派impl-final-fix amend进11fdd2669 | - | 打磨中 | ~2k |
+| 11:01 | 打磨amend e542bae6核验过(4文件+201/-31,守卫收紧+|分隔符)；changelog暂存标记被重整MM→M但内容零丢失(我行+在途2行都在,提交时重建blob即可)；changelog条目更新至最终形态(id掺kb_id+⑦终审收口句)；派final-review增量确认 | changelog.md等 | 等增量确认+triage verdict | ~3k |
+| 11:04 | final-review增量确认Approved(三核对点闭合:白名单严格同宽/df_前缀无解析点/测试零残留)；全批9提交代码侧全部闭合；triage-t6沉默已久,发进度快照查询 | - | 等triage verdict | ~2k |
+| 11:08 | triage中期快照:主跑实为10%挂死被timeout杀(此前MAIN_RUN_DONE误读),肇事嫌疑转移agents/toolkits/buildin/test_tools_graph_integration.py；亲核该文件:patch整个DomainFactoryRepository,本批diff无import期副作用→检查层面排除本批致挂；重排序列(候选验证→让容器给四套补跑→services优先→分层扫降级)已下达 | test_tools_graph_integration.py | 等候选验证结果 | ~4k |
+| 11:17 | triage钉死bug-4230元凶:同文件两用例组合挂死(用例2单跑4.66s过/组合零增长,用例间状态污染)；四套补跑3绿1红:red=新时序测试update_task桩返回None(打磨后成功路径task=update_task回赋,None→result None→TypeError),mock契约瑕疵非生产缺陷;派impl修mock+amend | test_c_batch_fixes.py | 修复中 | ~3k |
+| 11:18 | triage候选验证闭合:文件内用例1→2顺序污染挂死(非收集序),倾向既有但无旧版对照实验；容器交还triage跑services逐文件；等impl amend mock修复 | - | services扫批中 | ~1k |
+| 11:22 | mock修复amend f25aa2de落地,c_batch复跑30 passed,四套74用例全绿;changelog提交4764eb978(1文件+1行,在途2行留存工作区);buglog+5条(bug-4231..4235)+bug-4230元凶更新;cerebrum+2防复发 | changelog.md/.wolf | 全批10提交齐整,等triage services明细后重启容器+E2E | ~6k |
+| 12:25 | 用户提前开测撞真实FAILED_PROVIDER(第3次死同段落p20,疑内容触发)——消失=旧代码C-2缺陷活体复现(容器16h未重启,批码未生效)；triage扫批收官:104文件零挂点services清白,5失败文件待定责(5min取/tmp日志),之后重启容器 | - | 等失败详情→重启 | ~3k |
+| 12:29 | 用户指令提前重启api+worker:worker秒级就绪,api lifespan干净完成(milvus/KB init→startup complete,/ready 200)——C批后端代码首次在容器生效；通知triage定责改重启后重跑5文件 | - | E2E开跑 | ~2k |
+| 12:35 | triage-t6 终局verdict落库：services 1150p/14f全既有（bug-4236 eia路径契约10例+bug-4237 neo4j真库4例），bug-4230 fix补终局处理，元凶文件--ignore暂避；4231撞号改用4236/4237 | .wolf/buglog.json | 647条JSON校验通过 | ~6k |
+| 12:40 | triage 重启后补证：14失败逐条一致（稳定非瞬态）、肇事组合挂死RC=124复现；agents排除元凶后整目录绿；分层扫extensions+rootfiles续跑中 | .wolf/buglog.json(不变) | 定责维持，等分层短报 | ~3k |
+| 13:25 | 用户裁决砍除FAILED_PROVIDER：失败统一落FAILED、resume改数据判定、迁移表补UPLOADED→GENERALIZING修C-1a回归；存量6行SQL迁移 | fe4ad80a | 48 passed | ~9k |
+| 14:05 | p20四连死破案：llama-server@8080挂（default_model绑定）非内容触发；chapter_hint拼接伪影bug-4239立案；用户切默认模型后7b6364db跑通WAITING_REVIEW | - | E2E ①过 | ~4k |
+| 14:10 | 工作台筛选删legacy参数/叙述（新任务分布0，徽标映射保留）；changelog提交事故：pathspec覆盖staging blob、他线程2行入提交我2行丢失，soft-reset无pathspec重做修复 | eb4c5d04c+5a647e8f5 | HEAD grep双向验证 | ~7k |
+| 15:18 | 章节解析修复：无空格编号标题识别+路径编号自证（bug-4241 幽灵「1」/挂接错乱），TDD 7 用例+回归 75 passed+真实 markdown 重解析验证，dfa98ac8 | domain_factory_service.py, test_tight_numbered_headings.py | 已提交，容器已重启 | ~60k |
+| 15:30 | 7b6364db 全卷重跑（280s）落库核验：第1章 28 标题路径全对、ghost=NONE，WAITING_REVIEW 待用户界面复核 | （无代码改动） | 修复实证生效 | ~10k |

@@ -8088,7 +8088,7 @@
     "error_message": "上传链 API NOT READY 503 + worker health 'lease missing or invalid'，9 份批量上传被跳过，推 KB 链等超时退出",
     "file": "docker-compose (pisuan-localized-worker-1/api-1)",
     "root_cause": "Docker Desktop 崩溃重启竞态：worker 在 postgres starting up 时建连失败（asyncpg CannotConnectNowError），连接池带毒启动、健康租约未建立；api 的 /api/system/ready 依赖 worker 租约持续 503。本次未自愈（上次同类竞态自愈了）",
-    "fix": "docker restart pisuan-localized-worker-1 → healthy + /api/system/ready 200；随后重注入 /tmp/eia_bulk 工件（restart 后 /tmp 被清空）并在 api 容器内跑 upload.py",
+    "fix": "docker restart pisuan-localized-worker-1 → healthy + /api/system/ready 200；随后重注入 /tmp/eia_bulk 工件（restart 后 /tmp 被清空）并在 api 容器内跑 upload.py。2026-11-10 复现时 worker 与 api 双双死于启动期 require_current_schema（PG WAL 恢复窗口），处置：pg_isready 确认就绪后 docker restart worker+api，双 healthy + ready 200",
     "tags": [
       "docker-restart-race",
       "worker-lease",
@@ -8096,8 +8096,8 @@
       "self-heal-failed"
     ],
     "related_bugs": [],
-    "occurrences": 1,
-    "last_seen": "2026-10-18"
+    "occurrences": 2,
+    "last_seen": "2026-11-10"
   },
   {
     "id": "bug-4051",
@@ -11176,22 +11176,453 @@
     "occurrences": 4,
     "last_seen": "2026-11-06T23:59:00+08:00"
   },
-{
-  "id": "bug-4218",
-  "timestamp": "2026-11-06T18:40:00+08:00",
-  "error_message": "PUT /eia/formulas/{fid}/inputs/{name} 传数值标量 500：保存参数参考值失败: 'float' object has no attribute 'strip'（eia_formula_service.py:130）",
-  "file": "backend/package/yuxi/services/eia_formula_service.py",
-  "root_cause": "set_input_value 假定 value 恒为 str 直接 .strip()——路由模型对 value 不做 str 强转（JSON 标量原样透传），API 直传数值 0.123 / 布尔 true 即 AttributeError 500；formulas tab 参考值裁决对数值输入完全不可用（11 tab 走查写链批实测发现）",
-  "fix": "set_input_value 签名 value: Any：空值守卫（None 或空白字符串抛『参考值不能为空』）后，非字符串 JSON 标量统一 json.dumps 成 JSON 字面量文本入库（TEXT 存储契约不变），字符串仍 strip；导出侧 _normalize_value 既有 json.loads 保型回填（'0.123'→0.123、'true'→true）天然兼容零改动。验证：单测 test_set_input_value_accepts_json_scalars（0.65/true/' 0.7 ' 三形态 upsert 断言 + None 守卫）容器 7/7；localized 栈 F 链 PUT 0.123/true 均 200、GET pending=True、DELETE×2 撤清表 0 行零净差。运维注意：api 容器 uvicorn --reload（watchfiles）收不到 Windows bind mount 写入事件，sync-dev 后须 docker restart pisuan-localized-api-1（前端 Vite 轮询热载不受影响）",
-  "tags": [
-    "domain-factory",
-    "eia-formulas",
-    "type-assumption",
-    "api-500",
-    "json-scalar"
-  ],
-  "related_bugs": [],
-  "occurrences": 1,
-  "last_seen": "2026-11-06T18:40:00+08:00"
-}
+  {
+    "id": "bug-4218",
+    "timestamp": "2026-11-06T18:40:00+08:00",
+    "error_message": "PUT /eia/formulas/{fid}/inputs/{name} 传数值标量 500：保存参数参考值失败: 'float' object has no attribute 'strip'（eia_formula_service.py:130）",
+    "file": "backend/package/yuxi/services/eia_formula_service.py",
+    "root_cause": "set_input_value 假定 value 恒为 str 直接 .strip()——路由模型对 value 不做 str 强转（JSON 标量原样透传），API 直传数值 0.123 / 布尔 true 即 AttributeError 500；formulas tab 参考值裁决对数值输入完全不可用（11 tab 走查写链批实测发现）",
+    "fix": "set_input_value 签名 value: Any：空值守卫（None 或空白字符串抛『参考值不能为空』）后，非字符串 JSON 标量统一 json.dumps 成 JSON 字面量文本入库（TEXT 存储契约不变），字符串仍 strip；导出侧 _normalize_value 既有 json.loads 保型回填（'0.123'→0.123、'true'→true）天然兼容零改动。验证：单测 test_set_input_value_accepts_json_scalars（0.65/true/' 0.7 ' 三形态 upsert 断言 + None 守卫）容器 7/7；localized 栈 F 链 PUT 0.123/true 均 200、GET pending=True、DELETE×2 撤清表 0 行零净差。运维注意：api 容器 uvicorn --reload（watchfiles）收不到 Windows bind mount 写入事件，sync-dev 后须 docker restart pisuan-localized-api-1（前端 Vite 轮询热载不受影响）",
+    "tags": [
+      "domain-factory",
+      "eia-formulas",
+      "type-assumption",
+      "api-500",
+      "json-scalar"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-06T18:40:00+08:00"
+  },
+  {
+    "id": "bug-4219",
+    "timestamp": "2026-11-09",
+    "error_message": "E2E 实测 template-recommender 逐节引导流所问非所答、信息杂乱：模型读不到 SKILL.md（自称无 read_file），用 grep 逐行拼凑技能文档，规划独白泄漏为用户可见回复，用 create_report/save_chapter 即兴落稿替代 write_file 工作区（线程 103458a6）",
+    "file": "backend/package/pisuan/agents/skills/buildin/template-recommender/SKILL.md + backend/package/pisuan/agents/middlewares/skills.py",
+    "root_cause": "SKILL.md frontmatter tool_dependencies 声明 read_file/write_file/edit_file/execute（compliance-checker 也声明了 read_file）→ SkillsMiddleware._resolve_gated_tool_names 把不在 context.tools（基础工具集=已配置 buildin 工具，文件系统中间件 7 件套不在其中）的工具全部门控隐藏 → 激活技能唯一通道恰是 read_file 读 SKILL.md → Catch-22：工具不可见就无法激活，无法激活工具就永远不可见。模型只能用未门控的 ls/glob/grep 逐行拼凑 SKILL.md，技能从未激活",
+    "fix": "待修：skills.py 门控集合豁免文件系统中间件常驻工具（ls/read_file/write_file/edit_file/glob/grep/execute）——它们是平台原生基础能力且 read_file 是激活通道本身，任何技能不得门控；tool_dependencies 中的文件工具保留作为依赖文档",
+    "tags": [
+      "skills-middleware",
+      "tool-gating",
+      "catch22",
+      "read_file",
+      "skill-activation",
+      "template-recommender",
+      "e2e"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-09"
+  },
+  {
+    "id": "bug-4220",
+    "timestamp": "2026-11-10",
+    "error_message": "用户报告：任务中心上传样例报告后「出现两个任务」，一个在知识工厂tab中、一个在进行中tab中，实为同一任务",
+    "file": "web/src/stores/tasker.js, web/src/components/TaskCenterDrawer.vue",
+    "root_cause": "双因叠加：①任务中心筛选项「知识工厂」按类型过滤、其余按状态过滤，同一任务天然命中两类视图；②loadTasks 并行拉通用任务全量+知识工厂专线（/tasks-center 返回的就是前者 type=domain_factory 的同 id 行），列表按 id 去重正确，但 summary（total/status_counts/filtered_total）在去重前的拼接数组上统计，知识工厂任务计数恒 ×2（进行中徽标 2、列表 1 卡）",
+    "fix": "TaskCenterDrawer 删「知识工厂」筛选项与 filteredTasks 的 domain_factory 分支（筛选项 5→4）；tasker.js 的 summary 改在按 id 去重后的合并列表上统计。任务卡类型标签与后端 /tasks-center 不动",
+    "tags": [
+      "task-center",
+      "tasker-store",
+      "duplicate-count",
+      "domain-factory",
+      "ui-filter",
+      "dedupe"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-10"
+  },
+  {
+    "id": "bug-4221",
+    "timestamp": "2026-11-10",
+    "error_message": "用户报告：http://localhost:5173/ 无法访问（Invoke-WebRequest/浏览器报「基础连接已经关闭: 连接被意外关闭」），docker 服务均已启动",
+    "file": "(runtime) Docker Desktop/WSL2 端口转发，非代码文件",
+    "root_cause": "~20:15 同波启动的 web(5173)/gitea(3000)/sandbox-provisioner(8002) 的端口 publish 转发成批楔死：TCP accept 后无响应关闭；容器本身完全健康（容器内 wget 127.0.0.1:5173 返回完整 HTML）。20:23 后启动的 api(5050) 转发正常——转发按注册波次失效；此前 web 经历过的 docker restart/stop-start 不重建 publish 注册，故未自愈",
+    "fix": "docker compose up -d --force-recreate --no-deps web gitea sandbox-provisioner 删重建容器刷新 publish 注册，三端口即恢复（5173/3000 → 200，8002 → 404 服务路由即通）。对照：防火墙故障表现为连接超时而非被关闭；netstat 见 com.docker.backend/wslrelay 持有环回监听属正常转发链而非抢占者",
+    "tags": [
+      "docker",
+      "wsl2",
+      "port-forward",
+      "force-recreate",
+      "compose",
+      "localhost-5173"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-10"
+  },
+  {
+    "id": "bug-4222",
+    "timestamp": "2026-11-10T21:20:00+08:00",
+    "error_message": "用户：提问卡只能给出几个选项标题，看不到推荐模板的高亮区分，无法快速定位推荐项",
+    "file": "backend/package/pisuan/agents/skills/buildin/template-recommender/SKILL.md",
+    "root_cause": "平台推荐高亮机制本就存在（选项置首位且 label 含 \"(Recommended)\" 时，HumanApprovalModal .recommended 主色加粗 / AskUserQuestionTool .is-recommended 药丸描边），选项 description 说明行字段也前后端均透传；但 SKILL.md 沟通规范第 6 条明令「不加 (Recommended) 等英文标记」且全中文纪律无中文替代标记——推荐项从未触发高亮，说明信息只能挤进标题。",
+    "fix": "前端两处触发标记扩为 (Recommended)/（推荐）/(推荐) 任一（向后兼容，a44754290）；ASK_USER_QUESTION_DESCRIPTION 补 description 字段用法与推荐标记口径；SKILL.md 规范 6 改为置首位+标题末尾「（推荐）」（禁每题都标），卡2 选择卡选项构成改为脱敏短标题+description 放来源/结构特点。SKILL.md 落栈三面 md5=2b1d698d。",
+    "tags": [
+      "ask_user_question",
+      "推荐高亮",
+      "卡协议",
+      "SKILL.md",
+      "UX",
+      "template-recommender"
+    ],
+    "related_bugs": [
+      "bug-4219"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-10"
+  },
+  {
+    "id": "bug-4223",
+    "timestamp": "2026-11-10T23:05:00+08:00",
+    "error_message": "docker exec ... python /app/scripts/xxx.py 报 No such file: '/app/C:/Program Files/Git/app/scripts/...'",
+    "file": "backend/scripts/verify_card2_highlight.py",
+    "root_cause": "Git Bash (MSYS) 会把 docker exec 参数里的 /app/... 当 POSIX 路径自动转换成 Windows 路径再传给容器。",
+    "fix": "容器绝对路径写双斜杠 //app/... 阻止 MSYS 转换；或 MSYS_NO_PATHCONV=1。",
+    "tags": [
+      "docker",
+      "git-bash",
+      "msys",
+      "路径转换"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-10"
+  },
+  {
+    "id": "bug-4224",
+    "timestamp": "2026-11-10T23:06:00+08:00",
+    "error_message": "driver 脚本 RuntimeError: Task got Future attached to a different loop",
+    "file": "backend/scripts/verify_card2_highlight.py",
+    "root_cause": "模块级 create_async_engine 在首个 asyncio.run() 的 loop 上建池；main 里 start 与 drive 用两次 asyncio.run()，第二个 loop 复用旧池连接即崩。",
+    "fix": "start+drive 包进单个 asyncio.run(entry())；另首轮（开局定位含章节树+KB检索）超 300s，POLL_TIMEOUT 提至 900。",
+    "tags": [
+      "asyncio",
+      "sqlalchemy",
+      "asyncpg",
+      "事件循环",
+      "驱动脚本"
+    ],
+    "related_bugs": [
+      "bug-4223"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-10"
+  },
+  {
+    "id": "bug-4225",
+    "timestamp": "2026-11-10T23:45:00+08:00",
+    "error_message": "driver 6 轮重复应答同一张卡不推进（resume 实际已建出并跑到卡2）",
+    "file": "backend/scripts/verify_card2_highlight.py",
+    "root_cause": "agent_runs.id 是 UUID 字符串主键，latest_run 用 ORDER BY id DESC 得到的是字典序不是时间序，父 run（9835…）字典序恒大于子 resume run（0534…）。",
+    "fix": "改 ORDER BY created_at DESC（id 仅作并列兜底）。凡按 agent_runs 找「最新 run」都不能按 id 排序。",
+    "tags": [
+      "agent_runs",
+      "UUID",
+      "排序",
+      "驱动脚本"
+    ],
+    "related_bugs": [
+      "bug-4224"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-10"
+  },
+  {
+    "id": "bug-4226",
+    "timestamp": "2026-11-10T23:46:00+08:00",
+    "error_message": "tool_calls.tool_input.questions 是 JSON 字符串而非数组（AttributeError: 'str' object has no attribute 'get'）",
+    "file": "backend/scripts/verify_card2_highlight.py",
+    "root_cause": "模型（agnes-3.0-flash）调用 ask_user_question 时把 questions 数组 JSON 字符串化传入；平台链路容忍此形态（前端 questionUtils normalizeQuestions 兼容字符串化输入），run 正常中断呈卡。",
+    "fix": "驱动侧对 questions 字段做 isinstance(str) 则 json.loads 兜底，与前端归一化同口径；后续处理 ask_user_question 原始 tool_input 的代码都应做此防御。",
+    "tags": [
+      "ask_user_question",
+      "tool_input",
+      "字符串化JSON",
+      "归一化"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-10"
+  },
+  {
+    "id": "bug-4227",
+    "timestamp": "2026-11-11T00:45:00+08:00",
+    "error_message": "TypeError: _build_table_generalize_prompt() got an unexpected keyword argument 'prompt_template'（markdown 表格段落进入泛化即触发；asyncio.gather 无 return_exceptions，异常传播杀死整轮泛化，任务落 FAILED）",
+    "file": "backend/package/pisuan/services/domain_factory_service.py",
+    "root_cause": "调用点 :3463-3469 给 _build_table_generalize_prompt 传了 prompt_template=template_prompt，但签名(:3537-3543)只有 table_text/schema_text/chapter_hint/domain_label 四参。markdown 结构解析(:1546-1548)产出 table_format='markdown' 的表格段落，:3461 分支可达；docx/pdf 的 HTML 表走 table_format='html' 的 :3423 跳过路径，故生产长期未爆。属潜伏地雷：任何 .md/带 markdown 表的上传在泛化阶段必崩。发现于 Task 4(C-4) 规格审查期间，先于 C-4 存在。",
+    "fix": "已落地（修法 A，commit 6cc153738）：调用点删除 prompt_template=template_prompt kwarg，附语义注释（表格不套用域自定义模板，符合 builder 文档语义）；text 分支合法 kwarg 未动。45 测试绿，终审通过。",
+    "tags": [
+      "etl",
+      "generalize",
+      "table",
+      "markdown",
+      "TypeError",
+      "pre-existing",
+      "latent"
+    ],
+    "related_bugs": [],
+    "occurrences": 0,
+    "last_seen": "2026-11-11"
+  },
+  {
+    "id": "bug-4228",
+    "timestamp": "2026-11-11T02:05:00+08:00",
+    "error_message": "reingest（再入库）从 COMMIT_FAILED/COMMIT_PARTIAL 触发时 repo.update_task 守卫 raise ValueError 非法状态迁移，API 返回 500「再入库失败」",
+    "file": "backend/package/pisuan/repositories/domain_factory_repository.py (TASK_STATUS_EDGES) + backend/package/pisuan/services/domain_factory_service.py:5615",
+    "root_cause": "5a(commit 48a730669) 迁移表 TASK_STATUS_EDGES 遗漏 reingest 前置重置边：service.reingest_task:5615 无条件 update_task 落 WAITING_REVIEW，但 reingest 按钮前端 v-if 仅在 COMMIT_FAILED/COMMIT_PARTIAL 显示（DataSourceDashboard.vue:523），表中这两态出边只有 {UPLOADED, INGESTING, COMMITTED} 不含 WAITING_REVIEW。表注释「→INGESTING：reingest 入口」的设计意图与实际写点（WAITING_REVIEW）不一致。Task 5b 的 5b.9 写盘点普查首次发现（qual 阶段未覆盖 reingest 前置链）。",
+    "fix": "已修复（方案 C + qual I-2 两项，随 commit 61529982【4ea84547 两轮 amend】）：①reingest 处理器前置重置去 status 键、仅清 committed_at/reviewer 归属字段，→INGESTING 由 worker 侧 5b.5 入口写点独占（COMMIT_FAILED/COMMIT_PARTIAL→INGESTING 表内合法）；②I-2a W3 scope 兜底挪进 begin_ingest（scope None→project，与原 commit_task 同款）；③I-2b committed_at 迁到 commit 管线终态写（:4769 dict，仅可达 COMMITTED/COMMIT_PARTIAL）；④TASK_STATUS_EDGES 普查注释补死代码豁免行。enqueue 失败时任务保持原终态可再次发起。A（扩表）/B（处理器直落 INGESTING 致僵尸）经 lead 裁决否决。修复后 50 测试过、ast 过。",
+    "tags": [
+      "domain-factory",
+      "C-1",
+      "state-machine",
+      "reingest",
+      "TASK_STATUS_EDGES",
+      "5a-regression"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-11T02:35:00+08:00"
+  },
+  {
+    "id": "bug-4229",
+    "timestamp": "2026-11-11T03:05:00+08:00",
+    "error_message": "test_commit_pipeline_status 3 failed + 1 空洞通过：夹具 _partial_pipeline_env 仍 mock repo.commit_task（AsyncMock），管线 5b.1 已改调 repo.begin_ingest——MagicMock 自动属性不可 await → TypeError → 外层 except → 断言 COMMIT_PARTIAL 的 3 用例全失败，图谱失败用例空洞通过",
+    "file": "backend/test/unit/services/test_commit_pipeline_status.py:139",
+    "root_cause": "C-1b 契约切换（commit_task→begin_ingest）只改了生产代码，未同步更新消费该契约的测试夹具（qual-t5b 发现，红态实测 ..F.FF，错误 object MagicMock cant be used in await expression）",
+    "fix": "夹具一行替换：fake_service.repo.commit_task = AsyncMock() → fake_service.repo.begin_ingest = AsyncMock()（死 mock 直接删）；全 test 目录普查仅此一处 commit_task mock 挂点。修复后范围化 18 passed（6+12，含空洞用例恢复真实覆盖），随 commit 016c9bc9【ab52600f amend】提交",
+    "tags": [
+      "domain-factory",
+      "C-1",
+      "test-fixture",
+      "AsyncMock",
+      "contract-switch"
+    ],
+    "related_bugs": [
+      "bug-4228"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-11T03:05:00+08:00"
+  },
+  {
+    "id": "bug-4230",
+    "timestamp": "2026-11-11T03:05:00+08:00",
+    "error_message": "docker exec api-1 pytest /app/test/unit/services --noconftest -q 全量跑挂死：某套件 await 永不返回（PID 6489 ELAPSED 6:27:50 / CPU 仅 0:35，间隔数分钟两次采样 CPU 零增长、RSS 恒定 594MB），宿主侧 600s 前台超时转后台后被内存压力回收，容器内进程 lead kill -9",
+    "file": "backend/test/unit/services/ (整目录 --noconftest 形态)",
+    "root_cause": "待 Task 6 分诊（疑点：某套件依赖被 --noconftest 剥掉的 conftest 环境装配、或存在无超时网络/事件循环 await；单文件/小批跑均正常——同批 18+50 用例数秒完成） | 2026-11-11 triage 定位更新：元凶= test/unit/agents/toolkits/buildin/test_tools_graph_integration.py 文件内用例1→2顺序状态污染（用例2单跑4.66s通过、组合零增长挂死）；agents 收集序先于 services，全树主跑 10%（214/2141）即死于此文件；倾向既有问题（本批未触碰 agents/toolkits 且 diff 无 import 期副作用），无旧版对照实验故不定论",
+    "fix": "范围化验证协议 + timeout 300 守卫（单文件/小批组合跑）；2026-11-11 分诊终局：整目录批暂以 --ignore 排除元凶文件跑（分层扫 agents 段已带 --ignore test_tools_graph_integration.py）；根修方向=用例隔离/定位用例1未恢复资源（事件循环或 GraphQueryService mock 边车未 close），独立后续任务非本批范围",
+    "tags": [
+      "test-infra",
+      "hang",
+      "noconftest",
+      "services"
+    ],
+    "related_bugs": [],
+    "occurrences": 2,
+    "last_seen": "2026-11-11"
+  },
+  {
+    "id": "bug-4231",
+    "timestamp": "2026-11-11",
+    "error_message": "commit/reingest 发起路径 enqueue 失败仅 logger.warning 后返回 success:true 附永不执行的 ingest_task_id",
+    "file": "backend/package/pisuan/services/domain_factory_service.py",
+    "root_cause": "C-3 只点名了 create_task/retry_task 两处，commit_task/reingest_task 发起路径未覆盖同一原则；reingest 还先清 committed_at/reviewer 后 enqueue，失败留 COMMITTED+committed_at=None 观感矛盾",
+    "fix": "f25aa2de（11fdd2669 系 amend）：except 写 error_message（无 status 键）+ raise ValueError 由路由层转可读错误；reingest 字段清挪到 enqueue 成功后；发起态白名单守卫与 TASK_STATUS_EDGES →INGESTING 边族同宽",
+    "tags": [
+      "domain-factory",
+      "enqueue",
+      "静默失败",
+      "终审"
+    ],
+    "related_bugs": [
+      "bug-4227"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-11"
+  },
+  {
+    "id": "bug-4232",
+    "timestamp": "2026-11-11",
+    "error_message": "file_id 确定键不含 kb_id：同 task 跨 KB 重复提交时旧库 Milvus 块成检索不可见孤儿",
+    "file": "backend/package/pisuan/services/domain_factory_service.py",
+    "root_cause": "KnowledgeFile 全局 PK 是 file_id，hash(task_id) 键使换库重提时文件记录迁往新库而旧库块无文件记录管理",
+    "fix": "f25aa2de：file_id 掺 kb_id 并加分隔符 hashstr(task_id + '|' + knowledge_base_id, 12)（df_/df_ri_ 两站点），跨库旧副本转受管可见副本",
+    "tags": [
+      "domain-factory",
+      "file_id",
+      "幂等",
+      "孤儿向量",
+      "终审"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-11"
+  },
+  {
+    "id": "bug-4233",
+    "timestamp": "2026-11-11",
+    "error_message": "入库/再入库管线 except 无条件写 COMMIT_FAILED：终态落盘后异常（set_progress/set_message 抛点）或 begin_ingest 前异常撞非法边 → ValueError 从 except 逃逸",
+    "file": "backend/package/pisuan/services/domain_factory_service.py",
+    "root_cause": "COMMITTED→COMMIT_FAILED、WAITING_REVIEW→COMMIT_FAILED（后者终态语义）不在 TASK_STATUS_EDGES；except 未检查当前状态",
+    "fix": "f25aa2de：except 先 repo.get_task，仅 INGESTING 落 COMMIT_FAILED，否则只写 error_message（begin_ingest 前崩溃保 WAITING_REVIEW/原终态可重发）",
+    "tags": [
+      "domain-factory",
+      "状态机",
+      "异常处理",
+      "终审"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-11"
+  },
+  {
+    "id": "bug-4234",
+    "timestamp": "2026-11-11",
+    "error_message": "_chinese_to_arabic 对无单位数字序列塌缩为末位（一二三→3，旧 replace 法给 123）",
+    "file": "backend/package/pisuan/services/domain_factory_service.py",
+    "root_cause": "C-5 新实现逐字符覆盖 number 不累加；逐字位序写法（全数字字符无单位）无对应分支",
+    "fix": "f25aa2de：解析入口检测全数字字符序列（零〇一二三四五六七八九）走逐字映射拼接；带单位路径不动",
+    "tags": [
+      "domain-factory",
+      "中文数字",
+      "C-5",
+      "终审"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-11"
+  },
+  {
+    "id": "bug-4235",
+    "timestamp": "2026-11-11",
+    "error_message": "test_reingest_clears_attribution_only_after_enqueue 容器首跑 TypeError: NoneType not subscriptable",
+    "file": "backend/test/unit/test_c_batch_fixes.py",
+    "root_cause": "时序测试 update_task 桩只记录调用返回 None，而打磨后成功路径 task = await repo.update_task(...) 赋回返回值供 to_summary_dict——桩未复刻 repo 返回契约；宿主无 pytest 未能自证，静态终审也未抓到 mock/运行时契约错位",
+    "fix": "f25aa2de：record_update 桩补 return task；另两测核查为结构性安全（返回值不被消费）",
+    "tags": [
+      "测试",
+      "mock契约",
+      " vacuous-adjacent",
+      "amend链"
+    ],
+    "related_bugs": [
+      "bug-4229"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-11"
+  },
+  {
+    "id": "bug-4236",
+    "timestamp": "2026-11-11",
+    "error_message": "services 分诊 10 例既有失败（test_eia_entity/formula/lexicon/stage_service 的 export 系用例）：RuntimeError: 导出文件不在 references 树内，无法入 refs 仓 (eia_refs_git.py:55)",
+    "file": "backend/test/unit/services/test_eia_entity_service.py / test_eia_formula_service.py / test_eia_lexicon_mapping.py / test_eia_stage_service.py",
+    "root_cause": "测试 tmp_path 与 eia_refs_git.py:55 _worktree_rel 路径契约不匹配；定责既有失败：本批 diff 零触及 eia 域、失败栈无本批符号、导入链零耦合（eia 生产文件仅 lexicon 引 storage/postgres/models_domain_factory ORM 模型，非本批触及面）",
+    "fix": "未修（2026-11-11 services 全量分诊存档，104 文件 1150 passed / 14 failed 唯二失败主题之一；后续任务方向：统一测试 tmp_path 落在 references 树内或放宽 _worktree_rel 契约）",
+    "tags": [
+      "test",
+      "eia",
+      "路径契约",
+      "既有失败"
+    ],
+    "related_bugs": [
+      "bug-4237"
+    ],
+    "occurrences": 10,
+    "last_seen": "2026-11-11"
+  },
+  {
+    "id": "bug-4237",
+    "timestamp": "2026-11-11",
+    "error_message": "test_graph_query_service 4 例既有失败：应至少13个顶级章节key,实际0 / assert None is not None / 应通过递归子章节返回模板,实际空",
+    "file": "backend/test/unit/services/test_graph_query_service.py",
+    "root_cause": "真实 neo4j 数据依赖：捕获日志含 DBMS 警告 expected_tables/charts/formulas 属性不存在，ChapterTemplate 查询返空；本批未触及 graph_query_service 生产代码（与 [[bug-4230]] 挂死元凶同域但不同文件——元凶文件 patch 了 GraphQueryService，执行路径不同）",
+    "fix": "未修（2026-11-11 分诊存档；后续任务方向：测试数据 seed 或 mock 数据层，摆脱真库依赖）",
+    "tags": [
+      "test",
+      "graph",
+      "neo4j",
+      "既有失败"
+    ],
+    "related_bugs": [
+      "bug-4230",
+      "bug-4236"
+    ],
+    "occurrences": 4,
+    "last_seen": "2026-11-11"
+  },
+  {
+    "id": "bug-4238",
+    "timestamp": "2026-11-11",
+    "error_message": "用户复测：纳林文件第 4 次同点位熔断且列表消失；进一步发现断点续跑真实路径会被 C-1a 迁移守卫打死（TASK_STATUS_EDGES 缺 UPLOADED→GENERALIZING 边，表内 FAILED_PROVIDER→GENERALIZING 直达边运行时不可达，旧测试断言死边给假信心）",
+    "file": "backend/package/pisuan/services/domain_factory_service.py + repositories/domain_factory_repository.py",
+    "root_cause": "两层：①用户裁决砍除 FAILED_PROVIDER 状态（失败统一落 FAILED，列表可见性随之恢复，取代 C-2 前端可达路线）；②C-1a 加守卫时只按写点直连边建表，没追运行时两跳路径（retry 先重置 UPLOADED、管线再 GENERALIZING），续跑自 C-1a 起潜在全断",
+    "fix": "fe4ad80a：熔断写点落 FAILED；resume 判定数据驱动（FAILED 且 source_paragraphs 非空）；迁移表补 UPLOADED→GENERALIZING 边、删 FAILED_PROVIDER 节点；前端两处映射移除；存量 6 行 SQL 迁移；测试断言对齐真实路径（48 passed）。另：4 连死真凶=本地 llama-server@8080 挂（default_model 绑定），非内容触发",
+    "tags": [
+      "domain-factory",
+      "状态机",
+      "断点续跑",
+      "C-1a回归"
+    ],
+    "related_bugs": [
+      "bug-4231"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-11"
+  },
+  {
+    "id": "bug-4239",
+    "timestamp": "2026-11-11",
+    "error_message": "熔断报错文案「段落 p20（章节 1.1.2.1.2.1）」——该章节号不存在于文档任何标题，误导连续 4 次死亡被误判为内容触发",
+    "file": "backend/package/pisuan/services/domain_factory_service.py:3460-3464",
+    "root_cause": "chapter_hint 用 '.'.join(section_path) 拼接，但 section_path 各元素本就是带前缀的完整编号（如 [\"1\",\"1.2\",\"1.2.1\"]），拼接产出杂交串 1.1.2.1.2.1；真实段落 p20=「1.2.1 任务依据」54 字符完全无辜",
+    "fix": "未修（仅错误文案/日志显示层，2026-11-11 立案；修法方向：取 section_path 末元素或按前缀去重拼接）",
+    "tags": [
+      "domain-factory",
+      "显示伪影",
+      "误诊根源"
+    ],
+    "related_bugs": [
+      "bug-4238"
+    ],
+    "occurrences": 4,
+    "last_seen": "2026-11-11"
+  },
+  {
+    "id": "bug-4240",
+    "timestamp": "2026-11-11",
+    "error_message": "用户：ETL 清洗工作台类型筛选还留着「参数」「叙述」，选了恒空，有啥用",
+    "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+    "root_cause": "spec-W1 散文双轨合并后分类器只产 prose，但筛选组遍历 CLASSIFY_TYPE_MAP 全键，legacy 值按钮残留；新任务 classify_type 实测分布 prose/legal_reference/heading/table/figure 两值为 0（存量 2333+3003 条全在合并前旧任务）",
+    "fix": "eb4c5d04c：筛选组改用 FILTERABLE_CLASSIFY_TYPES 排除两值；CLASSIFY_TYPE_MAP 徽标映射与 PROSE_TYPES 兼容读保留（旧任务徽标渲染不受影响）",
+    "tags": [
+      "domain-factory",
+      "工作台",
+      "legacy死选项"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-11"
+  },
+  {
+    "id": "bug-4241",
+    "timestamp": "2026-11-11T15:18:00",
+    "error_message": "用户截图反馈：ETL 清洗工作台章节导航第1章树异常——幽灵「1」子节点、1.1/1.3/1.4 父章节缺失、1.2.4 缺失、1.4.2 排在 1.4.1 前",
+    "file": "backend/package/pisuan/services/domain_factory_service.py",
+    "root_cause": "两层：①numbered_pattern 要求编号后必须有空白（\\s+），上游转换器产出无空格编号标题（「### 1.1评价目的与原则」等 10 处）致编号提取失败、节不开、路径栈停滞（子节点挂接前节）；②level3+ 分支路径栈深度不足时盲目补 \"1\" 占位（而非从编号推父级）产生幽灵路径元素 [\"1\",\"1\",\"1.1.1\"]，栈残段与新编号混血致父子编号断裂（[\"1\",\"1.2\",\"1.4.2\"]）",
+    "fix": "commit dfa98ac8：markdown 标题（# 前缀已担保标题身份）编号提取追加无空格变体 numbered_tight_pattern（标题首字符排除数字/点防纯编号错切）；路径计算改编号自证——取编号前缀序列（每段完整编号，cap 4 级），消除栈拼接。裸文本路径保持原空格要求防正文行误判。新增 test_tight_numbered_headings.py 7 用例，回归 75 passed",
+    "tags": [
+      "etl",
+      "parse",
+      "section_path",
+      "章节导航",
+      "幽灵节点",
+      "numbered_pattern"
+    ],
+    "related_bugs": [
+      "bug-4239"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-11"
+  }
 ]
