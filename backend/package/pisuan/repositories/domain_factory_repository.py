@@ -82,10 +82,14 @@ def _normalize_report_type(report_type: str) -> str:
 # C-1 状态机：合法迁移表。键=当前状态，值=允许迁移到的目标集合。
 # 同值重写不计为迁移；非法迁移 raise ValueError（fail-loud，不用静默兜底掩盖）。
 # 已知写盘点普查（2026-11-10）：
-#   service create_task/retry_task/_etl_pipeline_async(:858 GENERALIZING, 终态 WAITING_REVIEW/
-#   FAILED/FAILED_PROVIDER)、commit 管线(:4493/:4510/:4583/:4666/:4721/:4744)、
-#   reingest 管线(:5723/:5742)、repo.commit_task(:280)、fail_domain_factory_etl(:6803 直写)、
-#   fail_domain_factory_ingest（INGESTING→COMMIT_FAILED 直写，durable 收敛豁免）。
+#   service create_task/retry_task/_etl_pipeline_async(:856 GENERALIZING, 终态 WAITING_REVIEW/
+#   FAILED/FAILED_PROVIDER)、commit 管线(:4563/:4580 begin_ingest/:4655/:4740/:4796/:4825
+#   except 终态守卫)、reingest 管线(:5712/:5821/:5845 except 终态守卫)、repo.commit_task(:313)、
+#   fail_domain_factory_etl(:6909 直写)、
+#   fail_domain_factory_ingest（INGESTING→COMMIT_FAILED 直写，durable 收敛豁免）、
+#   save_task_step 通用分支（service :4313 附近 update_task 透传客户端可控 status，
+#   PUT /tasks/{task_id} 路由；非法值 ValueError→500，fail-loud 符合设计）。
+# worker 侧误用 ValueError（非法迁移）由管线 except 终态守卫/任务中心 durable 层按失败收敛。
 # 死代码豁免：update_task_form_data 的 UPLOADED→EXTRACTING 写点无调用方，未计入。
 # ---------------------------------------------------------------------------
 TASK_STATUS_EDGES: dict[str, set[str]] = {
