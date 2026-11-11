@@ -799,7 +799,7 @@ class DomainFactoryService:
         return paragraphs, form_data
 
     async def _etl_resume_stage(self, task_id: str, task, service, context) -> tuple[list[dict], dict]:
-        """P0-3 断点续跑：FAILED_PROVIDER 任务跳过解析/分类，载入已保存段落只补泛化失败段
+        """P0-3 断点续跑：FAILED 任务（熔断时已保存段落）跳过解析/分类，载入已保存段落只补泛化失败段
 
         form_data 从 task.base_info 起步，保留上一轮章节提取与 slot 收集结果，
         避免续跑后 base_info 回退。
@@ -973,7 +973,7 @@ class DomainFactoryService:
                         {
                             "source_paragraphs": paragraphs,
                             "step_stats": step_ledger,
-                            "status": "FAILED_PROVIDER",
+                            "status": "FAILED",
                             "error_message": (
                                 f"LLM 服务连续断供（{step_ledger.get('breaker_position')}），已暂停泛化；"
                                 f"成功段落已保留，可重试触发断点续跑只补失败段"
@@ -5873,9 +5873,10 @@ class DomainFactoryService:
         # 运行中/入库中任务禁止重复重试（路由层捕获 ValueError 返回给前端）
         if task.status in ("PARSING", "GENERALIZING", "INGESTING"):
             raise ValueError(f"任务正在执行中（{task.status}），请稍后再试")
-        # P0-3 断点续跑：仅 provider 熔断任务且已有解析产物时，只补泛化失败段
-        resume = task.status == "FAILED_PROVIDER" and bool(task.source_paragraphs)
-        original_status = task.status  # C-3：入队失败时恢复原状态（保住 FAILED_PROVIDER 续跑资格）
+        # P0-3 断点续跑：FAILED 且熔断时已保存段落 → 只补泛化失败段；无段落（解析失败等）全卷重跑。
+        # 续跑资格由数据判定而非独立状态（FAILED_PROVIDER 已砍除）
+        resume = task.status == "FAILED" and bool(task.source_paragraphs)
+        original_status = task.status  # C-3：入队失败时恢复原状态（保住 FAILED 续跑资格）
 
         updated_task = await self.repo.update_task(task_id, {"status": "UPLOADED", "error_message": None})
 
@@ -5898,8 +5899,8 @@ class DomainFactoryService:
             logger.info(f"重试任务已注册到 Tasker: {task_id}")
         except Exception as e:
             logger.warning(f"重试任务注册 Tasker 失败: {e}")
-            # C-3 兜底：任务已置 UPLOADED 但无人执行，恢复重试前状态原值；
-            # 不得落 FAILED——否则 FAILED_PROVIDER 的 resume 判定丢失，退化为全卷重跑
+            # C-3 兜底：任务已置 UPLOADED 但无人执行，恢复重试前状态原值
+            # （原状态 FAILED 且已存段落时，续跑资格由数据保留，不受影响）
             restored = await self.repo.update_task(
                 task_id,
                 {"status": original_status, "error_message": f"任务队列注册失败，请重试: {e}"},

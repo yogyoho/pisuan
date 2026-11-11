@@ -77,8 +77,7 @@ const statusMap = {
   COMMITTED: { color: 'var(--color-success-500)', text: '已入库' },
   COMMIT_FAILED: { color: 'var(--color-error-500)', text: '入库失败' },
   COMMIT_PARTIAL: { color: 'var(--color-warning-500)', text: '部分入库' },
-  FAILED: { color: 'var(--color-error-500)', text: '失败' },
-  FAILED_PROVIDER: { color: 'var(--color-error-500)', text: '服务商中断' }
+  FAILED: { color: 'var(--color-error-500)', text: '失败' }
 }
 
 // 计算属性
@@ -198,7 +197,7 @@ const handleDeleteTask = async (task) => {
   }
 }
 
-// 重试任务：FAILED → 重置为 UPLOADED 重跑整个 ETL；FAILED_PROVIDER → 断点续跑（仅补失败段）
+// 重试任务：FAILED 且熔断时已存段落 → 后端断点续跑（仅补失败段）；无段落 → 重置 UPLOADED 全卷重跑
 const handleRetryTask = async (task) => {
   try {
     await domainFactoryApi.retryTask(task.id || task.task_id)
@@ -510,10 +509,7 @@ defineExpose({ refresh })
                     <Eye :size="12" />
                   </a-button>
                 </a-tooltip>
-                <a-tooltip
-                  v-if="record.status === 'FAILED' || record.status === 'FAILED_PROVIDER'"
-                  title="重新提取"
-                >
+                <a-tooltip v-if="record.status === 'FAILED'" title="重新提取">
                   <a-button size="small" type="text" @click="handleRetryTask(record)">
                     <Redo2 :size="12" />
                   </a-button>
