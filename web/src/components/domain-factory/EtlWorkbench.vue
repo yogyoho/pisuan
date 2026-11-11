@@ -239,7 +239,7 @@ const CLASSIFY_TYPE_MAP = {
   figure: { label: '图片', color: 'cyan' },
   list: { label: '列表', color: 'orange' },
   legal_reference: { label: '标准引用', color: 'geekblue' },
-  prose: { label: '散文', color: 'gold' },
+  prose: { label: '段落', color: 'gold' },
   parameter: { label: '参数', color: 'gold' },
   narrative: { label: '叙述', color: 'default' }
 }
