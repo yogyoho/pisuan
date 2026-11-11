@@ -1292,6 +1292,10 @@ class DomainFactoryService:
 
         # 数字标题模式（匹配 "1. xxx" 或 "1.1 xxx" 等）
         numbered_pattern = re.compile(r"^(\d+(?:\.\d+)*)\s+(.+)$")
+        # 编号紧贴标题文本变体（上游转换器常见「1.1评价目的」）：
+        # 仅用于已确认的 markdown 标题内提取编号（# 前缀已担保标题身份），
+        # 裸文本路径不放宽，避免「2024年…」式正文行被误判为标题
+        numbered_tight_pattern = re.compile(r"^(\d+(?:\.\d+)*)\s*([^\d\s.].*)$")
 
         # 中文章节目录模式
         chapter_pattern = re.compile(r"^第([一二三四五六七八九十百千万\d]+)章\s*(.*)$")
@@ -1352,8 +1356,8 @@ class DomainFactoryService:
                     dual_num_match = re.match(r"^(\d+(?:\.\d+)*)\s+(\d+(?:\.\d+)*\s+\S.*)$", title_text)
                     if dual_num_match:
                         title_text = dual_num_match.group(2).strip()
-                    # 从标题文本中提取章节编号
-                    num_match = numbered_pattern.match(title_text)
+                    # 从标题文本中提取章节编号（无空格变体仅在 # 标题内放宽）
+                    num_match = numbered_pattern.match(title_text) or numbered_tight_pattern.match(title_text)
                     if num_match:
                         num_part = num_match.group(1)
                         # 清洗 title_text 去掉编号前缀，避免 current_section_title 拼接时编号重复
@@ -1396,42 +1400,14 @@ class DomainFactoryService:
             if is_title:
                 # 计算章节路径
                 if num_part:
-                    path_parts = num_part.split(".")
-                    num_level = len(path_parts)
-
-                    if num_level == 1:
-                        level = 1
-                    elif num_level == 2:
-                        level = 2
-                    elif num_level == 3:
-                        level = 3
-                    elif num_level >= 4:
-                        level = 4
-
-                    if level == 1:
-                        section_path_stack = [num_part]
-                    elif level == 2:
-                        if len(section_path_stack) >= 1:
-                            section_path_stack[0] = path_parts[0]
-                        else:
-                            section_path_stack.append(path_parts[0])
-                        if len(section_path_stack) >= 2:
-                            section_path_stack[1] = num_part
-                        else:
-                            section_path_stack.append(num_part)
-                        section_path_stack = section_path_stack[:2]
-                    elif level == 3:
-                        while len(section_path_stack) < 2:
-                            section_path_stack.append("1")
-                        section_path_stack = section_path_stack[:2] + [num_part]
-                        section_path_stack = section_path_stack[:3]
-                    elif level >= 4:
-                        while len(section_path_stack) < 3:
-                            section_path_stack.append("1")
-                        # 父级路径 = num_part 去掉末段编号
-                        parent_num = ".".join(path_parts[:-1])
-                        section_path_stack = section_path_stack[:2] + [parent_num, num_part]
-                        section_path_stack = section_path_stack[:4]
+                    num_dots = num_part.split(".")
+                    # 编号自证：路径取编号前缀序列（每段为完整编号，如
+                    # "1.2.2" → ["1","1.2","1.2.2"]，cap 4 级）。旧实现按层级与
+                    # 路径栈拼接，跳级时补 "1" 占位产生幽灵路径元素
+                    # （["1","1","1.1.1"] → 章节导航幽灵「1」节点），栈残段与
+                    # 新编号混血导致父子编号断裂（如 ["1","1.2","1.4.2"]）
+                    level = min(len(num_dots), 4)
+                    section_path_stack = [".".join(num_dots[: i + 1]) for i in range(level)]
                 else:
                     if level == 1:
                         section_path_stack = [str(len([p for p in paragraphs if p.get("level", 0) == 1]) + 1)]
