@@ -86,6 +86,8 @@ async def test_outline_failure_marks_commit_partial():
     ):
         await DomainFactoryService()._commit_pipeline_async(ctx)
 
+    # C-1 幂等：pipeline 以 payload 携带的确定性 ingest_task_id 调 begin_ingest
+    fake_service.repo.begin_ingest.assert_awaited_once_with("t1", "admin", ingest_task_id="ing1")
     final = [c for c in update_calls if c.get("status")]
     assert any(c["status"] == "COMMIT_PARTIAL" for c in final), f"outline失败应标记 COMMIT_PARTIAL,实际: {final}"
 

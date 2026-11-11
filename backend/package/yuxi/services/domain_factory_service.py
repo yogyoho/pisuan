@@ -1579,13 +1579,29 @@ class DomainFactoryService:
     def _chinese_to_arabic(self, cn_num: str) -> str:
         """中文数字 → 阿拉伯数字（正规进位解析：十一→11、二十三→23、一百零三→103）。
 
-        含非中文数字字符或无法解析时原样返回（调用方有位置编号兜底）。
+        纯数字字符序列（无十百千万亿单位）走逐字映射拼接，保留位序写法与前导零
+        （一二三→123、零八一→081）；含非中文数字字符或无法解析时原样返回（调用方有位置编号兜底）。
         """
-        digits = {"零": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4,
-                  "五": 5, "六": 6, "七": 7, "八": 8, "九": 9}
+        digits = {
+            "零": 0,
+            "〇": 0,
+            "一": 1,
+            "二": 2,
+            "两": 2,
+            "三": 3,
+            "四": 4,
+            "五": 5,
+            "六": 6,
+            "七": 7,
+            "八": 8,
+            "九": 9,
+        }
         units = {"十": 10, "百": 100, "千": 1000}
         if not cn_num:
             return cn_num
+        # 纯数字序列逐字映射拼接；「两」不含于位序集，维持进位路径旧行为
+        if all(ch in "零〇一二三四五六七八九" for ch in cn_num):
+            return "".join(str(digits[ch]) for ch in cn_num)
         total = 0      # 万段以上累计
         section = 0    # 当前万段累计
         number = 0     # 待乘单位的悬挂数字
@@ -4304,8 +4320,14 @@ class DomainFactoryService:
         if not task:
             return None
 
-        # 生成入库任务ID
-        ingest_task_id = f"ingest_{task_id}_{uuid.uuid4().hex[:8]}"
+        # 与 TASK_STATUS_EDGES 同宽：仅持有 →INGESTING 合法边的状态可发起（WAITING_REVIEW→INGESTING
+        # 提交入口；COMMIT_*→INGESTING 同边族），其余状态误发起直接拒绝、不在 worker 侧白耗
+        # durable 任务（路由层捕获 ValueError 返回前端）
+        if task.status not in ("WAITING_REVIEW", "COMMITTED", "COMMIT_PARTIAL", "COMMIT_FAILED"):
+            raise ValueError(f"任务当前状态（{task.status}）不允许发起入库，请先完成解析审核流程")
+
+        # 生成入库任务ID（确定性：对齐 reingest_{task_id}，重复发起同 key 幂等）
+        ingest_task_id = f"ingest_{task_id}"
 
         # 注册入库流水线到任务中心，异步执行
         try:
@@ -4325,7 +4347,11 @@ class DomainFactoryService:
             )
             logger.info(f"已注册入库任务到任务中心: {task_id}")
         except Exception as e:
-            logger.warning(f"注册入库任务失败: {e}")
+            logger.warning(f"注册入库任务失败: {task_id}")
+            # C-3 同款兜底：不再静默返回 success+死 ingest_task_id；状态不动（发起侧零状态副作用），
+            # error_message 留痕 + 向上抛由路由层转可读错误
+            await self.repo.update_task(task_id, {"error_message": f"入库任务注册失败，请稍后重试: {e}"})
+            raise ValueError(f"入库任务注册失败，请稍后重试: {e}") from e
 
         result = task.to_summary_dict() if task else None
         if result:
@@ -4575,7 +4601,9 @@ class DomainFactoryService:
                         raise ValueError(f"知识库 {knowledge_base_id} 不存在")
 
                     file_name = task_detail.get("file_name", f"domain_factory_{task_id}.md")
-                    file_id = f"df_{hashstr(task_id, 12)}"  # C-1 幂等：确定性 ID，同 task 重复入库同 key 覆盖
+                    # C-1 幂等：确定性 ID 掺 kb_id——同 task 同 KB 重复入库同 key 覆盖；换库重提时
+                    # 旧库副本保留为受管可见副本（可在旧库 UI 删除），不再产生检索不可见的孤儿向量
+                    file_id = f"df_{hashstr(task_id + '|' + knowledge_base_id, 12)}"
 
                     # 同时生成 Markdown（用于 MinIO 存档）和结构化文档（用于向量化）
                     ingest_markdown = self._build_ingest_markdown(task_detail)
@@ -4790,10 +4818,19 @@ class DomainFactoryService:
 
         except Exception as e:
             logger.exception(f"入库流水线执行失败: {task_id}")
-            await service.repo.update_task(
-                task_id,
-                {"status": "COMMIT_FAILED", "error_message": f"入库流水线执行失败: {e}"},
-            )
+            # 终态守卫：仅 INGESTING 可落 COMMIT_FAILED（非法边会 ValueError 逃逸 except）；
+            # begin_ingest 前崩溃保持 WAITING_REVIEW 可重发，终态后异常不覆盖真实终态
+            current = await service.repo.get_task(task_id)
+            if current is not None and current.status == "INGESTING":
+                await service.repo.update_task(
+                    task_id,
+                    {"status": "COMMIT_FAILED", "error_message": f"入库流水线执行失败: {e}"},
+                )
+            else:
+                await service.repo.update_task(
+                    task_id,
+                    {"error_message": f"入库流水线执行失败: {e}"},
+                )
             await context.set_progress(100.0, f"入库失败: {str(e)}")
             await context.set_message(f"入库失败: {str(e)}")
             return {"error": str(e)}
@@ -5614,16 +5651,10 @@ class DomainFactoryService:
         if not task:
             return None
 
-        # C-1：处理器只清归属字段；状态迁移（→INGESTING）由 worker 侧入口写点承担
-        # （fail_domain_factory_ingest 自 worker 起跑即覆盖收敛）；enqueue 失败时任务保持原终态，
-        # 可再次发起 reingest。
-        task = await self.repo.update_task(
-            task_id,
-            {
-                "committed_at": None,
-                "reviewer": None,
-            },
-        )
+        # 与 TASK_STATUS_EDGES 同宽：再入库要求曾入库，仅 COMMIT_*（→INGESTING reingest 入口边）
+        # 可发起；UPLOADED/WAITING_REVIEW 等直接拒绝（路由层捕获 ValueError 返回前端）
+        if task.status not in ("COMMITTED", "COMMIT_PARTIAL", "COMMIT_FAILED"):
+            raise ValueError(f"任务尚未入库完成（{task.status}），无法再入库")
 
         # 生成新的入库任务ID
         ingest_task_id = f"reingest_{task_id}"
@@ -5644,8 +5675,19 @@ class DomainFactoryService:
                 },
             )
             logger.info(f"已注册再入库任务到任务中心: {task_id}")
+            # C-1：enqueue 成功后才清归属字段（committed_at/reviewer）；失败时任务保持
+            # 完整原终态，可再次发起。状态迁移（→INGESTING）仍由 worker 侧入口写点承担
+            # （fail_domain_factory_ingest 自 worker 起跑即覆盖收敛）。
+            task = await self.repo.update_task(
+                task_id,
+                {
+                    "committed_at": None,
+                    "reviewer": None,
+                },
+            )
         except Exception as e:
-            logger.warning(f"注册再入库任务失败: {e}")
+            logger.warning(f"注册再入库任务失败: {task_id}")
+            raise ValueError(f"再入库任务注册失败，请稍后重试: {e}") from e
 
         result = task.to_summary_dict() if task else None
         if result:
@@ -5699,7 +5741,8 @@ class DomainFactoryService:
                     raise ValueError(f"知识库 {knowledge_base_id} 不存在")
 
                 file_name = task_detail.get("file_name", f"domain_factory_{task_id}.md")
-                file_id = f"df_ri_{hashstr(task_id, 12)}"  # C-1 幂等：确定性 ID
+                # C-1 幂等：确定性 ID 掺 kb_id（同 commit 侧口径，换库重提不产生孤儿向量）
+                file_id = f"df_ri_{hashstr(task_id + '|' + knowledge_base_id, 12)}"
 
                 # 1. 保存 Markdown 到 MinIO
                 markdown_url = ""
@@ -5796,10 +5839,19 @@ class DomainFactoryService:
 
         except Exception as e:
             logger.exception(f"再入库流水线执行失败: {task_id}")
-            await service.repo.update_task(
-                task_id,
-                {"status": "COMMIT_FAILED", "error_message": f"再入库流水线执行失败: {e}"},
-            )
+            # 终态守卫：仅 INGESTING 可落 COMMIT_FAILED（非法边会 ValueError 逃逸 except）；
+            # INGESTING 写点前崩溃保持 COMMITTED 可重发，终态后异常不覆盖真实终态
+            current = await service.repo.get_task(task_id)
+            if current is not None and current.status == "INGESTING":
+                await service.repo.update_task(
+                    task_id,
+                    {"status": "COMMIT_FAILED", "error_message": f"再入库流水线执行失败: {e}"},
+                )
+            else:
+                await service.repo.update_task(
+                    task_id,
+                    {"error_message": f"再入库流水线执行失败: {e}"},
+                )
             await context.set_progress(100.0, f"执行失败: {str(e)}")
             return {"error": str(e)}
 
