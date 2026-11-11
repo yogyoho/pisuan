@@ -154,11 +154,12 @@ class TestStatusTransition:
         # 泛化失败收敛边
         _validate_status_transition("PARSING", "FAILED")
         _validate_status_transition("GENERALIZING", "FAILED")
-        _validate_status_transition("GENERALIZING", "FAILED_PROVIDER")
-        # resume：FAILED_PROVIDER→GENERALIZING（断点续跑）
-        _validate_status_transition("FAILED_PROVIDER", "GENERALIZING")
+        # resume 真实运行路径（FAILED_PROVIDER 已砍除，断点续跑不再有独立状态）：
+        # retry 先重置 UPLOADED，管线跳过解析直达泛化
+        _validate_status_transition("FAILED", "UPLOADED")
+        _validate_status_transition("UPLOADED", "GENERALIZING")
         # retry（对齐 retry_task 守卫现状）：非运行态均可重置 UPLOADED
-        for source in ("FAILED", "FAILED_PROVIDER", "WAITING_REVIEW", "COMMIT_FAILED", "COMMIT_PARTIAL", "COMMITTED"):
+        for source in ("FAILED", "WAITING_REVIEW", "COMMIT_FAILED", "COMMIT_PARTIAL", "COMMITTED"):
             _validate_status_transition(source, "UPLOADED")
 
     def test_all_states_covered(self):
@@ -169,7 +170,6 @@ class TestStatusTransition:
             "WAITING_REVIEW",
             "INGESTING",
             "FAILED",
-            "FAILED_PROVIDER",
             "COMMITTED",
             "COMMIT_PARTIAL",
             "COMMIT_FAILED",

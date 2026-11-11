@@ -81,9 +81,9 @@ def _normalize_report_type(report_type: str) -> str:
 # ---------------------------------------------------------------------------
 # C-1 状态机：合法迁移表。键=当前状态，值=允许迁移到的目标集合。
 # 同值重写不计为迁移；非法迁移 raise ValueError（fail-loud，不用静默兜底掩盖）。
-# 已知写盘点普查（2026-11-10）：
+# 已知写盘点普查（2026-11-11，FAILED_PROVIDER 已砍除——失败统一落 FAILED）：
 #   service create_task/retry_task/_etl_pipeline_async(:856 GENERALIZING, 终态 WAITING_REVIEW/
-#   FAILED/FAILED_PROVIDER)、commit 管线(:4563/:4580 begin_ingest/:4655/:4740/:4796/:4825
+#   FAILED)、commit 管线(:4563/:4580 begin_ingest/:4655/:4740/:4796/:4825
 #   except 终态守卫)、reingest 管线(:5712/:5821/:5845 except 终态守卫)、repo.commit_task(:313)、
 #   fail_domain_factory_etl(:6909 直写)、
 #   fail_domain_factory_ingest（INGESTING→COMMIT_FAILED 直写，durable 收敛豁免）、
@@ -93,23 +93,23 @@ def _normalize_report_type(report_type: str) -> str:
 # 死代码豁免：update_task_form_data 的 UPLOADED→EXTRACTING 写点无调用方，未计入。
 # ---------------------------------------------------------------------------
 TASK_STATUS_EDGES: dict[str, set[str]] = {
-    # UPLOADED→各终态/等待态：retry_task 入队失败恢复原状态（C-3）
+    # UPLOADED→各终态/等待态：retry_task 入队失败恢复原状态（C-3）；
+    # UPLOADED→GENERALIZING：断点续跑跳过解析直达泛化（retry 先重置 UPLOADED，管线跳过解析阶段）
     "UPLOADED": {
         "PARSING",
+        "GENERALIZING",
         "FAILED",
-        "FAILED_PROVIDER",
         "WAITING_REVIEW",
         "COMMITTED",
         "COMMIT_FAILED",
         "COMMIT_PARTIAL",
     },
     "PARSING": {"GENERALIZING", "FAILED"},
-    "GENERALIZING": {"WAITING_REVIEW", "FAILED", "FAILED_PROVIDER"},
+    "GENERALIZING": {"WAITING_REVIEW", "FAILED"},
     # WAITING_REVIEW→COMMIT_FAILED：提交前校验中止（:4493 既有行为）
     "WAITING_REVIEW": {"INGESTING", "COMMIT_FAILED", "UPLOADED"},
     "INGESTING": {"COMMITTED", "COMMIT_PARTIAL", "COMMIT_FAILED"},
     "FAILED": {"UPLOADED"},
-    "FAILED_PROVIDER": {"UPLOADED", "GENERALIZING"},
     # COMMITTED/PARTIAL/FAILED→UPLOADED：retry 现守卫允许；→INGESTING：reingest 入口
     "COMMITTED": {"UPLOADED", "INGESTING", "COMMITTED"},
     "COMMIT_PARTIAL": {"UPLOADED", "INGESTING", "COMMITTED"},
