@@ -105,3 +105,11 @@ backup_*.sql
 
 # 脑暴可视化伴侣会话存档
 .superpowers/
+.gstack/
+
+# 离线包构建产物（源文件在 deploy/offline/，需跟踪）
+deploy/*.tar.gz
+deploy/*.sha256.txt
+deploy/pisuan-offline-*/
+deploy/pisuan-offline-work/
+pisuan-localized.zip
