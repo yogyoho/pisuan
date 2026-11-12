@@ -25,6 +25,22 @@ def disable_pending_publication(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(task_service, "publish_pending_tasks", no_pending_tasks)
 
 
+@pytest.fixture(autouse=True)
+def isolate_task_cancel_redis(monkeypatch: pytest.MonkeyPatch) -> None:
+    """默认让 Redis watcher 保持等待，避免单测访问真实 Redis。"""
+
+    async def wait_forever(_task_id: str, poll_interval_seconds: float = 0.5) -> bool:
+        await asyncio.Event().wait()
+        return True
+
+    async def noop(_task_id: str) -> None:
+        return None
+
+    monkeypatch.setattr(task_service, "wait_for_task_cancel_signal", wait_forever)
+    monkeypatch.setattr(task_service, "publish_task_cancel_signal", noop)
+    monkeypatch.setattr(task_service, "clear_task_cancel_signal", noop)
+
+
 class FakeRecord(SimpleNamespace):
     def to_dict(self) -> dict[str, Any]:
         data = vars(self).copy()
@@ -180,6 +196,73 @@ async def test_arq_publication_uses_fresh_messages_instead_of_stale_job_lock(mon
     await task_queue_service.publish_task("task-1")
 
     assert calls == [(("process_task", "task-1"), {})]
+
+
+async def test_task_cancel_publication_failure_keeps_redis_best_effort(monkeypatch):
+    async def unavailable_client():
+        raise ConnectionError("redis unavailable")
+
+    monkeypatch.setattr(task_queue_service, "get_redis_client", unavailable_client)
+
+    await task_queue_service.publish_task_cancel_signal("task-1")
+
+
+async def test_task_cancel_wait_returns_on_redis_signal(monkeypatch):
+    async def signal_present(_task_id: str):
+        return True
+
+    monkeypatch.setattr(task_queue_service, "_read_task_cancel_signal", signal_present)
+
+    assert await task_queue_service.wait_for_task_cancel_signal("task-1", poll_interval_seconds=0) is True
+
+
+async def test_cancel_task_publishes_signal_after_postgres_cancel(monkeypatch):
+    """PG 取消提交后才发布 Redis 唤醒信号，避免 watcher 读到未落库的取消。"""
+    record = make_record(status="running", worker_id="worker-1")
+    repo = FakeRepo(record)
+    tasker = Tasker()
+    tasker._repo = repo
+    observed: list[tuple[str, int]] = []
+
+    async def publish(task_id: str) -> None:
+        observed.append((task_id, repo.record.cancel_requested))
+
+    monkeypatch.setattr(task_service, "get_failure_task_definition", lambda *_args: FakeDefinition(None))
+    monkeypatch.setattr(task_service, "publish_task_cancel_signal", publish)
+
+    cancelled = await tasker.cancel_task(record.id)
+
+    assert cancelled is not None
+    assert observed == [(record.id, 1)]
+
+
+async def test_cancel_watcher_interrupts_blocked_handler_and_marks_cancelled(monkeypatch):
+    """Redis 信号到达后不再等下一次心跳，阻塞 handler 立即进入 cancelled 终态。"""
+    record = make_record()
+    repo = FakeRepo(record)
+    started = asyncio.Event()
+    stopped = asyncio.Event()
+
+    async def handler(_context: TaskContext):
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            stopped.set()
+
+    async def wait_for_started(_task_id: str, poll_interval_seconds: float = 0.5) -> bool:
+        await started.wait()
+        return True
+
+    monkeypatch.setattr(task_service, "wait_for_task_cancel_signal", wait_for_started)
+    monkeypatch.setattr(task_service, "TaskRepository", lambda: repo)
+    monkeypatch.setattr(task_service, "get_task_definition", lambda *_args: FakeDefinition(handler))
+
+    await process_task({"worker_id": "worker-1"}, record.id)
+
+    assert stopped.is_set()
+    assert repo.record.status == "cancelled"
+    assert repo.finish_calls[-1]["status"] == "cancelled"
 
 
 async def test_submit_persists_before_arq_publication(monkeypatch):

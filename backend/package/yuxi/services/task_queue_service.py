@@ -1,23 +1,85 @@
 from __future__ import annotations
 
+import asyncio
+import os
 from functools import partial
 
 from yuxi.repositories.task_repository import TaskRepository
-from yuxi.services.run_queue_service import get_arq_pool
+from yuxi.services.run_queue_service import get_arq_pool, get_redis_client
 from yuxi.services.task_registry import get_failure_task_definition, get_task_definition
 from yuxi.utils.logging_config import logger
 
 TASK_LEASE_SECONDS = 30.0
 TASK_HEARTBEAT_SECONDS = 10.0
+TASK_CANCEL_POLL_SECONDS = 0.5
+TASK_CANCEL_KEY_TTL_SECONDS = int(os.getenv("TASK_CANCEL_KEY_TTL_SECONDS", "1800"))
 TASK_RECONCILIATION_SECONDS = 30.0
 TASK_RECONCILIATION_HEALTH_KEY = "yuxi:worker:health:durable-task-reconciliation-v1"
 TASK_RECONCILIATION_HEALTH_TTL_SECONDS = int(TASK_RECONCILIATION_SECONDS * 2 + 5)
+
+
+def _task_cancel_key(task_id: str) -> str:
+    return f"task:cancel:{task_id}"
 
 
 async def publish_task(task_id: str) -> None:
     """把已提交的 PG Task 发布为 ARQ 唤醒消息；重复消息由数据库 claim 拒绝。"""
     pool = await get_arq_pool()
     await pool.enqueue_job("process_task", task_id)
+
+
+async def publish_task_cancel_signal(task_id: str) -> None:
+    """在 PostgreSQL 取消事务提交后发布短期 Redis 唤醒信号。"""
+    try:
+        redis = await get_redis_client()
+        await redis.set(_task_cancel_key(task_id), "1", ex=TASK_CANCEL_KEY_TTL_SECONDS)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:
+        logger.warning("Failed to publish task cancel signal: task_id=%s: %s", task_id, exc)
+
+
+async def _read_task_cancel_signal(task_id: str) -> bool:
+    redis = await get_redis_client()
+    return bool(await redis.get(_task_cancel_key(task_id)))
+
+
+async def wait_for_task_cancel_signal(
+    task_id: str,
+    poll_interval_seconds: float = TASK_CANCEL_POLL_SECONDS,
+) -> bool:
+    """轮询 Redis 取消 key；Redis 故障时保持运行，由 PostgreSQL 心跳兜底。"""
+    poll_interval_seconds = max(0.0, float(poll_interval_seconds))
+    loop = asyncio.get_running_loop()
+    key_failure_logged = False
+
+    while True:
+        attempt_started_at = loop.time()
+        try:
+            if await _read_task_cancel_signal(task_id):
+                return True
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            if not key_failure_logged:
+                logger.warning("Failed to read task cancel signal: task_id=%s: %s", task_id, exc)
+                key_failure_logged = True
+        else:
+            key_failure_logged = False
+
+        remaining = poll_interval_seconds - (loop.time() - attempt_started_at)
+        await asyncio.sleep(max(0.0, remaining))
+
+
+async def clear_task_cancel_signal(task_id: str) -> None:
+    """清理已终结 Task 的 Redis 取消信号；失败不影响 PostgreSQL 终态。"""
+    try:
+        redis = await get_redis_client()
+        await redis.delete(_task_cancel_key(task_id))
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:
+        logger.warning("Failed to clear task cancel signal: task_id=%s: %s", task_id, exc)
 
 
 async def finalize_task_failure(session, record, error: str) -> None:

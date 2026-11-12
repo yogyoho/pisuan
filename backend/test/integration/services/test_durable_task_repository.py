@@ -18,9 +18,9 @@ from yuxi.repositories import task_repository as task_repository_module
 from yuxi.repositories.evaluation_repository import EvaluationRepository
 from yuxi.repositories.knowledge_file_repository import KnowledgeFileRepository
 from yuxi.repositories.task_repository import TaskRepository
-from yuxi.services import task_queue_service
-from yuxi.services.task_queue_service import finalize_task_failure
-from yuxi.services.task_service import TaskContext, Tasker
+from yuxi.services import task_queue_service, task_service
+from yuxi.services.task_queue_service import clear_task_cancel_signal, finalize_task_failure
+from yuxi.services.task_service import TaskContext, Tasker, process_task
 from yuxi.storage.postgres.manager import PostgresManager
 from yuxi.storage.postgres.models_business import TaskRecord
 from yuxi.storage.postgres.models_knowledge import EvaluationDataset, EvaluationRun, KnowledgeBase, KnowledgeFile
@@ -844,3 +844,53 @@ async def test_concurrent_dedupe_creates_one_active_task(durable_task_schema) ->
     reused = [(record.id, is_created) for record, is_created in results if not is_created]
     assert len(created) == 1
     assert reused == [(created[0][0], False)]
+
+
+async def test_redis_cancel_signal_interrupts_running_durable_task(durable_task_schema, monkeypatch) -> None:
+    """真实 PG + Redis：取消请求提交后，阻塞 handler 不等待心跳周期即收敛为 cancelled。"""
+    task_id = uuid.uuid4().hex
+    repo = TaskRepository()
+    await repo.create(task_id, {**_task_data(), "type": "pytest_cancel"})
+    started = asyncio.Event()
+    stopped = asyncio.Event()
+
+    async def handler(_context: TaskContext):
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            stopped.set()
+
+    class Definition:
+        version = 1
+
+        def load_handler(self):
+            return handler
+
+        def load_success_handler(self):
+            return None
+
+        def load_failure_handler(self):
+            return None
+
+    async def no_pending_tasks(*, limit: int = 200):
+        return []
+
+    monkeypatch.setattr(task_service, "get_task_definition", lambda *_args: Definition())
+    monkeypatch.setattr(task_service, "get_failure_task_definition", lambda *_args: Definition())
+    monkeypatch.setattr(task_service, "publish_pending_tasks", no_pending_tasks)
+
+    worker = asyncio.create_task(process_task({"worker_id": "pytest-worker"}, task_id))
+    await asyncio.wait_for(started.wait(), timeout=5)
+    cancelled = await Tasker().cancel_task(task_id)
+    assert cancelled is not None
+
+    try:
+        await asyncio.wait_for(worker, timeout=2)
+    finally:
+        await clear_task_cancel_signal(task_id)
+
+    assert stopped.is_set()
+    persisted = await repo.get_by_id(task_id)
+    assert persisted.status == "cancelled"
+    assert persisted.cancel_requested == 1

@@ -898,6 +898,7 @@ class DomainFactoryService:
                     schema_variables=schema_vars,
                     domain_label=domain_label,
                     max_concurrency=etl_max_concurrency,
+                    context=context,
                 )
                 paragraph_results = gen_output["results"]
                 step_ledger.update(gen_output["stats"])
@@ -3327,6 +3328,7 @@ class DomainFactoryService:
         schema_variables: list[dict[str, Any]],
         domain_label: str = "通用",
         max_concurrency: int = 2,  # 兜底默认：串行端点安全值；流水线运行时从 domain_factory_llm 配置读取
+        context: TaskContext | None = None,
     ) -> dict[str, Any]:
         """对分片后的段落逐一进行模板泛化，并产出 StepOutcome 质量台账（[pisuan-custom] ETL P0-1）
 
@@ -3342,6 +3344,7 @@ class DomainFactoryService:
             schema_variables: 领域 Schema 变量列表，用于指导插槽命名
             domain_label: 领域标签，用于提示 LLM 当前文档所属领域
             max_concurrency: 并发调用 LLM 的最大协程数，用于控制成本和速率
+            context: 任务上下文；提供时在每个新 LLM 调用前检查取消
 
         Returns:
             dict: {
@@ -3446,6 +3449,9 @@ class DomainFactoryService:
                 stats["skipped"] += 1
                 return
 
+            if context is not None:
+                await context.raise_if_cancelled()
+
             # C-4 结构化组装：表格整块 / prose 块边界丢尾（替代 text[:1200] 中间截断）
             generalize_input, fallback_text, input_truncated = self._build_generalize_input(
                 text, is_table, chapter_hint
@@ -3473,6 +3479,8 @@ class DomainFactoryService:
                 )
 
             async with semaphore:
+                if context is not None:
+                    await context.raise_if_cancelled()
                 # 等待信号量期间可能已熔断，二次确认
                 if stats["breaker_tripped"]:
                     stats["skipped"] += 1

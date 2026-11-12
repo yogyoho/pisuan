@@ -12,10 +12,14 @@ from typing import Any
 
 from yuxi.repositories.task_repository import TERMINAL_TASK_STATUSES, TaskRepository
 from yuxi.services.task_queue_service import (
+    TASK_CANCEL_POLL_SECONDS,
     TASK_HEARTBEAT_SECONDS,
     TASK_LEASE_SECONDS,
+    clear_task_cancel_signal,
+    publish_task_cancel_signal,
     publish_pending_tasks,
     publish_task,
+    wait_for_task_cancel_signal,
 )
 from yuxi.services.task_registry import get_failure_task_definition, get_task_definition
 from yuxi.utils.datetime_utils import utc_isoformat, utc_now_naive
@@ -264,7 +268,10 @@ class Tasker:
                 before_cancel = partial(failure_handler, error="任务已取消")
 
         record = await self._repo.request_cancel(task_id, before_cancel=before_cancel)
-        return Task.from_dict(record.to_dict()) if record else None
+        if record is None:
+            return None
+        await publish_task_cancel_signal(task_id)
+        return Task.from_dict(record.to_dict())
 
     async def delete_task(self, task_id: str) -> bool:
         current = await self._repo.get_by_id(task_id)
@@ -382,6 +389,18 @@ async def _heartbeat_task(context: TaskContext, execution: asyncio.Task[Any]) ->
             return
 
 
+async def _cancel_watcher_task(context: TaskContext, execution: asyncio.Task[Any]) -> None:
+    """Redis 取消信号到达后立即中断 handler，PostgreSQL 心跳继续兜底。"""
+    await wait_for_task_cancel_signal(
+        context.task_id,
+        poll_interval_seconds=TASK_CANCEL_POLL_SECONDS,
+    )
+    if execution.done():
+        return
+    context._request_cancel("cancelled")
+    execution.cancel()
+
+
 async def _finish_task_failure(
     repo: TaskRepository,
     *,
@@ -462,6 +481,10 @@ async def process_task(ctx: dict[str, Any], task_id: str) -> None:
     context = TaskContext(task_id, owner, record.payload or {})
     execution = asyncio.create_task(handler(context), name=f"durable-task:{task_id}")
     heartbeat = asyncio.create_task(_heartbeat_task(context, execution), name=f"durable-task-heartbeat:{task_id}")
+    cancel_watcher = asyncio.create_task(
+        _cancel_watcher_task(context, execution),
+        name=f"durable-task-cancel:{task_id}",
+    )
     try:
         timeout_seconds = float(record.timeout_seconds or TASKER_DEFAULT_TIMEOUT_SECONDS)
         done, _ = await asyncio.wait({execution}, timeout=timeout_seconds)
@@ -529,7 +552,9 @@ async def process_task(ctx: dict[str, Any], task_id: str) -> None:
         )
     finally:
         heartbeat.cancel()
-        await asyncio.gather(heartbeat, return_exceptions=True)
+        cancel_watcher.cancel()
+        await asyncio.gather(heartbeat, cancel_watcher, return_exceptions=True)
+        await clear_task_cancel_signal(task_id)
         await _publish_pending_after_slot_release()
 
 
