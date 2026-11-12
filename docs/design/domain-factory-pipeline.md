@@ -313,10 +313,10 @@ domain × report_type = 独立隔离的模板空间
 
 | 节点 | 标签 | 属性 | 来源 |
 |------|------|------|------|
-| 文档 | Document | id, title, domain, domain_code, report_type_code | 上传文件 |
+| 文档 | Document | id, title, domain, domain_code, report_type_code, document_key | 上传文件 |
 | 章节 | Section | id, title, path, level, order | heading 段落 |
-| 段落模板 | ParagraphTemplate | id, generalized, original, slot_count, quality_score, classify_type | parameter 段落泛化 |
-| 插槽 | Slot | id, name, type, entity_ref, value, unit, vocabulary | 泛化产出 |
+| 段落模板 | ParagraphTemplate | id, generalized, original, slot_count, quality_score, classify_type, domain, report_type, source_only | parameter 段落泛化 |
+| 插槽 | Slot | id, name, type, entity_ref, unresolved_entity_ref, value, unit, vocabulary, signature_version | 泛化产出 |
 | 实体模式 | EntitySchema | id, name, category, data_type | 实体确认 |
 | 法律引用 | LegalReference | id, name, code, type, scope, authority, effective_date, status, superseded_by | 法律引用提取 |
 | 表格模式 | TableSchema | id, name, table_type, columns, structural_rows | 表格提取 |
@@ -339,9 +339,10 @@ domain × report_type = 独立隔离的模板空间
 | NEXT_SECTION | Section → Section | order |
 | COMPOSED_OF | Section → ParagraphTemplate | order |
 | HAS_SLOT | ParagraphTemplate → Slot | — |
-| CITES | Slot → EntitySchema | — |
-| CONSTRAINS | LegalReference → Section | — |
-| HAS_FORMULA | Section → FormulaTemplate | — |
+| CITES | ParagraphTemplate → LegalReference | — |
+| CONSTRAINS | Slot → EntitySchema | — |
+| HAS_TABLE_SCHEMA | ParagraphTemplate / Section → TableSchema | — |
+| HAS_FORMULA | ParagraphTemplate / Section → FormulaTemplate | — |
 | USES_VARIABLE | FormulaTemplate → Slot | symbol |
 | HAS_PROCESS_FLOW | Section → ProcessFlow | — |
 | STEP | ProcessFlow → ProcessStep | order |
@@ -360,8 +361,8 @@ domain × report_type = 独立隔离的模板空间
 ```
 Step 1: _create_document_node        — 创建 Document 节点
 Step 2: _build_sections_and_templates — 创建 Section/ParagraphTemplate/Slot + 关系
-Step 3: _build_entity_schema_nodes    — 创建 EntitySchema + CITES 关系
-Step 4: _build_legal_reference_nodes  — 创建 LegalReference（含 effective_date/status/superseded_by）
+Step 3: _build_entity_schema_nodes    — 创建 EntitySchema + CONSTRAINS 关系
+Step 4: _build_legal_reference_nodes  — 创建 LegalReference（含时效性）并按来源段落模板建立 CITES
 Step 5: _build_table_schema_nodes     — 创建 TableSchema + 列定义
 Step 6: _build_formula_template_nodes — 创建 FormulaTemplate + USES_VARIABLE 关系
 Step 7: _build_process_flow_nodes     — 创建 ProcessFlow/ProcessStep + STEP 关系
@@ -373,9 +374,9 @@ Step 9: _build_logical_relationship_nodes — 创建 CausalChain/ConditionRule/D
 
 `_build_skeleton_aggregation()` 在同一 `(domain, report_type)` 下跨文档聚合：
 
-1. MERGE 创建或更新 DomainOutline 节点，`source_count` 自增
+1. MERGE 创建或更新 DomainOutline 节点；`source_count` 按贡献文档的 `document_key` 去重重算，不再按入库次数自增
 2. 对每份文档的章节树，MERGE 创建 ChapterTemplate，按 section_path 对齐
-3. 计算 `frequency`（出现该章节的文档数 / 总文档数）
+3. 用 `Document -[CONTAINS_CHAPTER]-> ChapterTemplate` 记录文档章节成员，并按唯一文档重算 `frequency`（出现该章节的文档数 / 总文档数）
 4. 判定 `rigidity`：
    - frequency ≥ 0.9 → `rigid`（刚性章节）
    - frequency ≥ 0.5 → `flexible`（弹性章节）
@@ -383,9 +384,25 @@ Step 9: _build_logical_relationship_nodes — 创建 CausalChain/ConditionRule/D
 5. 对每个章节内的 parameter 段落，按模板 hash 去重合并为 ParagraphRole
 6. 创建 REQUIRES_PARAGRAPH_ROLE / REALIZED_BY 关系
 
-### 4.5 法律引用时效性管理
+模板隔离边界是 `domain + report_type`；`kb_id` 只保留来源追溯，不承担模板隔离。
 
-`_build_legal_reference_nodes()` 中的 Cypher：
+### 4.5 身份与存量治理
+
+`Document.document_key` 是跨重复入库的稳定文档身份；`build_knowledge_graph()` 优先使用上传原文哈希，缺省时按源段落生成。`ParagraphTemplate.id`、`Slot.id`、`TableSchema.id`、`FormulaTemplate.id` 均由语义签名生成，重复入库通过 `MERGE` 幂等。
+
+存量图谱使用 `backend/scripts/governance/repair_graph_identity.py` 收敛：回填 `Document.document_key` 与 `ParagraphTemplate.domain/report_type`，从精确 Section 标题重建文档章节成员，按唯一文档重算 `source_count`/`frequency`/`rigidity`/`REALIZED_BY.frequency`，清理未命中实体元数据的 `EntitySchema` 并把引用降级为 `Slot.unresolved_entity_ref`，最后为知识工厂身份标签建立唯一约束。旧文档缺少可重建 Section 证据时，章节成员只保留可唯一解析的部分，脚本会报告无法解析的模板作用域并拒绝继续。
+
+### 4.6 法律引用与 CITES 来源归属
+
+`_build_legal_reference_nodes()` 同时负责 LegalReference 时效性和 CITES 来源归属。每条引用按 `source_para_id` 定位来源段落模板：
+
+- 来源段落有泛化模板时复用步骤2创建的 `TPL_PARA_*`；
+- 法规清单等无泛化模板的段落物化为 `TPL_SRC_*` 来源专用模板，`source_only=true`，通过 `Section -[COMPOSED_OF]->` 挂到所属 Section，但不创建 `ParagraphRole` / `REALIZED_BY`，因此不进入普通模板推荐；
+- 来源段落或 Section 无法定位时跳过，禁止按 `kb_id` 全量匹配；同一 `(来源模板, 法规)` 只保留一条边。
+
+存量数据重算使用 `backend/scripts/governance/rebuild_legal_citations.py`；脚本优先按 `doc_{task_id}` 映射任务与文档，旧随机 doc id 仅在文件名唯一时回退，只删除可重建文档专属模板上的旧 `CITES`。
+
+时效性 Cypher：
 
 ```cypher
 MERGE (ref:LegalReference {id: $ref_id})
@@ -398,7 +415,7 @@ WHERE old.id <> $ref_id AND old.effective_date < $effective_date
 SET old.status = 'superseded', old.superseded_by = $ref_id
 ```
 
-### 4.6 逻辑关系精确关联
+### 4.7 逻辑关系精确关联
 
 `_build_logical_relationship_nodes()` 使用 `_find_template_id_for_para()` 将 para_id 精确映射到已创建的 ParagraphTemplate 节点，而非模糊匹配文本内容。这确保了因果链和数据引用链的端到端精确性。
 

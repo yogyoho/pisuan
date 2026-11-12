@@ -22,6 +22,67 @@ def _parse_json_field(value: Any) -> list[str] | None:
         return None
 
 
+def flatten_leaf_sections(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """把章节节点展开为叶子节，保留完整父路径与稳定节点身份。"""
+    by_id = {node["id"]: dict(node) for node in nodes if node.get("id")}
+    for node in by_id.values():
+        node["_children"] = []
+
+    roots: list[dict[str, Any]] = []
+    for node in by_id.values():
+        parent_id = node.get("parent_id")
+        if parent_id is None:
+            roots.append(node)
+        else:
+            parent = by_id.get(parent_id)
+            if parent is None:
+                raise ValueError(f"ChapterTemplate 层级断链: {node['id']} -> {parent_id}")
+            parent["_children"].append(node)
+
+    def sort_key(node: dict[str, Any]) -> tuple[bool, int, str, str]:
+        order = node.get("order")
+        return (order is None, order if order is not None else 0, node.get("chapter_no") or "", node["id"])
+
+    for node in by_id.values():
+        node["_children"].sort(key=sort_key)
+    roots.sort(key=sort_key)
+
+    leaves: list[dict[str, Any]] = []
+    walked: set[str] = set()
+
+    def walk(node: dict[str, Any], ancestors: tuple[str, ...]) -> None:
+        section_key = node["id"]
+        if section_key in ancestors:
+            raise ValueError(f"ChapterTemplate 层级存在环: {section_key}")
+        canonical = node.get("canonical_chapter_key") or node.get("title") or section_key
+        path = (*ancestors, canonical)
+        walked.add(section_key)
+        children = node["_children"]
+        if children:
+            for child in children:
+                walk(child, path)
+            return
+        leaves.append(
+            {
+                "section_key": section_key,
+                "canonical_chapter_key": canonical,
+                "title": node.get("title") or canonical,
+                "chapter_no": node.get("chapter_no"),
+                "level": node.get("level"),
+                "order": node.get("order"),
+                "path": list(path),
+                "parent_section_key": node.get("parent_id"),
+                "is_leaf": True,
+            }
+        )
+
+    for root in roots:
+        walk(root, ())
+    if by_id and len(walked) != len(by_id):
+        raise ValueError("ChapterTemplate 层级存在环")
+    return leaves
+
+
 class GraphQueryService:
     """查询知识图谱的 ChapterTemplate/ParagraphTemplate/Slot/LegalReference。
 
@@ -52,6 +113,26 @@ class GraphQueryService:
                 rt=report_type,
             )
             return [r["key"] for r in result if r["key"]]
+
+    async def list_leaf_sections(self, domain: str, report_type: str) -> list[dict[str, Any]]:
+        """列出叶子章节，返回稳定 section_key、完整路径和章节定位信息。"""
+        with self._driver.session() as session:
+            result = session.run(
+                """
+                MATCH (ch:ChapterTemplate {domain: $domain, report_type: $rt})
+                WHERE ch.id IS NOT NULL
+                  AND ch.canonical_chapter_key IS NOT NULL AND ch.canonical_chapter_key <> ''
+                OPTIONAL MATCH (parent:ChapterTemplate)-[:HAS_CHILD]->(ch)
+                RETURN ch.id AS id, ch.canonical_chapter_key AS canonical_chapter_key,
+                       ch.title AS title, ch.chapter_no AS chapter_no, ch.level AS level,
+                       ch.`order` AS `order`, parent.id AS parent_id
+                ORDER BY ch.level, ch.`order`, ch.id
+                """,
+                domain=domain,
+                rt=report_type,
+            )
+            nodes = [dict(record) for record in result]
+        return flatten_leaf_sections(nodes)
 
     async def get_chapter_outline(self, domain: str, report_type: str, canonical_key: str) -> dict[str, Any] | None:
         """查询单个章节大纲,含子章节和段落角色预览。
@@ -161,11 +242,24 @@ class GraphQueryService:
             "structure_type": "narrative_text",
         }
 
-    async def get_templates(self, domain: str, report_type: str, canonical_key: str) -> list[dict[str, Any]]:
+    async def get_templates(
+        self,
+        domain: str,
+        report_type: str,
+        canonical_key: str | None = None,
+        *,
+        section_key: str | None = None,
+    ) -> list[dict[str, Any]]:
         """查询某章节下的段落模板,含 Slot 和 LegalReference。
 
+        section_key 精确匹配章节节点，只返回该节点段落角色关联的模板；
+        canonical_key 保留旧的按名称递归查询，同名跨父路径时不保证唯一。
         顶级章节无模板时递归查子章节(HAS_CHILD*1..3),去重返回。
         """
+        if section_key:
+            return self._query_section_templates(domain, report_type, section_key)
+        if not canonical_key:
+            return []
         templates = self._query_templates(domain, report_type, canonical_key)
         if templates:
             return templates
@@ -186,7 +280,11 @@ class GraphQueryService:
             result = session.run(
                 """
                 MATCH (ch:ChapterTemplate {domain: $domain, report_type: $rt, canonical_chapter_key: $key})
-                MATCH (pt:ParagraphTemplate {canonical_chapter_key: $key})
+                MATCH (pt:ParagraphTemplate {
+                    canonical_chapter_key: $key,
+                    domain: $domain,
+                    report_type: $rt
+                })
                 OPTIONAL MATCH (pt)-[:HAS_SLOT]->(s:Slot)
                 OPTIONAL MATCH (s)-[:CONSTRAINS]->(es:EntitySchema)
                 OPTIONAL MATCH (pt)-[:CITES]->(lr:LegalReference)
@@ -214,6 +312,54 @@ class GraphQueryService:
                         "text_pattern": pattern,
                         "slots": slots,
                         "legal_references": refs,
+                    }
+                )
+            return templates
+
+    def _query_section_templates(self, domain: str, report_type: str, section_key: str) -> list[dict[str, Any]]:
+        """按章节节点精确查询模板，模板元数据携带所属叶子节身份。"""
+        with self._driver.session() as session:
+            result = session.run(
+                """
+                MATCH (ch:ChapterTemplate {domain: $domain, report_type: $rt, id: $section_key})
+                MATCH (ch)-[:REQUIRES_PARAGRAPH_ROLE]->(:ParagraphRole)-[:REALIZED_BY]->(pt:ParagraphTemplate)
+                WHERE pt.domain = $domain AND pt.report_type = $rt
+                OPTIONAL MATCH (pt)-[:HAS_SLOT]->(s:Slot)
+                OPTIONAL MATCH (s)-[:CONSTRAINS]->(es:EntitySchema)
+                OPTIONAL MATCH (pt)-[:CITES]->(lr:LegalReference)
+                RETURN pt.id AS pt_id, pt.text_pattern AS pattern,
+                       ch.id AS section_key, ch.canonical_chapter_key AS canonical_chapter_key,
+                       ch.title AS chapter_title, ch.chapter_no AS chapter_no, ch.level AS section_level,
+                       collect(DISTINCT {name: s.name, type: s.type, entity: es.name}) AS slots,
+                       collect(DISTINCT {code: lr.code, name: lr.name}) AS refs
+                ORDER BY pt_id
+                """,
+                domain=domain,
+                rt=report_type,
+                section_key=section_key,
+            )
+            templates = []
+            for rec in result:
+                pattern = rec["pattern"]
+                if not pattern:
+                    continue
+                slots = [
+                    {"name": slot["name"], "type": slot["type"], "entity_ref": slot["entity"]}
+                    for slot in rec["slots"]
+                    if slot and slot.get("name")
+                ]
+                refs = [{"code": ref["code"], "name": ref["name"]} for ref in rec["refs"] if ref and ref.get("code")]
+                templates.append(
+                    {
+                        "template_id": rec["pt_id"],
+                        "text_pattern": pattern,
+                        "slots": slots,
+                        "legal_references": refs,
+                        "section_key": rec["section_key"],
+                        "canonical_chapter_key": rec["canonical_chapter_key"],
+                        "chapter_title": rec["chapter_title"],
+                        "chapter_no": rec["chapter_no"],
+                        "section_level": rec["section_level"],
                     }
                 )
             return templates

@@ -1,8 +1,8 @@
 ---
 name: template-recommender
 description: "逐节引导写作技能（高用户参与模式）：按报告叶子章节逐节推进——模板候选卡片让用户自选，给出组装建议与待补数据，用户补全后组装成稿并确认，确认后自动推荐进入下一节。触发：用户要求逐节写、边选边写、自己挑模板编写报告（如环评报告），或要求推荐章节/段落模板。用户要整本或整章自动批量编写时属于另外两种写作模式，本技能不接，如实告知即可。"
-version: "2026.11.10"
-tool_dependencies: ["list_kbs", "get_mindmap", "query_kb", "get_templates", "list_report_types", "list_chapter_keys", "ask_user_question", "present_artifacts", "read_file", "write_file", "edit_file", "execute"]
+version: "2026.11.12"
+tool_dependencies: ["list_kbs", "get_mindmap", "query_kb", "get_templates", "list_report_types", "list_leaf_sections", "ask_user_question", "present_artifacts", "read_file", "write_file", "edit_file", "execute"]
 skill_dependencies: []
 ---
 
@@ -40,6 +40,7 @@ skill_dependencies: []
 5. 样例禁抄：样例切片只学结构与写法——样例里的矿名/地名/企业名/数值禁进本项目正文；上卡面前先脱敏（实体→「某矿」「某企业」占位，数值→「××」占位）；报告名/文件名/路径等溯源信息不上卡面。知识库检索参照候选与样例候选同一套纪律：卡面先脱敏（矿名/地名/企业名→占位、数值→占位化），溯源信息不上卡面，只学结构与写法禁抄。
 6. 进度唯一权威=写作档案：进度与成稿以工作区档案为准，会话记忆只是回声；开局先读档案再定行动。
 7. 语料只读：写作技能包内的语料资料（样例库/范式文档/实体清单）只读参照，禁改动那些目录的任何文件。
+8. 叶子节身份唯一：逐节主链只认 `list_leaf_sections` 返回的 `section_key`；同名节可能在不同父路径，禁按标题或章节号合并；禁把一级章名当叶子节；模板记录的 `section_key` 与当前节不一致即弃用。
 
 ## 工作区（写作档案）
 
@@ -61,9 +62,12 @@ progress.json 结构（每节推进后立即更新）：
   "kbs": ["煤矿环评报告模板库"],
   "sections": [
     {
-      "key": "4.2",
+      "section_key": "CH_general_eia_report_xxx",
+      "canonical_chapter_key": "地表水环境影响预测",
       "title": "地表水环境影响预测",
-      "path": ["第四章 环境影响预测", "4.2"],
+      "chapter_no": "4.2",
+      "level": 3,
+      "path": ["环境影响预测与评价", "地表水环境影响", "地表水环境影响预测"],
       "status": "pending",
       "template_source": "kb",
       "template_summary": "模板库五段式：源强→预测情景→预测结果→影响分析→措施",
@@ -85,16 +89,16 @@ template_source 取值：kb（模板库）/ sample（样例参照）/ none（常
 ### 开局定位（一次性）
 
 1. `list_kbs` 确认对话已选知识库：为零 → 告知用户先在对话设置里选择领域知识库后再来，本回合结束；多个且领域不同 → 开局卡确认范围；多个且同域 → 开局卡一并确认用哪个（或都用），禁静默任选。
-2. `get_mindmap` 取章节树；`list_report_types` / `list_chapter_keys` 取合法口径（domain/report_type 用数据字典 code，禁猜）。
-3. 结合用户目标定位范围：点名章节 → 该章子树；给关键字 → 树上匹配；要整本 → 全树。展开为叶子节清单（有子节的章展开到叶子节），推进顺序按章节号。
+2. `list_report_types` 取合法口径（domain/report_type 用数据字典 code，禁猜）；`list_leaf_sections` 取叶子节清单与完整父路径，`get_mindmap` 只用于向用户解释章节树。
+3. 结合用户目标定位范围：点名章节 → 在该章叶子节中匹配；给关键字 → 按节名与父路径匹配；要整本 → 全部叶子节。叶子节清单与身份以 `list_leaf_sections` 为准，禁自行把章名拆成叶子节；同名节按 `section_key` 区分，推进顺序按返回顺序。
 4. 探测语料：execute 列 `/home/gem/skills/coal-eia-writer/references/` 下的 samples_bank/（真实报告切片）与 paradigms/（通用范式）；目录不存在 → 正文如实说明一句「没有找到同类报告样例库，将只用知识库模板」，不阻塞。
-5. 读写作档案：`/home/gem/user-data/workspace/template-writing/` 下已有本报告 progress.json → 以档案为准呈进度（完成/待写/跳过各几节、下一节是哪个），开局卡问「继续下一节 / 复查某一节 / 另开新报告」；档案里某节是 pending 但 sections/ 下已有草稿 → 呈现该草稿直接走卡4 请确认，禁静默重写。没有 → 开局确认报告名（作档案目录名）与起始范围，建档案起步；目标范围全部叶子节一次建入（status 均为 pending）。
+5. 读写作档案：`/home/gem/user-data/workspace/template-writing/` 下已有本报告 progress.json → 先校验每节 `section_key`；旧档案缺该字段时按 `chapter_no` + `path` 在 `list_leaf_sections` 重解析，唯一命中才沿用，歧义则开局卡请用户确认，禁按标题猜。以档案为准呈进度（完成/待写/跳过各几节、下一节是哪个），开局卡问「继续下一节 / 复查某一节 / 另开新报告」；档案里某节是 pending 但 sections/ 下已有草稿 → 呈现该草稿直接走卡4 请确认，禁静默重写。没有 → 开局确认报告名（作档案目录名）与起始范围，建档案起步；目标范围全部叶子节按 `section_key` 一次建入（status 均为 pending）。
 6. 用户目标只给了章没给报告名、或范围有歧义 → 开局卡一并问清，禁静默选定。
 
 ### 卡1 · 选节卡（每轮第一张，发卡即停）
 
 - 题面：进度一句话（目标范围共 N 节、已完成 M 节）+「建议下一节写〈节号 节名〉」。
-- 选项：推荐节（首位）+ 同章其他待写节按顺序补位，节选项合计 ≤4，末位固定「先停一下」；允许自行输入节名或关键字换节（allow_other 开）。
+- 选项：推荐节（首位）+ 同章其他待写节按顺序补位，节选项合计 ≤4，末位固定「先停一下」；同名节在选项 description 标上级路径帮助区分；允许自行输入节名或关键字换节（allow_other 开）。
 - 待写节超过选项容量 → 题面注明「也可以直接输入你想写的节名」。
 - 用户表示跳过当前推荐节 → 该节置 skipped 并写盘，顺延推荐下一节。
 
@@ -102,7 +106,7 @@ template_source 取值：kb（模板库）/ sample（样例参照）/ none（常
 
 选定节后取候选：
 
-1. canonical_chapter_key 以 `list_chapter_keys` 返回为准按节名匹配，禁猜；`get_templates(domain, report_type, canonical_chapter_key)` 取该节结构化模板；无结果时按 `list_chapter_keys` 核对口径后重试一次，结构化模板查无结果时，再用 query_kb 以该节主题词检索知识库相关段落，命中的段落脱敏后作「知识库参照」候选并入候选清单。三路（结构化模板/知识库参照/样例参照）都为空 → 如实告知该节无可用参照，选项与候选=0 分支相同：按常规写法直接写 / 换一节 / 先停一下。
+1. 用档案该节的 `section_key` 调 `get_templates(domain, report_type, section_key)` 取精确模板；只收 `section_key` 与当前节一致的记录，缺失或不一致即弃用，禁改传同名 canonical 或一级章名重查。返回 `_source=graph_error` → 如实告知图谱暂不可用，不外推其他节模板；空列表 → 再用 query_kb 以该节主题词检索知识库相关段落，命中的段落脱敏后作「知识库参照」候选并入候选清单。三路（结构化模板/知识库参照/样例参照）都为空 → 如实告知该节无可用参照，选项与候选=0 分支相同：按常规写法直接写 / 换一节 / 先停一下。
 2. 语料可用且为本领域（煤矿环评）→ samples_bank/ 找同章真实切片作「样例参照」候选。
 3. 候选全文先落盘再呈卡：present_artifacts 只能呈已存在的文件——模板候选先把组装稿（泛化模板全文+插槽清单+原文引用）write_file 到工作区；样例切片先另存脱敏副本（禁直呈语料原文件）。再逐份 present_artifacts 呈文件卡，文件卡不停车。
 4. 候选 ≥2 → 选择卡：题面「〈节名〉找到 N 份模板/样例，用哪份？」；选项合计 ≤4：选项标题放脱敏后的候选短标题，来源标「模板库」/「样例参照」+ 结构特点 + 约多少段放选项 description（前端渲染在标题下方说明行）；推荐候选标题末尾加「（推荐）」标记（模板含完整插槽定义时推荐模板库候选，标记口径见沟通规范 6）；候选超 4 份择优取前 4（模板库优先），其余如实说明未列出。末位固定「都不用，按常规写法」；allow_other 开。候选 =1 → 不发选择卡，正文一句话说明采用哪份，直接进卡3（用户不同意可随时叫停）。候选 =0 → 如实告知，选项「按常规写法直接写 / 换一节 / 先停一下」。
@@ -135,7 +139,7 @@ template_source 取值：kb（模板库）/ sample（样例参照）/ none（常
 
 ## 数据源
 
-1. 知识库（主源）：对话设置中已选的领域知识库——章节树（get_mindmap）、结构化段落模板（get_templates）、补充检索（query_kb）。
+1. 知识库（主源）：对话设置中已选的领域知识库——叶子节身份（list_leaf_sections）、章节树（get_mindmap）、结构化段落模板（get_templates）、补充检索（query_kb）。
 2. 写作技能语料（辅源，只读）：`/home/gem/skills/coal-eia-writer/references/` 下 samples_bank/（真实报告切片）、paradigms/（通用范式文档）、sample_entities/（样例实体禁抄清单）。检索=execute 列目录 + read_file 读内容；此语料是煤矿环评领域，其他领域按无样例处理并如实说明。
 3. 两处都没有 → 如实告知，处置选项同卡2 候选=0 分支，禁编造模板与数据。
 
@@ -143,5 +147,6 @@ template_source 取值：kb（模板库）/ sample（样例参照）/ none（常
 
 模板记录可能来自图谱或数据库回退（看 `_source` 字段），字段名不同，按实际返回读取，禁编造字段名：
 
-- 图谱（`_source: "graph"`）：泛化模板文本=`text_pattern`，插槽=`slots`（name/type/entity_ref），标准依据=`legal_references`（code/name）。
+- 图谱（`_source: "graph"`）：泛化模板文本=`text_pattern`，插槽=`slots`（name/type/entity_ref），标准依据=`legal_references`（code/name）；所属节=`section_key`/`canonical_chapter_key`/`chapter_title`/`chapter_no`/`section_level`，必须与当前节 `section_key` 一致。
+- 图谱错误（`_source: "graph_error"`）：不是模板候选，不得进入卡2，按该条 `hint` 如实说明。
 - 数据库回退（`_source: "db"` / `"db_fallback"`）：泛化模板文本=`generalized`，插槽=`slots`（以 name 为准，type/description 有则参考），原文引用=`sample_original`，章节=`chapter`；出现 `_degraded_note` 时按其要求向用户如实说明图谱暂不可用。

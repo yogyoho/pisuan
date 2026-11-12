@@ -205,3 +205,6 @@ def test_shipping_skills_keep_required_dependencies():
     assert found["deep-research"]["skill_dependencies"] == []
     assert found["mysql-reporter"]["mcp_dependencies"] == []
     assert found["html-preview"]["version"] == "2026.07.23"
+    recommender_tools = found["template-recommender"]["tool_dependencies"]
+    assert "list_leaf_sections" in recommender_tools
+    assert "list_chapter_keys" not in recommender_tools
