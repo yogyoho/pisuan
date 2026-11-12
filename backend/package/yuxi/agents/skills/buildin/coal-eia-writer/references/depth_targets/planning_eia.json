@@ -7,28 +7,34 @@
       "floor_chars": 5577
     },
     "ch1": {
-      "floor_chars": 7052
+      "floor_chars": 6901
     },
     "ch10": {
-      "floor_chars": 2468
+      "floor_chars": 2548
     },
     "ch11": {
-      "floor_chars": 1134
+      "floor_chars": 1140
     },
     "ch12": {
-      "floor_chars": 2148
+      "floor_chars": 2124
     },
     "ch1200": {
       "floor_chars": 6813
     },
     "ch13": {
-      "floor_chars": 10255
+      "floor_chars": 10244
     },
     "ch14": {
-      "floor_chars": 8976
+      "floor_chars": 5152
     },
     "ch140": {
       "floor_chars": 7065
+    },
+    "ch15": {
+      "floor_chars": 839
+    },
+    "ch16": {
+      "floor_chars": 2469
     },
     "ch1600": {
       "floor_chars": 2784
@@ -36,8 +42,14 @@
     "ch16531": {
       "floor_chars": 3204
     },
+    "ch17": {
+      "floor_chars": 654
+    },
+    "ch18": {
+      "floor_chars": 6932
+    },
     "ch2": {
-      "floor_chars": 14599
+      "floor_chars": 14724
     },
     "ch20": {
       "floor_chars": 631
@@ -67,10 +79,10 @@
       "floor_chars": 2992
     },
     "ch3": {
-      "floor_chars": 11044
+      "floor_chars": 10839
     },
     "ch4": {
-      "floor_chars": 14008
+      "floor_chars": 13008
     },
     "ch40": {
       "floor_chars": 3043
@@ -88,25 +100,25 @@
       "floor_chars": 62
     },
     "ch5": {
-      "floor_chars": 3362
+      "floor_chars": 3660
     },
     "ch565": {
       "floor_chars": 3533
     },
     "ch6": {
-      "floor_chars": 34806
+      "floor_chars": 34084
     },
     "ch7": {
-      "floor_chars": 4315
+      "floor_chars": 4418
     },
     "ch8": {
-      "floor_chars": 5992
+      "floor_chars": 5937
     },
     "ch8760": {
       "floor_chars": 2434
     },
     "ch9": {
-      "floor_chars": 9089
+      "floor_chars": 8734
     },
     "ch96": {
       "floor_chars": 1757

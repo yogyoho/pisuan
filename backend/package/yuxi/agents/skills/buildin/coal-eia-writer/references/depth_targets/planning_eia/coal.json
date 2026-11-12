@@ -14,23 +14,23 @@
       "median_table_rows": 94
     },
     "ch1": {
-      "median_eff": 11754,
-      "median_paragraphs": 210,
+      "median_eff": 11502,
+      "median_paragraphs": 214,
       "median_table_rows": 99
     },
     "ch10": {
-      "median_eff": 4114,
-      "median_paragraphs": 71,
-      "median_table_rows": 30
+      "median_eff": 4247,
+      "median_paragraphs": 77,
+      "median_table_rows": 31
     },
     "ch11": {
-      "median_eff": 1890,
-      "median_paragraphs": 28,
-      "median_table_rows": 36
+      "median_eff": 1900,
+      "median_paragraphs": 33,
+      "median_table_rows": 37
     },
     "ch12": {
-      "median_eff": 3580,
-      "median_paragraphs": 70,
+      "median_eff": 3540,
+      "median_paragraphs": 66,
       "median_table_rows": 44
     },
     "ch1200": {
@@ -39,19 +39,29 @@
       "median_table_rows": 54
     },
     "ch13": {
-      "median_eff": 17093,
-      "median_paragraphs": 165,
+      "median_eff": 17074,
+      "median_paragraphs": 159,
       "median_table_rows": 0
     },
     "ch14": {
-      "median_eff": 14960,
-      "median_paragraphs": 152,
-      "median_table_rows": 13
+      "median_eff": 8588,
+      "median_paragraphs": 84,
+      "median_table_rows": 6
     },
     "ch140": {
       "median_eff": 11776,
       "median_paragraphs": 217,
       "median_table_rows": 18
+    },
+    "ch15": {
+      "median_eff": 1399,
+      "median_paragraphs": 18,
+      "median_table_rows": 50
+    },
+    "ch16": {
+      "median_eff": 4116,
+      "median_paragraphs": 87,
+      "median_table_rows": 86
     },
     "ch1600": {
       "median_eff": 4641,
@@ -63,10 +73,20 @@
       "median_paragraphs": 155,
       "median_table_rows": 136
     },
+    "ch17": {
+      "median_eff": 1091,
+      "median_paragraphs": 33,
+      "median_table_rows": 33
+    },
+    "ch18": {
+      "median_eff": 11554,
+      "median_paragraphs": 124,
+      "median_table_rows": 0
+    },
     "ch2": {
-      "median_eff": 24332,
-      "median_paragraphs": 371,
-      "median_table_rows": 620
+      "median_eff": 24540,
+      "median_paragraphs": 381,
+      "median_table_rows": 600
     },
     "ch20": {
       "median_eff": 1052,
@@ -114,14 +134,14 @@
       "median_table_rows": 18
     },
     "ch3": {
-      "median_eff": 18408,
-      "median_paragraphs": 298,
-      "median_table_rows": 945
+      "median_eff": 18066,
+      "median_paragraphs": 284,
+      "median_table_rows": 932
     },
     "ch4": {
-      "median_eff": 23347,
-      "median_paragraphs": 320,
-      "median_table_rows": 765
+      "median_eff": 21681,
+      "median_paragraphs": 308,
+      "median_table_rows": 739
     },
     "ch40": {
       "median_eff": 5072,
@@ -149,9 +169,9 @@
       "median_table_rows": 0
     },
     "ch5": {
-      "median_eff": 5604,
-      "median_paragraphs": 109,
-      "median_table_rows": 96
+      "median_eff": 6100,
+      "median_paragraphs": 112,
+      "median_table_rows": 98
     },
     "ch565": {
       "median_eff": 5889,
@@ -159,19 +179,19 @@
       "median_table_rows": 21
     },
     "ch6": {
-      "median_eff": 58011,
-      "median_paragraphs": 610,
-      "median_table_rows": 834
+      "median_eff": 56807,
+      "median_paragraphs": 592,
+      "median_table_rows": 790
     },
     "ch7": {
-      "median_eff": 7193,
-      "median_paragraphs": 115,
-      "median_table_rows": 121
+      "median_eff": 7364,
+      "median_paragraphs": 117,
+      "median_table_rows": 127
     },
     "ch8": {
-      "median_eff": 9987,
-      "median_paragraphs": 102,
-      "median_table_rows": 68
+      "median_eff": 9895,
+      "median_paragraphs": 100,
+      "median_table_rows": 70
     },
     "ch8760": {
       "median_eff": 4057,
@@ -179,9 +199,9 @@
       "median_table_rows": 168
     },
     "ch9": {
-      "median_eff": 15149,
+      "median_eff": 14557,
       "median_paragraphs": 179,
-      "median_table_rows": 30
+      "median_table_rows": 31
     },
     "ch96": {
       "median_eff": 2929,
@@ -209,6 +229,7 @@
     "ch10_038-2024-7-9.md",
     "ch10_040-r.md",
     "ch10_042-r.md",
+    "ch10_043-1000.md",
     "ch11_003-1-2024-1-30.md",
     "ch11_004-2-2021-1.md",
     "ch11_007-3.md",
@@ -225,6 +246,7 @@
     "ch11_038-2024-7-9.md",
     "ch11_040-r.md",
     "ch11_042-r.md",
+    "ch11_043-1000.md",
     "ch1200_028-r.md",
     "ch12_003-1-2024-1-30.md",
     "ch12_004-2-2021-1.md",
@@ -242,6 +264,7 @@
     "ch12_038-2024-7-9.md",
     "ch12_040-r.md",
     "ch12_042-r.md",
+    "ch12_043-1000.md",
     "ch13_003-1-2024-1-30.md",
     "ch13_004-2-2021-1.md",
     "ch13_007-3.md",
@@ -257,10 +280,16 @@
     "ch13_038-2024-7-9.md",
     "ch13_040-r.md",
     "ch13_042-r.md",
+    "ch13_043-1000.md",
     "ch140_028-r.md",
     "ch14_012-r.md",
+    "ch14_043-1000.md",
+    "ch15_043-1000.md",
     "ch1600_028-r.md",
     "ch16531_028-r.md",
+    "ch16_043-1000.md",
+    "ch17_043-1000.md",
+    "ch18_043-1000.md",
     "ch1_003-1-2024-1-30.md",
     "ch1_004-2-2021-1.md",
     "ch1_007-3.md",
@@ -278,6 +307,7 @@
     "ch1_038-2024-7-9.md",
     "ch1_040-r.md",
     "ch1_042-r.md",
+    "ch1_043-1000.md",
     "ch200_028-r.md",
     "ch2015_028-r.md",
     "ch2017_028-r.md",
@@ -304,6 +334,7 @@
     "ch2_038-2024-7-9.md",
     "ch2_040-r.md",
     "ch2_042-r.md",
+    "ch2_043-1000.md",
     "ch3_003-1-2024-1-30.md",
     "ch3_004-2-2021-1.md",
     "ch3_007-3.md",
@@ -321,6 +352,7 @@
     "ch3_038-2024-7-9.md",
     "ch3_040-r.md",
     "ch3_042-r.md",
+    "ch3_043-1000.md",
     "ch40_028-r.md",
     "ch41_028-r.md",
     "ch42_028-r.md",
@@ -343,6 +375,7 @@
     "ch4_038-2024-7-9.md",
     "ch4_040-r.md",
     "ch4_042-r.md",
+    "ch4_043-1000.md",
     "ch565_028-r.md",
     "ch5_003-1-2024-1-30.md",
     "ch5_004-2-2021-1.md",
@@ -361,6 +394,7 @@
     "ch5_038-2024-7-9.md",
     "ch5_040-r.md",
     "ch5_042-r.md",
+    "ch5_043-1000.md",
     "ch6_003-1-2024-1-30.md",
     "ch6_004-2-2021-1.md",
     "ch6_007-3.md",
@@ -378,6 +412,7 @@
     "ch6_038-2024-7-9.md",
     "ch6_040-r.md",
     "ch6_042-r.md",
+    "ch6_043-1000.md",
     "ch7_003-1-2024-1-30.md",
     "ch7_004-2-2021-1.md",
     "ch7_007-3.md",
@@ -394,6 +429,7 @@
     "ch7_038-2024-7-9.md",
     "ch7_040-r.md",
     "ch7_042-r.md",
+    "ch7_043-1000.md",
     "ch8760_028-r.md",
     "ch8_003-1-2024-1-30.md",
     "ch8_004-2-2021-1.md",
@@ -411,6 +447,7 @@
     "ch8_038-2024-7-9.md",
     "ch8_040-r.md",
     "ch8_042-r.md",
+    "ch8_043-1000.md",
     "ch96_028-r.md",
     "ch9_003-1-2024-1-30.md",
     "ch9_004-2-2021-1.md",
@@ -428,7 +465,8 @@
     "ch9_038-2023-5.md",
     "ch9_038-2024-7-9.md",
     "ch9_040-r.md",
-    "ch9_042-r.md"
+    "ch9_042-r.md",
+    "ch9_043-1000.md"
   ],
   "scale_floor": 0.25
 }
