@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import json
+import os
 import re
 import shutil
+import sys
 import time
 import zipfile
 from pathlib import Path
@@ -261,15 +264,78 @@ async def test_parse_document_docx_returns_markdown_text(tmp_path: Path, monkeyp
     file_path = tmp_path / "parser_test.docx"
     _build_docx(file_path, "Parser DOCX content")
 
-    # 避免测试依赖 docling 行为，直接验证统一 parser 可回退到 python-docx。
-    def _raise_docling_error(*args, **kwargs):
+    # 子进程不会继承 pytest monkeypatch，直接验证异步边界失败后的兜底。
+    async def _raise_docling_error(*args, **kwargs):
         raise RuntimeError("force fallback to python-docx")
 
-    monkeypatch.setattr(parser_unified, "_convert_with_docling", _raise_docling_error)
+    monkeypatch.setattr(parser_unified, "_convert_docx_with_timeout", _raise_docling_error)
 
     markdown = await parse_document(str(file_path))
 
     assert "Parser DOCX content" in markdown
+
+
+@pytest.mark.asyncio
+async def test_parse_document_docx_uses_docling_subprocess(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    file_path = tmp_path / "parser_test.docx"
+    _build_docx(file_path, "fallback content")
+    captured: list[Path] = []
+
+    async def _fake_docling(file_path: Path, params: dict | None = None) -> str:
+        del params
+        captured.append(file_path)
+        return "# Docling DOCX content"
+
+    monkeypatch.setattr(parser_unified, "_convert_docx_with_timeout", _fake_docling)
+
+    markdown = await parse_document(str(file_path))
+
+    assert markdown == "# Docling DOCX content"
+    assert captured == [file_path]
+
+
+@pytest.mark.asyncio
+async def test_parse_document_docx_does_not_call_ocr_models(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    file_path = tmp_path / "parser_no_ocr.docx"
+    _build_docx(file_path, "fallback content")
+
+    async def _fake_docling(*args, **kwargs) -> str:
+        return "# Docling DOCX content"
+
+    def _unexpected_ocr(*args, **kwargs):
+        pytest.fail("原生 DOCX 不应调用 OCR/VLM 解析入口")
+
+    monkeypatch.setattr(parser_unified, "_convert_docx_with_timeout", _fake_docling)
+    monkeypatch.setattr(parser_unified, "parse_image_async", _unexpected_ocr)
+    monkeypatch.setattr(parser_unified, "parse_pdf_async", _unexpected_ocr)
+
+    markdown = await parse_document(str(file_path))
+
+    assert markdown == "# Docling DOCX content"
+
+
+@pytest.mark.asyncio
+async def test_parse_document_docx_falls_back_after_docling_timeout(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    file_path = tmp_path / "parser_timeout.docx"
+    _build_docx(file_path, "Timeout fallback content")
+
+    async def _timeout(*args, **kwargs):
+        raise TimeoutError("Docling DOCX 超时")
+
+    monkeypatch.setattr(parser_unified, "_convert_docx_with_timeout", _timeout)
+
+    markdown = await parse_document(str(file_path))
+
+    assert "Timeout fallback content" in markdown
 
 
 @pytest.mark.parametrize(
@@ -498,6 +564,114 @@ def test_convert_with_docling_keeps_image_placeholder_when_upload_fails(
     assert markdown == "before\n[图片: image_1000000.png]\nafter"
 
 
+def test_python_docx_fallback_preserves_heading_levels(tmp_path: Path) -> None:
+    file_path = tmp_path / "headings.docx"
+    document = Document()
+    document.add_heading("一级标题", level=1)
+    document.add_paragraph("正文内容")
+    document.add_heading("二级标题", level=2)
+    document.save(str(file_path))
+
+    markdown = parser_unified._convert_docx_with_python_docx(file_path)
+
+    assert "# 一级标题" in markdown
+    assert "## 二级标题" in markdown
+    assert "正文内容" in markdown
+
+
+@pytest.mark.parametrize(
+    ("style_name", "expected_prefix"),
+    [
+        ("Heading 1", "# "),
+        ("Heading 3", "### "),
+        ("标题 2", "## "),
+        ("Heading 7", ""),
+        ("正文", ""),
+    ],
+)
+def test_markdown_heading_prefix_maps_word_styles(style_name: str, expected_prefix: str) -> None:
+    assert parser_unified._markdown_heading_prefix(style_name) == expected_prefix
+
+
+def test_docx_worker_command_only_forwards_image_storage_params(tmp_path: Path) -> None:
+    command = parser_unified._build_docx_docling_worker_command(
+        tmp_path / "input.docx",
+        {"image_bucket": "images", "image_prefix": "kb/1", "api_key": "secret"},
+        tmp_path / "output.md",
+    )
+
+    assert json.loads(command[4]) == {"image_bucket": "images", "image_prefix": "kb/1"}
+    assert all("secret" not in item for item in command)
+
+
+@pytest.mark.asyncio
+async def test_convert_docx_with_timeout_reads_worker_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    file_path = tmp_path / "input.docx"
+    file_path.write_bytes(b"fake docx")
+    captured_timeout: list[float] = []
+
+    async def _fake_run(argv: list[str], timeout_seconds: float) -> None:
+        captured_timeout.append(timeout_seconds)
+        Path(argv[-1]).write_text("# worker output", encoding="utf-8")
+
+    monkeypatch.setattr(parser_unified, "DOCLING_DOCX_TIMEOUT_SECONDS", 12.5)
+    monkeypatch.setattr(parser_unified, "_run_process_with_timeout", _fake_run)
+
+    markdown = await parser_unified._convert_docx_with_timeout(file_path)
+
+    assert markdown == "# worker output"
+    assert captured_timeout == [12.5]
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(os.name == "nt", reason="POSIX 进程组语义")
+async def test_run_process_with_timeout_kills_child(tmp_path: Path) -> None:
+    pid_path = tmp_path / "child.pid"
+    script = (
+        "import os, pathlib, time; "
+        f"pathlib.Path({str(pid_path)!r}).write_text(str(os.getpid()), encoding='utf-8'); "
+        "time.sleep(60)"
+    )
+    started = time.monotonic()
+
+    with pytest.raises(TimeoutError):
+        await parser_unified._run_process_with_timeout([sys.executable, "-c", script], 1.0)
+
+    assert time.monotonic() - started < 5
+    child_pid = int(pid_path.read_text(encoding="utf-8"))
+    with pytest.raises(ProcessLookupError):
+        os.kill(child_pid, 0)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(os.name == "nt", reason="POSIX 进程组语义")
+async def test_run_process_with_timeout_kills_child_on_cancel(tmp_path: Path) -> None:
+    pid_path = tmp_path / "cancelled-child.pid"
+    script = (
+        "import os, pathlib, time; "
+        f"pathlib.Path({str(pid_path)!r}).write_text(str(os.getpid()), encoding='utf-8'); "
+        "time.sleep(60)"
+    )
+    task = asyncio.create_task(parser_unified._run_process_with_timeout([sys.executable, "-c", script], 60))
+
+    for _ in range(500):
+        if pid_path.exists():
+            break
+        await asyncio.sleep(0.01)
+    assert pid_path.exists()
+
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    child_pid = int(pid_path.read_text(encoding="utf-8"))
+    with pytest.raises(ProcessLookupError):
+        os.kill(child_pid, 0)
+
+
 @pytest.mark.asyncio
 async def test_parse_document_png_returns_markdown_text_with_mocked_ocr(
     tmp_path: Path,
@@ -575,8 +749,8 @@ async def test_parse_document_docx_does_not_block_event_loop(
     file_path.write_bytes(b"fake docx")
     completion_order: list[str] = []
 
-    def _slow_docling_conversion(*args, **kwargs) -> str:
-        time.sleep(0.1)
+    async def _slow_docling_conversion(*args, **kwargs) -> str:
+        await asyncio.sleep(0.1)
         return "Async DOCX content"
 
     async def _parse_document() -> None:
@@ -587,7 +761,7 @@ async def test_parse_document_docx_does_not_block_event_loop(
         await asyncio.sleep(0.01)
         completion_order.append("event_loop")
 
-    monkeypatch.setattr(parser_unified, "_convert_with_docling", _slow_docling_conversion)
+    monkeypatch.setattr(parser_unified, "_convert_docx_with_timeout", _slow_docling_conversion)
 
     await asyncio.gather(_parse_document(), _record_event_loop_progress())
 

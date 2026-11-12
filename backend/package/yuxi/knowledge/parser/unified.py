@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import json
 import os
 import re
+import signal
+import sys
 import tempfile
 import threading
 import time
@@ -39,6 +42,25 @@ _OFFICE_BACKENDS = {
     ".xls": (InputFormat.XLS, MsExcelDocumentBackend),
 }
 _docling_office_lock = threading.Lock()
+
+
+def _positive_seconds_from_env(name: str, default: float) -> float:
+    """读取正数秒级环境变量，非法值回退默认值。"""
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        logger.warning(f"{name}={raw!r} 不是有效秒数，使用默认值 {default:g}")
+        return default
+    if value <= 0:
+        logger.warning(f"{name}={raw!r} 必须大于 0，使用默认值 {default:g}")
+        return default
+    return value
+
+
+DOCLING_DOCX_TIMEOUT_SECONDS = _positive_seconds_from_env("DOCLING_DOCX_TIMEOUT_SECONDS", 900.0)
 
 
 def pdfreader(file_path, params=None):
@@ -168,7 +190,7 @@ async def parse_resolved_document(source: str, params: dict | None = None) -> st
 
         elif file_ext == ".docx":
             try:
-                result = await asyncio.to_thread(_convert_with_docling, file_path_obj, params=params)
+                result = await _convert_docx_with_timeout(file_path_obj, params=params)
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"Docling 解析 DOCX 失败，回退到 python-docx: {file_path_obj.name}, {e}")
                 result = await asyncio.to_thread(_convert_docx_with_python_docx, file_path_obj)
@@ -338,6 +360,106 @@ def _convert_with_docling(file_path: Path, params: dict | None = None) -> str:
     return doc.export_to_markdown()
 
 
+def _build_docx_docling_worker_command(
+    file_path: Path,
+    params: dict | None,
+    output_path: Path,
+) -> list[str]:
+    """构建 Docling DOCX 子进程命令，仅传图片存储参数。"""
+    worker_params = {key: params[key] for key in ("image_bucket", "image_prefix") if params and key in params}
+    return [
+        sys.executable,
+        "-m",
+        "yuxi.knowledge.parser.docx_docling_worker",
+        str(file_path),
+        json.dumps(worker_params, ensure_ascii=False),
+        str(output_path),
+    ]
+
+
+async def _kill_process_group(process: asyncio.subprocess.Process) -> None:
+    """杀掉子进程及其进程组，并等待回收。"""
+    if process.returncode is not None:
+        return
+
+    try:
+        if os.name == "posix":
+            os.killpg(process.pid, signal.SIGKILL)
+        else:
+            process.kill()
+    except ProcessLookupError:
+        pass
+    except OSError:
+        try:
+            process.kill()
+        except ProcessLookupError:
+            pass
+
+    await process.wait()
+
+
+async def _run_process_with_timeout(argv: list[str], timeout_seconds: float) -> None:
+    """运行子进程并硬超时；超时或取消时杀掉整个进程组。"""
+    process_kwargs: dict[str, Any] = {}
+    if os.name == "posix":
+        process_kwargs["start_new_session"] = True
+
+    process = await asyncio.create_subprocess_exec(
+        *argv,
+        stdout=asyncio.subprocess.DEVNULL,
+        **process_kwargs,
+    )
+    try:
+        await asyncio.wait_for(process.wait(), timeout=timeout_seconds)
+    except TimeoutError:
+        await _kill_process_group(process)
+        raise TimeoutError(f"子进程超过 {timeout_seconds:g} 秒未完成") from None
+    except asyncio.CancelledError:
+        await _kill_process_group(process)
+        raise
+
+    if process.returncode:
+        raise RuntimeError(f"子进程异常退出，退出码 {process.returncode}")
+
+
+async def _convert_docx_with_timeout(
+    file_path: Path,
+    params: dict | None = None,
+    timeout_seconds: float | None = None,
+) -> str:
+    """在可终止子进程中用 Docling 解析 DOCX。"""
+    timeout = DOCLING_DOCX_TIMEOUT_SECONDS if timeout_seconds is None else timeout_seconds
+
+    while not _docling_office_lock.acquire(blocking=False):
+        await asyncio.sleep(0.05)
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="yuxi-docx-") as temp_dir:
+            output_path = Path(temp_dir) / "output.md"
+            argv = _build_docx_docling_worker_command(file_path, params, output_path)
+            started = time.monotonic()
+            await _run_process_with_timeout(argv, timeout)
+            markdown = output_path.read_text(encoding="utf-8")
+
+        logger.debug(f"Docling DOCX 子进程完成: {file_path.name}, {time.monotonic() - started:.1f}s")
+        return markdown
+    finally:
+        _docling_office_lock.release()
+
+
+_HEADING_STYLE_PATTERN = re.compile(r"^(?:heading|标题)\s*([1-6])$", re.IGNORECASE)
+
+
+def _markdown_heading_prefix(style_name: str | None) -> str:
+    """将 Word 标题样式转换为 Markdown 标题前缀。"""
+    if not style_name:
+        return ""
+    match = _HEADING_STYLE_PATTERN.match(style_name.strip())
+    if match is None:
+        return ""
+    return f"{'#' * int(match.group(1))} "
+
+
 def _convert_docx_with_python_docx(file_path: Path) -> str:
     """使用 python-docx 解析 DOCX（Docling 失败时兜底）。"""
     from docx import Document
@@ -348,7 +470,8 @@ def _convert_docx_with_python_docx(file_path: Path) -> str:
     for para in document.paragraphs:
         text = para.text.strip()
         if text:
-            blocks.append(text)
+            prefix = _markdown_heading_prefix(para.style.name if para.style else None)
+            blocks.append(f"{prefix}{text}")
 
     for table in document.tables:
         rows: list[list[str]] = []
@@ -400,6 +523,7 @@ def _convert_xls_to_markdown(file_path: Path) -> str:
             blocks.append(f"## {sheet_name}")
         blocks.append(dataframe.to_markdown(index=False, headers=[""] * len(dataframe.columns), disable_numparse=True))
     return "\n\n".join(blocks)
+
 
 # ========== pisuan ETL 兼容层 ==========
 # 上游 v0.7.3 将解析入口收敛为 parse_resolved_document（纯 Markdown 返回）。
