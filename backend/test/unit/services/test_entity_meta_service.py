@@ -229,13 +229,22 @@ class TestSlotEntityMapper:
         mapped = mapper.map_slots(slots)
         assert "entity_ref" not in mapped[0]
 
-    def test_map_slots_preserves_existing_entity_ref(self, entity_json_file):
+    def test_map_slots_preserves_valid_existing_entity_ref(self, entity_json_file):
         """已有的 entity_ref 不被覆盖"""
+        loader = EntityMetaLoader(entity_types_path=entity_json_file)
+        mapper = SlotEntityMapper(loader)
+        slots = [{"name": "project_main", "entity_ref": "water_resource"}]
+        mapped = mapper.map_slots(slots)
+        assert mapped[0]["entity_ref"] == "water_resource"
+
+    def test_map_slots_downgrades_invalid_existing_entity_ref(self, entity_json_file):
+        """未命中实体元数据的已有 entity_ref 降级为 unresolved"""
         loader = EntityMetaLoader(entity_types_path=entity_json_file)
         mapper = SlotEntityMapper(loader)
         slots = [{"name": "project_main", "entity_ref": "custom_ref"}]
         mapped = mapper.map_slots(slots)
-        assert mapped[0]["entity_ref"] == "custom_ref"
+        assert "entity_ref" not in mapped[0]
+        assert mapped[0]["unresolved_entity_ref"] == "custom_ref"
 
     def test_map_slots_empty_entities(self, tmp_path):
         """空实体库返回原始插槽"""

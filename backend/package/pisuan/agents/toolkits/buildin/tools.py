@@ -761,10 +761,48 @@ async def list_chapter_keys(domain: str, report_type: str) -> list[str]:
     return out
 
 
+LIST_LEAF_SECTIONS_DESCRIPTION = """
+列出某领域+报告类型下所有叶子章节，供逐节写作精确定位。
+返回 [{section_key, canonical_chapter_key, title, chapter_no, level, order, path, parent_section_key}]。
+section_key 是章节节点的稳定身份；同名章节可能位于不同父路径，必须用 section_key 区分，禁按标题或一级章名合并。
+调用 get_templates 时把 section_key 原样传入 section_key 参数；叶子节按章节树顺序返回。
+"""
+
+
+@tool(
+    category="buildin",
+    tags=["知识工厂", "大纲"],
+    display_name="列出叶子节",
+    description=LIST_LEAF_SECTIONS_DESCRIPTION,
+)
+async def list_leaf_sections(domain: str, report_type: str) -> list[dict]:
+    """列出叶子章节及其稳定身份，供逐节模板查询精确定位。"""
+    from pisuan.services.graph_query_service import GraphQueryService
+
+    domain = GENERAL_DOMAIN_CODE  # 去领域化：形参保留兼容写手 prompts，语义恒通用域
+    report_type = _normalize_report_type(report_type)
+    graph_svc = GraphQueryService()
+    try:
+        sections = await graph_svc.list_leaf_sections(domain, report_type)
+    finally:
+        graph_svc.close()
+    _track_usage(
+        "list_leaf_sections",
+        domain=domain,
+        report_type=report_type,
+        result_count=len(sections),
+        source="graph",
+    )
+    return sections
+
+
 GET_TEMPLATES_DESCRIPTION = """
-取某章节（或全部）的结构化段落模板（来自 learned_templates）。
-返回 [{generalized, slots, chapter, sample_original, standard_code}]。
-template-recommender 逐节引导流用它取模板候选；slot-filler（旧版批量填槽，已接管）用它取插槽定义。
+取某叶子节（或旧版按章节名/全部）的结构化段落模板。
+逐节引导流必须传 section_key（由 list_leaf_sections 返回）；同名章节跨父路径时 canonical_chapter_key 不唯一。
+图谱返回 [{template_id, text_pattern, slots, legal_references, section_key,
+canonical_chapter_key, chapter_title, chapter_no, section_level}]。
+section_key 查无模板时返回空列表，不得改用同名 canonical_chapter_key 查询，避免串入其他节模板；图谱不可用时返回 _source=graph_error，不是模板候选。
+slot-filler（旧版批量填槽，已接管）仍可按 canonical_chapter_key 取插槽定义。
 domain/report_type 必须使用数据字典中的 code（用 list_report_types 查询合法值）。
 """
 
@@ -775,7 +813,12 @@ domain/report_type 必须使用数据字典中的 code（用 list_report_types �
     display_name="取段落模板",
     description=GET_TEMPLATES_DESCRIPTION,
 )
-async def get_templates(domain: str, report_type: str, canonical_chapter_key: str | None = None) -> list[dict]:
+async def get_templates(
+    domain: str,
+    report_type: str,
+    canonical_chapter_key: str | None = None,
+    section_key: str | None = None,
+) -> list[dict]:
     """获取结构化段落模板。优先查图谱,回退 DB。回退条目带 _source 标注（对齐 get_chapter_outline）。"""
     from pisuan.services.graph_query_service import GraphQueryService
 
@@ -783,6 +826,45 @@ async def get_templates(domain: str, report_type: str, canonical_chapter_key: st
     report_type = _normalize_report_type(report_type)
     templates: list[dict] = []
     graph_errored = False
+    if section_key:
+        try:
+            graph_svc = GraphQueryService()
+            try:
+                templates = await graph_svc.get_templates(domain, report_type, section_key=section_key)
+                for item in templates:
+                    if isinstance(item, dict):
+                        item.setdefault("_source", "graph")
+                _track_usage(
+                    "get_templates",
+                    domain=domain,
+                    report_type=report_type,
+                    args_summary={"section_key": section_key},
+                    result_count=len(templates),
+                    source="graph",
+                )
+                return templates
+            finally:
+                graph_svc.close()
+        except Exception as e:
+            logger.warning(
+                f"[graph-degraded] get_templates 叶子节精确查询失败,不回退同名 canonical: "
+                f"{domain}/{report_type}/{section_key} - {e}"
+            )
+            _track_usage(
+                "get_templates",
+                domain=domain,
+                report_type=report_type,
+                args_summary={"section_key": section_key},
+                result_count=0,
+                source="graph_error",
+            )
+            return [
+                {
+                    "_source": "graph_error",
+                    "error": f"叶子节模板精确查询失败: {e}",
+                    "hint": "图谱暂不可用；不要改用同名 canonical 查询，请如实告知用户并走知识库检索或常规写法",
+                }
+            ]
     if canonical_chapter_key:
         try:
             graph_svc = GraphQueryService()

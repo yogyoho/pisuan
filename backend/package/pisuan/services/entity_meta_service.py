@@ -10,7 +10,6 @@
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 from typing import Any
 
@@ -115,7 +114,6 @@ class EntityMetaAdapter:
 
         # 追加：实体中有但 Schema 中没有的关键属性
         for entity_id, entity in entities.items():
-            entity_keywords = entity.get("keywords", [])
             entity_name = entity.get("name", "")
             # 只追加分类级别的变量（不逐个追加 examples）
             if entity_id not in existing_keys and entity_name not in existing_keys:
@@ -227,7 +225,8 @@ class SlotEntityMapper:
     def map_slots(self, slots: list[dict[str, Any]], paragraph_context: str = "") -> list[dict[str, Any]]:
         """为插槽补充 entity_ref 信息
 
-        当插槽名称匹配到实体关键词时，自动添加 entity_ref 字段。
+        只接受精确命中实体元数据的引用；未知引用保留为
+        unresolved_entity_ref，不再用子串模糊匹配写入占位实体。
         """
         entities = self.loader.load()
         if not entities:
@@ -238,22 +237,19 @@ class SlotEntityMapper:
         mapped = []
         for slot in slots:
             s = dict(slot)
-            slot_name = slot.get("name", "")
+            slot_name = str(slot.get("name") or "").strip()
 
-            # 已有 entity_ref 的跳过
-            if s.get("entity_ref"):
+            existing_ref = str(s.get("entity_ref") or "").strip()
+            if existing_ref:
+                if existing_ref in entities:
+                    s["entity_ref"] = existing_ref
+                else:
+                    s.pop("entity_ref", None)
+                    s["unresolved_entity_ref"] = existing_ref
                 mapped.append(s)
                 continue
 
-            # 尝试匹配
             entity_id = keyword_to_entity.get(slot_name)
-            if not entity_id:
-                # 模糊匹配
-                for kw, eid in keyword_to_entity.items():
-                    if kw in slot_name or slot_name in kw:
-                        entity_id = eid
-                        break
-
             if entity_id and entity_id in entities:
                 s["entity_ref"] = entity_id
 

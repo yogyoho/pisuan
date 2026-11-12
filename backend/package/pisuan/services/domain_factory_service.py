@@ -4384,6 +4384,8 @@ class DomainFactoryService:
 
         domain = GENERAL_DOMAIN_CODE  # 去领域化：历史任务行 domain 不再透传入图谱
         report_type = self._normalize_report_type_for_graph(task_detail.get("report_type_code") or "eia_report")
+        outline_id = f"OUTLINE_{domain}_{report_type}"
+        std_prefix = f"CH_{domain}_{report_type}_std_"
         builder = GraphBuilder()
         merged_count = 0
         try:
@@ -4437,14 +4439,14 @@ class DomainFactoryService:
                         """
                         MATCH (std:ChapterTemplate {id: $std_id})
                         OPTIONAL MATCH (std)-[:HAS_CHILD]->(etl:ChapterTemplate)
-                        WHERE NOT etl.id STARTS WITH 'CH_coal_eia_report_std_'
+                        WHERE NOT etl.id STARTS WITH $std_prefix
                           AND etl.canonical_chapter_key IS NOT NULL
                           AND etl.canonical_chapter_key <> ''
-                        OPTIONAL MATCH (doc:Document)-[:CONTRIBUTES_TO]->()
                         WITH std, collect(DISTINCT etl.canonical_chapter_key) AS all_sub_keys
                         RETURN all_sub_keys
                         """,
                         std_id=std_id,
+                        std_prefix=std_prefix,
                     )
                     trec = template_result.single()
                     if trec is None:
@@ -4458,21 +4460,26 @@ class DomainFactoryService:
                         """
                         MATCH (std:ChapterTemplate {id: $std_id})-[:HAS_CHILD]->(etl:ChapterTemplate)
                         WHERE etl.canonical_chapter_key IS NOT NULL AND etl.canonical_chapter_key <> ''
-                        WITH std, etl.canonical_chapter_key AS key, count(DISTINCT etl) AS cnt
+                        OPTIONAL MATCH (d:Document)-[:CONTAINS_CHAPTER]->(etl)
+                        WITH std, etl.canonical_chapter_key AS key,
+                             count(DISTINCT COALESCE(d.document_key, d.id)) AS cnt
                         RETURN key, cnt ORDER BY key
                         """,
                         std_id=std_id,
                     )
                     key_counts = {r["key"]: r["cnt"] for r in count_result}
                     total_docs = session.run(
-                        "MATCH (d:Document) WHERE d.domain_code = $d AND d.report_type_code = $rt RETURN count(DISTINCT d) AS cnt",
-                        d=domain,
-                        rt=report_type,
+                        """
+                        MATCH (dol:DomainOutline {id: $outline_id})<-[:CONTRIBUTES_TO]-(d:Document)
+                        RETURN count(DISTINCT COALESCE(d.document_key, d.id)) AS cnt
+                        """,
+                        outline_id=outline_id,
                     ).single()
-                    doc_count = total_docs["cnt"] if total_docs else 1
+                    doc_count = total_docs["cnt"] if total_docs else 0
+                    threshold = doc_count or 1
 
-                    required = [k for k, c in key_counts.items() if c >= doc_count]
-                    optional = [k for k, c in key_counts.items() if c < doc_count]
+                    required = [k for k, c in key_counts.items() if c >= threshold]
+                    optional = [k for k, c in key_counts.items() if c < threshold]
 
                     content_contract = {
                         "required_elements": sorted(required),
@@ -4680,6 +4687,8 @@ class DomainFactoryService:
                 source_paragraphs = task_detail.get("source_paragraphs", [])
                 domain_label = task_detail.get("domain_label", "")
                 base_info = task_detail.get("base_info", {})
+                raw_markdown = task_detail.get("raw_markdown") or ""
+                document_key = f"content_{hashstr(raw_markdown)}" if raw_markdown else None
 
                 if source_paragraphs:
                     graph_stats = graph_builder.build_knowledge_graph(
@@ -4693,6 +4702,7 @@ class DomainFactoryService:
                         report_type_code=self._normalize_report_type_for_graph(
                             task_detail.get("report_type_code") or ""
                         ),
+                        document_key=document_key,
                     )
                     # [pisuan-custom] D2: GraphBuilder degrades internally — Neo4j
                     # connection failure returns {"skipped": True} and write errors are
@@ -5382,6 +5392,7 @@ class DomainFactoryService:
             doc_id = f"DOC_EXT_{domain_code}_{report_type_code}_{hashstr(file_name or 'extract', 12)}"
             kb_id = f"KB_EXT_{domain_code}_{report_type_code}"
             doc_title = file_name or "outline_extract"
+            document_key = f"content_{hashstr(json.dumps(source_paragraphs, ensure_ascii=False, sort_keys=True))}"
 
             with driver.session() as session:
                 # 建 Document（样例标识，供 doc_count 统计）
@@ -5393,6 +5404,7 @@ class DomainFactoryService:
                     domain_code,
                     domain_code,
                     report_type_code,
+                    document_key,
                 )
                 # 骨架归纳：DomainOutline source_count 递增 + ChapterTemplate frequency/rigidity + HAS_CHILD
                 session.execute_write(
@@ -5403,6 +5415,7 @@ class DomainFactoryService:
                     doc_id,
                     doc_title,
                     source_paragraphs,
+                    document_key,
                 )
                 # 回填 LLM 元数据（purpose/key_points/extraction_regex）到归纳出的 ChapterTemplate
                 for p in source_paragraphs:
@@ -5771,6 +5784,8 @@ class DomainFactoryService:
                 source_paragraphs = task_detail.get("source_paragraphs", [])
                 domain_label = task_detail.get("domain_label", "")
                 base_info = task_detail.get("base_info", {})
+                raw_markdown = task_detail.get("raw_markdown") or ""
+                document_key = f"content_{hashstr(raw_markdown)}" if raw_markdown else None
 
                 if source_paragraphs:
                     graph_stats = graph_builder.build_knowledge_graph(
@@ -5784,6 +5799,7 @@ class DomainFactoryService:
                         report_type_code=self._normalize_report_type_for_graph(
                             task_detail.get("report_type_code") or ""
                         ),
+                        document_key=document_key,
                     )
                     logger.info(f"知识图谱构建完成: {graph_stats}")
                     graph_builder.close()
