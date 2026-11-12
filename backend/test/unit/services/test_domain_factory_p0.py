@@ -219,6 +219,94 @@ async def test_ledger_counts_all_success(monkeypatch):
     assert len(out["results"]) == 3
 
 
+class _CancelAfterCheckpoint:
+    """第 N 次检查点抛出取消，模拟任务中心取消已落库。"""
+
+    def __init__(self, fail_on_call: int):
+        self.calls = 0
+        self.fail_on_call = fail_on_call
+
+    async def raise_if_cancelled(self) -> None:
+        self.calls += 1
+        if self.calls >= self.fail_on_call:
+            raise asyncio.CancelledError("Task was cancelled")
+
+
+class _CancelAfterFirstLlm:
+    """首次 LLM 返回后设置取消标志，后续检查点立即失败。"""
+
+    def __init__(self):
+        self.cancelled = asyncio.Event()
+
+    async def raise_if_cancelled(self) -> None:
+        if self.cancelled.is_set():
+            raise asyncio.CancelledError("Task was cancelled")
+
+
+@pytest.mark.asyncio
+async def test_generalize_paragraphs_checks_cancellation_after_semaphore(monkeypatch):
+    """拿到并发槽位后再次检查取消，避免排队期间取消仍发起 LLM 调用。"""
+    service = _make_service(monkeypatch, FakeModel([]))
+    calls: list[str] = []
+
+    async def fake_tracked(text, chapter_hint="", prompt=None):
+        calls.append(text)
+        return {"generalized": "x", "slots": [], "metadata": {}}, {
+            "status": "success",
+            "error_type": None,
+            "attempts": 1,
+        }
+
+    async def fake_templates():
+        return {}
+
+    service._generalize_text_tracked = fake_tracked
+    service._load_prompt_templates = fake_templates
+
+    with pytest.raises(asyncio.CancelledError):
+        await service.generalize_paragraphs(
+            [_para(0)],
+            [],
+            max_concurrency=1,
+            context=_CancelAfterCheckpoint(fail_on_call=2),
+        )
+
+    assert calls == []
+
+
+@pytest.mark.asyncio
+async def test_generalize_paragraphs_stops_before_next_llm_after_cancel(monkeypatch):
+    """取消后不再为后续段落发起新的 LLM 调用。"""
+    service = _make_service(monkeypatch, FakeModel([]))
+    context = _CancelAfterFirstLlm()
+    calls: list[str] = []
+
+    async def fake_tracked(text, chapter_hint="", prompt=None):
+        calls.append(text)
+        context.cancelled.set()
+        return {"generalized": "x", "slots": [], "metadata": {}}, {
+            "status": "success",
+            "error_type": None,
+            "attempts": 1,
+        }
+
+    async def fake_templates():
+        return {}
+
+    service._generalize_text_tracked = fake_tracked
+    service._load_prompt_templates = fake_templates
+
+    with pytest.raises(asyncio.CancelledError):
+        await service.generalize_paragraphs(
+            [_para(i) for i in range(3)],
+            [],
+            max_concurrency=1,
+            context=context,
+        )
+
+    assert len(calls) == 1
+
+
 # ------------------------------------------------------------------
 # P0-2 兜底标记 / P0-4 list 停机
 # ------------------------------------------------------------------

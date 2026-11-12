@@ -566,12 +566,18 @@ async def get_tasks_for_task_center(
                 # 从知识工厂获取最新状态
                 df_task = await service.repo.get_task(df_task_id)
                 if df_task:
-                    # 覆盖任务中心状态为知识工厂的实际状态
-                    df_status = df_task.status
-                    mapped = DOMAIN_FACTORY_STATUS_MAP.get(df_status, {})
-                    task["status"] = mapped.get("status", task.get("status"))
-                    task["progress"] = mapped.get("progress", task.get("progress"))
-                    task["message"] = mapped.get("message", task.get("message"))
+                    durable_status = str(task.get("status") or "")
+                    # durable 终态证明 worker 已停止，不能被领域行的滞留执行态覆盖
+                    if durable_status not in {"cancelled", "failed"}:
+                        if task.get("cancel_requested"):
+                            task["message"] = "取消中，等待 worker 停止"
+                        else:
+                            # 领域行拥有 ETL 审核/入库阶段语义，仅在 durable 仍活跃时覆盖进度
+                            df_status = df_task.status
+                            mapped = DOMAIN_FACTORY_STATUS_MAP.get(df_status, {})
+                            task["status"] = mapped.get("status", task.get("status"))
+                            task["progress"] = mapped.get("progress", task.get("progress"))
+                            task["message"] = mapped.get("message", task.get("message"))
 
             result_tasks.append(task)
 
