@@ -178,18 +178,6 @@ const taskFilterOptions = computed(() => [
         h('span', { class: 'filter-count' }, failedTaskCount.value)
       ]),
     value: 'failed'
-  },
-  {
-    label: () =>
-      h('span', { class: 'task-filter-option' }, [
-        '知识工厂',
-        h(
-          'span',
-          { class: 'filter-count' },
-          tasks.value.filter((t) => t.type === 'domain_factory').length
-        )
-      ]),
-    value: 'domain_factory'
   }
 ])
 
@@ -223,8 +211,6 @@ const filteredTasks = computed(() => {
       return list.filter((task) => task.status === 'success')
     case 'failed':
       return list.filter((task) => isFailedStatus(task.status))
-    case 'domain_factory':
-      return list.filter((task) => task.type === 'domain_factory')
     default:
       return list
   }

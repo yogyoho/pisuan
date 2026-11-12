@@ -131,24 +131,6 @@ export const useTaskerStore = defineStore('tasker', () => {
       const taskList = response?.tasks || []
       const dfTasks = dfResponse?.tasks || []
 
-      // 合并知识工厂任务（使用 domain_factory 类型标记）
-      const mergedTasks = [...taskList, ...dfTasks]
-
-      // 更新 summary
-      const statusCounter = {}
-      const typeCounter = {}
-      for (const task of mergedTasks) {
-        statusCounter[task.status] = (statusCounter[task.status] || 0) + 1
-        typeCounter[task.type] = (typeCounter[task.type] || 0) + 1
-      }
-
-      summary.value = {
-        total: mergedTasks.length,
-        filtered_total: mergedTasks.length,
-        status_counts: statusCounter,
-        type_counts: typeCounter
-      }
-
       // 合并去重：相同 ID 的知识工厂任务更新通用任务状态
       const taskMap = new Map()
       for (const t of taskList) {
@@ -165,6 +147,22 @@ export const useTaskerStore = defineStore('tasker', () => {
       }
 
       tasks.value = Array.from(taskMap.values())
+
+      // 更新 summary：在去重后的列表上统计（两路来源含同一任务行，去重前计数会双算）
+      const statusCounter = {}
+      const typeCounter = {}
+      for (const task of tasks.value) {
+        statusCounter[task.status] = (statusCounter[task.status] || 0) + 1
+        typeCounter[task.type] = (typeCounter[task.type] || 0) + 1
+      }
+
+      summary.value = {
+        total: tasks.value.length,
+        filtered_total: tasks.value.length,
+        status_counts: statusCounter,
+        type_counts: typeCounter
+      }
+
       pollingFailures = 0
     } catch (error) {
       if (requestId !== listRequestId || revision !== taskRevision) return
