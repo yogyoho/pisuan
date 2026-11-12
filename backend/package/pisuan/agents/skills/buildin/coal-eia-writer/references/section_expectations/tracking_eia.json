@@ -85,7 +85,15 @@
       "title": "规划(修编)背景以及规划内容"
     },
     "ch3_S02": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "矿区面积",
+          "corpus_freq": 1.0,
+          "field": "eco.mine_area_km2",
+          "tier": "required",
+          "unit": "km2"
+        }
+      ],
       "title": "规划实施情况及变化情况"
     },
     "ch3_S03": {
@@ -655,20 +663,6 @@
       "section": "ch3",
       "unit": "万m3",
       "value": "860.1192"
-    },
-    {
-      "caliber": "段规划的矿区面积",
-      "sample": "034-r",
-      "section": "ch3",
-      "unit": "km2",
-      "value": "1185.52"
-    },
-    {
-      "caliber": "的矿区面积",
-      "sample": "034-r",
-      "section": "ch3",
-      "unit": "km2",
-      "value": "1184.70"
     },
     {
       "caliber": "新一号勘查区面积",

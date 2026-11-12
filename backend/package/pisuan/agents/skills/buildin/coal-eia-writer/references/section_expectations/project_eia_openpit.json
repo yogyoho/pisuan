@@ -40,7 +40,7 @@
       "expected_quantities": [
         {
           "caliber": "剥采比",
-          "corpus_freq": 0.33,
+          "corpus_freq": 0.2,
           "field": "openpit_engineering.stripping_ratio",
           "tier": "optional",
           "unit": "m"
@@ -140,15 +140,8 @@
       "expected_quantities": [
         {
           "caliber": "设备完好率",
-          "corpus_freq": 0.75,
+          "corpus_freq": 1.0,
           "field": "cleaner_production.equipment_integrity_rate",
-          "range": {
-            "n_reports": 6,
-            "n_values": 6,
-            "p5": 100.0,
-            "p50": 100.0,
-            "p95": 100.0
-          },
           "tier": "required",
           "unit": "%"
         }
@@ -165,13 +158,6 @@
           "caliber": "矿坑水回用率",
           "corpus_freq": 1.0,
           "field": "water.mine_water_reuse_rate",
-          "range": {
-            "n_reports": 6,
-            "n_values": 6,
-            "p5": 100.0,
-            "p50": 100.0,
-            "p95": 100.0
-          },
           "tier": "required",
           "unit": "%"
         }
@@ -184,13 +170,6 @@
           "caliber": "生活污水回用率",
           "corpus_freq": 1.0,
           "field": "water.domestic_water_reuse_rate",
-          "range": {
-            "n_reports": 5,
-            "n_values": 11,
-            "p5": 100.0,
-            "p50": 100.0,
-            "p95": 100.0
-          },
           "tier": "required",
           "unit": "%"
         },
@@ -198,13 +177,6 @@
           "caliber": "矿坑水回用率",
           "corpus_freq": 1.0,
           "field": "water.mine_water_reuse_rate",
-          "range": {
-            "n_reports": 6,
-            "n_values": 6,
-            "p5": 100.0,
-            "p50": 100.0,
-            "p95": 100.0
-          },
           "tier": "required",
           "unit": "%"
         }
@@ -219,15 +191,8 @@
       "expected_quantities": [
         {
           "caliber": "设备完好率",
-          "corpus_freq": 0.5,
+          "corpus_freq": 0.4,
           "field": "cleaner_production.equipment_integrity_rate",
-          "range": {
-            "n_reports": 6,
-            "n_values": 6,
-            "p5": 100.0,
-            "p50": 100.0,
-            "p95": 100.0
-          },
           "tier": "optional",
           "unit": "%"
         }
@@ -244,13 +209,6 @@
           "caliber": "生活污水回用率",
           "corpus_freq": 1.0,
           "field": "water.domestic_water_reuse_rate",
-          "range": {
-            "n_reports": 5,
-            "n_values": 11,
-            "p5": 100.0,
-            "p50": 100.0,
-            "p95": 100.0
-          },
           "tier": "required",
           "unit": "%"
         },
@@ -258,13 +216,6 @@
           "caliber": "矿坑水回用率",
           "corpus_freq": 1.0,
           "field": "water.mine_water_reuse_rate",
-          "range": {
-            "n_reports": 6,
-            "n_values": 6,
-            "p5": 100.0,
-            "p50": 100.0,
-            "p95": 100.0
-          },
           "tier": "required",
           "unit": "%"
         }
@@ -283,48 +234,11 @@
       "expected_quantities": [],
       "title": "本次改扩建项目环境经济损益评价"
     },
-    "ch16_S03": {
-      "expected_quantities": [],
-      "title": "环境监测计划"
-    },
-    "ch16_S04": {
-      "expected_quantities": [
-        {
-          "caliber": "生活污水回用率",
-          "corpus_freq": 1.0,
-          "field": "water.domestic_water_reuse_rate",
-          "range": {
-            "n_reports": 5,
-            "n_values": 11,
-            "p5": 100.0,
-            "p50": 100.0,
-            "p95": 100.0
-          },
-          "tier": "required",
-          "unit": "%"
-        },
-        {
-          "caliber": "矿坑水回用率",
-          "corpus_freq": 1.0,
-          "field": "water.mine_water_reuse_rate",
-          "range": {
-            "n_reports": 6,
-            "n_values": 6,
-            "p5": 100.0,
-            "p50": 100.0,
-            "p95": 100.0
-          },
-          "tier": "required",
-          "unit": "%"
-        }
-      ],
-      "title": "环保设施验收清单"
-    },
     "ch17_S01": {
       "expected_quantities": [
         {
           "caliber": "剥采比",
-          "corpus_freq": 0.4,
+          "corpus_freq": 0.5,
           "field": "openpit_engineering.stripping_ratio",
           "tier": "optional",
           "unit": "m"
@@ -336,9 +250,9 @@
       "expected_quantities": [
         {
           "caliber": "剥采比",
-          "corpus_freq": 0.17,
+          "corpus_freq": 0.2,
           "field": "openpit_engineering.stripping_ratio",
-          "tier": "contextual",
+          "tier": "optional",
           "unit": "m"
         }
       ],
@@ -365,27 +279,11 @@
       "title": "项目选址可行性综合评价"
     },
     "ch18_S01": {
-      "expected_quantities": [
-        {
-          "caliber": "剥采比",
-          "corpus_freq": 0.5,
-          "field": "openpit_engineering.stripping_ratio",
-          "tier": "optional",
-          "unit": "m"
-        }
-      ],
+      "expected_quantities": [],
       "title": "项目概况及主要建设内容"
     },
     "ch18_S02": {
-      "expected_quantities": [
-        {
-          "caliber": "矸石产生量",
-          "corpus_freq": 0.5,
-          "field": "solid_waste.gangue_generation",
-          "tier": "optional",
-          "unit": "万t"
-        }
-      ],
+      "expected_quantities": [],
       "title": "项目政策符合性分析"
     },
     "ch18_S03": {
@@ -432,7 +330,7 @@
       "expected_quantities": [
         {
           "caliber": "剥采比",
-          "corpus_freq": 0.33,
+          "corpus_freq": 0.4,
           "field": "openpit_engineering.stripping_ratio",
           "tier": "optional",
           "unit": "m"
@@ -443,11 +341,11 @@
     "ch2_S03": {
       "expected_quantities": [
         {
-          "caliber": "剥采比",
-          "corpus_freq": 0.17,
-          "field": "openpit_engineering.stripping_ratio",
-          "tier": "contextual",
-          "unit": "m"
+          "caliber": "矿区面积",
+          "corpus_freq": 0.2,
+          "field": "eco.mine_area_km2",
+          "tier": "optional",
+          "unit": "km2"
         }
       ],
       "title": "项目工程组成"
@@ -456,7 +354,7 @@
       "expected_quantities": [
         {
           "caliber": "剥采比",
-          "corpus_freq": 0.67,
+          "corpus_freq": 0.6,
           "field": "openpit_engineering.stripping_ratio",
           "tier": "required",
           "unit": "m"
@@ -468,73 +366,10 @@
       "expected_quantities": [
         {
           "caliber": "矸石产生量",
-          "corpus_freq": 0.5,
+          "corpus_freq": 0.4,
           "field": "solid_waste.gangue_generation",
           "tier": "optional",
           "unit": "万t"
-        },
-        {
-          "caliber": "除尘效率",
-          "corpus_freq": 0.17,
-          "field": "air.dust_removal_efficiency",
-          "range": {
-            "n_reports": 5,
-            "n_values": 7,
-            "p5": 85.0,
-            "p50": 85.0,
-            "p95": 95.15
-          },
-          "tier": "contextual",
-          "unit": "%"
-        },
-        {
-          "caliber": "年剥离量",
-          "corpus_freq": 0.17,
-          "field": "openpit_engineering.stripping_volume",
-          "tier": "contextual",
-          "unit": "万t"
-        },
-        {
-          "caliber": "TSP控制效率",
-          "corpus_freq": 0.17,
-          "field": "air.tsp_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 61.0,
-            "p50": 61.0,
-            "p95": 90.0
-          },
-          "tier": "contextual",
-          "unit": "%"
-        },
-        {
-          "caliber": "PM10控制效率",
-          "corpus_freq": 0.17,
-          "field": "air.pm10_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 55.0,
-            "p50": 59.0,
-            "p95": 84.0
-          },
-          "tier": "contextual",
-          "unit": "%"
-        },
-        {
-          "caliber": "PM2.5控制效率",
-          "corpus_freq": 0.17,
-          "field": "air.pm2_5_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 46.0,
-            "p50": 49.0,
-            "p95": 70.0
-          },
-          "tier": "contextual",
-          "unit": "%"
         }
       ],
       "title": "环保措施及运行情况"
@@ -561,13 +396,6 @@
           "caliber": "生活污水回用率",
           "corpus_freq": 0.5,
           "field": "water.domestic_water_reuse_rate",
-          "range": {
-            "n_reports": 5,
-            "n_values": 11,
-            "p5": 100.0,
-            "p50": 100.0,
-            "p95": 100.0
-          },
           "tier": "optional",
           "unit": "%"
         }
@@ -590,15 +418,8 @@
       "expected_quantities": [
         {
           "caliber": "生活污水回用率",
-          "corpus_freq": 0.33,
+          "corpus_freq": 0.4,
           "field": "water.domestic_water_reuse_rate",
-          "range": {
-            "n_reports": 5,
-            "n_values": 11,
-            "p5": 100.0,
-            "p50": 100.0,
-            "p95": 100.0
-          },
           "tier": "optional",
           "unit": "%"
         }
@@ -606,7 +427,15 @@
       "title": "项目与“三线一单”、 “三区三线”的符合性分析"
     },
     "ch3_S03": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "矿区面积",
+          "corpus_freq": 0.25,
+          "field": "eco.mine_area_km2",
+          "tier": "optional",
+          "unit": "km2"
+        }
+      ],
       "title": "项目与相关规划的符合性"
     },
     "ch3_S04": {
@@ -746,136 +575,44 @@
       "title": "建设期水污染影响及防治措施"
     },
     "ch7_S04": {
-      "expected_quantities": [
-        {
-          "caliber": "除尘效率",
-          "corpus_freq": 0.25,
-          "field": "air.dust_removal_efficiency",
-          "range": {
-            "n_reports": 5,
-            "n_values": 7,
-            "p5": 85.0,
-            "p50": 85.0,
-            "p95": 95.15
-          },
-          "tier": "optional",
-          "unit": "%"
-        },
-        {
-          "caliber": "年剥离量",
-          "corpus_freq": 0.25,
-          "field": "openpit_engineering.stripping_volume",
-          "tier": "optional",
-          "unit": "万t"
-        },
-        {
-          "caliber": "TSP控制效率",
-          "corpus_freq": 0.25,
-          "field": "air.tsp_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 61.0,
-            "p50": 61.0,
-            "p95": 90.0
-          },
-          "tier": "optional",
-          "unit": "%"
-        },
-        {
-          "caliber": "PM10控制效率",
-          "corpus_freq": 0.25,
-          "field": "air.pm10_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 55.0,
-            "p50": 59.0,
-            "p95": 84.0
-          },
-          "tier": "optional",
-          "unit": "%"
-        },
-        {
-          "caliber": "PM2.5控制效率",
-          "corpus_freq": 0.25,
-          "field": "air.pm2_5_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 46.0,
-            "p50": 49.0,
-            "p95": 70.0
-          },
-          "tier": "optional",
-          "unit": "%"
-        }
-      ],
+      "expected_quantities": [],
       "title": "运营期水环境影响及防治措施"
     },
     "ch7_S05": {
       "expected_quantities": [
         {
           "caliber": "除尘效率",
-          "corpus_freq": 0.17,
+          "corpus_freq": 0.2,
           "field": "air.dust_removal_efficiency",
-          "range": {
-            "n_reports": 5,
-            "n_values": 7,
-            "p5": 85.0,
-            "p50": 85.0,
-            "p95": 95.15
-          },
-          "tier": "contextual",
+          "tier": "optional",
           "unit": "%"
         },
         {
           "caliber": "年剥离量",
-          "corpus_freq": 0.17,
+          "corpus_freq": 0.2,
           "field": "openpit_engineering.stripping_volume",
-          "tier": "contextual",
+          "tier": "optional",
           "unit": "万t"
         },
         {
           "caliber": "TSP控制效率",
-          "corpus_freq": 0.17,
+          "corpus_freq": 0.2,
           "field": "air.tsp_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 61.0,
-            "p50": 61.0,
-            "p95": 90.0
-          },
-          "tier": "contextual",
+          "tier": "optional",
           "unit": "%"
         },
         {
           "caliber": "PM10控制效率",
-          "corpus_freq": 0.17,
+          "corpus_freq": 0.2,
           "field": "air.pm10_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 55.0,
-            "p50": 59.0,
-            "p95": 84.0
-          },
-          "tier": "contextual",
+          "tier": "optional",
           "unit": "%"
         },
         {
           "caliber": "PM2.5控制效率",
-          "corpus_freq": 0.17,
+          "corpus_freq": 0.2,
           "field": "air.pm2_5_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 46.0,
-            "p50": 49.0,
-            "p95": 70.0
-          },
-          "tier": "contextual",
+          "tier": "optional",
           "unit": "%"
         }
       ],
@@ -885,70 +622,42 @@
       "expected_quantities": [
         {
           "caliber": "除尘效率",
-          "corpus_freq": 0.33,
+          "corpus_freq": 0.5,
           "field": "air.dust_removal_efficiency",
-          "range": {
-            "n_reports": 5,
-            "n_values": 7,
-            "p5": 85.0,
-            "p50": 85.0,
-            "p95": 95.15
-          },
           "tier": "optional",
           "unit": "%"
         },
         {
           "caliber": "年剥离量",
-          "corpus_freq": 0.33,
+          "corpus_freq": 0.5,
           "field": "openpit_engineering.stripping_volume",
           "tier": "optional",
           "unit": "万t"
         },
         {
           "caliber": "TSP控制效率",
-          "corpus_freq": 0.33,
+          "corpus_freq": 0.5,
           "field": "air.tsp_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 61.0,
-            "p50": 61.0,
-            "p95": 90.0
-          },
           "tier": "optional",
           "unit": "%"
         },
         {
           "caliber": "PM10控制效率",
-          "corpus_freq": 0.33,
+          "corpus_freq": 0.5,
           "field": "air.pm10_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 55.0,
-            "p50": 59.0,
-            "p95": 84.0
-          },
           "tier": "optional",
           "unit": "%"
         },
         {
           "caliber": "PM2.5控制效率",
-          "corpus_freq": 0.33,
+          "corpus_freq": 0.5,
           "field": "air.pm2_5_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 46.0,
-            "p50": 49.0,
-            "p95": 70.0
-          },
           "tier": "optional",
           "unit": "%"
         },
         {
           "caliber": "抑尘效率",
-          "corpus_freq": 0.33,
+          "corpus_freq": 0.5,
           "field": "measures.dust_suppression_efficiency",
           "tier": "optional",
           "unit": "%"
@@ -980,50 +689,29 @@
       "expected_quantities": [
         {
           "caliber": "年剥离量",
-          "corpus_freq": 0.2,
+          "corpus_freq": 0.25,
           "field": "openpit_engineering.stripping_volume",
           "tier": "optional",
           "unit": "万t"
         },
         {
           "caliber": "TSP控制效率",
-          "corpus_freq": 0.2,
+          "corpus_freq": 0.25,
           "field": "air.tsp_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 61.0,
-            "p50": 61.0,
-            "p95": 90.0
-          },
           "tier": "optional",
           "unit": "%"
         },
         {
           "caliber": "PM10控制效率",
-          "corpus_freq": 0.2,
+          "corpus_freq": 0.25,
           "field": "air.pm10_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 55.0,
-            "p50": 59.0,
-            "p95": 84.0
-          },
           "tier": "optional",
           "unit": "%"
         },
         {
           "caliber": "PM2.5控制效率",
-          "corpus_freq": 0.2,
+          "corpus_freq": 0.25,
           "field": "air.pm2_5_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 46.0,
-            "p50": 49.0,
-            "p95": 70.0
-          },
           "tier": "optional",
           "unit": "%"
         }
@@ -1036,13 +724,6 @@
           "caliber": "除尘效率",
           "corpus_freq": 0.5,
           "field": "air.dust_removal_efficiency",
-          "range": {
-            "n_reports": 5,
-            "n_values": 7,
-            "p5": 85.0,
-            "p50": 85.0,
-            "p95": 95.15
-          },
           "tier": "optional",
           "unit": "%"
         },
@@ -1057,13 +738,6 @@
           "caliber": "TSP控制效率",
           "corpus_freq": 0.5,
           "field": "air.tsp_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 61.0,
-            "p50": 61.0,
-            "p95": 90.0
-          },
           "tier": "optional",
           "unit": "%"
         },
@@ -1071,13 +745,6 @@
           "caliber": "PM10控制效率",
           "corpus_freq": 0.5,
           "field": "air.pm10_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 55.0,
-            "p50": 59.0,
-            "p95": 84.0
-          },
           "tier": "optional",
           "unit": "%"
         },
@@ -1085,13 +752,6 @@
           "caliber": "PM2.5控制效率",
           "corpus_freq": 0.5,
           "field": "air.pm2_5_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 46.0,
-            "p50": 49.0,
-            "p95": 70.0
-          },
           "tier": "optional",
           "unit": "%"
         }
@@ -1104,13 +764,6 @@
           "caliber": "除尘效率",
           "corpus_freq": 0.33,
           "field": "air.dust_removal_efficiency",
-          "range": {
-            "n_reports": 5,
-            "n_values": 7,
-            "p5": 85.0,
-            "p50": 85.0,
-            "p95": 95.15
-          },
           "tier": "optional",
           "unit": "%"
         },
@@ -1125,13 +778,6 @@
           "caliber": "TSP控制效率",
           "corpus_freq": 0.33,
           "field": "air.tsp_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 61.0,
-            "p50": 61.0,
-            "p95": 90.0
-          },
           "tier": "optional",
           "unit": "%"
         },
@@ -1139,13 +785,6 @@
           "caliber": "PM10控制效率",
           "corpus_freq": 0.33,
           "field": "air.pm10_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 55.0,
-            "p50": 59.0,
-            "p95": 84.0
-          },
           "tier": "optional",
           "unit": "%"
         },
@@ -1153,13 +792,6 @@
           "caliber": "PM2.5控制效率",
           "corpus_freq": 0.33,
           "field": "air.pm2_5_control_efficiency",
-          "range": {
-            "n_reports": 6,
-            "n_values": 14,
-            "p5": 46.0,
-            "p50": 49.0,
-            "p95": 70.0
-          },
           "tier": "optional",
           "unit": "%"
         },
@@ -2613,5 +2245,5 @@
       "value": "322"
     }
   ],
-  "version": "1.2"
+  "version": "1.1"
 }

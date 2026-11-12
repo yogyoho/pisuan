@@ -478,7 +478,15 @@
       "title": "项目基本情况"
     },
     "ch2_S02": {
-      "expected_quantities": [],
+      "expected_quantities": [
+        {
+          "caliber": "矿区面积",
+          "corpus_freq": 0.14,
+          "field": "eco.mine_area_km2",
+          "tier": "contextual",
+          "unit": "km2"
+        }
+      ],
       "title": "矿区总体规划与煤炭开发历史"
     },
     "ch2_S03": {
