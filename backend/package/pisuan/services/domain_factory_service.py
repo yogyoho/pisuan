@@ -5932,7 +5932,10 @@ class DomainFactoryService:
     async def save_prompt_config(self, config_data: dict[str, Any]) -> bool:
         try:
             for prompt_type, template in config_data.items():
-                await self.repo.upsert_prompt_config(None, prompt_type, template)
+                # API 键形如 {type}_prompt（与 get_prompt_config 返回键对称），
+                # DB/消费端用裸 prompt_type（_load_prompt_templates → 泛化管线
+                # templates.get("template")），落库前剥后缀（bug-4244）。
+                await self.repo.upsert_prompt_config(None, prompt_type.removesuffix("_prompt"), template)
             self._invalidate_prompt_cache()
             return True
         except Exception as e:
