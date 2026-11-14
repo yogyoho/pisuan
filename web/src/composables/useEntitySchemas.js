@@ -21,7 +21,7 @@ export const VALUE_TYPE_OPTIONS = [
 // 泛化 prompt 的属性上限，与后端 `_load_entity_schema_variables(max_items=60)` 同口径
 export const PROMPT_PROPERTY_LIMIT = 60
 
-// 按码点比较：实测与 PG `ORDER BY category, name_cn`（en_US.utf8）逐行一致（71/71）
+// 按码点比较：中文名排序与后端 Python `name_cn` 排序同口径
 const compareText = (a, b) => {
   const left = a || ''
   const right = b || ''
@@ -29,13 +29,20 @@ const compareText = (a, b) => {
 }
 
 /**
- * 泛化 prompt 覆盖测算：后端逐实体（category、name_cn 排序）累计有 name_cn 的属性，
- * 取前 PROMPT_PROPERTY_LIMIT 个写进泛化提示词，其余属性 LLM 看不到。
- * 这里复算同一份集合，供页面标注「进 prompt / 被截断」。
+ * 泛化 prompt 覆盖测算：与后端 `_load_entity_schema_variables` 同口径——
+ * 按分类字典 sort_order（categoryOrder 顺序）→ 实体 name_cn 排序后，累计有 name_cn
+ * 的属性取前 PROMPT_PROPERTY_LIMIT 个写进泛化提示词，其余属性 LLM 看不到。
+ * 字典外分类（categoryOrder 里没有）排到最后，与后端 rank=1e6 一致。
  */
-export const computePromptCoverage = (entities, limit = PROMPT_PROPERTY_LIMIT) => {
+export const computePromptCoverage = (
+  entities,
+  limit = PROMPT_PROPERTY_LIMIT,
+  categoryOrder = []
+) => {
+  const rank = new Map(categoryOrder.map((code, index) => [code, index]))
+  const rankOf = (category) => (rank.has(category) ? rank.get(category) : 10 ** 6)
   const ordered = [...(entities || [])].sort(
-    (a, b) => compareText(a.category, b.category) || compareText(a.name_cn, b.name_cn)
+    (a, b) => rankOf(a.category) - rankOf(b.category) || compareText(a.name_cn, b.name_cn)
   )
   const coveredRefs = new Set()
   const byEntity = {}
@@ -165,6 +172,8 @@ export const validateEntityDraft = (draft) => {
 export function useEntitySchemas() {
   const taxonomy = ref(null)
   const schemas = ref([])
+  // 分类字典（含停用/空分类），树序与 prompt 截断序的来源
+  const categories = ref([])
   const loading = ref(false)
   const saving = ref(false)
   const error = ref('')
@@ -186,7 +195,13 @@ export function useEntitySchemas() {
     () => Boolean(draft.value) && JSON.stringify(draft.value) !== baselineJson.value
   )
 
-  const promptCoverage = computed(() => computePromptCoverage(schemas.value))
+  const promptCoverage = computed(() =>
+    computePromptCoverage(
+      schemas.value,
+      PROMPT_PROPERTY_LIMIT,
+      categories.value.map((item) => item.code)
+    )
+  )
 
   const loadUsage = async (entityKey) => {
     const reqId = ++usageReqId
@@ -218,11 +233,25 @@ export function useEntitySchemas() {
   }
 
   const categoryOptions = computed(() => {
+    // 分类字典为准：value 是存储用 code，label 用中文名（不再把 code 暴露给用户）。
+    // 停用分类不再提供新建入口，但已被实体使用的仍列出，避免编辑旧实体时选不到分类。
+    const used = new Set(schemas.value.map((entity) => entity.category))
+    const fromDict = categories.value
+      .filter((item) => item.is_active || used.has(item.code))
+      .map((item) => ({
+        label: item.is_active ? item.name_cn : `${item.name_cn}（已停用）`,
+        value: item.code
+      }))
+    if (fromDict.length) return fromDict
+    // 字典未加载（后端旧版本）时回落到 taxonomy
     const options = []
     taxonomy.value?.domains?.forEach((domain) => {
       domain.categories?.forEach((category) => {
         if (category.category_name && !options.some((o) => o.value === category.category_name)) {
-          options.push({ label: category.category_name, value: category.category_name })
+          options.push({
+            label: category.category_label || domain.domain_name || category.category_name,
+            value: category.category_name
+          })
         }
       })
     })
@@ -296,8 +325,9 @@ export function useEntitySchemas() {
   }
 
   const startCreate = (category) => {
+    const fallback = categories.value.find((item) => item.is_active)?.code
     selectedEntity.value = null
-    draft.value = emptyDraft(category)
+    draft.value = emptyDraft(category || fallback)
     markClean()
     void loadUsage(null)
   }
@@ -316,12 +346,14 @@ export function useEntitySchemas() {
     loading.value = true
     error.value = ''
     try {
-      const [taxRes, schemasRes] = await Promise.all([
+      const [taxRes, schemasRes, categoriesRes] = await Promise.all([
         domainEntityBuilderApi.getTaxonomy(DOMAIN_CODE),
-        domainEntityBuilderApi.listEntitySchemas(null, DOMAIN_CODE)
+        domainEntityBuilderApi.listEntitySchemas(null, DOMAIN_CODE),
+        domainEntityBuilderApi.listCategories()
       ])
       if (taxRes.success) taxonomy.value = taxRes.data
       if (schemasRes.success) schemas.value = schemasRes.data.entity_schemas || []
+      if (categoriesRes.success) categories.value = categoriesRes.data || []
       if (preserveDraft && draft.value) {
         const currentId = draft.value.entity_id
         selectedEntity.value =
@@ -437,9 +469,66 @@ export function useEntitySchemas() {
     }
   }
 
+  // ---- 分类字典操作：成功后统一 reload，树/选择器/覆盖测算同源更新 ----
+  const createCategory = async (payload) => {
+    try {
+      await domainEntityBuilderApi.createCategory(payload)
+      message.success('分类已新增')
+      await load({ preserveDraft: true })
+      return true
+    } catch (e) {
+      console.error('新增分类失败', e)
+      message.error(e?.message || '新增分类失败')
+      return false
+    }
+  }
+
+  const updateCategory = async (code, payload) => {
+    try {
+      await domainEntityBuilderApi.updateCategory(code, payload)
+      message.success('分类已更新')
+      await load({ preserveDraft: true })
+      return true
+    } catch (e) {
+      console.error('更新分类失败', e)
+      message.error(e?.message || '更新分类失败')
+      return false
+    }
+  }
+
+  const deleteCategory = async (code) => {
+    try {
+      await domainEntityBuilderApi.deleteCategory(code)
+      message.success('分类已删除')
+      await load({ preserveDraft: true })
+      return true
+    } catch (e) {
+      console.error('删除分类失败', e)
+      message.error(e?.message || '删除分类失败')
+      return false
+    }
+  }
+
+  /** 在字典顺序里把分类上移/下移一格并整体重排（sort_order 由后端重算）。 */
+  const moveCategory = async (code, direction) => {
+    const codes = categories.value.map((item) => item.code)
+    const index = codes.indexOf(code)
+    const target = index + (direction === 'up' ? -1 : 1)
+    if (index < 0 || target < 0 || target >= codes.length) return
+    ;[codes[index], codes[target]] = [codes[target], codes[index]]
+    try {
+      await domainEntityBuilderApi.reorderCategories(codes)
+      await load({ preserveDraft: true })
+    } catch (e) {
+      console.error('分类排序失败', e)
+      message.error(e?.message || '分类排序失败')
+    }
+  }
+
   return {
     taxonomy,
     schemas,
+    categories,
     loading,
     saving,
     error,
@@ -465,6 +554,10 @@ export function useEntitySchemas() {
     cloneEntity,
     exportConfig,
     previewImport,
-    importConfig
+    importConfig,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    moveCategory
   }
 }

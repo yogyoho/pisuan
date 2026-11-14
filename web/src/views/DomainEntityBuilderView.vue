@@ -2,8 +2,9 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
-import { Bot, Box, Download, FileText, Inbox, Plus, Upload } from '@lucide/vue'
+import { Bot, Box, Download, FileText, Inbox, Layers, Plus, Upload } from '@lucide/vue'
 import { useEntitySchemas } from '@/composables/useEntitySchemas'
+import CategoryManager from '@/components/domain-factory/entity/CategoryManager.vue'
 import EntityEditor from '@/components/domain-factory/entity/EntityEditor.vue'
 import EntityExtractWizard from '@/components/domain-factory/entity/EntityExtractWizard.vue'
 import EntityJsonModal from '@/components/domain-factory/entity/EntityJsonModal.vue'
@@ -14,6 +15,7 @@ const router = useRouter()
 const {
   taxonomy,
   schemas,
+  categories,
   loading,
   saving,
   error,
@@ -54,6 +56,7 @@ const cloneModalVisible = ref(false)
 const cloneNewKey = ref('')
 const cloneNewName = ref('')
 const extractVisible = ref(false)
+const categoryManagerVisible = ref(false)
 const pendingEntityKey = ref(null)
 
 // ---- 脏状态守卫：切换实体/新建/克隆/导入/离开页面统一先确认 ----
@@ -224,7 +227,7 @@ const handleConfirmImport = async () => {
     content:
       `新增 ${created} 个实体，更新 ${updated} 个实体。${rejectText}` +
       '更新按 entity_key 对齐，会用文件内容覆盖同名实体的定义，并重映射待审核任务；' +
-      '段落模板与报告参数里的旧属性引用会变成悬空字符串。taxonomy 由实体分类派生，不参与导入。',
+      '段落模板与报告参数里的旧属性引用会变成悬空字符串。分类字典独立管理，导入不消费文件里的 taxonomy。',
     okText: '导入',
     cancelText: '取消',
     onOk: async () => {
@@ -273,6 +276,9 @@ watch(
         <div class="ph-sub">管理通用域层级分类体系和实体 Schema 定义，统一实体归属与提取口径</div>
       </div>
       <div class="ph-actions">
+        <button class="btn btn-sec" @click="categoryManagerVisible = true">
+          <Layers :size="14" /> 分类管理
+        </button>
         <button class="btn btn-sec" @click="exportConfig"><Download :size="14" /> 导出</button>
         <button class="btn btn-sec" @click="handleImport"><Upload :size="14" /> 导入</button>
         <button class="btn btn-sec" @click="extractVisible = true">
@@ -352,7 +358,8 @@ watch(
         <p class="ant-upload-drag-icon"><Inbox :size="48" /></p>
         <p class="ant-upload-text">点击或拖拽文件到此区域上传</p>
         <p class="ant-upload-hint">
-          支持 JSON 格式配置文件（导出的文件可直接回导；taxonomy 由实体分类派生，不参与导入）
+          支持 JSON 格式配置文件（导出的文件可直接回导；分类字典独立管理，文件里的 taxonomy
+          不参与导入）
         </p>
       </a-upload-dragger>
     </a-modal>
@@ -375,6 +382,11 @@ watch(
       :filename="draft?.entity_key || 'entity'"
     />
     <EntityExtractWizard v-model:open="extractVisible" @imported="handleExtractImported" />
+    <CategoryManager
+      v-model:open="categoryManagerVisible"
+      :categories="categories"
+      @changed="load({ preserveDraft: true })"
+    />
   </div>
 </template>
 

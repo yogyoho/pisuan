@@ -247,6 +247,119 @@ async def test_import_rejects_foreign_domain_code(test_client, admin_headers):
     assert missing.status_code == 404, missing.text
 
 
+# ========== 分类字典（v23） ==========
+
+PROBE_CATEGORY = "it_probe_category"
+PROBE_CATEGORY_ENTITY = "it_category_probe_entity"
+
+
+async def _cleanup_category_probe(test_client, admin_headers) -> None:
+    await test_client.delete(f"{BASE}/entities/{PROBE_CATEGORY_ENTITY}", headers=admin_headers)
+    await test_client.delete(f"{BASE}/categories/{PROBE_CATEGORY}", headers=admin_headers)
+
+
+async def test_categories_seeded_and_ordered(test_client, admin_headers):
+    res = await test_client.get(f"{BASE}/categories", headers=admin_headers)
+    assert res.status_code == 200, res.text
+    rows = res.json()["data"]
+    codes = [row["code"] for row in rows]
+    assert "project_basic" in codes and "impact_assessment" in codes
+    assert codes.index("project_basic") < codes.index("env_quality")
+    assert [row["sort_order"] for row in rows] == sorted(row["sort_order"] for row in rows)
+    assert all("entity_count" in row for row in rows)
+
+
+async def test_taxonomy_follows_dictionary_order(test_client, admin_headers):
+    res = await test_client.get(f"{BASE}/taxonomy", headers=admin_headers)
+    assert res.status_code == 200, res.text
+    domains = res.json()["data"]["domains"]
+    codes = [domain["domain_id"] for domain in domains]
+    assert codes.index("project_basic") < codes.index("env_quality")
+    first = domains[0]
+    assert first["domain_name"] == "基础工程实体"
+    assert first["categories"][0]["category_label"] == "基础工程实体"
+
+
+async def test_category_crud_lifecycle(test_client, admin_headers):
+    await _cleanup_category_probe(test_client, admin_headers)
+    try:
+        created = await test_client.post(
+            f"{BASE}/categories",
+            json={"code": PROBE_CATEGORY, "name_cn": "集成测试分类"},
+            headers=admin_headers,
+        )
+        assert created.status_code == 200, created.text
+        assert created.json()["data"]["entity_count"] == 0
+
+        # 新分类排在字典末尾（不抢树首与 prompt 名额）
+        listed = (await test_client.get(f"{BASE}/categories", headers=admin_headers)).json()["data"]
+        assert listed[-1]["code"] == PROBE_CATEGORY
+
+        # 空分类立即出现在树上（0 实体），可在其中新建实体
+        taxonomy = (await test_client.get(f"{BASE}/taxonomy", headers=admin_headers)).json()["data"]
+        node = next(item for item in taxonomy["domains"] if item["domain_id"] == PROBE_CATEGORY)
+        assert node["entity_count"] == 0
+        assert node["categories"][0]["category_name"] == PROBE_CATEGORY
+
+        renamed = await test_client.put(
+            f"{BASE}/categories/{PROBE_CATEGORY}",
+            json={"name_cn": "集成测试分类（改名）"},
+            headers=admin_headers,
+        )
+        assert renamed.status_code == 200, renamed.text
+        assert renamed.json()["data"]["name_cn"] == "集成测试分类（改名）"
+
+        # 调序到第一位，taxonomy 首项随之变化
+        rows = (await test_client.get(f"{BASE}/categories", headers=admin_headers)).json()["data"]
+        codes = [row["code"] for row in rows]
+        codes.remove(PROBE_CATEGORY)
+        reordered = await test_client.post(
+            f"{BASE}/categories/reorder",
+            json={"codes": [PROBE_CATEGORY, *codes]},
+            headers=admin_headers,
+        )
+        assert reordered.status_code == 200, reordered.text
+        assert reordered.json()["data"][0]["code"] == PROBE_CATEGORY
+        taxonomy = (await test_client.get(f"{BASE}/taxonomy", headers=admin_headers)).json()["data"]
+        assert taxonomy["domains"][0]["domain_id"] == PROBE_CATEGORY
+    finally:
+        missing = await test_client.delete(f"{BASE}/categories/{PROBE_CATEGORY}", headers=admin_headers)
+        assert missing.status_code == 200, missing.text
+
+
+async def test_category_delete_rejects_when_entities_remain(test_client, admin_headers):
+    await _cleanup_category_probe(test_client, admin_headers)
+    try:
+        created = await test_client.post(
+            f"{BASE}/categories",
+            json={"code": PROBE_CATEGORY, "name_cn": "集成测试分类"},
+            headers=admin_headers,
+        )
+        assert created.status_code == 200, created.text
+        entity = await test_client.post(
+            f"{BASE}/entities",
+            json=_probe_payload(entity_key=PROBE_CATEGORY_ENTITY, category=PROBE_CATEGORY),
+            headers=admin_headers,
+        )
+        assert entity.status_code == 200, entity.text
+
+        res = await test_client.delete(f"{BASE}/categories/{PROBE_CATEGORY}", headers=admin_headers)
+        assert res.status_code == 400, res.text
+        assert "1 个实体" in res.json()["detail"]
+    finally:
+        await _cleanup_category_probe(test_client, admin_headers)
+
+
+async def test_create_entity_rejects_unknown_category(test_client, admin_headers):
+    res = await test_client.post(
+        f"{BASE}/entities",
+        json=_probe_payload(entity_key="it_unknown_category_probe", category="no_such_category"),
+        headers=admin_headers,
+    )
+    assert res.status_code == 400, res.text
+    assert "不在分类字典中" in res.json()["detail"]
+
+
 async def test_import_round_trip_of_exported_config(test_client, admin_headers):
     """导出结果原样回导：全部命中已存在实体，不产生新增。"""
     exported = await test_client.get(f"{BASE}/export", headers=admin_headers)

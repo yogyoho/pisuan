@@ -57,6 +57,7 @@ async def test_storage_migration_reads_legacy_schema_before_cutover(monkeypatch)
         upgrade_business_v19_to_v20=lambda: _record(calls, "upgrade_v20"),  # [pisuan-custom] v20 判别力：删调用点必红
         upgrade_business_v20_to_v21=lambda: _record(calls, "upgrade_v21"),
         upgrade_business_v21_to_v22=lambda: _record(calls, "upgrade_v22"),
+        upgrade_business_v22_to_v23=lambda: _record(calls, "upgrade_v23"),
         create_knowledge_tables=lambda: _record(calls, "create_knowledge_tables"),
         ensure_business_schema=lambda: _record(calls, "ensure_business_schema"),
         ensure_knowledge_schema=lambda: _record(calls, "ensure_knowledge_schema"),
@@ -143,6 +144,7 @@ async def test_storage_migration_rejects_v071_schema_without_quiescence_proof(mo
         upgrade_business_v19_to_v20=lambda: _record(calls, "upgrade_v20"),  # [pisuan-custom] v20 判别力：删调用点必红
         upgrade_business_v20_to_v21=lambda: _record(calls, "upgrade_v21"),
         upgrade_business_v21_to_v22=lambda: _record(calls, "upgrade_v22"),
+        upgrade_business_v22_to_v23=lambda: _record(calls, "upgrade_v23"),
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),
@@ -205,6 +207,7 @@ async def test_current_schema_skips_schema_ddl(monkeypatch):
         upgrade_business_v19_to_v20=lambda: _record(calls, "upgrade_v20"),  # [pisuan-custom] v20 判别力：删调用点必红
         upgrade_business_v20_to_v21=lambda: _record(calls, "upgrade_v21"),
         upgrade_business_v21_to_v22=lambda: _record(calls, "upgrade_v22"),
+        upgrade_business_v22_to_v23=lambda: _record(calls, "upgrade_v23"),
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "business_schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),
@@ -280,7 +283,7 @@ async def test_main_rejects_unsupported_business_schema_before_ddl(monkeypatch, 
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("business_version", [2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21])
+@pytest.mark.parametrize("business_version", [2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22])
 async def test_supported_legacy_business_schema_is_converged_and_versioned_as_current(monkeypatch, business_version):
     calls: list[str] = []
     sessions = [_Session(), _Session(), _Session()]
@@ -314,6 +317,7 @@ async def test_supported_legacy_business_schema_is_converged_and_versioned_as_cu
         upgrade_business_v19_to_v20=lambda: _record(calls, "upgrade_v20"),  # [pisuan-custom] v20 判别力：删调用点必红
         upgrade_business_v20_to_v21=lambda: _record(calls, "upgrade_v21"),
         upgrade_business_v21_to_v22=lambda: _record(calls, "upgrade_v22"),
+        upgrade_business_v22_to_v23=lambda: _record(calls, "upgrade_v23"),
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "business_schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),
@@ -355,6 +359,9 @@ async def test_supported_legacy_business_schema_is_converged_and_versioned_as_cu
     assert ("upgrade_v20" in calls) is (business_version in {2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19})
     assert ("upgrade_v21" in calls) is (business_version in {2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20})
     assert ("upgrade_v22" in calls) is (business_version in {2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21})
+    assert ("upgrade_v23" in calls) is (
+        business_version in {2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22}
+    )
     # v9/v10/v11 来源库已在各自增量迁移中写过版本，只有 ≤8 档经 resource_selection 重写为当前版本
     assert (f"version:business:{storage_migration.BUSINESS_SCHEMA_VERSION}" in calls) is (business_version in {2, 7, 8})
     assert {"create_business", "checkpoint", "knowledge_schema"}.isdisjoint(calls)
@@ -395,6 +402,7 @@ async def test_failed_business_migration_does_not_record_version(monkeypatch):
         upgrade_business_v19_to_v20=lambda: _record(calls, "upgrade_v20"),  # [pisuan-custom] v20 判别力：删调用点必红
         upgrade_business_v20_to_v21=lambda: _record(calls, "upgrade_v21"),
         upgrade_business_v21_to_v22=lambda: _record(calls, "upgrade_v22"),
+        upgrade_business_v22_to_v23=lambda: _record(calls, "upgrade_v23"),
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "business_schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),
@@ -453,6 +461,7 @@ async def test_current_schema_does_not_rewrite_workdir_data(monkeypatch):
         upgrade_business_v19_to_v20=lambda: _record(calls, "upgrade_v20"),  # [pisuan-custom] v20 判别力：删调用点必红
         upgrade_business_v20_to_v21=lambda: _record(calls, "upgrade_v21"),
         upgrade_business_v21_to_v22=lambda: _record(calls, "upgrade_v22"),
+        upgrade_business_v22_to_v23=lambda: _record(calls, "upgrade_v23"),
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),
@@ -515,7 +524,7 @@ def test_v22_business_schema_version_and_attribution_isolation_registered():
         DomainFactoryRegionalFact,
     )
 
-    assert storage_migration.BUSINESS_SCHEMA_VERSION == 22
+    assert storage_migration.BUSINESS_SCHEMA_VERSION == 23
     assert hasattr(storage_migration.pg_manager, "upgrade_business_v20_to_v21")
     assert hasattr(storage_migration.pg_manager, "upgrade_business_v21_to_v22")
     assert "domain_factory_kb_attributions" in DomainFactoryBase.metadata.tables

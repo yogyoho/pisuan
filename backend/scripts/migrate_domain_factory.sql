@@ -109,6 +109,37 @@ CREATE INDEX IF NOT EXISTS idx_des_category ON domain_entity_schemas(category);
 CREATE INDEX IF NOT EXISTS idx_des_domain_code ON domain_entity_schemas(domain_code);
 
 -- ============================================================================
+-- 5.1 实体分类字典（v23）：树序与泛化 prompt 截断序的唯一来源
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS domain_entity_categories (
+    code VARCHAR(64) PRIMARY KEY,
+    name_cn VARCHAR(128) NOT NULL,
+    description TEXT DEFAULT '',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+INSERT INTO domain_entity_categories (code, name_cn, description, sort_order)
+SELECT 'project_basic', '基础工程实体', '定义''谁在建''、''建什么''、''怎么建''', 10
+WHERE NOT EXISTS (SELECT 1 FROM domain_entity_categories WHERE code = 'project_basic');
+INSERT INTO domain_entity_categories (code, name_cn, description, sort_order)
+SELECT 'natural_env', '自然环境实体', '定义自然环境要素', 20
+WHERE NOT EXISTS (SELECT 1 FROM domain_entity_categories WHERE code = 'natural_env');
+INSERT INTO domain_entity_categories (code, name_cn, description, sort_order)
+SELECT 'env_quality', '环境质量与污染源实体', '定义环境质量与污染源', 30
+WHERE NOT EXISTS (SELECT 1 FROM domain_entity_categories WHERE code = 'env_quality');
+INSERT INTO domain_entity_categories (code, name_cn, description, sort_order)
+SELECT 'sensitive_target', '敏感目标与空间实体', '定义''在哪建''、''周围有什么''', 40
+WHERE NOT EXISTS (SELECT 1 FROM domain_entity_categories WHERE code = 'sensitive_target');
+INSERT INTO domain_entity_categories (code, name_cn, description, sort_order)
+SELECT 'measures_regulation', '措施与法规实体', '定义''怎么办''、''依据什么''', 50
+WHERE NOT EXISTS (SELECT 1 FROM domain_entity_categories WHERE code = 'measures_regulation');
+INSERT INTO domain_entity_categories (code, name_cn, description, sort_order)
+SELECT 'impact_assessment', '环境影响评价实体', '定义''产生什么问题''、''后果如何''', 60
+WHERE NOT EXISTS (SELECT 1 FROM domain_entity_categories WHERE code = 'impact_assessment');
+
+-- ============================================================================
 -- 6. 报告类型字典表
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS report_types (

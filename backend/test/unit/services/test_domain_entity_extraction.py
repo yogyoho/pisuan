@@ -18,6 +18,9 @@ from yuxi.services.domain_entity_service import (
     DomainEntityService,
 )
 
+# 分类字典的允许集合（v23 起提案 category 以字典为准）
+ALLOWED_CATEGORIES = {"project_basic", "measures_regulation", "natural_env"}
+
 
 class FakeEntity:
     def __init__(self, entity_id: str, entity_key: str, properties=None, category="project_basic"):
@@ -101,7 +104,7 @@ def test_compare_all_keys_defined_is_matched(service):
     extracted = [
         {"schema_ref": "coal_mine", "values": {"capacity": 120}, "extracted_text": "产能 120 万吨"}
     ]
-    result = service._compare_extracted_with_entities(extracted, [row(existing)])
+    result = service._compare_extracted_with_entities(extracted, [row(existing)], ALLOWED_CATEGORIES)
 
     assert result[0]["_status"] == "matched"
     assert result[0]["_diff"]["add_properties"] == []
@@ -113,7 +116,7 @@ def test_compare_new_keys_is_partial(service):
     extracted = [
         {"schema_ref": "coal_mine", "values": {"capacity": 120, "dust_control": "洒水"}}
     ]
-    result = service._compare_extracted_with_entities(extracted, [row(existing)])
+    result = service._compare_extracted_with_entities(extracted, [row(existing)], ALLOWED_CATEGORIES)
 
     assert result[0]["_status"] == "partial"
     add = result[0]["_diff"]["add_properties"]
@@ -132,7 +135,9 @@ def test_compare_tolerates_dict_shaped_properties(service):
         "properties": {"排放量": "1200t/a"},
     }
     result = service._compare_extracted_with_entities(
-        [{"schema_ref": "legacy_entity", "values": {"新属性": "x"}}], [legacy]
+        [{"schema_ref": "legacy_entity", "values": {"新属性": "x"}}],
+        [legacy],
+        ALLOWED_CATEGORIES,
     )
 
     assert result[0]["_status"] == "partial"
@@ -141,7 +146,9 @@ def test_compare_tolerates_dict_shaped_properties(service):
 
 def test_compare_unknown_schema_ref_is_rejected_proposal(service):
     result = service._compare_extracted_with_entities(
-        [{"schema_ref": "typo_key", "name_cn": "错键", "values": {"a": 1}}], []
+        [{"schema_ref": "typo_key", "name_cn": "错键", "values": {"a": 1}}],
+        [],
+        ALLOWED_CATEGORIES,
     )
 
     proposal = result[0]["_proposed_entity"]
@@ -161,6 +168,7 @@ def test_compare_explicit_proposal_is_clean(service):
             }
         ],
         [],
+        ALLOWED_CATEGORIES,
     )
 
     proposal = result[0]["_proposed_entity"]

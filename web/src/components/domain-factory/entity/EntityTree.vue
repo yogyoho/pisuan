@@ -113,6 +113,7 @@ const handleDelete = (entityId) => emit('delete', entityId)
           :selected-keys="selectedKeys"
           :expanded-keys="expandedKeys"
           :auto-expand-parent="autoExpandParent"
+          :open-animation="false"
           @select="handleSelect"
           @expand="handleExpand"
         >

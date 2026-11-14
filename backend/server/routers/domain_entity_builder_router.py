@@ -230,6 +230,92 @@ async def import_extracted_entities(
         raise HTTPException(status_code=500, detail=f"导入提取实体失败: {e}")
 
 
+# ========== Category Dictionary ==========
+
+@domain_entity_builder.get("/categories")
+async def list_categories(
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """分类字典（含实体数与启用状态），按 sort_order 排序"""
+    try:
+        service = get_entity_service()
+        return {"success": True, "data": await service.list_categories()}
+    except Exception as e:
+        logger.error(f"Failed to list categories: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取分类字典失败: {e}")
+
+
+@domain_entity_builder.post("/categories")
+async def create_category(
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """新增分类（code 为实体 category 的存储值，只能小写 snake_case）"""
+    try:
+        service = get_entity_service()
+        return {"success": True, "data": await service.create_category(payload)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to create category: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"新增分类失败: {e}")
+
+
+@domain_entity_builder.post("/categories/reorder")
+async def reorder_categories(
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """按给定 code 顺序重排分类（sort_order 记为 10/20/30…）"""
+    try:
+        codes = payload.get("codes") or []
+        if not isinstance(codes, list) or not codes:
+            raise HTTPException(status_code=400, detail="codes 不能为空")
+        service = get_entity_service()
+        return {"success": True, "data": await service.reorder_categories(codes)}
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to reorder categories: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"分类排序失败: {e}")
+
+
+@domain_entity_builder.put("/categories/{code}")
+async def update_category(
+    code: str,
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """更新分类名称/描述/启用（code 不可改）"""
+    try:
+        service = get_entity_service()
+        return {"success": True, "data": await service.update_category(code, payload)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to update category {code}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"更新分类失败: {e}")
+
+
+@domain_entity_builder.delete("/categories/{code}")
+async def delete_category(
+    code: str,
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """删除分类（仅允许空分类，有实体时 400）"""
+    try:
+        service = get_entity_service()
+        await service.delete_category(code)
+        return {"success": True, "message": "分类已删除"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to delete category {code}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"删除分类失败: {e}")
+
+
 # ========== Import / Export ==========
 
 @domain_entity_builder.get("/export")

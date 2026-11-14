@@ -3708,12 +3708,15 @@ class DomainFactoryService:
         # provider 已响应；JSON 解析失败再试 1 次（解析层问题，不计熔断）
         for parse_attempt in range(1 + self.JSON_RETRY_MAX):
             try:
+                last_error_type = "json_parse"
                 json_match = re.search(r"\{[\s\S]*\}", response_text)
                 if not json_match:
                     raise ValueError("响应中未找到 JSON 对象")
                 result = json.loads(json_match.group())
-                result.setdefault("generalized", text[:500] + "...")
-                result.setdefault("slots", [])
+                if not self._is_valid_generalized_payload(result):
+                    last_error_type = "schema_invalid"
+                    keys = sorted(result) if isinstance(result, dict) else type(result).__name__
+                    raise ValueError(f"泛化响应缺少 generalized 或 slots 非对象数组: keys={keys}")
                 result.setdefault("metadata", {"chapter": chapter_hint, "tags": []})
                 return self._normalize_template_response(result), {
                     "status": "success",
@@ -3721,10 +3724,13 @@ class DomainFactoryService:
                     "attempts": total_attempts,
                     "channel": channel,
                 }
-            except Exception:
+            except Exception as exc:
                 if parse_attempt >= self.JSON_RETRY_MAX:
                     break
-                logger.warning(f"泛化响应 JSON 解析失败，重试 1 次 (chapter={chapter_hint})")
+                logger.warning(
+                    f"泛化响应不合法（{last_error_type}），重试 1 次 "
+                    f"(chapter={chapter_hint}): {exc}"
+                )
                 response_text, retry_meta = await self._call_llm_with_retry(model, prompt)
                 total_attempts += retry_meta["attempts"]
                 if response_text is None:
@@ -3737,10 +3743,21 @@ class DomainFactoryService:
 
         return self._generalize_fallback(text, chapter_hint), {
             "status": "fallback",
-            "error_type": "json_parse",
+            "error_type": last_error_type,
             "attempts": total_attempts,
             "channel": channel,
         }
+
+    @staticmethod
+    def _is_valid_generalized_payload(result: Any) -> bool:
+        """判断 prompt 通道响应是否符合泛化契约：generalized 非空，slots 必须是对象数组。"""
+        if not isinstance(result, dict):
+            return False
+        generalized = result.get("generalized")
+        if not isinstance(generalized, str) or not generalized.strip():
+            return False
+        slots = result.get("slots", [])
+        return isinstance(slots, list) and all(isinstance(slot, dict) for slot in slots)
 
     def _normalize_template_response(self, response: dict[str, Any]) -> dict[str, Any]:
         """规范化模板泛化响应，确保插槽名称符合命名规则（参考源系统 pipeline.py）
@@ -4052,18 +4069,27 @@ class DomainFactoryService:
 
         让泛化 LLM 优先按已有实体属性名提取 slot（自上而下收敛），而非完全自由提取。
         只取该领域实体的属性（非全量），cap max_items 控制 token 成本。
+        排序按分类字典 sort_order → 实体 name_cn：业务优先级决定谁进 prompt
+        （此前按分类字母序，project_basic 这类主力分类会被整类挤出 60 个之外）。
         返回 _format_schema_variables 所需的 {key, data_type, label, prompt} 格式。
         """
         if not domain_code:
             return []
+        from yuxi.repositories.domain_entity_category_repository import (
+            DomainEntityCategoryRepository,
+        )
         from yuxi.repositories.domain_entity_repository import DomainEntityRepository
 
         try:
             repo = DomainEntityRepository()
             entities = await repo.list_all(domain_code=domain_code)
+            category_rank = await DomainEntityCategoryRepository().rank_map()
         except Exception as e:
             logger.warning(f"[phase4] 加载实体属性失败 {domain_code}: {e}")
             return []
+        entities.sort(
+            key=lambda e: (category_rank.get(e.get("category"), 10**6), e.get("name_cn") or "")
+        )
         variables: list[dict[str, Any]] = []
         for e in entities:
             ek = e.get("entity_key", "")
