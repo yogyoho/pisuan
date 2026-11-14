@@ -218,11 +218,14 @@ async def import_extracted_entities(
             raise HTTPException(status_code=400, detail="请提供要导入的实体列表")
         service = get_entity_service()
         result = await service.save_extracted_entities(entities, domain_code)
-        return {
-            "success": True,
-            "message": f"导入完成：新增 {result['inserted']} 个，更新 {result['updated']} 个",
-            **result,
-        }
+        rejected = len(result["rejected"])
+        message = (
+            f"导入完成：新增 {result['inserted']} 个实体，"
+            f"补充 {result['properties_added']} 个属性"
+        )
+        if rejected:
+            message += f"，{rejected} 条被拒绝"
+        return {"success": True, "message": message, **result}
     except HTTPException:
         raise
     except Exception as e:

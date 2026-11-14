@@ -20,12 +20,14 @@ from pisuan.repositories.domain_factory_repository import GENERAL_DOMAIN_CODE, D
 from pisuan.services.domain_factory_region import (
     VALID_SCOPES,
     apply_min_permissive,
+    attribution_scope_key,
     derive_template_region,
     extract_fact_signal,
     extract_region_signal,
     extract_year,
     fact_type_for_category,
     l1_task_attribution,
+    normalize_attribution,
     region_key_for_label,
     region_label_for_key,
 )
@@ -1579,9 +1581,9 @@ class DomainFactoryService:
         # 纯数字序列逐字映射拼接；「两」不含于位序集，维持进位路径旧行为
         if all(ch in "零〇一二三四五六七八九" for ch in cn_num):
             return "".join(str(digits[ch]) for ch in cn_num)
-        total = 0      # 万段以上累计
-        section = 0    # 当前万段累计
-        number = 0     # 待乘单位的悬挂数字
+        total = 0  # 万段以上累计
+        section = 0  # 当前万段累计
+        number = 0  # 待乘单位的悬挂数字
         parsed = False
         for ch in cn_num:
             if ch in digits:
@@ -4133,6 +4135,10 @@ class DomainFactoryService:
             "raw_html": getattr(task, "raw_html", None),
             "ingest_task_id": task.ingest_task_id,
             "knowledge_base_id": task.knowledge_base_id,
+            "project_name": task.project_name,
+            "region_label": task.region_label,
+            "region_key": task.region_key,
+            "scope": task.scope,
         }
 
     async def validate_task(self, task_id: str) -> dict[str, Any]:
@@ -4310,6 +4316,15 @@ class DomainFactoryService:
         if task.status not in ("WAITING_REVIEW", "COMMITTED", "COMMIT_PARTIAL", "COMMIT_FAILED"):
             raise ValueError(f"任务当前状态（{task.status}）不允许发起入库，请先完成解析审核流程")
 
+        if knowledge_base_id:
+            await self.repo.assert_kb_attribution_compatible(
+                knowledge_base_id,
+                task_id=task_id,
+                region_key=getattr(task, "region_key", None),
+                scope=getattr(task, "scope", None),
+                project_name=getattr(task, "project_name", None),
+            )
+
         # 生成入库任务ID（确定性：对齐 reingest_{task_id}，重复发起同 key 幂等）
         ingest_task_id = f"ingest_{task_id}"
 
@@ -4372,6 +4387,21 @@ class DomainFactoryService:
         normalized = _normalize_report_type(report_type or "")
         return normalized if normalized else (report_type or "")
 
+    async def _load_entity_relation_rules(self) -> dict[str, dict]:
+        """读实体构建器维护的关系推理规则，供图谱构建阶段求值。"""
+        from pisuan.repositories.domain_entity_repository import DomainEntityRepository
+
+        rows = await DomainEntityRepository().list_all(domain_code=GENERAL_DOMAIN_CODE)
+        return {
+            row["entity_key"]: {
+                "name": row.get("name_cn") or row["entity_key"],
+                "category": row.get("category") or "",
+                "rules": row.get("relation_rules") or [],
+            }
+            for row in rows
+            if row.get("relation_rules")
+        }
+
     def _dedup_templates_by_hash(self, templates: list[dict]) -> list[dict]:
         """按 text_pattern 去重, source_count 累加。"""
         seen: dict[str, dict] = {}
@@ -4392,7 +4422,15 @@ class DomainFactoryService:
 
         domain = GENERAL_DOMAIN_CODE  # 去领域化：历史任务行 domain 不再透传入图谱
         report_type = self._normalize_report_type_for_graph(task_detail.get("report_type_code") or "eia_report")
+        attribution = attribution_scope_key(
+            task_detail.get("knowledge_base_id"),
+            task_detail.get("region_key"),
+            task_detail.get("scope"),
+            task_detail.get("project_name"),
+        )
         outline_id = f"OUTLINE_{domain}_{report_type}"
+        if attribution:
+            outline_id = f"{outline_id}_{attribution}"
         std_prefix = f"CH_{domain}_{report_type}_std_"
         builder = GraphBuilder()
         merged_count = 0
@@ -4407,14 +4445,23 @@ class DomainFactoryService:
                     # 1. 聚合 key_points
                     result = session.run(
                         """
-                        MATCH (std:ChapterTemplate {id: $std_id})
+                        MATCH (seed:ChapterTemplate {id: $std_id})
+                        OPTIONAL MATCH (dol:DomainOutline {id: $outline_id})-[:HAS_CHAPTER]->(candidate:ChapterTemplate)
+                        WHERE candidate.canonical_chapter_key = seed.canonical_chapter_key
+                          AND candidate.level = seed.level
+                          AND candidate.id <> seed.id
+                        WITH seed, candidate
+                        ORDER BY candidate.id
+                        LIMIT 1
+                        WITH coalesce(candidate, seed) AS std
                         OPTIONAL MATCH (std)-[:HAS_CHILD*1..3]->(sub:ChapterTemplate)
                         WHERE sub.key_points IS NOT NULL
                         WITH std, collect(DISTINCT sub.key_points) AS all_kp,
                              collect(DISTINCT sub.regulations) AS all_reg
-                        RETURN all_kp, all_reg
+                        RETURN std.id AS node_id, all_kp, all_reg
                         """,
                         std_id=std_id,
+                        outline_id=outline_id,
                     )
                     rec = result.single()
                     if rec is None:
@@ -4437,7 +4484,7 @@ class DomainFactoryService:
                         if kp_set:
                             session.run(
                                 "MATCH (std:ChapterTemplate {id: $id}) SET std.key_points = $kp",
-                                id=std_id,
+                                id=rec["node_id"],
                                 kp=json.dumps(kp_set, ensure_ascii=False),
                             )
                             merged_count += 1
@@ -4445,16 +4492,25 @@ class DomainFactoryService:
                     # 2. 提取大纲模板: 按报告分组收集子章节, 计算共通/差异
                     template_result = session.run(
                         """
-                        MATCH (std:ChapterTemplate {id: $std_id})
+                        MATCH (seed:ChapterTemplate {id: $std_id})
+                        OPTIONAL MATCH (dol:DomainOutline {id: $outline_id})-[:HAS_CHAPTER]->(candidate:ChapterTemplate)
+                        WHERE candidate.canonical_chapter_key = seed.canonical_chapter_key
+                          AND candidate.level = seed.level
+                          AND candidate.id <> seed.id
+                        WITH seed, candidate
+                        ORDER BY candidate.id
+                        LIMIT 1
+                        WITH coalesce(candidate, seed) AS std
                         OPTIONAL MATCH (std)-[:HAS_CHILD]->(etl:ChapterTemplate)
                         WHERE NOT etl.id STARTS WITH $std_prefix
                           AND etl.canonical_chapter_key IS NOT NULL
                           AND etl.canonical_chapter_key <> ''
                         WITH std, collect(DISTINCT etl.canonical_chapter_key) AS all_sub_keys
-                        RETURN all_sub_keys
+                        RETURN std.id AS node_id, all_sub_keys
                         """,
                         std_id=std_id,
                         std_prefix=std_prefix,
+                        outline_id=outline_id,
                     )
                     trec = template_result.single()
                     if trec is None:
@@ -4466,7 +4522,16 @@ class DomainFactoryService:
                     # 统计每个子章节在多少份报告中出现
                     count_result = session.run(
                         """
-                        MATCH (std:ChapterTemplate {id: $std_id})-[:HAS_CHILD]->(etl:ChapterTemplate)
+                        MATCH (seed:ChapterTemplate {id: $std_id})
+                        OPTIONAL MATCH (dol:DomainOutline {id: $outline_id})-[:HAS_CHAPTER]->(candidate:ChapterTemplate)
+                        WHERE candidate.canonical_chapter_key = seed.canonical_chapter_key
+                          AND candidate.level = seed.level
+                          AND candidate.id <> seed.id
+                        WITH seed, candidate
+                        ORDER BY candidate.id
+                        LIMIT 1
+                        WITH coalesce(candidate, seed) AS std
+                        MATCH (std)-[:HAS_CHILD]->(etl:ChapterTemplate)
                         WHERE etl.canonical_chapter_key IS NOT NULL AND etl.canonical_chapter_key <> ''
                         OPTIONAL MATCH (d:Document)-[:CONTAINS_CHAPTER]->(etl)
                         WITH std, etl.canonical_chapter_key AS key,
@@ -4474,6 +4539,7 @@ class DomainFactoryService:
                         RETURN key, cnt ORDER BY key
                         """,
                         std_id=std_id,
+                        outline_id=outline_id,
                     )
                     key_counts = {r["key"]: r["cnt"] for r in count_result}
                     total_docs = session.run(
@@ -4497,7 +4563,7 @@ class DomainFactoryService:
                     }
                     session.run(
                         "MATCH (std:ChapterTemplate {id: $id}) SET std.content_contract = $cc",
-                        id=std_id,
+                        id=trec["node_id"],
                         cc=json.dumps(content_contract, ensure_ascii=False),
                     )
                     merged_count += 1
@@ -4570,7 +4636,18 @@ class DomainFactoryService:
             await context.set_message("正在准备入库...")
 
             # C-1 状态机收敛：先落 INGESTING（归属字段早写）；COMMITTED 只在入库成功后落
-            await service.repo.begin_ingest(task_id, reviewer, ingest_task_id=ingest_task_id)
+            ingest_task = await service.repo.begin_ingest(
+                task_id,
+                reviewer,
+                ingest_task_id=ingest_task_id,
+                knowledge_base_id=knowledge_base_id,
+            )
+            if ingest_task is not None:
+                task_detail["knowledge_base_id"] = ingest_task.knowledge_base_id
+                task_detail["project_name"] = ingest_task.project_name
+                task_detail["region_label"] = ingest_task.region_label
+                task_detail["region_key"] = ingest_task.region_key
+                task_detail["scope"] = ingest_task.scope
 
             # ========== 阶段2: 同步到知识库 (SYNCING) ==========
             await context.set_progress(30.0, "正在同步数据到知识库...")
@@ -4699,6 +4776,7 @@ class DomainFactoryService:
                 document_key = f"content_{hashstr(raw_markdown)}" if raw_markdown else None
 
                 if source_paragraphs:
+                    entity_rules = await self._load_entity_relation_rules()
                     graph_stats = graph_builder.build_knowledge_graph(
                         kb_id=knowledge_base_id or "",
                         doc_id=doc_id,
@@ -4711,6 +4789,10 @@ class DomainFactoryService:
                             task_detail.get("report_type_code") or ""
                         ),
                         document_key=document_key,
+                        project_name=task_detail.get("project_name") or "",
+                        region_key=task_detail.get("region_key") or "",
+                        scope=task_detail.get("scope") or "",
+                        entity_rules=entity_rules,
                     )
                     # [pisuan-custom] D2: GraphBuilder degrades internally — Neo4j
                     # connection failure returns {"skipped": True} and write errors are
@@ -5111,8 +5193,14 @@ class DomainFactoryService:
     async def _produce_outlines_async(self, task_id: str, domain_code: str, report_type_code: str) -> int:
         """commit 阶段：逐章组装大纲 + LLM 归一/散文 → upsert。非阻断由调用方保证。"""
         task_detail = await self.get_task_detail(task_id)
+        attribution = attribution_scope_key(
+            task_detail.get("knowledge_base_id"),
+            task_detail.get("region_key"),
+            task_detail.get("scope"),
+            task_detail.get("project_name"),
+        )
         groups = self._group_assets_by_chapter(task_detail)
-        seed_keys = await self.repo.list_chapter_keys(domain_code, report_type_code)
+        seed_keys = await self.repo.list_chapter_keys(domain_code, report_type_code, attribution=attribution)
         count = 0
         graph_meta_rows: list[dict[str, Any]] = []
         for chapter_raw, assets in groups.items():
@@ -5143,10 +5231,15 @@ class DomainFactoryService:
                 source_task_ids=[task_id],
                 source_count=1,
                 prose_based_on_source_count=1,
+                attribution=attribution,
             )
             # 回填 learned_templates.canonical_chapter_key（供 get_templates 检索）
             await self.repo.backfill_template_chapter_key(
-                domain_code, report_type_code, list(assets.get("template_chapter_keys", [])), canonical_key
+                domain_code,
+                report_type_code,
+                list(assets.get("template_chapter_keys", [])),
+                canonical_key,
+                attribution=attribution,
             )
             if canonical_key not in seed_keys:
                 seed_keys.append(canonical_key)
@@ -5177,6 +5270,7 @@ class DomainFactoryService:
                                 MATCH (ch:ChapterTemplate)
                                 WHERE ch.domain = $domain AND ch.report_type = $rt
                                   AND ch.canonical_chapter_key = $key
+                                  AND ($attribution = '' OR ch.attribution = $attribution)
                                 SET {set_clause},
                                     ch.key_points = CASE WHEN ch.key_points IS NULL OR size(ch.key_points) = 0
                                                          THEN $key_points ELSE ch.key_points END
@@ -5184,6 +5278,7 @@ class DomainFactoryService:
                                 domain=domain_code,
                                 rt=report_type_code,
                                 key=meta_row["key"],
+                                attribution=attribution,
                                 purpose=meta_row["purpose"],
                                 overview=meta_row["overview"],
                                 key_points=json.dumps(kp, ensure_ascii=False) if kp else None,
@@ -5207,22 +5302,26 @@ class DomainFactoryService:
 
         graph_svc = GraphQueryService()
         try:
-            outline = await graph_svc.get_chapter_outline(domain, report_type, chapter_key)
+            outline = await graph_svc.get_chapter_outline(domain, report_type, chapter_key, attribution="")
         finally:
             graph_svc.close()
 
         raw_key = (chapter_key or "").split("||")[0]
         canonical = normalize_chapter_key(raw_key) or raw_key
-        pg = await self.repo.get_outline(domain, report_type, canonical) or {}
+        pg = await self.repo.get_outline(domain, report_type, canonical, attribution="") or {}
         if outline is None and not pg:
             return None
 
         pg_title = pg.get("chapter_title") or canonical
-        detail: dict[str, Any] = dict(outline) if outline else {
-            "canonical_chapter_key": canonical,
-            # pg-only 分支同样存去编号干净标题，与图谱分支一致（bug-4167）
-            "title": normalize_chapter_key(pg_title) or pg_title,
-        }
+        detail: dict[str, Any] = (
+            dict(outline)
+            if outline
+            else {
+                "canonical_chapter_key": canonical,
+                # pg-only 分支同样存去编号干净标题，与图谱分支一致（bug-4167）
+                "title": normalize_chapter_key(pg_title) or pg_title,
+            }
+        )
         for field in ("expected_tables", "expected_charts", "expected_formulas"):
             if not detail.get(field):
                 detail[field] = pg.get(field) or []
@@ -5599,6 +5698,12 @@ class DomainFactoryService:
         """从已提交任务中提取高质量模板，回流到学习模板库"""
         domain_code = GENERAL_DOMAIN_CODE  # 去领域化：模板回流恒通用域
         report_type_code = task_detail.get("report_type_code")
+        attribution = attribution_scope_key(
+            task_detail.get("knowledge_base_id"),
+            task_detail.get("region_key"),
+            task_detail.get("scope"),
+            task_detail.get("project_name"),
+        )
         paragraphs = task_detail.get("source_paragraphs", [])
         template_ids: list[int] = []
         saved = 0
@@ -5631,6 +5736,7 @@ class DomainFactoryService:
                 sample_original=sample_original,
                 extra_meta=metadata,
                 report_type_code=report_type_code,
+                attribution=attribution,
             )
             if template_id:
                 template_ids.append(template_id)
@@ -5655,6 +5761,15 @@ class DomainFactoryService:
 
         # 生成新的入库任务ID
         ingest_task_id = f"reingest_{task_id}"
+
+        if knowledge_base_id:
+            await self.repo.assert_kb_attribution_compatible(
+                knowledge_base_id,
+                task_id=task_id,
+                region_key=getattr(task, "region_key", None),
+                scope=getattr(task, "scope", None),
+                project_name=getattr(task, "project_name", None),
+            )
 
         # 注册到任务中心进行重新入库
         try:
@@ -5708,17 +5823,31 @@ class DomainFactoryService:
             return {"error": "task not found"}
 
         try:
-            # C-1：再入库同样走 INGESTING 中间态，durable 中断由 fail_domain_factory_ingest 收敛
-            await service.repo.update_task(task_id, {"status": "INGESTING"})
-            await context.set_progress(10.0, "正在准备再入库...")
-            await context.set_message("正在准备再入库...")
-
             # 获取任务详情
             task_detail = await service.get_task_detail(task_id)
 
             # 使用任务记录中的 knowledge_base_id 作为回退
             if not knowledge_base_id:
                 knowledge_base_id = task.knowledge_base_id
+
+            # C-1：再入库同样走 INGESTING 中间态，durable 中断由 fail_domain_factory_ingest 收敛。
+            # 有目标库时在同一事务内锁定库归属；无库的纯图重建保留旧行为。
+            if knowledge_base_id:
+                ingest_task = await service.repo.begin_ingest(
+                    task_id,
+                    ingest_task_id=f"reingest_{task_id}",
+                    knowledge_base_id=knowledge_base_id,
+                )
+                if ingest_task is not None:
+                    task_detail["knowledge_base_id"] = ingest_task.knowledge_base_id
+                    task_detail["project_name"] = ingest_task.project_name
+                    task_detail["region_label"] = ingest_task.region_label
+                    task_detail["region_key"] = ingest_task.region_key
+                    task_detail["scope"] = ingest_task.scope
+            else:
+                await service.repo.update_task(task_id, {"status": "INGESTING"})
+            await context.set_progress(10.0, "正在准备再入库...")
+            await context.set_message("正在准备再入库...")
 
             # 执行入库
             if knowledge_base_id:
@@ -5796,6 +5925,7 @@ class DomainFactoryService:
                 document_key = f"content_{hashstr(raw_markdown)}" if raw_markdown else None
 
                 if source_paragraphs:
+                    entity_rules = await self._load_entity_relation_rules()
                     graph_stats = graph_builder.build_knowledge_graph(
                         kb_id=knowledge_base_id or "",
                         doc_id=doc_id,
@@ -5808,6 +5938,10 @@ class DomainFactoryService:
                             task_detail.get("report_type_code") or ""
                         ),
                         document_key=document_key,
+                        project_name=task_detail.get("project_name") or "",
+                        region_key=task_detail.get("region_key") or "",
+                        scope=task_detail.get("scope") or "",
+                        entity_rules=entity_rules,
                     )
                     logger.info(f"知识图谱构建完成: {graph_stats}")
                     graph_builder.close()
@@ -6000,7 +6134,7 @@ class DomainFactoryService:
         2. slot.name 包含 property.name_cn 或反向
         3. slot.name 的任意字符在 property.name_cn 中出现
 
-        匹配成功 → slot.entity_ref = "entity_key.property_name"
+        匹配成功 → slot.entity_ref = "entity_key.property_key"（属性 key，非 name_cn）
         """
         from pisuan.repositories.domain_entity_repository import DomainEntityRepository
 
@@ -6024,13 +6158,14 @@ class DomainFactoryService:
                     if name:
                         prop_index.setdefault(name, []).append((ek, pk, pv))
             else:
-                # list 格式: [{name_cn, value_type, unit, ...}]
+                # list 格式: [{key, name_cn, value_type, unit, ...}]
                 for p in props:
                     if not isinstance(p, dict):
                         continue
                     name = (p.get("name_cn") or "").strip()
-                    if name:
-                        prop_index.setdefault(name, []).append((ek, name, p))
+                    prop_key = str(p.get("key") or "").strip()
+                    if name and prop_key:
+                        prop_index.setdefault(name, []).append((ek, prop_key, p))
 
         if not prop_index:
             return 0
@@ -6355,14 +6490,26 @@ class DomainFactoryService:
         domain_code = GENERAL_DOMAIN_CODE  # 去领域化：实体归属恒通用域
 
         from pisuan.repositories.domain_entity_repository import DomainEntityRepository
+        from pisuan.services.domain_entity_service import (
+            DomainEntityService,
+            validate_key,
+        )
 
         repo = DomainEntityRepository()
         saved = 0
         skipped = 0
+        rejected: list[dict[str, str]] = []
+
+        def reject(key: str, reason: str) -> None:
+            """统一记账：跳过即留痕，避免前端只看到「已保存」却不知丢了什么。"""
+            nonlocal skipped
+            skipped += 1
+            rejected.append({"key": key, "reason": reason})
+            logger.warning(f"实体确认跳过 {key or '-'}: {reason}")
 
         for entity_data in entities:
             if not entity_data.get("_confirmed"):
-                skipped += 1
+                reject(entity_data.get("entity_key", ""), "未经用户确认")
                 continue
 
             suggestion_type = entity_data.get("suggestion_type", "new_entity")
@@ -6371,16 +6518,20 @@ class DomainFactoryService:
                 # 向已有实体追加属性
                 target_key = entity_data.get("target_entity_key") or entity_data.get("entity_key", "")
                 if not target_key:
-                    skipped += 1
+                    reject("", "缺少目标实体 key")
                     continue
                 existing = await repo.get_by_key(target_key, domain_code=domain_code)
                 if not existing:
-                    logger.warning(f"目标实体不存在: {target_key}")
-                    skipped += 1
+                    reject(target_key, "目标实体不存在")
                     continue
                 proposed_prop = entity_data.get("proposed_property", {})
                 if not proposed_prop:
-                    skipped += 1
+                    reject(target_key, "缺少属性定义")
+                    continue
+                try:
+                    proposed_prop = DomainEntityService.normalize_properties([proposed_prop])[0]
+                except ValueError as exc:
+                    reject(target_key, str(exc))
                     continue
                 current_props = list(existing.properties or [])
                 # 去重
@@ -6391,19 +6542,29 @@ class DomainFactoryService:
                     saved += 1
                     logger.info(f"追加属性到 {existing.name_cn}: {proposed_prop.get('name_cn', '')}")
                 else:
-                    skipped += 1
+                    reject(target_key, f"属性 `{proposed_prop.get('key', '')}` 已存在")
 
             else:
                 # 创建新实体
                 entity_key = entity_data.get("entity_key", "")
                 name_cn = entity_data.get("name_cn", "")
                 if not entity_key or not name_cn:
-                    skipped += 1
+                    reject(entity_key, "缺少实体 key 或中文名")
+                    continue
+                try:
+                    entity_key = validate_key(entity_key, "entity_key")
+                    value_type = DomainEntityService.normalize_value_type(
+                        entity_data.get("value_type", "String")
+                    )
+                    properties = DomainEntityService.normalize_properties(
+                        entity_data.get("properties") or []
+                    )
+                except ValueError as exc:
+                    reject(entity_key, str(exc))
                     continue
                 existing = await repo.get_by_key(entity_key, domain_code=domain_code)
                 if existing:
-                    logger.info(f"实体已存在，跳过: {entity_key}")
-                    skipped += 1
+                    reject(entity_key, "实体已存在（如需改定义请到实体构建器编辑）")
                     continue
                 data = {
                     "entity_id": str(uuid.uuid4()),
@@ -6411,12 +6572,12 @@ class DomainFactoryService:
                     "name_cn": name_cn,
                     "category": entity_data.get("category", "其他"),
                     "domain_code": domain_code,
-                    "value_type": entity_data.get("value_type", "String"),
+                    "value_type": value_type,
                     "unit": entity_data.get("unit", ""),
                     "is_list_type": entity_data.get("is_list_type", False),
                     "description": entity_data.get("description", ""),
                     "synonyms": entity_data.get("synonyms", []),
-                    "properties": entity_data.get("properties", []),
+                    "properties": properties,
                     "relation_rules": [],
                     "metadata": {
                         "source": "etl_proposal",
@@ -6445,16 +6606,43 @@ class DomainFactoryService:
         except Exception as remap_err:
             logger.warning(f"实体重映射失败（不影响实体保存）: {remap_err}")
 
-        return {"saved": saved, "skipped": skipped, "remapped": remapped}
+        return {"saved": saved, "skipped": skipped, "remapped": remapped, "rejected": rejected}
+
+    async def remap_waiting_review_tasks(self, domain_code: str) -> int:
+        """公开入口：实体定义变更后刷新待审核任务的 entity_ref。"""
+        return await self._remap_waiting_review_tasks(domain_code)
 
     async def _remap_waiting_review_tasks(self, domain_code: str) -> int:
-        """对同领域 WAITING_REVIEW 任务重新映射插槽的 entity_ref"""
+        """对同领域 WAITING_REVIEW 任务重新映射插槽的 entity_ref
+
+        匹配来源有两级：
+        1. 实体构建页维护的 domain_entity_schemas —— 属性被删/改名后先清空失效引用，
+           再按属性名重新绑定；
+        2. legacy 17 类型静态表（SlotEntityMapper）—— 保持既有行为，只填空引用。
+        """
+        from pisuan.repositories.domain_entity_repository import DomainEntityRepository
         from pisuan.services.entity_meta_service import SlotEntityMapper
 
         pending_tasks = await self.repo.list_pending_tasks_by_domain(domain_code)
         if not pending_tasks:
             return 0
 
+        entity_index: dict[str, dict[str, Any]] = {}
+        for row in await DomainEntityRepository().list_all(domain_code=domain_code):
+            entity_key = str(row.get("entity_key") or "")
+            if not entity_key:
+                continue
+            keys: set[str] = set()
+            names: dict[str, str] = {}
+            for prop in row.get("properties") or []:
+                if not isinstance(prop, dict) or not prop.get("key"):
+                    continue
+                prop_key = str(prop["key"])
+                keys.add(prop_key)
+                name = str(prop.get("name_cn") or "").strip()
+                if name:
+                    names.setdefault(name, prop_key)
+            entity_index[entity_key] = {"keys": keys, "names": names}
         mapper = SlotEntityMapper()
         updated = 0
 
@@ -6467,6 +6655,28 @@ class DomainFactoryService:
             paragraphs = task.source_paragraphs
             changed = False
 
+            # 1) 失效引用清理 + 旧格式归一：entity_ref 第二段必须是属性 key
+            for para in paragraphs:
+                template = para.get("template", {})
+                if not isinstance(template, dict):
+                    continue
+                for slot in template.get("slots", []) or []:
+                    ref = str(slot.get("entity_ref") or "")
+                    if "." not in ref:
+                        continue
+                    entity_key, _, prop = ref.partition(".")
+                    known = entity_index.get(entity_key)
+                    if known is None:  # legacy 静态表引用，交给 SlotEntityMapper
+                        continue
+                    if prop in known["keys"]:
+                        continue
+                    if prop in known["names"]:  # 历史数据用 name_cn 作第二段 → 归一为 key
+                        slot["entity_ref"] = f"{entity_key}.{known['names'][prop]}"
+                    else:  # 属性已删除或改名 → 清空，等待重新绑定
+                        slot["entity_ref"] = ""
+                    changed = True
+
+            # 2) legacy 静态表回填（仅空引用）
             for para in paragraphs:
                 template = para.get("template", {})
                 if not isinstance(template, dict):
@@ -6489,6 +6699,10 @@ class DomainFactoryService:
                         raw_slots[i]["entity_ref"] = new_ref
                         changed = True
 
+            # 3) 实体库属性名匹配（仅空引用）
+            if await self._auto_map_slots_to_entity_properties(paragraphs, domain_code=domain_code):
+                changed = True
+
             if changed:
                 await self.repo.update_task(task_id, {"source_paragraphs": paragraphs})
                 updated += 1
@@ -6505,6 +6719,10 @@ class DomainFactoryService:
         fact_type = fact_type_for_category(str(entity_data.get("category", "")), content)
         if not fact_type:
             return "not_b_class"
+        region_key, scope, project_name = normalize_attribution(
+            task_row.region_key, task_row.scope or "project", task_row.project_name
+        )
+        kb_id = str(task_row.knowledge_base_id or "")
         return await self.repo.insert_regional_fact(
             fact_type=fact_type,
             content=content,
@@ -6513,6 +6731,8 @@ class DomainFactoryService:
             region_key=task_row.region_key if task_row else None,
             year=extract_year(f"{name_cn} {description}"),
             source_ref=str(entity_data.get("source_ref") or ""),
+            kb_id=kb_id,
+            attribution=attribution_scope_key(kb_id, region_key, scope, project_name),
         )
 
     async def confirm_region(
@@ -6792,11 +7012,32 @@ class DomainFactoryService:
         )
         return {"items": items, "total": total, "page": page, "page_size": page_size}
 
+    async def list_kb_attributions(
+        self,
+        *,
+        keyword: str | None = None,
+        status: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> dict[str, Any]:
+        """知识库绑定诊断列表。status 只接受 bound/mixed/retained/legacy，非法即 400。"""
+        valid_statuses = ("bound", "mixed", "retained", "legacy")
+        if status is not None and status not in valid_statuses:
+            return {"error": f"status 非法: {status}（允许 {'/'.join(valid_statuses)}）"}
+        page = max(1, page)
+        page_size = min(max(1, page_size), 100)
+        items, total = await self.repo.list_kb_attributions(
+            keyword=keyword, status=status, page=page, page_size=page_size
+        )
+        return {"items": items, "total": total, "page": page, "page_size": page_size}
+
     async def list_regional_facts(
         self,
         region_key: str | None = None,
         fact_type: str | None = None,
         status: str | None = None,
+        kb_id: str | None = None,
+        attribution: str | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> dict[str, Any]:
@@ -6809,7 +7050,13 @@ class DomainFactoryService:
         page = max(1, page)
         page_size = min(max(1, page_size), 100)
         items, total = await self.repo.list_regional_facts(
-            region_key=region_key, fact_type=fact_type, status=status, page=page, page_size=page_size
+            region_key=region_key,
+            fact_type=fact_type,
+            status=status,
+            kb_id=kb_id,
+            attribution=attribution,
+            page=page,
+            page_size=page_size,
         )
         return {"items": items, "total": total, "page": page, "page_size": page_size}
 
@@ -6830,6 +7077,15 @@ class DomainFactoryService:
             if row["status"] in facts_by_status:
                 facts_by_status[row["status"]] += row["count"]
 
+        facts_by_attribution: dict[str, dict[str, int]] = {}
+        for row in raw["facts_by_region_type_status"]:
+            key = row.get("attribution") or ""
+            item = facts_by_attribution.setdefault(key, {"draft": 0, "confirmed": 0, "retired": 0, "total": 0})
+            item[row["status"]] = item.get(row["status"], 0) + row["count"]
+            item["total"] += row["count"]
+
+        templates_by_attribution: dict[str, int] = {}
+
         tasks_by_region = [
             {"region_key": r["region_key"], "region_label": r["region_label"], "count": r["count"]}
             for r in raw["tasks_by_region"]
@@ -6838,15 +7094,20 @@ class DomainFactoryService:
         templates = []
         for t in raw["templates"]:
             region = derive_template_region(t["contributing_task_ids"], raw["task_regions"])
+            attribution = t.get("attribution") or ""
             templates.append(
                 {
                     "id": t["id"],
                     "chapter": t["chapter"],
                     "scope": t["scope"],
+                    "attribution": attribution,
                     "region": region,
                     "contributing_count": len(t["contributing_task_ids"]),
                     "updated_at": t["updated_at"],
                 }
+            )
+            templates_by_attribution[attribution or "legacy"] = (
+                templates_by_attribution.get(attribution or "legacy", 0) + 1
             )
         templates.sort(key=lambda x: x["updated_at"] or "", reverse=True)
 
@@ -6876,6 +7137,10 @@ class DomainFactoryService:
                 continue
             node = tree.setdefault(t["region"], _node(t["region"], region_label_for_key(t["region"]) or t["region"]))
             node["template_count"] += 1
+            node.setdefault("attribution_counts", {})
+            node["attribution_counts"][t["attribution"] or "legacy"] = (
+                node["attribution_counts"].get(t["attribution"] or "legacy", 0) + 1
+            )
 
         # 未归属伪节点固定殿后，其余按任务数降序
         nodes = sorted(tree.values(), key=lambda n: (n["region_key"] is None, -n["task_count"], -n["fact_count"]))
@@ -6885,7 +7150,10 @@ class DomainFactoryService:
                 "templates_by_scope": templates_by_scope,
                 "tasks_by_region": tasks_by_region,
                 "facts_by_status": facts_by_status,
+                "facts_by_attribution": facts_by_attribution,
+                "templates_by_attribution": templates_by_attribution,
             },
+            "kb_attributions": raw.get("kb_attributions", []),
             "templates": templates,
             "region_tree": nodes,
         }

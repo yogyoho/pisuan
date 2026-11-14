@@ -104,8 +104,9 @@ class DomainEntityRepository:
             if entity is None:
                 return None
 
+            # entity_key 是模板 entity_ref 的前缀，改名会使存量引用悬空，不在可更新列中
             updatable = [
-                "entity_key", "name_cn", "category", "domain_code",
+                "name_cn", "category", "domain_code",
                 "value_type", "unit", "is_list_type", "description", "synonyms",
                 "properties", "relation_rules",
             ]

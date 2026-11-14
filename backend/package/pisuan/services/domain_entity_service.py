@@ -2,11 +2,73 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from typing import Any
 
 from pisuan.repositories.domain_entity_repository import DomainEntityRepository
 from pisuan.utils import logger
+from pisuan.utils.datetime_utils import format_utc_datetime, utc_now_naive
+
+VALID_VALUE_TYPES = ("String", "Integer", "Float", "Boolean", "Enum", "Object", "List")
+
+# 历史数据兼容别名：显式映射，未知值一律拒绝（不再静默转 String）
+LEGACY_VALUE_TYPE_ALIASES = {
+    "Numeric": "Float",
+    "Number": "Float",
+    "Date": "String",
+    "Text": "String",
+}
+
+# AI 提取：模型只看到前 N 个字符，响应里必须回传覆盖信息
+EXTRACTION_CONTENT_LIMIT = 12000
+# 前端默认勾选门槛（后端只记录，不做硬拒绝）
+EXTRACTION_CONFIDENCE_DEFAULT = 0.6
+# 新实体提案的标记值
+PROPOSAL_SCHEMA_REF = "__proposal__"
+
+_KEY_FORBIDDEN_CHARS = re.compile(r"[\s.。]")
+
+
+def validate_key(value: Any, label: str) -> str:
+    """校验实体键/属性键的契约必需项：非空、无空白与点号、长度受限。"""
+    key = str(value or "").strip()
+    if not key:
+        raise ValueError(f"{label}不能为空")
+    if len(key) > 64:
+        raise ValueError(f"{label} `{key[:20]}…` 超过 64 字符")
+    if _KEY_FORBIDDEN_CHARS.search(key):
+        raise ValueError(f"{label} `{key}` 含空白或点号（entity_ref 用点号分隔），示例：coal_usage")
+    return key
+
+
+def canonical_property_key(raw: Any) -> str:
+    """把模型给出的属性键规整成可作为 entity_ref 后缀的键。"""
+    key = re.sub(r"[\s.。\-/]+", "_", str(raw or "").strip()).strip("_")
+    return key[:64]
+
+
+def infer_value_type(values: list[Any]) -> str:
+    """按样本值推断值类型，只做保守推断。"""
+    if not values:
+        return "String"
+    if all(isinstance(v, bool) for v in values):
+        return "Boolean"
+    if all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in values):
+        return "Float"
+    if all(isinstance(v, list) for v in values):
+        return "List"
+    return "String"
+
+
+def _strip_whitespace(text: str) -> str:
+    return re.sub(r"\s+", "", text or "")
+
+
+def is_grounded(quote: str, content: str) -> bool:
+    """原文字面回查：空白归一化后 quote 必须是 content 的子串。"""
+    normalized_quote = _strip_whitespace(quote)
+    return bool(normalized_quote) and normalized_quote in _strip_whitespace(content)
 
 # 六大领域分类映射
 CATEGORY_DOMAIN_MAP = {
@@ -123,23 +185,27 @@ class DomainEntityService:
         return entity.to_dict() if entity else None
 
     async def create_entity(self, data: dict[str, Any]) -> dict[str, Any]:
-        if not data.get("entity_key") or not data.get("name_cn"):
-            raise ValueError("entity_key 和 name_cn 不能为空")
+        data = dict(data)
+        entity_key = validate_key(data.get("entity_key"), "entity_key")
+        if not str(data.get("name_cn") or "").strip():
+            raise ValueError("name_cn 不能为空")
+        category = str(data.get("category") or "").strip()
+        if category not in CATEGORY_DOMAIN_MAP:
+            raise ValueError(f"category `{category}` 不属于六大分类，可选：{', '.join(CATEGORY_DOMAIN_MAP)}")
 
-        existing = await self.repo.get_by_key(data["entity_key"])
+        existing = await self.repo.get_by_key(entity_key)
         if existing:
-            raise ValueError(f"实体键 {data['entity_key']} 已存在")
+            raise ValueError(f"实体键 {entity_key} 已存在")
 
-        entity_id = data.get("entity_id") or str(uuid.uuid4())
-        data["entity_id"] = entity_id
+        data["entity_key"] = entity_key
+        data["entity_id"] = data.get("entity_id") or str(uuid.uuid4())
+        # 去领域化：实体归属恒通用域，缺省不得落到 repo 的 legacy "coal"
+        if not data.get("domain_code"):
+            from pisuan.repositories.domain_factory_repository import GENERAL_DOMAIN_CODE
 
-        value_type = data.get("value_type", "String")
-        data["value_type"] = self._normalize_value_type(value_type)
-
-        if "properties" in data:
-            data["properties"] = [
-                self._normalize_property(p) for p in data["properties"]
-            ]
+            data["domain_code"] = GENERAL_DOMAIN_CODE
+        data["value_type"] = self.normalize_value_type(data.get("value_type", "String"))
+        data["properties"] = self.normalize_properties(data.get("properties") or [])
 
         entity = await self.repo.create(data)
         return entity.to_dict()
@@ -149,14 +215,20 @@ class DomainEntityService:
         if not entity:
             raise ValueError(f"实体 {identifier} 不存在")
 
+        # entity_key 是模板 entity_ref 的前缀，改名会让存量引用悬空；改名走 clone
+        if data.get("entity_key") and data["entity_key"] != entity.entity_key:
+            raise ValueError("entity_key 不允许修改（改名会使模板 entity_ref 失效），请克隆后删除旧实体")
+        data = {k: v for k, v in data.items() if k != "entity_key"}
+
         if "value_type" in data:
-            data["value_type"] = self._normalize_value_type(data["value_type"])
-        if "properties" in data and data["properties"] is not None:
-            data["properties"] = [
-                self._normalize_property(p) for p in data["properties"]
-            ]
+            data["value_type"] = self.normalize_value_type(data["value_type"])
+        if data.get("properties") is not None:
+            data["properties"] = self.normalize_properties(data["properties"])
 
         updated = await self.repo.update(entity.entity_id, data)
+        remapped = await self._remap_waiting_review_tasks()
+        if remapped:
+            logger.info(f"实体 {identifier} 更新后重映射 {remapped} 个待审核任务")
         return updated.to_dict()
 
     async def delete_entity(self, identifier: str) -> bool:
@@ -182,6 +254,9 @@ class DomainEntityService:
         if not entity:
             raise ValueError(f"实体 {identifier} 不存在")
 
+        new_key = validate_key(new_key, "entity_key")
+        if not str(new_name or "").strip():
+            raise ValueError("name_cn 不能为空")
         existing = await self.repo.get_by_key(new_key)
         if existing:
             raise ValueError(f"实体键 {new_key} 已存在")
@@ -279,26 +354,62 @@ class DomainEntityService:
     # ========== Helpers ==========
 
     @staticmethod
-    def _normalize_value_type(value_type: str) -> str:
-        if not isinstance(value_type, str):
-            return "String"
-        if value_type.startswith("List"):
-            if "<Object>" in value_type:
-                return "Object"
-            return "String"
-        valid = {"String", "Integer", "Float", "Boolean", "Enum", "Object", "List"}
-        return value_type if value_type in valid else "String"
+    def normalize_value_type(value_type: Any) -> str:
+        if not isinstance(value_type, str) or not value_type.strip():
+            raise ValueError(f"值类型不能为空，可选：{', '.join(VALID_VALUE_TYPES)}")
+        raw = value_type.strip()
+        if raw.startswith("List") and "<" in raw:
+            return "Object" if "<Object>" in raw else "String"
+        normalized = LEGACY_VALUE_TYPE_ALIASES.get(raw, raw)
+        if normalized not in VALID_VALUE_TYPES:
+            raise ValueError(f"未知值类型 `{raw}`，可选：{', '.join(VALID_VALUE_TYPES)}")
+        return normalized
 
-    @staticmethod
-    def _normalize_property(prop: dict[str, Any]) -> dict[str, Any]:
+    @classmethod
+    def normalize_property(cls, prop: dict[str, Any]) -> dict[str, Any]:
         normalized = dict(prop)
-        if "value_type" in normalized:
-            normalized["value_type"] = DomainEntityService._normalize_value_type(
-                normalized["value_type"]
-            )
+        normalized["value_type"] = cls.normalize_value_type(
+            normalized.get("value_type", "String")
+        )
         if "options" in normalized and "enum_options" not in normalized:
             normalized["enum_options"] = normalized.pop("options")
         return normalized
+
+    @classmethod
+    def normalize_properties(cls, properties: Any) -> list[dict[str, Any]]:
+        if not isinstance(properties, list):
+            raise ValueError("properties 必须是数组")
+        normalized: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for index, prop in enumerate(properties, start=1):
+            if not isinstance(prop, dict):
+                raise ValueError(f"第 {index} 个属性不是对象")
+            item = cls.normalize_property(prop)
+            key = validate_key(item.get("key"), f"第 {index} 个属性的 key")
+            folded = key.casefold()
+            if folded in seen:
+                raise ValueError(f"属性 key `{key}` 重复")
+            seen.add(folded)
+            item["key"] = key
+            normalized.append(item)
+        return normalized
+
+    async def _remap_waiting_review_tasks(self) -> int:
+        """实体定义变更后，刷新同域待审核任务的 entity_ref。"""
+        from pisuan.repositories.domain_factory_repository import (
+            GENERAL_DOMAIN_CODE,
+        )
+        from pisuan.services.domain_factory_service import (
+            get_domain_factory_service,
+        )
+
+        try:
+            return await get_domain_factory_service().remap_waiting_review_tasks(
+                GENERAL_DOMAIN_CODE
+            )
+        except Exception as exc:  # 重映射失败不影响实体保存本身
+            logger.warning(f"实体变更后重映射待审核任务失败: {exc}")
+            return 0
 
     # ========== AI Entity Extraction ==========
 
@@ -323,119 +434,287 @@ class DomainEntityService:
             logger.error(f"LLM 调用失败: {e}")
             raise RuntimeError(f"AI 模型调用失败: {e}")
 
-        extracted = self._parse_extraction_response(response_text)
+        extracted = [
+            item for item in self._parse_extraction_response(response_text) if isinstance(item, dict)
+        ]
+        for item in extracted:
+            item["grounded"] = is_grounded(item.get("extracted_text", ""), content)
 
-        # 与现有同行业实体比对
-        existing = await self.repo.list_all(domain_code=domain_code)
-        comparison = self._compare_extracted_with_entities(extracted, existing)
+        comparison = self._compare_extracted_with_entities(extracted, schemas)
+        scanned = min(len(content), EXTRACTION_CONTENT_LIMIT)
 
         return {
             "entities": extracted,
             "comparison": comparison,
             "total": len(extracted),
+            "coverage": {
+                "content_chars": len(content),
+                "scanned_chars": scanned,
+                "truncated": len(content) > scanned,
+            },
+            "confidence_threshold": EXTRACTION_CONFIDENCE_DEFAULT,
             "prompt": prompt,
         }
 
     async def save_extracted_entities(
         self, entities: list[dict[str, Any]], domain_code: str
     ) -> dict[str, Any]:
-        """保存用户确认的提取实体到数据库"""
-        import uuid
+        """保存用户确认的提取结果。
 
-        inserted = 0
-        updated = 0
+        提取结果只用于生成/补全 schema 定义，实例值不入库：
+        matched 不写、partial 追加属性、new 建实体。
+        """
+        result: dict[str, Any] = {
+            "inserted": 0,
+            "updated_entities": 0,
+            "properties_added": 0,
+            "unchanged": 0,
+            "rejected": [],
+        }
 
-        for item in entities:
-            schema_ref = item.get("schema_ref", "")
-            status = item.get("_status", "new")
-            entity_id = item.get("_entity_id")
+        for index, item in enumerate(entities):
+            label = str(item.get("name_cn") or item.get("schema_ref") or f"第 {index + 1} 条")
+            reason = ""
 
-            if status == "new":
-                entity_data = {
-                    "entity_id": str(uuid.uuid4()),
-                    "entity_key": f"{schema_ref}_{domain_code}_{uuid.uuid4().hex[:8]}",
-                    "name_cn": item.get("name_cn", schema_ref),
-                    "category": item.get("category", ""),
-                    "domain_code": domain_code,
-                    "value_type": "String",
-                    "is_list_type": False,
-                    "description": item.get("extracted_text", ""),
-                    "synonyms": [],
-                    "properties": item.get("values", {}),
-                    "relation_rules": [],
-                    "metadata": {"extracted_at": "", "confidence": item.get("confidence", 0), "source": "ai_extract"},
+            status = item.get("_status")
+            if status not in {"matched", "partial", "new"}:
+                reason = "缺少比对状态，请重新提取后再导入"
+            elif item.get("grounded") is not True:
+                reason = "原文未找到对应片段（无证据），不予导入"
+            elif status == "matched":
+                result["unchanged"] += 1
+                continue
+            else:
+                try:
+                    if status == "partial":
+                        await self._append_properties_from_diff(item, result)
+                    else:
+                        await self._create_entity_from_proposal(item, domain_code, result)
+                except ValueError as exc:
+                    reason = str(exc)
+
+            if reason:
+                result["rejected"].append({"index": index, "name": label, "reason": reason})
+
+        written = (
+            result["inserted"] + result["updated_entities"] + result["properties_added"]
+        )
+        if written:
+            await self._remap_waiting_review_tasks()
+        result["total"] = result["inserted"] + result["updated_entities"]
+        return result
+
+    @staticmethod
+    def _property_definitions(diff: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        definitions: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for prop in diff:
+            key = canonical_property_key(prop.get("key"))
+            if not key or key.casefold() in seen:
+                continue
+            seen.add(key.casefold())
+            definitions.append(
+                {
+                    "key": key,
+                    "name_cn": str(prop.get("name_cn") or key).strip(),
+                    "value_type": DomainEntityService.normalize_value_type(
+                        prop.get("value_type") or "String"
+                    ),
+                    "unit": "",
+                    "description": "由 AI 提取补充",
                 }
-                await self.repo.create(entity_data)
-                inserted += 1
+            )
+        return definitions
 
-            elif status == "updated" and entity_id:
-                # 更新现有实体
-                update_data = {
-                    "name_cn": item.get("name_cn"),
-                    "description": item.get("extracted_text", ""),
-                    "properties": item.get("values", {}),
-                }
-                await self.repo.update(entity_id, update_data)
-                updated += 1
+    async def _append_properties_from_diff(
+        self, item: dict[str, Any], result: dict[str, Any]
+    ) -> None:
+        entity_id = item.get("_entity_id")
+        entity = await self.repo.get_by_id_or_key(entity_id) if entity_id else None
+        if not entity:
+            raise ValueError("目标实体不存在，可能已被删除，请重新提取")
 
-        return {"inserted": inserted, "updated": updated, "total": inserted + updated}
+        existing = {
+            str(p.get("key")).casefold()
+            for p in (entity.properties or [])
+            if isinstance(p, dict) and p.get("key")
+        }
+        added = [
+            prop
+            for prop in self._property_definitions(
+                (item.get("_diff") or {}).get("add_properties") or []
+            )
+            if prop["key"].casefold() not in existing
+        ]
+        if not added:
+            result["unchanged"] += 1
+            return
+
+        await self.repo.update(
+            entity.entity_id, {"properties": list(entity.properties or []) + added}
+        )
+        result["updated_entities"] += 1
+        result["properties_added"] += len(added)
+
+    async def _create_entity_from_proposal(
+        self, item: dict[str, Any], domain_code: str, result: dict[str, Any]
+    ) -> None:
+        proposal = item.get("_proposed_entity") or {}
+        problems = proposal.get("problems") or []
+        if problems:
+            raise ValueError(f"提案不可导入：{'；'.join(problems)}")
+
+        entity_key = validate_key(proposal.get("entity_key"), "entity_key")
+        if await self.repo.get_by_key(entity_key):
+            raise ValueError(f"实体键 {entity_key} 已存在，请改为补属性后重试")
+
+        name_cn = str(proposal.get("name_cn") or "").strip()
+        if not name_cn:
+            raise ValueError("提案缺少实体中文名")
+
+        properties = self._property_definitions(proposal.get("properties") or [])
+        await self.repo.create(
+            {
+                "entity_id": str(uuid.uuid4()),
+                "entity_key": entity_key,
+                "name_cn": name_cn,
+                "category": proposal.get("category", ""),
+                "domain_code": domain_code,
+                "value_type": "String",
+                "is_list_type": False,
+                "description": "",
+                "synonyms": [],
+                "properties": properties,
+                "relation_rules": [],
+                "metadata": {
+                    "source": "ai_extract",
+                    "confidence": item.get("confidence", 0),
+                    "extracted_at": format_utc_datetime(utc_now_naive()),
+                },
+            }
+        )
+        result["inserted"] += 1
+
+    @staticmethod
+    def _property_keys_of(entity: dict[str, Any]) -> set[str]:
+        """已有实体已定义的属性键（兼容 list[dict] 与 dict 两种历史形态）。"""
+        props = entity.get("properties")
+        if isinstance(props, dict):
+            keys = list(props.keys())
+        elif isinstance(props, list):
+            keys = [p.get("key") for p in props if isinstance(p, dict)]
+        else:
+            keys = []
+        return {str(k).casefold() for k in keys if k}
 
     def _compare_extracted_with_entities(
         self, extracted: list[dict], existing_entities: list[dict]
     ) -> list[dict]:
-        """比对提取结果与已有实体"""
-        # 构建已有实体索引（按 entity_key 分组）
-        existing_by_key = {}
-        for e in existing_entities:
-            key = e.get("entity_key", "")
-            if key not in existing_by_key:
-                existing_by_key[key] = []
-            existing_by_key[key].append(e)
+        """覆盖度比对：提取结果的属性键集合 vs 已有 schema 的属性键集合。
 
-        comparison = []
+        matched  = 提取到的属性都已在 schema 中，无需写入
+        partial  = 有 schema 未定义的新属性，建议补充
+        new      = schema_ref 不在实体库（必须显式标注 __proposal__），建议建实体
+        """
+        existing_by_key: dict[str, dict] = {}
+        for entity in existing_entities:
+            key = str(entity.get("entity_key") or "")
+            existing_by_key.setdefault(key, entity)
+
+        comparison: list[dict] = []
         for item in extracted:
-            schema_ref = item.get("schema_ref", "")
-            existing_list = existing_by_key.get(schema_ref, [])
+            schema_ref = str(item.get("schema_ref") or "").strip()
+            values = item.get("values") if isinstance(item.get("values"), dict) else {}
+            entry = {**item, "schema_ref": schema_ref, "values": values}
+            existing = existing_by_key.get(schema_ref)
 
-            if not existing_list:
-                comparison.append({
-                    **item,
+            if existing:
+                defined = self._property_keys_of(existing)
+                add_properties: list[dict[str, Any]] = []
+                seen: set[str] = set()
+                for raw_key, value in values.items():
+                    key = canonical_property_key(raw_key)
+                    if not key or key.casefold() in defined or key.casefold() in seen:
+                        continue
+                    seen.add(key.casefold())
+                    add_properties.append(
+                        {
+                            "key": key,
+                            "name_cn": str(raw_key).strip() or key,
+                            "value_type": infer_value_type([value]),
+                            "sample_value": value,
+                        }
+                    )
+                entry.update(
+                    {
+                        "_status": "partial" if add_properties else "matched",
+                        "_entity_id": existing.get("entity_id"),
+                        "_diff": {"add_properties": add_properties},
+                        "_existing": {
+                            "entity_id": existing.get("entity_id"),
+                            "entity_key": schema_ref,
+                            "name_cn": existing.get("name_cn"),
+                            "category": existing.get("category"),
+                            "property_keys": sorted(defined),
+                        },
+                        "_proposed_entity": None,
+                    }
+                )
+                comparison.append(entry)
+                continue
+
+            entry.update(
+                {
                     "_status": "new",
                     "_entity_id": None,
-                    "_diff": None,
+                    "_diff": {"add_properties": []},
                     "_existing": None,
-                })
-            else:
-                # 取第一个匹配的已有实体进行比对
-                existing = existing_list[0]
-                item_values = item.get("values", {}) or {}
-                existing_values = existing.get("properties", {}) or {}
-
-                # 简单对比：value 是否有差异
-                diff = {}
-                all_keys = set(list(item_values.keys()) + list(existing_values.keys()))
-                for k in all_keys:
-                    new_val = item_values.get(k)
-                    old_val = existing_values.get(k)
-                    if str(new_val) != str(old_val):
-                        diff[k] = {"extracted": new_val, "existing": old_val}
-
-                status = "different" if diff else "matched"
-                comparison.append({
-                    **item,
-                    "_status": status,
-                    "_entity_id": existing.get("entity_id"),
-                    "_diff": diff if diff else None,
-                    "_existing": {
-                        "entity_id": existing.get("entity_id"),
-                        "entity_key": existing.get("entity_key"),
-                        "name_cn": existing.get("name_cn"),
-                        "category": existing.get("category"),
-                        "properties": existing_values,
-                    } if status == "different" else None,
-                })
+                    "_proposed_entity": self._build_entity_proposal(item, schema_ref, values),
+                }
+            )
+            comparison.append(entry)
 
         return comparison
+
+    @staticmethod
+    def _build_entity_proposal(
+        item: dict[str, Any], schema_ref: str, values: dict[str, Any]
+    ) -> dict[str, Any]:
+        problems: list[str] = []
+        if schema_ref not in ("", PROPOSAL_SCHEMA_REF):
+            problems.append(
+                f"schema_ref `{schema_ref}` 不在实体库中（疑似写错），新实体请用 `{PROPOSAL_SCHEMA_REF}`"
+            )
+
+        raw_key = str(item.get("entity_key") or "").strip()
+        entity_key = re.sub(r"[^a-z0-9_]", "_", raw_key.lower()).strip("_")[:64]
+        if not entity_key:
+            problems.append("新实体提案缺少 entity_key（snake_case 英文）")
+
+        category = str(item.get("category") or "").strip()
+        if category not in CATEGORY_DOMAIN_MAP:
+            problems.append("category 不属于六大分类")
+
+        properties = [
+            {
+                "key": canonical_property_key(raw_key),
+                "name_cn": str(raw_key).strip(),
+                "value_type": infer_value_type([value]),
+                "sample_value": value,
+            }
+            for raw_key, value in values.items()
+            if canonical_property_key(raw_key)
+        ]
+        if not properties:
+            problems.append("提案没有任何属性")
+
+        return {
+            "entity_key": entity_key,
+            "name_cn": str(item.get("name_cn") or "").strip(),
+            "category": category,
+            "properties": properties,
+            "problems": problems,
+        }
 
     def _build_extraction_prompt(
         self, schemas: list[dict[str, Any]], content: str, domain_code: str
@@ -464,6 +743,9 @@ class DomainEntityService:
                 lines.append(f"- 单位: {unit}")
             if synonyms:
                 lines.append(f"- 同义词/别称: {', '.join(synonyms[:8])}")
+            negative_examples = ((s.get("metadata") or {}).get("negative_examples")) or []
+            if negative_examples:
+                lines.append(f"- 不计入本实体的内容: {'；'.join(map(str, negative_examples[:6]))}")
             if properties:
                 lines.append("- 属性字段:")
                 for p in properties[:10]:
@@ -471,7 +753,9 @@ class DomainEntityService:
                     pn = p.get("name_cn", "")
                     pt = p.get("value_type", "String")
                     pd = p.get("description", "")
-                    lines.append(f"  - `{pk}` ({pn}): {pt} — {pd}")
+                    hint = p.get("extraction_hint") or pd
+                    mark = "（必填）" if p.get("required") else ""
+                    lines.append(f"  - `{pk}` ({pn}){mark}: {pt} — {hint}")
             schema_desc_parts.append("\n".join(lines))
 
         schema_text = "\n\n".join(schema_desc_parts)
@@ -480,16 +764,21 @@ class DomainEntityService:
             domain_code, domain_code
         )
 
+        categories = "、".join(f"{k}（{v['domain_name']}）" for k, v in CATEGORY_DOMAIN_MAP.items())
         system_prompt = (
             "你是一个专业的领域实体提取助手。"
-            "你的任务是从文档中识别和提取符合预定义Schema的实体对象。"
+            "你的任务是从文档中识别符合预定义 Schema 的实体对象，并为 Schema 未覆盖的内容提出提案。"
             "提取规则：\n"
             "1. 实体对象是独立的概念，拥有自己的属性，能在知识图谱中建立关系\n"
             "2. 实体的属性（如名称、数值、状态等）不能独立成为实体\n"
             "3. 列表类型实体需提取文档中提到的每一个实例\n"
-            "4. 只提取文档中明确提到的信息，不要推断\n"
-            "5. 如果某个实体在文档中没有找到，不要凭空创建\n"
-            "6. 严格按JSON格式输出，不要包含其他文字"
+            "4. 只提取文档中明确提到的信息，不要推断；extracted_text 必须是原文片段，原文里没有的不要输出\n"
+            "5. 以下内容不是实体：标准编号（如 GB 1234）、法规条款序号、纯数值与单位、表格表头、章节标题\n"
+            "6. schema_ref 只能取上面列出的 entity_key；文档中出现了 Schema 未覆盖的实体时，"
+            f"schema_ref 固定写 `{PROPOSAL_SCHEMA_REF}`，并在 entity_key 给出 snake_case 英文键\n"
+            f"7. 提案的 category 只能取：{categories}\n"
+            "8. values 的键优先使用 Schema 中已定义的属性 key；确需新增的用 snake_case 英文\n"
+            "9. 严格按 JSON 格式输出，不要包含其他文字"
         )
 
         user_prompt = (
@@ -497,23 +786,23 @@ class DomainEntityService:
             f"## 实体Schema定义:\n\n{schema_text}\n\n"
             f"## 文档内容:\n\n{content[:12000]}\n\n"
             "## 输出要求:\n"
-            "请以JSON数组格式返回提取到的实体实例，格式如下：\n"
+            "请以 JSON 数组格式返回结果，格式如下：\n"
             "```json\n"
             "[\n"
             "  {\n"
-            '    "schema_ref": "对应的entity_key",\n'
-            '    "name_cn": "实体实例名称",\n'
-            '    "category": "所属分类",\n'
-            '    "confidence": 0.0-1.0之间的置信度,\n'
-            '    "extracted_text": "文档中对应的原文片段",\n'
+            '    "schema_ref": "已有实体的 entity_key，或 __proposal__",\n'
+            '    "entity_key": "仅提案时给出：snake_case 英文键",\n'
+            '    "name_cn": "实体中文名",\n'
+            '    "category": "所属分类（提案时必填，取六大分类之一）",\n'
+            '    "confidence": 0.0-1.0,\n'
+            '    "extracted_text": "文档中的原文片段（必须逐字摘录）",\n'
             '    "values": {\n'
-            '      "属性key": "提取到的属性值",\n'
-            '      ...\n'
+            '      "属性key": "提取到的属性值"\n'
             "    }\n"
             "  }\n"
             "]\n"
             "```\n\n"
-            "只返回JSON数组，不要有其他内容。"
+            "只返回 JSON 数组，不要有其他内容。"
         )
 
         return [
