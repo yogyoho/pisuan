@@ -12129,5 +12129,26 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-15T01:05:00.000Z"
+  },
+  {
+    "id": "bug-4270",
+    "timestamp": "2026-11-15T01:05:37.000Z",
+    "error_message": "localized 首次提交分类字典批次时，manager.py/storage_migration.py/migrate_domain_factory.sql/test_storage_migration.py 里混入 custom 已落地的属性归因批次（v21/v22）内容，提交后的 HEAD 引用了分支上不存在的 DomainFactoryKnowledgeBaseAttribution 与 v21/v22 迁移函数",
+    "file": "backend/package/pisuan/storage/postgres/manager.py",
+    "root_cause": "custom 的 23e660509（65 文件归因批次）从未提交进 localized 分支，只在工作区以 overlay 存在；整文件 git add 把 overlay 与 v23 改动一起暂存，且 backport 工具对行数漂移的文件只能整文件逆变换",
+    "fix": "git reset --soft 撤回；按 forward_text(custom HEAD blob) 把 63 个归因文件前向同步为独立提交 ec12fe4bb（4 个重叠文件只写归因内容、worktree 保留 v23，PromptConfigView.vue 排除）；再提交 v23 批次 3949708dd；backport START 指向 ec12fe4bb 后回迁 22/22 forward 等价",
+    "tags": [
+      "git",
+      "localized",
+      "overlay",
+      "backport",
+      "schema-migration",
+      "分支基线"
+    ],
+    "related_bugs": [
+      "bug-4269"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-15T01:05:37.000Z"
   }
 ]

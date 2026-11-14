@@ -2916,3 +2916,15 @@
 - **不要把"分类"继续塞回 `CATEGORY_DOMAIN_MAP` 之类的硬编码映射**——单源是字典表，新增分类走 UI 或 SQL 播种。
 - **不要让新建分类默认 sort_order=0**（抢队首），也不要给已存在的 code 提供改名入口。
 - **不要整文件 `ruff format` 存量文件**：`domain_entity_repository.py` 等文件本来就不是 ruff 0.16/line-length 120 的产物，整篇格式化会产生几十行与需求无关的 diff；只格式化自己新写的文件，存量文件手动对齐。
+
+## Key Learnings + DNR（2026-11-15 localized 分支基线漂移）
+
+- **localized 分支不等于 custom 历史**：custom 的 `23e660509`（属性归因批次，65 文件）从未在 localized 分支提交过，只以工作区 overlay 形式存在。凡是要改 `manager.py` / `storage_migration.py` / `migrate_domain_factory.sql` / `test_storage_migration.py` 这类"迁移链"文件，先假设分支基线落后，别把整个文件当成"只有本批次改动"。
+- **整文件 `git add` 会把 overlay 卷进提交**：分类字典批次首提就因此把 v21/v22 归因内容带走，并 `import` 了分支上不存在的 `DomainFactoryKnowledgeBaseAttribution`——提交自相矛盾。判定方法：对每个待提交文件比较 `forward_text(git show <custom> HEAD:<path>)` 与工作区内容，不一致即为 overlay/自有迭代混入。
+- **前向同步（custom→localized 分支）是可以机械验证的**：按 `forward_text(custom blob)` 逐文件写回，`apply_pisuan_rename` 的 F 变换与 `invert_line` 不对称（F 改裸词、逆向只改结构化 token），所以 forward 方向要用 `forward_text`，路径用 `yuxi*→pisuan*` 的组件替换，没有现成 `forward_path` 需要自带。
+- **docs 分支的校验要 apply forward_text**：custom 侧 changelog/设计文档保留 `yuxi/...` 原始写法，localized 侧被 F 改过；比较文档一致性时同样要 forward_text，否则每一行旧记录都会报"漂移"。
+- **PromptConfigView.vue 工作区与 custom 内容不同**（模板 prompt 文案另有本地迭代），不参与前向同步，别顺手覆盖。
+
+### DNR
+- **不要在 localized 提交前跳过 overlay 核对**：`git status` 里那些"不是我改的"文件如果与本次批次文件重叠，先拆提交（前向同步另立提交）再提交语义批次。
+- **不要用 `git add -A` / 目录级 add 提交本仓库**：工作区常驻多批未提交 overlay，只 stage 明确路径，docs 用 `-f`。
