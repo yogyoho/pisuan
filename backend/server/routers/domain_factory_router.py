@@ -45,6 +45,8 @@ domain_factory = APIRouter(prefix="/domain-factory", tags=["Domain Factory"])
 @domain_factory.get("/data-sources")
 async def fetch_data_sources(
     status: str | None = Query(None),
+    kb_id: str | None = Query(None),
+    attribution: str | None = Query(None),
     current_user: User = Depends(get_required_user),
 ) -> dict[str, Any]:
     """获取待处理数据源列表"""
@@ -378,11 +380,37 @@ async def fetch_attribution_tasks(
         raise HTTPException(status_code=500, detail=f"获取任务归属列表失败: {str(e)}")
 
 
+@domain_factory.get("/kb-attributions")
+async def fetch_kb_attributions(
+    keyword: str | None = Query(None),
+    status: str | None = Query(None),
+    page: int = Query(1),
+    page_size: int = Query(20),
+    current_user: User = Depends(get_required_user),
+) -> dict[str, Any]:
+    """[pisuan-custom] W4：知识库绑定诊断（一库一归属冲突与保留绑定）。"""
+    try:
+        service = get_domain_factory_service()
+        result = await service.list_kb_attributions(
+            keyword=keyword, status=status, page=page, page_size=page_size
+        )
+        if result.get("error"):
+            raise HTTPException(status_code=400, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to list KB attributions: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取知识库绑定诊断失败: {str(e)}")
+
+
 @domain_factory.get("/regional-facts")
 async def fetch_regional_facts(
     region_key: str | None = Query(None),
     fact_type: str | None = Query(None),
     status: str | None = Query(None),
+    kb_id: str | None = Query(None),
+    attribution: str | None = Query(None),
     page: int = Query(1),
     page_size: int = Query(20),
     current_user: User = Depends(get_required_user),
@@ -391,7 +419,13 @@ async def fetch_regional_facts(
     try:
         service = get_domain_factory_service()
         result = await service.list_regional_facts(
-            region_key=region_key, fact_type=fact_type, status=status, page=page, page_size=page_size
+            region_key=region_key,
+            fact_type=fact_type,
+            status=status,
+            kb_id=kb_id,
+            attribution=attribution,
+            page=page,
+            page_size=page_size,
         )
         if result.get("error"):
             raise HTTPException(status_code=400, detail=result["error"])
@@ -679,7 +713,7 @@ async def list_outline_templates(
 
         svc = GraphQueryService()
         try:
-            items = await svc.list_outline_templates(GENERAL_DOMAIN_CODE, report_type)
+            items = await svc.list_outline_templates(GENERAL_DOMAIN_CODE, report_type, attribution="")
             return {"items": items, "total": len(items)}
         finally:
             svc.close()
@@ -721,7 +755,7 @@ async def update_outline_template(
 
         svc = GraphQueryService()
         try:
-            updated = await svc.update_chapter_template(GENERAL_DOMAIN_CODE, report_type, chapter_key, body)
+            updated = await svc.update_chapter_template(GENERAL_DOMAIN_CODE, report_type, chapter_key, body, attribution="")
             if not updated:
                 raise HTTPException(status_code=404, detail=f"章节 '{chapter_key}' 不存在或无可更新字段")
             return {"success": True, "chapter_key": chapter_key}

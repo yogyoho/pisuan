@@ -1,7 +1,16 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch, h } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, FileText, Inbox, X } from '@lucide/vue'
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  ClipboardList,
+  FileText,
+  Inbox,
+  X
+} from '@lucide/vue'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { domainEntityBuilderApi } from '@/apis/domain_entity_builder_api'
 import { databaseApi } from '@/apis/knowledge_api'
@@ -925,6 +934,14 @@ const openEntityEditModal = (record) => {
   entityEditModalVisible.value = true
 }
 
+// 后端对 schema 做结构校验（key/值类型/重复属性）；被拒时保留提案并说明原因，避免「已保存」假象
+const confirmRejectedMessage = (result) => {
+  const rejected = result?.rejected || []
+  if (!rejected.length) return ''
+  const first = rejected[0]
+  return `未写入 ${rejected.length} 个：${first.key || '提案'} — ${first.reason}`
+}
+
 // 保存后从建议列表本地移除（不触发 LLM 重新提取）
 const removeProposalsLocally = (savedItems) => {
   const savedIds = new Set(savedItems.map((e) => e._row_id))
@@ -941,7 +958,12 @@ const saveEntity = async () => {
   }
   entity._confirmed = true
   try {
-    await domainFactoryApi.confirmProposedEntities(taskDetail.value.id, [entity])
+    const result = await domainFactoryApi.confirmProposedEntities(taskDetail.value.id, [entity])
+    const rejectedMsg = confirmRejectedMessage(result)
+    if (rejectedMsg) {
+      message.warning(rejectedMsg)
+      return
+    }
     entityEditModalVisible.value = false
     message.success(`实体 "${entity.name_cn}" 已保存`)
     removeProposalsLocally([entity])
@@ -954,6 +976,11 @@ const saveEntityDirectly = async (record) => {
   record._confirmed = true
   try {
     const result = await domainFactoryApi.confirmProposedEntities(taskDetail.value.id, [record])
+    const rejectedMsg = confirmRejectedMessage(result)
+    if (rejectedMsg) {
+      message.warning(rejectedMsg)
+      return
+    }
     message.success(`实体 "${record.name_cn || record.entity_key}" 已保存`)
     if (result.remapped > 0) {
       message.info(`${result.remapped} 个待审核任务的 slot 已重新映射`)
@@ -970,13 +997,24 @@ const batchSaveEntities = async () => {
     const entities = selectedEntities.value.map((e) => ({ ...e, _confirmed: true }))
     const result = await domainFactoryApi.confirmProposedEntities(taskDetail.value.id, entities)
     message.success(`已保存 ${result.saved || 0} 个实体`)
+    const rejectedMsg = confirmRejectedMessage(result)
+    if (rejectedMsg) {
+      message.warning(rejectedMsg)
+    }
     if (result.remapped > 0) {
       message.info(`${result.remapped} 个待审核任务的 slot 已重新映射`)
     }
-    const saved = [...selectedEntities.value]
-    selectedEntities.value = []
-    removeProposalsLocally(saved)
-    stepCompleted.value.entities = true
+    // 只移除真正写入成功的提案，被拒的保留在列表中让用户修正后重试
+    const rejectedKeys = new Set((result.rejected || []).map((r) => r.key || ''))
+    const accepted = selectedEntities.value.filter(
+      (e) => !rejectedKeys.has(e.entity_key || e.target_entity_key || '')
+    )
+    if (accepted.length) {
+      const saved = [...accepted]
+      selectedEntities.value = []
+      removeProposalsLocally(saved)
+      stepCompleted.value.entities = true
+    }
   } catch {
     message.error('批量保存失败')
   }
@@ -1015,42 +1053,50 @@ watch(
     <Inbox :size="40" :stroke-width="1.2" class="empty-state-icon" />
     <span>请选择一个待校验的任务</span>
   </div>
-  <div v-else class="etl-workbench">
+  <div v-else class="ewp etl-workbench">
     <!-- ========== Header: 标题 + 步骤导航 + 状态栏 ========== -->
     <div class="workbench-header">
-      <div class="header-top">
-        <h3>ETL 清洗工作台</h3>
-        <a-space :size="12" class="header-status">
-          <a-tag v-if="domainLabel" color="blue">{{ domainLabel }}</a-tag>
-          <a-tag v-if="reportTypeLabel" color="green">{{ reportTypeLabel }}</a-tag>
+      <div class="ph-icon">
+        <ClipboardList :size="18" />
+      </div>
+      <div class="header-main">
+        <div class="header-top">
+          <h3>ETL 清洗工作台</h3>
+          <!-- 文件名随标题行展示（与 chip 行对调，用户裁定） -->
+          <span class="header-file" :title="taskDetail.file_name">
+            {{ taskDetail.file_name }}
+          </span>
+          <div class="flow-steps">
+            <div
+              v-for="(step, idx) in [
+                { key: 'parse', title: '段落分类审核' },
+                { key: 'entities', title: '领域实体确认' },
+                { key: 'commit', title: '入库确认' }
+              ]"
+              :key="step.key"
+              class="flow-step"
+              :class="{
+                active: activeTab === step.key,
+                done: stepCompleted[step.key],
+                clickable: idx <= currentStep + 1
+              }"
+              @click="idx <= currentStep + 1 && goToStep(idx)"
+            >
+              <span class="flow-step-num">{{ idx + 1 }}</span>
+              <span class="flow-step-title">{{ step.title }}</span>
+              <span v-if="idx < 2" class="flow-step-arrow">›</span>
+            </div>
+          </div>
+        </div>
+        <div class="header-meta">
+          <span v-if="domainLabel" class="pill pill-sm pill-main">{{ domainLabel }}</span>
+          <span v-if="reportTypeLabel" class="pill pill-sm pill-ok">{{ reportTypeLabel }}</span>
           <span class="status-item">AI 置信度: {{ taskDetail.ai_confidence || 0 }}%</span>
           <span class="status-item" v-if="reviewProgress.total > 0">
             审核: {{ reviewProgress.reviewed }}/{{ reviewProgress.total }}
           </span>
-        </a-space>
-        <div class="flow-steps">
-          <div
-            v-for="(step, idx) in [
-              { key: 'parse', title: '段落分类审核' },
-              { key: 'entities', title: '领域实体确认' },
-              { key: 'commit', title: '入库确认' }
-            ]"
-            :key="step.key"
-            class="flow-step"
-            :class="{
-              active: activeTab === step.key,
-              done: stepCompleted[step.key],
-              clickable: idx <= currentStep + 1
-            }"
-            @click="idx <= currentStep + 1 && goToStep(idx)"
-          >
-            <span class="flow-step-num">{{ idx + 1 }}</span>
-            <span class="flow-step-title">{{ step.title }}</span>
-            <span v-if="idx < 2" class="flow-step-arrow">›</span>
-          </div>
         </div>
       </div>
-      <p>{{ taskDetail.file_name }}</p>
     </div>
 
     <!-- ========== 流程内容面板 ========== -->
@@ -2022,11 +2068,15 @@ watch(
               </a-col>
               <a-col :span="8">
                 <a-form-item label="值类型">
+                  <!-- 值类型词表与实体构建器统一：String/Integer/Float/Boolean/Enum/Object/List -->
                   <a-select v-model:value="editingEntity.value_type" placeholder="选择类型">
                     <a-select-option value="String">String</a-select-option>
-                    <a-select-option value="Numeric">Numeric</a-select-option>
+                    <a-select-option value="Integer">Integer</a-select-option>
+                    <a-select-option value="Float">Float</a-select-option>
                     <a-select-option value="Boolean">Boolean</a-select-option>
-                    <a-select-option value="Date">Date</a-select-option>
+                    <a-select-option value="Enum">Enum</a-select-option>
+                    <a-select-option value="Object">Object</a-select-option>
+                    <a-select-option value="List">List</a-select-option>
                   </a-select>
                 </a-form-item>
               </a-col>
@@ -2185,20 +2235,84 @@ watch(
 
 <style lang="less" scoped>
 .etl-workbench {
-  margin: 10px;
+  /* EIA 容器：.ewp 自带 20/24/40 边距与 14px 正文字号；此处只管横向防溢出 */
   max-width: 100%;
   overflow-x: hidden;
   user-select: text;
 
+  /* a-card 对齐 EIA 卡片配方：1px gray-150 边框 + 8px 圆角 + 紧凑卡头 */
   :deep(.ant-card) {
     max-width: 100%;
     overflow: hidden;
+    border-color: var(--gray-150);
+    border-radius: 8px;
   }
+
+  :deep(.ant-card .ant-card-head) {
+    min-height: 40px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text);
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  /* a-button 对齐三档按钮配方（主/次/文本 + sm 密集档） */
+  :deep(.ant-btn) {
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  :deep(.ant-btn-sm) {
+    height: 26px;
+    padding: 0 9px;
+    font-size: 12px;
+  }
+
+  :deep(.ant-btn-default:not(.ant-btn-dangerous)) {
+    background: var(--gray-0);
+    border-color: var(--gray-200);
+    color: var(--color-text-secondary);
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--main-400);
+      color: var(--main-600);
+      background: var(--main-10, var(--main-50));
+    }
+  }
+
+  :deep(.ant-btn-primary:not(.ant-btn-dangerous)) {
+    background: var(--main-color);
+
+    &:not(:disabled):hover {
+      filter: brightness(1.08);
+    }
+  }
+
+  :deep(.ant-btn-text:not(.ant-btn-dangerous)) {
+    color: var(--main-600);
+
+    &:not(:disabled):hover {
+      background: var(--main-50);
+    }
+  }
+
+  :deep(.ant-btn-link:not(.ant-btn-dangerous)) {
+    color: var(--main-600);
+  }
+
   :deep(table) {
     max-width: 100%;
     table-layout: fixed;
     word-wrap: break-word;
   }
+}
+
+/* 主按钮暗色字色（配方 §5：实底主钮暗色用 #0a0a0a 字） */
+:root.dark .etl-workbench :deep(.ant-btn.ant-btn-primary:not(.ant-btn-dangerous)) {
+  color: #0a0a0a;
 }
 
 .loading-state,
@@ -2221,21 +2335,49 @@ watch(
 }
 
 .workbench-header {
+  /* page-head 配方：点阵底纹 + 左→右渐变扫白（EIA .page-head 同款，画布内独立卡片） */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
   background: var(--gray-0);
-  padding: 16px 20px 0;
-  border-radius: 12px 12px 0 0;
-  border: 1px solid var(--gray-150);
-  border-bottom: none;
+  background-image: radial-gradient(circle at 1px 1px, var(--main-200) 1px, transparent 0);
+  background-size: 22px 22px;
+  background-position: 6px 6px;
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, var(--gray-0) 0%, var(--gray-0) 55%, transparent 100%);
+    pointer-events: none;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+
   h3 {
     margin: 0;
-    font-size: 20px;
+    font-size: 16px;
     font-weight: 600;
+    line-height: 1.3;
   }
-  p {
-    margin: 4px 0 0;
-    color: var(--gray-500);
-    font-size: 13px;
-  }
+}
+
+:root.dark .etl-workbench .workbench-header {
+  background-image: radial-gradient(circle at 1px 1px, var(--main-100) 1px, transparent 0);
+}
+
+.header-main {
+  flex: 1;
+  min-width: 0;
 }
 .header-top {
   display: flex;
@@ -2243,12 +2385,26 @@ watch(
   gap: 16px;
 }
 
-.header-status {
-  flex-shrink: 0;
-  .status-item {
-    font-size: 13px;
-    color: var(--gray-600);
-  }
+/* 文件名贴标题右侧：13px 次要色，超长截断（完整名走 title 提示） */
+.header-file {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* chip/审核指标行：标题下方第二行 */
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-item {
+  font-size: 13px;
+  color: var(--color-text-secondary);
 }
 
 .flow-steps {
@@ -2256,6 +2412,7 @@ watch(
   align-items: center;
   gap: 0;
   margin-left: auto;
+  flex-shrink: 0;
 }
 .flow-step {
   display: flex;
@@ -2265,6 +2422,7 @@ watch(
   border-radius: 6px;
   font-size: 13px;
   color: var(--gray-500);
+  color: var(--color-text-tertiary);
   transition: all 0.2s;
   cursor: default;
   &.clickable {
@@ -2315,8 +2473,7 @@ watch(
   background: var(--gray-0);
   padding: 10px;
   border: 1px solid var(--gray-150);
-  border-top: none;
-  border-radius: 0 0 12px 12px;
+  border-radius: 8px;
   max-width: 100%;
   overflow: hidden;
 }
@@ -2337,7 +2494,7 @@ watch(
 
 .classify-filter-label {
   font-size: 13px;
-  color: var(--gray-600);
+  color: var(--color-text-secondary);
 }
 
 .classify-count {

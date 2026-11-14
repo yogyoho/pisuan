@@ -34,11 +34,76 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from typing import Any
 
 from neo4j import GraphDatabase as Neo4jDriver
 
 from yuxi.utils import hashstr, logger, normalize_chapter_key
+from yuxi.services.domain_factory_region import attribution_scope_key
+
+_RELATION_LABEL_RE = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
+
+
+def _sanitize_relation_label(raw: Any) -> str:
+    """把规则里的关系名规整成合法的 Neo4j 关系类型（大写 ASCII）。非法返回空。"""
+    label = re.sub(r"[^A-Za-z0-9_]", "_", str(raw or "").strip()).upper()
+    label = re.sub(r"_+", "_", label).strip("_")[:64]
+    if not label:
+        return ""
+    if label[0].isdigit():
+        label = f"R_{label}"
+    return label if _RELATION_LABEL_RE.match(label) else ""
+
+
+def _collect_paragraph_entity_values(slots: Any) -> dict[str, dict[str, Any]]:
+    """从段落模板的 slot 汇总 {entity_key: {prop_key: value}}。
+
+    entity_ref 形如 `entity_key.prop_key`；无点号时视为实体级实例，属性键记为 `*`。
+    """
+    instances: dict[str, dict[str, Any]] = {}
+    if not isinstance(slots, list):
+        return instances
+    for slot in slots:
+        if not isinstance(slot, dict):
+            continue
+        ref = str(slot.get("entity_ref") or "").strip()
+        if not ref:
+            continue
+        entity_key, _, prop_key = ref.rpartition(".")
+        if not entity_key:
+            entity_key, prop_key = ref, "*"
+        value = slot.get("value")
+        if value is None or (isinstance(value, str) and not value.strip()):
+            continue
+        instances.setdefault(entity_key, {})[prop_key] = value
+    return instances
+
+
+def _comparable(value: Any) -> Any:
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip()
+    try:
+        return float(text)
+    except ValueError:
+        return text
+
+
+def _condition_matches(condition: dict[str, Any], props: dict[str, Any]) -> bool:
+    """规则条件逐项比对：属性值相等，或列表属性包含期望值。缺值一律不命中。"""
+    if not condition:
+        return False
+    for prop_key, expected in condition.items():
+        actual = props.get(str(prop_key))
+        if actual is None:
+            return False
+        if isinstance(actual, list):
+            if not any(_comparable(item) == _comparable(expected) for item in actual):
+                return False
+        elif _comparable(actual) != _comparable(expected):
+            return False
+    return True
 
 
 def _derive_canonical_key(title: str) -> str:
@@ -67,6 +132,7 @@ def resolve_chapter_id(
     level: int,
     parent_resolved_id: str,
     std_index: dict[tuple[str, str, int], str],
+    attribution: str = "",
 ) -> str:
     """按聚合身份键解析 ChapterTemplate 节点 id（纯函数,std 索引由调用方预构建）。
 
@@ -75,10 +141,14 @@ def resolve_chapter_id(
     - 未命中 → CH_{domain}_{rt}_{level}_{hashstr(归一canonical + '|' + 父解析id)}
     同构章节树跨文档解析出相同 id → MERGE 幂等;不同父同名单独成点。
     """
-    std_id = std_index.get((norm_canonical, parent_resolved_id, level))
-    if std_id:
-        return std_id
-    return f"CH_{domain_code}_{report_type_code}_{level}_{hashstr(f'{norm_canonical}|{parent_resolved_id}', 10)}"
+    if not attribution:
+        std_id = std_index.get((norm_canonical, parent_resolved_id, level))
+        if std_id:
+            return std_id
+    identity = f"{norm_canonical}|{parent_resolved_id}"
+    if attribution:
+        identity = f"{identity}|{attribution}"
+    return f"CH_{domain_code}_{report_type_code}_{level}_{hashstr(identity, 10)}"
 
 
 class GraphBuilder:
@@ -117,6 +187,10 @@ class GraphBuilder:
         domain_code: str | None = None,
         report_type_code: str | None = None,
         document_key: str | None = None,
+        project_name: str | None = None,
+        region_key: str | None = None,
+        scope: str | None = None,
+        entity_rules: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """构建知识图谱
 
@@ -130,6 +204,10 @@ class GraphBuilder:
             domain_code: 领域编码（如 coal、chem）
             report_type_code: 报告类型编码（如 eia_report）
             document_key: 稳定文档身份（内容哈希）；缺省时按 source_paragraphs 推导
+            project_name: 项目归属；与 region/scope 一起构成图谱隔离身份
+            region_key: 区域归属键
+            scope: universal|regional|project
+            entity_rules: 实体关系推理规则，{entity_key: {name, category, rules}}
 
         Returns:
             构建结果统计
@@ -141,13 +219,24 @@ class GraphBuilder:
 
         stats = {"nodes_created": 0, "relationships_created": 0, "skipped": False}
         document_key = document_key or document_content_key(source_paragraphs)
+        attribution = attribution_scope_key(kb_id, region_key, scope, project_name)
 
         try:
             with driver.session() as session:
                 # 步骤1: 创建 Document 节点
                 doc_result = session.execute_write(
-                    self._create_document_node, kb_id, doc_id, doc_title,
-                    domain_label, domain_code, report_type_code, document_key,
+                    self._create_document_node,
+                    kb_id,
+                    doc_id,
+                    doc_title,
+                    domain_label,
+                    domain_code,
+                    report_type_code,
+                    document_key,
+                    project_name or "",
+                    region_key or "",
+                    scope or "",
+                    attribution,
                 )
                 stats["nodes_created"] += doc_result.get("nodes", 0)
                 stats["relationships_created"] += doc_result.get("relationships", 0)
@@ -155,14 +244,26 @@ class GraphBuilder:
                 # 步骤2: 构建 Section、ParagraphTemplate、Slot 节点和关系
                 structure_result = session.execute_write(
                     self._build_sections_and_templates,
-                    kb_id, doc_id, source_paragraphs, domain_code or "", report_type_code or "",
+                    kb_id,
+                    doc_id,
+                    source_paragraphs,
+                    domain_code or "",
+                    report_type_code or "",
+                    project_name or "",
+                    region_key or "",
+                    scope or "",
+                    attribution,
                 )
                 stats["nodes_created"] += structure_result.get("nodes", 0)
                 stats["relationships_created"] += structure_result.get("relationships", 0)
 
                 # 步骤3: 构建 EntitySchema 节点，将 Slot 的 entity_ref 关联到实体定义
                 entity_result = session.execute_write(
-                    self._build_entity_schema_nodes, kb_id, source_paragraphs, domain_code or ""
+                    self._build_entity_schema_nodes,
+                    kb_id,
+                    source_paragraphs,
+                    domain_code or "",
+                    attribution,
                 )
                 stats["nodes_created"] += entity_result.get("nodes", 0)
                 stats["relationships_created"] += entity_result.get("relationships", 0)
@@ -177,6 +278,7 @@ class GraphBuilder:
                     structure_result.get("section_map") or {},
                     domain_code or "",
                     report_type_code or "",
+                    attribution,
                 )
                 stats["nodes_created"] += legal_result.get("nodes", 0)
                 stats["relationships_created"] += legal_result.get("relationships", 0)
@@ -189,6 +291,10 @@ class GraphBuilder:
                     kb_id, doc_id, source_paragraphs,
                     structure_result.get("section_map") or {},
                     domain_code or "", report_type_code or "",
+                    project_name or "",
+                    region_key or "",
+                    scope or "",
+                    attribution,
                 )
                 stats["nodes_created"] += table_result.get("nodes", 0)
                 stats["relationships_created"] += table_result.get("relationships", 0)
@@ -199,6 +305,10 @@ class GraphBuilder:
                     kb_id, doc_id, source_paragraphs,
                     structure_result.get("section_map") or {},
                     domain_code or "", report_type_code or "",
+                    project_name or "",
+                    region_key or "",
+                    scope or "",
+                    attribution,
                 )
                 stats["nodes_created"] += formula_result.get("nodes", 0)
                 stats["relationships_created"] += formula_result.get("relationships", 0)
@@ -208,6 +318,7 @@ class GraphBuilder:
                     self._build_process_flow_nodes,
                     kb_id, doc_id, source_paragraphs,
                     structure_result.get("section_map") or {},
+                    attribution,
                 )
                 stats["nodes_created"] += flow_result.get("nodes", 0)
                 stats["relationships_created"] += flow_result.get("relationships", 0)
@@ -218,6 +329,10 @@ class GraphBuilder:
                         self._build_skeleton_aggregation,
                         kb_id, domain_code, report_type_code, doc_id, doc_title,
                         source_paragraphs, document_key,
+                        project_name or "",
+                        region_key or "",
+                        scope or "",
+                        attribution,
                     )
                     stats["nodes_created"] += skeleton_result.get("nodes", 0)
                     stats["relationships_created"] += skeleton_result.get("relationships", 0)
@@ -225,10 +340,27 @@ class GraphBuilder:
                 # 步骤9: 逻辑关系节点（CausalChain / ConditionRule / DataFlow）
                 # 从 task 的 logical_relations 字段读取（由 ETL pipeline 提取后传入）
                 logical_result = session.execute_write(
-                    self._build_logical_relationship_nodes, kb_id, source_paragraphs, base_info or {},
+                    self._build_logical_relationship_nodes,
+                    kb_id,
+                    source_paragraphs,
+                    base_info or {},
+                    attribution,
                 )
                 stats["nodes_created"] += logical_result.get("nodes", 0)
                 stats["relationships_created"] += logical_result.get("relationships", 0)
+
+                # 步骤10: 实体关系推理规则（实体构建器维护，按段落 slot 值求值后落边）
+                if entity_rules:
+                    rule_result = session.execute_write(
+                        self._build_entity_relation_rule_edges,
+                        kb_id,
+                        source_paragraphs,
+                        entity_rules,
+                        attribution,
+                    )
+                    stats["rule_edges_created"] = rule_result.get("edges", 0)
+                    stats["rule_matches"] = rule_result.get("matches", 0)
+                    stats["rule_skipped_actions"] = rule_result.get("skipped_actions", 0)
 
                 logger.info(
                     f"图谱构建完成: 文档 {doc_id}, 节点 {stats['nodes_created']}, 关系 {stats['relationships_created']}"
@@ -248,11 +380,12 @@ class GraphBuilder:
         section_map: dict[str, dict[str, Any]],
         domain_code: str = "",
         report_type_code: str = "",
+        attribution: str = "",
     ) -> dict:
         """在已存在的文档结构上重算 LegalReference/CITES（供存量治理脚本复用）。"""
         return session.execute_write(
             GraphBuilder._build_legal_reference_nodes,
-            kb_id, doc_id, source_paragraphs, section_map, domain_code, report_type_code,
+            kb_id, doc_id, source_paragraphs, section_map, domain_code, report_type_code, attribution,
         )
 
     # ------------------------------------------------------------------
@@ -263,6 +396,7 @@ class GraphBuilder:
     def _create_document_node(
         tx, kb_id, doc_id, doc_title, domain_label,
         domain_code=None, report_type_code=None, document_key=None,
+        project_name="", region_key="", scope="", attribution="",
     ) -> dict:
         tx.run(
             """
@@ -276,6 +410,10 @@ class GraphBuilder:
                 d.report_type_code = $report_type_code,
                 d.document_key = COALESCE($document_key, $doc_id),
                 d.kb_id = $kb_id,
+                d.project_name = $project_name,
+                d.region_key = $region_key,
+                d.scope = $scope,
+                d.attribution = $attribution,
                 d.score = 5,
                 d.created_at = datetime()
             ON MATCH SET
@@ -288,7 +426,11 @@ class GraphBuilder:
                     ELSE COALESCE(d.report_type_code, '')
                 END,
                 d.document_key = COALESCE(d.document_key, $document_key, $doc_id),
-                d.kb_id = COALESCE($kb_id, d.kb_id)
+                d.kb_id = COALESCE($kb_id, d.kb_id),
+                d.project_name = CASE WHEN $project_name <> '' THEN $project_name ELSE d.project_name END,
+                d.region_key = CASE WHEN $region_key <> '' THEN $region_key ELSE d.region_key END,
+                d.scope = CASE WHEN $scope <> '' THEN $scope ELSE d.scope END,
+                d.attribution = CASE WHEN $attribution <> '' THEN $attribution ELSE d.attribution END
             """,
             kb_id=kb_id,
             doc_id=doc_id,
@@ -297,6 +439,10 @@ class GraphBuilder:
             domain_code=domain_code or "",
             report_type_code=report_type_code or "",
             document_key=document_key or doc_id,
+            project_name=project_name,
+            region_key=region_key,
+            scope=scope,
+            attribution=attribution,
         )
         return {"nodes": 1, "relationships": 0}
 
@@ -308,6 +454,7 @@ class GraphBuilder:
     def _build_sections_and_templates(
         tx, kb_id: str, doc_id: str, source_paragraphs: list[dict[str, Any]],
         domain_code: str = "", report_type_code: str = "",
+        project_name: str = "", region_key: str = "", scope: str = "", attribution: str = "",
     ) -> dict:
         nodes_created = 0
         relationships_created = 0
@@ -357,10 +504,15 @@ class GraphBuilder:
                     s.section_path = $section_path,
                     s.section_path_str = $section_path_str,
                     s.kb_id = $kb_id,
+                    s.project_name = $project_name,
+                    s.region_key = $region_key,
+                    s.scope = $scope,
+                    s.attribution = $attribution,
                     s.created_at = datetime()
                 ON MATCH SET
                     s.title = COALESCE($title, s.title),
-                    s.level = COALESCE($level, s.level)
+                    s.level = COALESCE($level, s.level),
+                    s.attribution = CASE WHEN $attribution <> '' THEN $attribution ELSE s.attribution END
                 """,
                 section_id=section_id,
                 title=section_title,
@@ -368,6 +520,10 @@ class GraphBuilder:
                 section_path=json.dumps(section_path, ensure_ascii=False),
                 section_path_str=section_path_str,
                 kb_id=kb_id,
+                project_name=project_name,
+                region_key=region_key,
+                scope=scope,
+                attribution=attribution,
             )
             nodes_created += 1
             created_sections[section_id] = True
@@ -438,7 +594,7 @@ class GraphBuilder:
             if not generalized:
                 continue
 
-            template_id = _generate_template_id(template_data, chunk_id)
+            template_id = _generate_template_id(template_data, chunk_id, attribution)
             template_hash = hashstr(generalized, 12)
 
             if template_id not in created_templates:
@@ -456,6 +612,10 @@ class GraphBuilder:
                         pt.domain = $domain_code,
                         pt.report_type = $report_type_code,
                         pt.kb_id = $kb_id,
+                        pt.project_name = $project_name,
+                        pt.region_key = $region_key,
+                        pt.scope = $scope,
+                        pt.attribution = $attribution,
                         pt.created_at = datetime()
                     ON MATCH SET
                         pt.text_pattern = COALESCE($text_pattern, pt.text_pattern),
@@ -463,7 +623,8 @@ class GraphBuilder:
                         pt.classify_type = COALESCE($classify_type, pt.classify_type),
                         pt.domain = COALESCE(pt.domain, $domain_code),
                         pt.report_type = COALESCE(pt.report_type, $report_type_code),
-                        pt.canonical_chapter_key = COALESCE(pt.canonical_chapter_key, $canonical_key)
+                        pt.canonical_chapter_key = COALESCE(pt.canonical_chapter_key, $canonical_key),
+                        pt.attribution = CASE WHEN $attribution <> '' THEN $attribution ELSE pt.attribution END
                     """,
                     template_id=template_id,
                     text_pattern=generalized,
@@ -474,6 +635,10 @@ class GraphBuilder:
                     domain_code=domain_code,
                     report_type_code=report_type_code,
                     kb_id=kb_id,
+                    project_name=project_name,
+                    region_key=region_key,
+                    scope=scope,
+                    attribution=attribution,
                 )
                 nodes_created += 1
                 created_templates[template_id] = True
@@ -501,7 +666,16 @@ class GraphBuilder:
                 # 创建 Slot 节点
                 slots = template_data.get("slots", [])
                 if isinstance(slots, list):
-                    slot_stats = _create_slots_and_relationships(tx, template_id, slots, kb_id)
+                    slot_stats = _create_slots_and_relationships(
+                        tx,
+                        template_id,
+                        slots,
+                        kb_id,
+                        project_name,
+                        region_key,
+                        scope,
+                        attribution,
+                    )
                     nodes_created += slot_stats["nodes"]
                     relationships_created += slot_stats["relationships"]
 
@@ -550,7 +724,11 @@ class GraphBuilder:
 
     @staticmethod
     def _build_entity_schema_nodes(
-        tx, kb_id: str, source_paragraphs: list[dict[str, Any]], domain_code: str = "",
+        tx,
+        kb_id: str,
+        source_paragraphs: list[dict[str, Any]],
+        domain_code: str = "",
+        attribution: str = "",
     ) -> dict:
         """只为精确命中实体元数据的 Slot 建立 EntitySchema 与 CONSTRAINS。
 
@@ -592,6 +770,7 @@ class GraphBuilder:
                     slot.get("type", ""),
                     slot.get("unit", ""),
                     entity_ref,
+                    attribution,
                 )
                 entity_info = entity_meta.get(entity_ref)
                 if entity_info is None:
@@ -658,6 +837,116 @@ class GraphBuilder:
         }
 
     # ------------------------------------------------------------------
+    # 步骤10: 实体关系推理规则（relation_rules → 图谱边）
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _build_entity_relation_rule_edges(
+        tx,
+        kb_id: str,
+        source_paragraphs: list[dict[str, Any]],
+        entity_rules: dict[str, dict[str, Any]],
+        attribution: str = "",
+    ) -> dict:
+        """按实体 relation_rules 在段落模板上求值，命中后落一条证据边。
+
+        规则形态：{"rule_name", "condition": {prop_key: 期望值},
+                  "actions": [{"type": "create_edge", "relation": "CONFLICT_WITH", "target": "entity_key"}]}
+
+        条件在段落的 slot 值上求值（slot.entity_ref = entity_key.prop_key）；
+        命中后生成 (ParagraphTemplate)-[<relation>]->(EntitySchema 目标)，
+        边属性记录 rule_id/rule_name/source_entity/matched_props，便于回溯。
+        """
+        edges = 0
+        matches = 0
+        skipped_actions = 0
+        seen_edges: set[tuple[str, str, str]] = set()
+        ensured_targets: set[str] = set()
+
+        for para in source_paragraphs:
+            template_data = _normalize_template_data(para.get("template"))
+            if not template_data:
+                continue
+            generalized = template_data.get("generalized") or template_data.get("generalized_pattern") or ""
+            if not generalized:
+                continue
+
+            instances = _collect_paragraph_entity_values(template_data.get("slots"))
+            if not instances:
+                continue
+
+            template_id = _generate_template_id(template_data, para.get("id") or "", attribution)
+
+            for entity_key, props in instances.items():
+                rule_set = entity_rules.get(entity_key) or {}
+                for rule in rule_set.get("rules") or []:
+                    if not isinstance(rule, dict):
+                        continue
+                    condition = rule.get("condition")
+                    if not isinstance(condition, dict) or not _condition_matches(condition, props):
+                        continue
+                    matches += 1
+
+                    for action in rule.get("actions") or []:
+                        if not isinstance(action, dict) or action.get("type") != "create_edge":
+                            skipped_actions += 1
+                            continue
+                        relation = _sanitize_relation_label(action.get("relation"))
+                        target_key = str(action.get("target") or "").strip()
+                        if not relation or not target_key:
+                            skipped_actions += 1
+                            continue
+
+                        edge_key = (template_id, relation, target_key)
+                        if edge_key in seen_edges:
+                            continue
+                        seen_edges.add(edge_key)
+
+                        target_id = f"entity_{target_key}"
+                        if target_id not in ensured_targets:
+                            target_meta = entity_rules.get(target_key) or {}
+                            tx.run(
+                                """
+                                MERGE (e:EntitySchema {id: $entity_id})
+                                ON CREATE SET
+                                    e.entity_key = $entity_key,
+                                    e.name = $name,
+                                    e.category = $category,
+                                    e.metadata_source = 'relation_rule',
+                                    e.kb_id = $kb_id,
+                                    e.created_at = datetime()
+                                """,
+                                entity_id=target_id,
+                                entity_key=target_key,
+                                name=target_meta.get("name") or target_key,
+                                category=target_meta.get("category") or "",
+                                kb_id=kb_id,
+                            )
+                            ensured_targets.add(target_id)
+
+                        tx.run(
+                            f"""
+                            MATCH (pt:ParagraphTemplate {{id: $template_id}})
+                            MATCH (t:EntitySchema {{id: $target_id}})
+                            MERGE (pt)-[r:{relation}]->(t)
+                            ON CREATE SET r.created_at = datetime()
+                            SET r.rule_id = $rule_id,
+                                r.rule_name = $rule_name,
+                                r.source_entity = $source_entity,
+                                r.matched_props = $matched_props
+                            """,
+                            template_id=template_id,
+                            target_id=target_id,
+                            rule_id=str(rule.get("rule_id") or ""),
+                            rule_name=str(rule.get("rule_name") or ""),
+                            source_entity=entity_key,
+                            matched_props=json.dumps(condition, ensure_ascii=False),
+                        )
+                        edges += 1
+
+        return {"edges": edges, "matches": matches, "skipped_actions": skipped_actions}
+
+    # ------------------------------------------------------------------
     # 步骤4: LegalReference 节点（法律/法规/标准引用）
     # ------------------------------------------------------------------
 
@@ -670,6 +959,7 @@ class GraphBuilder:
         section_map: dict[str, dict[str, Any]] | None = None,
         domain_code: str = "",
         report_type_code: str = "",
+        attribution: str = "",
     ) -> dict:
         """创建 LegalReference，并按具体来源段落模板建立 CITES。
 
@@ -681,7 +971,7 @@ class GraphBuilder:
         if section_map is None:
             section_map = _section_id_map_from_paragraphs(source_paragraphs, doc_id)
 
-        plan = plan_legal_citations(source_paragraphs, doc_id, section_map)
+        plan = plan_legal_citations(source_paragraphs, doc_id, section_map, attribution)
         nodes_created = 0
         relationships_created = 0
         citations_created = 0
@@ -702,6 +992,7 @@ class GraphBuilder:
                     pt.domain = $domain_code,
                     pt.report_type = $report_type_code,
                     pt.kb_id = $kb_id,
+                    pt.attribution = $attribution,
                     pt.created_at = datetime()
                 ON MATCH SET
                     pt.text_pattern = $text_pattern,
@@ -710,7 +1001,8 @@ class GraphBuilder:
                     pt.source_only = true,
                     pt.domain = COALESCE(pt.domain, $domain_code),
                     pt.report_type = COALESCE(pt.report_type, $report_type_code),
-                    pt.kb_id = $kb_id
+                    pt.kb_id = $kb_id,
+                    pt.attribution = CASE WHEN $attribution <> '' THEN $attribution ELSE pt.attribution END
                 MERGE (s)-[r:COMPOSED_OF]->(pt)
                 ON CREATE SET r.order = $order
                 """,
@@ -722,6 +1014,7 @@ class GraphBuilder:
                 domain_code=domain_code,
                 report_type_code=report_type_code,
                 kb_id=kb_id,
+                attribution=attribution,
                 order=source["order"],
             )
             counters = result.consume().counters
@@ -814,6 +1107,10 @@ class GraphBuilder:
         section_map: dict[str, dict[str, Any]] | None = None,
         domain_code: str = "",
         report_type_code: str = "",
+        project_name: str = "",
+        region_key: str = "",
+        scope: str = "",
+        attribution: str = "",
     ) -> dict:
         """创建 TableSchema，并同时挂到精确 Section 与具体来源段落模板。"""
         if section_map is None:
@@ -854,11 +1151,12 @@ class GraphBuilder:
                 position,
                 domain_code,
                 report_type_code,
+                attribution,
             )
             if not template_id:
                 continue
 
-            schema_id = f"TBL_{hashstr(f'{schema_name}_{table_type}', 12)}"
+            schema_id = f"TBL_{hashstr(f'{schema_name}_{table_type}|{attribution}', 12)}"
             result = tx.run(
                 """
                 MERGE (ts:TableSchema {id: $schema_id})
@@ -868,6 +1166,10 @@ class GraphBuilder:
                     ts.table_type = $table_type,
                     ts.columns = $columns,
                     ts.kb_id = $kb_id,
+                    ts.project_name = $project_name,
+                    ts.region_key = $region_key,
+                    ts.scope = $scope,
+                    ts.attribution = $attribution,
                     ts.created_at = datetime()
                 ON MATCH SET
                     ts.name = COALESCE($name, ts.name),
@@ -885,6 +1187,10 @@ class GraphBuilder:
                 template_id=template_id,
                 section_id=section_id,
                 kb_id=kb_id,
+                project_name=project_name,
+                region_key=region_key,
+                scope=scope,
+                attribution=attribution,
             )
             counters = result.consume().counters
             nodes_created += counters.nodes_created
@@ -901,6 +1207,7 @@ class GraphBuilder:
         tx, kb_id: str, domain_code: str, report_type_code: str,
         doc_id: str, doc_title: str, source_paragraphs: list[dict[str, Any]],
         document_key: str | None = None,
+        project_name: str = "", region_key: str = "", scope: str = "", attribution: str = "",
     ) -> dict:
         """跨文档骨架聚合：创建 DomainOutline / ChapterTemplate / ParagraphRole 节点。
 
@@ -934,6 +1241,8 @@ class GraphBuilder:
 
         # 1. DomainOutline 节点
         outline_id = f"OUTLINE_{domain_code}_{report_type_code}"
+        if attribution:
+            outline_id = f"{outline_id}_{attribution}"
         tx.run(
             """
             MERGE (dol:DomainOutline {id: $outline_id})
@@ -943,14 +1252,23 @@ class GraphBuilder:
                 dol.report_type = $report_type_code,
                 dol.source_count = 0,
                 dol.last_updated = datetime(),
-                dol.kb_id = $kb_id
+                dol.kb_id = $kb_id,
+                dol.project_name = $project_name,
+                dol.region_key = $region_key,
+                dol.scope = $scope,
+                dol.attribution = $attribution
             ON MATCH SET
-                dol.last_updated = datetime()
+                dol.last_updated = datetime(),
+                dol.attribution = CASE WHEN $attribution <> '' THEN $attribution ELSE dol.attribution END
             """,
             outline_id=outline_id,
             domain_code=domain_code,
             report_type_code=report_type_code,
             kb_id=kb_id,
+            project_name=project_name,
+            region_key=region_key,
+            scope=scope,
+            attribution=attribution,
         )
         nodes_created += 1
 
@@ -1036,7 +1354,13 @@ class GraphBuilder:
 
             # 身份键解析：先复用 std，未命中落聚合键 id；回写映射供子章节 HAS_CHILD 与段落角色挂载
             chapter_id = resolve_chapter_id(
-                domain_code, report_type_code, ch_info["canonical_key"], level, parent_resolved_id, std_index
+                domain_code,
+                report_type_code,
+                ch_info["canonical_key"],
+                level,
+                parent_resolved_id,
+                std_index,
+                attribution,
             )
             is_std_reuse = chapter_id.startswith(f"CH_{domain_code}_{report_type_code}_std_")
             chapter_map[sp_str]["chapter_id"] = chapter_id
@@ -1057,6 +1381,10 @@ class GraphBuilder:
                         ch.domain = $domain_code,
                         ch.report_type = $report_type_code,
                         ch.kb_id = $kb_id,
+                        ch.project_name = $project_name,
+                        ch.region_key = $region_key,
+                        ch.scope = $scope,
+                        ch.attribution = $attribution,
                         ch.created_at = datetime()
                     ON MATCH SET
                         ch.canonical_chapter_key = COALESCE(ch.canonical_chapter_key, $canonical_key),
@@ -1074,6 +1402,10 @@ class GraphBuilder:
                     domain_code=domain_code,
                     report_type_code=report_type_code,
                     kb_id=kb_id,
+                    project_name=project_name,
+                    region_key=region_key,
+                    scope=scope,
+                    attribution=attribution,
                 )
             nodes_created += 1
 
@@ -1175,7 +1507,7 @@ class GraphBuilder:
             if not role_name:
                 role_name = f"参数描述_{para_order}"
 
-            role_id = f"ROLE_{hashstr(f'{target_ch_id}_{role_name}', 10)}"
+            role_id = f"ROLE_{hashstr(f'{target_ch_id}_{role_name}|{attribution}', 10)}"
             para_order += 1
 
             required_slots = [s.get("name", "") for s in slots if isinstance(s, dict) and s.get("name")]
@@ -1191,6 +1523,10 @@ class GraphBuilder:
                     pr.contains_data = true,
                     pr.required_slots = $required_slots,
                     pr.kb_id = $kb_id,
+                    pr.project_name = $project_name,
+                    pr.region_key = $region_key,
+                    pr.scope = $scope,
+                    pr.attribution = $attribution,
                     pr.created_at = datetime()
                 """,
                 role_id=role_id,
@@ -1199,6 +1535,10 @@ class GraphBuilder:
                 typical_length=f"{len(para.get('content', ''))}字",
                 required_slots=json.dumps(required_slots, ensure_ascii=False),
                 kb_id=kb_id,
+                project_name=project_name,
+                region_key=region_key,
+                scope=scope,
+                attribution=attribution,
             )
             nodes_created += 1
 
@@ -1219,7 +1559,7 @@ class GraphBuilder:
             # ParagraphRole -[REALIZED_BY {confidence, frequency}]-> ParagraphTemplate
             template_data = _normalize_template_data(template)
             if template_data and template_data.get("generalized"):
-                template_id = _generate_template_id(template_data, para.get("id", ""))
+                template_id = _generate_template_id(template_data, para.get("id", ""), attribution)
                 quality_score = template.get("quality_score", 0.5)
                 tx.run(
                     """
@@ -1254,7 +1594,11 @@ class GraphBuilder:
 
     @staticmethod
     def _build_logical_relationship_nodes(
-        tx, kb_id: str, source_paragraphs: list[dict[str, Any]], base_info: dict,
+        tx,
+        kb_id: str,
+        source_paragraphs: list[dict[str, Any]],
+        base_info: dict,
+        attribution: str = "",
     ) -> dict:
         """从段落的 logical_relations 元数据创建逻辑关系节点。
 
@@ -1298,7 +1642,7 @@ class GraphBuilder:
             if not cause_id or not effect_id:
                 continue
 
-            chain_id = f"CAUSAL_{hashstr(f'{cause_id}_{effect_id}', 10)}"
+            chain_id = f"CAUSAL_{hashstr(f'{cause_id}_{effect_id}|{attribution}', 10)}"
             tx.run(
                 """
                 MERGE (cc:CausalChain {id: $chain_id})
@@ -1306,18 +1650,20 @@ class GraphBuilder:
                     cc.id = $chain_id,
                     cc.relation = $relation,
                     cc.kb_id = $kb_id,
+                    cc.attribution = $attribution,
                     cc.created_at = datetime()
                 """,
                 chain_id=chain_id,
                 relation=relation,
                 kb_id=kb_id,
+                attribution=attribution,
             )
             nodes_created += 1
 
             # ParagraphTemplate -[CAUSES]-> CausalChain -> ParagraphTemplate
             # Build para_id -> template_id mapping from source_paragraphs
-            cause_template_id = _find_template_id_for_para(cause_id, source_paragraphs)
-            effect_template_id = _find_template_id_for_para(effect_id, source_paragraphs)
+            cause_template_id = _find_template_id_for_para(cause_id, source_paragraphs, attribution)
+            effect_template_id = _find_template_id_for_para(effect_id, source_paragraphs, attribution)
             if cause_template_id:
                 tx.run(
                     """
@@ -1348,7 +1694,7 @@ class GraphBuilder:
             if not expression:
                 continue
 
-            cond_id = f"COND_{hashstr(f'{expression}_{consequence}', 10)}"
+            cond_id = f"COND_{hashstr(f'{expression}_{consequence}|{attribution}', 10)}"
             tx.run(
                 """
                 MERGE (cr:ConditionRule {id: $cond_id})
@@ -1359,14 +1705,17 @@ class GraphBuilder:
                     cr.source = 'learned',
                     cr.frequency = 1,
                     cr.kb_id = $kb_id,
+                    cr.attribution = $attribution,
                     cr.created_at = datetime()
                 ON MATCH SET
-                    cr.frequency = cr.frequency + 1
+                    cr.frequency = cr.frequency + 1,
+                    cr.attribution = CASE WHEN $attribution <> '' THEN $attribution ELSE cr.attribution END
                 """,
                 cond_id=cond_id,
                 expression=expression,
                 consequence=consequence,
                 kb_id=kb_id,
+                attribution=attribution,
             )
             nodes_created += 1
 
@@ -1401,7 +1750,7 @@ class GraphBuilder:
             if not para_id:
                 continue
 
-            flow_id = f"DFLOW_{hashstr(f'{para_id}_{source}', 10)}"
+            flow_id = f"DFLOW_{hashstr(f'{para_id}_{source}|{attribution}', 10)}"
             tx.run(
                 """
                 MERGE (df:DataFlow {id: $flow_id})
@@ -1410,6 +1759,7 @@ class GraphBuilder:
                     df.source = $source,
                     df.data_fields = $data_fields,
                     df.kb_id = $kb_id,
+                    df.attribution = $attribution,
                     df.created_at = datetime()
                 """,
                 flow_id=flow_id,
@@ -1420,6 +1770,7 @@ class GraphBuilder:
                     else str(data_fields)
                 ),
                 kb_id=kb_id,
+                attribution=attribution,
             )
             nodes_created += 1
 
@@ -1429,13 +1780,14 @@ class GraphBuilder:
                     """
                     MATCH (df:DataFlow {id: $flow_id})
                     MATCH (ts:TableSchema)
-                    WHERE ts.kb_id = $kb_id
+                    WHERE ts.kb_id = $kb_id AND ts.attribution = $attribution
                     WITH df, ts
                     LIMIT 1
                     MERGE (df)-[:SOURCED_FROM]->(ts)
                     """,
                     flow_id=flow_id,
                     kb_id=kb_id,
+                    attribution=attribution,
                 )
                 relationships_created += 1
 
@@ -1454,6 +1806,10 @@ class GraphBuilder:
         section_map: dict[str, dict[str, Any]] | None = None,
         domain_code: str = "",
         report_type_code: str = "",
+        project_name: str = "",
+        region_key: str = "",
+        scope: str = "",
+        attribution: str = "",
     ) -> dict:
         """创建 FormulaTemplate、USES_VARIABLE，并挂到精确 Section 与来源段落模板。"""
         from yuxi.services.entity_meta_service import EntityMetaLoader
@@ -1479,7 +1835,7 @@ class GraphBuilder:
             purpose = formula_data.get("purpose", "通用计算")
             fmt = formula_data.get("format", "text")
             variables = formula_data.get("variables", [])
-            formula_id = f"FORMULA_{hashstr(original[:200], 12)}"
+            formula_id = f"FORMULA_{hashstr(f'{original[:200]}|{attribution}', 12)}"
 
             section_path = para.get("section_path") or para.get("path") or []
             section_id = _find_target_section(section_path, section_map)
@@ -1495,6 +1851,7 @@ class GraphBuilder:
                 position,
                 domain_code,
                 report_type_code,
+                attribution,
             )
             if not template_id:
                 continue
@@ -1508,6 +1865,10 @@ class GraphBuilder:
                     f.format = $format,
                     f.purpose = $purpose,
                     f.kb_id = $kb_id,
+                    f.project_name = $project_name,
+                    f.region_key = $region_key,
+                    f.scope = $scope,
+                    f.attribution = $attribution,
                     f.created_at = datetime()
                 ON MATCH SET
                     f.purpose = COALESCE($purpose, f.purpose)
@@ -1524,6 +1885,10 @@ class GraphBuilder:
                 template_id=template_id,
                 section_id=section_id,
                 kb_id=kb_id,
+                project_name=project_name,
+                region_key=region_key,
+                scope=scope,
+                attribution=attribution,
             )
             counters = result.consume().counters
             nodes_created += counters.nodes_created
@@ -1543,7 +1908,7 @@ class GraphBuilder:
                 if entity_ref and entity_ref not in entity_meta:
                     unresolved_entity_ref = entity_ref
                     entity_ref = ""
-                slot_id = _generate_slot_id(var_name, var_type, var_unit, entity_ref)
+                slot_id = _generate_slot_id(var_name, var_type, var_unit, entity_ref, attribution)
                 slot_result = tx.run(
                     """
                     MERGE (s:Slot {id: $slot_id})
@@ -1603,6 +1968,7 @@ class GraphBuilder:
         doc_id: str,
         source_paragraphs: list[dict[str, Any]],
         section_map: dict[str, dict[str, Any]] | None = None,
+        attribution: str = "",
     ) -> dict:
         """为 figure 类型段落中的多模态提取结果创建 ProcessFlow / ProcessStep 节点。"""
         if section_map is None:
@@ -1628,7 +1994,7 @@ class GraphBuilder:
             if figure_type != "process_flow" or not steps:
                 continue
 
-            flow_id = f"FLOW_{hashstr(caption[:200], 12)}"
+            flow_id = f"FLOW_{hashstr(f'{caption[:200]}|{attribution}', 12)}"
             if flow_id not in created_flows:
                 tx.run(
                     """
@@ -1638,12 +2004,14 @@ class GraphBuilder:
                         pf.name = $caption,
                         pf.figure_type = $figure_type,
                         pf.kb_id = $kb_id,
+                        pf.attribution = $attribution,
                         pf.created_at = datetime()
                     """,
                     flow_id=flow_id,
                     caption=caption,
                     figure_type=figure_type,
                     kb_id=kb_id,
+                    attribution=attribution,
                 )
                 nodes_created += 1
                 created_flows[flow_id] = True
@@ -1742,13 +2110,15 @@ class GraphBuilder:
 # ======================================================================
 
 
-def _find_template_id_for_para(para_id: str, source_paragraphs: list[dict[str, Any]]) -> str | None:
+def _find_template_id_for_para(
+    para_id: str, source_paragraphs: list[dict[str, Any]], attribution: str = ""
+) -> str | None:
     """从 source_paragraphs 中找到段落的 template_id"""
     for para in source_paragraphs:
         if para.get("id") == para_id:
             template_data = _normalize_template_data(para.get("template"))
             if template_data and template_data.get("generalized"):
-                return _generate_template_id(template_data, para_id)
+                return _generate_template_id(template_data, para_id, attribution)
     return None
 
 
@@ -1761,16 +2131,18 @@ def _generate_section_id(section_path: list, doc_id: str) -> str:
     return f"sec_{doc_id}_{path_hash}"
 
 
-def _generate_template_id(template_data: dict, chunk_id: str) -> str:
+def _generate_template_id(template_data: dict, chunk_id: str, attribution: str = "") -> str:
     """自动生成模板 ID（基于内容哈希，支持去重）"""
     existing_id = template_data.get("template_id")
     if existing_id:
-        return existing_id
+        return f"{existing_id}_{attribution}" if attribution else existing_id
 
     generalized = template_data.get("generalized") or template_data.get("generalized_pattern") or ""
     slots = template_data.get("slots") or []
     slot_names = [s.get("name", "") for s in slots if isinstance(s, dict)]
     combined = f"{generalized}|{','.join(sorted(slot_names))}"
+    if attribution:
+        combined = f"{combined}|{attribution}"
     hash_value = hashstr(combined, 12)
     return f"TPL_PARA_{hash_value}"
 
@@ -1786,6 +2158,7 @@ def _generate_slot_id(
     slot_type: str = "",
     unit: str = "",
     entity_ref: str = "",
+    attribution: str = "",
 ) -> str:
     """按名称、类型、单位和实体引用生成插槽语义 ID。"""
     name = str(slot_name or "").strip()
@@ -1796,6 +2169,7 @@ def _generate_slot_id(
         "type": str(slot_type or "").strip(),
         "unit": str(unit or "").strip(),
         "entity_ref": str(entity_ref or "").strip(),
+        "attribution": attribution,
     }
     digest = hashstr(json.dumps(signature, ensure_ascii=False, sort_keys=True), 12)
     return f"SLOT_{digest}"
@@ -1854,6 +2228,7 @@ def _ensure_paragraph_template(
     order: int,
     domain_code: str,
     report_type_code: str,
+    attribution: str = "",
 ) -> str:
     """确保表格/公式段落有来源模板，并精确挂到当前文档 Section。"""
     template_data = _normalize_template_data(para.get("template"))
@@ -1865,7 +2240,7 @@ def _ensure_paragraph_template(
     classify_type = str(para.get("classify_type") or "").strip()
 
     if generalized:
-        template_id = _generate_template_id(template_data, source_para_id)
+        template_id = _generate_template_id(template_data, source_para_id, attribution)
         text_pattern = generalized
         source_only = False
     else:
@@ -1889,6 +2264,7 @@ def _ensure_paragraph_template(
             pt.domain = $domain_code,
             pt.report_type = $report_type_code,
             pt.kb_id = $kb_id,
+            pt.attribution = $attribution,
             pt.created_at = datetime()
         ON MATCH SET
             pt.text_pattern = COALESCE(pt.text_pattern, $text_pattern),
@@ -1896,7 +2272,8 @@ def _ensure_paragraph_template(
             pt.source_only = COALESCE(pt.source_only, $source_only),
             pt.domain = COALESCE(pt.domain, $domain_code),
             pt.report_type = COALESCE(pt.report_type, $report_type_code),
-            pt.kb_id = COALESCE(pt.kb_id, $kb_id)
+            pt.kb_id = COALESCE(pt.kb_id, $kb_id),
+            pt.attribution = CASE WHEN $attribution <> '' THEN $attribution ELSE pt.attribution END
         MERGE (s)-[r:COMPOSED_OF]->(pt)
         ON CREATE SET r.order = $order
         """,
@@ -1910,12 +2287,22 @@ def _ensure_paragraph_template(
         domain_code=domain_code,
         report_type_code=report_type_code,
         kb_id=kb_id,
+        attribution=attribution,
         order=order,
     )
     return template_id
 
 
-def _create_slots_and_relationships(tx, template_id: str, slots: list[dict], kb_id: str) -> dict:
+def _create_slots_and_relationships(
+    tx,
+    template_id: str,
+    slots: list[dict],
+    kb_id: str,
+    project_name: str = "",
+    region_key: str = "",
+    scope: str = "",
+    attribution: str = "",
+) -> dict:
     """创建 Slot 节点并建立关系
 
     如果插槽包含 entity_ref 字段（由 SlotEntityMapper 注入），
@@ -1935,7 +2322,7 @@ def _create_slots_and_relationships(tx, template_id: str, slots: list[dict], kb_
         unit = str(slot.get("unit") or "").strip()
         entity_ref = str(slot.get("entity_ref") or "").strip()
         unresolved_entity_ref = str(slot.get("unresolved_entity_ref") or "").strip()
-        slot_id = _generate_slot_id(slot_name, slot_type, unit, entity_ref)
+        slot_id = _generate_slot_id(slot_name, slot_type, unit, entity_ref, attribution)
         if not slot_id:
             continue
 
@@ -1954,6 +2341,10 @@ def _create_slots_and_relationships(tx, template_id: str, slots: list[dict], kb_
                 s.unresolved_entity_ref = $unresolved_entity_ref,
                 s.signature_version = 2,
                 s.kb_id = $kb_id,
+                s.project_name = $project_name,
+                s.region_key = $region_key,
+                s.scope = $scope,
+                s.attribution = $attribution,
                 s.created_at = datetime()
             ON MATCH SET
                 s.description = COALESCE($description, s.description),
@@ -1965,7 +2356,8 @@ def _create_slots_and_relationships(tx, template_id: str, slots: list[dict], kb_
                     WHEN $unresolved_entity_ref <> '' THEN $unresolved_entity_ref
                     ELSE s.unresolved_entity_ref
                 END,
-                s.signature_version = 2
+                s.signature_version = 2,
+                s.attribution = CASE WHEN $attribution <> '' THEN $attribution ELSE s.attribution END
             """,
             slot_id=slot_id,
             slot_name=slot_name,
@@ -1976,6 +2368,10 @@ def _create_slots_and_relationships(tx, template_id: str, slots: list[dict], kb_
             entity_ref=entity_ref,
             unresolved_entity_ref=unresolved_entity_ref,
             kb_id=kb_id,
+            project_name=project_name,
+            region_key=region_key,
+            scope=scope,
+            attribution=attribution,
         )
         nodes_created += 1
 
@@ -2027,6 +2423,7 @@ def plan_legal_citations(
     source_paragraphs: list[dict[str, Any]],
     doc_id: str,
     section_map: dict[str, dict[str, Any]],
+    attribution: str = "",
 ) -> dict[str, Any]:
     """计算来源段落模板与法规引用之间的 CITES 边（纯函数，不访问数据库）。
 
@@ -2088,7 +2485,7 @@ def plan_legal_citations(
                 continue
 
             if generalized:
-                template_id = _generate_template_id(source_template, source_para_id)
+                template_id = _generate_template_id(source_template, source_para_id, attribution)
             else:
                 template_id = generate_source_template_id(doc_id, source_para_id)
                 templates.setdefault(

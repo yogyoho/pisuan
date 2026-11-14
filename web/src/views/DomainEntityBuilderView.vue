@@ -1,33 +1,21 @@
 <template>
-  <div class="domain-entity-builder-view">
-    <div class="page-header">
-      <div>
-        <div class="header-title-row">
-          <a-button type="text" @click="handleBack" class="back-btn">
-            <template #icon><ArrowLeft :size="14" /></template>
-            返回
-          </a-button>
-          <h2>领域实体构建器</h2>
-        </div>
-        <p class="subtitle">管理通用域层级分类体系和实体Schema定义，统一实体归属与提取口径</p>
+  <div class="ewp domain-entity-builder-view">
+    <!-- 页头（EIA page-head 配方）：唯一主操作「新建实体」，其余降级次/文本钮 -->
+    <div class="page-head">
+      <div class="ph-icon">
+        <Box :size="18" />
       </div>
-      <div class="header-actions">
-        <a-button type="default" @click="handleExport">
-          <template #icon><Download :size="14" /></template>
-          导出
-        </a-button>
-        <a-button type="default" @click="handleImport">
-          <template #icon><Upload :size="14" /></template>
-          导入
-        </a-button>
-        <a-button type="primary" @click="handleCreateEntity">
-          <template #icon><Plus :size="14" /></template>
-          新建实体
-        </a-button>
-        <a-button type="primary" @click="handleOpenExtract">
-          <template #icon><Bot :size="14" /></template>
-          AI 提取
-        </a-button>
+      <div>
+        <h2>领域实体构建器</h2>
+        <div class="ph-sub">管理通用域层级分类体系和实体 Schema 定义，统一实体归属与提取口径</div>
+      </div>
+      <div class="ph-actions">
+        <button class="btn btn-sec" @click="handleExport"><Download :size="14" /> 导出</button>
+        <button class="btn btn-sec" @click="handleImport"><Upload :size="14" /> 导入</button>
+        <button class="btn btn-sec" @click="handleOpenExtract"><Bot :size="14" /> AI 提取</button>
+        <button class="btn btn-pri" @click="handleCreateEntity">
+          <Plus :size="14" /> 新建实体
+        </button>
       </div>
     </div>
 
@@ -221,6 +209,12 @@
 
           <!-- 关系推理规则 -->
           <a-card title="图谱关系推理规则" class="editor-section">
+            <div class="rule-hint">
+              规则在文档入库阶段求值：<code>condition</code> 的键是本实体的属性 key，按段落 slot
+              值逐项比对； 全部命中后，按 <code>actions</code> 生成
+              <code>（段落模板）-[关系]-&gt;（目标实体）</code> 图谱边，<code>target</code> 填目标
+              entity_key。
+            </div>
             <div
               v-for="(rule, index) in editingEntity.relation_rules"
               :key="index"
@@ -497,17 +491,12 @@
       <!-- Step 2: Comparison & Import -->
       <div v-if="extractStep === 1">
         <div class="extract-results-header">
-          <a-space>
-            <a-tag color="blue">提取 {{ extractComparison.length }} 个实体</a-tag>
-            <a-tag color="green"
-              >{{ extractComparison.filter((e) => e._status === 'matched').length }} 匹配</a-tag
-            >
-            <a-tag color="orange"
-              >{{ extractComparison.filter((e) => e._status === 'different').length }} 有变化</a-tag
-            >
-            <a-tag color="purple"
-              >{{ extractComparison.filter((e) => e._status === 'new').length }} 新增</a-tag
-            >
+          <a-space wrap>
+            <a-tag color="blue">提取 {{ extractComparison.length }} 条</a-tag>
+            <a-tag color="green">{{ countByStatus('matched') }} 已一致</a-tag>
+            <a-tag color="orange">{{ countByStatus('partial') }} 可补属性</a-tag>
+            <a-tag color="purple">{{ countByStatus('new') }} 新建提案</a-tag>
+            <a-tag v-if="invalidCount" color="red">{{ invalidCount }} 不可导入</a-tag>
           </a-space>
           <a-space>
             <a-button size="small" @click="handleSelectAllNew" :disabled="importableCount === 0"
@@ -520,6 +509,21 @@
             >
           </a-space>
         </div>
+
+        <a-alert
+          v-if="extractCoverage?.truncated"
+          type="warning"
+          show-icon
+          class="extract-coverage"
+          :message="`仅扫描前 ${extractCoverage.scanned_chars} 字符（全文 ${extractCoverage.content_chars} 字符），超出部分未参与提取`"
+        />
+        <a-alert
+          type="info"
+          show-icon
+          class="extract-coverage"
+          :message="`默认勾选：有原文证据、置信度 ≥ ${(extractConfidenceThreshold * 100).toFixed(0)}% 且通过校验的条目；提取结果只用于补全 Schema，实例值不入库`"
+        />
+
         <div v-if="extractComparison.length === 0" class="extract-empty">
           <a-empty description="未提取到实体对象" />
         </div>
@@ -534,41 +538,65 @@
               <a-checkbox
                 v-if="item._status !== 'matched'"
                 v-model:checked="extractSelected[idx]"
+                :disabled="!isImportable(item)"
                 class="extract-check"
               />
               <template v-else><span class="extract-check-placeholder" /></template>
               <span class="extract-result-name">{{ item.name_cn || item.schema_ref }}</span>
-              <a-space size="4">
-                <a-tag v-if="item._status === 'new'" color="purple">新增</a-tag>
-                <a-tag v-if="item._status === 'matched'" color="green">已匹配</a-tag>
-                <a-tag v-if="item._status === 'different'" color="orange">有变化</a-tag>
+              <a-space size="4" wrap>
+                <a-tag v-if="item._status === 'new'" color="purple">新建提案</a-tag>
+                <a-tag v-if="item._status === 'matched'" color="green">已一致</a-tag>
+                <a-tag v-if="item._status === 'partial'" color="orange">
+                  补 {{ item._diff.add_properties.length }} 个属性
+                </a-tag>
+                <a-tag v-if="!item.grounded" color="red">原文未命中</a-tag>
                 <a-tag
                   :color="
-                    item.confidence >= 0.8 ? 'green' : item.confidence >= 0.5 ? 'orange' : 'red'
+                    item.confidence >= 0.8 ? 'green' : item.confidence >= 0.6 ? 'orange' : 'red'
                   "
                 >
-                  {{ (item.confidence * 100).toFixed(0) }}%
+                  {{ ((item.confidence || 0) * 100).toFixed(0) }}%
                 </a-tag>
-                <a-tag>{{ item.schema_ref }}</a-tag>
+                <a-tag>{{ item.schema_ref || '(提案)' }}</a-tag>
               </a-space>
             </div>
 
-            <!-- 差异对比 -->
-            <div v-if="item._diff && Object.keys(item._diff).length" class="extract-diff">
-              <div class="diff-title">字段变更对比：</div>
-              <div v-for="(diff, field) in item._diff" :key="field" class="diff-row">
-                <span class="diff-field">{{ field }}</span>
-                <span class="diff-old">{{ diff.existing ?? '(无)' }}</span>
-                <span class="diff-arrow">→</span>
-                <span class="diff-new">{{ diff.extracted ?? '(无)' }}</span>
+            <!-- 新建提案的问题说明 -->
+            <div v-if="item._proposed_entity?.problems?.length" class="extract-problems">
+              <div v-for="(p, i) in item._proposed_entity.problems" :key="i">• {{ p }}</div>
+            </div>
+
+            <!-- 建议补充的属性 -->
+            <div v-if="item._diff?.add_properties?.length" class="extract-diff">
+              <div class="diff-title">建议补充的属性定义：</div>
+              <div v-for="prop in item._diff.add_properties" :key="prop.key" class="diff-row">
+                <span class="diff-field">{{ prop.name_cn }} ({{ prop.key }})</span>
+                <span class="diff-new">{{ prop.value_type }}</span>
+                <span class="diff-old">示例：{{ prop.sample_value }}</span>
+              </div>
+            </div>
+
+            <!-- 新建提案的实体信息 -->
+            <div v-else-if="item._status === 'new'" class="extract-diff">
+              <div class="diff-title">新建实体提案：</div>
+              <div class="diff-row">
+                <span class="diff-field">{{ item._proposed_entity?.entity_key }}</span>
+                <span class="diff-new">{{ item._proposed_entity?.category }}</span>
+                <span class="diff-old">
+                  {{ item._proposed_entity?.properties?.length || 0 }} 个属性
+                </span>
               </div>
             </div>
             <div v-else-if="item._status === 'matched'" class="extract-matched-hint">
-              与已有实体完全一致，无需导入
+              属性已全部覆盖，无需写入
             </div>
 
-            <div v-if="item.extracted_text" class="extract-result-text">
-              <strong>原文：</strong>{{ item.extracted_text }}
+            <div
+              v-if="item.extracted_text"
+              :class="['extract-result-text', { 'is-ungrounded': !item.grounded }]"
+            >
+              <strong>{{ item.grounded ? '原文' : '原文未命中（不可导入）' }}：</strong>
+              {{ item.extracted_text }}
             </div>
             <div
               v-if="item.values && Object.keys(item.values).length"
@@ -586,9 +614,14 @@
         <!-- Import button -->
         <div v-if="importableCount > 0" class="extract-import-bar">
           <a-space>
-            已选 <strong>{{ selectedCount }}</strong> 个实体
+            已选 <strong>{{ selectedCount }}</strong> / 可导入 {{ importableCount }}
           </a-space>
-          <a-button type="primary" :loading="importing" @click="handleImportExtracted">
+          <a-button
+            type="primary"
+            :loading="importing"
+            :disabled="selectedCount === 0"
+            @click="handleImportExtracted"
+          >
             <template #icon><Download :size="14" /></template>
             导入数据库（{{ selectedCount }}）
           </a-button>
@@ -600,10 +633,10 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
-  ArrowLeft,
+  Box,
   Bot,
   Copy,
   Download,
@@ -618,7 +651,6 @@ import {
 import { domainEntityBuilderApi } from '@/apis/domain_entity_builder_api'
 
 const route = useRoute()
-const router = useRouter()
 const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
@@ -652,10 +684,21 @@ const importing = ref(false)
 const extractFile = ref(null)
 const extractComparison = ref([])
 const extractSelected = ref({})
+const extractCoverage = ref(null)
+const extractConfidenceThreshold = ref(0.6)
 
-const importableCount = computed(() => {
-  return extractComparison.value.filter((e) => e._status !== 'matched').length
-})
+const countByStatus = (status) => extractComparison.value.filter((e) => e._status === status).length
+
+const hasProposalProblems = (item) => Boolean(item._proposed_entity?.problems?.length)
+
+// 可导入 = 非"已一致"、有原文证据、提案无校验问题
+const isImportable = (item) =>
+  item._status !== 'matched' && item.grounded === true && !hasProposalProblems(item)
+
+const importableCount = computed(() => extractComparison.value.filter(isImportable).length)
+const invalidCount = computed(
+  () => extractComparison.value.filter((e) => e._status !== 'matched' && !isImportable(e)).length
+)
 const selectedCount = computed(() => {
   return Object.values(extractSelected.value).filter((v) => v).length
 })
@@ -727,26 +770,32 @@ const treeData = computed(() => {
       const categoryEntities = entitySchemas.value.filter(
         (e) => (e.category || '') === categoryName
       )
-      if (categoryEntities.length === 0) return null
+      // 空分类也保留：否则管理员无处新建第一实体
       return {
-        title: `${domain.domain_name} (${categoryEntities.length})`,
+        title: domain.domain_name, // 计数由节点右侧单独渲染，避免重复
         key: domain.domain_id,
         category: categoryName,
         isLeaf: false,
+        search_text: `${domain.domain_name} ${categoryName}`,
         children: [
           ...categoryEntities.map((entity) => ({
             title: entity.name_cn,
             key: `entity_${entity.entity_id}`,
             entity_id: entity.entity_id,
             entity_key: entity.entity_key,
-            isLeaf: true
+            isLeaf: true,
+            search_text: [entity.name_cn, entity.entity_key, entity.description]
+              .concat(entity.synonyms || [])
+              .filter(Boolean)
+              .join(' ')
           })),
           {
             title: '+ 新建实体',
             key: `new_${domain.domain_id}`,
             category: categoryName,
             isLeaf: true,
-            isNew: true
+            isNew: true,
+            search_text: ''
           }
         ]
       }
@@ -756,10 +805,11 @@ const treeData = computed(() => {
 
 const filteredTreeData = computed(() => {
   if (!searchKeyword.value) return treeData.value
+  const keyword = searchKeyword.value.toLowerCase()
   const filter = (nodes) =>
     nodes
       .map((node) => {
-        const match = node.title.toLowerCase().includes(searchKeyword.value.toLowerCase())
+        const match = (node.search_text || node.title).toLowerCase().includes(keyword)
         const filtered = node.children ? filter(node.children) : []
         if (match || filtered.length)
           return { ...node, children: filtered.length ? filtered : node.children }
@@ -853,9 +903,10 @@ const loadData = async () => {
   loading.value = true
   error.value = ''
   try {
+    // 去领域化：本页固定通用域作用域，避免多域数据串台
     const [taxRes, schemasRes] = await Promise.all([
-      domainEntityBuilderApi.getTaxonomy(null),
-      domainEntityBuilderApi.listEntitySchemas(null, null)
+      domainEntityBuilderApi.getTaxonomy('general'),
+      domainEntityBuilderApi.listEntitySchemas(null, 'general')
     ])
     if (taxRes.success) taxonomy.value = taxRes.data
     if (schemasRes.success) entitySchemas.value = schemasRes.data.entity_schemas || []
@@ -953,17 +1004,40 @@ const handleCreateEntity = (domainId = null) => {
   selectedEntity.value = editingEntity.value
 }
 
+// 与后端 validate_key 同口径：非空、无空白与点号、≤64 字符
+const KEY_PATTERN = /^[^\s.。]{1,64}$/
+
+const validateEntityDraft = (draft) => {
+  if (!KEY_PATTERN.test((draft.entity_key || '').trim())) {
+    return '实体键不能为空、不能含空白或点号，且不超过 64 字符'
+  }
+  if (!draft.name_cn?.trim()) return '请填写中文名称'
+  if (!draft.category) return '请选择分类'
+  const seen = new Set()
+  for (const [index, prop] of (draft.properties || []).entries()) {
+    const key = (prop.key || '').trim()
+    if (!KEY_PATTERN.test(key)) {
+      return `第 ${index + 1} 个属性的键不能为空、不能含空白或点号`
+    }
+    if (seen.has(key.toLowerCase())) return `属性键 ${key} 重复`
+    seen.add(key.toLowerCase())
+  }
+  return ''
+}
+
 const handleSave = async () => {
   try {
-    if (!editingEntity.value.entity_key || !editingEntity.value.name_cn) {
-      message.error('请填写实体键和中文名称')
-      return
-    }
-    if (!editingEntity.value.category) {
-      message.error('请选择分类')
+    const invalid = validateEntityDraft(editingEntity.value)
+    if (invalid) {
+      message.error(invalid)
       return
     }
     saving.value = true
+    editingEntity.value.entity_key = editingEntity.value.entity_key.trim()
+    editingEntity.value.properties = (editingEntity.value.properties || []).map((p) => ({
+      ...p,
+      key: (p.key || '').trim()
+    }))
     editingEntity.value.value_type = normalizeValueType(editingEntity.value.value_type)
     if (editingEntity.value.properties?.length) {
       editingEntity.value.properties = editingEntity.value.properties.map((p) => ({
@@ -1148,6 +1222,39 @@ const handleSaveRule = () => {
       message.error('请填写规则名称')
       return
     }
+    if (
+      !condition ||
+      typeof condition !== 'object' ||
+      Array.isArray(condition) ||
+      !Object.keys(condition).length
+    ) {
+      message.error('条件必须是非空对象，如 {"location_relation": "错动线内"}')
+      return
+    }
+    if (!Array.isArray(actions) || actions.length === 0) {
+      message.error('动作必须是非空数组')
+      return
+    }
+    for (const action of actions) {
+      if (action?.type !== 'create_edge') {
+        message.error('动作目前只支持 type=create_edge')
+        return
+      }
+      if (!action.relation || !action.target) {
+        message.error('create_edge 需要 relation（关系名）与 target（目标 entity_key）')
+        return
+      }
+      if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(action.relation)) {
+        message.error('relation 必须是英文标识（字母开头，可含下划线），如 CONFLICT_WITH')
+        return
+      }
+    }
+    const unknownTargets = actions
+      .map((a) => a.target)
+      .filter((t) => !entitySchemas.value.some((e) => e.entity_key === t))
+    if (unknownTargets.length) {
+      message.warning(`目标实体不存在，将按规则创建占位节点：${unknownTargets.join(', ')}`)
+    }
     if (!editingRule.value.rule_id) editingRule.value.rule_id = `rule_${Date.now()}`
     const data = {
       rule_id: editingRule.value.rule_id,
@@ -1234,8 +1341,6 @@ const handleDownloadJson = () => {
   message.success('JSON文件下载成功')
 }
 
-const handleBack = () => router.push({ name: 'DomainFactoryMain' })
-
 onMounted(async () => {
   if (route.query.entity_key) pendingEntityKey.value = route.query.entity_key
   loadData()
@@ -1255,6 +1360,7 @@ const handleOpenExtract = () => {
   extractFile.value = null
   extractComparison.value = []
   extractSelected.value = {}
+  extractCoverage.value = null
   extractStep.value = 0
   showExtractModal.value = true
 }
@@ -1274,13 +1380,20 @@ const handleStartExtract = async () => {
   try {
     const res = await domainEntityBuilderApi.extractEntities(extractFile.value, 'general') // 去领域化：恒传通用域
     if (res.success) {
-      extractComparison.value = res.data.comparison || res.data.entities || []
+      const data = res.data || {}
+      extractComparison.value = data.comparison || data.entities || []
+      extractCoverage.value = data.coverage || null
+      extractConfidenceThreshold.value = data.confidence_threshold ?? 0.6
       extractSelected.value = {}
+      extractComparison.value.forEach((item, idx) => {
+        if (isImportable(item) && (item.confidence ?? 0) >= extractConfidenceThreshold.value) {
+          extractSelected.value[idx] = true
+        }
+      })
       extractStep.value = 1
-      const newCount = extractComparison.value.filter((e) => e._status === 'new').length
-      const diffCount = extractComparison.value.filter((e) => e._status === 'different').length
-      const matchCount = extractComparison.value.filter((e) => e._status === 'matched').length
-      message.success(`提取完成：新增 ${newCount}，有变化 ${diffCount}，已匹配 ${matchCount}`)
+      message.success(
+        `提取完成：新建提案 ${countByStatus('new')}，可补属性 ${countByStatus('partial')}，已一致 ${countByStatus('matched')}`
+      )
     }
   } catch (e) {
     console.error('实体提取失败', e)
@@ -1292,7 +1405,7 @@ const handleStartExtract = async () => {
 
 const handleSelectAllNew = () => {
   extractComparison.value.forEach((item, idx) => {
-    if (item._status !== 'matched') extractSelected.value[idx] = true
+    if (isImportable(item)) extractSelected.value[idx] = true
   })
 }
 
@@ -1310,7 +1423,11 @@ const handleImportExtracted = async () => {
   try {
     const res = await domainEntityBuilderApi.importExtractedEntities(selected, 'general') // 去领域化：恒传通用域
     if (res.success) {
-      message.success(res.message || `导入完成`)
+      if (res.rejected?.length) {
+        message.warning(`${res.message}；首条拒绝原因：${res.rejected[0].reason}`)
+      } else {
+        message.success(res.message || '导入完成')
+      }
       showExtractModal.value = false
       await loadData()
     }
@@ -1327,6 +1444,7 @@ const handleExtractCancel = () => {
   extractFile.value = null
   extractComparison.value = []
   extractSelected.value = {}
+  extractCoverage.value = null
   extractStep.value = 0
 }
 
@@ -1351,54 +1469,9 @@ const formatFileSize = (bytes) => {
 
 <style scoped lang="less">
 .domain-entity-builder-view {
-  padding: 24px;
-  background: var(--gray-50);
-  min-height: 100vh;
-}
-
-.page-header {
+  height: 100%;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
-  background: var(--gray-0);
-  padding: 20px 24px;
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-
-  .header-title-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    .back-btn {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      color: var(--gray-600);
-      padding: 4px 8px;
-      height: auto;
-      &:hover {
-        color: var(--main-color);
-        background: var(--gray-50);
-      }
-    }
-  }
-  h2 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--gray-1000);
-  }
-  .subtitle {
-    margin: 4px 0 0;
-    font-size: 13px;
-    color: var(--gray-600);
-  }
-  .header-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
+  flex-direction: column;
 }
 
 .alert {
@@ -1407,16 +1480,18 @@ const formatFileSize = (bytes) => {
 
 .main-content {
   display: flex;
-  gap: 16px;
-  height: calc(100vh - 200px);
+  flex: 1;
+  min-height: 0;
+  gap: 12px;
+  margin-top: 12px;
 }
 
 .left-panel {
   width: 340px;
   background: var(--gray-0);
   border-radius: 8px;
+  border: 1px solid var(--gray-150);
   padding: 16px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1462,8 +1537,8 @@ const formatFileSize = (bytes) => {
   flex: 1;
   background: var(--gray-0);
   border-radius: 8px;
+  border: 1px solid var(--gray-150);
   padding: 24px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   overflow-y: auto;
 
   .empty-state {
@@ -1476,7 +1551,21 @@ const formatFileSize = (bytes) => {
     .editor-section {
       margin-bottom: 24px;
     }
-    .relation-rules-list .rule-item {
+    .rule-hint {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      background: var(--color-info-50);
+      color: var(--gray-700);
+      font-size: 12px;
+      line-height: 1.7;
+      code {
+        padding: 1px 4px;
+        border-radius: 3px;
+        background: var(--gray-100);
+      }
+    }
+    .rule-item {
       padding: 12px;
       border: 1px solid var(--gray-200);
       border-radius: 6px;
@@ -1531,145 +1620,163 @@ const formatFileSize = (bytes) => {
     word-wrap: break-word;
     color: var(--gray-1000);
   }
+}
 
-  .extract-file-info {
-    margin-top: 12px;
-    padding: 8px 12px;
+.extract-file-info {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: var(--gray-50);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.extract-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.extract-empty {
+  padding: 40px 0;
+}
+
+.extract-results-list {
+  max-height: 500px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.extract-result-card {
+  .extract-result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    .extract-check,
+    .extract-check-placeholder {
+      flex-shrink: 0;
+      width: 22px;
+      margin-right: 4px;
+    }
+    .extract-result-name {
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--gray-900);
+      flex: 1;
+    }
+    &:not(:last-child) {
+      margin-bottom: 8px;
+    }
+  }
+  .extract-result-text {
+    font-size: 13px;
+    color: var(--gray-600);
+    padding: 8px;
+    background: var(--gray-50);
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+  .extract-result-values {
+    margin-top: 4px;
+  }
+
+  .extract-diff {
     background: var(--gray-50);
     border-radius: 6px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-  }
-
-  .extract-results-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--gray-200);
-  }
-
-  .extract-empty {
-    padding: 40px 0;
-  }
-
-  .extract-results-list {
-    max-height: 500px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .extract-result-card {
-    .extract-result-header {
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    .diff-title {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 6px;
+      color: var(--gray-700);
+    }
+    .diff-row {
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 8px;
-      .extract-check,
-      .extract-check-placeholder {
-        flex-shrink: 0;
-        width: 22px;
-        margin-right: 4px;
-      }
-      .extract-result-name {
-        font-weight: 600;
-        font-size: 15px;
-        color: var(--gray-900);
-        flex: 1;
-      }
-      &:not(:last-child) {
-        margin-bottom: 8px;
-      }
-    }
-    .extract-result-text {
+      align-items: center;
+      gap: 8px;
       font-size: 13px;
-      color: var(--gray-600);
-      padding: 8px;
-      background: var(--gray-50);
-      border-radius: 4px;
-      margin-bottom: 8px;
-    }
-    .extract-result-values {
-      margin-top: 4px;
-    }
-
-    .extract-diff {
-      background: var(--gray-50);
-      border-radius: 6px;
-      padding: 10px 12px;
-      margin-bottom: 8px;
-      .diff-title {
+      margin: 3px 0;
+      .diff-field {
         font-weight: 600;
-        font-size: 13px;
-        margin-bottom: 6px;
-        color: var(--gray-700);
+        color: var(--gray-800);
+        min-width: 120px;
       }
-      .diff-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 13px;
-        margin: 3px 0;
-        .diff-field {
-          font-weight: 600;
-          color: var(--gray-800);
-          min-width: 120px;
-        }
-        .diff-old {
-          color: var(--color-error-500);
-          text-decoration: line-through;
-          background: var(--color-error-50);
-          padding: 1px 6px;
-          border-radius: 3px;
-        }
-        .diff-arrow {
-          color: var(--gray-400);
-        }
-        .diff-new {
-          color: var(--color-success-500);
-          background: var(--color-success-50);
-          padding: 1px 6px;
-          border-radius: 3px;
-        }
+      .diff-old {
+        color: var(--color-error-500);
+        text-decoration: line-through;
+        background: var(--color-error-50);
+        padding: 1px 6px;
+        border-radius: 3px;
+      }
+      .diff-arrow {
+        color: var(--gray-400);
+      }
+      .diff-new {
+        color: var(--color-success-500);
+        background: var(--color-success-50);
+        padding: 1px 6px;
+        border-radius: 3px;
       }
     }
-
-    .extract-matched-hint {
-      font-size: 13px;
-      color: var(--gray-500);
-      padding: 6px 0;
-      margin-bottom: 4px;
-    }
   }
 
-  .extract-card-new {
-    border-left: 3px solid var(--purple-color, #722ed1);
+  .extract-matched-hint {
+    font-size: 13px;
+    color: var(--gray-500);
+    padding: 6px 0;
+    margin-bottom: 4px;
   }
-  .extract-card-matched {
-    border-left: 3px solid var(--color-success-500);
-    opacity: 0.75;
-  }
-  .extract-card-different {
-    border-left: 3px solid var(--warning-color, #fa8c16);
-  }
+}
 
-  .extract-import-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 16px;
-    padding: 12px 16px;
-    background: var(--main-color);
-    border-radius: 8px;
-    color: #fff; /* 中性白，不随主题 */
-    a-button {
-      margin-left: auto;
-    }
+.extract-card-new {
+  border-left: 3px solid var(--color-info-500);
+}
+.extract-card-matched {
+  border-left: 3px solid var(--color-success-500);
+  opacity: 0.75;
+}
+.extract-card-partial {
+  border-left: 3px solid var(--color-warning-500);
+}
+
+.extract-import-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: var(--main-color);
+  border-radius: 8px;
+  color: #fff; /* 中性白，不随主题 */
+  a-button {
+    margin-left: auto;
   }
+}
+
+.extract-coverage {
+  margin-bottom: 12px;
+}
+
+.extract-problems {
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--color-error-50);
+  color: var(--color-error-700);
+  font-size: 13px;
+}
+
+.extract-result-text.is-ungrounded {
+  background: var(--color-error-50);
+  color: var(--color-error-700);
 }
 </style>
