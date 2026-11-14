@@ -10,6 +10,7 @@ const entity = defineModel('entity', { type: Object, required: true })
 defineProps({
   categoryOptions: { type: Array, default: () => [] },
   entityKeys: { type: Array, default: () => [] },
+  promptCoverage: { type: Object, default: null },
   saving: { type: Boolean, default: false }
 })
 
@@ -95,7 +96,11 @@ const emit = defineEmits(['save', 'cancel', 'clone', 'view-json', 'delete'])
       </a-form>
     </a-card>
 
-    <PropertyTable v-model:properties="entity.properties" />
+    <PropertyTable
+      v-model:properties="entity.properties"
+      :entity-key="entity.entity_key"
+      :prompt-coverage="promptCoverage"
+    />
 
     <RelationRuleEditor v-model:rules="entity.relation_rules" :entity-keys="entityKeys" />
 

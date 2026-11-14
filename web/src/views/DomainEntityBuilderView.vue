@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
-import { Bot, Box, Download, Inbox, Plus, Upload } from '@lucide/vue'
+import { Bot, Box, Download, FileText, Inbox, Plus, Upload } from '@lucide/vue'
 import { useEntitySchemas } from '@/composables/useEntitySchemas'
 import EntityEditor from '@/components/domain-factory/entity/EntityEditor.vue'
 import EntityExtractWizard from '@/components/domain-factory/entity/EntityExtractWizard.vue'
@@ -20,6 +20,7 @@ const {
   selectedEntity,
   draft,
   isDirty,
+  promptCoverage,
   categoryOptions,
   treeData,
   load,
@@ -222,13 +223,29 @@ watch(
 
       <div class="right-panel">
         <div v-if="!draft" class="empty-state">
-          <a-empty description="请从左侧选择分类或实体进行编辑" />
+          <a-empty description="请从左侧选择实体开始编辑" />
+          <div class="empty-actions">
+            <button class="btn btn-pri" @click="handleCreateEntity">
+              <Plus :size="14" /> 新建实体
+            </button>
+            <button class="btn btn-sec" @click="extractVisible = true">
+              <Bot :size="14" /> 从文档提取实体
+            </button>
+            <button class="btn btn-sec" @click="router.push({ name: 'GeneralWorkbench' })">
+              <FileText :size="14" /> 从报告学习
+            </button>
+          </div>
+          <p class="empty-note">
+            从报告学习：在知识工作台打开已解析报告，由模型提出实体与属性 schema
+            提案，再回到本页采纳。
+          </p>
         </div>
         <EntityEditor
           v-else
           v-model:entity="draft"
           :category-options="categoryOptions"
           :entity-keys="entityKeys"
+          :prompt-coverage="promptCoverage"
           :saving="saving"
           @save="save"
           @cancel="handleCancel"
@@ -303,9 +320,25 @@ watch(
 
   .empty-state {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 16px;
     height: 100%;
+
+    .empty-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .empty-note {
+      max-width: 420px;
+      margin: 0;
+      color: var(--gray-500);
+      font-size: 12px;
+      line-height: 1.7;
+      text-align: center;
+    }
   }
 }
 </style>

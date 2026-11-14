@@ -18,6 +18,44 @@ export const VALUE_TYPE_OPTIONS = [
   'List'
 ]
 
+// 泛化 prompt 的属性上限，与后端 `_load_entity_schema_variables(max_items=60)` 同口径
+export const PROMPT_PROPERTY_LIMIT = 60
+
+// 按码点比较：实测与 PG `ORDER BY category, name_cn`（en_US.utf8）逐行一致（71/71）
+const compareText = (a, b) => {
+  const left = a || ''
+  const right = b || ''
+  return left < right ? -1 : left > right ? 1 : 0
+}
+
+/**
+ * 泛化 prompt 覆盖测算：后端逐实体（category、name_cn 排序）累计有 name_cn 的属性，
+ * 取前 PROMPT_PROPERTY_LIMIT 个写进泛化提示词，其余属性 LLM 看不到。
+ * 这里复算同一份集合，供页面标注「进 prompt / 被截断」。
+ */
+export const computePromptCoverage = (entities, limit = PROMPT_PROPERTY_LIMIT) => {
+  const ordered = [...(entities || [])].sort(
+    (a, b) => compareText(a.category, b.category) || compareText(a.name_cn, b.name_cn)
+  )
+  const coveredRefs = new Set()
+  const byEntity = {}
+  let covered = 0
+  let eligible = 0
+  for (const entity of ordered) {
+    let hit = 0
+    for (const prop of entity.properties || []) {
+      if (!prop?.key || !(prop.name_cn || '').trim()) continue
+      eligible += 1
+      if (covered >= limit) continue
+      coveredRefs.add(`${entity.entity_key}.${prop.key}`)
+      covered += 1
+      hit += 1
+    }
+    byEntity[entity.entity_id] = hit
+  }
+  return { limit, covered, eligible, coveredRefs, byEntity }
+}
+
 export const normalizeValueType = (value) => {
   if (!value || typeof value !== 'string') return 'String'
   if (value.startsWith('List')) {
@@ -141,6 +179,8 @@ export function useEntitySchemas() {
   const isDirty = computed(
     () => Boolean(draft.value) && JSON.stringify(draft.value) !== baselineJson.value
   )
+
+  const promptCoverage = computed(() => computePromptCoverage(schemas.value))
 
   const categoryOptions = computed(() => {
     const options = []
@@ -360,6 +400,7 @@ export function useEntitySchemas() {
     selectedEntity,
     draft,
     isDirty,
+    promptCoverage,
     categoryOptions,
     treeData,
     load,

@@ -60,6 +60,27 @@ const handleSearch = () => {
   if (searchKeyword.value) autoExpandParent.value = true
 }
 
+// 标题命中高亮：按关键词切段，命中段用 <mark> 包起来（文本插值，不走 v-html）
+const highlightParts = (text) => {
+  const keyword = searchKeyword.value.trim().toLowerCase()
+  const source = text || ''
+  if (!keyword || !source) return [{ text: source, hit: false }]
+  const lower = source.toLowerCase()
+  const parts = []
+  let cursor = 0
+  while (cursor < source.length) {
+    const index = lower.indexOf(keyword, cursor)
+    if (index < 0) {
+      parts.push({ text: source.slice(cursor), hit: false })
+      break
+    }
+    if (index > cursor) parts.push({ text: source.slice(cursor, index), hit: false })
+    parts.push({ text: source.slice(index, index + keyword.length), hit: true })
+    cursor = index + keyword.length
+  }
+  return parts
+}
+
 const handleExpand = (keys) => {
   expandedKeys.value = keys
   autoExpandParent.value = false
@@ -97,7 +118,12 @@ const handleDelete = (entityId) => emit('delete', entityId)
         >
           <template #title="{ title, count, entity_id, isNew }">
             <div class="tree-node-row">
-              <span :class="['tree-node-title', { 'is-new': isNew }]">{{ title }}</span>
+              <span :class="['tree-node-title', { 'is-new': isNew }]">
+                <template v-for="(part, index) in highlightParts(title)" :key="index">
+                  <mark v-if="part.hit">{{ part.text }}</mark>
+                  <template v-else>{{ part.text }}</template>
+                </template>
+              </span>
               <span v-if="count != null" class="tree-node-count">({{ count }})</span>
               <a-popconfirm
                 v-if="entity_id && !isNew"
@@ -141,6 +167,12 @@ const handleDelete = (entityId) => emit('delete', entityId)
       gap: 4px;
       .tree-node-title {
         font-weight: 500;
+        mark {
+          padding: 0 1px;
+          border-radius: 2px;
+          background: var(--color-warning-100);
+          color: inherit;
+        }
         &.is-new {
           color: var(--main-color);
           font-style: italic;
