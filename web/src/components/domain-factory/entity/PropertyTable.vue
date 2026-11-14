@@ -1,10 +1,16 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { Plus } from '@lucide/vue'
+import { Info, Plus } from '@lucide/vue'
 
 // 属性数组由父级实体草稿持有：本组件只做增删改，不重新赋值整个数组
 const properties = defineModel('properties', { type: Array, default: () => [] })
+
+const props = defineProps({
+  entityKey: { type: String, default: '' },
+  // 泛化 prompt 覆盖测算（composable 的 promptCoverage）
+  promptCoverage: { type: Object, default: null }
+})
 
 const PROPERTY_VALUE_TYPES = ['String', 'Integer', 'Float', 'Boolean', 'Enum']
 
@@ -15,8 +21,21 @@ const propertyColumns = [
   { title: '单位', dataIndex: 'unit', key: 'unit' },
   { title: '必填', dataIndex: 'required', key: 'required' },
   { title: '枚举选项', dataIndex: 'enum_options', key: 'enum_options' },
+  { title: '提取提示词', dataIndex: 'extraction_hint', key: 'extraction_hint' },
+  { title: '泛化 prompt', key: 'prompt', width: 110 },
   { title: '操作', key: 'actions', width: 120 }
 ]
+
+const isPromptCovered = (record) =>
+  Boolean(props.promptCoverage?.coveredRefs?.has(`${props.entityKey}.${record.key}`))
+
+const ownCoveredCount = computed(
+  () => properties.value.filter((prop) => isPromptCovered(prop)).length
+)
+
+const ownEligibleCount = computed(
+  () => properties.value.filter((prop) => prop?.key && (prop.name_cn || '').trim()).length
+)
 
 const propertyModalVisible = ref(false)
 const editingPropertyIndex = ref(-1)
@@ -95,6 +114,15 @@ const handleSaveProperty = () => {
 
 <template>
   <a-card title="属性结构定义" class="editor-section">
+    <div v-if="promptCoverage" class="prompt-coverage-hint">
+      <Info :size="13" />
+      <span>
+        泛化抽取只会把排序后前 {{ promptCoverage.limit }} 个属性写进提示词（通用域共
+        {{ promptCoverage.eligible }} 个候选，已覆盖 {{ promptCoverage.covered }} 个）；本实体
+        {{ ownCoveredCount }}/{{ ownEligibleCount }}
+        进 prompt。未进的属性不会被泛化命中，改写进提示词靠前实体的属性或精简候选。
+      </span>
+    </div>
     <a-table :columns="propertyColumns" :data-source="properties" :pagination="false" size="small">
       <template #bodyCell="{ column, record, index }">
         <template v-if="column.key === 'actions'">
@@ -116,6 +144,25 @@ const handleSaveProperty = () => {
             record.enum_options.join(', ')
           }}</span>
           <span v-else>-</span>
+        </template>
+        <template v-else-if="column.key === 'extraction_hint'">
+          <a-tooltip v-if="record.extraction_hint" :title="record.extraction_hint">
+            <span class="hint-cell">{{ record.extraction_hint }}</span>
+          </a-tooltip>
+          <span v-else class="muted">-</span>
+        </template>
+        <template v-else-if="column.key === 'prompt'">
+          <a-tooltip
+            :title="
+              isPromptCovered(record)
+                ? '按分类+名称排序后位于前 60 个属性内，会进入泛化抽取提示词'
+                : '排序后在第 60 个之外，泛化抽取看不到该属性'
+            "
+          >
+            <a-tag :color="isPromptCovered(record) ? 'blue' : 'default'">{{
+              isPromptCovered(record) ? '进 prompt' : '未进'
+            }}</a-tag>
+          </a-tooltip>
         </template>
       </template>
     </a-table>
@@ -212,3 +259,32 @@ const handleSaveProperty = () => {
     </a-modal>
   </a-card>
 </template>
+
+<style scoped lang="less">
+.prompt-coverage-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--gray-50);
+  color: var(--gray-600);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.hint-cell {
+  display: inline-block;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+  color: var(--gray-600);
+}
+
+.muted {
+  color: var(--gray-400);
+}
+</style>
