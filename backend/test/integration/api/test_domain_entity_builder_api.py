@@ -128,3 +128,38 @@ async def test_update_entity_rejects_key_rename(test_client, admin_headers):
         assert "不允许修改" in res.json()["detail"]
     finally:
         await _delete_probe(test_client, admin_headers)
+
+
+# ========== 引用影响面 ==========
+
+
+async def test_entity_usage_returns_zero_counts_for_new_entity(test_client, admin_headers):
+    await _delete_probe(test_client, admin_headers)
+    created = await test_client.post(f"{BASE}/entities", json=_probe_payload(), headers=admin_headers)
+    assert created.status_code == 200, created.text
+    try:
+        res = await test_client.get(f"{BASE}/entities/{PROBE_KEY}/usage", headers=admin_headers)
+        assert res.status_code == 200, res.text
+        data = res.json()["data"]
+        assert data["entity_key"] == PROBE_KEY
+        assert data["totals"] == {
+            "templates": 0,
+            "pending_tasks": 0,
+            "report_pps": 0,
+            "facts": 0,
+            "dangling_refs": 0,
+        }
+        assert data["properties"]["probe_attr"] == {
+            "templates": 0,
+            "pending_tasks": 0,
+            "report_pps": 0,
+            "facts": 0,
+        }
+        assert data["unused_properties"] == ["probe_attr"]
+    finally:
+        await _delete_probe(test_client, admin_headers)
+
+
+async def test_entity_usage_missing_returns_404(test_client, admin_headers):
+    res = await test_client.get(f"{BASE}/entities/no_such_entity_xyz/usage", headers=admin_headers)
+    assert res.status_code == 404, res.text

@@ -3,6 +3,7 @@ import { Copy, FileText } from '@lucide/vue'
 import { VALUE_TYPE_OPTIONS } from '@/composables/useEntitySchemas'
 import PropertyTable from './PropertyTable.vue'
 import RelationRuleEditor from './RelationRuleEditor.vue'
+import EntityUsagePanel from './EntityUsagePanel.vue'
 
 // 实体草稿由页面持有（composable），本组件就地编辑嵌套字段
 const entity = defineModel('entity', { type: Object, required: true })
@@ -11,6 +12,9 @@ defineProps({
   categoryOptions: { type: Array, default: () => [] },
   entityKeys: { type: Array, default: () => [] },
   promptCoverage: { type: Object, default: null },
+  usage: { type: Object, default: null },
+  usageLoading: { type: Boolean, default: false },
+  usageError: { type: String, default: '' },
   saving: { type: Boolean, default: false }
 })
 
@@ -100,9 +104,17 @@ const emit = defineEmits(['save', 'cancel', 'clone', 'view-json', 'delete'])
       v-model:properties="entity.properties"
       :entity-key="entity.entity_key"
       :prompt-coverage="promptCoverage"
+      :usage="usage"
     />
 
     <RelationRuleEditor v-model:rules="entity.relation_rules" :entity-keys="entityKeys" />
+
+    <EntityUsagePanel
+      v-if="entity.entity_id"
+      :usage="usage"
+      :loading="usageLoading"
+      :error="usageError"
+    />
 
     <!-- 操作条（sticky：长属性表滚动时保存/取消始终可达） -->
     <div class="editor-actions">
@@ -117,15 +129,9 @@ const emit = defineEmits(['save', 'cancel', 'clone', 'view-json', 'delete'])
           <template #icon><FileText :size="14" /></template>
           查看JSON
         </a-button>
-        <a-popconfirm
-          v-if="entity.entity_id"
-          title="确定删除此实体？此操作不可恢复。"
-          ok-text="删除"
-          cancel-text="取消"
-          @confirm="emit('delete')"
-        >
-          <a-button type="primary" danger>删除</a-button>
-        </a-popconfirm>
+        <a-button v-if="entity.entity_id" type="primary" danger @click="emit('delete')">
+          删除
+        </a-button>
       </a-space>
     </div>
   </div>

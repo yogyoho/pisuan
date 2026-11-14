@@ -9,7 +9,9 @@ const properties = defineModel('properties', { type: Array, default: () => [] })
 const props = defineProps({
   entityKey: { type: String, default: '' },
   // 泛化 prompt 覆盖测算（composable 的 promptCoverage）
-  promptCoverage: { type: Object, default: null }
+  promptCoverage: { type: Object, default: null },
+  // 引用影响面（composable 的 usage），按属性给出被引用次数
+  usage: { type: Object, default: null }
 })
 
 const PROPERTY_VALUE_TYPES = ['String', 'Integer', 'Float', 'Boolean', 'Enum']
@@ -23,11 +25,26 @@ const propertyColumns = [
   { title: '枚举选项', dataIndex: 'enum_options', key: 'enum_options' },
   { title: '提取提示词', dataIndex: 'extraction_hint', key: 'extraction_hint' },
   { title: '泛化 prompt', key: 'prompt', width: 110 },
+  { title: '引用', key: 'usage', width: 90 },
   { title: '操作', key: 'actions', width: 120 }
 ]
 
 const isPromptCovered = (record) =>
   Boolean(props.promptCoverage?.coveredRefs?.has(`${props.entityKey}.${record.key}`))
+
+const usageCountsOf = (record) => props.usage?.properties?.[record.key] || null
+
+const refCountOf = (record) => {
+  const counts = usageCountsOf(record)
+  if (!counts) return 0
+  return counts.templates + counts.pending_tasks + counts.report_pps + counts.facts
+}
+
+const refTitleOf = (record) => {
+  const counts = usageCountsOf(record)
+  if (!counts) return ''
+  return `段落模板 ${counts.templates} · 待审核任务 ${counts.pending_tasks} · 报告参数 ${counts.report_pps} · 区域事实 ${counts.facts}`
+}
 
 const ownCoveredCount = computed(
   () => properties.value.filter((prop) => isPromptCovered(prop)).length
@@ -163,6 +180,13 @@ const handleSaveProperty = () => {
               isPromptCovered(record) ? '进 prompt' : '未进'
             }}</a-tag>
           </a-tooltip>
+        </template>
+        <template v-else-if="column.key === 'usage'">
+          <a-tooltip v-if="usage" :title="refTitleOf(record)">
+            <a-tag v-if="refCountOf(record)" color="green">{{ refCountOf(record) }}</a-tag>
+            <span v-else class="muted">未使用</span>
+          </a-tooltip>
+          <span v-else class="muted">-</span>
         </template>
       </template>
     </a-table>

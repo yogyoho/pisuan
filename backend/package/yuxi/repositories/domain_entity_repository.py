@@ -8,7 +8,15 @@ from sqlalchemy import select
 from yuxi.repositories.domain_factory_repository import GENERAL_DOMAIN_CODE
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_domain_entity import DomainEntitySchema, ReportType
-from yuxi.storage.postgres.models_domain_factory import DomainFactoryDomain
+from yuxi.storage.postgres.models_domain_factory import (
+    DomainFactoryDomain,
+    DomainFactoryLearnedTemplate,
+    DomainFactoryRegionalFact,
+    DomainFactoryReport,
+    DomainFactoryReportPps,
+    DomainFactoryTask,
+)
+from yuxi.utils.datetime_utils import format_utc_datetime
 
 
 class DomainEntityRepository:
@@ -258,6 +266,80 @@ class DomainEntityRepository:
             "entity_schemas": entity_map,
             "version": "1.0.0",
         }
+
+    # ========== Usage / References ==========
+
+    async def list_usage_learned_templates(self, domain_code: str) -> list[dict[str, Any]]:
+        """引用扫描：已学习段落模板的 slots（含 entity_ref）。"""
+        async with pg_manager.get_async_session_context() as session:
+            result = await session.execute(
+                select(
+                    DomainFactoryLearnedTemplate.id,
+                    DomainFactoryLearnedTemplate.chapter,
+                    DomainFactoryLearnedTemplate.report_type_code,
+                    DomainFactoryLearnedTemplate.source_count,
+                    DomainFactoryLearnedTemplate.updated_at,
+                    DomainFactoryLearnedTemplate.slots,
+                )
+                .where(DomainFactoryLearnedTemplate.domain_code == domain_code)
+                .order_by(DomainFactoryLearnedTemplate.updated_at.desc())
+            )
+            return [
+                {
+                    "id": row.id,
+                    "chapter": row.chapter,
+                    "report_type_code": row.report_type_code,
+                    "source_count": row.source_count,
+                    "updated_at": format_utc_datetime(row.updated_at),
+                    "slots": row.slots or [],
+                }
+                for row in result.all()
+            ]
+
+    async def list_usage_pending_tasks(self, domain_code: str) -> list[dict[str, Any]]:
+        """引用扫描：待审核任务的 source_paragraphs[].template.slots。"""
+        async with pg_manager.get_async_session_context() as session:
+            result = await session.execute(
+                select(
+                    DomainFactoryTask.id,
+                    DomainFactoryTask.file_name,
+                    DomainFactoryTask.source_paragraphs,
+                )
+                .join(DomainFactoryDomain, DomainFactoryTask.domain_id == DomainFactoryDomain.id)
+                .where(
+                    DomainFactoryDomain.code == domain_code,
+                    DomainFactoryTask.status == "WAITING_REVIEW",
+                )
+                .order_by(DomainFactoryTask.updated_at.desc())
+            )
+            return [
+                {
+                    "id": row.id,
+                    "file_name": row.file_name,
+                    "source_paragraphs": row.source_paragraphs or [],
+                }
+                for row in result.all()
+            ]
+
+    async def list_usage_report_pps(self, domain_code: str) -> list[dict[str, Any]]:
+        """引用扫描：写作侧报告参数（entity_key 裸键或点号形态）。"""
+        async with pg_manager.get_async_session_context() as session:
+            result = await session.execute(
+                select(DomainFactoryReportPps.report_id, DomainFactoryReportPps.entity_key)
+                .join(DomainFactoryReport, DomainFactoryReportPps.report_id == DomainFactoryReport.id)
+                .where(DomainFactoryReport.domain_code == domain_code)
+            )
+            return [{"report_id": row.report_id, "entity_key": row.entity_key} for row in result.all()]
+
+    async def list_usage_regional_facts(self) -> list[dict[str, Any]]:
+        """引用扫描：区域事实（无 domain_code，按 entity_key 全局统计）。"""
+        async with pg_manager.get_async_session_context() as session:
+            result = await session.execute(
+                select(DomainFactoryRegionalFact.entity_key, DomainFactoryRegionalFact.status).where(
+                    DomainFactoryRegionalFact.entity_key.isnot(None)
+                )
+            )
+            return [{"entity_key": row.entity_key, "status": row.status} for row in result.all()]
 
     # ========== Report Types ==========
 

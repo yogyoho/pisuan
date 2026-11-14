@@ -7,6 +7,7 @@ import uuid
 from typing import Any
 
 from yuxi.repositories.domain_entity_repository import DomainEntityRepository
+from yuxi.repositories.domain_factory_repository import GENERAL_DOMAIN_CODE
 from yuxi.utils import logger
 from yuxi.utils.datetime_utils import format_utc_datetime, utc_now_naive
 
@@ -268,6 +269,115 @@ class DomainEntityService:
 
         new_entity = await self.repo.create(entity_dict)
         return new_entity.to_dict()
+
+    # ========== Usage / References ==========
+
+    async def get_entity_usage(self, identifier: str) -> dict[str, Any]:
+        """统计实体及属性在存量模板/待审核任务/报告参数/区域事实中的引用。
+
+        entity_ref 契约：以第一个点号切分，前缀 entity_key、后缀属性 key；
+        历史数据有中文名后缀，按 name_cn → key 归一。属性已不存在的后缀计入
+        dangling_refs（下游会静默降质）；无后缀的引用按实体级引用计数。
+        """
+        entity = await self.repo.get_by_id_or_key(identifier)
+        if not entity:
+            raise ValueError(f"实体 {identifier} 不存在")
+        data = entity.to_dict()
+        entity_key = str(data.get("entity_key") or "")
+
+        properties: dict[str, dict[str, int]] = {}
+        prop_key_by_folded: dict[str, str] = {}
+        prop_key_by_name: dict[str, str] = {}
+        for prop in data.get("properties") or []:
+            if not isinstance(prop, dict) or not prop.get("key"):
+                continue
+            key = str(prop["key"])
+            properties[key] = {"templates": 0, "pending_tasks": 0, "report_pps": 0, "facts": 0}
+            prop_key_by_folded[key.casefold()] = key
+            name = str(prop.get("name_cn") or "").strip()
+            if name:
+                prop_key_by_name.setdefault(name, key)
+
+        dangling: set[str] = set()
+
+        def tally(ref: str, source: str) -> bool:
+            head, sep, suffix = ref.partition(".")
+            if head != entity_key:
+                return False
+            if sep:
+                prop_key = prop_key_by_folded.get(suffix.casefold()) or prop_key_by_name.get(suffix)
+                if prop_key:
+                    properties[prop_key][source] += 1
+                else:
+                    dangling.add(ref)
+            return True
+
+        def refs_of(slots: Any) -> list[str]:
+            return [
+                str(slot.get("entity_ref") or "").strip()
+                for slot in slots or []
+                if isinstance(slot, dict) and str(slot.get("entity_ref") or "").strip()
+            ]
+
+        template_items = []
+        for row in await self.repo.list_usage_learned_templates(GENERAL_DOMAIN_CODE):
+            matched = [ref for ref in refs_of(row.get("slots")) if tally(ref, "templates")]
+            if matched:
+                template_items.append(
+                    {
+                        "id": row.get("id"),
+                        "chapter": row.get("chapter") or "",
+                        "report_type_code": row.get("report_type_code") or "",
+                        "source_count": row.get("source_count") or 0,
+                        "updated_at": row.get("updated_at") or "",
+                        "refs": matched,
+                    }
+                )
+
+        task_items = []
+        for row in await self.repo.list_usage_pending_tasks(GENERAL_DOMAIN_CODE):
+            slots: list[Any] = []
+            for para in row.get("source_paragraphs") or []:
+                template = para.get("template") if isinstance(para, dict) else None
+                if isinstance(template, dict):
+                    slots.extend(template.get("slots") or [])
+            matched = [ref for ref in refs_of(slots) if tally(ref, "pending_tasks")]
+            if matched:
+                task_items.append(
+                    {"id": row.get("id"), "file_name": row.get("file_name") or "", "refs": matched}
+                )
+
+        pps_count = 0
+        for row in await self.repo.list_usage_report_pps(GENERAL_DOMAIN_CODE):
+            ref = str(row.get("entity_key") or "").strip()
+            if ref and tally(ref, "report_pps"):
+                pps_count += 1
+
+        fact_count = 0
+        for row in await self.repo.list_usage_regional_facts():
+            ref = str(row.get("entity_key") or "").strip()
+            if ref and tally(ref, "facts"):
+                fact_count += 1
+
+        return {
+            "entity_id": data.get("entity_id"),
+            "entity_key": entity_key,
+            "name_cn": data.get("name_cn"),
+            "totals": {
+                "templates": len(template_items),
+                "pending_tasks": len(task_items),
+                "report_pps": pps_count,
+                "facts": fact_count,
+                "dangling_refs": len(dangling),
+            },
+            "properties": properties,
+            "unused_properties": [
+                key for key, counts in properties.items() if not any(counts.values())
+            ],
+            "dangling_refs": sorted(dangling),
+            "template_refs": template_items[:20],
+            "pending_task_refs": task_items,
+        }
 
     # ========== Import / Export ==========
 

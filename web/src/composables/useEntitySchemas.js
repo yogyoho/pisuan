@@ -172,6 +172,12 @@ export function useEntitySchemas() {
   const draft = ref(null) // 编辑中的副本
   const baselineJson = ref('')
 
+  // 引用影响面（模板/待审核任务/报告参数/区域事实），按当前选中实体加载
+  const usage = ref(null)
+  const usageLoading = ref(false)
+  const usageError = ref('')
+  let usageReqId = 0
+
   const markClean = () => {
     baselineJson.value = draft.value ? JSON.stringify(draft.value) : ''
   }
@@ -181,6 +187,35 @@ export function useEntitySchemas() {
   )
 
   const promptCoverage = computed(() => computePromptCoverage(schemas.value))
+
+  const loadUsage = async (entityKey) => {
+    const reqId = ++usageReqId
+    usage.value = null
+    usageError.value = ''
+    if (!entityKey) {
+      usageLoading.value = false
+      return
+    }
+    usageLoading.value = true
+    try {
+      const res = await domainEntityBuilderApi.getEntityUsage(entityKey)
+      if (reqId !== usageReqId) return
+      usage.value = res.success ? res.data : null
+      if (!res.success) usageError.value = '使用情况加载失败'
+    } catch (e) {
+      if (reqId !== usageReqId) return
+      console.error('加载使用情况失败', e)
+      usageError.value = e?.message || '使用情况加载失败'
+    } finally {
+      if (reqId === usageReqId) usageLoading.value = false
+    }
+  }
+
+  // 删除前取最新影响面；失败时抛给调用方决定是否继续
+  const fetchUsage = async (identifier) => {
+    const res = await domainEntityBuilderApi.getEntityUsage(identifier)
+    return res.data
+  }
 
   const categoryOptions = computed(() => {
     const options = []
@@ -237,6 +272,7 @@ export function useEntitySchemas() {
     selectedEntity.value = entity
     draft.value = normalizeEntityForEditing(entity)
     markClean()
+    void loadUsage(entity.entity_key)
   }
 
   const selectByKey = (entityKey) => {
@@ -256,12 +292,14 @@ export function useEntitySchemas() {
     selectedEntity.value = null
     draft.value = null
     markClean()
+    void loadUsage(null)
   }
 
   const startCreate = (category) => {
     selectedEntity.value = null
     draft.value = emptyDraft(category)
     markClean()
+    void loadUsage(null)
   }
 
   const resetDraft = () => {
@@ -400,6 +438,11 @@ export function useEntitySchemas() {
     selectedEntity,
     draft,
     isDirty,
+    usage,
+    usageLoading,
+    usageError,
+    loadUsage,
+    fetchUsage,
     promptCoverage,
     categoryOptions,
     treeData,
