@@ -6,17 +6,31 @@ region_key 必填（一地区一 KB，不跨区混供）、仅 confirmed、q 子
 """
 
 import pytest
+from types import SimpleNamespace
+from langgraph.prebuilt.tool_node import ToolRuntime
 
 import yuxi.agents.toolkits.buildin.tools as tools_mod
 from yuxi.agents.toolkits.registry import get_all_tool_instances
 
 
 def _fake_repo(monkeypatch, rows, capture=None):
-    """以 repo 契约模拟 list_regional_facts：region/type/status 三过滤下推。"""
+    """以 repo 契约模拟 list_regional_facts：KB/归属/region/type/status 过滤下推。"""
 
-    async def _list(self, region_key=None, fact_type=None, status=None, page=1, page_size=20):
+    async def get_kb_attribution(self, kb_id):
+        return {"bound": True, "mixed": False, "attribution": "attr_hengcheng"}
+
+    async def _list(
+        self, region_key=None, fact_type=None, status=None, kb_id=None, attribution=None, page=1, page_size=20
+    ):
         if capture is not None:
-            capture.update(region_key=region_key, fact_type=fact_type, status=status, page_size=page_size)
+            capture.update(
+                region_key=region_key,
+                fact_type=fact_type,
+                status=status,
+                kb_id=kb_id,
+                attribution=attribution,
+                page_size=page_size,
+            )
         out = [
             r
             for r in rows
@@ -26,7 +40,7 @@ def _fake_repo(monkeypatch, rows, capture=None):
         ]
         return out, len(out)
 
-    repo = type("R", (), {"list_regional_facts": _list})
+    repo = type("R", (), {"get_kb_attribution": get_kb_attribution, "list_regional_facts": _list})
     monkeypatch.setattr(tools_mod, "DomainFactoryRepository", repo)
 
 
@@ -43,7 +57,20 @@ def _fact(i, status="confirmed", content="事实内容", fact_type="monitoring",
         "source_ref": "详查报告 §4.2",
         "created_at": "2026-10-12T00:00:00",
         "updated_at": None,
+        "kb_id": "kb_hengcheng",
+        "attribution": "attr_hengcheng",
     }
+
+
+def _runtime(kb_id="kb_hengcheng"):
+    return ToolRuntime(
+        state=None,
+        context=SimpleNamespace(knowledges=[kb_id] if kb_id else []),
+        config=None,
+        stream_writer=None,
+        tool_call_id=None,
+        store=None,
+    )
 
 
 async def test_registered_in_buildin_registry():
@@ -56,7 +83,7 @@ async def test_requires_region_key(monkeypatch):
     """region_key 缺省不跨区混供：报错并引导先确认矿区，仓库不被调用。"""
     calls = {}
     _fake_repo(monkeypatch, [], capture=calls)
-    out = await tools_mod.lookup_regional_fact.ainvoke({"fact_type": "monitoring"})
+    out = await tools_mod.lookup_regional_fact.ainvoke({"fact_type": "monitoring", "runtime": _runtime()})
     assert "error" in out
     assert calls == {}
 
@@ -65,7 +92,9 @@ async def test_requires_region_key(monkeypatch):
 async def test_rejects_invalid_fact_type(monkeypatch):
     calls = {}
     _fake_repo(monkeypatch, [], capture=calls)
-    out = await tools_mod.lookup_regional_fact.ainvoke({"fact_type": "whatever", "region_key": "宁夏/横城"})
+    out = await tools_mod.lookup_regional_fact.ainvoke(
+        {"fact_type": "whatever", "region_key": "宁夏/横城", "runtime": _runtime()}
+    )
     assert "error" in out
     assert calls == {}
 
@@ -80,12 +109,16 @@ async def test_returns_confirmed_only_with_projection(monkeypatch):
         _fact(3, status="retired", content="已退役事实"),
     ]
     _fake_repo(monkeypatch, rows, capture=capture)
-    out = await tools_mod.lookup_regional_fact.ainvoke({"fact_type": "monitoring", "region_key": "宁夏/横城"})
+    out = await tools_mod.lookup_regional_fact.ainvoke(
+        {"fact_type": "monitoring", "region_key": "宁夏/横城", "runtime": _runtime()}
+    )
     assert capture["status"] == "confirmed"
+    assert capture["kb_id"] == "kb_hengcheng"
+    assert capture["attribution"] == "attr_hengcheng"
     assert capture["region_key"] == "宁夏/横城"
     assert capture["fact_type"] == "monitoring"
     assert [f["content"] for f in out["facts"]] == ["事实内容"]
-    assert set(out["facts"][0]) == {"fact_type", "region_key", "content", "year", "source_ref"}
+    assert set(out["facts"][0]) == {"fact_type", "region_key", "kb_id", "content", "year", "source_ref"}
     assert out["total"] == 1
     assert "source_ref" in out["note"]
 
@@ -98,7 +131,7 @@ async def test_q_filters_by_content_substring(monkeypatch):
     ]
     _fake_repo(monkeypatch, rows)
     out = await tools_mod.lookup_regional_fact.ainvoke(
-        {"fact_type": "monitoring", "region_key": "宁夏/横城", "q": "涌水量"}
+        {"fact_type": "monitoring", "region_key": "宁夏/横城", "q": "涌水量", "runtime": _runtime()}
     )
     assert out["total"] == 1
     assert out["facts"][0]["content"] == "3 煤层涌水量长期观测数据"
@@ -108,7 +141,9 @@ async def test_q_filters_by_content_substring(monkeypatch):
 async def test_no_match_returns_structured_hint(monkeypatch):
     """无匹配 → 结构化 hint（引导类比矿/业主数据路径），非裸空数组。"""
     _fake_repo(monkeypatch, [])
-    out = await tools_mod.lookup_regional_fact.ainvoke({"fact_type": "monitoring", "region_key": "未知区"})
+    out = await tools_mod.lookup_regional_fact.ainvoke(
+        {"fact_type": "monitoring", "region_key": "未知区", "runtime": _runtime()}
+    )
     assert out["facts"] == []
     assert out["total"] == 0
     assert "hint" in out
@@ -120,7 +155,26 @@ async def test_usage_tracked(monkeypatch):
     _fake_repo(monkeypatch, [_fact(1, fact_type="measure")])
     seen = {}
     monkeypatch.setattr(tools_mod, "_track_usage", lambda name, **kw: seen.update(name=name, **kw))
-    await tools_mod.lookup_regional_fact.ainvoke({"fact_type": "measure", "region_key": "宁夏/横城"})
+    await tools_mod.lookup_regional_fact.ainvoke(
+        {"fact_type": "measure", "region_key": "宁夏/横城", "runtime": _runtime()}
+    )
     assert seen["name"] == "lookup_regional_fact"
     assert seen["result_count"] == 1
     assert seen["args_summary"]["region_key"] == "宁夏/横城"
+    assert seen["args_summary"]["kb_id"] == "kb_hengcheng"
+
+
+@pytest.mark.asyncio
+async def test_requires_provable_knowledge_base_scope(monkeypatch):
+    """零库、显式不可见库都不得查询事实；事实必须绑定会话可见知识库。"""
+    calls = {}
+    _fake_repo(monkeypatch, [], capture=calls)
+    with pytest.raises(ValueError, match="没有启用知识库"):
+        await tools_mod.lookup_regional_fact.ainvoke(
+            {"fact_type": "monitoring", "region_key": "宁夏/横城", "runtime": _runtime("")}
+        )
+    with pytest.raises(ValueError, match="可见范围"):
+        await tools_mod.lookup_regional_fact.ainvoke(
+            {"fact_type": "monitoring", "region_key": "宁夏/横城", "kb_id": "kb-other", "runtime": _runtime()}
+        )
+    assert calls == {}

@@ -1705,4 +1705,4 @@ onMounted(() => {
 }
 </style>
 
-<style lang="less" src="./factory-ui.less"></style>
+<style lang="less" src="../factory-core/factory-ui.less"></style>

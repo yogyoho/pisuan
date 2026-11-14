@@ -10,11 +10,12 @@
     下一次保存/入库会把 remap 结果覆盖回去。
 
 本脚本同时验证两件事（真实服务层代码路径，不需要浏览器）：
-  A. remap 的匹配源是静态文件 server/coal_eia_entity_types.json（17 个旧实体类型，
-     EntityMetaLoader），与「实体构建」页维护的 domain_entity_schemas 不是同一份数据。
-     因此确认通用域实体不会产生任何 remap（remapped=0）。
-  B. 一旦 entity_ref 被填上（若 remap 对齐了实体库），前端用旧快照全量保存会把它覆盖回空。
-     S4 用直写 DB 模拟「remap 生效」后的服务端状态，再重放前端保存请求复现该缺陷。
+  A. remap 的匹配来源：legacy SlotEntityMapper 只认静态文件 server/coal_eia_entity_types.json
+     （17 个旧实体类型）；实体构建页维护的 domain_entity_schemas 由
+     `_auto_map_slots_to_entity_properties` 匹配（2026-11-14 P0 重构后已接入
+     `_remap_waiting_review_tasks`，属性变更后能真正刷新 entity_ref）。
+  B. 前端确认成功后不刷新 taskDetail，内存里仍是 remap 前的快照；
+     下一次保存/入库会把 remap 结果覆盖回去（§5.2 待修，本脚本仍复现该缺陷）。
 
 副作用控制：
   - confirm 会 remap 同域其他 WAITING_REVIEW 任务：脚本先快照所有 pending 任务的
@@ -201,7 +202,7 @@ async def main() -> int:
             f"{legacy_id}",
         )
 
-        print("\n===== 确认通用域实体 → 后端 remap =====")
+        print("\n===== 确认通用域实体（带属性）→ 后端 remap 绑定实体库属性 =====")
         conf = await svc.confirm_proposed_entities(
             task_id,
             [
@@ -212,7 +213,9 @@ async def main() -> int:
                     "category": "其他",  # 非 B 类：不级联区域事实，保持本脚本单一变量
                     "description": "E2E remap 验证实体，验证后删除",
                     "value_type": "Numeric",
-                    "properties": [],
+                    "properties": [
+                        {"key": "probe_metric", "name_cn": SLOT_NAME, "value_type": "Numeric"}
+                    ],
                     "synonyms": [],
                     "_confirmed": True,
                 }
@@ -222,24 +225,18 @@ async def main() -> int:
 
         db_paras, db_blocks = await get_paragraphs(task_id)
         check(
-            conf.get("remapped", 0) == 0 and slot_ref(db_paras) == "",
-            "S3 remap 不认实体构建页的实体（匹配源是 17 类型静态文件）：确认后 entity_ref 仍为空",
+            conf.get("remapped", 0) >= 1 and slot_ref(db_paras) == f"{ENTITY_KEY}.probe_metric",
+            "S3 remap 认实体构建页的实体：确认后 entity_ref 绑定到 entity_key.prop_key",
             f"remapped={conf.get('remapped')}, entity_ref={slot_ref(db_paras)!r}",
         )
 
-        print("\n===== S4：模拟 remap 生效后，前端旧快照全量保存 =====")
-        simulated = copy.deepcopy(memory)
-        simulated[0]["template"]["slots"][0]["entity_ref"] = f"{ENTITY_KEY}.probe_metric"
-        await svc.save_task_step(task_id, {"step": "structured", "payload": {"source_paragraphs": simulated}})
-        ref_after_remap = slot_ref((await get_paragraphs(task_id))[0])
-        check(bool(ref_after_remap), "S4a 服务端存在已绑定 entity_ref（remap 生效后的状态）", f"{ref_after_remap!r}")
-
+        print("\n===== S4：模拟前端旧快照全量保存 =====")
         await svc.save_task_step(task_id, {"step": "structured", "payload": {"source_paragraphs": memory}})
         ref_after_stale = slot_ref((await get_paragraphs(task_id))[0])
         check(
-            ref_after_stale == "" and bool(ref_after_remap),
-            "S4b【缺陷复现】旧快照保存后 entity_ref 被覆盖回空（前端不刷新 → 下次保存即回退）",
-            f"{ref_after_remap!r} → {ref_after_stale!r}",
+            ref_after_stale == "" and bool(slot_ref(db_paras)),
+            "S4【缺陷复现】remap 已绑定的 entity_ref 被前端旧快照覆盖回空（前端不刷新 → 下次保存即回退）",
+            f"{slot_ref(db_paras)!r} → {ref_after_stale!r}",
         )
 
         print("\n===== 保存语义：structured_blocks 全量替换 =====")

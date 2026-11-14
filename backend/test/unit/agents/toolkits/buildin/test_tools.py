@@ -1,6 +1,7 @@
 """TDD tests for v2 calculation tools and save_chapter state extension."""
 
 import pytest
+from types import SimpleNamespace
 
 # ========== calculate_a_value ==========
 
@@ -293,6 +294,7 @@ async def test_lookup_subsidence_params_merges_milvus_hits(monkeypatch):
 async def test_get_templates_marks_db_fallback_on_graph_error(monkeypatch):
     """图谱查询异常 → DB 兜底条目带 _source=db_fallback + _degraded_note"""
     from yuxi.agents.toolkits.buildin import tools as tools_mod
+    from langgraph.prebuilt.tool_node import ToolRuntime
 
     class _Boom:
         async def get_templates(self, *a, **k):
@@ -306,13 +308,24 @@ async def test_get_templates_marks_db_fallback_on_graph_error(monkeypatch):
     rows = [{"generalized": "模板文本", "slots": []}]
 
     class _FakeRepo:
+        async def get_kb_attribution(self, kb_id):
+            return {"bound": True, "mixed": False, "attribution": "attr"}
+
         async def list_learned_templates_by_key(self, *a, **k):
             return rows
 
     monkeypatch.setattr(tools_mod, "DomainFactoryRepository", _FakeRepo)
+    runtime = ToolRuntime(
+        state=None,
+        context=SimpleNamespace(knowledges=["kb"]),
+        config=None,
+        stream_writer=None,
+        tool_call_id=None,
+        store=None,
+    )
 
     result = await tools_mod.get_templates.ainvoke(
-        {"domain": "coal", "report_type": "eia_report", "canonical_chapter_key": "章1"}
+        {"domain": "coal", "report_type": "eia_report", "canonical_chapter_key": "章1", "runtime": runtime}
     )
     assert result[0]["_source"] == "db_fallback"
     assert "_degraded_note" in result[0]
@@ -323,6 +336,7 @@ async def test_get_templates_marks_db_fallback_on_graph_error(monkeypatch):
 async def test_get_templates_marks_graph_source(monkeypatch):
     """图谱命中 → 条目 _source=graph,不查 DB"""
     from yuxi.agents.toolkits.buildin import tools as tools_mod
+    from langgraph.prebuilt.tool_node import ToolRuntime
 
     graph_rows = [{"generalized": "图谱模板", "slots": []}]
 
@@ -335,12 +349,24 @@ async def test_get_templates_marks_graph_source(monkeypatch):
 
     monkeypatch.setattr("yuxi.services.graph_query_service.GraphQueryService", _FakeGraphSvc)
 
-    def _no_repo(*a, **k):
-        raise AssertionError("图谱命中时不应回退 DB")
+    class _FakeRepo:
+        async def get_kb_attribution(self, kb_id):
+            return {"bound": True, "mixed": False, "attribution": "attr"}
 
-    monkeypatch.setattr(tools_mod, "DomainFactoryRepository", _no_repo)
+        async def list_learned_templates_by_key(self, *a, **k):
+            raise AssertionError("图谱命中时不应回退 DB")
+
+    monkeypatch.setattr(tools_mod, "DomainFactoryRepository", _FakeRepo)
+    runtime = ToolRuntime(
+        state=None,
+        context=SimpleNamespace(knowledges=["kb"]),
+        config=None,
+        stream_writer=None,
+        tool_call_id=None,
+        store=None,
+    )
 
     result = await tools_mod.get_templates.ainvoke(
-        {"domain": "coal", "report_type": "eia_report", "canonical_chapter_key": "章1"}
+        {"domain": "coal", "report_type": "eia_report", "canonical_chapter_key": "章1", "runtime": runtime}
     )
     assert result[0]["_source"] == "graph"

@@ -1,7 +1,7 @@
 """存量 ChapterTemplate 治理脚本（bug-4167 spec §4.4）：归一 canonical、合并重复、纠挂、编号结构化、删测试子树、meta 回写。
 
 幂等可重跑：每步先算动作清单再执行，重跑零动作。默认 dry-run 只打印 JSON 报告，--apply 才落写。
-import 兼容 yuxi/pisuan 双包名（localized 容器内包名为 pisuan，脚本自动降级）。
+import 兼容 yuxi/yuxi 双包名（localized 容器内包名为 yuxi，脚本自动降级）。
 
 治理步骤（Neo4j 阶段按序）:
   1. 全量归一 canonical（normalize_chapter_key，「总  则」→「总则」）
@@ -34,8 +34,8 @@ import sys
 
 try:
     from yuxi.utils import normalize_chapter_key
-except ImportError:  # localized 容器内包名为 pisuan
-    from pisuan.utils import normalize_chapter_key
+except ImportError:  # localized 容器内包名为 yuxi
+    from yuxi.utils import normalize_chapter_key
 
 # 合并重复节点时 COALESCE 取非空的 meta 字段（图谱节点侧）
 GRAPH_META_FIELDS = (
@@ -60,7 +60,7 @@ PG_OUTLINE_QUERY = """
     SELECT id, canonical_chapter_key, chapter_id, chapter_title, purpose, overview, key_points,
            content_requirements, regulations, entity_bindings, writing_example, writing_hints,
            expected_tables, expected_charts, expected_formulas, expected_figures,
-           content_contract, dependencies, source_task_ids, source_count
+           content_contract, dependencies, source_task_ids, source_count, attribution
       FROM domain_factory_outlines
      WHERE domain_code = %s AND report_type_code = %s
 """
@@ -123,11 +123,11 @@ class GraphState:
                 self.children_of.setdefault(p, []).append(cid)
         self.std_prefix = f"CH_{domain}_{report_type}_std_"
 
-    def group_key(self, nid: str) -> tuple[str, int, str]:
+    def group_key(self, nid: str) -> tuple[str, str, int, str]:
         """聚合身份键 (归一canonical, level, 父节点 id)；level=1 无 ChapterTemplate 父 → 空串。"""
         n = self.nodes[nid]
         parents = sorted(p for p in self.parents_of.get(nid, []) if p in self.nodes)
-        return (n["canonical_norm"], n["level"], parents[0] if parents else "")
+        return (n.get("attribution") or "", n["canonical_norm"], n["level"], parents[0] if parents else "")
 
 
 def state_from_query_rows(rows: list[dict], domain: str, report_type: str) -> GraphState:
@@ -146,6 +146,7 @@ def state_from_query_rows(rows: list[dict], domain: str, report_type: str) -> Gr
             "chapter_no": r["chapter_no"],
             "order": r.get("order"),
             "frequency": r["frequency"],
+            "attribution": r.get("attribution") or "",
             **{f: r[f] for f in GRAPH_META_FIELDS},
         }
         parents_of[nid] = sorted({p for p in (r["parent_ids"] or []) if p})
@@ -160,7 +161,7 @@ def plan_merges(state: GraphState) -> list[dict]:
     groups: dict[tuple, list[str]] = {}
     for nid in state.nodes:
         key = state.group_key(nid)
-        if not key[0]:
+        if not key[1]:
             continue  # 空 canonical（纯编号标题）不参与合并
         groups.setdefault(key, []).append(nid)
     plans = []
@@ -170,7 +171,8 @@ def plan_merges(state: GraphState) -> list[dict]:
             continue
         ordered = sorted(ids, key=lambda i: (0 if i.startswith(state.std_prefix) else 1, i))
         plans.append({
-            "canonical": key[0], "level": key[1], "parent": key[2],
+            "canonical": key[1], "level": key[2], "parent": key[3],
+            "attribution": key[0],
             "survivor": ordered[0], "deletes": ordered[1:],
         })
     return plans
@@ -323,8 +325,15 @@ def plan_meta_backfill(state: GraphState, pg_rows: list[dict]) -> tuple[list[dic
         if not key:
             continue
         target = row.get("chapter_id") if row.get("chapter_id") in state.nodes else None
+        row_attribution = row.get("attribution") or ""
+        if target is not None and (state.nodes[target].get("attribution") or "") != row_attribution:
+            target = None
         if target is None:
-            candidates = sorted(nid for nid, n in state.nodes.items() if n["canonical_norm"] == key)
+            candidates = sorted(
+                nid
+                for nid, n in state.nodes.items()
+                if n["canonical_norm"] == key and (n.get("attribution") or "") == row_attribution
+            )
             if len(candidates) == 1:
                 target = candidates[0]
             elif not candidates:
@@ -341,15 +350,15 @@ def plan_meta_backfill(state: GraphState, pg_rows: list[dict]) -> tuple[list[dic
 
 def plan_pg_merges(rows: list[dict]) -> list[dict]:
     """PG 阶段：带编号 canonical 行与归一后相同的行归并；canonical 重命名为归一值。"""
-    groups: dict[str, list[dict]] = {}
+    groups: dict[tuple[str, str], list[dict]] = {}
     for row in rows:
         key = normalize_chapter_key(row.get("canonical_chapter_key") or "")
         if not key:
             continue
-        groups.setdefault(key, []).append(row)
+        groups.setdefault((row.get("attribution") or "", key), []).append(row)
     plans = []
-    for key in sorted(groups):
-        members = groups[key]
+    for attribution, key in sorted(groups):
+        members = groups[(attribution, key)]
         ordered = sorted(members, key=lambda r: (0 if r["canonical_chapter_key"] == key else 1, r["id"]))
         survivor, dups = ordered[0], ordered[1:]
         set_fields: dict = {}
@@ -381,7 +390,7 @@ def plan_pg_merges(rows: list[dict]) -> list[dict]:
             set_fields["source_count"] = max_count
         if set_fields or dups:
             plans.append({
-                "survivor_id": survivor["id"], "canonical": key,
+                "survivor_id": survivor["id"], "canonical": key, "attribution": attribution,
                 "set": set_fields, "delete_ids": [d["id"] for d in dups],
             })
     return plans
@@ -547,7 +556,8 @@ def fetch_graph_state(session, domain: str, report_type: str) -> GraphState:
         OPTIONAL MATCH (p:ChapterTemplate)-[:HAS_CHILD]->(ch)
         RETURN ch.id AS id, ch.title AS title, ch.canonical_chapter_key AS canonical,
                ch.level AS level, ch.chapter_no AS chapter_no, ch.frequency AS frequency,
-               ch.order AS order, {meta_returns}, collect(p.id) AS parent_ids
+               ch.order AS order, ch.attribution AS attribution,
+               {meta_returns}, collect(p.id) AS parent_ids
         """,
         domain=domain, rt=report_type,
     )
@@ -733,7 +743,7 @@ class ChapterGovernance:
         groups: dict[tuple, list[str]] = {}
         for nid in state.nodes:
             key = state.group_key(nid)
-            if key[0]:
+            if key[1]:
                 groups.setdefault(key, []).append(nid)
         report["projected"]["roots"] = sum(1 for n in state.nodes.values() if n["level"] == 1)
         report["projected"]["remaining_dup_groups"] = sum(1 for ids in groups.values() if len(ids) > 1)

@@ -37,8 +37,10 @@ from yuxi.storage.postgres.models_domain_factory import (
     EiaStageFieldEdit,
     EiaStandardLimitRow,
     EiaStandardReview,
+    DomainFactoryKnowledgeBaseAttribution,
     _LEXICON_BLOCKLIST_SEED,
 )
+from yuxi.services.domain_factory_region import attribution_scope_key, normalize_attribution
 from yuxi.storage.postgres.models_domain_entity import (
     Base as DomainEntityBase,
 )
@@ -56,9 +58,9 @@ AGENT_RUN_TERMINAL_STATUS_SQL = ", ".join(f"'{status}'" for status in AGENT_RUN_
 # v18：环评文件库两表（eia_library_folders / eia_library_files，五阶段种子）；
 # v19：文件库 P2 扩列（canonical md 正源/KB 推送镜像/加工前置）+ 加工台账表（eia_corpus_process_log）；
 # v20：限值提取暂存 + 表注册（eia_limit_extract_rows / eia_limit_table_registry，spec 2026-10-19）
-BUSINESS_SCHEMA_VERSION = 20
+BUSINESS_SCHEMA_VERSION = 22
 KNOWLEDGE_SCHEMA_VERSION = 2
-SCHEMA_VERSION_TABLE = "yuxi_schema_migrations"
+SCHEMA_VERSION_TABLE = "pisuan_schema_migrations"
 AGENT_RUN_LEASE_SCHEMA_STATEMENTS = (
     "ALTER TABLE IF EXISTS agent_runs ADD COLUMN IF NOT EXISTS worker_id VARCHAR(128)",
     "ALTER TABLE IF EXISTS agent_runs ADD COLUMN IF NOT EXISTS heartbeat_at TIMESTAMP WITHOUT TIME ZONE",
@@ -913,6 +915,106 @@ class PostgresManager(metaclass=SingletonMeta):
                 """)
             )
 
+    async def upgrade_business_v20_to_v21(self) -> None:
+        """[pisuan-custom] v21：模板/大纲增加归属键，并把知识库归属绑定为持久事实。
+
+        存量行 attribution 统一回落空串并保留原唯一约束语义；新写入按归属哈希分身份。
+        先删旧唯一约束再建含 attribution 的唯一索引，避免存量约束继续阻止同模板跨归属共存。
+        """
+        self._check_initialized()
+        async with self.async_engine.begin() as conn:
+            version = await conn.scalar(
+                text(f"SELECT version FROM {SCHEMA_VERSION_TABLE} WHERE domain = 'business' FOR UPDATE")
+            )
+            if version == 21:
+                return
+            if version not in (None, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20):
+                raise RuntimeError(f"Unsupported business schema version: {version}")
+            statements = [
+                "ALTER TABLE IF EXISTS domain_factory_learned_templates "
+                "ADD COLUMN IF NOT EXISTS report_type_code VARCHAR(64) NOT NULL DEFAULT '通用'",
+                "ALTER TABLE IF EXISTS domain_factory_learned_templates "
+                "ADD COLUMN IF NOT EXISTS attribution VARCHAR(64) NOT NULL DEFAULT ''",
+                "ALTER TABLE IF EXISTS domain_factory_outlines "
+                "ADD COLUMN IF NOT EXISTS attribution VARCHAR(64) NOT NULL DEFAULT ''",
+                "UPDATE domain_factory_learned_templates SET attribution = '' WHERE attribution IS NULL",
+                "UPDATE domain_factory_outlines SET attribution = '' WHERE attribution IS NULL",
+                "ALTER TABLE IF EXISTS domain_factory_learned_templates DROP CONSTRAINT IF EXISTS uq_dflt_domain_rt_chapter_sig",
+                "ALTER TABLE IF EXISTS domain_factory_learned_templates DROP CONSTRAINT IF EXISTS uq_dflt_domain_chapter_sig",
+                "ALTER TABLE IF EXISTS domain_factory_learned_templates DROP CONSTRAINT IF EXISTS "
+                "domain_factory_learned_templates_domain_code_chapter_slot_signature_key",
+                "ALTER TABLE IF EXISTS domain_factory_outlines DROP CONSTRAINT IF EXISTS uq_dfo_domain_rt_key",
+                "ALTER TABLE IF EXISTS domain_factory_outlines DROP CONSTRAINT IF EXISTS "
+                "domain_factory_outlines_domain_code_report_type_code_canonical_chapter_key_key",
+                "DROP INDEX IF EXISTS uq_dflt_domain_rt_chapter_sig",
+                "DROP INDEX IF EXISTS uq_dflt_domain_chapter_sig",
+                "DROP INDEX IF EXISTS domain_factory_learned_templates_domain_code_chapter_slot_signature_key",
+                "DROP INDEX IF EXISTS uq_dfo_domain_rt_key",
+                "DROP INDEX IF EXISTS domain_factory_outlines_domain_code_report_type_code_canonical_chapter_key_key",
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_dflt_domain_rt_chapter_sig_attr "
+                "ON domain_factory_learned_templates"
+                "(domain_code, report_type_code, chapter, slot_signature, attribution)",
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_dfo_domain_rt_key_attr "
+                "ON domain_factory_outlines(domain_code, report_type_code, canonical_chapter_key, attribution)",
+                "CREATE INDEX IF NOT EXISTS idx_dflt_attribution "
+                "ON domain_factory_learned_templates(attribution)",
+                "CREATE INDEX IF NOT EXISTS idx_dfo_attribution ON domain_factory_outlines(attribution)",
+            ]
+            for statement in statements:
+                await conn.execute(text(statement))
+            await conn.run_sync(
+                lambda sync_conn: DomainFactoryBase.metadata.create_all(
+                    sync_conn, tables=[DomainFactoryKnowledgeBaseAttribution.__table__]
+                )
+            )
+            bound_rows = (
+                await conn.execute(
+                    text(
+                        """
+                        SELECT knowledge_base_id,
+                               min(region_key) AS region_key,
+                               min(coalesce(scope, 'project')) AS scope,
+                               min(project_name) AS project_name,
+                               count(DISTINCT (coalesce(region_key, ''), coalesce(scope, 'project'),
+                                               coalesce(project_name, ''))) AS attribution_count
+                        FROM domain_factory_tasks
+                        WHERE knowledge_base_id <> ''
+                        GROUP BY knowledge_base_id
+                        HAVING count(DISTINCT (coalesce(region_key, ''), coalesce(scope, 'project'),
+                                              coalesce(project_name, ''))) = 1
+                        """
+                    )
+                )
+            ).mappings()
+            for row in bound_rows:
+                attribution = attribution_scope_key(
+                    row["knowledge_base_id"], row["region_key"], row["scope"], row["project_name"]
+                )
+                await conn.execute(
+                    text(
+                        """
+                        INSERT INTO domain_factory_kb_attributions
+                            (kb_id, region_key, scope, project_name, attribution)
+                        VALUES (:kb_id, :region_key, :scope, :project_name, :attribution)
+                        ON CONFLICT (kb_id) DO NOTHING
+                        """
+                    ),
+                    {
+                        "kb_id": row["knowledge_base_id"],
+                        "region_key": row["region_key"],
+                        "scope": row["scope"],
+                        "project_name": row["project_name"],
+                        "attribution": attribution,
+                    },
+                )
+            await conn.execute(
+                text(f"""
+                    INSERT INTO {SCHEMA_VERSION_TABLE} (domain, version, applied_at)
+                    VALUES ('business', 21, CURRENT_TIMESTAMP)
+                    ON CONFLICT (domain) DO UPDATE SET version = 21, applied_at = EXCLUDED.applied_at
+                """)
+            )
+
     async def record_schema_version(self, domain: str, version: int) -> None:
         """在对应域迁移完整成功后记录当前版本。"""
         self._check_initialized()
@@ -927,6 +1029,89 @@ class PostgresManager(metaclass=SingletonMeta):
                     """
                 ),
                 {"domain": domain, "version": version},
+            )
+
+    async def upgrade_business_v21_to_v22(self) -> None:
+        """[pisuan-custom] v22：区域事实绑定知识库归属；无法证明归属的 confirmed 事实退役。"""
+        self._check_initialized()
+        async with self.async_engine.begin() as conn:
+            version = await conn.scalar(
+                text(f"SELECT version FROM {SCHEMA_VERSION_TABLE} WHERE domain = 'business' FOR UPDATE")
+            )
+            if version == 22:
+                return
+            if version != 21:
+                raise RuntimeError(f"Unsupported business schema version: {version}")
+            statements = [
+                "ALTER TABLE IF EXISTS domain_factory_regional_facts "
+                "ADD COLUMN IF NOT EXISTS kb_id VARCHAR(128) NOT NULL DEFAULT ''",
+                "ALTER TABLE IF EXISTS domain_factory_regional_facts "
+                "ADD COLUMN IF NOT EXISTS attribution VARCHAR(64) NOT NULL DEFAULT ''",
+                "CREATE INDEX IF NOT EXISTS idx_dfrf_kb_type_status "
+                "ON domain_factory_regional_facts(kb_id, fact_type, status)",
+                "CREATE INDEX IF NOT EXISTS idx_dfrf_attribution "
+                "ON domain_factory_regional_facts(attribution)",
+            ]
+            for statement in statements:
+                await conn.execute(text(statement))
+            fact_rows = (
+                await conn.execute(
+                    text(
+                        """
+                        SELECT rf.id, rf.status,
+                               t.knowledge_base_id AS task_kb_id,
+                               t.region_key AS task_region_key,
+                               t.scope AS task_scope,
+                               t.project_name AS task_project_name,
+                               b.region_key AS bound_region_key,
+                               b.scope AS bound_scope,
+                               b.project_name AS bound_project_name
+                        FROM domain_factory_regional_facts rf
+                        LEFT JOIN domain_factory_tasks t ON t.id = rf.source_task_id
+                        LEFT JOIN domain_factory_kb_attributions b ON b.kb_id = t.knowledge_base_id
+                        """
+                    )
+                )
+            ).mappings()
+            for row in fact_rows:
+                task_attribution = normalize_attribution(
+                    row["task_region_key"], row["task_scope"], row["task_project_name"]
+                )
+                bound_attribution = (
+                    normalize_attribution(
+                        row["bound_region_key"], row["bound_scope"], row["bound_project_name"]
+                    )
+                    if row["bound_region_key"] is not None
+                    else None
+                )
+                kb_id = str(row["task_kb_id"] or "")
+                provable = bool(
+                    kb_id
+                    and bound_attribution is not None
+                    and task_attribution != (None, None, None)
+                    and task_attribution == bound_attribution
+                )
+                if not provable and row["status"] != "retired":
+                    await conn.execute(
+                        text("UPDATE domain_factory_regional_facts SET status = 'retired' WHERE id = :id"),
+                        {"id": row["id"]},
+                    )
+                    continue
+                if provable:
+                    attribution = attribution_scope_key(kb_id, *task_attribution)
+                    await conn.execute(
+                        text(
+                            "UPDATE domain_factory_regional_facts "
+                            "SET kb_id = :kb_id, attribution = :attribution WHERE id = :id"
+                        ),
+                        {"id": row["id"], "kb_id": kb_id, "attribution": attribution},
+                    )
+            await conn.execute(
+                text(f"""
+                    INSERT INTO {SCHEMA_VERSION_TABLE} (domain, version, applied_at)
+                    VALUES ('business', 22, CURRENT_TIMESTAMP)
+                    ON CONFLICT (domain) DO UPDATE SET version = 22, applied_at = EXCLUDED.applied_at
+                """)
             )
 
     async def require_current_schema(self) -> None:
@@ -1927,6 +2112,7 @@ class PostgresManager(metaclass=SingletonMeta):
             "CREATE TABLE IF NOT EXISTS domain_factory_learned_templates ("
             "    id SERIAL PRIMARY KEY,"
             "    domain_code VARCHAR(64) NOT NULL,"
+            "    report_type_code VARCHAR(64) NOT NULL DEFAULT '通用',"
             "    chapter VARCHAR(255) NOT NULL DEFAULT '',"
             "    generalized TEXT NOT NULL,"
             "    slots JSONB NOT NULL DEFAULT '[]',"
@@ -1936,14 +2122,19 @@ class PostgresManager(metaclass=SingletonMeta):
             "    sample_original TEXT,"
             "    extra_meta JSONB DEFAULT '{}',"
             "    canonical_chapter_key TEXT,"
+            "    scope VARCHAR(32),"
+            "    attribution VARCHAR(64) NOT NULL DEFAULT '',"
             "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
             "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
-            "    UNIQUE(domain_code, chapter, slot_signature)"
+            "    UNIQUE(domain_code, report_type_code, chapter, slot_signature, attribution)"
             ")",
             "CREATE INDEX IF NOT EXISTS idx_dflt_domain ON domain_factory_learned_templates(domain_code)",
             "ALTER TABLE IF EXISTS domain_factory_learned_templates ADD COLUMN IF NOT EXISTS match_count INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE IF EXISTS domain_factory_learned_templates ALTER COLUMN slot_signature TYPE TEXT",
             "ALTER TABLE IF EXISTS domain_factory_learned_templates ADD COLUMN IF NOT EXISTS canonical_chapter_key TEXT",
+            "ALTER TABLE IF EXISTS domain_factory_learned_templates ADD COLUMN IF NOT EXISTS report_type_code VARCHAR(64) NOT NULL DEFAULT '通用'",
+            "ALTER TABLE IF EXISTS domain_factory_learned_templates ADD COLUMN IF NOT EXISTS attribution VARCHAR(64) NOT NULL DEFAULT ''",
+            "CREATE INDEX IF NOT EXISTS idx_dflt_attribution ON domain_factory_learned_templates(attribution)",
             "CREATE TABLE IF NOT EXISTS domain_factory_outlines ("
             "    id SERIAL PRIMARY KEY,"
             "    domain_code VARCHAR(64) NOT NULL,"
@@ -1969,11 +2160,14 @@ class PostgresManager(metaclass=SingletonMeta):
             "    source_count INTEGER NOT NULL DEFAULT 1,"
             "    prose_based_on_source_count INTEGER,"
             "    rigidity VARCHAR(16),"
+            "    attribution VARCHAR(64) NOT NULL DEFAULT '',"
             "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
             "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
-            "    UNIQUE(domain_code, report_type_code, canonical_chapter_key)"
+            "    UNIQUE(domain_code, report_type_code, canonical_chapter_key, attribution)"
             ")",
             "CREATE INDEX IF NOT EXISTS idx_dfo_domain_rt ON domain_factory_outlines(domain_code, report_type_code)",
+            "ALTER TABLE IF EXISTS domain_factory_outlines ADD COLUMN IF NOT EXISTS attribution VARCHAR(64) NOT NULL DEFAULT ''",
+            "CREATE INDEX IF NOT EXISTS idx_dfo_attribution ON domain_factory_outlines(attribution)",
             # Writing-backbone: report / chapter / pps
             "CREATE TABLE IF NOT EXISTS domain_factory_reports ("
             "    id VARCHAR(64) PRIMARY KEY,"

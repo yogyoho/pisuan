@@ -140,7 +140,9 @@ async def main() -> None:
                     17,
                     18,
                     19,
-                ),  # [pisuan-custom] v14~v20：允许从 v9~v19 升级
+                    20,
+                    21,
+                ),  # [pisuan-custom] v14~v21：允许从 v9~v20 升级
             )
             knowledge_version = versions.get("knowledge")
             _require_supported_version(
@@ -199,6 +201,12 @@ async def main() -> None:
             # [pisuan-custom] v20：限值提取暂存表 + 表注册表（spec 2026-10-19，幂等）
             if business_version in {None, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19}:
                 await pg_manager.upgrade_business_v19_to_v20()
+            # [pisuan-custom] v21：模板/大纲归属隔离键（存量库补列 + 唯一身份重建，幂等）
+            if business_version in {None, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}:
+                await pg_manager.upgrade_business_v20_to_v21()
+            # [pisuan-custom] v22：区域事实归属隔离（存量无法证明归属的 confirmed 事实退役，幂等）
+            if business_version in {None, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21}:
+                await pg_manager.upgrade_business_v21_to_v22()
 
             if knowledge_version is None:
                 await pg_manager.create_knowledge_tables()

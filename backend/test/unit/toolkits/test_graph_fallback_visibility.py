@@ -4,10 +4,30 @@
 让 agent 感知并可转告用户（不再静默降级）。
 """
 from unittest.mock import AsyncMock, MagicMock
+from types import SimpleNamespace
+from langgraph.prebuilt.tool_node import ToolRuntime
 
 import pytest
 
 import yuxi.agents.toolkits.buildin.tools as tools_mod
+
+
+def _runtime():
+    return ToolRuntime(
+        state=None,
+        context=SimpleNamespace(knowledges=["kb"]),
+        config=None,
+        stream_writer=None,
+        tool_call_id=None,
+        store=None,
+    )
+
+
+def _scoped_repo(**methods):
+    return AsyncMock(
+        get_kb_attribution=AsyncMock(return_value={"bound": True, "mixed": False, "attribution": "attr"}),
+        **methods,
+    )
 
 
 @pytest.mark.asyncio
@@ -18,9 +38,11 @@ async def test_graph_success_tags_source_graph(monkeypatch):
     svc.return_value.get_chapter_outline = AsyncMock(return_value={"canonical_chapter_key": "总则", "purpose": "..."})
     svc.return_value.close = MagicMock()
     monkeypatch.setattr(gqs_mod, "GraphQueryService", svc)
-    monkeypatch.setattr(tools_mod, "DomainFactoryRepository", lambda: AsyncMock())
+    monkeypatch.setattr(tools_mod, "DomainFactoryRepository", lambda: _scoped_repo())
 
-    out = await tools_mod.get_chapter_outline.ainvoke({"domain": "coal", "report_type": "eia_report", "canonical_chapter_key": "总则"})
+    out = await tools_mod.get_chapter_outline.ainvoke(
+        {"domain": "coal", "report_type": "eia_report", "canonical_chapter_key": "总则", "runtime": _runtime()}
+    )
 
     assert out["_source"] == "graph"
     assert "_degraded_note" not in out
@@ -37,10 +59,14 @@ async def test_graph_error_fallback_tags_degraded(monkeypatch):
     monkeypatch.setattr(
         tools_mod,
         "DomainFactoryRepository",
-        lambda: AsyncMock(get_outline=AsyncMock(return_value={"canonical_chapter_key": "总则", "purpose": "db内容"})),
+        lambda: _scoped_repo(
+            get_outline=AsyncMock(return_value={"canonical_chapter_key": "总则", "purpose": "db内容"})
+        ),
     )
 
-    out = await tools_mod.get_chapter_outline.ainvoke({"domain": "coal", "report_type": "eia_report", "canonical_chapter_key": "总则"})
+    out = await tools_mod.get_chapter_outline.ainvoke(
+        {"domain": "coal", "report_type": "eia_report", "canonical_chapter_key": "总则", "runtime": _runtime()}
+    )
 
     assert out["_source"] == "db_fallback"
     assert "_degraded_note" in out
@@ -58,10 +84,12 @@ async def test_graph_empty_fallback_not_degraded(monkeypatch):
     monkeypatch.setattr(
         tools_mod,
         "DomainFactoryRepository",
-        lambda: AsyncMock(get_outline=AsyncMock(return_value={"canonical_chapter_key": "总则"})),
+        lambda: _scoped_repo(get_outline=AsyncMock(return_value={"canonical_chapter_key": "总则"})),
     )
 
-    out = await tools_mod.get_chapter_outline.ainvoke({"domain": "coal", "report_type": "eia_report", "canonical_chapter_key": "总则"})
+    out = await tools_mod.get_chapter_outline.ainvoke(
+        {"domain": "coal", "report_type": "eia_report", "canonical_chapter_key": "总则", "runtime": _runtime()}
+    )
 
     assert out["_source"] == "db"
     assert "_degraded_note" not in out

@@ -25,8 +25,8 @@ tool_dependencies: ["list_kbs", "query_kb", "read_file", "get_chapter_outline", 
 
 ### 第一步：获取大纲与法规清单
 
-1. 调用 `list_kbs` 确认可用知识库
-2. 对每个章节调用 `get_chapter_outline(domain, report_type, canonical_chapter_key)`，取其 `regulations`（含 `standard_code`）与 `content_requirements`
+1. 调用 `list_kbs` 确认可用知识库，并记下选定知识库的 `kb_id`
+2. 对每个章节调用 `get_chapter_outline(domain, report_type, canonical_chapter_key, kb_id=kb_id)`，取其 `regulations`（含 `standard_code`）与 `content_requirements`；多库时不得省略 `kb_id`
 3. 汇总生成法规清单（去重），标注每个法规关联的章节
 
 ### 第二步：检索法规原文

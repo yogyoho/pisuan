@@ -13,7 +13,9 @@ class _FakeGraphService:
     def __init__(self, outline: dict[str, Any] | None):
         self._outline = outline
 
-    async def get_chapter_outline(self, domain: str, report_type: str, chapter_key: str):
+    async def get_chapter_outline(
+        self, domain: str, report_type: str, chapter_key: str, *, attribution: str = "", kb_id: str = ""
+    ):
         return self._outline
 
     def close(self) -> None:
@@ -27,7 +29,7 @@ class _FakeRepo:
         self._row = row
         self.requested_key: str | None = None
 
-    async def get_outline(self, domain: str, report_type: str, canonical_key: str):
+    async def get_outline(self, domain: str, report_type: str, canonical_key: str, *, attribution: str = ""):
         self.requested_key = canonical_key
         return self._row
 

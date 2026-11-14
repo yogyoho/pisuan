@@ -123,13 +123,32 @@ class DomainFactoryTask(Base):
         return data
 
 
+class DomainFactoryKnowledgeBaseAttribution(Base):
+    """知识工厂 - 知识库持久归属绑定"""
+
+    __tablename__ = "domain_factory_kb_attributions"
+
+    kb_id = Column(String(128), primary_key=True)
+    region_key = Column(String(128), nullable=True)
+    scope = Column(String(32), nullable=False)
+    project_name = Column(String(255), nullable=True)
+    attribution = Column(String(64), nullable=False, index=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
+
+
 class DomainFactoryLearnedTemplate(Base):
     """领域知识工厂 - 学习到的段落模板"""
 
     __tablename__ = "domain_factory_learned_templates"
     __table_args__ = (
         UniqueConstraint(
-            "domain_code", "report_type_code", "chapter", "slot_signature", name="uq_dflt_domain_rt_chapter_sig"
+            "domain_code",
+            "report_type_code",
+            "chapter",
+            "slot_signature",
+            "attribution",
+            name="uq_dflt_domain_rt_chapter_sig_attr",
         ),
         Index("idx_dflt_chapter", "domain_code", "report_type_code", "chapter"),
     )
@@ -149,6 +168,9 @@ class DomainFactoryLearnedTemplate(Base):
     scope = Column(
         String(32), nullable=True
     )  # [pisuan-custom] W3：universal|regional|project；NULL=无证据不参与聚合（不进唯一约束）
+    attribution = Column(
+        String(64), nullable=False, default="", server_default="", index=True
+    )  # 归属隔离键；空串=存量共享/未归属
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
 
@@ -165,6 +187,8 @@ class DomainFactoryLearnedTemplate(Base):
             "match_count": self.match_count,
             "sample_original": self.sample_original,
             "extra_meta": self.extra_meta or {},
+            "scope": self.scope,
+            "attribution": self.attribution or "",
             "created_at": format_utc_datetime(self.created_at),
             "updated_at": format_utc_datetime(self.updated_at),
         }
@@ -207,7 +231,8 @@ class DomainFactoryOutline(Base):
             "domain_code",
             "report_type_code",
             "canonical_chapter_key",
-            name="uq_dfo_domain_rt_key",
+            "attribution",
+            name="uq_dfo_domain_rt_key_attr",
         ),
         Index("idx_dfo_domain_rt", "domain_code", "report_type_code"),
     )
@@ -240,6 +265,9 @@ class DomainFactoryOutline(Base):
     source_count = Column(Integer, nullable=False, default=1)
     prose_based_on_source_count = Column(Integer, nullable=True)
     rigidity = Column(String(16), nullable=True)
+    attribution = Column(
+        String(64), nullable=False, default="", server_default="", index=True
+    )  # 归属隔离键；空串=存量共享/未归属
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
 
@@ -264,6 +292,7 @@ class DomainFactoryOutline(Base):
             "expected_figures": self.expected_figures or [],
             "source_count": self.source_count,
             "rigidity": self.rigidity,
+            "attribution": self.attribution or "",
         }
 
 
@@ -386,12 +415,18 @@ class DomainFactoryRegionalFact(Base):
     __tablename__ = "domain_factory_regional_facts"
     __table_args__ = (
         Index("idx_dfrf_region_type_status", "region_key", "fact_type", "status"),
+        Index("idx_dfrf_kb_type_status", "kb_id", "fact_type", "status"),
+        Index("idx_dfrf_attribution", "attribution"),
         Index("idx_dfrf_source_task", "source_task_id"),
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     fact_type = Column(String(32), nullable=False)  # monitoring|sensitive_target|measure|constraint
     region_key = Column(String(128), nullable=True)  # NULL=未归属（靠 source_task_id 追补）
+    kb_id = Column(String(128), nullable=False, default="", server_default="")  # 空串=存量未判定，不得对外
+    attribution = Column(
+        String(64), nullable=False, default="", server_default="", index=True
+    )  # 空串=存量未判定；confirmed 必须绑定知识库归属后才可被写手消费
     content = Column(Text, nullable=False)  # 事实内容（实体名+描述）
     source_task_id = Column(String(64), ForeignKey("domain_factory_tasks.id", ondelete="SET NULL"), nullable=True)
     entity_key = Column(String(255), nullable=True)  # 去重与溯源键：(source_task_id, entity_key)
@@ -406,6 +441,8 @@ class DomainFactoryRegionalFact(Base):
             "id": self.id,
             "fact_type": self.fact_type,
             "region_key": self.region_key,
+            "kb_id": self.kb_id or "",
+            "attribution": self.attribution or "",
             "content": self.content,
             "source_task_id": self.source_task_id,
             "entity_key": self.entity_key,

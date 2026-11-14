@@ -4,7 +4,7 @@ import { message, Modal } from 'ant-design-vue'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { useUserStore } from '@/stores/user'
 
-// [pisuan-custom] W4 子页2：区域事实浏览 + admin 批量退役。
+// [pisuan-custom] W4 子页2：区域事实库 + admin 批量退役；空 attribution 的 confirmed 属于迁移前遗留风险。
 // API 层 get_admin_user 兜底，前端 isAdmin 仅展示层收敛（不重复鉴权假设）。
 const userStore = useUserStore()
 const loading = ref(false)
@@ -35,7 +35,7 @@ const STATUS_CHIPS = [
   { value: 'confirmed', label: 'confirmed' },
   { value: 'retired', label: 'retired' }
 ]
-const STATUS_COLORS = { draft: 'orange', confirmed: 'green', retired: 'default' }
+const STATUS_PILL = { draft: 'pill-orange', confirmed: 'pill-ok', retired: 'pill-gray' }
 const TYPE_LABELS = {
   monitoring: '监测',
   sensitive_target: '敏感目标',
@@ -46,6 +46,8 @@ const TYPE_LABELS = {
 const columns = [
   { title: '类型', key: 'fact_type', width: 90 },
   { title: 'region', dataIndex: 'region_key', width: 120 },
+  { title: '目标 KB', dataIndex: 'kb_id', width: 150, ellipsis: true },
+  { title: '归属身份', key: 'attribution', width: 110 },
   { title: '内容', dataIndex: 'content', ellipsis: true },
   { title: '状态', key: 'status', width: 100 },
   { title: '年份', dataIndex: 'year', width: 70 },
@@ -106,7 +108,13 @@ const rowSelection = computed(() => {
   }
 })
 
-const rowClassName = (record) => (record.status === 'retired' ? 'fact-retired' : '')
+const rowClassName = (record) => {
+  if (record.status === 'retired') return 'fact-retired'
+  if (record.status === 'confirmed' && !record.attribution) return 'fact-unproven'
+  return ''
+}
+
+const shortAttribution = (value) => (value ? value.slice(0, 8) : '未证明')
 
 const confirmRetire = () => {
   Modal.confirm({
@@ -149,87 +157,98 @@ defineExpose({
 
 <template>
   <div class="regional-facts-table">
-    <div class="filter-bar">
-      <a-select
-        v-model:value="regionKey"
-        :options="regionOptions"
-        style="width: 200px"
+    <div class="card">
+      <div class="toolbar">
+        <a-select
+          v-model:value="regionKey"
+          :options="regionOptions"
+          style="width: 200px"
+          size="small"
+          @change="onFilterChange"
+        />
+        <a-select
+          :options="FACT_TYPE_OPTIONS"
+          style="width: 120px"
+          size="small"
+          :value="factType"
+          @change="
+            (v) => {
+              factType = v
+              onFilterChange()
+            }
+          "
+        />
+        <div class="seg">
+          <button
+            v-for="c in STATUS_CHIPS"
+            :key="c.value"
+            :class="{ on: status === c.value }"
+            @click="
+              () => {
+                status = c.value
+                onFilterChange()
+              }
+            "
+          >
+            {{ c.label }}
+          </button>
+        </div>
+      </div>
+      <a-table
+        :data-source="items"
+        :columns="columns"
+        :loading="loading"
+        :pagination="pagination"
+        :row-selection="rowSelection"
+        :row-class-name="rowClassName"
+        row-key="id"
         size="small"
-        @change="onFilterChange"
-      />
-      <a-select
-        :options="FACT_TYPE_OPTIONS"
-        style="width: 120px"
-        size="small"
-        :value="factType"
-        @change="
-          (v) => {
-            factType = v
-            onFilterChange()
-          }
-        "
-      />
-      <a-radio-group
-        :value="status"
-        button-style="solid"
-        size="small"
-        @change="
-          (e) => {
-            status = e.target.value
-            onFilterChange()
-          }
-        "
+        @change="handleTableChange"
       >
-        <a-radio-button v-for="c in STATUS_CHIPS" :key="c.value" :value="c.value">{{
-          c.label
-        }}</a-radio-button>
-      </a-radio-group>
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'fact_type'">
+            {{ TYPE_LABELS[record.fact_type] || record.fact_type }}
+          </template>
+          <template v-else-if="column.key === 'status'">
+            <span class="pill pill-sm" :class="STATUS_PILL[record.status] || 'pill-gray'">
+              {{ record.status }}
+            </span>
+          </template>
+          <template v-else-if="column.key === 'attribution'">
+            <span class="pill pill-sm" :class="record.attribution ? 'pill-main' : 'pill-err'">
+              {{ shortAttribution(record.attribution) }}
+            </span>
+          </template>
+        </template>
+      </a-table>
     </div>
-    <a-table
-      :data-source="items"
-      :columns="columns"
-      :loading="loading"
-      :pagination="pagination"
-      :row-selection="rowSelection"
-      :row-class-name="rowClassName"
-      row-key="id"
-      size="small"
-      @change="handleTableChange"
-    >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'fact_type'">
-          {{ TYPE_LABELS[record.fact_type] || record.fact_type }}
-        </template>
-        <template v-else-if="column.key === 'status'">
-          <a-tag :color="STATUS_COLORS[record.status]">{{ record.status }}</a-tag>
-        </template>
-      </template>
-    </a-table>
     <div v-if="userStore.isAdmin && selectedIds.length" class="batch-bar">
       <span>已选 {{ selectedIds.length }} 条</span>
-      <a-button danger size="small" @click="confirmRetire">批量退役</a-button>
+      <button class="btn btn-sm btn-danger" @click="confirmRetire">批量退役</button>
     </div>
   </div>
 </template>
 
 <style lang="less" scoped>
-.filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
+/* 公共配方（card/toolbar/seg/pill/btn/a-table 对齐）在 factory-core/factory-ui.less */
 .batch-bar {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 10px;
-  padding: 6px 12px;
-  background: var(--color-warning-50, #fff7e6);
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: var(--second-50);
   border-radius: 6px;
+  font-size: 13px;
+  color: var(--second-600);
   width: fit-content;
 }
 :deep(.fact-retired) {
   opacity: 0.5;
 }
+:deep(.fact-unproven) {
+  background: var(--color-warning-50, #fff7e6);
+}
 </style>
+
+<style lang="less" src="../factory-core/factory-ui.less"></style>

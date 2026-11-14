@@ -9,10 +9,12 @@ from yuxi.services.domain_factory_service import DomainFactoryService  # noqa: E
 
 
 class FakeTaskRow:
-    def __init__(self, task_id="t1", region_key=None, scope=None):
+    def __init__(self, task_id="t1", region_key=None, scope=None, project_name=None, knowledge_base_id=None):
         self.id = task_id
         self.region_key = region_key
         self.scope = scope
+        self.project_name = project_name
+        self.knowledge_base_id = knowledge_base_id
         self.file_name = "横城矿区总体规划（修编）环评.docx"
         self.document_type = "通用"
         self.report_type_code = "通用"

@@ -122,6 +122,15 @@
       }
     }
 
+    &.btn-danger {
+      background: var(--color-error-500);
+      color: #fff;
+
+      &:hover {
+        filter: brightness(1.08);
+      }
+    }
+
     &.btn-txt {
       color: var(--main-600);
       padding: 0 6px;
@@ -857,6 +866,53 @@
 
     &.w-55 {
       width: 55%;
+    }
+  }
+
+  /* ── a-table 观感对齐（规范 §6：需排序/分页/滚动选择的表用 a-table，观感贴齐 §3.6 .tbl；
+        简单只读表仍走配方 CSS 自绘） ── */
+  .ant-table-wrapper {
+    font-size: 13px;
+    color: var(--color-text);
+
+    .ant-table {
+      background: transparent;
+      color: var(--color-text);
+    }
+
+    .ant-table-thead > tr > th {
+      background: var(--gray-0);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--color-text-tertiary);
+      border-bottom: 1px solid var(--gray-200);
+      white-space: nowrap;
+
+      /* 去掉 AntD 默认表头列分隔竖线，与 .tbl 一致 */
+      &::before {
+        display: none;
+      }
+    }
+
+    .ant-table-tbody > tr > td {
+      border-bottom: 1px solid var(--gray-100);
+      transition: background 0.12s;
+    }
+
+    .ant-table-tbody > tr:hover > td {
+      background: var(--gray-50);
+    }
+
+    .ant-table-tbody > tr.ant-table-row-selected > td {
+      background: var(--main-50);
+    }
+
+    .ant-pagination {
+      .ant-pagination-item,
+      .ant-pagination-prev,
+      .ant-pagination-next {
+        border-radius: 6px;
+      }
     }
   }
 }

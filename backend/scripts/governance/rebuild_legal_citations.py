@@ -51,7 +51,8 @@ def load_documents(session) -> list[dict]:
         """
         MATCH (d:Document)
         RETURN d.id AS id, d.filename AS filename, d.kb_id AS kb_id,
-               d.domain_code AS domain_code, d.report_type_code AS report_type_code
+               d.domain_code AS domain_code, d.report_type_code AS report_type_code,
+               d.attribution AS attribution
         ORDER BY d.id
         """
     )
@@ -212,6 +213,7 @@ def rebuild(session, mappings: list[dict]) -> dict:
         section_map = load_document_section_map(session, doc_id)
         if not section_map:
             continue
+        attribution = str((mapping.get("document") or {}).get("attribution") or "")
         stats = GraphBuilder.rebuild_legal_citations(
             session,
             task.get("knowledge_base_id") or "",
@@ -220,6 +222,7 @@ def rebuild(session, mappings: list[dict]) -> dict:
             section_map,
             domain_code,
             report_type_code,
+            attribution,
         )
         rebuilt_docs += 1
         created_edges += stats.get("citations_created", 0)

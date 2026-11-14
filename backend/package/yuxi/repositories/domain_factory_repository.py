@@ -7,6 +7,7 @@ from sqlalchemy import func, select, text, update
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_domain_factory import (
     DomainFactoryDomain,
+    DomainFactoryKnowledgeBaseAttribution,
     DomainFactoryTask,
     DomainFactoryLearnedTemplate,
     DomainFactoryOutline,
@@ -19,6 +20,10 @@ from yuxi.storage.postgres.models_domain_factory import (
 )
 from yuxi.utils import hashstr, normalize_chapter_key
 from yuxi.utils.datetime_utils import utc_now_naive
+from yuxi.services.domain_factory_region import (
+    attribution_scope_key,
+    normalize_attribution,
+)
 
 # 去领域化（2026-10-29）：通用域唯一常量。领域维度废弃后，所有写入与查询固定使用此值；
 # domains 表冻结保留（历史外键兼容），不再暴露增删改接口。
@@ -341,9 +346,13 @@ class DomainFactoryRepository:
         return task
 
     async def begin_ingest(
-        self, task_id: str, reviewer: str | None = None, ingest_task_id: str | None = None
+        self,
+        task_id: str,
+        reviewer: str | None = None,
+        ingest_task_id: str | None = None,
+        knowledge_base_id: str | None = None,
     ) -> DomainFactoryTask | None:
-        """C-1：入库链入口，落 INGESTING 中间态（归属字段早写，终态后置）。"""
+        """C-1：入库链入口，落 INGESTING 中间态并锁定目标库归属。"""
         async with pg_manager.get_async_session_context() as session:
             from sqlalchemy.orm import joinedload
 
@@ -356,15 +365,284 @@ class DomainFactoryRepository:
             if task is None:
                 return None
             _validate_status_transition(task.status, "INGESTING")
+            if knowledge_base_id:
+                await self._assert_kb_attribution_compatible_in_session(
+                    session,
+                    kb_id=knowledge_base_id,
+                    task_id=task_id,
+                    region_key=task.region_key,
+                    scope=task.scope,
+                    project_name=task.project_name,
+                )
             task.status = "INGESTING"
             if reviewer:
                 task.reviewer = reviewer
             if ingest_task_id:
                 task.ingest_task_id = ingest_task_id
+            if knowledge_base_id:
+                task.knowledge_base_id = knowledge_base_id
             # [pisuan-custom] W3 兜底：入库时仍无归属判定 → project（最保守；已有值不动）
             if task.scope is None:
                 task.scope = "project"
+            if knowledge_base_id:
+                await self._bind_regional_facts_for_task_in_session(session, task)
         return task
+
+    async def assert_kb_attribution_compatible(
+        self,
+        kb_id: str,
+        *,
+        task_id: str,
+        region_key: str | None,
+        scope: str | None,
+        project_name: str | None,
+    ) -> None:
+        """提交入口的早失败检查；权威检查仍在 begin_ingest 的事务内。"""
+        if not kb_id:
+            return
+        async with pg_manager.get_async_session_context() as session:
+            await self._assert_kb_attribution_compatible_in_session(
+                session,
+                kb_id=kb_id,
+                task_id=task_id,
+                region_key=region_key,
+                scope=scope,
+                project_name=project_name,
+            )
+
+    async def get_kb_attribution(self, kb_id: str) -> dict[str, Any]:
+        """返回知识库的入库归属；未绑定返回空串，混合归属标记 mixed 供调用方降级。"""
+        result: dict[str, Any] = {
+            "kb_id": kb_id,
+            "attribution": "",
+            "bound": False,
+            "mixed": False,
+            "region_key": None,
+            "scope": None,
+            "project_name": None,
+        }
+        if not kb_id:
+            return result
+        async with pg_manager.get_async_session_context() as session:
+            binding = (
+                await session.execute(
+                    select(DomainFactoryKnowledgeBaseAttribution).where(
+                        DomainFactoryKnowledgeBaseAttribution.kb_id == kb_id
+                    )
+                )
+            ).scalar_one_or_none()
+            rows = await session.execute(
+                select(
+                    DomainFactoryTask.region_key,
+                    DomainFactoryTask.scope,
+                    DomainFactoryTask.project_name,
+                )
+                .where(DomainFactoryTask.knowledge_base_id == kb_id)
+                .distinct()
+            )
+            attributions = {
+                normalize_attribution(row.region_key, row.scope or "project", row.project_name)
+                for row in rows
+            }
+        if binding is not None:
+            binding_tuple = normalize_attribution(binding.region_key, binding.scope, binding.project_name)
+            if len(attributions) > 1 or (attributions and next(iter(attributions)) != binding_tuple):
+                result["mixed"] = True
+                return result
+            result.update(
+                {
+                    "bound": True,
+                    "attribution": binding.attribution,
+                    "region_key": binding.region_key,
+                    "scope": binding.scope,
+                    "project_name": binding.project_name,
+                }
+            )
+            return result
+        if not attributions:
+            return result
+        result["bound"] = True
+        if len(attributions) > 1:
+            result["mixed"] = True
+            return result
+        region_key, scope, project_name = next(iter(attributions))
+        result.update(
+            {
+                "attribution": attribution_scope_key(kb_id, region_key, scope, project_name),
+                "region_key": region_key,
+                "scope": scope,
+                "project_name": project_name,
+            }
+        )
+        return result
+
+    async def list_kb_attributions(
+        self,
+        *,
+        keyword: str | None = None,
+        status: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """返回一库一归属诊断列表；任务已删除的绑定标记 retained，防止误判为可复用。"""
+        async with pg_manager.get_async_session_context() as session:
+            bindings = (
+                await session.execute(select(DomainFactoryKnowledgeBaseAttribution).order_by(DomainFactoryKnowledgeBaseAttribution.kb_id))
+            ).scalars().all()
+            task_rows = (
+                await session.execute(
+                    select(
+                        DomainFactoryTask.knowledge_base_id,
+                        DomainFactoryTask.region_key,
+                        DomainFactoryTask.scope,
+                        DomainFactoryTask.project_name,
+                        func.count(DomainFactoryTask.id),
+                    )
+                    .where(DomainFactoryTask.knowledge_base_id != "")
+                    .group_by(
+                        DomainFactoryTask.knowledge_base_id,
+                        DomainFactoryTask.region_key,
+                        DomainFactoryTask.scope,
+                        DomainFactoryTask.project_name,
+                    )
+                )
+            ).all()
+
+        by_kb: dict[str, dict[str, Any]] = {}
+        for binding in bindings:
+            by_kb[binding.kb_id] = {
+                "kb_id": binding.kb_id,
+                "attribution": binding.attribution,
+                "binding_region_key": binding.region_key,
+                "binding_scope": binding.scope,
+                "binding_project_name": binding.project_name,
+                "created_at": binding.created_at.isoformat() if binding.created_at else None,
+                "updated_at": binding.updated_at.isoformat() if binding.updated_at else None,
+                "task_count": 0,
+                "task_attribution_count": 0,
+            }
+        task_groups: dict[str, set[tuple[str | None, str | None, str | None]]] = {}
+        for kb_id, region_key, scope, project_name, count in task_rows:
+            key = str(kb_id)
+            item = by_kb.setdefault(
+                key,
+                {
+                    "kb_id": key,
+                    "attribution": attribution_scope_key(key, region_key, scope or "project", project_name),
+                    "binding_region_key": None,
+                    "binding_scope": None,
+                    "binding_project_name": None,
+                    "created_at": None,
+                    "updated_at": None,
+                    "task_count": 0,
+                    "task_attribution_count": 0,
+                },
+            )
+            item["task_count"] += int(count)
+            task_groups.setdefault(key, set()).add(normalize_attribution(region_key, scope or "project", project_name))
+
+        binding_tuples: dict[str, tuple[str | None, str | None, str | None]] = {
+            key: normalize_attribution(item["binding_region_key"], item["binding_scope"], item["binding_project_name"])
+            for key, item in by_kb.items()
+            if item["binding_region_key"] is not None or item["binding_scope"] is not None
+        }
+        for key, item in by_kb.items():
+            attrs = task_groups.get(key, set())
+            item["task_attribution_count"] = len(attrs)
+            binding_tuple = binding_tuples.get(key)
+            if binding_tuple is None:
+                item["status"] = "mixed" if len(attrs) > 1 else "legacy"
+                item["status_reason"] = "知识库存在任务归属但没有持久绑定" if attrs else ""
+            elif not attrs:
+                item["status"] = "retained"
+                item["status_reason"] = "来源任务已删除；绑定仍阻止知识库复用"
+            elif len(attrs) > 1 or next(iter(attrs)) != binding_tuple:
+                item["status"] = "mixed"
+                item["status_reason"] = "任务归属与持久绑定不一致，或同一库包含多种归属"
+            else:
+                item["status"] = "bound"
+                item["status_reason"] = ""
+
+        keyword_value = (keyword or "").strip().lower()
+        items = list(by_kb.values())
+        if keyword_value:
+            items = [
+                item
+                for item in items
+                if keyword_value
+                in " ".join(
+                    [
+                        item["kb_id"],
+                        item["attribution"],
+                        item["binding_region_key"] or "",
+                        item["binding_project_name"] or "",
+                    ]
+                ).lower()
+            ]
+        if status:
+            items = [item for item in items if item["status"] == status]
+        items.sort(key=lambda item: (item["status"] != "mixed", item["kb_id"]))
+        total = len(items)
+        start = (max(1, page) - 1) * page_size
+        return items[start : start + page_size], total
+
+    async def _assert_kb_attribution_compatible_in_session(
+        self,
+        session,
+        *,
+        kb_id: str,
+        task_id: str,
+        region_key: str | None,
+        scope: str | None,
+        project_name: str | None,
+    ) -> None:
+        """一个知识库只允许写入一种归属；用 advisory lock 串行化并发首写。"""
+        await session.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"domain-factory-kb:{kb_id}"))))
+        binding_result = await session.execute(
+            select(DomainFactoryKnowledgeBaseAttribution).where(
+                DomainFactoryKnowledgeBaseAttribution.kb_id == kb_id
+            )
+        )
+        binding = binding_result.scalar_one_or_none()
+        current = normalize_attribution(region_key, scope or "project", project_name)
+        if binding is not None:
+            existing = normalize_attribution(binding.region_key, binding.scope, binding.project_name)
+            if existing != current:
+                raise ValueError(
+                    "目标知识库已被其他归属占用："
+                    f"库={kb_id} 已绑定 {existing}，当前任务归属 {current}。"
+                    "请选择对应归属的知识库，或新建知识库后再入库。"
+                )
+        result = await session.execute(
+            select(
+                DomainFactoryTask.region_key,
+                DomainFactoryTask.scope,
+                DomainFactoryTask.project_name,
+            )
+            .where(
+                DomainFactoryTask.knowledge_base_id == kb_id,
+                DomainFactoryTask.id != task_id,
+            )
+            .distinct()
+        )
+        for row in result:
+            existing = normalize_attribution(row.region_key, row.scope or "project", row.project_name)
+            if existing != current:
+                raise ValueError(
+                    "目标知识库已被其他归属占用："
+                    f"库={kb_id} 已绑定 {existing}，当前任务归属 {current}。"
+                    "请选择对应归属的知识库，或新建知识库后再入库。"
+                )
+        if binding is None:
+            session.add(
+                DomainFactoryKnowledgeBaseAttribution(
+                    kb_id=kb_id,
+                    region_key=current[0],
+                    scope=current[1] or "project",
+                    project_name=current[2],
+                    attribution=attribution_scope_key(kb_id, current[0], current[1] or "project", current[2]),
+                )
+            )
 
     async def delete_task(self, task_id: str) -> bool:
         async with pg_manager.get_async_session_context() as session:
@@ -403,12 +681,14 @@ class DomainFactoryRepository:
         sample_original: str | None = None,
         extra_meta: dict | None = None,
         report_type_code: str | None = None,
+        attribution: str = "",
     ) -> int | None:
         async with pg_manager.get_async_session_context() as session:
             conditions = [
                 DomainFactoryLearnedTemplate.domain_code == domain_code,
                 DomainFactoryLearnedTemplate.chapter == chapter,
                 DomainFactoryLearnedTemplate.slot_signature == slot_signature,
+                DomainFactoryLearnedTemplate.attribution == attribution,
             ]
             if report_type_code:
                 conditions.append(DomainFactoryLearnedTemplate.report_type_code == report_type_code)
@@ -425,6 +705,7 @@ class DomainFactoryRepository:
                     slot_signature=slot_signature,
                     sample_original=sample_original,
                     extra_meta=extra_meta,
+                    attribution=attribution,
                 )
                 session.add(template)
                 await session.flush()  # W3：聚合需要自增 id（session 内取出，避免 expire 后取值）
@@ -501,6 +782,7 @@ class DomainFactoryRepository:
         source_task_ids=None,
         source_count=1,
         prose_based_on_source_count=None,
+        attribution="",
     ) -> DomainFactoryOutline:
         # canonical 归一化单一收口：带编号/含空白 key 统一归一后入库（bug-4167）
         canonical_chapter_key = normalize_chapter_key(canonical_chapter_key) or canonical_chapter_key
@@ -512,6 +794,7 @@ class DomainFactoryRepository:
                     DomainFactoryOutline.domain_code == domain_code,
                     DomainFactoryOutline.report_type_code == report_type_code,
                     DomainFactoryOutline.canonical_chapter_key == canonical_chapter_key,
+                    DomainFactoryOutline.attribution == attribution,
                 )
             )
             row = result.scalar_one_or_none()
@@ -537,6 +820,7 @@ class DomainFactoryRepository:
                     source_task_ids=source_task_ids or [],
                     source_count=source_count,
                     prose_based_on_source_count=prose_based_on_source_count,
+                    attribution=attribution,
                 )
                 session.add(row)
             else:
@@ -559,34 +843,50 @@ class DomainFactoryRepository:
             await session.commit()
             return row
 
-    async def get_outline(self, domain_code, report_type_code, canonical_chapter_key) -> dict[str, Any] | None:
+    async def get_outline(
+        self, domain_code, report_type_code, canonical_chapter_key, *, attribution: str | None = None
+    ) -> dict[str, Any] | None:
         from yuxi.storage.postgres.models_domain_factory import DomainFactoryOutline
 
         async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(
-                select(DomainFactoryOutline).where(
-                    DomainFactoryOutline.domain_code == domain_code,
-                    DomainFactoryOutline.report_type_code == report_type_code,
-                    DomainFactoryOutline.canonical_chapter_key == canonical_chapter_key,
-                )
-            )
+            conditions = [
+                DomainFactoryOutline.domain_code == domain_code,
+                DomainFactoryOutline.report_type_code == report_type_code,
+                DomainFactoryOutline.canonical_chapter_key == canonical_chapter_key,
+            ]
+            if attribution is not None:
+                conditions.append(DomainFactoryOutline.attribution == attribution)
+            stmt = select(DomainFactoryOutline).where(*conditions)
+            if attribution is None:
+                # 未指定归属的历史调用按最早行兜底，避免多归属并存后 scalar_one_or_none 抛错。
+                stmt = stmt.order_by(DomainFactoryOutline.id).limit(1)
+            result = await session.execute(stmt)
             row = result.scalar_one_or_none()
             return row.to_dict() if row else None
 
-    async def list_chapter_keys(self, domain_code, report_type_code) -> list[str]:
+    async def list_chapter_keys(
+        self, domain_code, report_type_code, *, attribution: str | None = None
+    ) -> list[str]:
         from yuxi.storage.postgres.models_domain_factory import DomainFactoryOutline
 
         async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(
-                select(DomainFactoryOutline.canonical_chapter_key).where(
-                    DomainFactoryOutline.domain_code == domain_code,
-                    DomainFactoryOutline.report_type_code == report_type_code,
-                )
-            )
+            conditions = [
+                DomainFactoryOutline.domain_code == domain_code,
+                DomainFactoryOutline.report_type_code == report_type_code,
+            ]
+            if attribution is not None:
+                conditions.append(DomainFactoryOutline.attribution == attribution)
+            result = await session.execute(select(DomainFactoryOutline.canonical_chapter_key).where(*conditions))
             return [r[0] for r in result.all() if r[0]]
 
     async def backfill_template_chapter_key(
-        self, domain_code, report_type_code, chapter_identifiers: list[str], canonical_chapter_key
+        self,
+        domain_code,
+        report_type_code,
+        chapter_identifiers: list[str],
+        canonical_chapter_key,
+        *,
+        attribution: str = "",
     ) -> int:
         from yuxi.storage.postgres.models_domain_factory import DomainFactoryLearnedTemplate
         from sqlalchemy import update
@@ -600,6 +900,7 @@ class DomainFactoryRepository:
                     DomainFactoryLearnedTemplate.domain_code == domain_code,
                     DomainFactoryLearnedTemplate.report_type_code == report_type_code,
                     DomainFactoryLearnedTemplate.chapter.in_(chapter_identifiers),
+                    DomainFactoryLearnedTemplate.attribution == attribution,
                 )
                 .values(canonical_chapter_key=canonical_chapter_key)
             )
@@ -620,6 +921,9 @@ class DomainFactoryRepository:
         import uuid
 
         rid = f"rpt_{hashstr(thread_id + title + str(uuid.uuid4()), 10)}"
+        kb_info = await self.get_kb_attribution(str(kb_id or ""))
+        if kb_info.get("mixed") or not kb_info.get("bound"):
+            raise ValueError(f"报告知识库必须绑定唯一入库归属: {kb_id}")
         async with pg_manager.get_async_session_context() as session:
             row = DomainFactoryReport(
                 id=rid,
@@ -765,7 +1069,9 @@ class DomainFactoryRepository:
             await session.commit()
             return row.to_dict()
 
-    async def lookup_chapter_order(self, report_id, canonical_chapter_key) -> int | None:
+    async def lookup_chapter_order(
+        self, report_id, canonical_chapter_key, *, attribution: str | None = None
+    ) -> int | None:
         """从 domain_factory_outlines 推导章节序：查同 domain+report_type 的 outlines，
         按 id 顺序取 canonical_chapter_key 的出现排名（1-based）；查不到则 None。"""
         async with pg_manager.get_async_session_context() as session:
@@ -774,12 +1080,18 @@ class DomainFactoryRepository:
             ).scalar_one_or_none()
             if not rpt:
                 return None
+            if attribution is None:
+                attribution_info = await self.get_kb_attribution(str(rpt.kb_id or ""))
+                if attribution_info.get("mixed") or not attribution_info.get("bound"):
+                    return None
+                attribution = str(attribution_info["attribution"])
             rows = (
                 await session.execute(
                     select(DomainFactoryOutline.canonical_chapter_key)
                     .where(
                         DomainFactoryOutline.domain_code == rpt.domain_code,
                         DomainFactoryOutline.report_type_code == rpt.report_type_code,
+                        DomainFactoryOutline.attribution == attribution,
                     )
                     .order_by(DomainFactoryOutline.id)
                 )
@@ -836,7 +1148,7 @@ class DomainFactoryRepository:
             return [t.to_dict() for t in templates]
 
     async def list_learned_templates_by_key(
-        self, domain_code, report_type_code, canonical_chapter_key=None
+        self, domain_code, report_type_code, canonical_chapter_key=None, *, attribution: str | None = None
     ) -> list[dict[str, Any]]:
         async with pg_manager.get_async_session_context() as session:
             stmt = select(DomainFactoryLearnedTemplate).where(
@@ -845,6 +1157,8 @@ class DomainFactoryRepository:
             )
             if canonical_chapter_key:
                 stmt = stmt.where(DomainFactoryLearnedTemplate.canonical_chapter_key == canonical_chapter_key)
+            if attribution is not None:
+                stmt = stmt.where(DomainFactoryLearnedTemplate.attribution == attribution)
             result = await session.execute(stmt)
             return [r.to_dict() for r in result.scalars().all()]
 
@@ -916,6 +1230,8 @@ class DomainFactoryRepository:
         region_key: str | None,
         year: int | None,
         source_ref: str,
+        kb_id: str = "",
+        attribution: str = "",
     ) -> str:
         """B 类确认实体 → 事实草稿；(source_task_id, entity_key) 去重。返回 created|skipped。"""
         async with pg_manager.get_async_session_context() as session:
@@ -934,6 +1250,8 @@ class DomainFactoryRepository:
                     source_task_id=source_task_id,
                     entity_key=entity_key,
                     region_key=region_key,
+                    kb_id=kb_id,
+                    attribution=attribution,
                     year=year,
                     source_ref=source_ref or None,
                 )
@@ -943,15 +1261,41 @@ class DomainFactoryRepository:
     async def confirm_facts_for_task(self, task_id: str, region_key: str | None) -> int:
         """confirm-region 级联：同任务未退役事实覆盖式回填 region_key 并转 confirmed（纠偏含已确认行）。"""
         async with pg_manager.get_async_session_context() as session:
+            task = (
+                await session.execute(select(DomainFactoryTask).where(DomainFactoryTask.id == task_id))
+            ).scalar_one_or_none()
+            current = normalize_attribution(task.region_key, task.scope or "project", task.project_name)
+            kb_id = str(task.knowledge_base_id or "") if task else ""
+            attribution = attribution_scope_key(kb_id, *current)
             result = await session.execute(
                 update(DomainFactoryRegionalFact)
                 .where(
                     DomainFactoryRegionalFact.source_task_id == task_id,
                     DomainFactoryRegionalFact.status.in_(["draft", "confirmed"]),
                 )
-                .values(region_key=region_key, status="confirmed", updated_at=utc_now_naive())
+                .values(
+                    region_key=region_key,
+                    kb_id=kb_id,
+                    attribution=attribution,
+                    status="confirmed",
+                    updated_at=utc_now_naive(),
+                )
             )
         return result.rowcount or 0
+
+    async def _bind_regional_facts_for_task_in_session(self, session, task: DomainFactoryTask) -> None:
+        """入库绑定事务内同步事实归属；避免事实在任务提交后仍停留在空归属。"""
+        current = normalize_attribution(task.region_key, task.scope or "project", task.project_name)
+        kb_id = str(task.knowledge_base_id or "")
+        await session.execute(
+            update(DomainFactoryRegionalFact)
+            .where(DomainFactoryRegionalFact.source_task_id == task.id)
+            .values(
+                kb_id=kb_id,
+                attribution=attribution_scope_key(kb_id, *current),
+                updated_at=utc_now_naive(),
+            )
+        )
 
     async def retire_regional_facts(self, fact_ids: list[int]) -> int:
         """泄漏处置：批量 status→retired（不删行，留审计）；幂等。"""
@@ -1058,6 +1402,7 @@ class DomainFactoryRepository:
                     "region_label": t.region_label,
                     "region_key": t.region_key,
                     "scope": t.scope,
+                    "knowledge_base_id": t.knowledge_base_id,
                     "created_at": t.created_at.isoformat() if t.created_at else None,
                 }
                 for t in tasks
@@ -1069,6 +1414,8 @@ class DomainFactoryRepository:
         region_key: str | None = None,
         fact_type: str | None = None,
         status: str | None = None,
+        kb_id: str | None = None,
+        attribution: str | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[list[dict[str, Any]], int]:
@@ -1081,6 +1428,10 @@ class DomainFactoryRepository:
                 conditions.append(DomainFactoryRegionalFact.fact_type == fact_type)
             if status:
                 conditions.append(DomainFactoryRegionalFact.status == status)
+            if kb_id:
+                conditions.append(DomainFactoryRegionalFact.kb_id == kb_id)
+            if attribution is not None:
+                conditions.append(DomainFactoryRegionalFact.attribution == attribution)
 
             total = (
                 await session.execute(select(func.count(DomainFactoryRegionalFact.id)).where(*conditions))
@@ -1108,6 +1459,8 @@ class DomainFactoryRepository:
                     "id": f.id,
                     "fact_type": f.fact_type,
                     "region_key": f.region_key,
+                    "kb_id": f.kb_id or "",
+                    "attribution": f.attribution or "",
                     "content": f.content,
                     "status": f.status,
                     "year": f.year,
@@ -1137,11 +1490,15 @@ class DomainFactoryRepository:
                 await session.execute(
                     select(
                         DomainFactoryRegionalFact.region_key,
+                        DomainFactoryRegionalFact.kb_id,
+                        DomainFactoryRegionalFact.attribution,
                         DomainFactoryRegionalFact.fact_type,
                         DomainFactoryRegionalFact.status,
                         func.count(DomainFactoryRegionalFact.id),
                     ).group_by(
                         DomainFactoryRegionalFact.region_key,
+                        DomainFactoryRegionalFact.kb_id,
+                        DomainFactoryRegionalFact.attribution,
                         DomainFactoryRegionalFact.fact_type,
                         DomainFactoryRegionalFact.status,
                     )
@@ -1162,6 +1519,17 @@ class DomainFactoryRepository:
                     )
                 )
             ).all()
+            attribution_bindings = (
+                await session.execute(
+                    select(
+                        DomainFactoryKnowledgeBaseAttribution.kb_id,
+                        DomainFactoryKnowledgeBaseAttribution.attribution,
+                        DomainFactoryKnowledgeBaseAttribution.region_key,
+                        DomainFactoryKnowledgeBaseAttribution.scope,
+                        DomainFactoryKnowledgeBaseAttribution.project_name,
+                    ).order_by(DomainFactoryKnowledgeBaseAttribution.kb_id)
+                )
+            ).all()
             template_rows = (
                 await session.execute(
                     select(
@@ -1170,6 +1538,7 @@ class DomainFactoryRepository:
                         DomainFactoryLearnedTemplate.domain_code,
                         DomainFactoryLearnedTemplate.report_type_code,
                         DomainFactoryLearnedTemplate.scope,
+                        DomainFactoryLearnedTemplate.attribution,
                         DomainFactoryLearnedTemplate.extra_meta,
                         DomainFactoryLearnedTemplate.updated_at,
                     )
@@ -1179,7 +1548,25 @@ class DomainFactoryRepository:
         return {
             "tasks_by_region": [{"region_key": rk, "region_label": rl, "count": cnt} for rk, rl, cnt in task_rows],
             "facts_by_region_type_status": [
-                {"region_key": rk, "fact_type": ft, "status": st, "count": cnt} for rk, ft, st, cnt in fact_rows
+                {
+                    "region_key": rk,
+                    "kb_id": kbid,
+                    "attribution": attr,
+                    "fact_type": ft,
+                    "status": st,
+                    "count": cnt,
+                }
+                for rk, kbid, attr, ft, st, cnt in fact_rows
+            ],
+            "kb_attributions": [
+                {
+                    "kb_id": kbid,
+                    "attribution": attr,
+                    "region_key": rk,
+                    "scope": sc,
+                    "project_name": pn,
+                }
+                for kbid, attr, rk, sc, pn in attribution_bindings
             ],
             # scope 可能是 NULL → 键用 ""（service 层映射为 unassigned）
             "templates_by_scope": {(scope or ""): cnt for scope, cnt in scope_rows},
@@ -1191,9 +1578,10 @@ class DomainFactoryRepository:
                     "domain_code": dc,
                     "report_type_code": rtc,
                     "scope": sc,
+                    "attribution": attr,
                     "contributing_task_ids": (em or {}).get("contributing_task_ids") or [],
                     "updated_at": ua.isoformat() if ua else None,
                 }
-                for tid, ch, dc, rtc, sc, em, ua in template_rows
+                for tid, ch, dc, rtc, sc, attr, em, ua in template_rows
             ],
         }

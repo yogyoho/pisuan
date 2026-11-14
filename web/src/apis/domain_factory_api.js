@@ -213,6 +213,12 @@ export const domainFactoryApi = {
       () => apiGet(buildUrl('/api/domain-factory/tasks', params)).then((res) => res),
       () => ({ items: [], total: 0, page: 1, page_size: 20 })
     ),
+  // 知识库绑定诊断（bound/mixed/retained/legacy）
+  fetchKbAttributions: (params = {}) =>
+    withDemoFallback(
+      () => apiGet(buildUrl('/api/domain-factory/kb-attributions', params)).then((res) => res),
+      () => ({ items: [], total: 0, page: 1, page_size: 20 })
+    ),
   // 归属确认/改判（级联：facts 确认 + 归因集模板重算）
   confirmRegion: (taskId, payload) =>
     withDemoFallback(

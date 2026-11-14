@@ -568,8 +568,8 @@ onMounted(async () => {
   width: 340px;
   background: var(--gray-0);
   border-radius: 8px;
+  border: 1px solid var(--gray-150);
   padding: 16px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -694,7 +694,7 @@ onMounted(async () => {
   flex-direction: column;
   background: var(--gray-0);
   border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--gray-150);
   overflow: hidden;
 
   .panel-title {

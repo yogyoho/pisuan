@@ -78,7 +78,9 @@ class GraphGovernance:
                 """
                 MATCH (ch:ChapterTemplate {domain:'coal', report_type:'eia_report'})
                 WHERE ch.canonical_chapter_key IS NOT NULL AND ch.canonical_chapter_key <> ''
-                WITH ch.canonical_chapter_key AS key, collect(ch) AS nodes
+                WITH ch.canonical_chapter_key AS key, coalesce(ch.attribution, '') AS attribution,
+                     ch.level AS level,
+                     collect(ch) AS nodes
                 WHERE size(nodes) > 1
                 UNWIND nodes[1..] AS dup
                 WITH nodes[0] AS keep, dup
@@ -90,7 +92,9 @@ class GraphGovernance:
                 """
                 MATCH (ch:ChapterTemplate {domain:'coal', report_type:'eia_report'})
                 WHERE ch.canonical_chapter_key IS NOT NULL AND ch.canonical_chapter_key <> ''
-                WITH ch.canonical_chapter_key AS key, collect(ch) AS nodes
+                WITH ch.canonical_chapter_key AS key, coalesce(ch.attribution, '') AS attribution,
+                     ch.level AS level,
+                     collect(ch) AS nodes
                 WHERE size(nodes) > 1
                 UNWIND nodes[1..] AS dup
                 WITH nodes[0] AS keep, dup
@@ -102,7 +106,9 @@ class GraphGovernance:
                 """
                 MATCH (ch:ChapterTemplate {domain:'coal', report_type:'eia_report'})
                 WHERE ch.canonical_chapter_key IS NOT NULL AND ch.canonical_chapter_key <> ''
-                WITH ch.canonical_chapter_key AS key, collect(ch) AS nodes
+                WITH ch.canonical_chapter_key AS key, coalesce(ch.attribution, '') AS attribution,
+                     ch.level AS level,
+                     collect(ch) AS nodes
                 WHERE size(nodes) > 1
                 UNWIND nodes[1..] AS dup
                 DETACH DELETE dup

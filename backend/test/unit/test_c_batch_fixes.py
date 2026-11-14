@@ -189,6 +189,7 @@ def _make_launch_repo(task):
     repo = MagicMock()
     repo.get_task_with_domain = AsyncMock(return_value=task)
     repo.update_task = AsyncMock()
+    repo.assert_kb_attribution_compatible = AsyncMock()
     return repo
 
 

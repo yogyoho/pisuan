@@ -1,11 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { ArrowLeft, RotateCw, Save } from '@lucide/vue'
+import { NotebookPen, RotateCw, Save } from '@lucide/vue'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
-
-const router = useRouter()
 
 // 状态
 const loading = ref(false)
@@ -193,274 +190,211 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="prompt-config-view">
-    <!-- Header -->
-    <div class="page-header">
-      <div class="title-group">
-        <div class="title-with-back">
-          <a-button type="text" class="back-btn" @click="router.back()">
-            <template #icon><ArrowLeft :size="14" /></template>
-            返回
-          </a-button>
-          <div>
-            <h1>Prompt 模板管理</h1>
-            <p class="page-desc">管理文档解析、模板泛化处理时的 LLM 提示词配置</p>
+  <div class="ewp prompt-config-view">
+    <!-- 页头（EIA page-head 配方）：四组 Prompt seg 分段器收进 ph-actions -->
+    <div class="page-head">
+      <div class="ph-icon">
+        <NotebookPen :size="18" />
+      </div>
+      <div>
+        <h2>Prompt 模板管理</h2>
+        <div class="ph-sub">文档解析、模板泛化处理时的 LLM 提示词配置</div>
+      </div>
+      <div class="ph-actions">
+        <div class="seg">
+          <button :class="{ on: activeTab === 'extract' }" @click="activeTab = 'extract'">文档解析</button>
+          <button :class="{ on: activeTab === 'template' }" @click="activeTab = 'template'">模板泛化</button>
+          <button :class="{ on: activeTab === 'schema' }" @click="activeTab = 'schema'">Schema 生成</button>
+          <button :class="{ on: activeTab === 'section' }" @click="activeTab = 'section'">章节泛化</button>
+        </div>
+        <button class="btn btn-sec" :disabled="loading" @click="handleRefresh">
+          <RotateCw :size="14" /> 刷新
+        </button>
+        <button class="btn btn-pri" :disabled="saving" @click="handleSave">
+          <Save :size="14" /> 保存配置
+        </button>
+      </div>
+    </div>
+
+    <a-spin :spinning="loading">
+      <!-- 文档解析 Prompt -->
+      <div v-show="activeTab === 'extract'" class="card">
+        <div class="card-hd">
+          <h3>文档解析 / 信息抽取 Prompt</h3>
+          <span class="hd-sub">用于从文档中抽取结构化信息的提示词</span>
+          <div class="hd-right">
+            <button class="btn btn-sm btn-sec" @click="handleReset('extract_prompt')">重置为默认</button>
           </div>
         </div>
+        <div class="prompt-editor">
+          <div class="variable-hint">
+            <span>可用变量：</span>
+            <button
+              v-for="v in variables.extract"
+              :key="v"
+              class="slot-chip var-chip"
+              @click="insertVariable('extract_prompt', v)"
+            >
+              {{ v }}
+            </button>
+          </div>
+          <a-textarea
+            v-model:value="promptConfig.extract_prompt"
+            :rows="16"
+            placeholder="请输入文档解析 Prompt..."
+            class="prompt-textarea"
+          />
+        </div>
       </div>
-      <div class="header-actions">
-        <a-button @click="handleRefresh" :loading="loading">
-          <template #icon><RotateCw :size="14" /></template>
-          刷新
-        </a-button>
-        <a-button type="primary" @click="handleSave" :loading="saving">
-          <template #icon><Save :size="14" /></template>
-          保存配置
-        </a-button>
+
+      <!-- 模板泛化 Prompt -->
+      <div v-show="activeTab === 'template'" class="card">
+        <div class="card-hd">
+          <h3>模板泛化 Prompt</h3>
+          <span class="hd-sub">用于将原始文本泛化为带插槽模板的提示词</span>
+          <div class="hd-right">
+            <button class="btn btn-sm btn-sec" @click="handleReset('template_prompt')">重置为默认</button>
+          </div>
+        </div>
+        <div class="prompt-editor">
+          <div class="variable-hint">
+            <span>可用变量：</span>
+            <button
+              v-for="v in variables.template"
+              :key="v"
+              class="slot-chip var-chip"
+              @click="insertVariable('template_prompt', v)"
+            >
+              {{ v }}
+            </button>
+          </div>
+          <a-textarea
+            v-model:value="promptConfig.template_prompt"
+            :rows="16"
+            placeholder="请输入模板泛化 Prompt..."
+            class="prompt-textarea"
+          />
+        </div>
       </div>
-    </div>
 
-    <!-- Main Content -->
-    <div class="content-area">
-      <a-spin :spinning="loading">
-        <a-tabs v-model:activeKey="activeTab" type="card" size="large">
-          <a-tab-pane key="extract" tab="文档解析 Prompt">
-            <div class="prompt-editor">
-              <div class="prompt-header">
-                <div>
-                  <h3>文档解析/信息抽取 Prompt</h3>
-                  <p class="prompt-desc">用于从文档中抽取结构化信息的提示词</p>
-                </div>
-                <a-button size="small" @click="handleReset('extract_prompt')">重置为默认</a-button>
-              </div>
-              <div class="variable-hint">
-                <span>可用变量：</span>
-                <a-tag
-                  v-for="v in variables.extract"
-                  :key="v"
-                  class="clickable-tag"
-                  @click="insertVariable('extract_prompt', v)"
-                >
-                  {{ v }}
-                </a-tag>
-              </div>
-              <a-textarea
-                v-model:value="promptConfig.extract_prompt"
-                :rows="16"
-                placeholder="请输入文档解析 Prompt..."
-                class="prompt-textarea"
-              />
-            </div>
-          </a-tab-pane>
+      <!-- Schema 生成 Prompt -->
+      <div v-show="activeTab === 'schema'" class="card">
+        <div class="card-hd">
+          <h3>Schema 生成 Prompt</h3>
+          <span class="hd-sub">用于从示例文档中自动生成领域 Schema 配置的提示词</span>
+          <div class="hd-right">
+            <button class="btn btn-sm btn-sec" @click="handleReset('schema_generation_prompt')">
+              重置为默认
+            </button>
+          </div>
+        </div>
+        <div class="prompt-editor">
+          <div class="variable-hint">
+            <span>可用变量：</span>
+            <button
+              v-for="v in variables.schema"
+              :key="v"
+              class="slot-chip var-chip"
+              @click="insertVariable('schema_generation_prompt', v)"
+            >
+              {{ v }}
+            </button>
+          </div>
+          <a-textarea
+            v-model:value="promptConfig.schema_generation_prompt"
+            :rows="16"
+            placeholder="请输入 Schema 生成 Prompt..."
+            class="prompt-textarea"
+          />
+        </div>
+      </div>
 
-          <a-tab-pane key="template" tab="模板泛化 Prompt">
-            <div class="prompt-editor">
-              <div class="prompt-header">
-                <div>
-                  <h3>模板泛化 Prompt</h3>
-                  <p class="prompt-desc">用于将原始文本泛化为带插槽模板的提示词</p>
-                </div>
-                <a-button size="small" @click="handleReset('template_prompt')">重置为默认</a-button>
-              </div>
-              <div class="variable-hint">
-                <span>可用变量：</span>
-                <a-tag
-                  v-for="v in variables.template"
-                  :key="v"
-                  class="clickable-tag"
-                  @click="insertVariable('template_prompt', v)"
-                >
-                  {{ v }}
-                </a-tag>
-              </div>
-              <a-textarea
-                v-model:value="promptConfig.template_prompt"
-                :rows="16"
-                placeholder="请输入模板泛化 Prompt..."
-                class="prompt-textarea"
-              />
-            </div>
-          </a-tab-pane>
-
-          <a-tab-pane key="schema" tab="Schema 生成 Prompt">
-            <div class="prompt-editor">
-              <div class="prompt-header">
-                <div>
-                  <h3>Schema 生成 Prompt</h3>
-                  <p class="prompt-desc">用于从示例文档中自动生成领域 Schema 配置的提示词</p>
-                </div>
-                <a-button size="small" @click="handleReset('schema_generation_prompt')"
-                  >重置为默认</a-button
-                >
-              </div>
-              <div class="variable-hint">
-                <span>可用变量：</span>
-                <a-tag
-                  v-for="v in variables.schema"
-                  :key="v"
-                  class="clickable-tag"
-                  @click="insertVariable('schema_generation_prompt', v)"
-                >
-                  {{ v }}
-                </a-tag>
-              </div>
-              <a-textarea
-                v-model:value="promptConfig.schema_generation_prompt"
-                :rows="16"
-                placeholder="请输入 Schema 生成 Prompt..."
-                class="prompt-textarea"
-              />
-            </div>
-          </a-tab-pane>
-
-          <a-tab-pane key="section" tab="章节泛化 Prompt">
-            <div class="prompt-editor">
-              <div class="prompt-header">
-                <div>
-                  <h3>章节泛化提取 Prompt</h3>
-                  <p class="prompt-desc">用于对样例报告进行章节提取和泛化处理的提示词</p>
-                </div>
-                <a-button size="small" @click="handleReset('section_generalization_prompt')"
-                  >重置为默认</a-button
-                >
-              </div>
-              <div class="variable-hint">
-                <span>可用变量：</span>
-                <a-tag
-                  v-for="v in variables.section"
-                  :key="v"
-                  class="clickable-tag"
-                  @click="insertVariable('section_generalization_prompt', v)"
-                >
-                  {{ v }}
-                </a-tag>
-              </div>
-              <a-textarea
-                v-model:value="promptConfig.section_generalization_prompt"
-                :rows="16"
-                placeholder="请输入章节泛化 Prompt..."
-                class="prompt-textarea"
-              />
-            </div>
-          </a-tab-pane>
-        </a-tabs>
-      </a-spin>
-    </div>
+      <!-- 章节泛化 Prompt -->
+      <div v-show="activeTab === 'section'" class="card">
+        <div class="card-hd">
+          <h3>章节泛化抽取 Prompt</h3>
+          <span class="hd-sub">用于对样例报告进行章节提取和泛化处理的提示词</span>
+          <div class="hd-right">
+            <button class="btn btn-sm btn-sec" @click="handleReset('section_generalization_prompt')">
+              重置为默认
+            </button>
+          </div>
+        </div>
+        <div class="prompt-editor">
+          <div class="variable-hint">
+            <span>可用变量：</span>
+            <button
+              v-for="v in variables.section"
+              :key="v"
+              class="slot-chip var-chip"
+              @click="insertVariable('section_generalization_prompt', v)"
+            >
+              {{ v }}
+            </button>
+          </div>
+          <a-textarea
+            v-model:value="promptConfig.section_generalization_prompt"
+            :rows="16"
+            placeholder="请输入章节泛化 Prompt..."
+            class="prompt-textarea"
+          />
+        </div>
+      </div>
+    </a-spin>
   </div>
 </template>
 
 <style lang="less" scoped>
-.prompt-config-view {
-  padding: 24px;
-  background: var(--gray-0);
-  min-height: 100vh;
+/* 公共配方（page-head/seg/btn/card/card-hd/slot-chip）在 factory-core/factory-ui.less */
+.prompt-editor {
+  padding: 12px 16px 16px;
+}
 
-  .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--gray-150);
+/* 变量 chip：slot-chip 配方可点击化（mono 仅技术标识，正文不 mono） */
+.variable-hint {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
 
-    .title-group {
-      .title-with-back {
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-
-        .back-btn {
-          margin-top: 4px;
-        }
-
-        h1 {
-          margin: 0;
-          font-size: 20px;
-          font-weight: 600;
-        }
-
-        .page-desc {
-          margin: 4px 0 0;
-          color: var(--gray-500);
-          font-size: 13px;
-        }
-      }
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 8px;
-    }
-  }
-
-  .content-area {
-    background: var(--gray-0);
-
-    .prompt-editor {
-      padding: 16px;
-
-      .prompt-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 12px;
-
-        h3 {
-          margin: 0;
-          font-size: 16px;
-        }
-
-        .prompt-desc {
-          margin: 4px 0 0;
-          color: var(--gray-500);
-          font-size: 13px;
-        }
-      }
-
-      .variable-hint {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 12px;
-        padding: 12px;
-        background: var(--gray-50);
-        border-radius: 8px;
-
-        span {
-          font-size: 13px;
-          color: var(--gray-600);
-          font-weight: 500;
-        }
-
-        .clickable-tag {
-          cursor: pointer;
-          transition: all 0.2s;
-
-          &:hover {
-            background: var(--main-100);
-            border-color: var(--main-color);
-          }
-        }
-      }
-
-      .prompt-textarea {
-        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-        font-size: 13px;
-        line-height: 1.6;
-      }
-    }
+  > span {
+    font-size: 12px;
+    color: var(--color-text-tertiary);
   }
 }
 
-:deep(.ant-tabs-card) {
-  .ant-tabs-nav {
-    margin: 0;
+.var-chip {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 8px;
+  transition:
+    background 0.15s,
+    color 0.15s;
+
+  &:hover {
+    background: var(--main-100);
+  }
+}
+
+/* 编辑区：AntD textarea 罩到 .inp 配方（灰边/6px/主色 focus ring），正文 mono */
+.prompt-textarea {
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  background: var(--gray-0);
+  transition: border-color 0.15s;
+
+  &:focus {
+    border-color: var(--main-500);
+    box-shadow: 0 0 0 2px var(--main-50);
   }
 
-  .ant-tabs-tab {
-    padding: 12px 24px;
-    font-size: 14px;
-  }
+  font-family: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--color-text);
 }
 </style>
+
+<style lang="less" src="../components/factory-core/factory-ui.less"></style>

@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import AttributionEditModal from './AttributionEditModal.vue'
+import { dotStyle, statusMap } from './taskStatus'
 
 // [pisuan-custom] W4 子页1：任务归属列表（scope chips + 关键词 + 逐行改判入口）
 const loading = ref(false)
@@ -20,17 +21,20 @@ const pagination = reactive({
 
 const SCOPE_CHIPS = [
   { value: 'all', label: '全部' },
-  { value: 'regional', label: 'regional' },
-  { value: 'project', label: 'project' },
-  { value: 'universal', label: 'universal' },
+  { value: 'regional', label: '区域级' },
+  { value: 'project', label: '项目级' },
+  { value: 'universal', label: '通用级' },
   { value: 'unassigned', label: '未归属' }
 ]
 
+// scope 的英文枚举 → 中文展示（底层过滤值保持英文，作为 API 契约）；状态文案/颜色共用 taskStatus.js
+const SCOPE_LABELS = { regional: '区域级', project: '项目级', universal: '通用级' }
+
 const columns = [
   { title: '任务', dataIndex: 'file_name', ellipsis: true },
-  { title: 'scope', key: 'scope', width: 110 },
-  { title: 'region_label', dataIndex: 'region_label', width: 140, ellipsis: true },
-  { title: 'region_key', dataIndex: 'region_key', width: 130 },
+  { title: '归属层级', key: 'scope', width: 110 },
+  { title: '区域名称', dataIndex: 'region_label', width: 140, ellipsis: true },
+  { title: '区域标识', dataIndex: 'region_key', width: 130 },
   { title: '任务状态', dataIndex: 'status', width: 140 },
   { title: '操作', key: 'action', width: 100 }
 ]
@@ -96,49 +100,66 @@ defineExpose({ applyRegionFilter, refresh: fetchList })
 
 <template>
   <div class="attribution-task-table">
-    <div class="filter-bar">
-      <a-radio-group
-        v-model:value="scopeFilter"
-        button-style="solid"
+    <div class="card">
+      <div class="toolbar">
+        <div class="seg">
+          <button
+            v-for="c in SCOPE_CHIPS"
+            :key="c.value"
+            :class="{ on: scopeFilter === c.value }"
+            @click="
+              () => {
+                scopeFilter = c.value
+                onFilterChange()
+              }
+            "
+          >
+            {{ c.label }}
+          </button>
+        </div>
+        <a-input-search
+          v-model:value="keyword"
+          placeholder="搜索任务名"
+          class="search-input"
+          size="small"
+          allow-clear
+          @search="onFilterChange"
+          @change="onKeywordChange"
+        />
+        <span v-if="regionKeyFilter" class="pill pill-sm pill-main">
+          区域：{{ regionKeyFilter }}
+          <button class="pill-x" title="清除区域过滤" @click="clearRegionFilter">×</button>
+        </span>
+      </div>
+      <a-table
+        :data-source="items"
+        :columns="columns"
+        :loading="loading"
+        :pagination="pagination"
+        row-key="id"
         size="small"
-        @change="onFilterChange"
+        @change="handleTableChange"
       >
-        <a-radio-button v-for="c in SCOPE_CHIPS" :key="c.value" :value="c.value">{{
-          c.label
-        }}</a-radio-button>
-      </a-radio-group>
-      <a-input-search
-        v-model:value="keyword"
-        placeholder="搜索任务名"
-        style="width: 220px"
-        size="small"
-        allow-clear
-        @search="onFilterChange"
-        @change="onKeywordChange"
-      />
-      <a-tag v-if="regionKeyFilter" closable color="blue" @close="clearRegionFilter">
-        region: {{ regionKeyFilter }}
-      </a-tag>
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'scope'">
+            <span class="pill pill-sm" :class="record.scope ? 'pill-main' : 'pill-gray'">
+              {{ SCOPE_LABELS[record.scope] || '未归属' }}
+            </span>
+          </template>
+          <template v-else-if="column.dataIndex === 'status'">
+            <span class="status-dot">
+              <span class="dot" :style="dotStyle(record.status)"></span>
+              {{ statusMap[record.status]?.text || record.status }}
+            </span>
+          </template>
+          <template v-else-if="column.key === 'action'">
+            <button class="btn btn-sm btn-txt" @click="editingTask = record">
+              {{ record.region_key ? '改判' : '归属确认' }}
+            </button>
+          </template>
+        </template>
+      </a-table>
     </div>
-    <a-table
-      :data-source="items"
-      :columns="columns"
-      :loading="loading"
-      :pagination="pagination"
-      row-key="id"
-      size="small"
-      @change="handleTableChange"
-    >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'scope'">
-          <a-tag v-if="record.scope" color="blue">{{ record.scope }}</a-tag>
-          <a-tag v-else>未归属</a-tag>
-        </template>
-        <template v-else-if="column.key === 'action'">
-          <a @click="editingTask = record">{{ record.region_key ? '改判' : '归属确认' }}</a>
-        </template>
-      </template>
-    </a-table>
     <AttributionEditModal
       :open="!!editingTask"
       :task="editingTask"
@@ -150,10 +171,53 @@ defineExpose({ applyRegionFilter, refresh: fetchList })
 </template>
 
 <style lang="less" scoped>
-.filter-bar {
-  display: flex;
+/* 公共配方（card/toolbar/seg/pill/btn/a-table 对齐）在 factory-core/factory-ui.less */
+
+/* 正文列（任务/region_label/region_key/任务状态）13px；scope/操作列由 pill/btn 自带字号不受影响。
+   :deep 前置 .attribution-task-table 使 [data-v] 落在根节点，才能命中 AntD 渲染的 td */
+.attribution-task-table :deep(.ant-table-tbody > tr > td) {
+  font-size: 13px;
+}
+
+/* 状态点：与数据源管理页待处理列表同款（taskStatus.js 提供颜色/光环） */
+.status-dot {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex: none;
+  }
+}
+
+.search-input {
+  width: 220px;
+
+  :deep(.ant-input-affix-wrapper) {
+    height: 30px;
+    border-radius: 6px;
+  }
+}
+
+.pill-x {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0 0 0 2px;
+  font-size: 12px;
+  line-height: 1;
+  color: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--main-700);
+  }
 }
 </style>
+
+<style lang="less" src="../factory-core/factory-ui.less"></style>
