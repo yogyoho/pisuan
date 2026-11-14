@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 import { Info, Plus } from '@lucide/vue'
 
 // 属性数组由父级实体草稿持有：本组件只做增删改，不重新赋值整个数组
@@ -46,6 +46,20 @@ const refTitleOf = (record) => {
   return `段落模板 ${counts.templates} · 待审核任务 ${counts.pending_tasks} · 报告参数 ${counts.report_pps} · 区域事实 ${counts.facts}`
 }
 
+// 影响面确认用：只列非零来源，全部为零时给出「无引用」
+const refBreakdownOf = (counts) => {
+  if (!counts) return ''
+  return [
+    ['段落模板', counts.templates],
+    ['待审核任务', counts.pending_tasks],
+    ['报告参数', counts.report_pps],
+    ['区域事实', counts.facts]
+  ]
+    .filter(([, count]) => count > 0)
+    .map(([label, count]) => `${label} ${count}`)
+    .join('、')
+}
+
 const ownCoveredCount = computed(
   () => properties.value.filter((prop) => isPromptCovered(prop)).length
 )
@@ -86,8 +100,29 @@ const handleEditProperty = (index) => {
   propertyModalVisible.value = true
 }
 
-const handleDeleteProperty = (index) => {
-  properties.value.splice(index, 1)
+// 删除属性先看影响面：被引用时列出条数，说明保存后哪些引用会悬空
+const handleRequestDeleteProperty = (record, index) => {
+  const total = refCountOf(record)
+  Modal.confirm({
+    title: `删除属性「${record.name_cn || record.key}」？`,
+    content: total
+      ? `该属性当前被引用 ${total} 处（${refBreakdownOf(usageCountsOf(record))}）。保存实体后，待审核任务里的引用会被清理，段落模板与报告参数中的旧引用会变成悬空字符串，抽取与写作会静默降质。`
+      : '该属性当前没有任何引用，删除后不可恢复（保存实体后生效）。',
+    okText: '删除',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+    onOk: () => properties.value.splice(index, 1)
+  })
+}
+
+const applyProperty = (index, data) => {
+  if (index >= 0) {
+    properties.value[index] = data
+  } else {
+    properties.value.push(data)
+  }
+  propertyModalVisible.value = false
+  message.success('属性保存成功')
 }
 
 const handleSaveProperty = () => {
@@ -115,13 +150,21 @@ const handleSaveProperty = () => {
       description: editingProperty.value.description || '',
       extraction_hint: editingProperty.value.extraction_hint || ''
     }
-    if (editingPropertyIndex.value >= 0) {
-      properties.value[editingPropertyIndex.value] = data
-    } else {
-      properties.value.push(data)
+    const index = editingPropertyIndex.value
+    const previous = index >= 0 ? properties.value[index] : null
+    const renamed = Boolean(previous?.key) && previous.key !== data.key
+    const total = renamed ? refCountOf(previous) : 0
+    if (total) {
+      Modal.confirm({
+        title: `属性键由「${previous.key}」改为「${data.key}」？`,
+        content: `该属性当前被引用 ${total} 处（${refBreakdownOf(usageCountsOf(previous))}）。保存实体后，待审核任务里的引用会按最新属性重建，段落模板与报告参数中的旧键引用会变成悬空字符串。`,
+        okText: '继续修改',
+        cancelText: '取消',
+        onOk: () => applyProperty(index, data)
+      })
+      return
     }
-    propertyModalVisible.value = false
-    message.success('属性保存成功')
+    applyProperty(index, data)
   } catch (e) {
     console.error('保存属性失败', e)
     message.error('保存属性失败')
@@ -145,9 +188,14 @@ const handleSaveProperty = () => {
         <template v-if="column.key === 'actions'">
           <a-space>
             <a-button type="link" size="small" @click="handleEditProperty(index)">编辑</a-button>
-            <a-popconfirm title="删除此属性？" @confirm="handleDeleteProperty(index)">
-              <a-button type="link" size="small" danger>删除</a-button>
-            </a-popconfirm>
+            <a-button
+              type="link"
+              size="small"
+              danger
+              @click="handleRequestDeleteProperty(record, index)"
+            >
+              删除
+            </a-button>
           </a-space>
         </template>
         <template v-else-if="column.key === 'value_type'">{{ record.value_type }}</template>
