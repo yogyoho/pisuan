@@ -37,6 +37,7 @@ const {
   fetchUsage,
   cloneEntity,
   exportConfig,
+  previewImport,
   importConfig
 } = useEntitySchemas()
 
@@ -174,6 +175,17 @@ const handleImport = async () => {
 
 const handleBeforeUpload = () => false
 
+const IMPORT_REJECT_PREVIEW = 5
+
+const describeRejects = (rejected) =>
+  rejected
+    .slice(0, IMPORT_REJECT_PREVIEW)
+    .map(
+      (item) => `${item.entity_key || item.name_cn || `第 ${item.index + 1} 条`}：${item.reason}`
+    )
+    .join('；')
+
+/** 先预检再确认：导入会覆盖同名实体定义，不先给出影响面不写库。 */
 const handleConfirmImport = async () => {
   if (!importFileList.value.length) {
     message.error('请选择文件')
@@ -188,7 +200,37 @@ const handleConfirmImport = async () => {
     message.error('导入失败：文件格式错误')
     return
   }
-  if (await importConfig(configData)) importModalVisible.value = false
+
+  let preview
+  try {
+    preview = await previewImport(configData)
+  } catch (e) {
+    console.error('导入预检失败', e)
+    message.error('导入预检失败：' + (e?.message || '文件内容不符合配置格式'))
+    return
+  }
+
+  const { created = 0, updated = 0, rejected = [] } = preview || {}
+  const rejectText = rejected.length
+    ? `拒绝 ${rejected.length} 条：${describeRejects(rejected)}${rejected.length > IMPORT_REJECT_PREVIEW ? ' 等' : ''}。`
+    : ''
+  if (!created && !updated) {
+    message.error(`没有可导入的实体。${rejectText}`)
+    return
+  }
+
+  Modal.confirm({
+    title: '确认导入实体配置？',
+    content:
+      `新增 ${created} 个实体，更新 ${updated} 个实体。${rejectText}` +
+      '更新按 entity_key 对齐，会用文件内容覆盖同名实体的定义，并重映射待审核任务；' +
+      '段落模板与报告参数里的旧属性引用会变成悬空字符串。taxonomy 由实体分类派生，不参与导入。',
+    okText: '导入',
+    cancelText: '取消',
+    onOk: async () => {
+      if (await importConfig(configData)) importModalVisible.value = false
+    }
+  })
 }
 
 const handleExtractImported = () => load({ preserveDraft: true })
@@ -309,7 +351,9 @@ watch(
       >
         <p class="ant-upload-drag-icon"><Inbox :size="48" /></p>
         <p class="ant-upload-text">点击或拖拽文件到此区域上传</p>
-        <p class="ant-upload-hint">支持 JSON 格式配置文件</p>
+        <p class="ant-upload-hint">
+          支持 JSON 格式配置文件（导出的文件可直接回导；taxonomy 由实体分类派生，不参与导入）
+        </p>
       </a-upload-dragger>
     </a-modal>
 

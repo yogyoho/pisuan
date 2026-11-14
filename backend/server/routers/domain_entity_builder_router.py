@@ -270,17 +270,29 @@ async def export_config(
 @domain_entity_builder.post("/import")
 async def import_config(
     config_data: dict[str, Any] = Body(...),
+    dry_run: bool = Query(False, description="只计算新增/更新/拒绝，不写库"),
     current_user: User = Depends(get_admin_user),
 ) -> dict[str, Any]:
-    """导入配置"""
+    """导入配置；dry_run 返回影响面供前端确认后再落库"""
     try:
         if "entity_schemas" not in config_data:
             raise HTTPException(status_code=400, detail="配置格式不正确，缺少 entity_schemas")
         service = get_entity_service()
-        count = await service.import_all(config_data)
-        return {"success": True, "message": f"配置导入成功，共 {count} 个实体", "count": count}
+        result = await service.import_all(config_data, dry_run=dry_run)
+        message = f"新增 {result['created']} 个，更新 {result['updated']} 个"
+        if result["rejected"]:
+            message += f"，拒绝 {len(result['rejected'])} 个"
+        if result["remapped_tasks"]:
+            message += f"，重映射待审核任务 {result['remapped_tasks']} 个"
+        return {
+            "success": True,
+            "message": f"{'预检' if dry_run else '导入'}完成：{message}",
+            **result,
+        }
     except HTTPException:
         raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Failed to import config: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"导入配置失败: {e}")

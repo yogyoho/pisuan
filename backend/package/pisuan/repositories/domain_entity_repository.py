@@ -154,22 +154,22 @@ class DomainEntityRepository:
         return count
 
     async def upsert_all(self, entities: list[dict[str, Any]]) -> int:
-        """批量 upsert 实体（用于导入/初始化）"""
+        """批量 upsert 实体（用于导入/初始化）。
+
+        按 entity_key 对齐：它是 entity_ref 的实际标识；entity_id 只是环境内代理键，
+        跨环境导入时对不上，直接复用还会撞主键。调用方负责校验 entity_key/name_cn。
+        """
         count = 0
         async with pg_manager.get_async_session_context() as session:
+            existing = await session.execute(select(DomainEntitySchema))
+            existing_by_key = {row.entity_key: row for row in existing.scalars().all()}
             for data in entities:
-                entity_id = data.get("entity_id")
-                if not entity_id:
-                    continue
-                existing = await session.execute(
-                    select(DomainEntitySchema).where(DomainEntitySchema.entity_id == entity_id)
-                )
-                entity = existing.scalar_one_or_none()
+                entity = existing_by_key.get(data["entity_key"])
                 if entity is None:
                     entity = DomainEntitySchema(
-                        entity_id=entity_id,
-                        entity_key=data.get("entity_key", ""),
-                        name_cn=data.get("name_cn", ""),
+                        entity_id=data.get("entity_id") or str(uuid.uuid4()),
+                        entity_key=data["entity_key"],
+                        name_cn=data["name_cn"],
                         category=data.get("category", ""),
                         domain_code=data.get("domain_code", "coal"),
                         value_type=data.get("value_type", "String"),
@@ -182,8 +182,9 @@ class DomainEntityRepository:
                         extra_meta=data.get("metadata", data.get("extra_meta", {})),
                     )
                     session.add(entity)
+                    existing_by_key[entity.entity_key] = entity
                 else:
-                    for key in ["entity_key", "name_cn", "category", "domain_code",
+                    for key in ["name_cn", "category",
                                 "value_type", "unit", "is_list_type",
                                 "description", "synonyms", "properties", "relation_rules"]:
                         if key in data and data[key] is not None:

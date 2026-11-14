@@ -11624,5 +11624,471 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-11-11"
+  },
+  {
+    "id": "bug-4242",
+    "timestamp": "2026-11-12",
+    "error_message": "codex exec 404 Not Found: https://open.bigmodel.cn/api/paas/v4/responses（ccswitch Zhipu GLM 条目写入的配置）",
+    "file": "C:/Users/Lenovo/.codex/config.toml",
+    "root_cause": "cc-switch 存的 codex Zhipu 条目把 Responses 协议端点写成 chat 协议端点 paas/v4（该端点无 /responses 路由，恒 404）；且该 key 为 GLM Coding Plan，普通 paas/v4 下 429 余额不足。新版 codex 已删除 wire_api=chat，仅支持 responses，不存在降级路线。",
+    "fix": "base_url 改官方 Responses 端点 https://open.bigmodel.cn/api/v1（curl /responses 200 验证），wire_api=responses，auth.json 换 Zhipu key；同步修正 cc-switch 库（~/.cc-switch/cc-switch.db providers 表）同条目防回切冲掉；顺带删除新版已弃用的 disable_response_storage",
+    "tags": [
+      "codex",
+      "zhipu",
+      "glm",
+      "coding-plan",
+      "wire_api",
+      "cc-switch",
+      "responses"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-12"
+  },
+  {
+    "id": "bug-4243",
+    "timestamp": "2026-11-13",
+    "error_message": "codex TUI 报 stream disconnected before completion: stream closed before response.completed（glm-5.3-flash，手动重试必现）",
+    "file": "C:/Users/Lenovo/.codex/logs_2.sqlite",
+    "root_cause": "TUI 常驻 app-server-daemon 服务进程（pid 12676）实例级中毒：22:31 起它对 open.bigmodel.cn/api/v1/responses 的每次 POST 都秒收 200+70字节 JSON 错误体（SSE 从未建立），其内部重试复用同一坏连接池故必现；同窗口内全新进程（同二进制 0.167.2、同 CODEX_HOME、同 key、同网络、同指令）全部成功（23:12/23:27/23:43 三次夹逼验证），排除版本/载荷/配置/智谱时段故障。最可能机制：keep-alive 连接被钉死在坏 LB 节点，codex 重试不重建连接。错误体 70B 未解码（error_message 永不落日志）。",
+    "fix": "无需改配置：中毒 Codex 实例随 TUI 会话关闭自毁（23:32:08 'no subscribers and is idle; shutting down'），新会话=新实例=新连接池。复发时处置：关闭所有 codex 窗口并结束残留 codex 进程让其重新拉起；禁止在报错的同一 TUI 会话里反复重试。取证配方：logs_2.sqlite 按 process_uuid LIKE 'pid:N%' 分进程统计 POST 成败，'Request completed...status=200' 行含完整 URL 和 content-length（70B 签名）；重试 WARN 体不含 URL，需按时间窗查。",
+    "tags": [
+      "codex",
+      "zhipu",
+      "glm",
+      "stream-disconnected",
+      "app-server-daemon",
+      "connection-pool",
+      "logs-sqlite"
+    ],
+    "related_bugs": [
+      "bug-4242"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-13"
+  },
+  {
+    "id": "bug-4244",
+    "timestamp": "2026-11-13",
+    "error_message": "通用域知识工厂「Prompt 模板管理」页保存的提示词，保存后回显丢失且永不生效（取证发现，代码链闭合未运行验证）",
+    "file": "backend/package/pisuan/services/domain_factory_service.py",
+    "root_cause": "三重键断裂：1) 前端 PromptConfigView.vue:15-18,158 提交键带 _prompt 后缀（extract_prompt/template_prompt/...）；2) save_prompt_config (svc:6043) 原样落库 prompt_type=\"template_prompt\"；3) get_prompt_config (svc:6038) 再包一层后缀返回 template_prompt_prompt，前端读 cfg.template_prompt 落空回填默认 → 回显丢失；同时 _load_prompt_templates (svc:417) 以 \"template_prompt\" 覆盖 ≠ 泛化管线消费键 templates.get(\"template\") (svc:3384) → DB 自定义提示词永不进 ETL",
+    "fix": "已修复（2026-11-13）：save_prompt_config 落库前 removesuffix(\"_prompt\")（裸键幂等，与 GET 加后缀对称）；存量 4 行 DB 归一化剥后缀（备份 %TEMP%\\prompt_configs_backup_2026-11-13.txt）。验证：新增 test_prompt_config_keys.py 3 用例 + 同服务回归 23 passed（容器）；活体 consumed_custom=True、PUT→GET 回环匹配、原值还原；api 容器 restart 部署生效。部署时连带发现 storage-migrator 一次性服务不自动重跑新迁移（DB 停 21 拒启动），compose run --rm storage-migrator 补跑 v21→v22 解决。",
+    "tags": [
+      "domain-factory",
+      "prompt-config",
+      "key-mismatch",
+      "etl-generalization"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-13"
+  },
+  {
+    "id": "bug-4245",
+    "timestamp": "2026-11-14",
+    "error_message": "TypeError: 'StructuredTool' object is not callable（E2E 直接调用 get_templates/lookup_regional_fact）",
+    "file": "backend/scripts/verify_commit_chain_e2e.py",
+    "root_cause": "tools.py 中这两个函数被 @tool(...) 装饰成 StructuredTool，不是普通协程函数；且 ainvoke 的 runtime 必须是真实 langgraph ToolRuntime dataclass（SimpleNamespace 被 pydantic 拒绝：Input should be a dictionary or an instance of ToolRuntime）",
+    "fix": "改为 await get_templates.ainvoke({...})；runtime 用 ToolRuntime(state=None, context=SimpleNamespace(knowledges=[kb_id]), config=None, stream_writer=None, tool_call_id=None, store=None)（范式见 backend/test/unit/toolkits/test_lookup_regional_fact.py:65）",
+    "tags": [
+      "e2e",
+      "toolkit",
+      "langgraph",
+      "structuredtool"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-14"
+  },
+  {
+    "id": "bug-4246",
+    "timestamp": "2026-11-14",
+    "error_message": "AttributeError: Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'",
+    "file": "backend/scripts/verify_commit_chain_e2e.py",
+    "root_cause": "SQLAlchemy 通用 JSON 列 Column(JSON) 不支持 .astext（那是 postgresql JSONB 方言属性）",
+    "fix": "改用 TaskRecord.payload[\"domain_factory_task_id\"].as_string()（实测可正确 DELETE 匹配行）",
+    "tags": [
+      "sqlalchemy",
+      "json",
+      "postgres"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-14"
+  },
+  {
+    "id": "bug-4247",
+    "timestamp": "2026-11-14",
+    "error_message": "E2E 清理阶段崩溃导致残留：Neo4j 探针节点 29 个 + 任务中心行 2 条",
+    "file": "backend/scripts/verify_commit_chain_e2e.py",
+    "root_cause": "finally 清理路径自身抛异常（上面的 .astext）中断了 cleanup_graph/match_count 回写；且共享类型节点（LegalReference/EntitySchema）不带 attribution，按 attribution 删除会漏",
+    "fix": "1) 修掉清理路径异常；2) 额外按 kb_id 删探针创建的 LegalReference/EntitySchema；3) 验收用 cypher-shell 核对总节点数与基线（9102）",
+    "tags": [
+      "e2e",
+      "neo4j",
+      "residue",
+      "cleanup"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-14"
+  },
+  {
+    "id": "bug-4248",
+    "timestamp": "2026-11-14",
+    "error_message": "AI 实体提取命中任意有属性的已有实体即抛 AttributeError: 'list' object has no attribute 'keys'，/extract 返回 500",
+    "file": "backend/package/pisuan/services/domain_entity_service.py:416",
+    "root_cause": "比对把提取出的实例值 dict 与已有实体的 properties（属性定义 list）当成同构对象，list 形态下 .keys() 崩；连带 save_extracted_entities 把实例值 dict 写进 properties 字段，且比对产出 different 而后端只处理 new/updated，导入为空操作",
+    "fix": "待修（本轮只诊断）：比对改为属性键集合覆盖度（new/partial/matched），导入按 schema 语义写属性定义而非实例值",
+    "tags": [
+      "domain-entity-builder",
+      "ai-extract",
+      "type-mismatch",
+      "dead-branch"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-14"
+  },
+  {
+    "id": "bug-4249",
+    "timestamp": "2026-11-14T15:30:00.000Z",
+    "error_message": "E2E S1/S6 FAIL：create_entity 创建的探针实体在通用域 list_all/get_by_key(general) 查不到，提取比对返回 new；指纹显示零残留但 DB 余留一行",
+    "file": "backend/package/pisuan/services/domain_entity_service.py",
+    "root_cause": "DomainEntityRepository.create 缺省 domain_code='coal'（legacy），create_entity 未显式传 domain 时实体落 coal，通用域按 domain 过滤不可见",
+    "fix": "create_entity 缺省归属 GENERAL_DOMAIN_CODE；E2E 清理补无条件兜底删除",
+    "tags": [
+      "domain-entity",
+      "domain-code",
+      "e2e",
+      "silent-default"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-14T15:30:00.000Z"
+  },
+  {
+    "id": "bug-4250",
+    "timestamp": "2026-11-14T15:30:00.000Z",
+    "error_message": "实体属性变更/改名后待审核任务 entity_ref 不刷新；remap 恒 remapped=0，关系规则按属性 key 永不失配",
+    "file": "backend/package/pisuan/services/domain_factory_service.py",
+    "root_cause": "_remap_waiting_review_tasks 只走 SlotEntityMapper（静态 17 类型文件，不读 domain_entity_schemas）；_auto_map_slots_to_entity_properties 又把 name_cn 写成 entity_ref 第二段，与 entity_key.prop_key 契约冲突",
+    "fix": "remap 增加实体库匹配：先清空失效引用、把历史 name_cn 引用归一为属性 key，再按属性名回填；_auto_map 统一输出属性 key",
+    "tags": [
+      "remap",
+      "entity-ref",
+      "graph",
+      "relation-rules"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-14T15:30:00.000Z"
+  },
+  {
+    "id": "bug-4251",
+    "timestamp": "2026-11-14T15:30:00.000Z",
+    "error_message": "工作台确认实体后前端提示「已保存」，但实体因 schema 校验被后端静默跳过（skipped 无原因）",
+    "file": "backend/package/pisuan/services/domain_factory_service.py",
+    "root_cause": "confirm_proposed_entities 只累加 skipped 计数并写日志，返回值不含原因；前端据此移除提案",
+    "fix": "返回 rejected[{key,reason}]；实体验证改用 DomainEntityService 的键/值类型/属性归一；前端提示原因且只移除真正写入成功的提案",
+    "tags": [
+      "domain-factory",
+      "confirm-entities",
+      "silent-failure",
+      "frontend"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-14T15:30:00.000Z"
+  },
+  {
+    "id": "bug-4252",
+    "timestamp": "2026-11-14T15:30:00.000Z",
+    "error_message": "工作台实体编辑弹窗值类型只有 String/Numeric/Boolean/Date，提交 Numeric/Date 与实体构建器 7 种词表分叉",
+    "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+    "root_cause": "第二个写入口（ETL 工作台）维护了独立值类型词表，后端当时还会把未知值静默转 String",
+    "fix": "弹窗词表改为 String/Integer/Float/Boolean/Enum/Object/List；后端未知值 400，Numeric/Date 仅作显式别名",
+    "tags": [
+      "value-type",
+      "vocabulary",
+      "etl-workbench",
+      "contract"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-14T15:30:00.000Z"
+  },
+  {
+    "id": "bug-4253",
+    "timestamp": "2026-11-14T15:50:00.000Z",
+    "error_message": "[plugin:vite:css] [less] Unrecognised input. Possibly missing something /app/src/views/DomainEntityBuilderView.vue:313:0（报错代码框指向模板 <a-col>）",
+    "file": "web/src/views/DomainEntityBuilderView.vue",
+    "root_cause": "P0 重构把 .extract-* 样式移出 .json-viewer 时漏掉 .json-viewer 的闭合括号，less 解析到 EOF 才报错；Vite 的 less 错误行号是相对样式块内容的，而代码框按原文件行号取行，于是指向模板第 313 行，极具误导性",
+    "fix": "在 .json-content 之后补 .json-viewer 的闭合 `}`；用 vue/compiler-sfc 的 parse + less.render 校验样式块（LESS OK），再用 dev server fetch /src/views/DomainEntityBuilderView.vue 确认 200",
+    "tags": [
+      "less",
+      "vue-sfc",
+      "vite",
+      "brace",
+      "misleading-error-location"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-14T15:50:00.000Z"
+  },
+  {
+    "id": "bug-4254",
+    "timestamp": "2026-11-14T17:10:00.000Z",
+    "error_message": "回迁脚本 git add 失败：The following paths are ignored by one of your .gitignore files: docs/vibe（文件其实已被跟踪）",
+    "file": ".backport-tmp/backport.py",
+    "root_cause": "custom 仓库 .gitignore 忽略 docs/vibe，而该路径历史上被 -f 强加跟踪；git add 显式路径时对 ignored 路径一律报错（check-ignore 对已跟踪文件默认返回 1，检测不到）",
+    "fix": "staging 一律 git add -f -- <path>；不要指望 check-ignore 判断是否被忽略",
+    "tags": [
+      "git",
+      "gitignore",
+      "docs/vibe",
+      "backport"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-14T17:10:00.000Z"
+  },
+  {
+    "id": "bug-4255",
+    "timestamp": "2026-11-14T17:12:00.000Z",
+    "error_message": "回迁后 custom 分支 blob 全是 CRLF（工作树 138 个 CRLF / 提交后 blob 也 CRLF），forward 对比出现大量 0 段差异",
+    "file": ".backport-tmp/backport.py",
+    "root_cause": "custom 工作树混有 CRLF 变体（历史检出产物，core.autocrlf 在本仓库为 false 不会自动归一）；脚本把工作树当父版本读写，于是 CRLF 被原样提交",
+    "fix": "父版本一律从 git blob 读（git show HEAD:<path>），写盘前按父 blob 的行尾归一（新文件跟 localized blob）",
+    "tags": [
+      "crlf",
+      "line-endings",
+      "git",
+      "backport"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-14T17:12:00.000Z"
+  },
+  {
+    "id": "bug-4256",
+    "timestamp": "2026-11-14T17:15:00.000Z",
+    "error_message": "回迁脚本 git reset --hard 把 custom 克隆里未提交的 .wolf/{memory,cerebrum,anatomy,buglog,token-ledger,_session} 改动一并丢弃",
+    "file": "C:/workspace/pisuan/.wolf/*",
+    "root_cause": "为清理半成品回迁分支而在 custom 克隆执行 git reset --hard，未先确认工作树除 .wolf 外是否有未提交内容；reset --hard 对已跟踪文件的改动不可恢复（未 stash、未 objectify）",
+    "fix": "事后无法恢复；此后在他人工程克隆上做 reset/checkout 前必须先 git stash push .wolf 或备份目录",
+    "tags": [
+      "git",
+      "reset-hard",
+      "data-loss",
+      ".wolf"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-14T17:15:00.000Z"
+  },
+  {
+    "id": "bug-4257",
+    "timestamp": "2026-11-14T17:28:59",
+    "error_message": "git push origin pisuan-custom 失败：'Recv failure: Connection was reset' / 'Failed to connect to github.com port 443 after 21075 ms'",
+    "file": "n/a（网络出站问题，非代码）",
+    "root_cause": "本机 DNS 返回被投毒的不可达 IP（20.6.7.17 / 20.247.166.64）；github.com 多个边缘 IP 中本机只有 20.200.245.247 可建立 TLS（140.82.114.3 / 20.205.243.166 均超时）。git 走 libcurl 只能按 DNS 结果连接，因此必然失败。",
+    "fix": "起临时本地 HTTP CONNECT 代理（127.0.0.1:18080，把 github.com 重写到 20.200.245.247 后双向转发），然后 git -c http.proxy=http://127.0.0.1:18080 push origin pisuan-custom；推送成功后 ls-remote 复核，停代理并删临时目录。",
+    "tags": [
+      "git",
+      "push",
+      "dns",
+      "proxy",
+      "network",
+      "github"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-14T17:28:59"
+  },
+  {
+    "id": "bug-4258",
+    "timestamp": "2026-11-14T19:40:00",
+    "error_message": "实体构建器切换实体/离开页面时正在编辑的属性与关系规则被静默丢弃（无任何提示）",
+    "file": "web/src/views/DomainEntityBuilderView.vue",
+    "root_cause": "原实现 handleTreeSelect 直接覆盖 draft，路由离开与关标签页没有任何守卫，isDirty 概念不存在；保存走 reload 后也不恢复选中，用户改完保存看到的是空态",
+    "fix": "§5.2 拆分：状态下沉 composables/useEntitySchemas.js，draft 为深拷贝编辑副本、baselineJson 为选中/保存时快照，isDirty=JSON 快照比对；页面统一 confirmDiscard() 覆盖切树/新建/克隆/导入，onBeforeRouteLeave 返回 Promise 阻断路由，beforeunload 覆盖关标签页；save 后 load({entityKey}) 保持选中并置净",
+    "tags": [
+      "frontend",
+      "vue",
+      "dirty-state",
+      "domain-entity-builder",
+      "data-loss"
+    ],
+    "related_bugs": [
+      "bug-4257"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-14"
+  },
+  {
+    "id": "bug-4259",
+    "timestamp": "2026-11-14T20:10:00",
+    "error_message": "浏览器验证脚本 6/7 超时：locator('.editor-actions button').filter({ hasText: '保存' }) 30s 内不可见/不可点",
+    "file": "web/src/components/domain-factory/entity/EntityEditor.vue",
+    "root_cause": "ant-design-vue 会在按钮内两个汉字之间自动插入空格（中文排版规则），DOM 文本是「保 存」；hasText 默认按子串精确匹配（大小写不敏感但空格敏感），因此匹配不到",
+    "fix": "改用位置选择器 .editor-actions button 取第一个（保存是主操作第一个），并在脚本注释里记录顺序依赖；重跑 11/11 通过",
+    "tags": [
+      "playwright",
+      "ant-design-vue",
+      "selector",
+      "chinese-spacing"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-14T20:10:00"
+  },
+  {
+    "id": "bug-4260",
+    "timestamp": "2026-11-14T20:20:00",
+    "error_message": "回迁提交 git diff --stat 显示 1139 增/942 删，而源提交只有 208/11",
+    "file": ".backport-tmp/backport.py",
+    "root_cause": "脚本用 Python 文本模式 open(path,'w') 写 custom 工作树，Windows 下 \n 被转成 \r\n；custom 仓库 core.autocrlf=false 且 blob 为 LF，于是每个被改文件整篇行尾翻转",
+    "fix": "按字节重写 b.replace(b'\r\n', b'\n') 后 git commit --amend --no-edit，stat 回到 208/11，并复核 forward_text(custom) == localized",
+    "tags": [
+      "backport",
+      "crlf",
+      "autocrlf",
+      "windows"
+    ],
+    "related_bugs": [
+      "bug-4255"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-14T20:20:00"
+  },
+  {
+    "id": "bug-4261",
+    "timestamp": "2026-11-14T19:55:00",
+    "error_message": "宿主 npx eslint 报 module-loader 错误，但管道末尾 echo EXIT=$? 显示 0，一度误判为「lint 通过」",
+    "file": "web/",
+    "root_cause": "宿主 web/ 没有 node_modules（依赖只在容器内），npx 拉不到 eslint 配置依赖而失败；$? 取的是管道最后一个命令（echo/tee）的退出码，不是 eslint 的",
+    "fix": "前端 lint/prettier/build 一律 docker exec pisuan-localized-web-1 在 /app 下执行，并用 PowerShell 检查 $LASTEXITCODE；本次 eslint 0 error、prettier clean、vite build 9.46s",
+    "tags": [
+      "eslint",
+      "node_modules",
+      "exit-code",
+      "docker"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-14T19:55:00"
+  },
+  {
+    "id": "bug-4262",
+    "timestamp": "2026-11-14T22:20:00",
+    "error_message": "新增 GET /api/domain-entity-builder/entities/{id}/usage 后集成测试拿到 404 {\"detail\":\"Not Found\"}（默认 FastAPI 文案，而非自写错误信息）",
+    "file": "backend/server/routers/domain_entity_builder_router.py",
+    "root_cause": "api 容器的 uvicorn --reload 监听线程已静默死亡（日志 WatchfilesRustInternalError: Cannot allocate memory (os error 12)，起于 11-12），新路由代码从未被加载；容器健康检查只看端口存活，所以仍是 healthy",
+    "fix": "docker restart pisuan-localized-api-1，轮询 /api/auth/check-first-run 直到 200 后重跑集成测试（2 passed）。容器名是 pisuan-localized-api-1，不是文档里的 api-dev",
+    "tags": [
+      "uvicorn",
+      "reload",
+      "watchfiles",
+      "404",
+      "docker"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-14T22:20:00"
+  },
+  {
+    "id": "bug-4263",
+    "timestamp": "2026-11-14T23:20:00",
+    "error_message": "浏览器 E2E 断言『点取消后实体仍在』返回 0，误报删除失败；实测库中实体未删、页面树里节点也在",
+    "file": "%TEMP%/pisuan-browser-verify/verify-entity-usage.js",
+    "root_cause": "断言选择器里仍写着旧实体名 地下水水质，而库里 name_cn 是 地下水环境质量现状；批量 sed 只改了函数调用处，漏掉这条 hasText，locator.count() 自然为 0",
+    "fix": "改为取 .tree-node-title 的 allInnerTexts() 并 includes('地下水环境质量现状')；同时确认服务端数据未变（psql 查行）以排除真实删除",
+    "tags": [
+      "playwright",
+      "e2e",
+      "selector",
+      "false-negative"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-14T23:20:00"
+  },
+  {
+    "id": "bug-4264",
+    "timestamp": "2026-11-14T23:45:00",
+    "error_message": "浏览器截图里属性删除确认弹窗半透明、文字叠在表格行上，看起来像弹窗样式损坏",
+    "file": "%TEMP%/pisuan-browser-verify/verify-property-impact.js",
+    "root_cause": "截图在 waitForSelector('.ant-modal-confirm') 后立即触发，正好落在 ant-design-vue Modal 约 200ms 的淡入动画中；弹窗此时仍在缩放/透明过渡，computedStyle 实际已是 rgb(255,255,255)/opacity 1",
+    "fix": "截图前 waitForTimeout(800~900ms)，并先用 getComputedStyle 断言背景与 opacity；settled 截图与首轮断言一致，功能无问题",
+    "tags": [
+      "playwright",
+      "ant-design-vue",
+      "modal",
+      "screenshot",
+      "false-positive"
+    ],
+    "related_bugs": [
+      "bug-4263"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-14T23:45:00"
+  },
+  {
+    "id": "bug-4265",
+    "timestamp": "2026-11-15T00:05:00",
+    "error_message": "新增 import dry_run 字段后，容器内集成测试 KeyError: 'created'（接口仍返回旧的 {count} 结构）",
+    "file": "backend/server/routers/domain_entity_builder_router.py",
+    "root_cause": "api 容器 uvicorn --reload 未拾取本次后端改动（reload 静默失效，日志无 Reloading 记录），进程仍在跑旧代码；此前同类问题记为 bug-4262",
+    "fix": "docker restart pisuan-localized-api-1 后恢复；判断依据是响应结构而非源码，不能用 401/403 反推（未知查询参数会被忽略）",
+    "tags": [
+      "uvicorn",
+      "reload",
+      "docker",
+      "stale-process"
+    ],
+    "related_bugs": [
+      "bug-4262"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-15T00:05:00"
+  },
+  {
+    "id": "bug-4266",
+    "timestamp": "2026-11-15T00:05:00",
+    "error_message": "导出配置换环境后导入 500（entity_key 唯一约束）；无 entity_id 条目被静默跳过；旧 coal 文件落成通用域幽灵实体",
+    "file": "backend/package/pisuan/repositories/domain_entity_repository.py",
+    "root_cause": "upsert_all 只按 entity_id 匹配——entity_id 是环境内代理键，跨环境对不上；导入口不校验 domain_code 也不消费 taxonomy",
+    "fix": "对齐键改为 entity_key（缺 entity_id 生成 uuid 创建）；import 逐条校验 key/name_cn/domain_code 并归一属性值类型；新增 dry_run 预检与前端影响面确认；有更新时重映射待审核任务",
+    "tags": [
+      "import",
+      "export",
+      "entity_key",
+      "idempotency",
+      "domain_code"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-15T00:05:00"
+  },
+  {
+    "id": "bug-4267",
+    "timestamp": "2026-11-15T00:05:00",
+    "error_message": "导出原样回导时 8 个实体被拒：未知值类型 `parameter`；这些实体在页面上保存也会 400",
+    "file": "backend/scripts/governance/normalize_property_value_types.py",
+    "root_cause": "存量数据把模板 slot 类型（parameter）写进了属性 value_type（44 条属性），既不是合法值类型也不是历史别名",
+    "fix": "新增幂等治理脚本，parameter 按 key 判定 → Float（以「数值」结尾）/ String；本机 --apply 后库内非法值类型清零，回导 71/0/0",
+    "tags": [
+      "data-quality",
+      "value_type",
+      "governance",
+      "import"
+    ],
+    "related_bugs": [
+      "bug-4266"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-15T00:05:00"
   }
 ]

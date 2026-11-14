@@ -25,6 +25,7 @@
 
 - [2026-10-14] 卡片式导航的点击范围要克制：大卡片/区域不整卡可点，仅显式「直达」链接可点（用户对知识工厂工位卡的裁定）。此后卡片导航默认按此执行，整卡可点需先问。
 ## Key Learnings
+- [2026-11-12] Codex CLI 新版仅支持 wire_api="responses"（写 chat 直接报 config 错误）；智谱 GLM Coding Plan 的 Responses 端点是 https://open.bigmodel.cn/api/v1（/responses 实测 200），paas/v4 是 chat-only 且 Coding Plan key 在其下 429 余额不足；cc-switch 供应商库存于 ~/.cc-switch/cc-switch.db（sqlite providers 表 settings_config JSON 字段），其生成的 Zhipu codex 条目 base_url 曾是错的（v3.20.2 才修复），切换供应商会整写 config.toml+auth.json。
 - [2026-11-05] Docker Desktop(WSL VM) 整体重启后的 api 启动竞态：milvus 比 api 晚就绪时 lifespan knowledge_base 组件失败（required=True）→ api 进程退出（Application startup failed. Exiting），靠 watchfiles 重载自愈或需手动 docker restart api（待 milvus healthy 后）。重启后先确认 milvus healthy 再看 api，看到 healthy 前的 UI 流量全为死会话。
 - [2026-11-05] localized 栈部署链唯一正道：pisuan 工作树 → sync-dev.ps1 → pisuan-localized 树（/app/package 挂载源）→ api lifespan reseed（init_builtin_skills，_replace_skill_target 目录级原子替换）→ skill-sources/shared → 投影 copy-on-change。直接 cp 进 docker/volumes 的 shared/投影必被 reseed 用挂载源快照整目录回灌（连新增文件一起清除）。部署终审=PowerShell Get-FileHash 全链审计（repo/localized/shared/投影 24 目标）+ 容器 exec md5sum 抽查（docker exec 须 MSYS_NO_PATHCONV=1）。
 - [2026-11-05] 容器与宿主对同一 bind mount 内容分歧时，第一步 docker inspect --format 全量挂载清单（勿 grep 过滤——/app/package 挂载源行被滤掉导致误诊），确认两侧比对的是否同一宿主子树，再谈缓存。容器重启/WSL VM 重建都'换不来新内容'时，几乎必然是挂载源本身在另一棵树（真字节非缓存）。
@@ -2676,3 +2677,215 @@
 - **编号标题 pathology 的通用形态**：上游转换器会产出编号紧贴标题文本（无空格）的 markdown 标题；任何要求 `\s+` 的编号识别都会漏。放宽仅限已确认标题（# 前缀）内，裸文本保持严格（防「2024年…」正文误判）。
 - **源文本编号错误是独立层**：OCR/转换产物自身可能编号错乱（7b6364db「1.4.2 评价时段」出现在 1.3 节内，语义应为 1.3.2）。解析器修复后忠实保留源编号——树挂接正确但编号可能与语义不符，这是源文本信息，不是解析缺陷。
 - 回归面测试文件位置：状态机在 test/unit/test_c_batch_fixes.py（unit 根），管线 test/unit/services/test_commit_pipeline_status.py，熔断 test/unit/services/test_domain_factory_p0.py（无独立 c_batch/breaker 文件名，猜文件名会 collected 0）。
+
+## Key Learnings + DNR（2026-11-13 codex glm-5.3-flash 卡死实例 + models.json 目录批追加）
+
+### Key Learnings
+- codex app-server-daemon 架构：TUI 只是薄 JSON-RPC 客户端，所有模型 HTTP 请求由常驻 daemon 进程发起（二进制在 ~/.codex/packages/app-server-daemon/releases/<ver>/bin/codex.exe，自动更新）；同一 daemon 可同时服务不同 provider 的多会话（实测 pid 12676 同时挂 glm→open.bigmodel.cn 和 deepseek→内网网关 10.32.34.123:8080 两条链路，互不影响）。
+- 取证配方：~/.codex/logs_2.sqlite 只读打开，按 process_uuid LIKE 'pid:N%' 分进程统计；'Request completed method=POST url=... status=200 headers={...}' DEBUG 行含完整响应头（content-length: 70 = 错误体签名；url 含真实端点）；重试 WARN 体不含 URL，要按时间窗查。'stream disconnected' 的语义是「没等到 response.completed SSE 事件」，200+JSON 错误体也报这个错。
+- cc-switch 写的 disable_response_storage 已被 codex 0.167.x 忽略（每次启动 configWarning），无害死键。
+- model_catalog_json（~/.codex/models.json）schema 实测（serde 逐字段报错试出）：顶层 {"models": [ ... ]} 数组；条目必填 slug（即模型 id，可与 model 字段并存）；supported_reasoning_levels 是 [{"effort":..., "description":...}] 结构体数组而非字符串数组；**该文件解析失败会导致 codex 配置加载整体失败**（thread/start 返回 -32600），改目录必须用新进程冒烟验证。
+- 官方 codex 模型目录未收录 glm-5.3-flash，但模型页确认已全量上线 GLM Coding Plan（1M ctx / 128K out，推荐 reasoning max）；已在用户目录补 flash 条目（default_reasoning_level=high 贴合用户习惯）。
+- Windows SO_REUSEADDR 陷阱：两个进程可同时 LISTEN 127.0.0.1 同一端口，新起服务前先 Get-NetTCPConnection 查并杀僵尸。
+
+### Do-Not-Repeat（2026-11-13）
+- 不要在报错的同一 codex TUI 会话里反复重试：同一实例复用同一连接池，坏节点钉死后必现；先开新会话（新实例）或关闭全部 codex 窗口杀 daemon 重来。
+- 不要把 stream disconnected 直接归因为「流被中途切断」：先查 logs_2.sqlite 里 POST 响应的 content-length 签名（70B = 200 包错误体），错误体内容不会出现在任何日志里。
+- 驱动 app-server 做冒烟时，终止谓词不要用字符串 contains 'error'（JSON 里 "error":null 恒命中）；用 turn/completed / turn/failed / item/completed(type=agentMessage) 方法级谓词。
+
+## Key Learnings + DNR（2026-11-13 通用域知识工厂全景梳理 session）
+
+### Key Learnings
+- 通用域知识工厂是双 router 结构：通用管线端点在 /api/domain-factory/*（domain_factory_router.py，/eia/* 子树属环评侧）；实体构建页走独立 /api/domain-entity-builder/*（domain_entity_builder_router.py，全 admin）；归因页无专用端点，复用 GET /tasks（scope 过滤）+ regional-facts(+retire) + region-board 五端点。任务中心消费 UI 是 TaskCenterDrawer 全局抽屉（AppLayout 挂载），非独立页面。
+- attribution 语义 = hashstr(kb_id|region_key|scope|project_name,12) 归属隔离键（domain_factory_region.py:216），三层判定 L1 加工词表→L2 泛化便车补 NULL→L3 confirm-region 人工；fail-closed 一库一归属（KB 绑定归属 A 后归属 B 拒绝入库，repo:348-409）；模板/大纲唯一约束与图谱节点 ID 均掺 attribution；std 种子章节恒共享。
+- 图谱唯一写入方是通用域 commit/reingest 流水线（svc:4742）；EIA 语料只进 KB 不进图谱；聊天侧消费图谱的唯一入口是 buildin 工具（无 agent 直调 GraphQueryService）。
+- slot-filler 已被 template-recommender 接管（SKILL.md:11，2026-11-09），两者非串行流水线；compliance-checker 是对成稿的独立后置校验。
+- 工具面双源模式：图谱优先 PG 回退并标 _source/_degraded_note（get_chapter_outline 等）；get_templates 的 section_key 精确查失败不回退同名 canonical；每次工厂读工具调用写 W0 取用率埋点（domain_factory_tool_usage）。
+
+### Do-Not-Repeat（2026-11-13）
+- 子代理报告的「疑似缺陷/断链」必须人工 grep 复核后才能写进文档：本次「迁移链漏接 v22」即误报（storage_migration.py:209 有 v21_to_v22 调用；报告者读文件时正值工作树并发修改）。
+- 不要假设通用域 7 页全走 domain_factory_router：DomainEntityBuilderView 用独立 router；也不要假设归因页有 /attribution 端点。
+- storage-migrator 是一次性服务（restart:no + service_completed_successfully）：代码新增迁移版本（如 v21→v22）后必须 `docker compose run --rm storage-migrator` 手动补跑，否则 api/worker 启动被 _require_supported_version 拒绝（RuntimeError: business=21 required 22）。changelog bug-4218 条目另有：后端改动 watchfiles 收不到 Windows mount 事件，须 docker restart pisuan-localized-api-1。
+- 运行栈容器实名是 compose 项目名前缀（pisuan-localized-api-1 / pisuan-localized-postgres-1），CLAUDE.md 里的 api-dev 是旧别名；docker exec 走 PowerShell（MSYS 改写 /app/... 路径）。
+
+## Key Learnings + DNR（2026-11-13 实体双链路 E2E 追加）
+
+**Key Learnings:**
+- LLM 网关 10.32.34.123:8080 (hyllm) 宕机时的兜底配方：`config_options` 表 key=system_options 的 `value` 是 **json 类型非 jsonb**（jsonb_set 报错，直接整段 JSON 字面量 UPDATE）；改后必须 `redis-cli DEL pisuan:config_option_version:system_options pisuan:config_option:system_options`（value 键常已过期，version 键才是关键）；openai2:agnes-3.0-flash 实测可用（agnes-2.5-flash 曾限流）。跑完务必还原 + 再清缓存。
+- PowerShell 向 docker exec psql 传含引号 SQL 会被打碎 → SQL 写文件 + `docker cp` + `psql -f`。
+- 容器内 python 单行脚本用 pg_manager 后进程不退出（langgraph 池）→ 纯 SQL 一律走 postgres 容器 psql。
+- 实体规则绑定三级匹配（svc:6177）第三级「≥2 汉字交集」吸附面极大：71 实体库下现实风格槽名几乎必被绑走，LLM 发现新实体只兜底未知概念；E2E 需生僻字槽名（如 龦龧龩龫龭龯）才能让 LLM 出场。
+- `_load_entity_schema_variables` cap=60（svc:4054）按 category+name_cn 排序截断：71 实体时尾部实体属性不进泛化 prompt，属既定 token 控制。
+- agnes-3.0-flash 对 discover 提议类型非确定（一轮 new_entity 一轮 add_property）；generalize structured 通道 success 但 slots 可为空（S4 断言只宜结构断言）。
+
+**Do-Not-Repeat:**
+- E2E 清理名单不得硬编码实体键：LLM 提议实体的键由 LLM 自定（本轮 e2e_probe_q3），清理必须遍历运行时 tracked_keys，否则残留。已修 verify_entity_chain_e2e.py。
+- psql 单行 UPDATE 带 WHERE 遇 PowerShell 引号必炸，别再试，直接 SQL 文件。
+
+
+## Key Learnings（2026-11-14 codex 切 DeepSeek 后 401 + /model 无模型）
+
+- **401 根因是常驻 daemon 的 auth 内存缓存**：cc-switch 切换只改 config.toml + auth.json；运行中的 app-server-daemon 会按会话重读 config（日志里 model/base_url 已切到 deepseek），但 ApiKey 是启动时读入内存的（日志 `auth_mode="ApiKey" auth_header_attached=true`、`auth_env_*_present=false`），所以报错里的 key 尾号是上一家的。处置：`codex app-server daemon restart`（0.169 有 start/restart/stop/version），旧 TUI 退出重开。
+- **快速判定「用错哪把 key」**：cc-switch 的 codex provider 存于 ~/.cc-switch/cc-switch.db 的 providers.settings_config（JSON 内嵌 TOML + auth.OPENAI_API_KEY）；deepseek 条目是 sk-422…6a78，而报错 ****D3P5 正是 Zhipu 条目 280be874…D3P5。
+- **/model 无自建模型 = provider TOML 缺 `model_catalog_json`**：deepseek provider 配置缺该键（GLM 条目有），models.json 里也没有 deepseek 条目。`model_catalog_json` 是**整份替换**内置目录而非合并——只写自定义条目时内置 gpt-* 会刷 "Unknown model … fallback metadata"。补 deepseek-flash/v4-pro 后 `codex debug models` 显示 5 个条目。
+- **免开 TUI 的验证三角**：`codex debug models`（目录解析结果）、`codex doctor --json`（auth/config/app-server 状态）、`codex exec -C <tmp> --skip-git-repo-check`（新进程真实请求）；`curl /v1/models` 单独验 key 本身。
+- DeepSeek（2026-11 实测）：`/responses` 原生可用（wire_api="responses" 正确）；模型为 deepseek-flash（V4.1 Flash，1M ctx，text+image）与 deepseek-v4-pro（1M ctx，text）；effort low/high/max。
+- cc-switch DB 是 delete journal（无 WAL）；直接 UPDATE providers.settings_config 可行，但 UI 要重启才显示新值；每次切换会整份重写 config.toml，所以 provider 配置必须改在 DB/UI，不能只改 config.toml。
+
+### Do-Not-Repeat（2026-11-14）
+- 切 provider 后报 key 无效，别先改 auth.json 或怀疑平台 key：先看报错 key 尾号属于哪家，再重启 daemon；auth.json 只在新进程启动时被读取。
+- 加自定义模型只改 models.json 不够，必须同时确认 provider TOML 有 model_catalog_json，否则 TUI 里永远看不到。
+
+
+## Key Learnings（append 2026-11-14 通用域页面诊断 + 真实栈 E2E）
+
+- **写手工具不是普通协程函数**：`get_templates` / `lookup_regional_fact` 在 `agents/toolkits/buildin/tools.py` 被 `@tool(...)` 装饰成 `StructuredTool`。服务层/Script 里调用必须 `await tool.ainvoke({...})`，且 `runtime` 必须是真 `langgraph.prebuilt.tool_node.ToolRuntime` dataclass（`SimpleNamespace` 被 pydantic 校验拒：Input should be a dictionary or an instance of ToolRuntime）。范式见 `backend/test/unit/toolkits/test_lookup_regional_fact.py:65-73`。
+- **SQLAlchemy 通用 JSON 列没有 `.astext`**（那是 postgresql JSONB 方言属性）；`Column(JSON)` 上的 key 取值用 `.as_string()`，实测可用于 DELETE 的 WHERE。
+- **E2E 清理必须一步一事务**：把多处 DELETE 塞进同一个 `async with get_async_session_context()`，中间任何异常都会整体回滚，日志里照样打印"已删除 N 行"，实际一行没删。清理步骤要各自独立事务并单独 try/except。
+- **图谱查询 API 永远带 std 种子章节**：`graph_query_service._chapter_scope_filter` 条件是 `(attribution=$attr OR id STARTS WITH $std_prefix)`，所以"零残留"不能靠 API 计数，必须 cypher-shell 直连 `MATCH (n) WHERE n.attribution=$attr`，并另查 `kb_id` 匹配的共享类型节点（LegalReference / EntitySchema 无 attribution）。
+- **共享节点两类污染源**：①`_merge_cross_report_knowledge` 会把 `key_points`/`content_contract` SET 到 `CH_*_std_*` 种子（无 attribution，只能快照全属性回滚）；②`LegalReference` 是全局 id，`frequency+1` 且可能标 `superseded`。探针文档只要引用法规就会碰它们。
+- **ETL 会给全表模板 `match_count` +1**（top200 学习模板不按 attribution 过滤），删探针归属行撤不回来，必须上传前快照 `(id, match_count)` 再回写漂移行。
+- **删 domain_factory_tasks 不会带走任务中心 `tasks` 行**（无 FK），要按 `payload->>'domain_factory_task_id'` 另删；`knowledge/databases` 的 delete 也不清任何 domain_factory 表。
+- **泛化 slot 数量受 LLM 方差影响**：同一份探针 docx 四轮实测 slots 合计 = 4 / 5 / 9 / 0。E2E 不要把它当硬断言；slot 可绑定性用确定性路径（`SlotEntityMapper` / 直写 DB）单独验证。
+- **当前 `system_options.default_model` = `openai2:agnes-3.0-flash`**（用户在 UI 自选；E2E 不要改回 hyllm，模型切换本身会改变泛化输出形态）。
+
+### Do-Not-Repeat（2026-11-14）
+- 复用 `/tmp/e2e_probe_task_id.txt` 前必须校验任务状态是 `WAITING_REVIEW`：陈旧 id 会让 `wait_commit` 首轮就读到上一轮的 `COMMITTED`，整条链"秒过"然后全 FAIL。
+- 不要在 worker 还没跑完时删探针知识库：会触发 `Failed to get Milvus collection`，任务落失败态，且掩盖真实断言。
+- `milvus.py` 的 `except (connections.MilvusException, RuntimeError)` 在现行 pymilvus 下 `connections.MilvusException` 不存在 → except 子句自身抛 `AttributeError`，把原始 Milvus 错误吞成无关异常。改这里用 `pymilvus.exceptions.MilvusException`（待修）。
+
+## Decision Log（2026-11-14）
+- 本轮定位为**全量诊断、先不改码**：产出 `docs/vibe/2026-11-14-通用域知识工厂页面诊断与重构清单.md`（逐页诊断 + 11 条跨页缺陷 + 后端横切审计 + E2E 副作用地图 + P0/P1/P2/P3 四批重构清单），代码改动留到下一轮按批次推进。
+
+## Key Learnings（append 2026-11-14 提交约定）
+- `docs/vibe` 被 `.gitignore` 第 78 行整目录忽略，但仓库里已有该目录下的历史文档（tracked）。新增 vibe 文档必须 `git add -f`，否则 `git add` 直接报 "paths are ignored"。
+- `.wolf/` 是 tracked 目录，按仓库惯例单独成提交（`chore(wolf): 簿记收编——…`），不与业务/文档改动混在同一 commit。
+- 提交边界：用户工作树有大量未提交 WIP（含 `verify_card2_highlight.py` 等无关脚本），只能按显式路径 `git add -- <file>`，禁止 `git add -A/-u`。
+- 运行栈 `api` 容器内**没有 ruff**（`uv run ruff` → No such file），`make format` 的检查在本环境跑不起来；脚本改动至少用 `python -c "import ast; ast.parse(...)"` 过一遍语法。
+
+## Key Learnings（append 2026-11-14 实体构建器深挖）
+- 实体库生产现状（general 域）：71 实体 / 592 属性；`project_basic` 34 实体 470 属性（79%）；属性里 `extraction_hint` 仅 92 条（15.5%）、中文属性 key 180 条、`required=true` 52 条、`relation_rules` 非空实体 27 个；`metadata.source`：None 27 / etl_proposal 26 / coal_eia_entity_types 18；无 dict 形态 properties（AI 导入从未成功）。
+- `/extract` 闭环三段全断：① `_compare_extracted_with_entities` 把实例值 dict 与属性定义 list 同构比较 → `existing_values.keys()` 抛 AttributeError（53/71 实体一命中就 500）；② 比对只产 new/matched/different，而保存只认 new/updated → different 导入是空操作；③ new 分支 `properties=values`（实例值当 schema）且 entity_key 用 `{schema_ref}_{domain}_{uuid8}` 伪造。
+- `relation_rules` 全仓库无消费方（只有本页 + model + confirm 的 `[]` 占位），27 个实体上的规则是死资产。
+- 泛化 prompt `_load_entity_schema_variables(max_items=60)` 按 `list_all` 的 `(category, name_cn)` 字母序截断：只有 env_quality+impact_assessment+measures_regulation 进，natural_env/project_basic/sensitive_target 全被截掉。cap 无优先级概念。
+- 实体有**两个写入口**：builder CRUD（`DomainEntityService.update_entity`，不触发 remap）与工作台 `confirm_proposed_entities`（直调 repo、会 remap、值类型词表是 String/Numeric/Boolean/Date）。同一实体两个词表，builder 的 `normalizeValueType` 会把 Numeric 静默归一成 String。
+- `entity_ref` 两套格式：前端 `entity_key.property_key`（EtlWorkbench:141），后端 `_auto_map_slots_to_entity_properties` 的 list 分支用 `name_cn` 当后缀（factory:6146-6148）。
+- 实体→变量有两套转换器：`_convert_db_entities_to_variables`（description→prompt，工作台变量面板）与 `_load_entity_schema_variables`（extraction_hint→prompt，泛化）。同一字段在两个 UI 入口含义不同。
+- 实体概念现存三套接口：`domain-entity-builder`（真实）、`entity_type_router`（211 行内存 STUB，已注册但前端无调用）、工作台 `confirmProposedEntities`（写入路径）。删接口前先确认这三者关系。
+- `docs/vibe` 被 .gitignore 整目录忽略，新增文档要 `git add -f`（同前一条）。
+
+## Do-Not-Repeat（2026-11-14 实体构建器）
+- 看 Vue 单文件样式块时先确认大括号作用域：`DomainEntityBuilderView.vue` 的 `.extract-*` 全部误嵌套在 `.json-viewer` 内（1462-1622），导致 AI 提取弹窗整块无样式；改样式前先看嵌套层级，不要以为 `scoped` 就生效。
+- 判断"字段是否被消费"必须全仓检索（含 `agents/skills` 与前端 matcher），不能只看 model/repository 有读写就认为生效；`relation_rules`/`is_list_type`/`required`/`min_value` 都属于"存了但没人读"。
+- 对实体 schema 做只读体检时用 `psql` 直接跑聚合（`json_array_length(properties::json)` 而不是 `jsonb_*`，该列是 `JSON` 不是 `JSONB`），比走 app 连接池稳；app 池偶发 120s 挂起（pool connecting 报错）时不要反复重试。
+
+## Decision Log（append 2026-11-14 实体提取规则化）
+
+- 确立原则：**生成开放、落库闭合**。LLM 可自由提议实体/属性，但写 `domain_entity_schemas` 前必须过结构校验（schema_ref 白名单、values 键 ⊆ 属性 key）与人工闸门；新建实体一律进候选，不直接落库。
+- 判定一条规则是否有效：**能拒绝结果才算规则，否则只是建议**。当前三条提取链路里只有 ETL 泛化有结构化输出（`with_structured_output(GeneralizedTemplate)`），两条写实体库的链路（工作台发现 / 构建器 AI 提取）全靠"相信模型"。
+- 关键洞察：`extraction_hint` 是页面专为提取设计的字段（库内已填 92/592，ETL 在用），但构建器自己的 `_build_extraction_prompt` 只读 `description` —— 规则字段存在≠规则生效；新增规则字段时必须同时确认消费方已接通。
+
+## Key Learnings (append 2026-11-14 实体构建器 P0)
+- [2026-11-14] `DomainEntityRepository.create` 缺省 `domain_code="coal"`（legacy 遗留），服务层 `create_entity` 不带 domain 时实体落 coal，通用域 `list_all/get_by_key(domain_code="general")` 完全不可见——写入口必须显式归属 `GENERAL_DOMAIN_CODE`（已改为服务层缺省）。诊断这类"保存成功但查不到"先查 domain_code。
+- [2026-11-14] 插槽 remap 有两套匹配源：`SlotEntityMapper` 只认静态 17 类型（`server/coal_eia_entity_types.json`），实体库（`domain_entity_schemas`）变更必须走 `_auto_map_slots_to_entity_properties`；`slot.entity_ref` 第二段的契约是**属性 key**（`entity_key.prop_key`），历史上 `_auto_map` 曾写 name_cn，remap 时需归一。关系规则求值（graph_builder）按属性 key 比对 condition，格式错则规则永不命中。
+- [2026-11-14] `test/integration/api/*` 需 `TEST_USERNAME/TEST_PASSWORD`（本机无 `test/.env.test`），全套 **skipped** 是环境门控而非失败；新增用例沿用 `test_client`/`admin_headers` fixture 即可，勿自造客户端。
+- [2026-11-14] 前端 lint/format 在 web 容器执行（宿主无 pnpm）：`docker exec pisuan-localized-web-1 sh -lc "cd /app && node_modules/.bin/eslint <files>"`、`node_modules/.bin/prettier --write <file>`；只对自己改写的文件跑 Prettier，用户 WIP 文件保留既有格式基线。
+- [2026-11-14] E2E 里 mock LLM 的正确打点：`extract_entities_from_document` 函数内 `from pisuan.models.chat import select_model`，脚本只需 patch 模块属性 `pisuan.models.chat.select_model`，prompt/解析/比对/保存/remap 全走生产代码（见 `backend/scripts/verify_builder_extraction_e2e.py`）。
+
+## Do-Not-Repeat (append 2026-11-14)
+- [2026-11-14] 写库 E2E 不能只看"没抛异常"：首轮 `create_entity` 未传 domain_code → 实体落 coal，指纹按 general 统计看不见，清理也按 general 查不到，形成漏清理。以后写后一律用与服务相同的 domain 过滤回查断言可见性，清理再补一次无条件兜底。
+- [2026-11-14] 别用 PowerShell `ConvertFrom-Json` 读 `.wolf/buglog.json`（644KB、UTF-8 中文，PS 5.1 按 ANSI 读会解析失败）；用 Python 以 `utf-8` 读写。
+
+## Key Learnings (append 2026-11-14 SFC less 报错定位)
+- 2026-11-14：Vite 报 `[less] Unrecognised input` 且代码框指向模板行时，别信行号——less 的 error.line 相对样式块内容，而代码框按原文件行号渲染。用容器内 `vue/compiler-sfc` parse + `less.render(descriptor.styles[0].content)` 复核，再 fetch dev server 模块 URL 确认 200。典型成因是样式块少一个闭合 `}`（EOF 才报错）。
+
+
+## Key Learnings（append 2026-11-14 localized→custom 回迁）
+
+- 回迁机制：机械改名层逐行保行（只改行内 token + 目录/文件基名），因此 `localized` 的父版本与 `custom` 对应文件行数一致。把 localized 的 difflib opcode 直接套到 custom 的父版本行上：equal 段沿用 custom 原文，只对新增段做逆变换——这样 custom 里原生的 pisuan（分支名/标记/项目名）不会被误改。
+- 逆向只反转带分隔符的 token（`pisuan.` / `pisuan_` / `pisuan-` / `PISUAN_`）与目录/文件基名；裸词 pisuan/Pisuan 保留，KEEP 白名单：pisuan-custom、pisuan-localized、pisuan-api、pisuan.local、pisuan_schema_migrations、apply_pisuan_rename 等。
+- 校验用 forward 做 oracle：对每个变更文件比较 `forward_text(custom 内容) == localized HEAD 内容`。191 个变更文件里 190 个逐字相等，唯一差异是 seed 默认密码（custom 反向还原成 yuxi123456），属命名层与品牌文案的边界，单独人工裁决。
+- custom 工作树的文件行尾不统一（历史检出产物 CRLF 与 LF 混杂，仓库 core.autocrlf=false），任何回迁/改写都必须以 git blob 为父版本基准，并在写盘前归一化行尾。
+- `.gitignore` 忽略但被 -f 强加跟踪的路径（docs/vibe）用 `git add -f` 才能再次入库；`git check-ignore` 对已跟踪文件默认返回 1，别用它判断。
+
+## Do-Not-Repeat（append 2026-11-14 回迁）
+
+- **禁止在 custom 克隆上直接 `git reset --hard` 清理分支**：该克隆的 .wolf 账本常有未提交改动，reset 会静默丢弃（bug-4256）。正确做法：先 `git stash push -- .wolf`（或备份目录），再 reset/checkout，结束后 stash pop。
+- 判断"回迁提交与源提交一致"不要只看 commit 数：要同时核对 ①路径树（含文件基名改名）②文件模式 ③forward 等价 ④同测试集在两棵树上的通过/失败向量一致。
+
+### 网络（2026-11-14 推送实践）
+- 本机 DNS 被投毒，github.com 解析到的 IP 不可达；只有 `20.200.245.247` 能建 TLS（140.82.114.3 / 20.205.243.166 全超时）。
+- 可行方案：临时本地 HTTP CONNECT 代理（asyncio，把 github.com 重写到可达 IP）→ `git -c http.proxy=http://127.0.0.1:18080 push`；curl 能通 ≠ Python socket 一定通，先逐个 IP 做 `wrap_socket` 探测。
+- 代理只做 CONNECT，不缓存不落盘；用完立刻停进程 + 删目录（bug-4257）。
+
+### 前端组件拆分与脏状态（2026-11-14 §5.2 实践）
+- 拆分大 SFC 的边界判据：**状态归属**。凡是「加载/保存/脏态/树数据派生」都进 composable，凡是「一段 UI + 局部弹窗」都进组件；页面只留编排与路由。本次 1782 → 311 行，6 组件 + 1 composable。
+- 嵌套字段的 v-model 用 `defineModel('properties')` / `defineModel('entity')` 把**子属性引用**交给子组件就地改（`properties.value.splice`），不要 emit 整个数组——emit 会替换引用，父级 `draft` 的脏态快照还能比出来，但会让「只改一项」变成全量重渲染。
+- 脏态用「JSON 快照对比」而不是逐字段 watch：`baselineJson` 在 select/save 时记录，`isDirty = JSON.stringify(draft) !== baselineJson`。代价是每次求值序列化，收益是嵌套数组/对象的任意深度改动都能被捕捉，且不会漏掉新增字段。
+- 路由级守卫用 `onBeforeRouteLeave(() => isDirty ? confirmDiscard() : true)` 返回 Promise<boolean>（vue-router 5 支持），`Modal.confirm` 的 onOk/onCancel 里 resolve；关标签页只能靠 `beforeunload`（自定义文案不可控）。
+- 保存后「保持选中」的实现是 `load({ entityKey })` → `selectByKey` → `select()` → `markClean()`，一次调用同时刷新列表、恢复选中、置净脏态；删除他人实体时用 `load({ preserveDraft: true })` 不打断未保存编辑。
+- `@lucide/vue` 图标在按钮内用 `<template #icon><X :size="14" /></template>`；`a-upload-dragger` 的 `before-upload` 返回 `false` 才能阻止自动上传、只留本地 File 对象。
+
+## Key Learnings + DNR（2026-11-14 实体构建器第二批）
+
+### 泛化 prompt 覆盖口径（后端真相）
+- `DomainFactoryService._load_entity_schema_variables(domain_code, max_items=60)` 是「实体 schema 进抽取提示词」的唯一入口：`DomainEntityRepository.list_all(domain_code=...)` 走 `ORDER BY category, name_cn`，逐实体逐属性计数，只计 `key` 非空且 `name_cn` 去空白后非空的属性，键为 `${entity_key}.${prop_key}`，提示词文案取 `extraction_hint`，**累计到 60 个直接截断**（不是按实体截断）。
+- 实测通用域：610 个属性中 592 个合格，**只有前 60 个进 prompt**，第 60 个恰好落在某实体最后一个属性上。也就是说大部分属性的 `extraction_hint` 目前是**惰性的**，改它不会影响抽取结果——UI 必须把这个事实标出来，否则管理员会白填。
+- 前端复算口径必须与 PG 排序一致：PG 在 en_US.utf8 下的中文排序与 JS 码点比较（`a < b`）实测 71 个实体逐行一致（0 差异）。但这是「当前数据恰好一致」，不是语言保证；后端若改 Collation，前端 `computePromptCoverage` 要跟着改。
+
+### 浏览器验证配方（无 @playwright/test 时）
+- 项目 `web/package.json` 没声明 `@playwright/test`，宿主也没有 `node_modules`。可行路线：临时目录 `npm i playwright-core@1.54.0`，`chromium.launch({ executablePath: 'C:/Users/Lenovo/AppData/Local/ms-playwright/chromium-1208/chrome-win64/chrome.exe' })`，脚本放在仓库外（如 `%TEMP%\pw-verify/`），不污染工程。
+- 登录只要 `localStorage.user_token` 出现即视为成功：`page.waitForFunction(() => !!localStorage.getItem('user_token'))` 与点击提交并发；拿到 token 后可直接 `fetch` 后端接口算期望值，再和 UI 比对（避免把后端口径硬编码进脚本）。
+
+### 前端细节
+- **ant-design-vue 会在两个汉字之间插空格**：按钮文案「保存」实际渲染为「保 存」，「删除」为「删 除」。Playwright 用 `hasText: '保存'` 会超时；改用位置选择器（`.editor-actions button` 第一个是保存）或在脚本里断言 `保\s*存`。
+- 搜索高亮不要用 `v-html`：按关键词切段返回 `[{text, hit}]` 再在模板里 `<mark v-if="part.hit">`，既避免注入也能保留原文大小写。
+- 覆盖数这类「后端口径派生值」放在 composable 里算（`promptCoverage` computed），子组件只接收结果；不要让表格组件自己再算一遍，否则两处口径漂移时无人发现。
+
+### DNR
+- **不要用 Python 文本模式写 custom 分支的文件再提交**：`open(p,'w')` 在 Windows 把 `\n` 转成 `\r\n`，而 custom `core.autocrlf=false`、blob 是 LF，提交后整文件行尾翻转（第二批因此 208→1139 行差异）。回迁后必须 `git diff --stat` 与源提交比对，不一致就按字节 `b.replace(b'\r\n', b'\n')` 重写并 `git commit --amend --no-edit`。
+- **不要在宿主 `web/` 下跑 `npx eslint` 判断前端质量**：宿主无 `node_modules`，npx 报 module-loader 错，而管道里 `echo EXIT=$?` 可能拿到的是管道末端的 0，形成「看起来通过」的假象。前端 lint/prettier/build 一律在 `pisuan-localized-web-1` 容器里跑并检查 `$LASTEXITCODE`。
+- **改 changelog 这类多条目文本时，替换锚点必须包含首尾两条编号**：一次回迁中 old_tail 从 ③ 开始、new_tail 从 ④ 开始，导致 ③ 被静默删除；替换后必须做一次 forward 等价校验（`forward_text(custom) == localized`）而不是只看 git 是否成功。
+
+## Key Learnings + DNR（2026-11-14 实体引用影响面）
+
+### 引用源的实测事实（通用域）
+- `entity_ref` 的真实消费面只有四处：`domain_factory_learned_templates.slots[].entity_ref`（211 模板，当前**全部**指向 `groundwater_quality.最大值数值`，数据高度退化）、WAITING_REVIEW 任务的 `source_paragraphs[].template.slots[].entity_ref`（4 个任务，含 `entity_key.prop_key` 与 `entity_key.中文名` 两种历史格式）、`domain_factory_reports_pps.entity_key`（78 行，裸键与 `project.gas_grade` 点号混杂）、`domain_factory_regional_facts.entity_key`（0 行）。`domain_factory_outlines.entity_bindings` 全空，接它之前不要写扫描代码。
+- 归一规则：第一个点号切分，前缀必须严格等于 entity_key（不做模糊匹配）；后缀先按属性 key 大小写不敏感匹配，再按 `name_cn` 精确匹配，都不中才算悬空。无后缀的引用计入实体级（`tally` 返回 True 但不落到任何属性）。
+- 计数口径：模板按去重模板数、任务按任务数、pps/facts 按行数；同一模板内同一属性出现多次按多次计引用次数——「实体被 211 个模板引用」与「属性被引用 233 次」并不冲突（233 = 211 模板 + 22 待审核）。
+
+### 前端交互
+- 删除确认里 `Modal.confirm({ content: '纯字符串' })` 足够，不必 `h()`；影响面文案要区分「有引用」与「无引用」两条分支，并明确「取影响面失败 → 取消删除」而不是放行。
+- 当一个确认从组件内 `a-popconfirm` 上移到页面级 `Modal.confirm` 时，**必须同时删掉原 popconfirm**，否则双击确认（本次树行删除）；上移后组件只 emit 意图，页面统一走 `fetchUsage → Modal.confirm → removeEntity`。
+- `usage` 这类按选中实体拉取的面数据要与 `draft` 生命周期解耦：composable 里用递增 `usageReqId` 丢弃过期响应，`select/clearSelection/startCreate` 三处同步重置，避免快速切换实体时串台。
+
+### 浏览器验证配方补充
+- 管理员 UI 登录（不注入 token）：`fill('input[placeholder="用户ID或手机号"]','admin')` + `fill('input[type="password"]','123')` + `getByRole('button', { name: /登\s*录/ })`，登录后落 `/agent`；随后直接 `page.goto('/domain-factory/general/entity-builder')` 即可。
+- 树节点按中文名定位要用 `allInnerTexts().includes('…')` 或 `hasText: /^…$/`；**实体名以库为准**（`地下水质` → 实际 `地下水环境质量现状`），旧名字留在断言里会得到「0 命中」的假失败。
+- 详情类断言优先取 `.usage-panel` / `.ant-table-tbody` 的 innerText 再匹配数字，而不是逐元素断言布局。
+
+### DNR
+- **后端改了路由/服务后先确认 reloader 还活着**：`uvicorn --reload` 可能因 `Cannot allocate memory (os error 12)` 静默死亡（bug-4262），表现为新端点 404 且 detail 是 FastAPI 默认 "Not Found"。排查顺序：先 `docker logs` 看 watchfiles 报错，再看端点是否存在；修复是 `docker restart pisuan-localized-api-1` 并轮询健康接口，不要改代码去「兜底」。
+- **不要把 `usage` 面板做成「无数据也显示 0」**：新实体（未落库）不显示面板，`usage=null` 时属性「引用」列显示 `-`，有 usage 才显示 0/未使用，二者语义不同。
+
+## Key Learnings（2026-11-14 属性级影响面）
+
+- 属性行的「删除」与「改名」后果不同，文案不能共用：删除后待审核任务的失效引用会在保存实体时被 `_remap_waiting_review_tasks` 清理，而 `learned_templates` 与 `reports_pps` 里的旧引用没人修；改名则会把待审核任务按最新属性重建，模板与报告参数仍保留旧键。UI 必须分别说明，否则管理员会以为「保存一下全都自动修好」。
+- 影响面确认放在 `PropertyTable`（而不是页面）是对的：`usage.properties[key]` 与属性行一一对应，行内就知道该显示哪一条；代价是组件需要 `usage` prop，新实体（usage=null）自然退化为「无引用」。
+- 改名确认的取消语义要单独想：`Modal.confirm` 取消只关闭确认框，属性编辑弹窗与其中的输入值仍在（用户可再改再提交），但草稿 `properties[index]` 未被替换——验证时断言「表格里的旧键还在」比断言输入框回滚更准确。
+
+### DNR
+- **不要用 `a-popconfirm` 承载需要展示数据的影响面**：popconfirm 的 `title` 只适合一句短话，四类计数要拼长文本时直接用 `Modal.confirm`（组件内 `import { Modal } from 'ant-design-vue'` 即可），并把行删除按钮改成普通 link 按钮。
+- **截图不要紧跟 `waitForSelector` 就按**：ant-design-vue 的 Modal 有约 200ms 淡入，淡入中截图会看到半透明弹窗叠在表格上，看起来像样式炸了；实测 `getComputedStyle` 已是白底 opacity 1。截图前固定 `waitForTimeout(800~900)`，或先断言样式再截。
+
+## Key Learnings + DNR（2026-11-15 导入/导出对称性）
+
+- **对齐键是 `entity_key`，不是 `entity_id`**：`entity_id` 只是环境内代理键，`entity_key` 才是 `entity_ref = entity_key.prop_key` 的契约标识。任何「导入/同步/对账」逻辑都必须按 `entity_key` 匹配并保留本地 `entity_id`，否则跨环境文件要么撞唯一约束 500，要么把主键改坏。
+- **`domain_entity_schemas.properties[].value_type` 的合法值和模板 slot 的 `type` 是两套枚举**：slot 的 `parameter/enum/descriptive/reference` 绝不能写进属性值类型（历史上 `domain_factory_service._build_slot_property_proposals` 直接把 `slot["type"]` 塞进 proposal）。`parameter` 只是「这个值来自模板参数」的标记，不是类型。
+- **导出/导入是一份契约，必须自带往返测试**：`test_import_round_trip_of_exported_config`（导出原样回导 → created=0、updated=N、rejected=0）能在 3 行内暴露一类数据缺陷——本批就是靠它发现 8 个实体 44 条 `parameter` 值类型，而这些实体的属性在页面上保存会直接 400。
+- 治理脚本在 api 容器内跑的固定姿势：`python -u -m scripts.governance.xxx`（管道下 stdout 是块缓冲，不加 `-u` 看不到任何输出）+ 协程 `finally: await pg_manager.close()`（不关池进程挂在退出阶段，见 2026-10-05 记录）。dry-run 是默认值，写库要显式 `--apply`。
+
+### DNR
+- **不要给「导入」保留无预检的直写路径**：批量写库本身就是重锤，前端必须先 `dry_run` 拿影响面（新增/更新/拒绝+原因）再 `Modal.confirm`，后端不要把 `dry_run` 做成「先写再回滚」——只算不写才是可验证的。
+- **不要用自动改写行业域来「兼容」旧文件**：把文件里的 `coal` 静默改成 `general` 会让管理员以为迁移完成；拒绝并说明「构建器只服务通用域」是对的处置。
+- **不要在管道里用 `docker exec ... printenv <含凭据的变量>`**（会被安全策略拦），判断配置是否存在用 `sh -c 'test -n "$VAR" && echo set || echo unset'`。

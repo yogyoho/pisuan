@@ -415,10 +415,18 @@ export function useEntitySchemas() {
     }
   }
 
+  /** 导入影响面预检：返回 {created, updated, rejected, total}，不写库 */
+  const previewImport = (configData) =>
+    domainEntityBuilderApi.importConfig(configData, { dryRun: true })
+
   const importConfig = async (configData) => {
     try {
-      await domainEntityBuilderApi.importConfig(configData)
-      message.success('配置导入成功')
+      const res = await domainEntityBuilderApi.importConfig(configData)
+      message.success(res.message || '配置导入成功')
+      const rejected = res.rejected || []
+      if (rejected.length) {
+        message.warning(`${rejected.length} 条被拒绝：${rejected[0].reason}`)
+      }
       clearSelection()
       await load()
       return true
@@ -456,6 +464,7 @@ export function useEntitySchemas() {
     removeEntity,
     cloneEntity,
     exportConfig,
+    previewImport,
     importConfig
   }
 }
