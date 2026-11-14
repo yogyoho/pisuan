@@ -33,7 +33,7 @@ skill_dependencies: ["template-recommender"]
 
 1. **用户上传的附件**：检查对话中用户是否提供了文件（如 `.docx`、`.xlsx`、`.pdf`、`.md`），使用 `read_file` 读取附件内容，提取其中的关键数据
 2. **对话上下文**：从会话历史中提取用户已提供的项目信息、参数、约束条件等
-3. **模板插槽定义**：插槽定义来自 `get_templates(domain, report_type, canonical_chapter_key)` 返回的 `slots`（每项含 `name`/`type`/`description`/`suggested_source`）；填充时每值带 confidence + provenance，缺口用 `ask_user_question` 向用户确认，绝不编造
+3. **模板插槽定义**：插槽定义来自 `get_templates(domain, report_type, canonical_chapter_key, kb_id=kb_id)` 返回的 `slots`（每项含 `name`/`type`/`description`/`suggested_source`）；`kb_id` 取对话已选知识库（`list_kbs`），多库时不得省略；填充时每值带 confidence + provenance，缺口用 `ask_user_question` 向用户确认，绝不编造
 4. **知识库搜索**：对于需要补充数据的 slot，使用 `query_kb` 在同领域 KB 中搜索相关数据
 
 ### 第三步：逐槽填充

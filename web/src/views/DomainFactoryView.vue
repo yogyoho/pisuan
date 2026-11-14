@@ -212,8 +212,8 @@ const modules = [
     to: '/domain-factory/general',
     placeholder: false,
     chips: [
-      { label: '数据源管理', to: '/domain-factory/general/data-sources' },
-      { label: 'ETL 工作台', to: '/domain-factory/general/workbench' },
+      { label: '数据加工', to: '/domain-factory/general/data-sources' },
+      { label: '人工复核', to: '/domain-factory/general/workbench' },
       { label: '归属管理', to: '/domain-factory/general/attribution' },
       { label: '平台工具', to: '/domain-factory/general/prompt-config', admin: true }
     ]

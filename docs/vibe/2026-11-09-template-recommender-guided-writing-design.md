@@ -202,3 +202,5 @@ skill_dependencies: []
 - 前端（各一处条件）：高亮触发标记扩为 "(Recommended)" /「（推荐）」/ "(推荐)" 任一，向后兼容其他技能既有约定；
 - tools.py：ASK_USER_QUESTION_DESCRIPTION 补 description 字段用法与推荐标记口径；
 - SKILL.md：沟通规范 6 改为「推荐选项置首位 + 标题末尾加「（推荐）」（确有推荐倾向才标，禁每题都标）」；卡2 第 4 步选项构成改为「脱敏短标题 + description（来源/结构特点/约多少段）」。
+
+**E2E 已验证（2026-11-10）**：服务端驱动真实 run（`backend/scripts/verify_card2_highlight.py`，agnes-3.0-flash）跑通开局卡→卡1→卡2，三卡推荐项均置首位带标记、候选说明行齐全；真实卡2 payload 挂真实 HumanApprovalModal 渲染高亮确认。附发现：模型偶发把 questions 数组字符串化传入（前端归一化已兼容）；卡2 第 4 步「候选超 4 份择优取前 4、其余如实说明」纪律在实测中成立。

@@ -1,10 +1,11 @@
 <script setup>
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { message, Modal, Upload } from 'ant-design-vue'
-import { Eye, FileText, FileType2, Inbox, Plus, Redo2, RotateCw, Search, Trash2 } from '@lucide/vue'
+import { FileText, FileType2, Inbox, Plus, RotateCw, Search, Trash2 } from '@lucide/vue'
 import dayjs from 'dayjs'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 import { useTaskerStore } from '@/stores/tasker'
+import { dotStyle, statusMap } from './taskStatus'
 
 const emit = defineEmits(['task-open'])
 
@@ -59,26 +60,6 @@ const markdownModalVisible = ref(false)
 const markdownContent = ref('')
 const markdownLoading = ref(false)
 const currentTaskId = ref(null)
-
-// 状态映射
-const statusMap = {
-  UPLOADED: { color: 'var(--gray-400)', text: '已上传' },
-  PARSING: { color: 'var(--main-color)', text: '解析中' },
-  EXTRACTING: {
-    color: '#722ed1',
-    text: '提取中'
-  } /* [pisuan-custom] 青云素雅：一次性装饰色（状态点缀），不随主题 */,
-  GENERALIZING: {
-    color: '#722ed1',
-    text: '泛化中'
-  } /* [pisuan-custom] 青云素雅：一次性装饰色（状态点缀），不随主题 */,
-  WAITING_REVIEW: { color: 'var(--color-warning-500)', text: '待校验' },
-  INGESTING: { color: 'var(--color-info-500)', text: '入库中' },
-  COMMITTED: { color: 'var(--color-success-500)', text: '已入库' },
-  COMMIT_FAILED: { color: 'var(--color-error-500)', text: '入库失败' },
-  COMMIT_PARTIAL: { color: 'var(--color-warning-500)', text: '部分入库' },
-  FAILED: { color: 'var(--color-error-500)', text: '失败' }
-}
 
 // 计算属性
 const pendingCount = computed(() => taskList.value.length)
@@ -184,15 +165,13 @@ const handleOpenTask = (task) => {
 
 // 删除任务
 const handleDeleteTask = async (task) => {
+  // 行内 popconfirm 已是唯一确认点，确认后直接删除
   try {
-    await Modal.confirm({
-      title: '确认删除该任务？',
-      content: '删除后将无法恢复，且不会再出现在队列中。'
-    })
     await domainFactoryApi.deleteDataSource(task.id || task.task_id)
     message.success('删除成功')
     refresh()
-  } catch {
+  } catch (e) {
+    console.error('删除任务失败:', e)
     message.error('删除失败')
   }
 }
@@ -389,48 +368,43 @@ defineExpose({ refresh })
 </script>
 
 <template>
-  <div class="data-source-dashboard">
-    <!-- Header -->
-    <div class="page-header">
-      <div class="title">
-        <h2>领域知识工厂 · 数据源管理</h2>
-        <p>上传报告、跟踪解析状态、为行业工序创建高质量样本。</p>
+  <div class="ewp data-source-dashboard">
+    <!-- 页头（EIA page-head 配方：点阵底纹 + 34px 图标位 + 右侧操作区） -->
+    <div class="page-head">
+      <div class="ph-icon">
+        <Inbox :size="18" />
       </div>
-      <div class="actions">
-        <a-button class="refresh-btn" @click="refresh" :loading="taskLoading || historyLoading">
+      <div>
+        <h2>数据加工</h2>
+        <div class="ph-sub">上传报告、跟踪解析状态、为工程报告智能写作创建高质量数据集。</div>
+      </div>
+      <div class="ph-actions">
+        <button class="btn btn-sec" :disabled="taskLoading || historyLoading" @click="refresh">
           <RotateCw :size="14" /> 刷新
-        </a-button>
-        <a-button type="primary" @click="openUploadModal">
+        </button>
+        <button class="btn btn-pri" @click="openUploadModal">
           <Plus :size="14" /> 上传新报告
-        </a-button>
+        </button>
       </div>
     </div>
 
     <!-- 待处理任务 -->
-    <div class="task-section">
-      <div class="section-header">
-        <div class="section-header__left">
-          <span class="section-title">待处理任务</span>
-          <span class="entry-count">{{ pendingCount }} 项</span>
-          <a-tag v-if="hasActiveTasks" color="blue" class="processing-tag">
-            <span class="pulse-dot"></span> 处理中
-          </a-tag>
-        </div>
-        <div class="section-header__right">
+    <div class="card task-section">
+      <div class="card-hd">
+        <h3>待处理任务</h3>
+        <span class="pill pill-sm pill-gray">{{ pendingCount }} 项</span>
+        <span v-if="hasActiveTasks" class="pill pill-sm pill-main processing-tag">
+          <span class="pulse-dot"></span> 处理中
+        </span>
+        <div class="hd-right">
           <transition name="batch-bar">
             <div v-if="selectedRowKeys.length > 0" class="batch-bar">
               <span class="batch-bar__label">
                 已选 <strong>{{ selectedRowKeys.length }}</strong> 项
               </span>
-              <a-button
-                size="small"
-                danger
-                type="primary"
-                :loading="batchOperating"
-                @click="handleBatchDelete"
-              >
+              <button class="btn btn-sm btn-danger" :disabled="batchOperating" @click="handleBatchDelete">
                 <Trash2 :size="12" /> 批量删除
-              </a-button>
+              </button>
             </div>
           </transition>
         </div>
@@ -478,7 +452,7 @@ defineExpose({ refresh })
               <span class="status-dot">
                 <span
                   class="dot"
-                  :style="{ backgroundColor: statusMap[record.status]?.color || 'var(--gray-500)' }"
+                  :style="dotStyle(record.status)"
                 ></span>
                 {{ statusMap[record.status]?.text || record.status }}
               </span>
@@ -490,46 +464,37 @@ defineExpose({ refresh })
             <span class="col-action" @click.stop>
               <div class="action-btns">
                 <a-tooltip v-if="record.status === 'WAITING_REVIEW'" title="进入清洗工作台校验">
-                  <a-button type="primary" size="small" @click="handleOpenTask(record)">
-                    校验
-                  </a-button>
+                  <button class="btn btn-sm btn-pri" @click="handleOpenTask(record)">校验</button>
                 </a-tooltip>
                 <a-tooltip v-else :title="statusMap[record.status]?.text || '处理中'">
-                  <a-button size="small" disabled>
+                  <button class="btn btn-sm" disabled>
                     {{ statusMap[record.status]?.text || '处理中' }}
-                  </a-button>
+                  </button>
                 </a-tooltip>
-                <a-tooltip title="查看原文">
-                  <a-button
-                    size="small"
-                    type="text"
-                    class="btn-view"
-                    @click="handleViewMarkdown(record)"
-                  >
-                    <Eye :size="12" />
-                  </a-button>
-                </a-tooltip>
-                <a-tooltip v-if="record.status === 'FAILED'" title="重新提取">
-                  <a-button size="small" type="text" @click="handleRetryTask(record)">
-                    <Redo2 :size="12" />
-                  </a-button>
-                </a-tooltip>
-                <a-tooltip
-                  v-else-if="
-                    record.status === 'COMMIT_FAILED' || record.status === 'COMMIT_PARTIAL'
-                  "
-                  title="重新入库"
+                <button class="btn btn-sm btn-txt" @click="handleViewMarkdown(record)">
+                  查看原文
+                </button>
+                <button
+                  v-if="record.status === 'FAILED'"
+                  class="btn btn-sm btn-txt"
+                  @click="handleRetryTask(record)"
                 >
-                  <a-button size="small" type="text" @click="handleReingestTask(record)">
-                    <Redo2 :size="12" />
-                  </a-button>
-                </a-tooltip>
-                <a-popconfirm title="确定删除此任务吗？" @confirm="handleDeleteTask(record)">
-                  <a-tooltip title="删除">
-                    <a-button size="small" danger type="text" class="btn-delete">
-                      <Trash2 :size="12" />
-                    </a-button>
-                  </a-tooltip>
+                  重新提取
+                </button>
+                <button
+                  v-else-if="record.status === 'COMMIT_FAILED' || record.status === 'COMMIT_PARTIAL'"
+                  class="btn btn-sm btn-txt"
+                  @click="handleReingestTask(record)"
+                >
+                  重新入库
+                </button>
+                <a-popconfirm
+                  title="确定删除此任务吗？"
+                  ok-text="删除"
+                  :ok-button-props="{ danger: true }"
+                  @confirm="handleDeleteTask(record)"
+                >
+                  <button class="btn btn-sm btn-txt btn-delete">删除</button>
                 </a-popconfirm>
               </div>
             </span>
@@ -539,13 +504,11 @@ defineExpose({ refresh })
     </div>
 
     <!-- 历史记录 -->
-    <div class="task-section task-section--history">
-      <div class="section-header">
-        <div class="section-header__left">
-          <span class="section-title">已入库历史文档</span>
-          <span class="entry-count">{{ filteredHistory.length }} 项</span>
-        </div>
-        <div class="section-header__right">
+    <div class="card task-section task-section--history">
+      <div class="card-hd">
+        <h3>已入库历史文档</h3>
+        <span class="pill pill-sm pill-gray">{{ filteredHistory.length }} 项</span>
+        <div class="hd-right">
           <a-input
             v-model:value="searchKeyword"
             placeholder="搜索文件名..."
@@ -587,22 +550,16 @@ defineExpose({ refresh })
             </span>
             <span class="col-action" @click.stop>
               <div class="action-btns">
-                <a-tooltip title="查看原文">
-                  <a-button
-                    size="small"
-                    type="text"
-                    class="btn-view"
-                    @click="handleViewMarkdown(record)"
-                  >
-                    <Eye :size="12" />
-                  </a-button>
-                </a-tooltip>
-                <a-popconfirm title="确定删除此记录吗？" @confirm="handleDeleteTask(record)">
-                  <a-tooltip title="删除">
-                    <a-button size="small" danger type="text" class="btn-delete">
-                      <Trash2 :size="12" />
-                    </a-button>
-                  </a-tooltip>
+                <button class="btn btn-sm btn-txt" @click="handleViewMarkdown(record)">
+                  查看原文
+                </button>
+                <a-popconfirm
+                  title="确定删除此记录吗？"
+                  ok-text="删除"
+                  :ok-button-props="{ danger: true }"
+                  @confirm="handleDeleteTask(record)"
+                >
+                  <button class="btn btn-sm btn-txt btn-delete">删除</button>
                 </a-popconfirm>
               </div>
             </span>
@@ -706,7 +663,7 @@ defineExpose({ refresh })
     >
       <a-spin :spinning="markdownLoading">
         <div class="markdown-viewer">
-          <pre v-if="markdownContent" class="markdown-content">{{ markdownContent }}</pre>
+          <pre v-if="markdownContent" class="markdown-content expr-block">{{ markdownContent }}</pre>
           <a-empty v-else description="暂无 markdown 数据" />
         </div>
       </a-spin>
@@ -715,164 +672,60 @@ defineExpose({ refresh })
 </template>
 
 <style lang="less" scoped>
-.data-source-dashboard {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: 0;
+/* 数据源管理（通用域）：公共配方在 factory-core/factory-ui.less；此处只留本页形状 */
+.task-section--history {
+  margin-top: 16px;
 }
 
-.page-header {
-  display: flex;
+/* 批量操作条（卡片头右侧浮出，EIA 错误色语义） */
+.batch-bar {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px;
-  background: var(--gray-0);
-  border-radius: 0;
-  border-bottom: 1px solid var(--gray-150);
-
-  .title {
-    h2 {
-      margin: 0;
-      font-size: 20px;
-      font-weight: 600;
-    }
-    p {
-      margin: 4px 0 0;
-      color: var(--gray-500);
-      font-size: 13px;
-    }
-  }
-
-  .actions {
-    display: flex;
-    gap: 12px;
-
-    .refresh-btn {
-      border-radius: 999px;
-      border: 1px solid var(--gray-300);
-      background: var(--gray-0);
-      color: var(--gray-700);
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
-
-      &:hover {
-        border-color: var(--main-color);
-        color: var(--main-color);
-        background: rgba(var(--main-color-rgb), 0.04);
-      }
-    }
-  }
+  gap: 10px;
+  padding: 4px 12px;
+  background: var(--color-error-50);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--color-error-700);
 }
 
-.task-section {
-  background: var(--gray-0, #fff);
-  margin-bottom: 16px;
-
-  &--history {
-    margin-top: 24px;
-  }
+.batch-bar-enter-active,
+.batch-bar-leave-active {
+  transition: all 0.25s ease;
 }
 
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 44px;
-  padding: 0 14px;
-  border-bottom: 1px solid var(--gray-100, #f1f5f9);
-
-  &__left,
-  &__right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  &__right {
-    flex: 0 0 auto;
-  }
-
-  .section-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--gray-900, #0f172a);
-  }
-
-  .entry-count {
-    color: var(--gray-500, #64748b);
-    font-size: 12px;
-  }
-
-  .processing-tag {
-    font-size: 11px;
-  }
-
-  .history-search {
-    width: 240px;
-    display: flex;
-    align-items: center;
-
-    :deep(.ant-input-affix-wrapper) {
-      height: 32px;
-      padding: 0 10px;
-      border: 1px solid var(--gray-150);
-      border-radius: 8px;
-      background-color: var(--gray-0);
-
-      &:hover,
-      &:focus,
-      &.ant-input-affix-wrapper-focused {
-        border-color: var(--gray-200);
-        box-shadow: none;
-      }
-    }
-
-    :deep(.ant-input-prefix) {
-      margin-right: 8px;
-      color: var(--gray-400);
-    }
-
-    :deep(.ant-input) {
-      height: 100%;
-      background-color: transparent;
-      font-size: 13px;
-    }
-  }
-
-  .search-icon {
-    color: var(--gray-400);
-  }
+.batch-bar-enter-from,
+.batch-bar-leave-to {
+  opacity: 0;
+  transform: translateX(8px);
 }
 
+/* 自绘表格（简单只读列表走配方 CSS 自绘，规范 §6） */
 .file-table {
   min-height: 0;
-  overflow-y: auto;
-  padding: 0 4px;
 }
 
 .file-row {
   display: grid;
-  grid-template-columns: 34px minmax(150px, 1fr) 120px 140px 110px 88px 180px;
+  /* 232px：容纳「校验/失败 + 查看原文 + 重新提取 + 删除」四钮最坏组合（文字钮方案 A） */
+  grid-template-columns: 34px minmax(150px, 1fr) 120px 140px 110px 88px 232px;
   align-items: center;
   gap: 8px;
   width: 100%;
   min-height: 38px;
-  padding: 0 14px;
-  border: 0;
-  border-bottom: 1px solid var(--gray-50, #f8fafc);
-  background: transparent;
-  color: var(--gray-700, #334155);
+  padding: 0 16px;
+  border-bottom: 1px solid var(--gray-100);
   font-size: 13px;
+  color: var(--color-text);
   text-align: left;
 
   &:not(.table-head) {
     cursor: pointer;
-  }
+    transition: background 0.12s;
 
-  &:hover:not(.table-head) {
-    background: var(--main-20);
-    color: var(--gray-1000, #0c0d0d);
+    &:hover {
+      background: var(--gray-50);
+    }
   }
 
   &.no-checkbox {
@@ -881,14 +734,12 @@ defineExpose({ refresh })
 }
 
 .table-head {
-  position: sticky;
-  top: 0;
-  z-index: 1;
   min-height: 34px;
-  background: var(--gray-25, #fefeff);
-  color: var(--gray-500, #64748b);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  border-bottom: 1px solid var(--gray-200);
+  white-space: nowrap;
 }
 
 .checkbox-cell {
@@ -920,22 +771,55 @@ defineExpose({ refresh })
 }
 
 .col-dash {
-  color: var(--gray-400, #94a3b8);
+  color: var(--color-text-tertiary);
 }
 
 .col-action {
   justify-self: start;
 }
 
+/* 破坏性文字钮：红字 + 错误浅底 hover（方案 A 的删除语义） */
+.btn-delete {
+  color: var(--color-error-700);
+
+  &:hover {
+    background: var(--color-error-50);
+  }
+}
+
+/* 状态点：EIA dot 配方（6px；光环由 dotStyle 内联注入） */
 .status-dot {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
 
   .dot {
-    width: 7px;
-    height: 7px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
+    flex: none;
+  }
+}
+
+.pulse-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--main-500);
+  animation: dsd-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes dsd-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
   }
 }
 
@@ -943,120 +827,150 @@ defineExpose({ refresh })
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 180px;
-  color: var(--gray-500);
   width: 100%;
+  min-height: 180px;
+  color: var(--color-text-tertiary);
 }
 
 .list-empty {
   margin-top: 48px;
   font-size: 13px;
-  color: var(--gray-600);
+  color: var(--color-text-tertiary);
 }
 
-// 上传弹窗样式
+/* 卡片头搜索：AntD 输入罩到 .inp 配方（30px/6px/主色 focus ring） */
+.history-search {
+  width: 220px;
+
+  :deep(.ant-input-affix-wrapper) {
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    background: var(--gray-0);
+    font-size: 13px;
+    transition: border-color 0.15s;
+
+    &:hover {
+      border-color: var(--gray-200);
+    }
+
+    &:focus,
+    &.ant-input-affix-wrapper-focused {
+      border-color: var(--main-500);
+      box-shadow: 0 0 0 2px var(--main-50);
+    }
+  }
+
+  :deep(.ant-input-prefix) {
+    margin-right: 6px;
+    color: var(--color-text-tertiary);
+  }
+
+  :deep(.ant-input) {
+    background: transparent;
+    font-size: 13px;
+  }
+}
+
+.search-icon {
+  color: var(--color-text-tertiary);
+}
+
+/* ── 上传弹窗 ── */
 .upload-modal-content {
   .upload-instruction {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 
     .instruction-text {
       margin: 0;
-      font-size: 13px;
-      color: var(--gray-600);
+      font-size: 12px;
+      color: var(--color-text-tertiary);
     }
   }
 
   .form-selectors {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
 
   .custom-upload-dragger {
     :deep(.ant-upload-drag) {
-      background: var(--gray-25);
-      border: 2px dashed var(--gray-300);
+      background: var(--gray-50);
+      border: 1px dashed var(--gray-200);
       border-radius: 8px;
-      padding: 40px 20px;
-      transition: all 0.3s ease;
+      padding: 32px 20px;
+      transition:
+        border-color 0.15s,
+        background 0.15s;
 
       &:hover {
-        border-color: var(--main-color);
-        background: rgba(var(--main-color-rgb), 0.02);
+        border-color: var(--main-400);
+        background: var(--main-10, var(--main-50));
       }
     }
 
     .upload-icon-wrapper {
       display: flex;
       justify-content: center;
-      align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
 
       .upload-icon {
-        color: var(--main-color);
+        color: var(--main-500);
       }
     }
 
+    .file-icon {
+      color: var(--color-text-tertiary);
+    }
+
     :deep(.ant-upload-text) {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 500;
-      color: var(--gray-800);
+      color: var(--color-text);
     }
 
     :deep(.ant-upload-hint) {
-      font-size: 13px;
-      color: var(--gray-500);
+      font-size: 12px;
+      color: var(--color-text-tertiary);
     }
   }
 
   .file-list {
-    margin-top: 16px;
+    margin-top: 12px;
 
     .file-items {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
       max-height: 200px;
       overflow-y: auto;
-      padding: 12px;
+      padding: 10px;
       background: var(--gray-50);
+      border: 1px solid var(--gray-150);
       border-radius: 8px;
     }
 
     .file-item {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       padding: 8px 12px;
       background: var(--gray-0);
+      border: 1px solid var(--gray-150);
       border-radius: 6px;
-      border: 1px solid var(--gray-100);
 
       .file-status-dot {
-        width: 8px;
-        height: 8px;
+        width: 6px;
+        height: 6px;
         border-radius: 50%;
         background: var(--color-success-500);
-        flex-shrink: 0;
-      }
-
-      .file-icon-wrapper {
-        .file-icon {
-          &.pdf-icon {
-            color: var(--color-error-700);
-          }
-          &.doc-icon {
-            color: var(--main-color);
-          }
-          &.file-icon-default {
-            color: var(--gray-500);
-          }
-        }
+        flex: none;
       }
 
       .file-name {
         flex: 1;
         min-width: 0;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 500;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -1065,130 +979,31 @@ defineExpose({ refresh })
 
       .file-size {
         font-size: 12px;
-        color: var(--gray-500);
-        flex-shrink: 0;
-      }
-
-      .file-remove-btn {
-        opacity: 0.6;
-        &:hover {
-          opacity: 1;
-        }
+        color: var(--color-text-tertiary);
+        font-variant-numeric: tabular-nums;
+        flex: none;
       }
     }
 
     .file-confirm-message {
-      margin-top: 12px;
-      font-size: 13px;
-      color: var(--gray-600);
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--color-text-tertiary);
       text-align: center;
     }
   }
 }
 
+/* ── Markdown 查看暗块（expr-block 同款钉死深底，双主题一致） ── */
 .markdown-viewer {
   .markdown-content {
-    padding: 16px;
-    background: var(--gray-50);
-    border-radius: 8px;
-    font-family: 'Monaco', 'Menlo', monospace;
-    font-size: 13px;
-    line-height: 1.6;
+    margin: 0;
     white-space: pre-wrap;
     word-break: break-all;
     max-height: 60vh;
     overflow-y: auto;
   }
 }
-
-.action-btns {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-
-  :deep(.ant-btn) {
-    font-size: 12px;
-  }
-
-  .btn-delete {
-    border-radius: 4px;
-    color: var(--gray-400, #94a3b8);
-
-    &:hover {
-      color: var(--color-error-500);
-      background: rgba(255, 77, 79, 0.06);
-    }
-  }
-
-  .btn-view,
-  .btn-delete {
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    color: var(--gray-400, #94a3b8);
-  }
-
-  .btn-view:hover {
-    color: var(--main-color);
-    background: rgba(var(--main-color-rgb), 0.06);
-  }
-
-  .btn-delete:hover {
-    color: var(--color-error-500);
-    background: rgba(255, 77, 79, 0.06);
-  }
-}
-
-.batch-bar {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 12px;
-  background: rgba(255, 77, 79, 0.06);
-  border: 1px solid rgba(255, 77, 79, 0.15);
-  border-radius: 6px;
-  font-size: 13px;
-  color: var(--gray-600, #475569);
-
-  .batch-bar__label strong {
-    color: var(--color-error-500);
-    font-weight: 600;
-  }
-}
-
-.batch-bar-enter-active,
-.batch-bar-leave-active {
-  transition: all 0.25s ease;
-}
-
-.batch-bar-enter-from,
-.batch-bar-leave-to {
-  opacity: 0;
-  transform: translateX(8px);
-}
-
-.pulse-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--main-color);
-  animation: pulse 1.5s ease-in-out infinite;
-  vertical-align: middle;
-  margin-right: 4px;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.3;
-  }
-}
 </style>
+
+<style lang="less" src="../factory-core/factory-ui.less"></style>

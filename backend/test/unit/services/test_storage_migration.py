@@ -55,6 +55,8 @@ async def test_storage_migration_reads_legacy_schema_before_cutover(monkeypatch)
         upgrade_business_v17_to_v18=lambda: _record(calls, "upgrade_v18"),  # [pisuan-custom] v18 判别力：删调用点必红
         upgrade_business_v18_to_v19=lambda: _record(calls, "upgrade_v19"),  # [pisuan-custom] v19 判别力：删调用点必红
         upgrade_business_v19_to_v20=lambda: _record(calls, "upgrade_v20"),  # [pisuan-custom] v20 判别力：删调用点必红
+        upgrade_business_v20_to_v21=lambda: _record(calls, "upgrade_v21"),
+        upgrade_business_v21_to_v22=lambda: _record(calls, "upgrade_v22"),
         create_knowledge_tables=lambda: _record(calls, "create_knowledge_tables"),
         ensure_business_schema=lambda: _record(calls, "ensure_business_schema"),
         ensure_knowledge_schema=lambda: _record(calls, "ensure_knowledge_schema"),
@@ -139,6 +141,8 @@ async def test_storage_migration_rejects_v071_schema_without_quiescence_proof(mo
         upgrade_business_v17_to_v18=lambda: _record(calls, "upgrade_v18"),  # [pisuan-custom] v18 判别力：删调用点必红
         upgrade_business_v18_to_v19=lambda: _record(calls, "upgrade_v19"),  # [pisuan-custom] v19 判别力：删调用点必红
         upgrade_business_v19_to_v20=lambda: _record(calls, "upgrade_v20"),  # [pisuan-custom] v20 判别力：删调用点必红
+        upgrade_business_v20_to_v21=lambda: _record(calls, "upgrade_v21"),
+        upgrade_business_v21_to_v22=lambda: _record(calls, "upgrade_v22"),
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),
@@ -199,6 +203,8 @@ async def test_current_schema_skips_schema_ddl(monkeypatch):
         upgrade_business_v17_to_v18=lambda: _record(calls, "upgrade_v18"),  # [pisuan-custom] v18 判别力：删调用点必红
         upgrade_business_v18_to_v19=lambda: _record(calls, "upgrade_v19"),  # [pisuan-custom] v19 判别力：删调用点必红
         upgrade_business_v19_to_v20=lambda: _record(calls, "upgrade_v20"),  # [pisuan-custom] v20 判别力：删调用点必红
+        upgrade_business_v20_to_v21=lambda: _record(calls, "upgrade_v21"),
+        upgrade_business_v21_to_v22=lambda: _record(calls, "upgrade_v22"),
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "business_schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),
@@ -274,7 +280,7 @@ async def test_main_rejects_unsupported_business_schema_before_ddl(monkeypatch, 
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("business_version", [2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
+@pytest.mark.parametrize("business_version", [2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21])
 async def test_supported_legacy_business_schema_is_converged_and_versioned_as_current(monkeypatch, business_version):
     calls: list[str] = []
     sessions = [_Session(), _Session(), _Session()]
@@ -306,6 +312,8 @@ async def test_supported_legacy_business_schema_is_converged_and_versioned_as_cu
         upgrade_business_v17_to_v18=lambda: _record(calls, "upgrade_v18"),  # [pisuan-custom] v18 判别力：删调用点必红
         upgrade_business_v18_to_v19=lambda: _record(calls, "upgrade_v19"),  # [pisuan-custom] v19 判别力：删调用点必红
         upgrade_business_v19_to_v20=lambda: _record(calls, "upgrade_v20"),  # [pisuan-custom] v20 判别力：删调用点必红
+        upgrade_business_v20_to_v21=lambda: _record(calls, "upgrade_v21"),
+        upgrade_business_v21_to_v22=lambda: _record(calls, "upgrade_v22"),
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "business_schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),
@@ -345,6 +353,8 @@ async def test_supported_legacy_business_schema_is_converged_and_versioned_as_cu
     assert ("upgrade_v18" in calls) is (business_version in {2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17})
     assert ("upgrade_v19" in calls) is (business_version in {2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18})
     assert ("upgrade_v20" in calls) is (business_version in {2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19})
+    assert ("upgrade_v21" in calls) is (business_version in {2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20})
+    assert ("upgrade_v22" in calls) is (business_version in {2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21})
     # v9/v10/v11 来源库已在各自增量迁移中写过版本，只有 ≤8 档经 resource_selection 重写为当前版本
     assert (f"version:business:{storage_migration.BUSINESS_SCHEMA_VERSION}" in calls) is (business_version in {2, 7, 8})
     assert {"create_business", "checkpoint", "knowledge_schema"}.isdisjoint(calls)
@@ -383,6 +393,8 @@ async def test_failed_business_migration_does_not_record_version(monkeypatch):
         upgrade_business_v17_to_v18=lambda: _record(calls, "upgrade_v18"),  # [pisuan-custom] v18 判别力：删调用点必红
         upgrade_business_v18_to_v19=lambda: _record(calls, "upgrade_v19"),  # [pisuan-custom] v19 判别力：删调用点必红
         upgrade_business_v19_to_v20=lambda: _record(calls, "upgrade_v20"),  # [pisuan-custom] v20 判别力：删调用点必红
+        upgrade_business_v20_to_v21=lambda: _record(calls, "upgrade_v21"),
+        upgrade_business_v21_to_v22=lambda: _record(calls, "upgrade_v22"),
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "business_schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),
@@ -439,6 +451,8 @@ async def test_current_schema_does_not_rewrite_workdir_data(monkeypatch):
         upgrade_business_v17_to_v18=lambda: _record(calls, "upgrade_v18"),  # [pisuan-custom] v18 判别力：删调用点必红
         upgrade_business_v18_to_v19=lambda: _record(calls, "upgrade_v19"),  # [pisuan-custom] v19 判别力：删调用点必红
         upgrade_business_v19_to_v20=lambda: _record(calls, "upgrade_v20"),  # [pisuan-custom] v20 判别力：删调用点必红
+        upgrade_business_v20_to_v21=lambda: _record(calls, "upgrade_v21"),
+        upgrade_business_v21_to_v22=lambda: _record(calls, "upgrade_v22"),
         create_knowledge_tables=lambda: _record(calls, "create_knowledge"),
         ensure_business_schema=lambda: _record(calls, "schema"),
         ensure_knowledge_schema=lambda: _record(calls, "knowledge_schema"),
@@ -490,13 +504,31 @@ def test_personal_workspace_skills_never_trigger_shared_skill_migration(monkeypa
     assert storage_migration._legacy_skill_roots_exist() is False
 
 
-def test_v20_business_schema_version_and_limit_tables_registered():
-    """v20：BUSINESS_SCHEMA_VERSION 升至 20，v19→v20 增量方法与两张限值新表就位。"""
+def test_v22_business_schema_version_and_attribution_isolation_registered():
+    """v22：版本升至 22，模板/大纲/事实归属隔离契约就位。"""
     from pisuan.storage.postgres.models_domain_factory import Base as DomainFactoryBase
     from pisuan.storage.postgres.models_domain_factory import EiaLimitExtractRow, EiaLimitTableRegistry
 
-    assert storage_migration.BUSINESS_SCHEMA_VERSION == 20
-    assert hasattr(storage_migration.pg_manager, "upgrade_business_v19_to_v20")
+    from pisuan.storage.postgres.models_domain_factory import (
+        DomainFactoryLearnedTemplate,
+        DomainFactoryOutline,
+        DomainFactoryRegionalFact,
+    )
+
+    assert storage_migration.BUSINESS_SCHEMA_VERSION == 22
+    assert hasattr(storage_migration.pg_manager, "upgrade_business_v20_to_v21")
+    assert hasattr(storage_migration.pg_manager, "upgrade_business_v21_to_v22")
+    assert "domain_factory_kb_attributions" in DomainFactoryBase.metadata.tables
+    assert "attribution" in DomainFactoryLearnedTemplate.__table__.c
+    assert "attribution" in DomainFactoryOutline.__table__.c
+    assert "kb_id" in DomainFactoryRegionalFact.__table__.c
+    assert "attribution" in DomainFactoryRegionalFact.__table__.c
+    assert "uq_dflt_domain_rt_chapter_sig_attr" in {
+        constraint.name for constraint in DomainFactoryLearnedTemplate.__table__.constraints
+    }
+    assert "uq_dfo_domain_rt_key_attr" in {
+        constraint.name for constraint in DomainFactoryOutline.__table__.constraints
+    }
     assert {EiaLimitExtractRow.__tablename__, EiaLimitTableRegistry.__tablename__} <= set(
         DomainFactoryBase.metadata.tables
     )

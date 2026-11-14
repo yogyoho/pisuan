@@ -89,7 +89,7 @@ template_source 取值：kb（模板库）/ sample（样例参照）/ none（常
 ### 开局定位（一次性）
 
 1. `list_kbs` 确认对话已选知识库：为零 → 告知用户先在对话设置里选择领域知识库后再来，本回合结束；多个且领域不同 → 开局卡确认范围；多个且同域 → 开局卡一并确认用哪个（或都用），禁静默任选。
-2. `list_report_types` 取合法口径（domain/report_type 用数据字典 code，禁猜）；`list_leaf_sections` 取叶子节清单与完整父路径，`get_mindmap` 只用于向用户解释章节树。
+2. 记下开局选定的 `kb_id`（`list_kbs` 返回）；图谱查询工具一律带 `kb_id`，多库时不得省略。`list_report_types` 取合法口径（domain/report_type 用数据字典 code，禁猜）；`list_leaf_sections(domain, report_type, kb_id=kb_id)` 取叶子节清单与完整父路径，`get_mindmap` 只用于向用户解释章节树。
 3. 结合用户目标定位范围：点名章节 → 在该章叶子节中匹配；给关键字 → 按节名与父路径匹配；要整本 → 全部叶子节。叶子节清单与身份以 `list_leaf_sections` 为准，禁自行把章名拆成叶子节；同名节按 `section_key` 区分，推进顺序按返回顺序。
 4. 探测语料：execute 列 `/home/gem/skills/coal-eia-writer/references/` 下的 samples_bank/（真实报告切片）与 paradigms/（通用范式）；目录不存在 → 正文如实说明一句「没有找到同类报告样例库，将只用知识库模板」，不阻塞。
 5. 读写作档案：`/home/gem/user-data/workspace/template-writing/` 下已有本报告 progress.json → 先校验每节 `section_key`；旧档案缺该字段时按 `chapter_no` + `path` 在 `list_leaf_sections` 重解析，唯一命中才沿用，歧义则开局卡请用户确认，禁按标题猜。以档案为准呈进度（完成/待写/跳过各几节、下一节是哪个），开局卡问「继续下一节 / 复查某一节 / 另开新报告」；档案里某节是 pending 但 sections/ 下已有草稿 → 呈现该草稿直接走卡4 请确认，禁静默重写。没有 → 开局确认报告名（作档案目录名）与起始范围，建档案起步；目标范围全部叶子节按 `section_key` 一次建入（status 均为 pending）。
@@ -106,7 +106,7 @@ template_source 取值：kb（模板库）/ sample（样例参照）/ none（常
 
 选定节后取候选：
 
-1. 用档案该节的 `section_key` 调 `get_templates(domain, report_type, section_key)` 取精确模板；只收 `section_key` 与当前节一致的记录，缺失或不一致即弃用，禁改传同名 canonical 或一级章名重查。返回 `_source=graph_error` → 如实告知图谱暂不可用，不外推其他节模板；空列表 → 再用 query_kb 以该节主题词检索知识库相关段落，命中的段落脱敏后作「知识库参照」候选并入候选清单。三路（结构化模板/知识库参照/样例参照）都为空 → 如实告知该节无可用参照，选项与候选=0 分支相同：按常规写法直接写 / 换一节 / 先停一下。
+1. 用档案该节的 `section_key` 调 `get_templates(domain, report_type, section_key, kb_id=kb_id)` 取精确模板；只收 `section_key` 与当前节一致的记录，缺失或不一致即弃用，禁改传同名 canonical 或一级章名重查。返回 `_source=graph_error` → 如实告知图谱暂不可用，不外推其他节模板；空列表 → 再用 query_kb 以该节主题词检索知识库相关段落，命中的段落脱敏后作「知识库参照」候选并入候选清单。三路（结构化模板/知识库参照/样例参照）都为空 → 如实告知该节无可用参照，选项与候选=0 分支相同：按常规写法直接写 / 换一节 / 先停一下。
 2. 语料可用且为本领域（煤矿环评）→ samples_bank/ 找同章真实切片作「样例参照」候选。
 3. 候选全文先落盘再呈卡：present_artifacts 只能呈已存在的文件——模板候选先把组装稿（泛化模板全文+插槽清单+原文引用）write_file 到工作区；样例切片先另存脱敏副本（禁直呈语料原文件）。再逐份 present_artifacts 呈文件卡，文件卡不停车。
 4. 候选 ≥2 → 选择卡：题面「〈节名〉找到 N 份模板/样例，用哪份？」；选项合计 ≤4：选项标题放脱敏后的候选短标题，来源标「模板库」/「样例参照」+ 结构特点 + 约多少段放选项 description（前端渲染在标题下方说明行）；推荐候选标题末尾加「（推荐）」标记（模板含完整插槽定义时推荐模板库候选，标记口径见沟通规范 6）；候选超 4 份择优取前 4（模板库优先），其余如实说明未列出。末位固定「都不用，按常规写法」；allow_other 开。候选 =1 → 不发选择卡，正文一句话说明采用哪份，直接进卡3（用户不同意可随时叫停）。候选 =0 → 如实告知，选项「按常规写法直接写 / 换一节 / 先停一下」。

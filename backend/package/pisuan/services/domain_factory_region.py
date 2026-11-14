@@ -13,6 +13,8 @@
 
 import re
 
+from pisuan.utils import hashstr
+
 # 矿区/规划区名（取自 35 份语料文件名，2026-10-06 普查）→ slug 键（一地区一KB 分库键）
 REGION_VOCAB: dict[str, str] = {
     "横城矿区": "hengcheng",
@@ -196,3 +198,43 @@ def derive_template_region(contributing_task_ids: list[str] | None, task_regions
     if len(keys) == 1:
         return next(iter(keys))
     return "mixed"
+
+
+def normalize_attribution(
+    region_key: str | None,
+    scope: str | None,
+    project_name: str | None,
+) -> tuple[str | None, str | None, str | None]:
+    """归一化归属三元组；空串按未归属处理，供知识库绑定与图谱身份共用。"""
+    return (
+        (region_key or "").strip() or None,
+        (scope or "").strip() or None,
+        (project_name or "").strip() or None,
+    )
+
+
+def attribution_scope_key(
+    kb_id: str | None,
+    region_key: str | None,
+    scope: str | None,
+    project_name: str | None,
+) -> str:
+    """返回需要写入图谱身份的隔离键；无任何归属时返回空串以兼容存量节点。
+
+    归属存在时把知识库也纳入身份：同一地区若被误写进两个库，也不共享模板节点。
+    """
+    region, scope_value, project = normalize_attribution(region_key, scope, project_name)
+    if not (region or scope_value or project):
+        return ""
+    payload = "|".join((str(kb_id or "").strip(), region or "", scope_value or "", project or ""))
+    return hashstr(payload, 12)
+
+
+def domain_factory_file_ids(task_id: str, kb_id: str) -> list[str]:
+    """知识工厂入库文件的确定性 ID；与 commit/reingest 写入口径保持一致。"""
+    if not task_id or not kb_id:
+        return []
+    return [
+        f"df_{hashstr(task_id + '|' + kb_id, 12)}",
+        f"df_ri_{hashstr(task_id + '|' + kb_id, 12)}",
+    ]

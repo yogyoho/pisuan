@@ -4,7 +4,7 @@ import { message } from 'ant-design-vue'
 import dayjs from 'dayjs'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
 
-// [pisuan-custom] W4 子页3：聚合看板（只读）。region>6 个时组件内重排 T2 形态（左树右详情），接口不变。
+// [pisuan-custom] W4 子页3：模板隔离诊断（只读）。region>6 个时组件内重排 T2 形态（左树右详情）。
 const emit = defineEmits(['jump-to-tasks', 'jump-to-facts'])
 const loading = ref(false)
 const board = ref(null)
@@ -34,6 +34,7 @@ const tbr = computed(() => {
 const templateColumns = [
   { title: '模板（章族）', dataIndex: 'chapter', ellipsis: true },
   { title: 'scope', key: 'scope', width: 110 },
+  { title: '归属身份', key: 'attribution', width: 110 },
   { title: 'region', key: 'region', width: 140 },
   { title: '归因集', dataIndex: 'contributing_count', width: 80 },
   { title: '更新时间', key: 'updated_at', width: 150 }
@@ -59,6 +60,8 @@ const toggleExpand = (node) => {
   expandedKey.value = expandedKey.value === nodeKey(node) ? null : nodeKey(node)
 }
 const regionText = (r) => (r === 'mixed' ? 'mixed（多区域）' : r || '未归属')
+const attributionText = (value) => (value ? value.slice(0, 8) : 'legacy')
+const legacyConfirmedFacts = computed(() => board.value?.stats?.facts_by_attribution?.['']?.confirmed || 0)
 const fmt = (v) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '—')
 
 onMounted(fetchBoard)
@@ -67,58 +70,66 @@ defineExpose({ refresh: fetchBoard })
 
 <template>
   <div v-if="board" class="region-board">
-    <div class="stat-cards">
-      <div class="stat-card">
-        <div class="stat-title">模板 × scope</div>
-        <div class="stat-body">
-          <span v-for="c in SCOPE_CARDS" :key="c.key" class="stat-item">
+    <!-- 指标带（EIA metric-strip 配方：三 cell 分栏） -->
+    <div class="metric-strip">
+      <div class="metric-cell">
+        <div class="metric-label">模板 × scope</div>
+        <div class="metric-value metric-vals">
+          <span v-for="c in SCOPE_CARDS" :key="c.key">
             <b>{{ tbs[c.key] ?? 0 }}</b> {{ c.label }}
           </span>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-title">任务 × region</div>
-        <div class="stat-body">
-          <span v-for="r in tbr" :key="r.region_key ?? '__none__'" class="stat-item">
+      <div class="metric-cell">
+        <div class="metric-label">任务 × region</div>
+        <div class="metric-value metric-vals">
+          <span v-for="r in tbr" :key="r.region_key ?? '__none__'">
             <b>{{ r.count }}</b> {{ r.region_label || r.region_key || '未归属' }}
           </span>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-title">事实 × 状态</div>
-        <div class="stat-body">
-          <span class="stat-item"
-            ><b>{{ fbs.draft ?? 0 }}</b> draft</span
-          >
-          <span class="stat-item"
-            ><b>{{ fbs.confirmed ?? 0 }}</b> confirmed</span
-          >
-          <span class="stat-item"
-            ><b>{{ fbs.retired ?? 0 }}</b> retired</span
-          >
+      <div class="metric-cell" :class="{ warn: legacyConfirmedFacts > 0 }">
+        <div class="metric-label">事实 × 状态</div>
+        <div class="metric-value metric-vals">
+          <span><b>{{ fbs.draft ?? 0 }}</b> draft</span>
+          <span><b>{{ fbs.confirmed ?? 0 }}</b> confirmed</span>
+          <span><b>{{ fbs.retired ?? 0 }}</b> retired</span>
+          <span v-if="legacyConfirmedFacts">
+            <b>{{ legacyConfirmedFacts }}</b> 未证明归属
+          </span>
         </div>
       </div>
     </div>
 
-    <h4 class="section-title">模板聚合明细</h4>
-    <a-table
-      :data-source="board.templates"
-      :columns="templateColumns"
-      :loading="loading"
-      :pagination="{ pageSize: 15, showTotal: (t) => `共 ${t} 条` }"
-      :locale="{ emptyText: '新任务回写后出现（存量模板 scope=NULL 为 W3 Q3 预期行为）' }"
-      row-key="id"
-      size="small"
-    >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'scope'">
-          <a-tag v-if="record.scope" color="blue">{{ record.scope }}</a-tag>
-          <a-tag v-else>未判定</a-tag>
+    <div class="card">
+      <div class="card-hd">
+        <h3>模板隔离明细</h3>
+      </div>
+      <a-table
+        :data-source="board.templates"
+        :columns="templateColumns"
+        :loading="loading"
+        :pagination="{ pageSize: 15, showTotal: (t) => `共 ${t} 条` }"
+        :locale="{ emptyText: '新任务回写后出现（存量模板 scope=NULL 为 W3 Q3 预期行为）' }"
+        row-key="id"
+        size="small"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'scope'">
+            <span class="pill pill-sm" :class="record.scope ? 'pill-main' : 'pill-gray'">
+              {{ record.scope || '未判定' }}
+            </span>
+          </template>
+          <template v-else-if="column.key === 'attribution'">
+            <span class="pill pill-sm" :class="record.attribution ? 'pill-main' : 'pill-err'">
+              {{ attributionText(record.attribution) }}
+            </span>
+          </template>
+          <template v-else-if="column.key === 'region'">{{ regionText(record.region) }}</template>
+          <template v-else-if="column.key === 'updated_at'">{{ fmt(record.updated_at) }}</template>
         </template>
-        <template v-else-if="column.key === 'region'">{{ regionText(record.region) }}</template>
-        <template v-else-if="column.key === 'updated_at'">{{ fmt(record.updated_at) }}</template>
-      </template>
-    </a-table>
+      </a-table>
+    </div>
 
     <h4 class="section-title">区域下钻</h4>
     <div class="region-cards">
@@ -145,13 +156,15 @@ defineExpose({ refresh: fetchBoard })
         {{ expandedNode.fact_counts_by_type.constraint }}
       </p>
       <p v-if="expandedNode.region_key">
-        <a @click="emit('jump-to-tasks', { regionKey: expandedNode.region_key })"
-          >任务 {{ expandedNode.task_count }} →</a
+        <button
+          class="btn btn-sm btn-txt"
+          @click="emit('jump-to-tasks', { regionKey: expandedNode.region_key })"
+          >任务 {{ expandedNode.task_count }} →</button
         >
-        <a
-          style="margin-left: 16px"
+        <button
+          class="btn btn-sm btn-txt"
           @click="emit('jump-to-facts', { regionKey: expandedNode.region_key })"
-          >事实 {{ expandedNode.fact_count }} →</a
+          >事实 {{ expandedNode.fact_count }} →</button
         >
       </p>
       <p v-else class="detail-hint">未归属伪节点：改判任务后自动归位</p>
@@ -166,47 +179,51 @@ defineExpose({ refresh: fetchBoard })
   flex-direction: column;
   gap: 12px;
 }
-.stat-cards {
+
+/* metric-vals：指标带内的多值行（数值 tabular + 12px 说明字，EIA metric-cell 语义）；
+   三级前缀提升优先级，稳定压过 factory-ui 全局 .metric-value 的 22px 大数配方 */
+.region-board .metric-strip .metric-vals {
   display: flex;
-  gap: 12px;
-}
-.stat-card {
-  flex: 1;
-  padding: 10px 14px;
-  border: 1px solid var(--gray-200, #e2e8f0);
-  border-radius: 8px;
-}
-.stat-title {
-  font-size: 12px;
-  color: var(--gray-400, #94a3b8);
-}
-.stat-body {
-  margin-top: 4px;
-  display: flex;
-  gap: 12px;
   flex-wrap: wrap;
-}
-.stat-item {
+  gap: 4px 12px;
   font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+
+  b {
+    font-weight: 700;
+    color: var(--gray-800);
+  }
 }
-.section-title {
-  margin: 4px 0 0;
-  font-size: 13px;
-  color: var(--gray-500, #64748b);
+
+.region-board .metric-strip .metric-warn {
+  color: var(--second-600);
 }
+
 .region-cards {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
 }
+
 .region-card {
   padding: 8px 14px;
-  border: 1px dashed var(--gray-300, #cbd5e1);
+  border: 1px dashed var(--gray-200);
   border-radius: 8px;
   cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+
+  &:hover {
+    background: var(--gray-50);
+  }
+
+  /* 选中态同 fam-item.on：主色浅底 + 内嵌左缘（原型 .proto 语汇） */
   &.active {
-    border-color: var(--main-color, #2563eb);
-    border-style: solid;
+    background: var(--main-50);
+    border: 1px solid var(--main-300);
+    box-shadow: inset 2px 0 0 var(--main-500);
   }
 }
 .region-name {
@@ -216,18 +233,22 @@ defineExpose({ refresh: fetchBoard })
 .region-badges {
   margin-top: 4px;
   font-size: 12px;
-  color: var(--gray-400, #94a3b8);
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
 }
 .region-detail {
-  padding: 10px 14px;
-  border: 1px solid var(--gray-200, #e2e8f0);
+  padding: 10px 16px;
+  border: 1px solid var(--gray-150);
   border-radius: 8px;
+  background: var(--gray-0);
   font-size: 13px;
   p {
     margin: 2px 0;
   }
 }
 .detail-hint {
-  color: var(--gray-400, #94a3b8);
+  color: var(--color-text-tertiary);
 }
 </style>
+
+<style lang="less" src="../factory-core/factory-ui.less"></style>

@@ -62,6 +62,36 @@ def _track_usage(
     task.add_done_callback(_tracking_tasks.discard)
 
 
+async def _resolve_graph_scope(
+    kb_id: str | None, runtime: ToolRuntime | None
+) -> tuple[str, str]:
+    """解析并校验图谱查询边界；零库、多库、不可见库、混合归属都必须显式拒绝。"""
+    resolved = str(kb_id or "").strip()
+    context = getattr(runtime, "context", None) if runtime is not None else None
+    enabled = getattr(context, "knowledges", None) if context is not None else None
+    enabled_ids = [str(value).strip() for value in (enabled or []) if str(value).strip()]
+    if resolved:
+        if not enabled_ids:
+            raise ValueError("无法确认知识库会话可见性，已拒绝查询")
+        if resolved not in enabled_ids:
+            raise ValueError(f"知识库不在当前会话可见范围内: {resolved}")
+    if not resolved:
+        if len(enabled_ids) == 1:
+            resolved = enabled_ids[0]
+        elif not enabled_ids:
+            raise ValueError("未指定 kb_id，且当前会话没有启用知识库")
+        else:
+            raise ValueError("当前会话启用了多个知识库，必须显式指定 kb_id")
+    if not resolved:
+        raise ValueError("无法解析图谱查询归属，请显式指定 kb_id")
+    info = await DomainFactoryRepository().get_kb_attribution(resolved)
+    if info.get("mixed"):
+        raise ValueError(f"知识库存在混合归属，已拒绝查询: {resolved}")
+    if not info.get("bound"):
+        raise ValueError(f"知识库尚未绑定知识工厂入库归属，已拒绝查询: {resolved}")
+    return resolved, str(info.get("attribution") or "")
+
+
 _OCR_OUTPUT_DIR_NAME = "ocr"
 _OCR_PREVIEW_LIMIT = 1200
 _SAFE_OUTPUT_STEM_RE = re.compile(r"[^A-Za-z0-9._\-\u4e00-\u9fff]+")
@@ -623,7 +653,13 @@ domain/report_type 必须使用数据字典中的 code（用 list_report_types �
     display_name="取章节大纲",
     description=GET_CHAPTER_OUTLINE_DESCRIPTION,
 )
-async def get_chapter_outline(domain: str, report_type: str, canonical_chapter_key: str) -> dict:
+async def get_chapter_outline(
+    domain: str,
+    report_type: str,
+    canonical_chapter_key: str,
+    kb_id: str | None = None,
+    runtime: ToolRuntime = None,
+) -> dict:
     """获取指定章节的结构化大纲。优先查图谱,回退 DB。
 
     回退时在返回里标注 _source=db_fallback + _degraded_note，让调用方（agent）感知
@@ -633,11 +669,18 @@ async def get_chapter_outline(domain: str, report_type: str, canonical_chapter_k
 
     domain = GENERAL_DOMAIN_CODE  # 去领域化：形参保留兼容写手 prompts，语义恒通用域
     report_type = _normalize_report_type(report_type)
+    resolved_kb, attribution = await _resolve_graph_scope(kb_id, runtime)
     graph_errored = False
     try:
         graph_svc = GraphQueryService()
         try:
-            outline = await graph_svc.get_chapter_outline(domain, report_type, canonical_chapter_key)
+            outline = await graph_svc.get_chapter_outline(
+                domain,
+                report_type,
+                canonical_chapter_key,
+                attribution=attribution,
+                kb_id=resolved_kb,
+            )
             if outline:
                 outline.setdefault("_source", "graph")
                 # [pisuan-custom] W0 埋点
@@ -658,7 +701,12 @@ async def get_chapter_outline(domain: str, report_type: str, canonical_chapter_k
         )
         graph_errored = True
     repo = DomainFactoryRepository()
-    out = await repo.get_outline(domain, report_type, canonical_chapter_key)
+    out = await repo.get_outline(
+        domain,
+        report_type,
+        canonical_chapter_key,
+        attribution=attribution if resolved_kb else None,
+    )
     if out:
         out["_source"] = "db_fallback" if graph_errored else "db"
         if graph_errored:
@@ -728,16 +776,21 @@ LIST_CHAPTER_KEYS_DESCRIPTION = """
     display_name="列出章节",
     description=LIST_CHAPTER_KEYS_DESCRIPTION,
 )
-async def list_chapter_keys(domain: str, report_type: str) -> list[str]:
+async def list_chapter_keys(
+    domain: str, report_type: str, kb_id: str | None = None, runtime: ToolRuntime = None
+) -> list[str]:
     """列出指定领域+报告类型下所有已入库的 canonical_chapter_key。优先查图谱,回退 DB。"""
     from pisuan.services.graph_query_service import GraphQueryService
 
     domain = GENERAL_DOMAIN_CODE  # 去领域化：形参保留兼容写手 prompts，语义恒通用域
     report_type = _normalize_report_type(report_type)
+    resolved_kb, attribution = await _resolve_graph_scope(kb_id, runtime)
     try:
         graph_svc = GraphQueryService()
         try:
-            keys = await graph_svc.list_chapter_keys(domain, report_type)
+            keys = await graph_svc.list_chapter_keys(
+                domain, report_type, attribution=attribution, kb_id=resolved_kb
+            )
             if keys:
                 # [pisuan-custom] W0 埋点
                 _track_usage(
@@ -750,7 +803,9 @@ async def list_chapter_keys(domain: str, report_type: str) -> list[str]:
         logger.warning(f"[graph-degraded] list_chapter_keys 图谱查询失败,回退 DB: {domain}/{report_type} - {e}")
     repo = DomainFactoryRepository()
     # [pisuan-custom] W0 埋点
-    out = await repo.list_chapter_keys(domain, report_type)
+    out = await repo.list_chapter_keys(
+        domain, report_type, attribution=attribution if resolved_kb else None
+    )
     _track_usage(
         "list_chapter_keys",
         domain=domain,
@@ -775,15 +830,20 @@ section_key 是章节节点的稳定身份；同名章节可能位于不同父�
     display_name="列出叶子节",
     description=LIST_LEAF_SECTIONS_DESCRIPTION,
 )
-async def list_leaf_sections(domain: str, report_type: str) -> list[dict]:
+async def list_leaf_sections(
+    domain: str, report_type: str, kb_id: str | None = None, runtime: ToolRuntime = None
+) -> list[dict]:
     """列出叶子章节及其稳定身份，供逐节模板查询精确定位。"""
     from pisuan.services.graph_query_service import GraphQueryService
 
     domain = GENERAL_DOMAIN_CODE  # 去领域化：形参保留兼容写手 prompts，语义恒通用域
     report_type = _normalize_report_type(report_type)
+    resolved_kb, attribution = await _resolve_graph_scope(kb_id, runtime)
     graph_svc = GraphQueryService()
     try:
-        sections = await graph_svc.list_leaf_sections(domain, report_type)
+        sections = await graph_svc.list_leaf_sections(
+            domain, report_type, attribution=attribution, kb_id=resolved_kb
+        )
     finally:
         graph_svc.close()
     _track_usage(
@@ -818,19 +878,28 @@ async def get_templates(
     report_type: str,
     canonical_chapter_key: str | None = None,
     section_key: str | None = None,
+    kb_id: str | None = None,
+    runtime: ToolRuntime = None,
 ) -> list[dict]:
     """获取结构化段落模板。优先查图谱,回退 DB。回退条目带 _source 标注（对齐 get_chapter_outline）。"""
     from pisuan.services.graph_query_service import GraphQueryService
 
     domain = GENERAL_DOMAIN_CODE  # 去领域化：形参保留兼容写手 prompts，语义恒通用域
     report_type = _normalize_report_type(report_type)
+    resolved_kb, attribution = await _resolve_graph_scope(kb_id, runtime)
     templates: list[dict] = []
     graph_errored = False
     if section_key:
         try:
             graph_svc = GraphQueryService()
             try:
-                templates = await graph_svc.get_templates(domain, report_type, section_key=section_key)
+                templates = await graph_svc.get_templates(
+                    domain,
+                    report_type,
+                    section_key=section_key,
+                    attribution=attribution,
+                    kb_id=resolved_kb,
+                )
                 for item in templates:
                     if isinstance(item, dict):
                         item.setdefault("_source", "graph")
@@ -869,7 +938,13 @@ async def get_templates(
         try:
             graph_svc = GraphQueryService()
             try:
-                templates = await graph_svc.get_templates(domain, report_type, canonical_chapter_key)
+                templates = await graph_svc.get_templates(
+                    domain,
+                    report_type,
+                    canonical_chapter_key,
+                    attribution=attribution,
+                    kb_id=resolved_kb,
+                )
                 if templates:
                     # [pisuan-custom] D5: mark the source so callers can tell graph
                     # data from DB fallback data.
@@ -895,7 +970,12 @@ async def get_templates(
             )
             graph_errored = True
     repo = DomainFactoryRepository()
-    out = await repo.list_learned_templates_by_key(domain, report_type, canonical_chapter_key)
+    out = await repo.list_learned_templates_by_key(
+        domain,
+        report_type,
+        canonical_chapter_key,
+        attribution=attribution if resolved_kb else None,
+    )
     # [pisuan-custom] D5: surface the DB fallback instead of degrading silently,
     # mirroring get_chapter_outline's _source/_degraded_note contract.
     for item in out:
@@ -1342,7 +1422,7 @@ async def lookup_standard_indicator(pollutant: str, doc_code: str | None = None)
 LOOKUP_REGIONAL_FACT_DESCRIPTION = """
 查归属管理已核实（confirmed）的区域事实仓库（domain_factory_regional_facts）。
 fact_type 四类：monitoring（监测）/ sensitive_target（敏感目标）/ measure（措施）/ constraint（约束）。
-region_key 必填（一地区一知识库，不跨区混供），q 可按内容子串过滤。
+region_key 必填；kb_id 省略时取会话唯一启用库，多库/零库必须显式指定。事实按知识库归属隔离，不跨库混供。
 写监测布点、敏感目标、环保措施、区域约束相关章节时用此工具取已核实事实，不要凭记忆编造；
 无匹配时按 hint 走类比矿或向业主索取数据，不得虚构区域实况。
 """
@@ -1354,7 +1434,13 @@ region_key 必填（一地区一知识库，不跨区混供），q 可按内容�
     display_name="查区域事实",
     description=LOOKUP_REGIONAL_FACT_DESCRIPTION,
 )
-async def lookup_regional_fact(fact_type: str, region_key: str | None = None, q: str | None = None) -> dict:
+async def lookup_regional_fact(
+    fact_type: str,
+    region_key: str | None = None,
+    q: str | None = None,
+    kb_id: str | None = None,
+    runtime: ToolRuntime = None,
+) -> dict:
     """从区域事实仓库查已核实（confirmed）事实（P1-2：工厂有产物、写手可消费）。"""
     fact_type = (fact_type or "").strip()
     valid_types = ("monitoring", "sensitive_target", "measure", "constraint")
@@ -1363,10 +1449,17 @@ async def lookup_regional_fact(fact_type: str, region_key: str | None = None, q:
     region_key = (region_key or "").strip()
     if not region_key:
         return {"error": "region_key 必填：区域事实按矿区隔离，不跨区混供；请先向用户确认所属矿区/地区"}
+    resolved_kb, attribution = await _resolve_graph_scope(kb_id, runtime)
     q = (q or "").strip()
     repo = DomainFactoryRepository()
     items, _total = await repo.list_regional_facts(
-        region_key=region_key, fact_type=fact_type, status="confirmed", page=1, page_size=100
+        region_key=region_key,
+        fact_type=fact_type,
+        status="confirmed",
+        kb_id=resolved_kb,
+        attribution=attribution,
+        page=1,
+        page_size=100,
     )
     if q:
         items = [it for it in items if q in (it.get("content") or "")]
@@ -1374,6 +1467,7 @@ async def lookup_regional_fact(fact_type: str, region_key: str | None = None, q:
         {
             "fact_type": it["fact_type"],
             "region_key": it["region_key"],
+            "kb_id": it["kb_id"],
             "content": it["content"],
             "year": it["year"],
             "source_ref": it["source_ref"],
@@ -1383,7 +1477,7 @@ async def lookup_regional_fact(fact_type: str, region_key: str | None = None, q:
     # [pisuan-custom] W0 埋点（未命中也记，0 结果是查询质量信号）
     _track_usage(
         "lookup_regional_fact",
-        args_summary={"fact_type": fact_type, "region_key": region_key, "q": q or None},
+        args_summary={"fact_type": fact_type, "region_key": region_key, "kb_id": resolved_kb, "q": q or None},
         result_count=len(facts),
         source="regional_facts",
     )

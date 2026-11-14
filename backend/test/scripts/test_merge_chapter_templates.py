@@ -33,12 +33,12 @@ from scripts.governance.merge_chapter_templates import (
 STD_PREFIX = "CH_coal_eia_report_std_"
 
 
-def make_row(nid, title, canonical, level, parents=(), chapter_no=None, order=None, **meta):
+def make_row(nid, title, canonical, level, parents=(), chapter_no=None, order=None, attribution="", **meta):
     """构造 fetch_graph_state 查询行（同 GraphQL 行结构）。"""
     row = {
         "id": nid, "title": title, "canonical": canonical, "level": level,
         "chapter_no": chapter_no, "frequency": 1.0, "parent_ids": list(parents),
-        "order": order,
+        "order": order, "attribution": attribution,
     }
     for f in GRAPH_META_FIELDS:
         row[f] = meta.get(f)
@@ -53,6 +53,7 @@ def pg_row(rid, key, **kw):
         "regulations": [], "entity_bindings": [], "writing_example": None, "writing_hints": None,
         "expected_tables": [], "expected_charts": [], "expected_formulas": [], "expected_figures": [],
         "content_contract": [], "dependencies": [], "source_task_ids": [], "source_count": 1,
+        "attribution": "",
     }
     base.update(kw)
     return base
@@ -71,6 +72,7 @@ def rows_from_state(state):
             "chapter_no": n["chapter_no"], "frequency": n["frequency"],
             "parent_ids": list(state.parents_of.get(nid, [])),
             "order": n.get("order"),
+            "attribution": n.get("attribution") or "",
         }
         for f in GRAPH_META_FIELDS:
             row[f] = n.get(f)
@@ -189,6 +191,16 @@ def test_plan_merges_std_preferred_over_etl():
     plans = plan_merges(state)
     assert len(plans) == 1
     assert plans[0]["survivor"] == STD_PREFIX + "12_2"
+
+
+def test_plan_merges_never_crosses_attribution():
+    """同 canonical/层级/父节点但归属不同，不得合并。"""
+    state = build_state([
+        make_row("attr-a-ch", "总则", "总则", 1, attribution="attr-a"),
+        make_row("attr-b-ch", "总则", "总则", 1, attribution="attr-b"),
+    ])
+
+    assert plan_merges(state) == []
 
 
 def test_apply_merge_moves_children_and_parents():
@@ -435,6 +447,29 @@ def test_plan_pg_merges_fields_union_and_max():
 def test_plan_pg_merges_rerun_zero_actions():
     rows = [pg_row(5, "总则", purpose="B", source_task_ids=["t2"], source_count=2)]
     assert plan_pg_merges(rows) == []
+
+
+def test_plan_pg_merges_never_crosses_attribution():
+    """同 canonical 不同归属的大纲行必须各自保留。"""
+    rows = [
+        pg_row(1, "总则", purpose="A", attribution="attr-a"),
+        pg_row(2, "总则", purpose="B", attribution="attr-b"),
+    ]
+
+    assert plan_pg_merges(rows) == []
+
+
+def test_meta_backfill_never_writes_cross_attribution_chapter():
+    """PG 行的 chapter_id 指向异归属节点时不得回填。"""
+    state = build_state([
+        make_row("attr-a-ch", "总则", "总则", 1, attribution="attr-a"),
+    ])
+    rows = [pg_row(1, "总则", chapter_id="attr-a-ch", purpose="异归属内容", attribution="attr-b")]
+
+    plans, ambiguous = plan_meta_backfill(state, rows)
+
+    assert plans == []
+    assert ambiguous == 0
 
 
 # ---------------- 端到端（dry-run 零写 / apply 落写 / 重跑零动作） ----------------

@@ -202,6 +202,85 @@ ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS region_key V
 ALTER TABLE IF EXISTS domain_factory_tasks ADD COLUMN IF NOT EXISTS scope VARCHAR(32);
 CREATE INDEX IF NOT EXISTS idx_df_tasks_region ON domain_factory_tasks(region_key);
 ALTER TABLE IF EXISTS domain_factory_learned_templates ADD COLUMN IF NOT EXISTS scope VARCHAR(32);
+ALTER TABLE IF EXISTS domain_factory_learned_templates ADD COLUMN IF NOT EXISTS report_type_code VARCHAR(64) NOT NULL DEFAULT '通用';
+ALTER TABLE IF EXISTS domain_factory_learned_templates ADD COLUMN IF NOT EXISTS attribution VARCHAR(64) NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS domain_factory_outlines ADD COLUMN IF NOT EXISTS attribution VARCHAR(64) NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS domain_factory_learned_templates DROP CONSTRAINT IF EXISTS uq_dflt_domain_chapter_sig;
+ALTER TABLE IF EXISTS domain_factory_learned_templates DROP CONSTRAINT IF EXISTS uq_dflt_domain_rt_chapter_sig;
+ALTER TABLE IF EXISTS domain_factory_outlines DROP CONSTRAINT IF EXISTS uq_dfo_domain_rt_key;
+DROP INDEX IF EXISTS uq_dflt_domain_chapter_sig;
+DROP INDEX IF EXISTS uq_dflt_domain_rt_chapter_sig;
+DROP INDEX IF EXISTS uq_dfo_domain_rt_key;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_dflt_domain_rt_chapter_sig_attr
+    ON domain_factory_learned_templates(domain_code, report_type_code, chapter, slot_signature, attribution);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_dfo_domain_rt_key_attr
+    ON domain_factory_outlines(domain_code, report_type_code, canonical_chapter_key, attribution);
+CREATE INDEX IF NOT EXISTS idx_dflt_attribution ON domain_factory_learned_templates(attribution);
+CREATE INDEX IF NOT EXISTS idx_dfo_attribution ON domain_factory_outlines(attribution);
+
+CREATE TABLE IF NOT EXISTS domain_factory_kb_attributions (
+    kb_id VARCHAR(128) PRIMARY KEY,
+    region_key VARCHAR(128),
+    scope VARCHAR(32) NOT NULL,
+    project_name VARCHAR(255),
+    attribution VARCHAR(64) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_dfkb_attr ON domain_factory_kb_attributions(attribution);
+ALTER TABLE IF EXISTS domain_factory_regional_facts
+    ADD COLUMN IF NOT EXISTS kb_id VARCHAR(128) NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS domain_factory_regional_facts
+    ADD COLUMN IF NOT EXISTS attribution VARCHAR(64) NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_dfrf_kb_type_status
+    ON domain_factory_regional_facts(kb_id, fact_type, status);
+CREATE INDEX IF NOT EXISTS idx_dfrf_attribution ON domain_factory_regional_facts(attribution);
+UPDATE domain_factory_regional_facts rf
+SET status = 'retired'
+WHERE rf.status <> 'retired'
+  AND (
+      rf.source_task_id IS NULL
+      OR t.id IS NULL
+      OR coalesce(t.knowledge_base_id, '') = ''
+      OR b.kb_id IS NULL
+      OR coalesce(t.region_key, '') <> coalesce(b.region_key, '')
+      OR coalesce(t.scope, 'project') <> coalesce(b.scope, 'project')
+      OR coalesce(t.project_name, '') <> coalesce(b.project_name, '')
+  )
+FROM domain_factory_tasks t
+LEFT JOIN domain_factory_kb_attributions b ON b.kb_id = t.knowledge_base_id
+WHERE t.id = rf.source_task_id;
+UPDATE domain_factory_regional_facts rf
+SET kb_id = t.knowledge_base_id,
+    attribution = substring(encode(sha256(convert_to(
+        t.knowledge_base_id || '|' || coalesce(t.region_key, '') || '|' ||
+        coalesce(t.scope, 'project') || '|' || coalesce(t.project_name, ''),
+        'UTF8'
+    ), 'hex'), 1, 12))
+FROM domain_factory_tasks t
+LEFT JOIN domain_factory_kb_attributions b ON b.kb_id = t.knowledge_base_id
+WHERE t.id = rf.source_task_id
+  AND coalesce(t.knowledge_base_id, '') <> ''
+  AND b.kb_id IS NOT NULL
+  AND coalesce(t.region_key, '') = coalesce(b.region_key, '')
+  AND coalesce(t.scope, 'project') = coalesce(b.scope, 'project')
+  AND coalesce(t.project_name, '') = coalesce(b.project_name, '');
+INSERT INTO domain_factory_kb_attributions (kb_id, region_key, scope, project_name, attribution)
+SELECT
+    knowledge_base_id,
+    min(region_key) AS region_key,
+    min(coalesce(scope, 'project')) AS scope,
+    min(project_name) AS project_name,
+    substring(encode(sha256(convert_to(
+        knowledge_base_id || '|' || coalesce(min(region_key), '') || '|' ||
+        coalesce(min(coalesce(scope, 'project')), '') || '|' || coalesce(min(project_name), ''),
+        'UTF8'
+    ), 'hex'), 1, 12)
+FROM domain_factory_tasks
+WHERE knowledge_base_id <> ''
+GROUP BY knowledge_base_id
+HAVING count(DISTINCT (coalesce(region_key, ''), coalesce(scope, 'project'), coalesce(project_name, ''))) = 1
+ON CONFLICT (kb_id) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS domain_factory_regional_facts (
     id SERIAL PRIMARY KEY,

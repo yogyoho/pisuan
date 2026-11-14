@@ -1,14 +1,22 @@
 """report/chapter/pps repository 落库链路集成测试：直连真实 PostgreSQL。"""
 
 import pytest
+from sqlalchemy import delete
+from pisuan.services.domain_factory_region import attribution_scope_key
 from pisuan.storage.postgres.manager import pg_manager
 from pisuan.repositories.domain_factory_repository import DomainFactoryRepository
+from pisuan.storage.postgres.models_domain_factory import DomainFactoryKnowledgeBaseAttribution
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
 
 @pytest.fixture(autouse=True)
 async def _dispose_engine():
+    async with pg_manager.get_async_session_context() as session:
+        await session.execute(delete(DomainFactoryKnowledgeBaseAttribution).where(
+            DomainFactoryKnowledgeBaseAttribution.kb_id == "kb_x"
+        ))
+        await session.commit()
     yield
     await pg_manager.close()
     pg_manager._initialized = False
@@ -17,6 +25,15 @@ async def _dispose_engine():
 @pytest.mark.asyncio
 async def test_create_report_and_chapter_and_pps():
     repo = DomainFactoryRepository()
+    async with pg_manager.get_async_session_context() as session:
+        session.add(DomainFactoryKnowledgeBaseAttribution(
+            kb_id="kb_x",
+            region_key="yining",
+            scope="regional",
+            project_name=None,
+            attribution=attribution_scope_key("kb_x", "yining", "regional", None),
+        ))
+        await session.commit()
     rep = await repo.create_report(
         thread_id="t1", title="伊宁矿区环评", domain_code="coal",
         report_type_code="eia_report", kb_id="kb_x", created_by="admin",

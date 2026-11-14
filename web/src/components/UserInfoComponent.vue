@@ -45,7 +45,7 @@
           <a-menu-divider />
           <a-menu-item v-if="userStore.isSuperAdmin" key="debug" @click="infoStore.openDebugModal">
             <template #icon><Terminal :size="16" /></template>
-            <span class="menu-text">调试面板（非生产环境）</span>
+            <span class="menu-text">调试面板</span>
           </a-menu-item>
           <a-menu-item key="setting" @click="goToSetting">
             <template #icon><Settings :size="16" /></template>
