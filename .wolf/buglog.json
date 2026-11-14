@@ -12110,5 +12110,24 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-11-15T00:45:00"
+  },
+  {
+    "id": "bug-4269",
+    "timestamp": "2026-11-15T01:05:00.000Z",
+    "error_message": "Cannot read properties of undefined (reading 'parent')",
+    "file": "web/src/components/domain-factory/entity/EntityTree.vue",
+    "root_cause": "ant-design-vue 4.2.6 的 vc-tree `getTreeNodeProps` 用 `parent: entity.parent` 时只对 `pos` 做了 entity 空值保护；分类节点新增/删除导致 treeData 变化、旧节点在离场动画帧里仍被渲染时，keyEntities 已不含该 key，entity 为 undefined 直接抛错（页面每次分类增删都刷 2~7 条 pageerror）",
+    "fix": "给实体树的 a-tree 显式 `:open-animation=\"false\"`（ant-design-vue 的 openAnimation 映射到 vc-tree motion），去掉节点增删的离场动画帧，keyEntities 与渲染键始终一致",
+    "tags": [
+      "ant-design-vue",
+      "a-tree",
+      "vc-tree",
+      "pageerror",
+      "domain-entity-builder",
+      "分类字典"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-15T01:05:00.000Z"
   }
 ]

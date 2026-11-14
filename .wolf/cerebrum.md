@@ -2901,3 +2901,18 @@
 - **不要用「全量 pytest 的 errors 数」判定本次改动是否引入回归**——先按相关文件单跑；errors 多来自 auth 锁定级联。
 - **不要保留 in-memory STUB 当"以后可能要用"的接口**：它读起来像真接口，接错一次就丢数据。
 - **不要拿 `pnpm run lint` 的失败数当前端回归信号**——先看报错文件路径是否在 `src/`。
+
+## Key Learnings + DNR（2026-11-15 分类字典表 v23）
+
+- **分类此前是"派生字段"不是数据**：`get_taxonomy` 用 `SELECT DISTINCT category` + 写死 `CATEGORY_DOMAIN_MAP` 造中文名，`repo.export_all` 又抄了一份同样映射（两处漂移）。字典表落地后，taxonomy / 导出 / 选择器 / 提取 prompt 分类清单全部单源读 `domain_entity_categories`。
+- **`category` 列存的是分类 `code`**，所以 code 是存储契约、不能改名（改名要级联迁移实体行），可管理的是 name_cn / sort_order / description / is_active；删除前必须先迁走实体（服务层返回 400 并给实体数）。
+- **泛化 prompt 截断序 = 字典 sort_order → 实体 name_cn**（Python 码点序）。改造前是 PG `ORDER BY category, name_cn`（字母序），`env_quality` 打头把 470 个属性的 `project_basic` 挤出 60 个名额；改后实测前 60 个全来自 `project_basic`，前端 `computePromptCoverage` 必须用同一排序键，否则"进 prompt / 未进"标记与真实截断不一致。
+- **新分类默认 sort_order 必须是 max+10**：落 0 会抢到树首与 prompt 名额（E2E 第一跑就复现：新建分类出现在 `project_basic` 之前）。
+- **ant-design-vue 4.2.6 `a-tree` 有个库内空值漏洞**：`getTreeNodeProps` 写 `parent: entity.parent` 只对 `pos` 做了保护，节点增删时 keyEntities 先更新、旧节点还在离场动画帧里渲染 → `Cannot read properties of undefined (reading 'parent')`。本页用 `:open-animation="false"`（该 prop 映射到 vc-tree `motion`）关掉动画即消失。
+- **代码改东西后 API 会连续 reload 好几轮**（WatchFiles 对同一次编辑去抖不佳），期间前端 proxy 报 `ECONNREFUSED 172.18.0.x:5050`、浏览器 `Failed to fetch`，是假故障；等 `docker logs api-1` 出现 `startup complete` 且两分钟内无重启再跑 E2E。
+- **集成测试要显式传测试凭据**：`docker exec -e TEST_USERNAME=... -e TEST_PASSWORD=... -e TEST_BASE_URL=http://localhost:5050 api-1 pytest ...`，否则整个文件 22 条全 skip（conftest 里 `TEST_USERNAME/TEST_PASSWORD` 缺失即 skip）。
+
+### DNR
+- **不要把"分类"继续塞回 `CATEGORY_DOMAIN_MAP` 之类的硬编码映射**——单源是字典表，新增分类走 UI 或 SQL 播种。
+- **不要让新建分类默认 sort_order=0**（抢队首），也不要给已存在的 code 提供改名入口。
+- **不要整文件 `ruff format` 存量文件**：`domain_entity_repository.py` 等文件本来就不是 ruff 0.16/line-length 120 的产物，整篇格式化会产生几十行与需求无关的 diff；只格式化自己新写的文件，存量文件手动对齐。

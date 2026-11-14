@@ -177,10 +177,10 @@ const handleSaveProperty = () => {
     <div v-if="promptCoverage" class="prompt-coverage-hint">
       <Info :size="13" />
       <span>
-        泛化抽取只会把排序后前 {{ promptCoverage.limit }} 个属性写进提示词（通用域共
+        泛化抽取按分类管理里的顺序累计前 {{ promptCoverage.limit }} 个属性写进提示词（通用域共
         {{ promptCoverage.eligible }} 个候选，已覆盖 {{ promptCoverage.covered }} 个）；本实体
         {{ ownCoveredCount }}/{{ ownEligibleCount }}
-        进 prompt。未进的属性不会被泛化命中，改写进提示词靠前实体的属性或精简候选。
+        进 prompt。未进的属性不会被泛化命中，可在「分类管理」里把本分类前移，或精简候选。
       </span>
     </div>
     <a-table :columns="propertyColumns" :data-source="properties" :pagination="false" size="small">
@@ -220,8 +220,8 @@ const handleSaveProperty = () => {
           <a-tooltip
             :title="
               isPromptCovered(record)
-                ? '按分类+名称排序后位于前 60 个属性内，会进入泛化抽取提示词'
-                : '排序后在第 60 个之外，泛化抽取看不到该属性'
+                ? '按「分类顺序 + 实体名称」排序后位于前 60 个属性内，会进入泛化抽取提示词'
+                : '按「分类顺序 + 实体名称」排序后在第 60 个之外，泛化抽取看不到该属性'
             "
           >
             <a-tag :color="isPromptCovered(record) ? 'blue' : 'default'">{{

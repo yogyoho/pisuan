@@ -342,6 +342,11 @@
 ## backend/package/yuxi/utils/
 
 
+## backend/package/pisuan/repositories/
+
+- `domain_entity_category_repository.py` — 实体分类字典数据访问（v23）：`list_categories`（按 sort_order, code；可含停用）/`get`/`create`（未指定 sort_order 时取 max+10 排尾部）/`update`（只改 name_cn/description/sort_order/is_active，code 不可改）/`delete`/`reorder`（缺失与重复校验，sort_order 重算为 10/20/30…）/`rank_map`（code→sort_order，供泛化 prompt 排序）；`validate_category_code` 强制 `^[a-z][a-z0-9_]{0,63}$` (~112 行)
+
+
 ## backend/scripts/
 
 - `verify_entity_chain_e2e.py` — 通用域实体双链路 E2E（Q1 实体注入泛化/Q2 LLM 提议→确认级联），探针+零残留清理（2026-11-13）。 (~1800 tok)
@@ -449,6 +454,7 @@
 - `test_domain_entity_extraction.py` — 实体提取契约单测：三态比对矩阵/dict 形属性兼容/无证据拒绝/partial 只写定义/new 建实体/键与值类型校验/改名拒绝（14 例，2026-11-14）。 (~1500 tok)
 - `test_domain_entity_usage.py` — 实体引用影响面单测：四类来源（模板/待审核任务/报告参数/区域事实）混合计数、中文名后缀归一为属性 key、悬空引用与未使用属性、非本实体引用忽略、实体不存在抛 ValueError（3 例，Fake repo，2026-11-14）。 (~900 tok)
 - `test_domain_entity_import.py` — 实体配置导入单测：按 entity_key 跨环境对齐/无 entity_id 可创建/异域与缺键缺名与文件内重复拒绝/dry_run 不写不 remap/值类型别名归一/仅更新才 remap（8 例，Fake repo，2026-11-15）。 (~800 tok)
+- `test_domain_entity_categories.py` — 实体分类字典（v23）单测：taxonomy 按字典 sort_order 渲染（含空分类）/停用且为空才隐藏/字典外历史分类兜底追加/实体 category 走字典校验/删除有实体的分类被拒/调序重写 sort_order/泛化 prompt 按字典顺序取前 N（10 例，Fake repo + monkeypatch，2026-11-15）。 (~1100 tok)
 - `test_graph_relation_rules.py` — relation_rules 在 graph_builder 的求值单测：关系名净化/slot 值收集/条件匹配/命中落边与目标 MERGE 去重/未命中零写入/不支持动作计数（6 例，FakeTx 不连 Neo4j，2026-11-14）。 (~900 tok)
 
 ## backend/test/unit/services/skills/
@@ -553,7 +559,7 @@
 
 ## web/src/composables/
 
-- `useEntitySchemas.js` — 实体构建器状态中枢：taxonomy/schemas 加载、编辑副本 `draft` 与 `baselineJson` 快照脏态判定（`isDirty`）、CRUD/克隆/导入导出、`treeData`、`promptCoverage`（复算后端泛化 60 上限口径）、`usage`/`usageLoading`/`usageError`（选中即拉影响面，reqId 防串台，`fetchUsage` 供删除前取最新）；固定 `DOMAIN_CODE='general'`，导出 `KEY_PATTERN`/`VALUE_TYPE_OPTIONS`/`normalizeValueType`/`validateEntityDraft`/`computePromptCoverage` (~418 行)
+- `useEntitySchemas.js` — 实体构建器状态中枢：taxonomy/schemas/分类字典 `categories` 三路并发加载、编辑副本 `draft` 与 `baselineJson` 快照脏态判定（`isDirty`）、CRUD/克隆/导入导出、分类 CRUD 与 `moveCategory`（成功后统一 reload 并 `preserveDraft`）、`treeData`（按字典顺序）、`promptCoverage`（复算后端泛化 60 上限口径，排序键 = 字典顺序 + name_cn）、`categoryOptions`（字典为准，停用分类仅在已被使用时列出）、`usage`/`usageLoading`/`usageError`（选中即拉影响面，reqId 防串台，`fetchUsage` 供删除前取最新）；固定 `DOMAIN_CODE='general'`，导出 `KEY_PATTERN`/`VALUE_TYPE_OPTIONS`/`normalizeValueType`/`validateEntityDraft`/`computePromptCoverage` (~563 行)
 
 
 ## web/src/components/common/
@@ -561,13 +567,14 @@
 
 ## web/src/components/domain-factory/
 
-- `entity/EntityTree.vue` — 实体构建器左栏：域分组树 + 搜索（搜 name_cn/entity_key/description/synonyms，命中词 `<mark>` 高亮）+ 每域「+ 新建实体」入口 + 实体删除图标（只 emit，确认弹窗与引用影响面由页面统一处理）；emit `select(key)`/`delete(entityId)` (~194 行)
+- `entity/EntityTree.vue` — 实体构建器左栏：域分组树（节点顺序即分类字典顺序，空分类也渲染）+ 搜索（搜 name_cn/entity_key/description/synonyms，命中词 `<mark>` 高亮）+ 每域「+ 新建实体」入口 + 实体删除图标（只 emit，确认弹窗与引用影响面由页面统一处理）；`a-tree` 显式 `:open-animation="false"`（避开库内 `getTreeNodeProps` 在节点离场帧读 `entity.parent` 的崩溃）；emit `select(key)`/`delete(entityId)` (~174 行)
 - `entity/EntityEditor.vue` — 实体编辑右栏：基础元数据表单 + 嵌套 PropertyTable（透传 promptCoverage/entityKey/usage）/RelationRuleEditor/EntityUsagePanel（仅已落库实体）+ sticky 操作条（保存/取消/克隆/查看JSON/删除，删除只 emit）；`defineModel('entity')` (~160 行)
 - `entity/EntityUsagePanel.vue` — 「使用情况」卡片：段落模板/待审核任务/报告参数/区域事实四类引用计数、未使用属性与悬空引用告警、ghost collapse「最近引用明细」（待审核任务 + 前 8 个模板）；props usage/loading/error (~160 行)
-- `entity/PropertyTable.vue` — 属性结构表（「提取提示词」列、「进 prompt / 未进」标记按 `promptCoverage` 复算后端 60 上限、「引用」列按 `usage.properties[key]` 汇总四类来源并给出分解 tooltip，0 标「未使用」）+ 属性定义弹窗；删除属性与属性键改名都先走 `Modal.confirm` 影响面（有引用列四类条数、无引用只提示不可恢复，改名取消不落草稿）；`defineModel('properties')` 就地增删改 (~362 行)
+- `entity/PropertyTable.vue` — 属性结构表（「提取提示词」列、「进 prompt / 未进」标记按 `promptCoverage` 复算后端 60 上限、「引用」列按 `usage.properties[key]` 汇总四类来源并给出分解 tooltip，0 标「未使用」）+ 属性定义弹窗；覆盖提示文案指向「分类管理」（顺序前移可换回名额）；删除属性与属性键改名都先走 `Modal.confirm` 影响面（有引用列四类条数、无引用只提示不可恢复，改名取消不落草稿）；`defineModel('properties')` 就地增删改 (~362 行)
 - `entity/RelationRuleEditor.vue` — 图谱关系推理规则编辑：条件 JSON 非空对象校验、actions 只允许 `create_edge` 且 relation 为英文标识，目标 entity_key 不存在时告警；`defineModel('rules')` (~232 行)
 - `entity/EntityExtractWizard.vue` — AI 提取向导弹窗：上传（≤5MB）→ 三态比对（new/partial/matched）+ grounded/coverage 提示 + 默认勾选规则 + 导入；emit `imported` (~480 行)
 - `entity/EntityJsonModal.vue` — 实体 JSON 查看弹窗（复制/下载）；`defineModel('open')` (~72 行)
+- `entity/CategoryManager.vue` — 「分类管理」弹窗：行内改名（blur/Enter 提交）、上移下移（整体 reorder）、启用停用开关（失败回滚）、删除空分类（有实体时按钮禁用并提示）、底部新增（校验 `^[a-z][a-z0-9_]{0,63}$`）；行数据是父级 `categories` 的本地副本，成功后只 emit `changed` 由页面 reload；文案说明顺序决定树序与泛化 prompt 取舍；`defineModel('open')` (~254 行)
 
 
 ## web/src/components/eia-data/
@@ -597,7 +604,7 @@
 
 ## web/src/views/
 
-- `DomainEntityBuilderView.vue` — 领域实体构建器页面（编排层）：`useEntitySchemas` + EntityTree + EntityEditor，统一脏状态确认（切树/新建/克隆/导入/`onBeforeRouteLeave`/`beforeunload`）、`?entity_key=` 深链、空态三入口、导入/克隆弹窗、删除影响面确认（`confirmDelete`：先 `fetchUsage` 列四类引用，失败即取消；编辑器与树两个入口共用） (~390 行)
+- `DomainEntityBuilderView.vue` — 领域实体构建器页面（编排层）：`useEntitySchemas` + EntityTree + EntityEditor + CategoryManager，统一脏状态确认（切树/新建/克隆/导入/`onBeforeRouteLeave`/`beforeunload`）、`?entity_key=` 深链、空态三入口、导入/克隆/分类管理弹窗、删除影响面确认（`confirmDelete`：先 `fetchUsage` 列四类引用，失败即取消；编辑器与树两个入口共用）；页头次操作依次为 分类管理 / 导出 / 导入 / AI 提取 (~390 行)
 
 
 ## web/test/unit/

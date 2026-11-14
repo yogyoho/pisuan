@@ -53,6 +53,47 @@ class DomainEntitySchema(Base):
         }
 
 
+class DomainEntityCategory(Base):
+    """实体分类字典：实体树渲染顺序与泛化 prompt 截断顺序的唯一来源。
+
+    code 是实体表 `category` 列的存储值（entity_ref/导入导出契约的一部分），不可改；
+    展示名与排序走 name_cn / sort_order。is_active=False 的分类不再提供新建入口，
+    但已有实体仍可见（taxonomy 对"已停用但仍有实体"的分类保留渲染）。
+    """
+
+    __tablename__ = "domain_entity_categories"
+
+    code = Column(String(64), primary_key=True)
+    name_cn = Column(String(128), nullable=False)
+    description = Column(Text, default="")
+    sort_order = Column(Integer, nullable=False, default=0)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "code": self.code,
+            "name_cn": self.name_cn,
+            "description": self.description or "",
+            "sort_order": self.sort_order,
+            "is_active": self.is_active,
+            "created_at": format_utc_datetime(self.created_at),
+            "updated_at": format_utc_datetime(self.updated_at),
+        }
+
+
+# v23 播种：原 CATEGORY_DOMAIN_MAP 的六分类，按业务优先级排序（基础工程实体在前）
+DEFAULT_ENTITY_CATEGORIES = (
+    ("project_basic", "基础工程实体", "定义'谁在建'、'建什么'、'怎么建'", 10),
+    ("natural_env", "自然环境实体", "定义自然环境要素", 20),
+    ("env_quality", "环境质量与污染源实体", "定义环境质量与污染源", 30),
+    ("sensitive_target", "敏感目标与空间实体", "定义'在哪建'、'周围有什么'", 40),
+    ("measures_regulation", "措施与法规实体", "定义'怎么办'、'依据什么'", 50),
+    ("impact_assessment", "环境影响评价实体", "定义'产生什么问题'、'后果如何'", 60),
+)
+
+
 class ReportType(Base):
     """报告类型字典表"""
 

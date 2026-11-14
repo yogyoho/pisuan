@@ -6,6 +6,7 @@ import re
 import uuid
 from typing import Any
 
+from pisuan.repositories.domain_entity_category_repository import DomainEntityCategoryRepository
 from pisuan.repositories.domain_entity_repository import DomainEntityRepository
 from pisuan.repositories.domain_factory_repository import GENERAL_DOMAIN_CODE
 from pisuan.utils import logger
@@ -71,102 +72,115 @@ def is_grounded(quote: str, content: str) -> bool:
     normalized_quote = _strip_whitespace(quote)
     return bool(normalized_quote) and normalized_quote in _strip_whitespace(content)
 
-# 六大领域分类映射
-CATEGORY_DOMAIN_MAP = {
-    "project_basic": {
-        "domain_id": "project_basic",
-        "domain_name": "基础工程实体",
-        "domain_key": "ProjectBasic",
-        "description": "定义'谁在建'、'建什么'、'怎么建'",
-    },
-    "natural_env": {
-        "domain_id": "natural_env",
-        "domain_name": "自然环境实体",
-        "domain_key": "NaturalEnv",
-        "description": "定义自然环境要素",
-    },
-    "env_quality": {
-        "domain_id": "env_quality",
-        "domain_name": "环境质量与污染源实体",
-        "domain_key": "EnvQuality",
-        "description": "定义环境质量与污染源",
-    },
-    "sensitive_target": {
-        "domain_id": "sensitive_target",
-        "domain_name": "敏感目标与空间实体",
-        "domain_key": "SensitiveTarget",
-        "description": "定义'在哪建'、'周围有什么'",
-    },
-    "measures_regulation": {
-        "domain_id": "measures_regulation",
-        "domain_name": "措施与法规实体",
-        "domain_key": "MeasuresRegulation",
-        "description": "定义'怎么办'、'依据什么'",
-    },
-    "impact_assessment": {
-        "domain_id": "impact_assessment",
-        "domain_name": "环境影响评价实体",
-        "domain_key": "ImpactAssessment",
-        "description": "定义'产生什么问题'、'后果如何'",
-    },
-}
-
-
 class DomainEntityService:
     """领域实体 Schema 服务"""
 
     def __init__(self):
         self.repo = DomainEntityRepository()
+        self.category_repo = DomainEntityCategoryRepository()
 
     # ========== Taxonomy ==========
 
     async def get_taxonomy(self, domain_code: str | None = None) -> dict[str, Any]:
-        categories = await self.repo.list_distinct_categories(domain_code)
+        """分类体系：分类字典按 sort_order 渲染（含空分类），字典外历史分类兜底追加。
+
+        停用且无实体的分类不渲染；停用但仍有实体的分类保留，避免存量实体从树上消失。
+        """
+        counts = await self.repo.counts_by_category(domain_code)
         domains = []
+        known: set[str] = set()
+        for item in await self.category_repo.list_categories():
+            code = item["code"]
+            entity_count = counts.get(code, 0)
+            if not item["is_active"] and entity_count == 0:
+                continue
+            domains.append(self._taxonomy_domain(item, entity_count))
+            known.add(code)
 
-        notified_categories = set()
-        for cat in categories:
-            info = CATEGORY_DOMAIN_MAP.get(cat, self._build_default_domain_info(cat))
-            domains.append({
-                "domain_id": info["domain_id"],
-                "domain_name": info["domain_name"],
-                "domain_key": info["domain_key"],
-                "description": info["description"],
-                "categories": [{
-                    "category_id": f"{info['domain_id']}_category",
-                    "category_name": cat,
-                    "category_key": cat.replace(" ", "").replace("与", "And"),
-                    "description": f"{cat}分类",
-                }],
-            })
-            notified_categories.add(cat)
-
-        for cat, info in CATEGORY_DOMAIN_MAP.items():
-            if cat not in notified_categories:
-                domains.append({
-                    "domain_id": info["domain_id"],
-                    "domain_name": info["domain_name"],
-                    "domain_key": info["domain_key"],
-                    "description": info["description"],
-                    "categories": [{
-                        "category_id": f"{info['domain_id']}_category",
-                        "category_name": cat,
-                        "category_key": cat.replace(" ", "").replace("与", "And"),
-                        "description": f"{cat}分类",
-                    }],
-                })
-
+        # 字典外的分类（历史导入可能留下）仍须在树上可见，按 code 字母序附在末尾
+        for code in sorted(set(counts) - known):
+            domains.append(
+                self._taxonomy_domain(
+                    {
+                        "code": code,
+                        "name_cn": code,
+                        "description": "",
+                        "sort_order": 10**6,
+                        "is_active": True,
+                    },
+                    counts[code],
+                )
+            )
         return {"domains": domains}
 
     @staticmethod
-    def _build_default_domain_info(category: str) -> dict[str, str]:
-        clean = category.replace(" ", "").replace("与", "")
+    def _taxonomy_domain(item: dict[str, Any], entity_count: int) -> dict[str, Any]:
+        code = item["code"]
+        domain_key = "".join(part.capitalize() for part in code.split("_"))
         return {
-            "domain_id": clean.lower(),
-            "domain_name": category,
-            "domain_key": clean,
-            "description": category,
+            "domain_id": code,
+            "domain_name": item["name_cn"],
+            "domain_key": domain_key,
+            "description": item.get("description") or "",
+            "is_active": item["is_active"],
+            "sort_order": item["sort_order"],
+            "entity_count": entity_count,
+            "categories": [
+                {
+                    "category_id": f"{code}_category",
+                    "category_name": code,
+                    "category_label": item["name_cn"],
+                    "category_key": domain_key,
+                    "description": item.get("description") or "",
+                    "entity_count": entity_count,
+                }
+            ],
         }
+
+    # ========== Category Dictionary ==========
+
+    async def list_categories(self) -> list[dict[str, Any]]:
+        counts = await self.repo.counts_by_category()
+        return [
+            {**row, "entity_count": counts.get(row["code"], 0)}
+            for row in await self.category_repo.list_categories()
+        ]
+
+    async def create_category(self, data: dict[str, Any]) -> dict[str, Any]:
+        row = await self.category_repo.create(data)
+        return {**row, "entity_count": 0}
+
+    async def update_category(self, code: str, data: dict[str, Any]) -> dict[str, Any]:
+        """分类 code 不可改（它是实体 category 的存储值），只改名称/描述/排序/启用。"""
+        if data.get("code") and data["code"] != code:
+            raise ValueError("分类 code 不允许修改（它是实体分类的存储值）")
+        row = await self.category_repo.update(code, data)
+        counts = await self.repo.counts_by_category()
+        return {**row, "entity_count": counts.get(code, 0)}
+
+    async def delete_category(self, code: str) -> None:
+        entity_count = await self.repo.count_by_category(code)
+        if entity_count:
+            raise ValueError(f"分类 `{code}` 下还有 {entity_count} 个实体，先迁走或删除实体后再删分类")
+        await self.category_repo.delete(code)
+
+    async def reorder_categories(self, codes: list[str]) -> list[dict[str, Any]]:
+        rows = await self.category_repo.reorder(codes)
+        counts = await self.repo.counts_by_category()
+        return [{**row, "entity_count": counts.get(row["code"], 0)} for row in rows]
+
+    async def _category_codes(self, include_inactive: bool = False) -> list[dict[str, Any]]:
+        return await self.category_repo.list_categories(include_inactive=include_inactive)
+
+    async def _validate_category(self, code: str) -> None:
+        if not code:
+            raise ValueError("category 不能为空")
+        if await self.category_repo.get(code):
+            return
+        options = "、".join(
+            f"{item['code']}（{item['name_cn']}）" for item in await self._category_codes()
+        )
+        raise ValueError(f"分类 `{code}` 不在分类字典中，可选：{options}")
 
     # ========== Entity CRUD ==========
 
@@ -191,8 +205,7 @@ class DomainEntityService:
         if not str(data.get("name_cn") or "").strip():
             raise ValueError("name_cn 不能为空")
         category = str(data.get("category") or "").strip()
-        if category not in CATEGORY_DOMAIN_MAP:
-            raise ValueError(f"category `{category}` 不属于六大分类，可选：{', '.join(CATEGORY_DOMAIN_MAP)}")
+        await self._validate_category(category)
 
         existing = await self.repo.get_by_key(entity_key)
         if existing:
@@ -371,15 +384,18 @@ class DomainEntityService:
     # ========== Import / Export ==========
 
     async def export_all(self, domain_code: str | None = None) -> dict[str, Any]:
-        return await self.repo.export_all(domain_code)
+        """导出实体配置；taxonomy 与页面/选择器共用同一份字典渲染结果。"""
+        data = await self.repo.export_all(domain_code)
+        data["taxonomy"] = await self.get_taxonomy(domain_code)
+        return data
 
     async def import_all(self, config: dict[str, Any], dry_run: bool = False) -> dict[str, Any]:
         """导入实体配置：按 entity_key 对齐，先算新增/更新/拒绝，dry_run 只算不写。
 
         entity_id 是环境内代理键，跨环境不可复用；entity_key 才是 entity_ref 的契约标识，
         因此对齐键取 entity_key，更新时保留本地 entity_id。归属其他行业域的条目直接拒绝，
-        避免落成通用域读不到的幽灵实体。taxonomy 由实体 category 派生（见 export_all），
-        没有独立存储，导入不消费。
+        避免落成通用域读不到的幽灵实体。分类字典独立管理（v23），导入文件里的
+        taxonomy 字段仅作参考、不参与导入；实体 category 原样落库，字典外分类在树上兜底可见。
         """
         schemas = config.get("entity_schemas", {})
         entities = list(schemas.values()) if isinstance(schemas, dict) else schemas
@@ -526,7 +542,8 @@ class DomainEntityService:
         if not schemas:
             return {"entities": [], "comparison": [], "message": "当前行业下没有实体 Schema 定义"}
 
-        prompt = self._build_extraction_prompt(schemas, content, domain_code)
+        categories = await self._category_codes()
+        prompt = self._build_extraction_prompt(schemas, content, domain_code, categories)
 
         try:
             from pisuan.models.chat import select_model
@@ -544,7 +561,9 @@ class DomainEntityService:
         for item in extracted:
             item["grounded"] = is_grounded(item.get("extracted_text", ""), content)
 
-        comparison = self._compare_extracted_with_entities(extracted, schemas)
+        comparison = self._compare_extracted_with_entities(
+            extracted, schemas, {item["code"] for item in categories}
+        )
         scanned = min(len(content), EXTRACTION_CONTENT_LIMIT)
 
         return {
@@ -712,7 +731,10 @@ class DomainEntityService:
         return {str(k).casefold() for k in keys if k}
 
     def _compare_extracted_with_entities(
-        self, extracted: list[dict], existing_entities: list[dict]
+        self,
+        extracted: list[dict],
+        existing_entities: list[dict],
+        allowed_categories: set[str],
     ) -> list[dict]:
         """覆盖度比对：提取结果的属性键集合 vs 已有 schema 的属性键集合。
 
@@ -773,7 +795,9 @@ class DomainEntityService:
                     "_entity_id": None,
                     "_diff": {"add_properties": []},
                     "_existing": None,
-                    "_proposed_entity": self._build_entity_proposal(item, schema_ref, values),
+                    "_proposed_entity": self._build_entity_proposal(
+                        item, schema_ref, values, allowed_categories
+                    ),
                 }
             )
             comparison.append(entry)
@@ -782,7 +806,10 @@ class DomainEntityService:
 
     @staticmethod
     def _build_entity_proposal(
-        item: dict[str, Any], schema_ref: str, values: dict[str, Any]
+        item: dict[str, Any],
+        schema_ref: str,
+        values: dict[str, Any],
+        allowed_categories: set[str],
     ) -> dict[str, Any]:
         problems: list[str] = []
         if schema_ref not in ("", PROPOSAL_SCHEMA_REF):
@@ -796,8 +823,8 @@ class DomainEntityService:
             problems.append("新实体提案缺少 entity_key（snake_case 英文）")
 
         category = str(item.get("category") or "").strip()
-        if category not in CATEGORY_DOMAIN_MAP:
-            problems.append("category 不属于六大分类")
+        if category not in allowed_categories:
+            problems.append("category 不在分类字典中")
 
         properties = [
             {
@@ -821,7 +848,11 @@ class DomainEntityService:
         }
 
     def _build_extraction_prompt(
-        self, schemas: list[dict[str, Any]], content: str, domain_code: str
+        self,
+        schemas: list[dict[str, Any]],
+        content: str,
+        domain_code: str,
+        categories: list[dict[str, Any]],
     ) -> list[dict]:
         """构建实体提取 Prompt"""
         schema_desc_parts = []
@@ -868,7 +899,7 @@ class DomainEntityService:
             domain_code, domain_code
         )
 
-        categories = "、".join(f"{k}（{v['domain_name']}）" for k, v in CATEGORY_DOMAIN_MAP.items())
+        categories = "、".join(f"{item['code']}（{item['name_cn']}）" for item in categories)
         system_prompt = (
             "你是一个专业的领域实体提取助手。"
             "你的任务是从文档中识别符合预定义 Schema 的实体对象，并为 Schema 未覆盖的内容提出提案。"
@@ -897,7 +928,7 @@ class DomainEntityService:
             '    "schema_ref": "已有实体的 entity_key，或 __proposal__",\n'
             '    "entity_key": "仅提案时给出：snake_case 英文键",\n'
             '    "name_cn": "实体中文名",\n'
-            '    "category": "所属分类（提案时必填，取六大分类之一）",\n'
+            '    "category": "所属分类（提案时必填，取分类字典之一）",\n'
             '    "confidence": 0.0-1.0,\n'
             '    "extracted_text": "文档中的原文片段（必须逐字摘录）",\n'
             '    "values": {\n'

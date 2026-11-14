@@ -16,6 +16,27 @@ export const domainEntityBuilderApi = {
     return apiAdminGet('/api/domain-entity-builder/domains')
   },
 
+  // 分类字典：树序与泛化 prompt 截断序的唯一来源
+  listCategories: () => {
+    return apiAdminGet('/api/domain-entity-builder/categories')
+  },
+
+  createCategory: (category) => {
+    return apiAdminPost('/api/domain-entity-builder/categories', category)
+  },
+
+  updateCategory: (code, category) => {
+    return apiAdminPut(`/api/domain-entity-builder/categories/${code}`, category)
+  },
+
+  deleteCategory: (code) => {
+    return apiAdminDelete(`/api/domain-entity-builder/categories/${code}`)
+  },
+
+  reorderCategories: (codes) => {
+    return apiAdminPost('/api/domain-entity-builder/categories/reorder', { codes })
+  },
+
   listEntitySchemas: (category = null, domainCode = null) => {
     const params = {}
     if (category) params.category = category

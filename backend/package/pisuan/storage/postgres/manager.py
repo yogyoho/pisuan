@@ -42,6 +42,10 @@ from pisuan.storage.postgres.models_domain_factory import (
 )
 from pisuan.services.domain_factory_region import attribution_scope_key, normalize_attribution
 from pisuan.storage.postgres.models_domain_entity import (
+    DEFAULT_ENTITY_CATEGORIES,
+    DomainEntityCategory,
+)
+from pisuan.storage.postgres.models_domain_entity import (
     Base as DomainEntityBase,
 )
 from pisuan.utils import logger
@@ -58,7 +62,8 @@ AGENT_RUN_TERMINAL_STATUS_SQL = ", ".join(f"'{status}'" for status in AGENT_RUN_
 # v18：环评文件库两表（eia_library_folders / eia_library_files，五阶段种子）；
 # v19：文件库 P2 扩列（canonical md 正源/KB 推送镜像/加工前置）+ 加工台账表（eia_corpus_process_log）；
 # v20：限值提取暂存 + 表注册（eia_limit_extract_rows / eia_limit_table_registry，spec 2026-10-19）
-BUSINESS_SCHEMA_VERSION = 22
+# v23：实体分类字典（domain_entity_categories，建表 + 播种六分类，决定树序与泛化 prompt 截断序）
+BUSINESS_SCHEMA_VERSION = 23
 KNOWLEDGE_SCHEMA_VERSION = 2
 SCHEMA_VERSION_TABLE = "pisuan_schema_migrations"
 AGENT_RUN_LEASE_SCHEMA_STATEMENTS = (
@@ -1111,6 +1116,48 @@ class PostgresManager(metaclass=SingletonMeta):
                     INSERT INTO {SCHEMA_VERSION_TABLE} (domain, version, applied_at)
                     VALUES ('business', 22, CURRENT_TIMESTAMP)
                     ON CONFLICT (domain) DO UPDATE SET version = 22, applied_at = EXCLUDED.applied_at
+                """)
+            )
+
+    async def upgrade_business_v22_to_v23(self) -> None:
+        """[pisuan-custom] v23：实体分类字典表（建表 + 播种六分类）。
+
+        分类此前从实体 category 字段派生、中文名与顺序写死在代码里，导致空分类不可建、
+        顺序不可调，泛化 prompt 又按字母序截断，业务主力分类被整类挤出。v23 起分类是
+        独立字典（code/name_cn/sort_order/is_active），实体表仍保留 category 存储值。
+        幂等：create_all 只补新表；播种逐条 NOT EXISTS，可重复执行。
+        """
+        self._check_initialized()
+        async with self.async_engine.begin() as conn:
+            version = await conn.scalar(
+                text(f"SELECT version FROM {SCHEMA_VERSION_TABLE} WHERE domain = 'business' FOR UPDATE")
+            )
+            if version == 23:
+                return
+            if version not in (None, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22):
+                raise RuntimeError(f"Unsupported business schema version: {version}")
+            await conn.run_sync(
+                lambda sync_conn: DomainEntityBase.metadata.create_all(
+                    sync_conn, tables=[DomainEntityCategory.__table__]
+                )
+            )
+            for code, name_cn, description, sort_order in DEFAULT_ENTITY_CATEGORIES:
+                await conn.execute(
+                    text(
+                        """
+                        INSERT INTO domain_entity_categories
+                            (code, name_cn, description, sort_order, is_active, created_at, updated_at)
+                        VALUES (:code, :name_cn, :description, :sort_order, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        ON CONFLICT (code) DO NOTHING
+                        """
+                    ),
+                    {"code": code, "name_cn": name_cn, "description": description, "sort_order": sort_order},
+                )
+            await conn.execute(
+                text(f"""
+                    INSERT INTO {SCHEMA_VERSION_TABLE} (domain, version, applied_at)
+                    VALUES ('business', 23, CURRENT_TIMESTAMP)
+                    ON CONFLICT (domain) DO UPDATE SET version = 23, applied_at = EXCLUDED.applied_at
                 """)
             )
 
@@ -2258,6 +2305,16 @@ class PostgresManager(metaclass=SingletonMeta):
             "CREATE INDEX IF NOT EXISTS idx_des_entity_key ON domain_entity_schemas(entity_key)",
             "CREATE INDEX IF NOT EXISTS idx_des_category ON domain_entity_schemas(category)",
             "CREATE INDEX IF NOT EXISTS idx_des_domain_code ON domain_entity_schemas(domain_code)",
+            # 实体分类字典（树序与泛化 prompt 截断序的唯一来源；种子见 upgrade_business_v22_to_v23）
+            "CREATE TABLE IF NOT EXISTS domain_entity_categories ("
+            "    code VARCHAR(64) PRIMARY KEY,"
+            "    name_cn VARCHAR(128) NOT NULL,"
+            "    description TEXT DEFAULT '',"
+            "    sort_order INTEGER NOT NULL DEFAULT 0,"
+            "    is_active BOOLEAN NOT NULL DEFAULT TRUE,"
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+            ")",
             # Report Types 字典表
             "CREATE TABLE IF NOT EXISTS report_types ("
             "    code VARCHAR(64) PRIMARY KEY,"

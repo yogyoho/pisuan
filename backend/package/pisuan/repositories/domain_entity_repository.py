@@ -3,7 +3,7 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from pisuan.repositories.domain_factory_repository import GENERAL_DOMAIN_CODE
 from pisuan.storage.postgres.manager import pg_manager
@@ -39,6 +39,17 @@ class DomainEntityRepository:
                 query = query.where(DomainEntitySchema.domain_code == domain_code)
             result = await session.execute(query)
             return len(result.scalars().all())
+
+    async def counts_by_category(self, domain_code: str | None = None) -> dict[str, int]:
+        """一次分组取各分类实体数（分类管理/树渲染用）。"""
+        async with pg_manager.get_async_session_context() as session:
+            query = select(DomainEntitySchema.category, func.count(DomainEntitySchema.entity_id)).group_by(
+                DomainEntitySchema.category
+            )
+            if domain_code:
+                query = query.where(DomainEntitySchema.domain_code == domain_code)
+            result = await session.execute(query)
+            return {row[0]: int(row[1]) for row in result.all()}
 
     # ========== CRUD ==========
 
@@ -183,74 +194,10 @@ class DomainEntityRepository:
         return count
 
     async def export_all(self, domain_code: str | None = None) -> dict[str, Any]:
+        """导出实体配置（taxonomy 由 service 从分类字典统一渲染，这里不再复制映射）。"""
         entities = await self.list_all(domain_code=domain_code)
-        categories = await self.list_distinct_categories(domain_code)
-
-        domain_mappings = {
-            "project_basic": {
-                "domain_id": "project_basic",
-                "domain_name": "基础工程实体",
-                "domain_key": "ProjectBasic",
-                "description": "定义'谁在建'、'建什么'、'怎么建'",
-            },
-            "natural_env": {
-                "domain_id": "natural_env",
-                "domain_name": "自然环境实体",
-                "domain_key": "NaturalEnv",
-                "description": "定义自然环境要素",
-            },
-            "env_quality": {
-                "domain_id": "env_quality",
-                "domain_name": "环境质量与污染源实体",
-                "domain_key": "EnvQuality",
-                "description": "定义环境质量与污染源",
-            },
-            "sensitive_target": {
-                "domain_id": "sensitive_target",
-                "domain_name": "敏感目标与空间实体",
-                "domain_key": "SensitiveTarget",
-                "description": "定义'在哪建'、'周围有什么'",
-            },
-            "measures_regulation": {
-                "domain_id": "measures_regulation",
-                "domain_name": "措施与法规实体",
-                "domain_key": "MeasuresRegulation",
-                "description": "定义'怎么办'、'依据什么'",
-            },
-            "impact_assessment": {
-                "domain_id": "impact_assessment",
-                "domain_name": "环境影响评价实体",
-                "domain_key": "ImpactAssessment",
-                "description": "定义'产生什么问题'、'后果如何'",
-            },
-        }
-
-        domains = []
-        for cat in categories:
-            info = domain_mappings.get(cat, {
-                "domain_id": cat.lower().replace(" ", "_"),
-                "domain_name": cat,
-                "domain_key": cat.replace(" ", ""),
-                "description": cat,
-            })
-            domains.append({
-                "domain_id": info["domain_id"],
-                "domain_name": info["domain_name"],
-                "domain_key": info["domain_key"],
-                "description": info["description"],
-                "categories": [{
-                    "category_id": f"{info['domain_id']}_category",
-                    "category_name": cat,
-                    "category_key": cat.replace(" ", "").replace("与", "And"),
-                    "description": f"{cat}分类",
-                }],
-            })
-
-        entity_map = {e["entity_id"]: e for e in entities}
-
         return {
-            "taxonomy": {"domains": domains},
-            "entity_schemas": entity_map,
+            "entity_schemas": {e["entity_id"]: e for e in entities},
             "version": "1.0.0",
         }
 
