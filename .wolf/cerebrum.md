@@ -2928,3 +2928,17 @@
 ### DNR
 - **不要在 localized 提交前跳过 overlay 核对**：`git status` 里那些"不是我改的"文件如果与本次批次文件重叠，先拆提交（前向同步另立提交）再提交语义批次。
 - **不要用 `git add -A` / 目录级 add 提交本仓库**：工作区常驻多批未提交 overlay，只 stage 明确路径，docs 用 `-f`。
+
+## Key Learnings + DNR（2026-11-15 实体软删 v24 + 乐观锁）
+
+- **软删的“键占位”是语义选择，不是副作用**：`entity_key` 唯一约束对回收站行同样生效。好处是删除的实体定义不会被“同名不同意图”的新实体静默顶替；代价是**所有创建入口**（create/clone/import/AI 提案）都必须显式识别回收站键并给出「在回收站中，请先恢复或彻底删除」，否则用户只会看到 500 唯一约束。`upsert_all` 对齐表包含回收站行，调用方必须先拒绝。
+- **乐观锁的比对必须与 `FOR UPDATE` 同一事务**：先在锁内 `format_utc_datetime(entity.updated_at)` 取当前版本，再与 `expected_updated_at` 比较，不一致抛领域异常 `EntityVersionConflict`；路由层映射为 409 + `{code, message}`。不带 `expected_updated_at` 的旧调用保持无锁语义，脚本不受影响。
+- **`require_current_schema()` 要求版本严格相等**：只改 `BUSINESS_SCHEMA_VERSION` 不跑 `docker compose run --rm storage-migrator`，api 会启动即崩并打印 `business=23 (required 24)`，容器随后可能进入 defunct reload 子进程状态（日志停住、HTTP 请求挂起）。处置：跑迁移器 → `docker exec … sh -c "touch /app/package/pisuan/storage_migration.py"` 触发 reload。
+- **HTTP 探针在 reload 窗口内会假超时**：raw TCP 连 5050 秒通、应用也记录到请求，但 httpx 等在启动阻塞期读超时。判定服务是否可用看 `/api/system/ready` 与容器 healthcheck，别把一次 ReadTimeout 当成端口楔死。
+- **属性级不做墓碑是有意的**：属性存在实体 JSON 里，单独软删会造出“已删属性随导出/导入/抽取流转”的幽灵数据；退路是草稿撤销条 + 实体级回收站。
+- **撤销条要在草稿整体替换时失效**：只 watch `entityKey` 不够——保存后 `load()` 用服务端结果替换 draft（entityKey 不变），撤销条会残留成“看似还能找回、实则已落库删除”。watch `properties` 模型引用（父级换新数组才触发）即可覆盖保存后重载、取消与换实体。
+
+### DNR
+- **不要在删除路径上直接 `session.delete`**：对外删除一律 `soft_delete`，`purge` 必须是显式的第二个动作且只接受回收站行；脚本/测试的收尾清理要“先软删再彻底删除”，否则回收站同键行会挡住后续创建。
+- **不要给 `get_by_key` / `get_by_id_or_key` 默认 `include_deleted=True`**：默认必须是活跃视图，回收站语义只在回收站端点、restore/purge 与键占位检查里显式打开。
+- **不要把 409 冲突做成静默 force**：冲突弹窗必须由人选择“覆盖保存 / 重新加载”，`force` 只能来自用户点击。

@@ -3,6 +3,7 @@
 覆盖：按 entity_key 对齐（跨环境 entity_id 不同）、无 entity_id 可创建、
 异域/缺键/缺名/文件内重复拒绝、dry_run 不写库、值类型归一、有更新才重映射。
 """
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock
@@ -15,12 +16,16 @@ pytestmark = pytest.mark.asyncio
 
 
 class _FakeRepo:
-    def __init__(self, existing=()):
+    def __init__(self, existing=(), trashed=()):
         self.existing = list(existing)
+        self.trashed = list(trashed)
         self.written: list[dict] = []
 
     async def list_all(self, domain_code=None, category=None):
         return self.existing
+
+    async def list_deleted(self, domain_code=None):
+        return self.trashed
 
     async def upsert_all(self, entities):
         self.written.extend(entities)
@@ -133,3 +138,13 @@ async def test_import_remaps_only_when_some_entity_updated():
     repo.existing = [{"entity_id": "env-a", "entity_key": "noise_equipment"}]
     await service.import_all(_config(_entity()))
     service._remap_waiting_review_tasks.assert_awaited_once()
+
+
+async def test_import_rejects_key_living_in_trash():
+    """回收站里的键仍占位：导入既不能当新增，也不能静默改写一条看不见的实体。"""
+    repo = _FakeRepo(trashed=[{"entity_id": "env-a", "entity_key": "noise_equipment"}])
+    result = await _service(repo).import_all(_config(_entity()))
+
+    assert (result["created"], result["updated"]) == (0, 0)
+    assert repo.written == []
+    assert "回收站" in result["rejected"][0]["reason"]

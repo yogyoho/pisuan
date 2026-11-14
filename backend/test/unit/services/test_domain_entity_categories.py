@@ -82,7 +82,7 @@ class _FakeEntityRepo:
     async def count_by_category(self, category: str, domain_code=None):
         return sum(1 for entity in self.entities if entity["category"] == category)
 
-    async def get_by_key(self, entity_key: str, domain_code=None):
+    async def get_by_key(self, entity_key: str, domain_code=None, include_deleted=False):
         return None
 
     async def create(self, data: dict):

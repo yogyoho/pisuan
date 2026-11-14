@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 import { domainEntityBuilderApi } from '@/apis/domain_entity_builder_api'
 
 // 去领域化：本页固定通用域作用域，避免多域数据串台
@@ -181,6 +181,11 @@ export function useEntitySchemas() {
   const draft = ref(null) // 编辑中的副本
   const baselineJson = ref('')
 
+  // 回收站：软删实体与数量（数量跟着列表响应走，抽屉内容按需加载）
+  const trash = ref([])
+  const trashTotal = ref(0)
+  const trashLoading = ref(false)
+
   // 引用影响面（模板/待审核任务/报告参数/区域事实），按当前选中实体加载
   const usage = ref(null)
   const usageLoading = ref(false)
@@ -352,7 +357,10 @@ export function useEntitySchemas() {
         domainEntityBuilderApi.listCategories()
       ])
       if (taxRes.success) taxonomy.value = taxRes.data
-      if (schemasRes.success) schemas.value = schemasRes.data.entity_schemas || []
+      if (schemasRes.success) {
+        schemas.value = schemasRes.data.entity_schemas || []
+        trashTotal.value = schemasRes.data.trash_total || 0
+      }
       if (categoriesRes.success) categories.value = categoriesRes.data || []
       if (preserveDraft && draft.value) {
         const currentId = draft.value.entity_id
@@ -370,7 +378,29 @@ export function useEntitySchemas() {
     }
   }
 
-  const save = async () => {
+  const isVersionConflict = (e) => e?.response?.data?.detail?.code === 'ENTITY_VERSION_CONFLICT'
+
+  /** 并发保存冲突：由人选择覆盖（force）或重新加载，绝不静默覆盖。 */
+  const resolveVersionConflict = (e) =>
+    new Promise((resolve) => {
+      Modal.confirm({
+        title: '实体已被他人保存',
+        content: `${e?.message || '你的编辑基于旧版本'}。覆盖保存会用当前编辑内容顶掉对方的修改；重新加载会丢弃本次编辑。`,
+        okText: '覆盖保存',
+        cancelText: '重新加载',
+        okButtonProps: { danger: true },
+        onOk: async () => {
+          await save({ force: true })
+          resolve()
+        },
+        onCancel: async () => {
+          await load({ entityKey: draft.value?.entity_key })
+          resolve()
+        }
+      })
+    })
+
+  const save = async ({ force = false } = {}) => {
     const invalid = validateEntityDraft(draft.value)
     if (invalid) {
       message.error(invalid)
@@ -386,7 +416,12 @@ export function useEntitySchemas() {
         value_type: normalizeValueType(prop.value_type)
       }))
       if (draft.value.entity_id) {
-        await domainEntityBuilderApi.updateEntitySchema(draft.value.entity_id, draft.value)
+        await domainEntityBuilderApi.updateEntitySchema(draft.value.entity_id, {
+          ...draft.value,
+          // 乐观锁：带回加载时的版本，不一致时后端 409（force 表示已确认覆盖）
+          expected_updated_at: draft.value.updated_at || null,
+          force
+        })
         message.success('实体更新成功')
       } else {
         await domainEntityBuilderApi.createEntitySchema(draft.value)
@@ -394,6 +429,10 @@ export function useEntitySchemas() {
       }
       await load({ entityKey: draft.value.entity_key }) // 保存后保持选中，同时把基线置净
     } catch (e) {
+      if (isVersionConflict(e)) {
+        await resolveVersionConflict(e)
+        return
+      }
       console.error('保存失败', e)
       message.error(e?.message || '保存失败')
     } finally {
@@ -401,10 +440,51 @@ export function useEntitySchemas() {
     }
   }
 
+  // ---- 回收站 ----
+  const loadTrash = async () => {
+    trashLoading.value = true
+    try {
+      const res = await domainEntityBuilderApi.listTrashEntities(DOMAIN_CODE)
+      if (res.success) {
+        trash.value = res.data.entities || []
+        trashTotal.value = res.data.total ?? trash.value.length
+      }
+    } catch (e) {
+      console.error('加载回收站失败', e)
+      message.error(e?.message || '加载回收站失败')
+    } finally {
+      trashLoading.value = false
+    }
+  }
+
+  const restoreEntity = async (entityId) => {
+    try {
+      await domainEntityBuilderApi.restoreEntitySchema(entityId)
+      message.success('实体已恢复')
+      await loadTrash()
+      await load({ preserveDraft: true })
+    } catch (e) {
+      console.error('恢复失败', e)
+      message.error(e?.message || '恢复失败')
+    }
+  }
+
+  const purgeEntity = async (entityId) => {
+    try {
+      await domainEntityBuilderApi.purgeEntitySchema(entityId)
+      message.success('实体已彻底删除')
+      await loadTrash()
+      await load({ preserveDraft: true })
+    } catch (e) {
+      console.error('彻底删除失败', e)
+      message.error(e?.message || '彻底删除失败')
+    }
+  }
+
   const removeEntity = async (entityId) => {
     try {
       await domainEntityBuilderApi.deleteEntitySchema(entityId)
-      message.success('实体已删除')
+      message.success('实体已移入回收站，可在回收站恢复')
       if (selectedEntity.value?.entity_id === entityId) clearSelection()
       await load({ preserveDraft: true })
     } catch (e) {
@@ -535,6 +615,12 @@ export function useEntitySchemas() {
     selectedEntity,
     draft,
     isDirty,
+    trash,
+    trashTotal,
+    trashLoading,
+    loadTrash,
+    restoreEntity,
+    purgeEntity,
     usage,
     usageLoading,
     usageError,

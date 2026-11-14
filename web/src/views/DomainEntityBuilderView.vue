@@ -2,12 +2,13 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
-import { Bot, Box, Download, FileText, Inbox, Layers, Plus, Upload } from '@lucide/vue'
+import { Bot, Box, Download, FileText, Inbox, Layers, Plus, Trash2, Upload } from '@lucide/vue'
 import { useEntitySchemas } from '@/composables/useEntitySchemas'
 import CategoryManager from '@/components/domain-factory/entity/CategoryManager.vue'
 import EntityEditor from '@/components/domain-factory/entity/EntityEditor.vue'
 import EntityExtractWizard from '@/components/domain-factory/entity/EntityExtractWizard.vue'
 import EntityJsonModal from '@/components/domain-factory/entity/EntityJsonModal.vue'
+import EntityTrashDrawer from '@/components/domain-factory/entity/EntityTrashDrawer.vue'
 import EntityTree from '@/components/domain-factory/entity/EntityTree.vue'
 
 const route = useRoute()
@@ -22,6 +23,12 @@ const {
   selectedEntity,
   draft,
   isDirty,
+  trash,
+  trashTotal,
+  trashLoading,
+  loadTrash,
+  restoreEntity,
+  purgeEntity,
   usage,
   usageLoading,
   usageError,
@@ -57,6 +64,7 @@ const cloneNewKey = ref('')
 const cloneNewName = ref('')
 const extractVisible = ref(false)
 const categoryManagerVisible = ref(false)
+const trashDrawerVisible = ref(false)
 const pendingEntityKey = ref(null)
 
 // ---- 脏状态守卫：切换实体/新建/克隆/导入/离开页面统一先确认 ----
@@ -138,9 +146,9 @@ const confirmDelete = async (entity) => {
   Modal.confirm({
     title: `删除实体「${entity.name_cn || entity.entity_key}」？`,
     content: hits.length
-      ? `当前被引用：${hits.join('、')}。删除后这些引用会变成悬空字符串，存量模板与待审核任务无法再定位该实体，且不可恢复。`
-      : '该实体当前没有任何引用，删除后不可恢复。',
-    okText: '删除',
+      ? `当前被引用：${hits.join('、')}。移入回收站后这些引用会变成悬空字符串，存量模板与待审核任务无法再定位该实体；需要时可在「回收站」恢复。`
+      : '该实体当前没有任何引用。删除后进入「回收站」，可随时恢复。',
+    okText: '移入回收站',
     cancelText: '取消',
     okButtonProps: { danger: true },
     onOk: () => removeEntity(entity.entity_id)
@@ -279,6 +287,13 @@ watch(
         <button class="btn btn-sec" @click="categoryManagerVisible = true">
           <Layers :size="14" /> 分类管理
         </button>
+        <button
+          class="btn btn-sec"
+          :title="trashTotal ? `回收站里有 ${trashTotal} 个实体` : '回收站是空的'"
+          @click="trashDrawerVisible = true"
+        >
+          <Trash2 :size="14" /> 回收站{{ trashTotal ? ` (${trashTotal})` : '' }}
+        </button>
         <button class="btn btn-sec" @click="exportConfig"><Download :size="14" /> 导出</button>
         <button class="btn btn-sec" @click="handleImport"><Upload :size="14" /> 导入</button>
         <button class="btn btn-sec" @click="extractVisible = true">
@@ -386,6 +401,15 @@ watch(
       v-model:open="categoryManagerVisible"
       :categories="categories"
       @changed="load({ preserveDraft: true })"
+    />
+    <EntityTrashDrawer
+      v-model:open="trashDrawerVisible"
+      :trash="trash"
+      :loading="trashLoading"
+      :categories="categories"
+      @open="loadTrash"
+      @restore="restoreEntity"
+      @purge="purgeEntity"
     />
   </div>
 </template>

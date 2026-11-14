@@ -12150,5 +12150,59 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-11-15T01:05:37.000Z"
+  },
+  {
+    "id": "bug-4271",
+    "timestamp": "2026-11-15T01:40:00.000Z",
+    "error_message": "api 容器起不来：Database schema migration is incomplete or incompatible: business=23 (required 24)；随后 uvicorn reload 子进程变 <defunct>，容器 health 一直不 healthy，容器内 httpx 请求 /api/system/ready 读超时",
+    "file": "backend/package/pisuan/storage/postgres/manager.py",
+    "root_cause": "只改了 BUSINESS_SCHEMA_VERSION=24 没有跑迁移器，require_current_schema() 要求版本严格相等；启动失败后 --reload 的 reloader 没能拉起新的 worker，旧 worker 变 defunct（日志停在崩溃前，HTTP 全部挂起）",
+    "fix": "docker compose run --rm storage-migrator 升到 business=24 并核对 deleted_at 列；再 docker exec api-1 sh -c 'touch /app/package/pisuan/storage_migration.py' 触发 WatchFiles reload，之后 /api/system/ready 200、容器恢复 healthy",
+    "tags": [
+      "schema-migration",
+      "v24",
+      "reload",
+      "defunct",
+      "startup"
+    ],
+    "related_bugs": [
+      "bug-4268"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-15T01:30:00.000Z"
+  },
+  {
+    "id": "bug-4272",
+    "timestamp": "2026-11-15T01:33:00.000Z",
+    "error_message": "集成测试断言失败：克隆到回收站键期望 detail 含「回收站」，实际是「实体 it_entity_builder_probe 不存在」",
+    "file": "backend/test/integration/api/test_domain_entity_builder_api.py",
+    "root_cause": "测试设计错误：源实体本身已被软删，clone_entity 先按活跃视图查源→查不到→报不存在；「回收站键占位」约束的是目标键，不是源",
+    "fix": "先建一个活跃源实体 it_entity_builder_probe_src，再从它克隆到回收站里的 PROBE_KEY，断言 400 + 「回收站」，收尾软删+purge 源实体",
+    "tags": [
+      "integration-test",
+      "soft-delete",
+      "clone",
+      "test-design"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-15T01:33:00.000Z"
+  },
+  {
+    "id": "bug-4273",
+    "timestamp": "2026-11-15T01:38:00.000Z",
+    "error_message": "属性删除后的撤销条在保存实体后仍然停留（草稿已按服务端结果重载，属性已真正落库删除，撤销条却还在）",
+    "file": "web/src/components/domain-factory/entity/PropertyTable.vue",
+    "root_cause": "lastRemoved 只在 watch(→props.entityKey) 时清空；保存后 load() 用服务端数据替换 draft，entityKey 不变，因而不会触发清空",
+    "fix": "改为 watch([() => props.entityKey, properties], ...)：properties 是 defineModel 引用，父级整体换新数组（保存后重载、取消、换实体）才触发，本组件就地 splice/push 不触发",
+    "tags": [
+      "vue",
+      "undo-bar",
+      "soft-delete",
+      "browser-e2e"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-15T01:38:00.000Z"
   }
 ]

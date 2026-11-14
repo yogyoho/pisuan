@@ -101,9 +101,13 @@ CREATE TABLE IF NOT EXISTS domain_entity_schemas (
     properties JSONB NOT NULL DEFAULT '[]',
     relation_rules JSONB NOT NULL DEFAULT '[]',
     extra_meta JSONB DEFAULT '{}',
+    deleted_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE IF EXISTS domain_entity_schemas ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
+-- v24：deleted_at 非空即该实体在回收站（所有对外读取过滤 deleted_at IS NULL，
+-- entity_key 仍被占用，避免同名重建让存量 entity_ref 指向另一套定义）
 CREATE INDEX IF NOT EXISTS idx_des_entity_key ON domain_entity_schemas(entity_key);
 CREATE INDEX IF NOT EXISTS idx_des_category ON domain_entity_schemas(category);
 CREATE INDEX IF NOT EXISTS idx_des_domain_code ON domain_entity_schemas(domain_code);

@@ -29,6 +29,7 @@ class FakeEntity:
         self.name_cn = entity_key
         self.category = category
         self.properties = properties or []
+        self.deleted_at = None
 
     def to_dict(self):
         return {
@@ -52,7 +53,7 @@ class FakeRepo:
                 return entity
         return None
 
-    async def get_by_key(self, key):
+    async def get_by_key(self, key, include_deleted=False):
         return self.entities.get(key)
 
     async def create(self, data):
@@ -99,11 +100,10 @@ def row(entity: FakeEntity) -> dict:
 # 比对矩阵
 # ------------------------------------------------------------------
 
+
 def test_compare_all_keys_defined_is_matched(service):
     existing = FakeEntity("e1", "coal_mine", [{"key": "capacity", "name_cn": "产能"}])
-    extracted = [
-        {"schema_ref": "coal_mine", "values": {"capacity": 120}, "extracted_text": "产能 120 万吨"}
-    ]
+    extracted = [{"schema_ref": "coal_mine", "values": {"capacity": 120}, "extracted_text": "产能 120 万吨"}]
     result = service._compare_extracted_with_entities(extracted, [row(existing)], ALLOWED_CATEGORIES)
 
     assert result[0]["_status"] == "matched"
@@ -113,9 +113,7 @@ def test_compare_all_keys_defined_is_matched(service):
 
 def test_compare_new_keys_is_partial(service):
     existing = FakeEntity("e1", "coal_mine", [{"key": "capacity", "name_cn": "产能"}])
-    extracted = [
-        {"schema_ref": "coal_mine", "values": {"capacity": 120, "dust_control": "洒水"}}
-    ]
+    extracted = [{"schema_ref": "coal_mine", "values": {"capacity": 120, "dust_control": "洒水"}}]
     result = service._compare_extracted_with_entities(extracted, [row(existing)], ALLOWED_CATEGORIES)
 
     assert result[0]["_status"] == "partial"
@@ -180,6 +178,7 @@ def test_compare_explicit_proposal_is_clean(service):
 # ------------------------------------------------------------------
 # 保存
 # ------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_save_rejects_ungrounded_item(service):
@@ -274,6 +273,7 @@ async def test_save_new_with_problems_is_rejected(service):
 # 校验
 # ------------------------------------------------------------------
 
+
 def test_value_type_rejects_unknown():
     with pytest.raises(ValueError, match="未知值类型"):
         DomainEntityService.normalize_value_type("Money")
@@ -286,9 +286,7 @@ def test_value_type_maps_legacy_alias():
 
 def test_duplicate_property_key_rejected():
     with pytest.raises(ValueError, match="重复"):
-        DomainEntityService.normalize_properties(
-            [{"key": "capacity"}, {"key": "Capacity"}]
-        )
+        DomainEntityService.normalize_properties([{"key": "capacity"}, {"key": "Capacity"}])
 
 
 def test_property_key_with_dot_rejected():

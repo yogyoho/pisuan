@@ -3,6 +3,7 @@
 注意：entity_type_router.py 是内存 STUB（重启丢数据），真实实体 API 在本 router。
 覆盖只读端点 + 鉴权门控 + 写入校验（P0：键/值类型/重复属性/改名 400）。
 """
+
 from __future__ import annotations
 
 import pytest
@@ -26,8 +27,10 @@ def _probe_payload(**overrides) -> dict:
 
 
 async def _delete_probe(test_client, admin_headers) -> None:
-    # 清理可能存在的探针（上一次失败运行残留），不存在时 404 可忽略
+    # 清理可能存在的探针（上一次失败运行残留），不存在时 404 可忽略。
+    # 删除是软删：必须再彻底删除，否则回收站里的同键行会挡住下一次创建。
     await test_client.delete(f"{BASE}/entities/{PROBE_KEY}", headers=admin_headers)
+    await test_client.delete(f"{BASE}/entities/{PROBE_KEY}/purge", headers=admin_headers)
 
 
 async def test_list_domains_admin_ok(test_client, admin_headers):
@@ -70,9 +73,7 @@ async def test_create_entity_rejects_key_with_dot(test_client, admin_headers):
 
 
 async def test_create_entity_rejects_unknown_value_type(test_client, admin_headers):
-    res = await test_client.post(
-        f"{BASE}/entities", json=_probe_payload(value_type="Money"), headers=admin_headers
-    )
+    res = await test_client.post(f"{BASE}/entities", json=_probe_payload(value_type="Money"), headers=admin_headers)
     assert res.status_code == 400, res.text
     assert "未知值类型" in res.json()["detail"]
 
@@ -185,7 +186,9 @@ def _import_entity(**overrides) -> dict:
 
 
 async def _delete_import_probe(test_client, admin_headers) -> None:
+    # 软删后彻底删除，避免回收站残留挡住下一次导入
     await test_client.delete(f"{BASE}/entities/{IMPORT_KEY}", headers=admin_headers)
+    await test_client.delete(f"{BASE}/entities/{IMPORT_KEY}/purge", headers=admin_headers)
 
 
 async def test_import_dry_run_reports_without_writing(test_client, admin_headers):
@@ -214,9 +217,7 @@ async def test_import_matches_entity_key_across_env(test_client, admin_headers):
         second = await test_client.post(
             f"{BASE}/import",
             json={
-                "entity_schemas": {
-                    "env-b": _import_entity(entity_id="env-b-import", name_cn="导入探针实体（改名）")
-                }
+                "entity_schemas": {"env-b": _import_entity(entity_id="env-b-import", name_cn="导入探针实体（改名）")}
             },
             headers=admin_headers,
         )
@@ -254,7 +255,9 @@ PROBE_CATEGORY_ENTITY = "it_category_probe_entity"
 
 
 async def _cleanup_category_probe(test_client, admin_headers) -> None:
+    # 分类删除保护只看活跃实体：探针要先彻底删除再删分类
     await test_client.delete(f"{BASE}/entities/{PROBE_CATEGORY_ENTITY}", headers=admin_headers)
+    await test_client.delete(f"{BASE}/entities/{PROBE_CATEGORY_ENTITY}/purge", headers=admin_headers)
     await test_client.delete(f"{BASE}/categories/{PROBE_CATEGORY}", headers=admin_headers)
 
 
@@ -373,3 +376,119 @@ async def test_import_round_trip_of_exported_config(test_client, admin_headers):
     assert body["rejected"] == []
     assert body["created"] == 0
     assert body["updated"] == len(config["entity_schemas"])
+
+
+# ========== 软删 / 回收站 / 乐观锁（v24） ==========
+
+
+async def test_delete_moves_entity_to_trash_and_restore_returns_it(test_client, admin_headers):
+    await _delete_probe(test_client, admin_headers)
+    try:
+        created = await test_client.post(f"{BASE}/entities", json=_probe_payload(), headers=admin_headers)
+        assert created.status_code == 200, created.text
+
+        deleted = await test_client.delete(f"{BASE}/entities/{PROBE_KEY}", headers=admin_headers)
+        assert deleted.status_code == 200, deleted.text
+
+        # 活跃视图看不到；回收站能看到并计入 trash_total
+        detail = await test_client.get(f"{BASE}/entities/{PROBE_KEY}", headers=admin_headers)
+        assert detail.status_code == 404, detail.text
+        listed = (await test_client.get(f"{BASE}/entities", headers=admin_headers)).json()["data"]
+        assert PROBE_KEY not in {row["entity_key"] for row in listed["entity_schemas"]}
+        assert listed["trash_total"] >= 1
+        trash = (await test_client.get(f"{BASE}/entities/trash", headers=admin_headers)).json()["data"]
+        assert PROBE_KEY in {row["entity_key"] for row in trash["entities"]}
+
+        # 回收站键占位：同名新建与「克隆到该键」都被明确拒绝（不是撞唯一约束的 500）
+        again = await test_client.post(f"{BASE}/entities", json=_probe_payload(), headers=admin_headers)
+        assert again.status_code == 400, again.text
+        assert "回收站" in again.json()["detail"]
+        src_key = f"{PROBE_KEY}_src"
+        src = await test_client.post(
+            f"{BASE}/entities",
+            json=_probe_payload(entity_key=src_key, name_cn="探针克隆源"),
+            headers=admin_headers,
+        )
+        assert src.status_code == 200, src.text
+        cloned = await test_client.post(
+            f"{BASE}/entities/{src_key}/clone",
+            json={"entity_key": PROBE_KEY, "name_cn": "探针副本"},
+            headers=admin_headers,
+        )
+        assert cloned.status_code == 400, cloned.text
+        assert "回收站" in cloned.json()["detail"]
+        await test_client.delete(f"{BASE}/entities/{src_key}", headers=admin_headers)
+        await test_client.delete(f"{BASE}/entities/{src_key}/purge", headers=admin_headers)
+
+        restored = await test_client.post(f"{BASE}/entities/{PROBE_KEY}/restore", headers=admin_headers)
+        assert restored.status_code == 200, restored.text
+        assert restored.json()["data"]["deleted_at"] is None
+        back = await test_client.get(f"{BASE}/entities/{PROBE_KEY}", headers=admin_headers)
+        assert back.status_code == 200, back.text
+    finally:
+        await _delete_probe(test_client, admin_headers)
+
+
+async def test_purge_requires_trash_and_frees_the_entity_key(test_client, admin_headers):
+    await _delete_probe(test_client, admin_headers)
+    created = await test_client.post(f"{BASE}/entities", json=_probe_payload(), headers=admin_headers)
+    assert created.status_code == 200, created.text
+    try:
+        # 活跃实体不能直接彻底删除
+        refused = await test_client.delete(f"{BASE}/entities/{PROBE_KEY}/purge", headers=admin_headers)
+        assert refused.status_code == 404, refused.text
+        assert "不在回收站" in refused.json()["detail"]
+
+        await test_client.delete(f"{BASE}/entities/{PROBE_KEY}", headers=admin_headers)
+        purged = await test_client.delete(f"{BASE}/entities/{PROBE_KEY}/purge", headers=admin_headers)
+        assert purged.status_code == 200, purged.text
+        trash = (await test_client.get(f"{BASE}/entities/trash", headers=admin_headers)).json()["data"]
+        assert PROBE_KEY not in {row["entity_key"] for row in trash["entities"]}
+
+        # 彻底删除后键被释放，可以重建同名实体
+        rebuilt = await test_client.post(f"{BASE}/entities", json=_probe_payload(), headers=admin_headers)
+        assert rebuilt.status_code == 200, rebuilt.text
+    finally:
+        await _delete_probe(test_client, admin_headers)
+
+
+async def test_stale_updated_at_returns_409_and_force_overwrites(test_client, admin_headers):
+    await _delete_probe(test_client, admin_headers)
+    try:
+        created = await test_client.post(f"{BASE}/entities", json=_probe_payload(), headers=admin_headers)
+        assert created.status_code == 200, created.text
+        version = created.json()["data"]["updated_at"]
+        assert version
+
+        first = await test_client.put(
+            f"{BASE}/entities/{PROBE_KEY}",
+            json={**_probe_payload(name_cn="探针（甲改）"), "expected_updated_at": version},
+            headers=admin_headers,
+        )
+        assert first.status_code == 200, first.text
+
+        # 另一人拿着旧版本保存 → 409 且带业务码，而不是静默覆盖
+        stale = await test_client.put(
+            f"{BASE}/entities/{PROBE_KEY}",
+            json={**_probe_payload(name_cn="探针（乙改）"), "expected_updated_at": version},
+            headers=admin_headers,
+        )
+        assert stale.status_code == 409, stale.text
+        detail = stale.json()["detail"]
+        assert detail["code"] == "ENTITY_VERSION_CONFLICT"
+        assert detail["message"]
+
+        # 确认覆盖（force）成功，名字按乙方意图落库
+        forced = await test_client.put(
+            f"{BASE}/entities/{PROBE_KEY}",
+            json={
+                **_probe_payload(name_cn="探针（乙改）"),
+                "expected_updated_at": version,
+                "force": True,
+            },
+            headers=admin_headers,
+        )
+        assert forced.status_code == 200, forced.text
+        assert forced.json()["data"]["name_cn"] == "探针（乙改）"
+    finally:
+        await _delete_probe(test_client, admin_headers)

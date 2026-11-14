@@ -213,9 +213,7 @@ async def main() -> int:
                     "category": "其他",  # 非 B 类：不级联区域事实，保持本脚本单一变量
                     "description": "E2E remap 验证实体，验证后删除",
                     "value_type": "Numeric",
-                    "properties": [
-                        {"key": "probe_metric", "name_cn": SLOT_NAME, "value_type": "Numeric"}
-                    ],
+                    "properties": [{"key": "probe_metric", "name_cn": SLOT_NAME, "value_type": "Numeric"}],
                     "synonyms": [],
                     "_confirmed": True,
                 }
@@ -250,7 +248,9 @@ async def main() -> int:
         )
 
         # 顺带记录跨任务 remap 的真实影响面（不改动其它任务，finally 还原）
-        print(f"\n[观察] 本次 confirm 的跨任务 remap={conf.get('remapped')}（同域 WAITING_REVIEW 任务数={len(pending_snapshot)}）")
+        print(
+            f"\n[观察] 本次 confirm 的跨任务 remap={conf.get('remapped')}（同域 WAITING_REVIEW 任务数={len(pending_snapshot)}）"
+        )
     finally:
         print("\n===== 清理 =====")
         restored = await restore_pending_tasks(pending_snapshot, skip_task_id=task_id)
@@ -261,9 +261,11 @@ async def main() -> int:
             )
             await session.execute(sa_delete(DomainFactoryTask).where(DomainFactoryTask.id == task_id))
         print(f"  删除合成任务 {task_id}")
-        ent = await entity_repo.get_by_key(ENTITY_KEY, domain_code=GENERAL_DOMAIN_CODE)
+        ent = await entity_repo.get_by_key(ENTITY_KEY, domain_code=GENERAL_DOMAIN_CODE, include_deleted=True)
         if ent is not None:
-            await entity_repo.delete(ent.entity_id)
+            # 回收站语义：探针收尾要真正清空，先软删再彻底删除
+            await entity_repo.soft_delete(ent.entity_id)
+            await entity_repo.purge(ent.entity_id)
             print(f"  删除探针实体 {ENTITY_KEY}")
         post_fp = await fingerprint()
         clean = post_fp == pre_fp

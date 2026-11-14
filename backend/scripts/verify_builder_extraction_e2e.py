@@ -153,9 +153,7 @@ async def restore_pending_tasks(snapshot: dict[str, list], skip_task_id: str) ->
 async def slot_ref(task_id: str) -> str:
     async with pg_manager.get_async_session_context() as session:
         paragraphs = (
-            await session.execute(
-                select(DomainFactoryTask.source_paragraphs).where(DomainFactoryTask.id == task_id)
-            )
+            await session.execute(select(DomainFactoryTask.source_paragraphs).where(DomainFactoryTask.id == task_id))
         ).scalar_one_or_none()
     try:
         return paragraphs[0]["template"]["slots"][0].get("entity_ref", "")
@@ -334,9 +332,13 @@ async def main() -> int:
             await session.execute(sa_delete(DomainFactoryTask).where(DomainFactoryTask.id == task_id))
         print(f"  删除合成任务 {task_id}")
         for key in (PROBE_KEY, NEW_KEY):
-            ent = await entity_repo.get_by_key(key, domain_code=GENERAL_DOMAIN_CODE) or await entity_repo.get_by_key(key)
+            ent = await entity_repo.get_by_key(
+                key, domain_code=GENERAL_DOMAIN_CODE, include_deleted=True
+            ) or await entity_repo.get_by_key(key, include_deleted=True)
             if ent is not None:
-                await entity_repo.delete(ent.entity_id)
+                # 回收站语义：探针收尾要真正清空，先软删再彻底删除
+                await entity_repo.soft_delete(ent.entity_id)
+                await entity_repo.purge(ent.entity_id)
                 print(f"  删除探针实体 {key}")
         post_fp = await fingerprint()
         clean = post_fp == pre_fp

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { Info, Plus } from '@lucide/vue'
 
@@ -101,17 +101,39 @@ const handleEditProperty = (index) => {
 }
 
 // 删除属性先看影响面：被引用时列出条数，说明保存后哪些引用会悬空
+// 「撤销条」是属性误删的退路：属性没有独立行（存在实体 JSON 里），无法后端软删，
+// 所以把删掉的那一条留在内存里，保存前可原位找回；草稿被整体替换（保存后重载、
+// 取消、切换实体）时属性数组会换成新对象，撤销条随之作废。
+const lastRemoved = ref(null)
+
+const removeProperty = (index) => {
+  const property = properties.value[index]
+  lastRemoved.value = { property, index, name: property?.name_cn || property?.key || '' }
+  properties.value.splice(index, 1)
+}
+
+const undoRemoveProperty = () => {
+  const entry = lastRemoved.value
+  if (!entry) return
+  properties.value.splice(Math.min(entry.index, properties.value.length), 0, entry.property)
+  lastRemoved.value = null
+}
+
+watch([() => props.entityKey, properties], () => {
+  lastRemoved.value = null
+})
+
 const handleRequestDeleteProperty = (record, index) => {
   const total = refCountOf(record)
   Modal.confirm({
     title: `删除属性「${record.name_cn || record.key}」？`,
     content: total
-      ? `该属性当前被引用 ${total} 处（${refBreakdownOf(usageCountsOf(record))}）。保存实体后，待审核任务里的引用会被清理，段落模板与报告参数中的旧引用会变成悬空字符串，抽取与写作会静默降质。`
-      : '该属性当前没有任何引用，删除后不可恢复（保存实体后生效）。',
+      ? `该属性当前被引用 ${total} 处（${refBreakdownOf(usageCountsOf(record))}）。保存实体后，待审核任务里的引用会被清理，段落模板与报告参数中的旧引用会变成悬空字符串，抽取与写作会静默降质。删除后可在下方撤销条找回。`
+      : '会从草稿中移除，保存实体后生效；保存前可在下方撤销条找回。',
     okText: '删除',
     cancelText: '取消',
     okButtonProps: { danger: true },
-    onOk: () => properties.value.splice(index, 1)
+    onOk: () => removeProperty(index)
   })
 }
 
@@ -182,6 +204,10 @@ const handleSaveProperty = () => {
         {{ ownCoveredCount }}/{{ ownEligibleCount }}
         进 prompt。未进的属性不会被泛化命中，可在「分类管理」里把本分类前移，或精简候选。
       </span>
+    </div>
+    <div v-if="lastRemoved" class="undo-bar">
+      <span>已从草稿中移除属性「{{ lastRemoved.name }}」，保存前可找回</span>
+      <a-button type="link" size="small" @click="undoRemoveProperty">撤销</a-button>
     </div>
     <a-table :columns="propertyColumns" :data-source="properties" :pagination="false" size="small">
       <template #bodyCell="{ column, record, index }">
@@ -344,6 +370,20 @@ const handleSaveProperty = () => {
   color: var(--gray-600);
   font-size: 12px;
   line-height: 1.7;
+}
+
+.undo-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--gray-150);
+  background: var(--gray-50);
+  color: var(--gray-600);
+  font-size: 12px;
 }
 
 .hint-cell {
