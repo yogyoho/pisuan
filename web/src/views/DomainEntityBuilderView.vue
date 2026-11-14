@@ -20,6 +20,9 @@ const {
   selectedEntity,
   draft,
   isDirty,
+  usage,
+  usageLoading,
+  usageError,
   promptCoverage,
   categoryOptions,
   treeData,
@@ -31,6 +34,7 @@ const {
   resetDraft,
   save,
   removeEntity,
+  fetchUsage,
   cloneEntity,
   exportConfig,
   importConfig
@@ -97,13 +101,49 @@ const handleCreateEntity = (domainId = null) => {
   startCreate(domain?.categories?.[0]?.category_name)
 }
 
-const handleTreeDelete = (entityId) => removeEntity(entityId)
+const handleTreeDelete = (entityId) => {
+  const entity = schemas.value.find((item) => item.entity_id === entityId)
+  if (entity) void confirmDelete(entity)
+}
 
 // ---- 编辑器操作 ----
 const handleCancel = () => resetDraft()
-const handleDelete = () => {
-  if (draft.value?.entity_id) removeEntity(draft.value.entity_id)
+
+const DELETE_IMPACT_LABELS = [
+  ['templates', '段落模板'],
+  ['pending_tasks', '待审核任务'],
+  ['report_pps', '报告参数'],
+  ['facts', '区域事实']
+]
+
+/** 删除前先取引用影响面：取不到就不删，避免在引用关系未知时误删。 */
+const confirmDelete = async (entity) => {
+  if (!entity?.entity_id) return
+  let entityUsage
+  try {
+    entityUsage = await fetchUsage(entity.entity_id)
+  } catch (e) {
+    console.error('获取引用影响面失败', e)
+    message.error(e?.message || '获取引用影响面失败，已取消删除')
+    return
+  }
+  const totals = entityUsage?.totals || {}
+  const hits = DELETE_IMPACT_LABELS.filter(([key]) => totals[key]).map(
+    ([key, label]) => `${label} ${totals[key]}`
+  )
+  Modal.confirm({
+    title: `删除实体「${entity.name_cn || entity.entity_key}」？`,
+    content: hits.length
+      ? `当前被引用：${hits.join('、')}。删除后这些引用会变成悬空字符串，存量模板与待审核任务无法再定位该实体，且不可恢复。`
+      : '该实体当前没有任何引用，删除后不可恢复。',
+    okText: '删除',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+    onOk: () => removeEntity(entity.entity_id)
+  })
 }
+
+const handleDelete = () => void confirmDelete(draft.value)
 
 const handleClone = async () => {
   if (!(await confirmDiscard())) return
@@ -246,6 +286,9 @@ watch(
           :category-options="categoryOptions"
           :entity-keys="entityKeys"
           :prompt-coverage="promptCoverage"
+          :usage="usage"
+          :usage-loading="usageLoading"
+          :usage-error="usageError"
           :saving="saving"
           @save="save"
           @cancel="handleCancel"

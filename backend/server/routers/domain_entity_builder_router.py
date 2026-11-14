@@ -105,6 +105,23 @@ async def get_entity(
         raise HTTPException(status_code=500, detail=f"获取实体失败: {e}")
 
 
+@domain_entity_builder.get("/entities/{identifier}/usage")
+async def get_entity_usage(
+    identifier: str,
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """实体引用影响面：模板/待审核任务/报告参数/区域事实的引用计数与明细"""
+    try:
+        service = get_entity_service()
+        usage = await service.get_entity_usage(identifier)
+        return {"success": True, "data": usage}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to get entity usage {identifier}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取实体引用情况失败: {e}")
+
+
 @domain_entity_builder.post("/entities")
 async def create_entity(
     payload: dict[str, Any] = Body(...),

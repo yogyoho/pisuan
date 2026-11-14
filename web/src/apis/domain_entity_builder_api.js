@@ -28,6 +28,11 @@ export const domainEntityBuilderApi = {
     return apiAdminGet(`/api/domain-entity-builder/entities/${entityId}`)
   },
 
+  // 引用影响面：模板 / 待审核任务 / 报告参数 / 区域事实
+  getEntityUsage: (entityId) => {
+    return apiAdminGet(`/api/domain-entity-builder/entities/${entityId}/usage`)
+  },
+
   createEntitySchema: (entityData) => {
     return apiAdminPost('/api/domain-entity-builder/entities', entityData)
   },

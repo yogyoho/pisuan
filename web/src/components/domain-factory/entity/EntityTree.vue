@@ -125,16 +125,13 @@ const handleDelete = (entityId) => emit('delete', entityId)
                 </template>
               </span>
               <span v-if="count != null" class="tree-node-count">({{ count }})</span>
-              <a-popconfirm
+              <!-- 删除确认统一由页面弹（含引用影响面），这里只发意图 -->
+              <Trash2
                 v-if="entity_id && !isNew"
-                title="确定删除此实体？"
-                ok-text="删除"
-                cancel-text="取消"
-                placement="right"
-                @confirm.stop="handleDelete(entity_id)"
-              >
-                <Trash2 :size="12" class="tree-delete-icon" @click.stop />
-              </a-popconfirm>
+                :size="12"
+                class="tree-delete-icon"
+                @click.stop="handleDelete(entity_id)"
+              />
             </div>
           </template>
         </a-tree>
