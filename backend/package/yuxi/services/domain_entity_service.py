@@ -238,17 +238,6 @@ class DomainEntityService:
             raise ValueError(f"实体 {identifier} 不存在")
         return await self.repo.delete(entity.entity_id)
 
-    async def delete_entities_batch(self, identifiers: list[str]) -> int:
-        """批量删除实体，返回删除数量"""
-        entity_ids = []
-        for identifier in identifiers:
-            entity = await self.repo.get_by_id_or_key(identifier)
-            if entity:
-                entity_ids.append(entity.entity_id)
-        if not entity_ids:
-            return 0
-        return await self.repo.delete_many(entity_ids)
-
     async def clone_entity(self, identifier: str, new_key: str, new_name: str) -> dict[str, Any]:
         """克隆实体"""
         entity = await self.repo.get_by_id_or_key(identifier)
@@ -465,70 +454,6 @@ class DomainEntityService:
 
     async def list_report_types(self, domain_code: str | None = None) -> list[dict[str, Any]]:
         return await self.repo.list_report_types(domain_code)
-
-    # ========== Seed Default Data ==========
-
-    async def seed_default_entities(self) -> int:
-        """从 coal_eia_entity_types.json 导入默认实体类型"""
-        import json
-        from pathlib import Path
-
-        json_path = Path(__file__).parent.parent.parent.parent / "server" / "coal_eia_entity_types.json"
-        if not json_path.exists():
-            logger.warning(f"默认实体类型文件不存在: {json_path}")
-            return 0
-
-        with open(json_path, encoding="utf-8-sig") as f:
-            entity_types = json.load(f)
-
-        existing_count = len(await self.repo.list_all())
-        if existing_count >= len(entity_types):
-            return 0
-
-        entities = []
-        for entity_id, entity_data in entity_types.items():
-            entity_key = entity_data.get("id", entity_id)
-            name_cn = entity_data.get("name", "")
-            category = entity_data.get("category", "")
-            description = entity_data.get("description", "")
-            examples = entity_data.get("examples", [])
-            keywords = entity_data.get("keywords", [])
-
-            value_type = "String"
-            is_list_type = False
-            if entity_key in ("residential", "pollutant", "spatial_boundary",
-                              "ecological_redline", "water_resource", "cultural_relic",
-                              "linear_engineering"):
-                value_type = "Object"
-                is_list_type = True
-
-            properties = []
-            if examples:
-                for i, example in enumerate(examples[:5]):
-                    properties.append({
-                        "key": f"item_{i + 1}" if len(examples) > 1 else "name",
-                        "name_cn": example,
-                        "value_type": "String",
-                        "required": False,
-                        "description": f"{name_cn}的{example}属性",
-                    })
-
-            entities.append({
-                "entity_id": f"{entity_key}_schema",
-                "entity_key": entity_key,
-                "name_cn": name_cn,
-                "category": category,
-                "domain_code": "coal",
-                "value_type": value_type,
-                "is_list_type": is_list_type,
-                "description": description,
-                "synonyms": list(set(keywords + examples))[:10],
-                "properties": properties,
-                "relation_rules": [],
-                "metadata": {"legacy_id": entity_id, "legacy_category": category},
-            })
-
-        return await self.repo.upsert_all(entities)
 
     # ========== Helpers ==========
 

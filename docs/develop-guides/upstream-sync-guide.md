@@ -271,7 +271,7 @@ e2e 已知限制：确定性回放路径依赖模型端点从容器内可达；�
 | 文件 | 定制内容 | 合并策略 |
 |------|----------|----------|
 | `backend/package/yuxi/storage/postgres/manager.py` | domain_factory 系列 DDL（建表/索引/种子数据） | 保留上游新增的 DDL + 保留我们的 domain_factory DDL |
-| `backend/server/routers/__init__.py` | domain_factory / entity_type / section_routing 路由注册 | 保留上游新增路由 + 保留我们的路由注册 |
+| `backend/server/routers/__init__.py` | domain_factory / section_routing 路由注册 | 保留上游新增路由 + 保留我们的路由注册 |
 | `docs/develop-guides/roadmap.md` | 领域知识工厂相关条目 | 保留上游更新 + 末尾追加我们的条目 |
 
 ### 7.4 上游优先类（接受覆盖）
@@ -300,7 +300,6 @@ backend/package/yuxi/config/static/prompt_templates.yaml
 backend/package/yuxi/agents/skills/buildin/slot-filler/
 backend/package/yuxi/agents/skills/buildin/template-recommender/
 backend/server/routers/domain_factory_router.py
-backend/server/routers/entity_type_router.py
 backend/server/routers/section_routing_router.py
 backend/server/coal_eia_entity_types.json
 backend/server/standard_code_mapping_list.json
@@ -318,7 +317,6 @@ web/src/views/SectionRoutingView.vue
 
 web/src/components/domain-factory/
 web/src/apis/domain_factory_api.js
-web/src/apis/entity_type_api.js
 web/src/assets/css/main.less
 ```
 

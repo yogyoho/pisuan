@@ -139,20 +139,6 @@ class DomainEntityRepository:
             await session.delete(entity)
         return True
 
-    async def delete_many(self, entity_ids: list[str]) -> int:
-        """批量删除实体"""
-        count = 0
-        async with pg_manager.get_async_session_context() as session:
-            for eid in entity_ids:
-                result = await session.execute(
-                    select(DomainEntitySchema).where(DomainEntitySchema.entity_id == eid)
-                )
-                entity = result.scalar_one_or_none()
-                if entity is not None:
-                    await session.delete(entity)
-                    count += 1
-        return count
-
     async def upsert_all(self, entities: list[dict[str, Any]]) -> int:
         """批量 upsert 实体（用于导入/初始化）。
 
