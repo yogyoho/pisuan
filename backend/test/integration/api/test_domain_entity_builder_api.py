@@ -163,3 +163,100 @@ async def test_entity_usage_returns_zero_counts_for_new_entity(test_client, admi
 async def test_entity_usage_missing_returns_404(test_client, admin_headers):
     res = await test_client.get(f"{BASE}/entities/no_such_entity_xyz/usage", headers=admin_headers)
     assert res.status_code == 404, res.text
+
+
+# ========== 导入 / 导出对称性 ==========
+
+IMPORT_KEY = "it_entity_import_probe"
+
+
+def _import_entity(**overrides) -> dict:
+    entity = {
+        "entity_id": "env-a-import",
+        "entity_key": IMPORT_KEY,
+        "name_cn": "导入探针实体",
+        "category": "natural_env",
+        "domain_code": "general",
+        "value_type": "String",
+        "properties": [{"key": "probe_attr", "name_cn": "探针属性", "value_type": "String"}],
+    }
+    entity.update(overrides)
+    return entity
+
+
+async def _delete_import_probe(test_client, admin_headers) -> None:
+    await test_client.delete(f"{BASE}/entities/{IMPORT_KEY}", headers=admin_headers)
+
+
+async def test_import_dry_run_reports_without_writing(test_client, admin_headers):
+    await _delete_import_probe(test_client, admin_headers)
+    payload = {"entity_schemas": {"env-a-import": _import_entity()}}
+    res = await test_client.post(f"{BASE}/import?dry_run=true", json=payload, headers=admin_headers)
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert (body["created"], body["updated"], body["rejected"]) == (1, 0, [])
+    missing = await test_client.get(f"{BASE}/entities/{IMPORT_KEY}", headers=admin_headers)
+    assert missing.status_code == 404, missing.text
+
+
+async def test_import_matches_entity_key_across_env(test_client, admin_headers):
+    """跨环境导入（entity_id 不同、entity_key 相同）走更新，不撞唯一约束。"""
+    await _delete_import_probe(test_client, admin_headers)
+    try:
+        first = await test_client.post(
+            f"{BASE}/import",
+            json={"entity_schemas": {"env-a": _import_entity(entity_id="env-a-import")}},
+            headers=admin_headers,
+        )
+        assert first.status_code == 200, first.text
+        assert first.json()["created"] == 1
+
+        second = await test_client.post(
+            f"{BASE}/import",
+            json={
+                "entity_schemas": {
+                    "env-b": _import_entity(entity_id="env-b-import", name_cn="导入探针实体（改名）")
+                }
+            },
+            headers=admin_headers,
+        )
+        assert second.status_code == 200, second.text
+        body = second.json()
+        assert (body["created"], body["updated"], body["rejected"]) == (0, 1, [])
+
+        detail = await test_client.get(f"{BASE}/entities/{IMPORT_KEY}", headers=admin_headers)
+        data = detail.json()["data"]
+        assert data["name_cn"] == "导入探针实体（改名）"
+        assert data["entity_id"] == "env-a-import"  # 本地代理键不被文件覆盖
+    finally:
+        await _delete_import_probe(test_client, admin_headers)
+
+
+async def test_import_rejects_foreign_domain_code(test_client, admin_headers):
+    await _delete_import_probe(test_client, admin_headers)
+    res = await test_client.post(
+        f"{BASE}/import",
+        json={"entity_schemas": {"coal": _import_entity(domain_code="coal")}},
+        headers=admin_headers,
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert (body["created"], body["updated"]) == (0, 0)
+    assert "coal" in body["rejected"][0]["reason"]
+    missing = await test_client.get(f"{BASE}/entities/{IMPORT_KEY}", headers=admin_headers)
+    assert missing.status_code == 404, missing.text
+
+
+async def test_import_round_trip_of_exported_config(test_client, admin_headers):
+    """导出结果原样回导：全部命中已存在实体，不产生新增。"""
+    exported = await test_client.get(f"{BASE}/export", headers=admin_headers)
+    assert exported.status_code == 200, exported.text
+    config = exported.json()["data"]
+    assert config["entity_schemas"]
+
+    res = await test_client.post(f"{BASE}/import?dry_run=true", json=config, headers=admin_headers)
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["rejected"] == []
+    assert body["created"] == 0
+    assert body["updated"] == len(config["entity_schemas"])

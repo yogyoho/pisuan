@@ -384,10 +384,79 @@ class DomainEntityService:
     async def export_all(self, domain_code: str | None = None) -> dict[str, Any]:
         return await self.repo.export_all(domain_code)
 
-    async def import_all(self, config: dict[str, Any]) -> int:
+    async def import_all(self, config: dict[str, Any], dry_run: bool = False) -> dict[str, Any]:
+        """导入实体配置：按 entity_key 对齐，先算新增/更新/拒绝，dry_run 只算不写。
+
+        entity_id 是环境内代理键，跨环境不可复用；entity_key 才是 entity_ref 的契约标识，
+        因此对齐键取 entity_key，更新时保留本地 entity_id。归属其他行业域的条目直接拒绝，
+        避免落成通用域读不到的幽灵实体。taxonomy 由实体 category 派生（见 export_all），
+        没有独立存储，导入不消费。
+        """
         schemas = config.get("entity_schemas", {})
         entities = list(schemas.values()) if isinstance(schemas, dict) else schemas
-        return await self.repo.upsert_all(entities)
+        if not isinstance(entities, list):
+            raise ValueError("entity_schemas 必须是对象或数组")
+
+        existing_keys = {row["entity_key"] for row in await self.repo.list_all()}
+        created: list[dict[str, Any]] = []
+        updated: list[dict[str, Any]] = []
+        rejected: list[dict[str, Any]] = []
+        seen: set[str] = set()
+
+        for index, raw in enumerate(entities):
+            label = raw if isinstance(raw, dict) else {}
+            try:
+                data = self._normalize_import_entity(raw)
+                if data["entity_key"] in seen:
+                    raise ValueError("文件内 entity_key 重复")
+            except ValueError as exc:
+                rejected.append(
+                    {
+                        "index": index,
+                        "entity_key": str(label.get("entity_key") or ""),
+                        "name_cn": str(label.get("name_cn") or ""),
+                        "reason": str(exc),
+                    }
+                )
+                continue
+            seen.add(data["entity_key"])
+            if data["entity_key"] in existing_keys:
+                updated.append(data)
+            else:
+                created.append(data)
+
+        if not dry_run and (created or updated):
+            await self.repo.upsert_all(created + updated)
+        remapped = await self._remap_waiting_review_tasks() if updated and not dry_run else 0
+
+        return {
+            "total": len(entities),
+            "created": len(created),
+            "updated": len(updated),
+            "rejected": rejected,
+            "remapped_tasks": remapped,
+            "dry_run": dry_run,
+        }
+
+    def _normalize_import_entity(self, raw: Any) -> dict[str, Any]:
+        """校验并归一一条导入实体；不复用 create 的 category 校验，导入文件可能缺分类。"""
+        if not isinstance(raw, dict):
+            raise ValueError("条目不是对象")
+        data = dict(raw)
+        data["entity_key"] = validate_key(raw.get("entity_key"), "entity_key")
+        name_cn = str(raw.get("name_cn") or "").strip()
+        if not name_cn:
+            raise ValueError("name_cn 不能为空")
+        data["name_cn"] = name_cn
+        declared_domain = str(raw.get("domain_code") or "").strip()
+        if declared_domain and declared_domain != GENERAL_DOMAIN_CODE:
+            raise ValueError(
+                f"归属行业域 `{declared_domain}`，构建器只服务通用域 `{GENERAL_DOMAIN_CODE}`"
+            )
+        data["domain_code"] = GENERAL_DOMAIN_CODE
+        data["value_type"] = self.normalize_value_type(raw.get("value_type", "String"))
+        data["properties"] = self.normalize_properties(raw.get("properties") or [])
+        return data
 
     async def get_domains_in_use(self) -> list[dict[str, Any]]:
         return await self.repo.list_domains_in_use()

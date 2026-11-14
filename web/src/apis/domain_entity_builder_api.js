@@ -61,9 +61,9 @@ export const domainEntityBuilderApi = {
     return apiAdminGet('/api/domain-entity-builder/export' + query)
   },
 
-  importConfig: (configData) => {
-    return apiAdminPost('/api/domain-entity-builder/import', configData)
-  },
+  /** 导入配置；dryRun=true 只返回新增/更新/拒绝计数，不写库 */
+  importConfig: (configData, { dryRun = false } = {}) =>
+    apiAdminPost('/api/domain-entity-builder/import' + (dryRun ? '?dry_run=true' : ''), configData),
 
   extractEntities: (file, domainCode) => {
     const formData = new FormData()
