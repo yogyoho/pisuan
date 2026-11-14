@@ -2889,3 +2889,15 @@
 - **不要给「导入」保留无预检的直写路径**：批量写库本身就是重锤，前端必须先 `dry_run` 拿影响面（新增/更新/拒绝+原因）再 `Modal.confirm`，后端不要把 `dry_run` 做成「先写再回滚」——只算不写才是可验证的。
 - **不要用自动改写行业域来「兼容」旧文件**：把文件里的 `coal` 静默改成 `general` 会让管理员以为迁移完成；拒绝并说明「构建器只服务通用域」是对的处置。
 - **不要在管道里用 `docker exec ... printenv <含凭据的变量>`**（会被安全策略拦），判断配置是否存在用 `sh -c 'test -n "$VAR" && echo set || echo unset'`。
+
+## Key Learnings + DNR（2026-11-15 实体接口旧账清理）
+
+- **死接口判定三步**：全仓 grep 组件/服务端调用方（只命中自身即死）→ `git log -- <path>` 确认文件由 pisuan custom 引入（上游文件删除会在 rebase 时制造 delete/modify 冲突）→ 删除后按压路径的 FastAPI 匹配规则验证：`POST /entities/batch-delete` 返回 405 而不是 404，是因为路径被 `DELETE /entities/{identifier}` 命中（`identifier="batch-delete"`），不代表批量删除还在。
+- **`/api/entity-types` 是内存 dict STUB**（`_entity_types_store` 预置煤矿/道路/学校示例），与 `/api/domain-entity-builder`、`/api/domain-factory` 的实体接口长期并存；页面与测试都不用它，已删除。
+- **全量 `pytest test/integration/api` 的 277 errors 是假阳性**：`test_auth_router.py` 故意锁死测试用户（`login_locked_until` 未到就 423），后续用例的 `standard_user`/cleanup fixture 复登录失败，成批 ERROR。判定回归要看按文件单跑的结果，或先清锁定列。
+- **`pnpm run lint` 会扫 `dist-prod/`**：3535 条 `no-unused-vars`/`no-useless-escape` 全在构建产物里，与本仓库源码无关；只 lint `src/` 才是有意义的口径。
+
+### DNR
+- **不要用「全量 pytest 的 errors 数」判定本次改动是否引入回归**——先按相关文件单跑；errors 多来自 auth 锁定级联。
+- **不要保留 in-memory STUB 当"以后可能要用"的接口**：它读起来像真接口，接错一次就丢数据。
+- **不要拿 `pnpm run lint` 的失败数当前端回归信号**——先看报错文件路径是否在 `src/`。

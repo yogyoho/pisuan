@@ -45,10 +45,6 @@ export const domainEntityBuilderApi = {
     return apiAdminDelete(`/api/domain-entity-builder/entities/${entityId}`)
   },
 
-  batchDeleteEntities: (identifiers) => {
-    return apiAdminPost('/api/domain-entity-builder/entities/batch-delete', { identifiers })
-  },
-
   cloneEntity: (entityId, entityKey, nameCn) => {
     return apiAdminPost(`/api/domain-entity-builder/entities/${entityId}/clone`, {
       entity_key: entityKey,

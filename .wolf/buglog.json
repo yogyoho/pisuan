@@ -12090,5 +12090,25 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-11-15T00:05:00"
+  },
+  {
+    "id": "bug-4268",
+    "timestamp": "2026-11-15T00:45:00",
+    "error_message": "pytest test/unit/services test/integration/api 全量跑出现 277 errors：RuntimeError: Failed to list E2E conversations for cleanup: {\"detail\":\"登录被锁定，请稍后重试\"}",
+    "file": "backend/test/integration/conftest.py",
+    "root_cause": "test_auth_router.py 会故意把测试用户连续登录失败锁死（login_locked_until 未到），全量运行时后续用例的 standard_user/cleanup fixture 仍用同一批 pytest_user_* 账号登录，被 423 拦下，于是成批 ERROR；并非代码回归",
+    "fix": "判定改动是否引入回归时按文件跑相关用例（如 test_domain_entity_builder_api.py 单跑 17 passed）；需要全量时先清 users.login_failed_count/login_locked_until 再跑；锁定用户可在 pisuan-localized-postgres-1 用 psql 查 select username,login_failed_count,login_locked_until from users where login_locked_until is not null",
+    "tags": [
+      "pytest",
+      "integration",
+      "login-lock",
+      "false-positive",
+      "fixture"
+    ],
+    "related_bugs": [
+      "bug-4265"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-15T00:45:00"
   }
 ]

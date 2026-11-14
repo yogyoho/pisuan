@@ -178,26 +178,6 @@ async def delete_entity(
         raise HTTPException(status_code=500, detail=f"删除实体失败: {e}")
 
 
-@domain_entity_builder.post("/entities/batch-delete")
-async def batch_delete_entities(
-    payload: dict[str, Any] = Body(...),
-    current_user: User = Depends(get_admin_user),
-) -> dict[str, Any]:
-    """批量删除实体 Schema"""
-    try:
-        identifiers = payload.get("identifiers", [])
-        if not identifiers:
-            raise HTTPException(status_code=400, detail="请提供要删除的实体标识列表")
-        service = get_entity_service()
-        count = await service.delete_entities_batch(identifiers)
-        return {"success": True, "message": f"批量删除成功，共 {count} 个实体", "count": count}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to batch delete entities: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"批量删除失败: {e}")
-
-
 @domain_entity_builder.post("/entities/{identifier}/clone")
 async def clone_entity(
     identifier: str,
