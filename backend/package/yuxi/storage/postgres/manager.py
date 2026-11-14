@@ -63,7 +63,8 @@ AGENT_RUN_TERMINAL_STATUS_SQL = ", ".join(f"'{status}'" for status in AGENT_RUN_
 # v19：文件库 P2 扩列（canonical md 正源/KB 推送镜像/加工前置）+ 加工台账表（eia_corpus_process_log）；
 # v20：限值提取暂存 + 表注册（eia_limit_extract_rows / eia_limit_table_registry，spec 2026-10-19）
 # v23：实体分类字典（domain_entity_categories，建表 + 播种六分类，决定树序与泛化 prompt 截断序）
-BUSINESS_SCHEMA_VERSION = 23
+# v24：实体软删（domain_entity_schemas.deleted_at，回收站 + 恢复 + 彻底删除）
+BUSINESS_SCHEMA_VERSION = 24
 KNOWLEDGE_SCHEMA_VERSION = 2
 SCHEMA_VERSION_TABLE = "pisuan_schema_migrations"
 AGENT_RUN_LEASE_SCHEMA_STATEMENTS = (
@@ -961,8 +962,7 @@ class PostgresManager(metaclass=SingletonMeta):
                 "(domain_code, report_type_code, chapter, slot_signature, attribution)",
                 "CREATE UNIQUE INDEX IF NOT EXISTS uq_dfo_domain_rt_key_attr "
                 "ON domain_factory_outlines(domain_code, report_type_code, canonical_chapter_key, attribution)",
-                "CREATE INDEX IF NOT EXISTS idx_dflt_attribution "
-                "ON domain_factory_learned_templates(attribution)",
+                "CREATE INDEX IF NOT EXISTS idx_dflt_attribution ON domain_factory_learned_templates(attribution)",
                 "CREATE INDEX IF NOT EXISTS idx_dfo_attribution ON domain_factory_outlines(attribution)",
             ]
             for statement in statements:
@@ -1054,8 +1054,7 @@ class PostgresManager(metaclass=SingletonMeta):
                 "ADD COLUMN IF NOT EXISTS attribution VARCHAR(64) NOT NULL DEFAULT ''",
                 "CREATE INDEX IF NOT EXISTS idx_dfrf_kb_type_status "
                 "ON domain_factory_regional_facts(kb_id, fact_type, status)",
-                "CREATE INDEX IF NOT EXISTS idx_dfrf_attribution "
-                "ON domain_factory_regional_facts(attribution)",
+                "CREATE INDEX IF NOT EXISTS idx_dfrf_attribution ON domain_factory_regional_facts(attribution)",
             ]
             for statement in statements:
                 await conn.execute(text(statement))
@@ -1083,9 +1082,7 @@ class PostgresManager(metaclass=SingletonMeta):
                     row["task_region_key"], row["task_scope"], row["task_project_name"]
                 )
                 bound_attribution = (
-                    normalize_attribution(
-                        row["bound_region_key"], row["bound_scope"], row["bound_project_name"]
-                    )
+                    normalize_attribution(row["bound_region_key"], row["bound_scope"], row["bound_project_name"])
                     if row["bound_region_key"] is not None
                     else None
                 )
@@ -1158,6 +1155,32 @@ class PostgresManager(metaclass=SingletonMeta):
                     INSERT INTO {SCHEMA_VERSION_TABLE} (domain, version, applied_at)
                     VALUES ('business', 23, CURRENT_TIMESTAMP)
                     ON CONFLICT (domain) DO UPDATE SET version = 23, applied_at = EXCLUDED.applied_at
+                """)
+            )
+
+    async def upgrade_business_v23_to_v24(self) -> None:
+        """[pisuan-custom] v24：实体软删列（回收站）。
+
+        删除实体改为置 `deleted_at`，回收站可恢复或彻底删除；列对存量库用
+        ADD COLUMN IF NOT EXISTS 补齐（NULL 即活跃），无需回填。幂等：version=24 直接返回。
+        """
+        self._check_initialized()
+        async with self.async_engine.begin() as conn:
+            version = await conn.scalar(
+                text(f"SELECT version FROM {SCHEMA_VERSION_TABLE} WHERE domain = 'business' FOR UPDATE")
+            )
+            if version == 24:
+                return
+            if version not in (None, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23):
+                raise RuntimeError(f"Unsupported business schema version: {version}")
+            await conn.execute(
+                text("ALTER TABLE IF EXISTS domain_entity_schemas ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP")
+            )
+            await conn.execute(
+                text(f"""
+                    INSERT INTO {SCHEMA_VERSION_TABLE} (domain, version, applied_at)
+                    VALUES ('business', 24, CURRENT_TIMESTAMP)
+                    ON CONFLICT (domain) DO UPDATE SET version = 24, applied_at = EXCLUDED.applied_at
                 """)
             )
 
@@ -2297,10 +2320,12 @@ class PostgresManager(metaclass=SingletonMeta):
             "    properties JSONB NOT NULL DEFAULT '[]',"
             "    relation_rules JSONB NOT NULL DEFAULT '[]',"
             "    extra_meta JSONB DEFAULT '{}',"
+            "    deleted_at TIMESTAMP,"
             "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
             "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
             ")",
             "ALTER TABLE IF EXISTS domain_entity_schemas ADD COLUMN IF NOT EXISTS domain_code VARCHAR(64) NOT NULL DEFAULT 'general'",
+            "ALTER TABLE IF EXISTS domain_entity_schemas ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP",
             "ALTER TABLE IF EXISTS domain_entity_schemas DROP COLUMN IF EXISTS report_types",
             "CREATE INDEX IF NOT EXISTS idx_des_entity_key ON domain_entity_schemas(entity_key)",
             "CREATE INDEX IF NOT EXISTS idx_des_category ON domain_entity_schemas(category)",

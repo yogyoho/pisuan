@@ -143,7 +143,8 @@ async def main() -> None:
                     20,
                     21,
                     22,
-                ),  # [pisuan-custom] v14~v23：允许从 v9~v22 升级
+                    23,
+                ),  # [pisuan-custom] v14~v24：允许从 v9~v23 升级
             )
             knowledge_version = versions.get("knowledge")
             _require_supported_version(
@@ -211,6 +212,9 @@ async def main() -> None:
             # [pisuan-custom] v23：实体分类字典（建表 + 播种六分类，幂等）
             if business_version in {None, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22}:
                 await pg_manager.upgrade_business_v22_to_v23()
+            # [pisuan-custom] v24：实体软删列（回收站，幂等）
+            if business_version in {None, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23}:
+                await pg_manager.upgrade_business_v23_to_v24()
 
             if knowledge_version is None:
                 await pg_manager.create_knowledge_tables()

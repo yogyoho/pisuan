@@ -72,6 +72,7 @@ def is_grounded(quote: str, content: str) -> bool:
     normalized_quote = _strip_whitespace(quote)
     return bool(normalized_quote) and normalized_quote in _strip_whitespace(content)
 
+
 class DomainEntityService:
     """领域实体 Schema 服务"""
 
@@ -142,8 +143,7 @@ class DomainEntityService:
     async def list_categories(self) -> list[dict[str, Any]]:
         counts = await self.repo.counts_by_category()
         return [
-            {**row, "entity_count": counts.get(row["code"], 0)}
-            for row in await self.category_repo.list_categories()
+            {**row, "entity_count": counts.get(row["code"], 0)} for row in await self.category_repo.list_categories()
         ]
 
     async def create_category(self, data: dict[str, Any]) -> dict[str, Any]:
@@ -177,10 +177,17 @@ class DomainEntityService:
             raise ValueError("category 不能为空")
         if await self.category_repo.get(code):
             return
-        options = "、".join(
-            f"{item['code']}（{item['name_cn']}）" for item in await self._category_codes()
-        )
+        options = "、".join(f"{item['code']}（{item['name_cn']}）" for item in await self._category_codes())
         raise ValueError(f"分类 `{code}` 不在分类字典中，可选：{options}")
+
+    async def _ensure_key_available(self, entity_key: str) -> None:
+        """实体键在回收站里也占位：恢复优先于静默重建同名实体。"""
+        existing = await self.repo.get_by_key(entity_key, include_deleted=True)
+        if existing is None:
+            return
+        if existing.deleted_at is not None:
+            raise ValueError(f"实体键 {entity_key} 在回收站中，请先恢复或彻底删除")
+        raise ValueError(f"实体键 {entity_key} 已存在")
 
     # ========== Entity CRUD ==========
 
@@ -193,6 +200,7 @@ class DomainEntityService:
         return {
             "entity_schemas": schemas,
             "total": len(schemas),
+            "trash_total": await self.repo.count_deleted(domain_code),
         }
 
     async def get_entity(self, identifier: str) -> dict[str, Any] | None:
@@ -207,9 +215,7 @@ class DomainEntityService:
         category = str(data.get("category") or "").strip()
         await self._validate_category(category)
 
-        existing = await self.repo.get_by_key(entity_key)
-        if existing:
-            raise ValueError(f"实体键 {entity_key} 已存在")
+        await self._ensure_key_available(entity_key)
 
         data["entity_key"] = entity_key
         data["entity_id"] = data.get("entity_id") or str(uuid.uuid4())
@@ -224,7 +230,14 @@ class DomainEntityService:
         entity = await self.repo.create(data)
         return entity.to_dict()
 
-    async def update_entity(self, identifier: str, data: dict[str, Any]) -> dict[str, Any]:
+    async def update_entity(
+        self,
+        identifier: str,
+        data: dict[str, Any],
+        expected_updated_at: str | None = None,
+        force: bool = False,
+    ) -> dict[str, Any]:
+        """更新实体；expected_updated_at 不一致时 repo 抛 EntityVersionConflict（路由映射 409）。"""
         entity = await self.repo.get_by_id_or_key(identifier)
         if not entity:
             raise ValueError(f"实体 {identifier} 不存在")
@@ -239,17 +252,42 @@ class DomainEntityService:
         if data.get("properties") is not None:
             data["properties"] = self.normalize_properties(data["properties"])
 
-        updated = await self.repo.update(entity.entity_id, data)
+        updated = await self.repo.update(entity.entity_id, data, expected_updated_at=expected_updated_at, force=force)
+        if updated is None:
+            raise ValueError(f"实体 {identifier} 不存在或已被移入回收站")
         remapped = await self._remap_waiting_review_tasks()
         if remapped:
             logger.info(f"实体 {identifier} 更新后重映射 {remapped} 个待审核任务")
         return updated.to_dict()
 
     async def delete_entity(self, identifier: str) -> bool:
+        """删除 = 移入回收站（回收站可恢复或彻底删除）。"""
         entity = await self.repo.get_by_id_or_key(identifier)
         if not entity:
             raise ValueError(f"实体 {identifier} 不存在")
-        return await self.repo.delete(entity.entity_id)
+        return await self.repo.soft_delete(entity.entity_id)
+
+    async def list_trash(self, domain_code: str | None = None) -> dict[str, Any]:
+        entities = await self.repo.list_deleted(domain_code)
+        return {"entities": entities, "total": len(entities)}
+
+    async def restore_entity(self, identifier: str) -> dict[str, Any]:
+        entity = await self.repo.get_by_id_or_key(identifier, include_deleted=True)
+        if not entity:
+            raise ValueError(f"实体 {identifier} 不存在")
+        if entity.deleted_at is None:
+            raise ValueError(f"实体 {identifier} 不在回收站中")
+        await self.repo.restore(entity.entity_id)
+        return (await self.repo.get_by_id(entity.entity_id)).to_dict()
+
+    async def purge_entity(self, identifier: str) -> bool:
+        """彻底删除：仅限回收站实体，活跃实体必须先删除（移入回收站）。"""
+        entity = await self.repo.get_by_id_or_key(identifier, include_deleted=True)
+        if not entity:
+            raise ValueError(f"实体 {identifier} 不存在")
+        if entity.deleted_at is None:
+            raise ValueError(f"实体 {identifier} 不在回收站中，先删除再彻底删除")
+        return await self.repo.purge(entity.entity_id)
 
     async def clone_entity(self, identifier: str, new_key: str, new_name: str) -> dict[str, Any]:
         """克隆实体"""
@@ -260,9 +298,7 @@ class DomainEntityService:
         new_key = validate_key(new_key, "entity_key")
         if not str(new_name or "").strip():
             raise ValueError("name_cn 不能为空")
-        existing = await self.repo.get_by_key(new_key)
-        if existing:
-            raise ValueError(f"实体键 {new_key} 已存在")
+        await self._ensure_key_available(new_key)
 
         entity_dict = entity.to_dict()
         entity_dict["entity_id"] = str(uuid.uuid4())
@@ -345,9 +381,7 @@ class DomainEntityService:
                     slots.extend(template.get("slots") or [])
             matched = [ref for ref in refs_of(slots) if tally(ref, "pending_tasks")]
             if matched:
-                task_items.append(
-                    {"id": row.get("id"), "file_name": row.get("file_name") or "", "refs": matched}
-                )
+                task_items.append({"id": row.get("id"), "file_name": row.get("file_name") or "", "refs": matched})
 
         pps_count = 0
         for row in await self.repo.list_usage_report_pps(GENERAL_DOMAIN_CODE):
@@ -373,9 +407,7 @@ class DomainEntityService:
                 "dangling_refs": len(dangling),
             },
             "properties": properties,
-            "unused_properties": [
-                key for key, counts in properties.items() if not any(counts.values())
-            ],
+            "unused_properties": [key for key, counts in properties.items() if not any(counts.values())],
             "dangling_refs": sorted(dangling),
             "template_refs": template_items[:20],
             "pending_task_refs": task_items,
@@ -403,6 +435,8 @@ class DomainEntityService:
             raise ValueError("entity_schemas 必须是对象或数组")
 
         existing_keys = {row["entity_key"] for row in await self.repo.list_all()}
+        # 回收站键仍占位（entity_key 全表唯一），导入不能把它当新增静默改写
+        trash_keys = {row["entity_key"] for row in await self.repo.list_deleted()}
         created: list[dict[str, Any]] = []
         updated: list[dict[str, Any]] = []
         rejected: list[dict[str, Any]] = []
@@ -414,6 +448,8 @@ class DomainEntityService:
                 data = self._normalize_import_entity(raw)
                 if data["entity_key"] in seen:
                     raise ValueError("文件内 entity_key 重复")
+                if data["entity_key"] in trash_keys:
+                    raise ValueError(f"实体键 {data['entity_key']} 在回收站中，请先恢复或彻底删除")
             except ValueError as exc:
                 rejected.append(
                     {
@@ -455,9 +491,7 @@ class DomainEntityService:
         data["name_cn"] = name_cn
         declared_domain = str(raw.get("domain_code") or "").strip()
         if declared_domain and declared_domain != GENERAL_DOMAIN_CODE:
-            raise ValueError(
-                f"归属行业域 `{declared_domain}`，构建器只服务通用域 `{GENERAL_DOMAIN_CODE}`"
-            )
+            raise ValueError(f"归属行业域 `{declared_domain}`，构建器只服务通用域 `{GENERAL_DOMAIN_CODE}`")
         data["domain_code"] = GENERAL_DOMAIN_CODE
         data["value_type"] = self.normalize_value_type(raw.get("value_type", "String"))
         data["properties"] = self.normalize_properties(raw.get("properties") or [])
@@ -488,9 +522,7 @@ class DomainEntityService:
     @classmethod
     def normalize_property(cls, prop: dict[str, Any]) -> dict[str, Any]:
         normalized = dict(prop)
-        normalized["value_type"] = cls.normalize_value_type(
-            normalized.get("value_type", "String")
-        )
+        normalized["value_type"] = cls.normalize_value_type(normalized.get("value_type", "String"))
         if "options" in normalized and "enum_options" not in normalized:
             normalized["enum_options"] = normalized.pop("options")
         return normalized
@@ -524,18 +556,14 @@ class DomainEntityService:
         )
 
         try:
-            return await get_domain_factory_service().remap_waiting_review_tasks(
-                GENERAL_DOMAIN_CODE
-            )
+            return await get_domain_factory_service().remap_waiting_review_tasks(GENERAL_DOMAIN_CODE)
         except Exception as exc:  # 重映射失败不影响实体保存本身
             logger.warning(f"实体变更后重映射待审核任务失败: {exc}")
             return 0
 
     # ========== AI Entity Extraction ==========
 
-    async def extract_entities_from_document(
-        self, content: str, domain_code: str
-    ) -> dict[str, Any]:
+    async def extract_entities_from_document(self, content: str, domain_code: str) -> dict[str, Any]:
         """从文档内容中提取实体对象，并与现有实体比对"""
 
         schemas = await self.repo.list_all(domain_code=domain_code)
@@ -548,6 +576,7 @@ class DomainEntityService:
         try:
             from yuxi.models.chat import select_model
             from yuxi.config.options import system_options
+
             model = select_model(model_spec=(await system_options.get())["default_model"])
             response = await model.call(prompt)
             response_text = response.content if hasattr(response, "content") else str(response)
@@ -555,15 +584,11 @@ class DomainEntityService:
             logger.error(f"LLM 调用失败: {e}")
             raise RuntimeError(f"AI 模型调用失败: {e}")
 
-        extracted = [
-            item for item in self._parse_extraction_response(response_text) if isinstance(item, dict)
-        ]
+        extracted = [item for item in self._parse_extraction_response(response_text) if isinstance(item, dict)]
         for item in extracted:
             item["grounded"] = is_grounded(item.get("extracted_text", ""), content)
 
-        comparison = self._compare_extracted_with_entities(
-            extracted, schemas, {item["code"] for item in categories}
-        )
+        comparison = self._compare_extracted_with_entities(extracted, schemas, {item["code"] for item in categories})
         scanned = min(len(content), EXTRACTION_CONTENT_LIMIT)
 
         return {
@@ -579,9 +604,7 @@ class DomainEntityService:
             "prompt": prompt,
         }
 
-    async def save_extracted_entities(
-        self, entities: list[dict[str, Any]], domain_code: str
-    ) -> dict[str, Any]:
+    async def save_extracted_entities(self, entities: list[dict[str, Any]], domain_code: str) -> dict[str, Any]:
         """保存用户确认的提取结果。
 
         提取结果只用于生成/补全 schema 定义，实例值不入库：
@@ -619,9 +642,7 @@ class DomainEntityService:
             if reason:
                 result["rejected"].append({"index": index, "name": label, "reason": reason})
 
-        written = (
-            result["inserted"] + result["updated_entities"] + result["properties_added"]
-        )
+        written = result["inserted"] + result["updated_entities"] + result["properties_added"]
         if written:
             await self._remap_waiting_review_tasks()
         result["total"] = result["inserted"] + result["updated_entities"]
@@ -640,42 +661,32 @@ class DomainEntityService:
                 {
                     "key": key,
                     "name_cn": str(prop.get("name_cn") or key).strip(),
-                    "value_type": DomainEntityService.normalize_value_type(
-                        prop.get("value_type") or "String"
-                    ),
+                    "value_type": DomainEntityService.normalize_value_type(prop.get("value_type") or "String"),
                     "unit": "",
                     "description": "由 AI 提取补充",
                 }
             )
         return definitions
 
-    async def _append_properties_from_diff(
-        self, item: dict[str, Any], result: dict[str, Any]
-    ) -> None:
+    async def _append_properties_from_diff(self, item: dict[str, Any], result: dict[str, Any]) -> None:
         entity_id = item.get("_entity_id")
         entity = await self.repo.get_by_id_or_key(entity_id) if entity_id else None
         if not entity:
             raise ValueError("目标实体不存在，可能已被删除，请重新提取")
 
         existing = {
-            str(p.get("key")).casefold()
-            for p in (entity.properties or [])
-            if isinstance(p, dict) and p.get("key")
+            str(p.get("key")).casefold() for p in (entity.properties or []) if isinstance(p, dict) and p.get("key")
         }
         added = [
             prop
-            for prop in self._property_definitions(
-                (item.get("_diff") or {}).get("add_properties") or []
-            )
+            for prop in self._property_definitions((item.get("_diff") or {}).get("add_properties") or [])
             if prop["key"].casefold() not in existing
         ]
         if not added:
             result["unchanged"] += 1
             return
 
-        await self.repo.update(
-            entity.entity_id, {"properties": list(entity.properties or []) + added}
-        )
+        await self.repo.update(entity.entity_id, {"properties": list(entity.properties or []) + added})
         result["updated_entities"] += 1
         result["properties_added"] += len(added)
 
@@ -688,7 +699,10 @@ class DomainEntityService:
             raise ValueError(f"提案不可导入：{'；'.join(problems)}")
 
         entity_key = validate_key(proposal.get("entity_key"), "entity_key")
-        if await self.repo.get_by_key(entity_key):
+        existing = await self.repo.get_by_key(entity_key, include_deleted=True)
+        if existing and existing.deleted_at is not None:
+            raise ValueError(f"实体键 {entity_key} 在回收站中，请先恢复或彻底删除")
+        if existing:
             raise ValueError(f"实体键 {entity_key} 已存在，请改为补属性后重试")
 
         name_cn = str(proposal.get("name_cn") or "").strip()
@@ -795,9 +809,7 @@ class DomainEntityService:
                     "_entity_id": None,
                     "_diff": {"add_properties": []},
                     "_existing": None,
-                    "_proposed_entity": self._build_entity_proposal(
-                        item, schema_ref, values, allowed_categories
-                    ),
+                    "_proposed_entity": self._build_entity_proposal(item, schema_ref, values, allowed_categories),
                 }
             )
             comparison.append(entry)
@@ -813,9 +825,7 @@ class DomainEntityService:
     ) -> dict[str, Any]:
         problems: list[str] = []
         if schema_ref not in ("", PROPOSAL_SCHEMA_REF):
-            problems.append(
-                f"schema_ref `{schema_ref}` 不在实体库中（疑似写错），新实体请用 `{PROPOSAL_SCHEMA_REF}`"
-            )
+            problems.append(f"schema_ref `{schema_ref}` 不在实体库中（疑似写错），新实体请用 `{PROPOSAL_SCHEMA_REF}`")
 
         raw_key = str(item.get("entity_key") or "").strip()
         entity_key = re.sub(r"[^a-z0-9_]", "_", raw_key.lower()).strip("_")[:64]
@@ -895,9 +905,7 @@ class DomainEntityService:
 
         schema_text = "\n\n".join(schema_desc_parts)
 
-        domain_name = {"coal": "煤炭采掘", "chem": "石油化工", "transport": "交通运输"}.get(
-            domain_code, domain_code
-        )
+        domain_name = {"coal": "煤炭采掘", "chem": "石油化工", "transport": "交通运输"}.get(domain_code, domain_code)
 
         categories = "、".join(f"{item['code']}（{item['name_cn']}）" for item in categories)
         system_prompt = (

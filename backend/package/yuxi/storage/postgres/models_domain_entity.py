@@ -30,6 +30,9 @@ class DomainEntitySchema(Base):
     properties = Column(JSON, nullable=False, default=list)
     relation_rules = Column(JSON, nullable=False, default=list)
     extra_meta = Column(JSON, nullable=True, default=dict)
+    # 软删：非空即该实体在回收站，所有对外读取默认过滤；entity_key 仍被占用，
+    # 避免"删了再建同名实体"让存量的 entity_ref 悄悄指向另一套定义。
+    deleted_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
 
@@ -48,6 +51,7 @@ class DomainEntitySchema(Base):
             "properties": self.properties or [],
             "relation_rules": self.relation_rules or [],
             "metadata": self.extra_meta or {},
+            "deleted_at": format_utc_datetime(self.deleted_at),
             "created_at": format_utc_datetime(self.created_at),
             "updated_at": format_utc_datetime(self.updated_at),
         }

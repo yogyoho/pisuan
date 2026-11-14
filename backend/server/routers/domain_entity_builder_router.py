@@ -8,17 +8,17 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile
 
 from server.utils.auth_middleware import get_admin_user
+from yuxi.repositories.domain_entity_repository import EntityVersionConflict
 from yuxi.repositories.domain_factory_repository import GENERAL_DOMAIN_CODE
 from yuxi.services.domain_entity_service import get_entity_service
 from yuxi.storage.postgres.models_business import User
 from yuxi.utils import logger
 
-domain_entity_builder = APIRouter(
-    prefix="/domain-entity-builder", tags=["Domain Entity Builder"]
-)
+domain_entity_builder = APIRouter(prefix="/domain-entity-builder", tags=["Domain Entity Builder"])
 
 
 # ========== Taxonomy ==========
+
 
 @domain_entity_builder.get("/taxonomy")
 async def get_taxonomy(
@@ -37,6 +37,7 @@ async def get_taxonomy(
 
 # ========== Domains ==========
 
+
 @domain_entity_builder.get("/domains")
 async def list_domains(
     current_user: User = Depends(get_admin_user),
@@ -52,6 +53,7 @@ async def list_domains(
 
 
 # ========== Report Types ==========
+
 
 @domain_entity_builder.get("/report-types")
 async def list_report_types(
@@ -70,6 +72,7 @@ async def list_report_types(
 
 # ========== Entity CRUD ==========
 
+
 @domain_entity_builder.get("/entities")
 async def list_entities(
     category: str | None = Query(None, description="按分类过滤"),
@@ -84,6 +87,21 @@ async def list_entities(
     except Exception as e:
         logger.error(f"Failed to list entities: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"获取实体列表失败: {e}")
+
+
+@domain_entity_builder.get("/entities/trash")
+async def list_trash_entities(
+    domain_code: str | None = Query(None, description="按行业代码过滤"),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """回收站：已软删实体列表（声明必须在 /entities/{identifier} 之前）"""
+    try:
+        service = get_entity_service()
+        result = await service.list_trash(domain_code)
+        return {"success": True, "data": result}
+    except Exception as e:
+        logger.error(f"Failed to list trash entities: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取回收站失败: {e}")
 
 
 @domain_entity_builder.get("/entities/{identifier}")
@@ -145,11 +163,19 @@ async def update_entity(
     payload: dict[str, Any] = Body(...),
     current_user: User = Depends(get_admin_user),
 ) -> dict[str, Any]:
-    """更新实体 Schema"""
+    """更新实体 Schema；expected_updated_at 用于乐观锁，force=True 表示确认覆盖"""
     try:
         service = get_entity_service()
-        entity = await service.update_entity(identifier, payload)
+        payload = dict(payload)
+        expected_updated_at = payload.pop("expected_updated_at", None)
+        force = bool(payload.pop("force", False))
+        entity = await service.update_entity(identifier, payload, expected_updated_at=expected_updated_at, force=force)
         return {"success": True, "message": "实体更新成功", "data": entity}
+    except EntityVersionConflict as e:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "ENTITY_VERSION_CONFLICT", "message": str(e)},
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -162,13 +188,13 @@ async def delete_entity(
     identifier: str,
     current_user: User = Depends(get_admin_user),
 ) -> dict[str, Any]:
-    """删除实体 Schema"""
+    """删除实体 Schema（移入回收站，可恢复）"""
     try:
         service = get_entity_service()
         success = await service.delete_entity(identifier)
         if not success:
             raise HTTPException(status_code=404, detail=f"实体 {identifier} 不存在")
-        return {"success": True, "message": "实体删除成功"}
+        return {"success": True, "message": "实体已移入回收站"}
     except HTTPException:
         raise
     except ValueError as e:
@@ -176,6 +202,44 @@ async def delete_entity(
     except Exception as e:
         logger.error(f"Failed to delete entity {identifier}: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"删除实体失败: {e}")
+
+
+@domain_entity_builder.post("/entities/{identifier}/restore")
+async def restore_entity(
+    identifier: str,
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """从回收站恢复实体"""
+    try:
+        service = get_entity_service()
+        entity = await service.restore_entity(identifier)
+        return {"success": True, "message": "实体已恢复", "data": entity}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to restore entity {identifier}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"恢复实体失败: {e}")
+
+
+@domain_entity_builder.delete("/entities/{identifier}/purge")
+async def purge_entity(
+    identifier: str,
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """彻底删除回收站实体（不可恢复）"""
+    try:
+        service = get_entity_service()
+        success = await service.purge_entity(identifier)
+        if not success:
+            raise HTTPException(status_code=404, detail=f"实体 {identifier} 不存在")
+        return {"success": True, "message": "实体已彻底删除"}
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to purge entity {identifier}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"彻底删除实体失败: {e}")
 
 
 @domain_entity_builder.post("/entities/{identifier}/clone")
@@ -216,10 +280,7 @@ async def import_extracted_entities(
         service = get_entity_service()
         result = await service.save_extracted_entities(entities, domain_code)
         rejected = len(result["rejected"])
-        message = (
-            f"导入完成：新增 {result['inserted']} 个实体，"
-            f"补充 {result['properties_added']} 个属性"
-        )
+        message = f"导入完成：新增 {result['inserted']} 个实体，补充 {result['properties_added']} 个属性"
         if rejected:
             message += f"，{rejected} 条被拒绝"
         return {"success": True, "message": message, **result}
@@ -231,6 +292,7 @@ async def import_extracted_entities(
 
 
 # ========== Category Dictionary ==========
+
 
 @domain_entity_builder.get("/categories")
 async def list_categories(
@@ -318,6 +380,7 @@ async def delete_category(
 
 # ========== Import / Export ==========
 
+
 @domain_entity_builder.get("/export")
 async def export_config(
     domain_code: str | None = Query(None, description="按行业导出，为空则导出全部"),
@@ -366,6 +429,7 @@ async def import_config(
 
 # ========== AI Extraction ==========
 
+
 @domain_entity_builder.post("/extract")
 async def extract_entities(
     file: UploadFile = File(...),
@@ -387,14 +451,10 @@ async def extract_entities(
             try:
                 text = file_content.decode("gbk")
             except UnicodeDecodeError:
-                raise HTTPException(
-                    status_code=400, detail="无法解析文件编码，请使用 UTF-8 或 GBK 编码的文件"
-                )
+                raise HTTPException(status_code=400, detail="无法解析文件编码，请使用 UTF-8 或 GBK 编码的文件")
 
         service = get_entity_service()
-        result = await service.extract_entities_from_document(
-            content=text, domain_code=domain_code
-        )
+        result = await service.extract_entities_from_document(content=text, domain_code=domain_code)
 
         return {
             "success": True,

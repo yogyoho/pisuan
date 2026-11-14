@@ -66,6 +66,20 @@ export const domainEntityBuilderApi = {
     return apiAdminDelete(`/api/domain-entity-builder/entities/${entityId}`)
   },
 
+  // 回收站：软删实体列表 / 恢复 / 彻底删除
+  listTrashEntities: (domainCode = null) => {
+    const query = buildQuery(domainCode ? { domain_code: domainCode } : {})
+    return apiAdminGet('/api/domain-entity-builder/entities/trash' + query)
+  },
+
+  restoreEntitySchema: (entityId) => {
+    return apiAdminPost(`/api/domain-entity-builder/entities/${entityId}/restore`)
+  },
+
+  purgeEntitySchema: (entityId) => {
+    return apiAdminDelete(`/api/domain-entity-builder/entities/${entityId}/purge`)
+  },
+
   cloneEntity: (entityId, entityKey, nameCn) => {
     return apiAdminPost(`/api/domain-entity-builder/entities/${entityId}/clone`, {
       entity_key: entityKey,
