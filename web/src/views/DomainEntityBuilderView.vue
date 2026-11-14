@@ -1,3 +1,183 @@
+<script setup>
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { message, Modal } from 'ant-design-vue'
+import { Bot, Box, Download, Inbox, Plus, Upload } from '@lucide/vue'
+import { useEntitySchemas } from '@/composables/useEntitySchemas'
+import EntityEditor from '@/components/domain-factory/entity/EntityEditor.vue'
+import EntityExtractWizard from '@/components/domain-factory/entity/EntityExtractWizard.vue'
+import EntityJsonModal from '@/components/domain-factory/entity/EntityJsonModal.vue'
+import EntityTree from '@/components/domain-factory/entity/EntityTree.vue'
+
+const route = useRoute()
+const router = useRouter()
+const {
+  taxonomy,
+  schemas,
+  loading,
+  saving,
+  error,
+  selectedEntity,
+  draft,
+  isDirty,
+  categoryOptions,
+  treeData,
+  load,
+  select,
+  selectByKey,
+  clearSelection,
+  startCreate,
+  resetDraft,
+  save,
+  removeEntity,
+  cloneEntity,
+  exportConfig,
+  importConfig
+} = useEntitySchemas()
+
+const selectedKeys = computed(() =>
+  selectedEntity.value ? [`entity_${selectedEntity.value.entity_id}`] : []
+)
+const entityKeys = computed(() => schemas.value.map((item) => item.entity_key).filter(Boolean))
+
+const importModalVisible = ref(false)
+const importFileList = ref([])
+const jsonModalVisible = ref(false)
+const jsonContent = ref('')
+const cloneModalVisible = ref(false)
+const cloneNewKey = ref('')
+const cloneNewName = ref('')
+const extractVisible = ref(false)
+const pendingEntityKey = ref(null)
+
+// ---- 脏状态守卫：切换实体/新建/克隆/导入/离开页面统一先确认 ----
+const confirmDiscard = () =>
+  new Promise((resolve) => {
+    if (!isDirty.value) return resolve(true)
+    Modal.confirm({
+      title: '有未保存的修改',
+      content: '继续操作将丢失当前编辑内容，确定放弃吗？',
+      okText: '放弃修改',
+      cancelText: '继续编辑',
+      okButtonProps: { danger: true },
+      onOk: () => resolve(true),
+      onCancel: () => resolve(false)
+    })
+  })
+
+const handleBeforeUnload = (event) => {
+  if (!isDirty.value) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+
+onBeforeRouteLeave(() => (isDirty.value ? confirmDiscard() : true))
+
+// ---- 树与选择 ----
+const handleTreeSelect = async (key) => {
+  if (!key || key === selectedKeys.value[0]) return
+  if (!(await confirmDiscard())) return
+  if (key.startsWith('new_')) {
+    handleCreateEntity(key.slice('new_'.length))
+    return
+  }
+  if (key.startsWith('entity_')) {
+    const entity = schemas.value.find((item) => item.entity_id === key.slice('entity_'.length))
+    if (entity) select(entity)
+    return
+  }
+  clearSelection()
+}
+
+const handleCreateEntity = (domainId = null) => {
+  const domain = domainId
+    ? taxonomy.value?.domains?.find((item) => item.domain_id === domainId)
+    : null
+  startCreate(domain?.categories?.[0]?.category_name)
+}
+
+const handleTreeDelete = (entityId) => removeEntity(entityId)
+
+// ---- 编辑器操作 ----
+const handleCancel = () => resetDraft()
+const handleDelete = () => {
+  if (draft.value?.entity_id) removeEntity(draft.value.entity_id)
+}
+
+const handleClone = async () => {
+  if (!(await confirmDiscard())) return
+  cloneNewKey.value = draft.value.entity_key + '_copy'
+  cloneNewName.value = draft.value.name_cn + '（副本）'
+  cloneModalVisible.value = true
+}
+
+const handleConfirmClone = async () => {
+  if (await cloneEntity(cloneNewKey.value, cloneNewName.value)) cloneModalVisible.value = false
+}
+
+const handleViewJson = () => {
+  if (!draft.value) {
+    message.warning('请先选择一个实体')
+    return
+  }
+  jsonContent.value = JSON.stringify(draft.value, null, 2)
+  jsonModalVisible.value = true
+}
+
+// ---- 导入 / 导出 ----
+const handleImport = async () => {
+  if (!(await confirmDiscard())) return
+  importFileList.value = []
+  importModalVisible.value = true
+}
+
+const handleBeforeUpload = () => false
+
+const handleConfirmImport = async () => {
+  if (!importFileList.value.length) {
+    message.error('请选择文件')
+    return
+  }
+  const text = await importFileList.value[0].originFileObj.text()
+  let configData
+  try {
+    configData = JSON.parse(text)
+  } catch (e) {
+    console.error('导入失败', e)
+    message.error('导入失败：文件格式错误')
+    return
+  }
+  if (await importConfig(configData)) importModalVisible.value = false
+}
+
+const handleExtractImported = () => load({ preserveDraft: true })
+
+// ---- 深链：?entity_key=xxx ----
+onMounted(async () => {
+  window.addEventListener('beforeunload', handleBeforeUnload)
+  pendingEntityKey.value = route.query.entity_key || null
+  await load()
+  if (pendingEntityKey.value && selectByKey(pendingEntityKey.value)) pendingEntityKey.value = null
+})
+
+onBeforeUnmount(() => window.removeEventListener('beforeunload', handleBeforeUnload))
+
+watch(
+  () => route.query.entity_key,
+  async (key) => {
+    if (!key || key === draft.value?.entity_key) return
+    if (!(await confirmDiscard())) {
+      if (draft.value?.entity_key) {
+        router.replace({ query: { ...route.query, entity_key: draft.value.entity_key } })
+      }
+      return
+    }
+    if (schemas.value.length) selectByKey(key)
+    else pendingEntityKey.value = key
+  }
+)
+</script>
+
 <template>
   <div class="ewp domain-entity-builder-view">
     <!-- 页头（EIA page-head 配方）：唯一主操作「新建实体」，其余降级次/文本钮 -->
@@ -10,9 +190,11 @@
         <div class="ph-sub">管理通用域层级分类体系和实体 Schema 定义，统一实体归属与提取口径</div>
       </div>
       <div class="ph-actions">
-        <button class="btn btn-sec" @click="handleExport"><Download :size="14" /> 导出</button>
+        <button class="btn btn-sec" @click="exportConfig"><Download :size="14" /> 导出</button>
         <button class="btn btn-sec" @click="handleImport"><Upload :size="14" /> 导入</button>
-        <button class="btn btn-sec" @click="handleOpenExtract"><Bot :size="14" /> AI 提取</button>
+        <button class="btn btn-sec" @click="extractVisible = true">
+          <Bot :size="14" /> AI 提取
+        </button>
         <button class="btn btn-pri" @click="handleCreateEntity">
           <Plus :size="14" /> 新建实体
         </button>
@@ -30,373 +212,32 @@
     />
 
     <div class="main-content">
-      <!-- 左侧：分类导航树 -->
-      <div class="left-panel">
-        <div class="panel-header">
-          <a-input
-            v-model:value="searchKeyword"
-            placeholder="搜索实体..."
-            allow-clear
-            @change="handleSearch"
-          >
-            <template #prefix><Search :size="14" /></template>
-          </a-input>
-        </div>
-        <div class="taxonomy-tree">
-          <a-spin :spinning="loading">
-            <a-tree
-              v-if="treeData.length > 0"
-              :tree-data="filteredTreeData"
-              :selected-keys="selectedKeys"
-              :expanded-keys="expandedKeys"
-              :auto-expand-parent="autoExpandParent"
-              @select="handleTreeSelect"
-              @expand="handleTreeExpand"
-            >
-              <template #title="{ title, category, entity_id, isNew }">
-                <div class="tree-node-row">
-                  <span :class="['tree-node-title', { 'is-new': isNew }]">{{ title }}</span>
-                  <span v-if="category" class="tree-node-count">
-                    ({{ getEntityCountByCategory(category) }})
-                  </span>
-                  <a-popconfirm
-                    v-if="entity_id && !isNew"
-                    title="确定删除此实体？"
-                    ok-text="删除"
-                    cancel-text="取消"
-                    placement="right"
-                    @confirm.stop="handleTreeDelete(entity_id)"
-                  >
-                    <Trash2 :size="12" class="tree-delete-icon" @click.stop />
-                  </a-popconfirm>
-                </div>
-              </template>
-            </a-tree>
-            <a-empty v-else description="暂无分类数据" />
-          </a-spin>
-        </div>
-      </div>
+      <EntityTree
+        :tree-data="treeData"
+        :loading="loading"
+        :selected-keys="selectedKeys"
+        @select="handleTreeSelect"
+        @delete="handleTreeDelete"
+      />
 
-      <!-- 右侧：Schema编辑器 -->
       <div class="right-panel">
-        <div v-if="!selectedEntity" class="empty-state">
+        <div v-if="!draft" class="empty-state">
           <a-empty description="请从左侧选择分类或实体进行编辑" />
         </div>
-
-        <div v-else class="schema-editor">
-          <!-- 实体基本信息 -->
-          <a-card title="基础元数据" class="editor-section">
-            <a-form :model="editingEntity" layout="vertical">
-              <a-row :gutter="16">
-                <a-col :span="8">
-                  <a-form-item label="实体键 (entity_key)" required>
-                    <a-input
-                      v-model:value="editingEntity.entity_key"
-                      placeholder="snake_case"
-                      :disabled="!!editingEntity.entity_id"
-                    />
-                  </a-form-item>
-                </a-col>
-                <a-col :span="8">
-                  <a-form-item label="中文名称" required>
-                    <a-input
-                      v-model:value="editingEntity.name_cn"
-                      placeholder="例如：设计生产能力"
-                    />
-                  </a-form-item>
-                </a-col>
-                <a-col :span="8">
-                  <a-form-item label="分类" required>
-                    <a-select
-                      v-model:value="editingEntity.category"
-                      placeholder="请选择分类"
-                      :disabled="!!editingEntity.entity_id"
-                      :options="categoryOptions"
-                    />
-                  </a-form-item>
-                </a-col>
-              </a-row>
-
-              <a-row :gutter="16">
-                <a-col :span="8">
-                  <a-form-item label="值类型">
-                    <a-select v-model:value="editingEntity.value_type">
-                      <a-select-option value="String">String</a-select-option>
-                      <a-select-option value="Integer">Integer</a-select-option>
-                      <a-select-option value="Float">Float</a-select-option>
-                      <a-select-option value="Boolean">Boolean</a-select-option>
-                      <a-select-option value="Enum">Enum</a-select-option>
-                      <a-select-option value="Object">Object</a-select-option>
-                      <a-select-option value="List">List</a-select-option>
-                    </a-select>
-                  </a-form-item>
-                </a-col>
-              </a-row>
-
-              <a-row :gutter="16">
-                <a-col :span="12">
-                  <a-form-item label="单位">
-                    <a-input v-model:value="editingEntity.unit" placeholder="Mt/a、万吨/年" />
-                  </a-form-item>
-                </a-col>
-                <a-col :span="12">
-                  <a-form-item>
-                    <a-checkbox v-model:checked="editingEntity.is_list_type">
-                      列表型实体（一份报告可能有多个）
-                    </a-checkbox>
-                  </a-form-item>
-                </a-col>
-              </a-row>
-
-              <a-form-item label="描述">
-                <a-textarea
-                  v-model:value="editingEntity.description"
-                  :rows="2"
-                  placeholder="描述该实体的用途和特点"
-                />
-              </a-form-item>
-
-              <a-form-item label="同义词列表">
-                <a-select
-                  v-model:value="editingEntity.synonyms"
-                  mode="tags"
-                  placeholder="输入同义词，按回车添加"
-                  :token-separators="[',']"
-                  style="width: 100%"
-                />
-              </a-form-item>
-            </a-form>
-          </a-card>
-
-          <!-- 属性定义 -->
-          <a-card title="属性结构定义" class="editor-section">
-            <a-table
-              :columns="propertyColumns"
-              :data-source="editingEntity.properties"
-              :pagination="false"
-              size="small"
-            >
-              <template #bodyCell="{ column, record, index }">
-                <template v-if="column.key === 'actions'">
-                  <a-space>
-                    <a-button type="link" size="small" @click="handleEditProperty(index)"
-                      >编辑</a-button
-                    >
-                    <a-popconfirm title="删除此属性？" @confirm="handleDeleteProperty(index)">
-                      <a-button type="link" size="small" danger>删除</a-button>
-                    </a-popconfirm>
-                  </a-space>
-                </template>
-                <template v-else-if="column.key === 'value_type'">{{ record.value_type }}</template>
-                <template v-else-if="column.key === 'required'">
-                  <a-tag :color="record.required ? 'red' : 'default'">{{
-                    record.required ? '必填' : '可选'
-                  }}</a-tag>
-                </template>
-                <template v-else-if="column.key === 'enum_options'">
-                  <span v-if="record.enum_options && record.enum_options.length">{{
-                    record.enum_options.join(', ')
-                  }}</span>
-                  <span v-else>-</span>
-                </template>
-              </template>
-            </a-table>
-            <a-button type="dashed" block style="margin-top: 16px" @click="handleAddProperty">
-              <template #icon><Plus :size="14" /></template>
-              添加属性
-            </a-button>
-          </a-card>
-
-          <!-- 关系推理规则 -->
-          <a-card title="图谱关系推理规则" class="editor-section">
-            <div class="rule-hint">
-              规则在文档入库阶段求值：<code>condition</code> 的键是本实体的属性 key，按段落 slot
-              值逐项比对； 全部命中后，按 <code>actions</code> 生成
-              <code>（段落模板）-[关系]-&gt;（目标实体）</code> 图谱边，<code>target</code> 填目标
-              entity_key。
-            </div>
-            <div
-              v-for="(rule, index) in editingEntity.relation_rules"
-              :key="index"
-              class="rule-item"
-            >
-              <div class="rule-header">
-                <strong>{{ rule.rule_name || `规则 ${index + 1}` }}</strong>
-                <a-space>
-                  <a-button type="link" size="small" @click="handleEditRule(index)">编辑</a-button>
-                  <a-popconfirm title="删除此规则？" @confirm="handleDeleteRule(index)">
-                    <a-button type="link" size="small" danger>删除</a-button>
-                  </a-popconfirm>
-                </a-space>
-              </div>
-              <div class="rule-content">
-                <div class="rule-condition">
-                  <strong>条件：</strong>
-                  <code>{{ JSON.stringify(rule.condition, null, 2) }}</code>
-                </div>
-                <div class="rule-actions">
-                  <strong>动作：</strong>
-                  <code>{{ JSON.stringify(rule.actions, null, 2) }}</code>
-                </div>
-              </div>
-            </div>
-            <a-button type="dashed" block style="margin-top: 16px" @click="handleAddRule">
-              <template #icon><Plus :size="14" /></template>
-              添加规则
-            </a-button>
-          </a-card>
-
-          <!-- 操作按钮 -->
-          <div class="editor-actions">
-            <a-space>
-              <a-button type="primary" @click="handleSave" :loading="saving">保存</a-button>
-              <a-button @click="handleCancel">取消</a-button>
-              <a-button v-if="editingEntity.entity_id" type="default" @click="handleClone">
-                <template #icon><Copy :size="14" /></template>
-                克隆
-              </a-button>
-              <a-button v-if="editingEntity.entity_id" type="default" @click="handleViewJson">
-                <template #icon><FileText :size="14" /></template>
-                查看JSON
-              </a-button>
-              <a-popconfirm
-                v-if="editingEntity.entity_id"
-                title="确定删除此实体？此操作不可恢复。"
-                ok-text="删除"
-                cancel-text="取消"
-                @confirm="handleDelete"
-              >
-                <a-button type="primary" danger>删除</a-button>
-              </a-popconfirm>
-            </a-space>
-          </div>
-        </div>
+        <EntityEditor
+          v-else
+          v-model:entity="draft"
+          :category-options="categoryOptions"
+          :entity-keys="entityKeys"
+          :saving="saving"
+          @save="save"
+          @cancel="handleCancel"
+          @clone="handleClone"
+          @view-json="handleViewJson"
+          @delete="handleDelete"
+        />
       </div>
     </div>
-
-    <!-- 属性编辑弹窗 -->
-    <a-modal
-      v-model:open="propertyModalVisible"
-      title="属性定义"
-      width="700px"
-      @ok="handleSaveProperty"
-    >
-      <a-form :model="editingProperty" layout="vertical">
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item label="属性键" required>
-              <a-input v-model:value="editingProperty.key" placeholder="例如：name" />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item label="中文名称" required>
-              <a-input v-model:value="editingProperty.name_cn" placeholder="例如：村庄名称" />
-            </a-form-item>
-          </a-col>
-        </a-row>
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item label="数据类型" required>
-              <a-select v-model:value="editingProperty.value_type">
-                <a-select-option value="String">String</a-select-option>
-                <a-select-option value="Integer">Integer</a-select-option>
-                <a-select-option value="Float">Float</a-select-option>
-                <a-select-option value="Boolean">Boolean</a-select-option>
-                <a-select-option value="Enum">Enum</a-select-option>
-              </a-select>
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item label="单位">
-              <a-input v-model:value="editingProperty.unit" placeholder="例如：m、人" />
-            </a-form-item>
-          </a-col>
-        </a-row>
-        <a-form-item>
-          <a-checkbox v-model:checked="editingProperty.required">必填</a-checkbox>
-        </a-form-item>
-        <a-form-item v-if="editingProperty.value_type === 'Enum'" label="枚举选项" required>
-          <a-select
-            v-model:value="editingProperty.enum_options"
-            mode="tags"
-            placeholder="输入枚举选项，按回车添加"
-            :token-separators="[',']"
-            style="width: 100%"
-          />
-        </a-form-item>
-        <a-row
-          :gutter="16"
-          v-if="editingProperty.value_type === 'Integer' || editingProperty.value_type === 'Float'"
-        >
-          <a-col :span="12">
-            <a-form-item label="最小值">
-              <a-input-number
-                v-model:value="editingProperty.min_value"
-                style="width: 100%"
-                :precision="editingProperty.value_type === 'Float' ? 2 : 0"
-              />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item label="最大值">
-              <a-input-number
-                v-model:value="editingProperty.max_value"
-                style="width: 100%"
-                :precision="editingProperty.value_type === 'Float' ? 2 : 0"
-              />
-            </a-form-item>
-          </a-col>
-        </a-row>
-        <a-form-item label="描述">
-          <a-textarea
-            v-model:value="editingProperty.description"
-            :rows="2"
-            placeholder="属性描述"
-          />
-        </a-form-item>
-        <a-form-item label="提取提示词">
-          <a-textarea
-            v-model:value="editingProperty.extraction_hint"
-            :rows="2"
-            placeholder="用于指导LLM提取的提示词"
-          />
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
-    <!-- 规则编辑弹窗 -->
-    <a-modal
-      v-model:open="ruleModalVisible"
-      title="关系推理规则"
-      width="800px"
-      @ok="handleSaveRule"
-    >
-      <a-form :model="editingRule" layout="vertical">
-        <a-form-item label="规则名称" required>
-          <a-input
-            v-model:value="editingRule.rule_name"
-            placeholder="例如：错动线内不搬迁冲突检测"
-          />
-        </a-form-item>
-        <a-form-item label="条件表达式 (JSON)" required>
-          <a-textarea
-            v-model:value="editingRule.condition_json"
-            :rows="4"
-            placeholder='{"location_relation": "错动线内", "protection_status": "留守"}'
-          />
-        </a-form-item>
-        <a-form-item label="动作列表 (JSON)" required>
-          <a-textarea
-            v-model:value="editingRule.actions_json"
-            :rows="6"
-            placeholder='[{"type": "create_edge", "relation": "CONFLICT_WITH", "target": "Project_Entity"}]'
-          />
-        </a-form-item>
-        <a-form-item label="规则描述">
-          <a-textarea v-model:value="editingRule.description" :rows="2" placeholder="规则描述" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
 
     <!-- 导入配置弹窗 -->
     <a-modal v-model:open="importModalVisible" title="导入配置" @ok="handleConfirmImport">
@@ -412,23 +253,6 @@
       </a-upload-dragger>
     </a-modal>
 
-    <!-- 查看JSON弹窗 -->
-    <a-modal v-model:open="jsonModalVisible" title="实体元数据JSON" width="900px" :footer="null">
-      <div class="json-viewer">
-        <div class="json-actions">
-          <a-space>
-            <a-button type="default" @click="handleCopyJson"
-              ><template #icon><Copy :size="14" /></template>复制</a-button
-            >
-            <a-button type="default" @click="handleDownloadJson"
-              ><template #icon><Download :size="14" /></template>下载</a-button
-            >
-          </a-space>
-        </div>
-        <pre class="json-content">{{ jsonContent }}</pre>
-      </div>
-    </a-modal>
-
     <!-- 克隆弹窗 -->
     <a-modal v-model:open="cloneModalVisible" title="克隆实体" @ok="handleConfirmClone">
       <a-form layout="vertical">
@@ -441,1031 +265,14 @@
       </a-form>
     </a-modal>
 
-    <!-- AI 实体提取弹窗 -->
-    <a-modal
-      v-model:open="showExtractModal"
-      title="AI 实体提取"
-      width="900px"
-      :footer="null"
-      @cancel="handleExtractCancel"
-    >
-      <a-steps :current="extractStep" size="small" style="margin-bottom: 24px">
-        <a-step title="上传文档" />
-        <a-step title="提取结果" />
-      </a-steps>
-
-      <!-- Step 1: Upload -->
-      <div v-if="extractStep === 0">
-        <a-form layout="vertical">
-          <a-form-item label="上传文档" required>
-            <a-upload-dragger
-              :before-upload="handleExtractUpload"
-              :show-upload-list="false"
-              accept=".txt,.md,.json"
-            >
-              <p class="ant-upload-drag-icon"><Inbox :size="48" /></p>
-              <p class="ant-upload-text">点击或拖拽文件到此区域上传</p>
-              <p class="ant-upload-hint">支持 TXT、Markdown 格式文档，最大 5MB</p>
-            </a-upload-dragger>
-            <div v-if="extractFile" class="extract-file-info">
-              <FileText :size="13" /> {{ extractFile.name }} ({{
-                formatFileSize(extractFile.size)
-              }})
-            </div>
-          </a-form-item>
-          <a-form-item>
-            <a-button
-              type="primary"
-              :loading="extracting"
-              :disabled="!extractFile"
-              @click="handleStartExtract"
-              style="width: 100%"
-            >
-              <template #icon><Zap :size="14" /></template>
-              开始提取
-            </a-button>
-          </a-form-item>
-        </a-form>
-      </div>
-
-      <!-- Step 2: Comparison & Import -->
-      <div v-if="extractStep === 1">
-        <div class="extract-results-header">
-          <a-space wrap>
-            <a-tag color="blue">提取 {{ extractComparison.length }} 条</a-tag>
-            <a-tag color="green">{{ countByStatus('matched') }} 已一致</a-tag>
-            <a-tag color="orange">{{ countByStatus('partial') }} 可补属性</a-tag>
-            <a-tag color="purple">{{ countByStatus('new') }} 新建提案</a-tag>
-            <a-tag v-if="invalidCount" color="red">{{ invalidCount }} 不可导入</a-tag>
-          </a-space>
-          <a-space>
-            <a-button size="small" @click="handleSelectAllNew" :disabled="importableCount === 0"
-              >全选可导入</a-button
-            >
-            <a-button size="small" @click="handleDeselectAll">取消全选</a-button>
-            <a-button size="small" @click="handleExtractBack">重新上传</a-button>
-            <a-button size="small" type="primary" @click="handleExtractRedo" :loading="extracting"
-              >重新提取</a-button
-            >
-          </a-space>
-        </div>
-
-        <a-alert
-          v-if="extractCoverage?.truncated"
-          type="warning"
-          show-icon
-          class="extract-coverage"
-          :message="`仅扫描前 ${extractCoverage.scanned_chars} 字符（全文 ${extractCoverage.content_chars} 字符），超出部分未参与提取`"
-        />
-        <a-alert
-          type="info"
-          show-icon
-          class="extract-coverage"
-          :message="`默认勾选：有原文证据、置信度 ≥ ${(extractConfidenceThreshold * 100).toFixed(0)}% 且通过校验的条目；提取结果只用于补全 Schema，实例值不入库`"
-        />
-
-        <div v-if="extractComparison.length === 0" class="extract-empty">
-          <a-empty description="未提取到实体对象" />
-        </div>
-        <div v-else class="extract-results-list">
-          <a-card
-            v-for="(item, idx) in extractComparison"
-            :key="idx"
-            size="small"
-            :class="['extract-result-card', 'extract-card-' + item._status]"
-          >
-            <div class="extract-result-header">
-              <a-checkbox
-                v-if="item._status !== 'matched'"
-                v-model:checked="extractSelected[idx]"
-                :disabled="!isImportable(item)"
-                class="extract-check"
-              />
-              <template v-else><span class="extract-check-placeholder" /></template>
-              <span class="extract-result-name">{{ item.name_cn || item.schema_ref }}</span>
-              <a-space size="4" wrap>
-                <a-tag v-if="item._status === 'new'" color="purple">新建提案</a-tag>
-                <a-tag v-if="item._status === 'matched'" color="green">已一致</a-tag>
-                <a-tag v-if="item._status === 'partial'" color="orange">
-                  补 {{ item._diff.add_properties.length }} 个属性
-                </a-tag>
-                <a-tag v-if="!item.grounded" color="red">原文未命中</a-tag>
-                <a-tag
-                  :color="
-                    item.confidence >= 0.8 ? 'green' : item.confidence >= 0.6 ? 'orange' : 'red'
-                  "
-                >
-                  {{ ((item.confidence || 0) * 100).toFixed(0) }}%
-                </a-tag>
-                <a-tag>{{ item.schema_ref || '(提案)' }}</a-tag>
-              </a-space>
-            </div>
-
-            <!-- 新建提案的问题说明 -->
-            <div v-if="item._proposed_entity?.problems?.length" class="extract-problems">
-              <div v-for="(p, i) in item._proposed_entity.problems" :key="i">• {{ p }}</div>
-            </div>
-
-            <!-- 建议补充的属性 -->
-            <div v-if="item._diff?.add_properties?.length" class="extract-diff">
-              <div class="diff-title">建议补充的属性定义：</div>
-              <div v-for="prop in item._diff.add_properties" :key="prop.key" class="diff-row">
-                <span class="diff-field">{{ prop.name_cn }} ({{ prop.key }})</span>
-                <span class="diff-new">{{ prop.value_type }}</span>
-                <span class="diff-old">示例：{{ prop.sample_value }}</span>
-              </div>
-            </div>
-
-            <!-- 新建提案的实体信息 -->
-            <div v-else-if="item._status === 'new'" class="extract-diff">
-              <div class="diff-title">新建实体提案：</div>
-              <div class="diff-row">
-                <span class="diff-field">{{ item._proposed_entity?.entity_key }}</span>
-                <span class="diff-new">{{ item._proposed_entity?.category }}</span>
-                <span class="diff-old">
-                  {{ item._proposed_entity?.properties?.length || 0 }} 个属性
-                </span>
-              </div>
-            </div>
-            <div v-else-if="item._status === 'matched'" class="extract-matched-hint">
-              属性已全部覆盖，无需写入
-            </div>
-
-            <div
-              v-if="item.extracted_text"
-              :class="['extract-result-text', { 'is-ungrounded': !item.grounded }]"
-            >
-              <strong>{{ item.grounded ? '原文' : '原文未命中（不可导入）' }}：</strong>
-              {{ item.extracted_text }}
-            </div>
-            <div
-              v-if="item.values && Object.keys(item.values).length"
-              class="extract-result-values"
-            >
-              <a-descriptions size="small" :column="2" bordered>
-                <a-descriptions-item v-for="(val, k) in item.values" :key="k" :label="k">
-                  {{ typeof val === 'object' ? JSON.stringify(val) : val }}
-                </a-descriptions-item>
-              </a-descriptions>
-            </div>
-          </a-card>
-        </div>
-
-        <!-- Import button -->
-        <div v-if="importableCount > 0" class="extract-import-bar">
-          <a-space>
-            已选 <strong>{{ selectedCount }}</strong> / 可导入 {{ importableCount }}
-          </a-space>
-          <a-button
-            type="primary"
-            :loading="importing"
-            :disabled="selectedCount === 0"
-            @click="handleImportExtracted"
-          >
-            <template #icon><Download :size="14" /></template>
-            导入数据库（{{ selectedCount }}）
-          </a-button>
-        </div>
-      </div>
-    </a-modal>
+    <EntityJsonModal
+      v-model:open="jsonModalVisible"
+      :content="jsonContent"
+      :filename="draft?.entity_key || 'entity'"
+    />
+    <EntityExtractWizard v-model:open="extractVisible" @imported="handleExtractImported" />
   </div>
 </template>
-
-<script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
-import { useRoute } from 'vue-router'
-import { message } from 'ant-design-vue'
-import {
-  Box,
-  Bot,
-  Copy,
-  Download,
-  FileText,
-  Inbox,
-  Plus,
-  Search,
-  Trash2,
-  Upload,
-  Zap
-} from '@lucide/vue'
-import { domainEntityBuilderApi } from '@/apis/domain_entity_builder_api'
-
-const route = useRoute()
-const loading = ref(false)
-const saving = ref(false)
-const error = ref('')
-const taxonomy = ref(null)
-const entitySchemas = ref([])
-const selectedKeys = ref([])
-const expandedKeys = ref([])
-const autoExpandParent = ref(true)
-const searchKeyword = ref('')
-const selectedEntity = ref(null)
-const editingEntity = ref(null)
-const selectedCategoryPath = ref('')
-const pendingEntityKey = ref(null)
-
-const propertyModalVisible = ref(false)
-const ruleModalVisible = ref(false)
-const importModalVisible = ref(false)
-const jsonModalVisible = ref(false)
-const cloneModalVisible = ref(false)
-const importFileList = ref([])
-const editingPropertyIndex = ref(-1)
-const editingRuleIndex = ref(-1)
-const jsonContent = ref('')
-const cloneNewKey = ref('')
-const cloneNewName = ref('')
-
-const showExtractModal = ref(false)
-const extractStep = ref(0)
-const extracting = ref(false)
-const importing = ref(false)
-const extractFile = ref(null)
-const extractComparison = ref([])
-const extractSelected = ref({})
-const extractCoverage = ref(null)
-const extractConfidenceThreshold = ref(0.6)
-
-const countByStatus = (status) => extractComparison.value.filter((e) => e._status === status).length
-
-const hasProposalProblems = (item) => Boolean(item._proposed_entity?.problems?.length)
-
-// 可导入 = 非"已一致"、有原文证据、提案无校验问题
-const isImportable = (item) =>
-  item._status !== 'matched' && item.grounded === true && !hasProposalProblems(item)
-
-const importableCount = computed(() => extractComparison.value.filter(isImportable).length)
-const invalidCount = computed(
-  () => extractComparison.value.filter((e) => e._status !== 'matched' && !isImportable(e)).length
-)
-const selectedCount = computed(() => {
-  return Object.values(extractSelected.value).filter((v) => v).length
-})
-
-const editingProperty = ref({
-  key: '',
-  name_cn: '',
-  value_type: 'String',
-  unit: '',
-  required: false,
-  enum_options: [],
-  min_value: null,
-  max_value: null,
-  description: '',
-  extraction_hint: ''
-})
-
-const editingRule = ref({
-  rule_id: '',
-  rule_name: '',
-  condition_json: '',
-  actions_json: '',
-  description: ''
-})
-
-const propertyColumns = [
-  { title: '属性键', dataIndex: 'key', key: 'key' },
-  { title: '中文名称', dataIndex: 'name_cn', key: 'name_cn' },
-  { title: '类型', dataIndex: 'value_type', key: 'value_type' },
-  { title: '单位', dataIndex: 'unit', key: 'unit' },
-  { title: '必填', dataIndex: 'required', key: 'required' },
-  { title: '枚举选项', dataIndex: 'enum_options', key: 'enum_options' },
-  { title: '操作', key: 'actions', width: 120 }
-]
-
-const normalizeValueType = (v) => {
-  if (!v || typeof v !== 'string') return 'String'
-  if (v.startsWith('List')) {
-    if (v.includes('<Object>')) return 'Object'
-    if (v.includes('<String>')) return 'String'
-    if (v.includes('<Integer>')) return 'Integer'
-    if (v.includes('<Float>')) return 'Float'
-    return 'List'
-  }
-  const valid = ['String', 'Integer', 'Float', 'Boolean', 'Enum', 'Object', 'List']
-  return valid.includes(v) ? v : 'String'
-}
-
-const categoryOptions = computed(() => {
-  if (!taxonomy.value?.domains) return []
-  const cats = []
-  taxonomy.value.domains.forEach((d) => {
-    d.categories?.forEach((c) => {
-      if (c.category_name && !cats.find((x) => x.value === c.category_name)) {
-        cats.push({ label: c.category_name, value: c.category_name })
-      }
-    })
-  })
-  return cats
-})
-
-const treeData = computed(() => {
-  if (!taxonomy.value?.domains) return []
-  return taxonomy.value.domains
-    .map((domain) => {
-      const category = domain.categories?.[0]
-      if (!category) return null
-      const categoryName = category.category_name
-      const categoryEntities = entitySchemas.value.filter(
-        (e) => (e.category || '') === categoryName
-      )
-      // 空分类也保留：否则管理员无处新建第一实体
-      return {
-        title: domain.domain_name, // 计数由节点右侧单独渲染，避免重复
-        key: domain.domain_id,
-        category: categoryName,
-        isLeaf: false,
-        search_text: `${domain.domain_name} ${categoryName}`,
-        children: [
-          ...categoryEntities.map((entity) => ({
-            title: entity.name_cn,
-            key: `entity_${entity.entity_id}`,
-            entity_id: entity.entity_id,
-            entity_key: entity.entity_key,
-            isLeaf: true,
-            search_text: [entity.name_cn, entity.entity_key, entity.description]
-              .concat(entity.synonyms || [])
-              .filter(Boolean)
-              .join(' ')
-          })),
-          {
-            title: '+ 新建实体',
-            key: `new_${domain.domain_id}`,
-            category: categoryName,
-            isLeaf: true,
-            isNew: true,
-            search_text: ''
-          }
-        ]
-      }
-    })
-    .filter(Boolean)
-})
-
-const filteredTreeData = computed(() => {
-  if (!searchKeyword.value) return treeData.value
-  const keyword = searchKeyword.value.toLowerCase()
-  const filter = (nodes) =>
-    nodes
-      .map((node) => {
-        const match = (node.search_text || node.title).toLowerCase().includes(keyword)
-        const filtered = node.children ? filter(node.children) : []
-        if (match || filtered.length)
-          return { ...node, children: filtered.length ? filtered : node.children }
-        return null
-      })
-      .filter((n) => n !== null)
-  return filter(treeData.value)
-})
-
-const getEntityCountByCategory = (cat) => {
-  if (!cat) return 0
-  return entitySchemas.value.filter((e) => (e.category || '') === cat).length
-}
-
-const normalizeEntityForEditing = (entity) => {
-  const copy = JSON.parse(JSON.stringify(entity))
-  copy.value_type = normalizeValueType(copy.value_type)
-  if (copy.properties?.length) {
-    copy.properties = copy.properties.map((p) => ({
-      ...p,
-      value_type: normalizeValueType(p.value_type)
-    }))
-  }
-  if (copy.relation_rules?.length) {
-    copy.relation_rules = copy.relation_rules.map((rule) => {
-      const nr = {
-        rule_id: rule.rule_id || `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        rule_name: rule.rule_name || '未命名规则',
-        condition: {},
-        actions: [],
-        description: rule.description || ''
-      }
-      if (rule.condition) {
-        if (typeof rule.condition === 'string') {
-          try {
-            nr.condition = JSON.parse(rule.condition)
-          } catch {
-            nr.condition = {}
-          }
-        } else if (
-          typeof rule.condition === 'object' &&
-          rule.condition !== null &&
-          !Array.isArray(rule.condition)
-        )
-          nr.condition = rule.condition
-      }
-      if (rule.actions) {
-        if (Array.isArray(rule.actions)) nr.actions = rule.actions
-        else if (typeof rule.actions === 'string') {
-          try {
-            nr.actions = JSON.parse(rule.actions)
-          } catch {
-            nr.actions = []
-          }
-        }
-      }
-      return nr
-    })
-  }
-  copy.domain_code = 'general' // 去领域化：实体归属统一通用域
-  return copy
-}
-
-const selectEntityByKey = (entityKey) => {
-  if (!entityKey) return false
-  const entity = entitySchemas.value.find(
-    (e) =>
-      e.entity_key === entityKey ||
-      e.entity_id === entityKey ||
-      e.entity_id === `${entityKey}_schema` ||
-      e.metadata?.legacy_id === entityKey
-  )
-  if (entity) {
-    selectedKeys.value = [`entity_${entity.entity_id}`]
-    selectedEntity.value = entity
-    editingEntity.value = normalizeEntityForEditing(entity)
-    if (entity.category && taxonomy.value?.domains) {
-      for (const d of taxonomy.value.domains) {
-        if (d.categories?.[0]?.category_name === entity.category) {
-          if (!expandedKeys.value.includes(d.domain_id)) expandedKeys.value.push(d.domain_id)
-          break
-        }
-      }
-    }
-    return true
-  }
-  return false
-}
-
-const loadData = async () => {
-  loading.value = true
-  error.value = ''
-  try {
-    // 去领域化：本页固定通用域作用域，避免多域数据串台
-    const [taxRes, schemasRes] = await Promise.all([
-      domainEntityBuilderApi.getTaxonomy('general'),
-      domainEntityBuilderApi.listEntitySchemas(null, 'general')
-    ])
-    if (taxRes.success) taxonomy.value = taxRes.data
-    if (schemasRes.success) entitySchemas.value = schemasRes.data.entity_schemas || []
-    if (taxonomy.value?.domains) {
-      expandedKeys.value = treeData.value.map((d) => d.key)
-    }
-    await nextTick()
-    const ek = route.query.entity_key || pendingEntityKey.value
-    if (ek) {
-      if (selectEntityByKey(ek)) pendingEntityKey.value = null
-    }
-  } catch (e) {
-    console.error('加载数据失败', e)
-    error.value = e?.message || '加载数据失败'
-    message.error(error.value)
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleTreeSelect = (keys) => {
-  if (!keys?.length) {
-    selectedEntity.value = null
-    editingEntity.value = null
-    selectedKeys.value = []
-    return
-  }
-  const key = keys[0]
-  selectedKeys.value = [key]
-  if (key.startsWith('new_')) {
-    handleCreateEntity(key.replace('new_', ''))
-    return
-  }
-  if (key.startsWith('entity_')) {
-    const eid = key.replace('entity_', '')
-    const entity = entitySchemas.value.find((e) => e.entity_id === eid)
-    if (entity) {
-      selectedEntity.value = entity
-      editingEntity.value = normalizeEntityForEditing(entity)
-    }
-  } else {
-    selectedEntity.value = null
-    editingEntity.value = null
-    selectedCategoryPath.value = key
-  }
-}
-
-const handleTreeExpand = (keys) => {
-  expandedKeys.value = keys
-  autoExpandParent.value = false
-}
-const handleSearch = () => {
-  if (searchKeyword.value) autoExpandParent.value = true
-}
-
-const handleTreeDelete = async (entityId) => {
-  try {
-    await domainEntityBuilderApi.deleteEntitySchema(entityId)
-    message.success('实体已删除')
-    if (selectedEntity.value?.entity_id === entityId) {
-      selectedEntity.value = null
-      editingEntity.value = null
-      selectedKeys.value = []
-    }
-    await loadData()
-  } catch (e) {
-    console.error('删除失败', e)
-    message.error(e?.message || '删除失败')
-  }
-}
-
-const handleCreateEntity = (domainId = null) => {
-  let defaultCategory = selectedCategoryPath.value
-  if (domainId && taxonomy.value?.domains) {
-    const domain = taxonomy.value.domains.find((d) => d.domain_id === domainId)
-    if (domain?.categories?.length) defaultCategory = domain.categories[0].category_name
-  }
-  if (!defaultCategory) defaultCategory = 'project_basic'
-
-  editingEntity.value = {
-    entity_id: null,
-    entity_key: '',
-    name_cn: '',
-    category: defaultCategory,
-    domain_code: 'general', // 去领域化：实体归属统一通用域
-    value_type: 'String',
-    unit: '',
-    is_list_type: false,
-    description: '',
-    synonyms: [],
-    properties: [],
-    relation_rules: [],
-    metadata: {}
-  }
-  selectedEntity.value = editingEntity.value
-}
-
-// 与后端 validate_key 同口径：非空、无空白与点号、≤64 字符
-const KEY_PATTERN = /^[^\s.。]{1,64}$/
-
-const validateEntityDraft = (draft) => {
-  if (!KEY_PATTERN.test((draft.entity_key || '').trim())) {
-    return '实体键不能为空、不能含空白或点号，且不超过 64 字符'
-  }
-  if (!draft.name_cn?.trim()) return '请填写中文名称'
-  if (!draft.category) return '请选择分类'
-  const seen = new Set()
-  for (const [index, prop] of (draft.properties || []).entries()) {
-    const key = (prop.key || '').trim()
-    if (!KEY_PATTERN.test(key)) {
-      return `第 ${index + 1} 个属性的键不能为空、不能含空白或点号`
-    }
-    if (seen.has(key.toLowerCase())) return `属性键 ${key} 重复`
-    seen.add(key.toLowerCase())
-  }
-  return ''
-}
-
-const handleSave = async () => {
-  try {
-    const invalid = validateEntityDraft(editingEntity.value)
-    if (invalid) {
-      message.error(invalid)
-      return
-    }
-    saving.value = true
-    editingEntity.value.entity_key = editingEntity.value.entity_key.trim()
-    editingEntity.value.properties = (editingEntity.value.properties || []).map((p) => ({
-      ...p,
-      key: (p.key || '').trim()
-    }))
-    editingEntity.value.value_type = normalizeValueType(editingEntity.value.value_type)
-    if (editingEntity.value.properties?.length) {
-      editingEntity.value.properties = editingEntity.value.properties.map((p) => ({
-        ...p,
-        value_type: normalizeValueType(p.value_type)
-      }))
-    }
-    if (editingEntity.value.entity_id) {
-      await domainEntityBuilderApi.updateEntitySchema(
-        editingEntity.value.entity_id,
-        editingEntity.value
-      )
-      message.success('实体更新成功')
-    } else {
-      const res = await domainEntityBuilderApi.createEntitySchema(editingEntity.value)
-      if (res.success) {
-        editingEntity.value.entity_id = res.data.entity_id
-        message.success('实体创建成功')
-      }
-    }
-    await loadData()
-  } catch (e) {
-    console.error('保存失败', e)
-    message.error(e?.message || '保存失败')
-  } finally {
-    saving.value = false
-  }
-}
-
-const handleCancel = () => {
-  if (selectedEntity.value?.entity_id)
-    editingEntity.value = normalizeEntityForEditing(selectedEntity.value)
-  else {
-    editingEntity.value = null
-    selectedEntity.value = null
-  }
-}
-
-const handleDelete = async () => {
-  if (!editingEntity.value.entity_id) return
-  try {
-    await domainEntityBuilderApi.deleteEntitySchema(editingEntity.value.entity_id)
-    message.success('实体已删除')
-    editingEntity.value = null
-    selectedEntity.value = null
-    selectedKeys.value = []
-    await loadData()
-  } catch (e) {
-    console.error('删除失败', e)
-    message.error(e?.message || '删除失败')
-  }
-}
-
-const handleClone = () => {
-  cloneNewKey.value = editingEntity.value.entity_key + '_copy'
-  cloneNewName.value = editingEntity.value.name_cn + '（副本）'
-  cloneModalVisible.value = true
-}
-
-const handleConfirmClone = async () => {
-  if (!cloneNewKey.value || !cloneNewName.value) {
-    message.error('请填写新实体键和名称')
-    return
-  }
-  try {
-    const res = await domainEntityBuilderApi.cloneEntity(
-      editingEntity.value.entity_id,
-      cloneNewKey.value,
-      cloneNewName.value
-    )
-    if (res.success) {
-      message.success('实体克隆成功')
-      cloneModalVisible.value = false
-      await loadData()
-    }
-  } catch (e) {
-    console.error('克隆失败', e)
-    message.error(e?.message || '克隆失败')
-  }
-}
-
-// --- Property handlers ---
-const handleAddProperty = () => {
-  editingPropertyIndex.value = -1
-  editingProperty.value = {
-    key: '',
-    name_cn: '',
-    value_type: 'String',
-    unit: '',
-    required: false,
-    enum_options: [],
-    min_value: null,
-    max_value: null,
-    description: '',
-    extraction_hint: ''
-  }
-  propertyModalVisible.value = true
-}
-const handleEditProperty = (i) => {
-  editingPropertyIndex.value = i
-  editingProperty.value = JSON.parse(JSON.stringify(editingEntity.value.properties[i]))
-  editingProperty.value.enum_options = editingProperty.value.enum_options || []
-  propertyModalVisible.value = true
-}
-const handleDeleteProperty = (i) => {
-  editingEntity.value.properties.splice(i, 1)
-}
-const handleSaveProperty = () => {
-  try {
-    if (!editingProperty.value.key || !editingProperty.value.name_cn) {
-      message.error('请填写属性键和中文名称')
-      return
-    }
-    if (
-      editingProperty.value.value_type === 'Enum' &&
-      !editingProperty.value.enum_options?.length
-    ) {
-      message.error('枚举类型必须提供枚举选项')
-      return
-    }
-    const data = {
-      key: editingProperty.value.key,
-      name_cn: editingProperty.value.name_cn,
-      value_type: editingProperty.value.value_type,
-      unit: editingProperty.value.unit || null,
-      required: editingProperty.value.required,
-      enum_options: editingProperty.value.enum_options || null,
-      min_value: editingProperty.value.min_value || null,
-      max_value: editingProperty.value.max_value || null,
-      description: editingProperty.value.description || '',
-      extraction_hint: editingProperty.value.extraction_hint || ''
-    }
-    if (editingPropertyIndex.value >= 0)
-      editingEntity.value.properties[editingPropertyIndex.value] = data
-    else editingEntity.value.properties.push(data)
-    propertyModalVisible.value = false
-    message.success('属性保存成功')
-  } catch (e) {
-    console.error('保存属性失败', e)
-    message.error('保存属性失败')
-  }
-}
-
-// --- Rule handlers ---
-const handleAddRule = () => {
-  editingRuleIndex.value = -1
-  editingRule.value = {
-    rule_id: '',
-    rule_name: '',
-    condition_json: '{}',
-    actions_json: '[]',
-    description: ''
-  }
-  ruleModalVisible.value = true
-}
-const handleEditRule = (i) => {
-  editingRuleIndex.value = i
-  const rule = editingEntity.value.relation_rules[i]
-  editingRule.value = {
-    rule_id: rule.rule_id || '',
-    rule_name: rule.rule_name || '',
-    condition_json: JSON.stringify(rule.condition || {}, null, 2),
-    actions_json: JSON.stringify(rule.actions || [], null, 2),
-    description: rule.description || ''
-  }
-  ruleModalVisible.value = true
-}
-const handleDeleteRule = (i) => {
-  editingEntity.value.relation_rules.splice(i, 1)
-}
-const handleSaveRule = () => {
-  try {
-    let condition, actions
-    try {
-      condition = JSON.parse(editingRule.value.condition_json)
-      actions = JSON.parse(editingRule.value.actions_json)
-    } catch {
-      message.error('JSON格式错误')
-      return
-    }
-    if (!editingRule.value.rule_name) {
-      message.error('请填写规则名称')
-      return
-    }
-    if (
-      !condition ||
-      typeof condition !== 'object' ||
-      Array.isArray(condition) ||
-      !Object.keys(condition).length
-    ) {
-      message.error('条件必须是非空对象，如 {"location_relation": "错动线内"}')
-      return
-    }
-    if (!Array.isArray(actions) || actions.length === 0) {
-      message.error('动作必须是非空数组')
-      return
-    }
-    for (const action of actions) {
-      if (action?.type !== 'create_edge') {
-        message.error('动作目前只支持 type=create_edge')
-        return
-      }
-      if (!action.relation || !action.target) {
-        message.error('create_edge 需要 relation（关系名）与 target（目标 entity_key）')
-        return
-      }
-      if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(action.relation)) {
-        message.error('relation 必须是英文标识（字母开头，可含下划线），如 CONFLICT_WITH')
-        return
-      }
-    }
-    const unknownTargets = actions
-      .map((a) => a.target)
-      .filter((t) => !entitySchemas.value.some((e) => e.entity_key === t))
-    if (unknownTargets.length) {
-      message.warning(`目标实体不存在，将按规则创建占位节点：${unknownTargets.join(', ')}`)
-    }
-    if (!editingRule.value.rule_id) editingRule.value.rule_id = `rule_${Date.now()}`
-    const data = {
-      rule_id: editingRule.value.rule_id,
-      rule_name: editingRule.value.rule_name,
-      condition,
-      actions,
-      description: editingRule.value.description || ''
-    }
-    if (editingRuleIndex.value >= 0)
-      editingEntity.value.relation_rules[editingRuleIndex.value] = data
-    else editingEntity.value.relation_rules.push(data)
-    ruleModalVisible.value = false
-    message.success('规则保存成功')
-  } catch (e) {
-    console.error('保存规则失败', e)
-    message.error('保存规则失败')
-  }
-}
-
-// --- Import / Export ---
-const handleExport = async () => {
-  try {
-    const res = await domainEntityBuilderApi.exportConfig('general') // 去领域化：恒传通用域
-    if (res.success) {
-      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' })
-      const link = document.createElement('a')
-      link.href = URL.createObjectURL(blob)
-      link.download = `domain_entity_general_${Date.now()}.json`
-      link.click()
-      URL.revokeObjectURL(link.href)
-      message.success('配置导出成功')
-    }
-  } catch (e) {
-    console.error('导出失败', e)
-    message.error('导出失败')
-  }
-}
-const handleImport = () => {
-  importModalVisible.value = true
-  importFileList.value = []
-}
-const handleBeforeUpload = () => false
-const handleConfirmImport = async () => {
-  if (!importFileList.value.length) {
-    message.error('请选择文件')
-    return
-  }
-  try {
-    const text = await importFileList.value[0].originFileObj.text()
-    await domainEntityBuilderApi.importConfig(JSON.parse(text))
-    message.success('配置导入成功')
-    importModalVisible.value = false
-    await loadData()
-  } catch (e) {
-    console.error('导入失败', e)
-    message.error('导入失败：' + (e?.message || '文件格式错误'))
-  }
-}
-
-// --- JSON viewer ---
-const handleViewJson = () => {
-  if (!editingEntity.value) {
-    message.warning('请先选择一个实体')
-    return
-  }
-  jsonContent.value = JSON.stringify(editingEntity.value, null, 2)
-  jsonModalVisible.value = true
-}
-const handleCopyJson = async () => {
-  try {
-    await navigator.clipboard.writeText(jsonContent.value)
-    message.success('已复制到剪贴板')
-  } catch {
-    message.error('复制失败')
-  }
-}
-const handleDownloadJson = () => {
-  const blob = new Blob([jsonContent.value], { type: 'application/json' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = `${editingEntity.value?.entity_key || 'entity'}_${Date.now()}.json`
-  link.click()
-  URL.revokeObjectURL(link.href)
-  message.success('JSON文件下载成功')
-}
-
-onMounted(async () => {
-  if (route.query.entity_key) pendingEntityKey.value = route.query.entity_key
-  loadData()
-})
-
-watch(
-  () => route.query.entity_key,
-  (nk) => {
-    if (nk && entitySchemas.value.length) selectEntityByKey(nk)
-    else if (nk) pendingEntityKey.value = nk
-  }
-)
-
-// ========== AI Extraction ==========
-
-const handleOpenExtract = () => {
-  extractFile.value = null
-  extractComparison.value = []
-  extractSelected.value = {}
-  extractCoverage.value = null
-  extractStep.value = 0
-  showExtractModal.value = true
-}
-
-const handleExtractUpload = (file) => {
-  if (file.size > 5 * 1024 * 1024) {
-    message.error('文件大小不能超过 5MB')
-    return false
-  }
-  extractFile.value = file
-  return false
-}
-
-const handleStartExtract = async () => {
-  if (!extractFile.value) return
-  extracting.value = true
-  try {
-    const res = await domainEntityBuilderApi.extractEntities(extractFile.value, 'general') // 去领域化：恒传通用域
-    if (res.success) {
-      const data = res.data || {}
-      extractComparison.value = data.comparison || data.entities || []
-      extractCoverage.value = data.coverage || null
-      extractConfidenceThreshold.value = data.confidence_threshold ?? 0.6
-      extractSelected.value = {}
-      extractComparison.value.forEach((item, idx) => {
-        if (isImportable(item) && (item.confidence ?? 0) >= extractConfidenceThreshold.value) {
-          extractSelected.value[idx] = true
-        }
-      })
-      extractStep.value = 1
-      message.success(
-        `提取完成：新建提案 ${countByStatus('new')}，可补属性 ${countByStatus('partial')}，已一致 ${countByStatus('matched')}`
-      )
-    }
-  } catch (e) {
-    console.error('实体提取失败', e)
-    message.error('提取失败: ' + (e?.message || '未知错误'))
-  } finally {
-    extracting.value = false
-  }
-}
-
-const handleSelectAllNew = () => {
-  extractComparison.value.forEach((item, idx) => {
-    if (isImportable(item)) extractSelected.value[idx] = true
-  })
-}
-
-const handleDeselectAll = () => {
-  extractSelected.value = {}
-}
-
-const handleImportExtracted = async () => {
-  const selected = extractComparison.value.filter((_, idx) => extractSelected.value[idx])
-  if (!selected.length) {
-    message.warning('请选择要导入的实体')
-    return
-  }
-  importing.value = true
-  try {
-    const res = await domainEntityBuilderApi.importExtractedEntities(selected, 'general') // 去领域化：恒传通用域
-    if (res.success) {
-      if (res.rejected?.length) {
-        message.warning(`${res.message}；首条拒绝原因：${res.rejected[0].reason}`)
-      } else {
-        message.success(res.message || '导入完成')
-      }
-      showExtractModal.value = false
-      await loadData()
-    }
-  } catch (e) {
-    console.error('导入失败', e)
-    message.error('导入失败: ' + (e?.message || '未知错误'))
-  } finally {
-    importing.value = false
-  }
-}
-
-const handleExtractCancel = () => {
-  showExtractModal.value = false
-  extractFile.value = null
-  extractComparison.value = []
-  extractSelected.value = {}
-  extractCoverage.value = null
-  extractStep.value = 0
-}
-
-const handleExtractBack = () => {
-  extractStep.value = 0
-  extractComparison.value = []
-  extractSelected.value = {}
-}
-
-const handleExtractRedo = () => {
-  extractStep.value = 0
-  extractComparison.value = []
-  extractSelected.value = {}
-}
-
-const formatFileSize = (bytes) => {
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
-}
-</script>
 
 <style scoped lang="less">
 .domain-entity-builder-view {
@@ -1486,53 +293,6 @@ const formatFileSize = (bytes) => {
   margin-top: 12px;
 }
 
-.left-panel {
-  width: 340px;
-  background: var(--gray-0);
-  border-radius: 8px;
-  border: 1px solid var(--gray-150);
-  padding: 16px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-
-  .panel-header {
-    margin-bottom: 16px;
-  }
-  .taxonomy-tree {
-    flex: 1;
-    overflow-y: auto;
-    .tree-node-row {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      .tree-node-title {
-        font-weight: 500;
-        &.is-new {
-          color: var(--main-color);
-          font-style: italic;
-        }
-      }
-      .tree-node-count {
-        color: var(--gray-600);
-        font-size: 12px;
-      }
-      .tree-delete-icon {
-        color: var(--gray-400);
-        margin-left: auto;
-        opacity: 0;
-        transition: opacity 0.2s;
-        &:hover {
-          color: var(--color-error-500);
-        }
-      }
-      &:hover .tree-delete-icon {
-        opacity: 1;
-      }
-    }
-  }
-}
-
 .right-panel {
   flex: 1;
   background: var(--gray-0);
@@ -1547,236 +307,5 @@ const formatFileSize = (bytes) => {
     justify-content: center;
     height: 100%;
   }
-  .schema-editor {
-    .editor-section {
-      margin-bottom: 24px;
-    }
-    .rule-hint {
-      margin-bottom: 12px;
-      padding: 10px 12px;
-      border-radius: 6px;
-      background: var(--color-info-50);
-      color: var(--gray-700);
-      font-size: 12px;
-      line-height: 1.7;
-      code {
-        padding: 1px 4px;
-        border-radius: 3px;
-        background: var(--gray-100);
-      }
-    }
-    .rule-item {
-      padding: 12px;
-      border: 1px solid var(--gray-200);
-      border-radius: 6px;
-      margin-bottom: 12px;
-      .rule-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-      }
-      .rule-content {
-        font-size: 12px;
-        .rule-condition,
-        .rule-actions {
-          margin-bottom: 8px;
-          code {
-            display: block;
-            padding: 8px;
-            background: var(--gray-100);
-            border-radius: 4px;
-            margin-top: 4px;
-            font-family: 'Courier New', monospace;
-          }
-        }
-      }
-    }
-    .editor-actions {
-      margin-top: 24px;
-      padding-top: 24px;
-      border-top: 1px solid var(--gray-200);
-    }
-  }
-}
-
-.json-viewer {
-  .json-actions {
-    margin-bottom: 16px;
-    display: flex;
-    justify-content: flex-end;
-  }
-  .json-content {
-    background: var(--gray-50);
-    border: 1px solid var(--gray-200);
-    border-radius: 6px;
-    padding: 16px;
-    max-height: 600px;
-    overflow: auto;
-    font-family: 'Courier New', monospace;
-    font-size: 13px;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    color: var(--gray-1000);
-  }
-}
-
-.extract-file-info {
-  margin-top: 12px;
-  padding: 8px 12px;
-  background: var(--gray-50);
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
-
-.extract-results-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--gray-200);
-}
-
-.extract-empty {
-  padding: 40px 0;
-}
-
-.extract-results-list {
-  max-height: 500px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.extract-result-card {
-  .extract-result-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 8px;
-    .extract-check,
-    .extract-check-placeholder {
-      flex-shrink: 0;
-      width: 22px;
-      margin-right: 4px;
-    }
-    .extract-result-name {
-      font-weight: 600;
-      font-size: 15px;
-      color: var(--gray-900);
-      flex: 1;
-    }
-    &:not(:last-child) {
-      margin-bottom: 8px;
-    }
-  }
-  .extract-result-text {
-    font-size: 13px;
-    color: var(--gray-600);
-    padding: 8px;
-    background: var(--gray-50);
-    border-radius: 4px;
-    margin-bottom: 8px;
-  }
-  .extract-result-values {
-    margin-top: 4px;
-  }
-
-  .extract-diff {
-    background: var(--gray-50);
-    border-radius: 6px;
-    padding: 10px 12px;
-    margin-bottom: 8px;
-    .diff-title {
-      font-weight: 600;
-      font-size: 13px;
-      margin-bottom: 6px;
-      color: var(--gray-700);
-    }
-    .diff-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      margin: 3px 0;
-      .diff-field {
-        font-weight: 600;
-        color: var(--gray-800);
-        min-width: 120px;
-      }
-      .diff-old {
-        color: var(--color-error-500);
-        text-decoration: line-through;
-        background: var(--color-error-50);
-        padding: 1px 6px;
-        border-radius: 3px;
-      }
-      .diff-arrow {
-        color: var(--gray-400);
-      }
-      .diff-new {
-        color: var(--color-success-500);
-        background: var(--color-success-50);
-        padding: 1px 6px;
-        border-radius: 3px;
-      }
-    }
-  }
-
-  .extract-matched-hint {
-    font-size: 13px;
-    color: var(--gray-500);
-    padding: 6px 0;
-    margin-bottom: 4px;
-  }
-}
-
-.extract-card-new {
-  border-left: 3px solid var(--color-info-500);
-}
-.extract-card-matched {
-  border-left: 3px solid var(--color-success-500);
-  opacity: 0.75;
-}
-.extract-card-partial {
-  border-left: 3px solid var(--color-warning-500);
-}
-
-.extract-import-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 16px;
-  padding: 12px 16px;
-  background: var(--main-color);
-  border-radius: 8px;
-  color: #fff; /* 中性白，不随主题 */
-  a-button {
-    margin-left: auto;
-  }
-}
-
-.extract-coverage {
-  margin-bottom: 12px;
-}
-
-.extract-problems {
-  margin-bottom: 8px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: var(--color-error-50);
-  color: var(--color-error-700);
-  font-size: 13px;
-}
-
-.extract-result-text.is-ungrounded {
-  background: var(--color-error-50);
-  color: var(--color-error-700);
 }
 </style>
