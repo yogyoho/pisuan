@@ -326,7 +326,13 @@ watch(
 
       <div class="right-panel">
         <div v-if="!draft" class="empty-state">
-          <a-empty description="请从左侧选择实体开始编辑" />
+          <!-- 未选实体时主体区不能只是一片空白：说明本屏做什么、数据从哪来、下游谁消费 -->
+          <div class="empty-icon"><Box :size="22" /></div>
+          <h3>从左侧选择一个实体开始编辑</h3>
+          <p class="empty-desc">
+            左栏按分类列出全部实体定义，选中后在这里维护属性结构、关系规则与泛化描述。
+            保存后的定义会用于泛化抽取、段落模板与报告参数。
+          </p>
           <div class="empty-actions">
             <button class="btn btn-pri" @click="handleCreateEntity">
               <Plus :size="14" /> 新建实体
@@ -446,16 +452,47 @@ watch(
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 16px;
-    height: 100%;
+    gap: 10px;
+    // 不再用 height:100%：外层画布高度随树内容增长，百分比会让提示被居中到首屏之外
+    min-height: 420px;
+    padding: 56px 24px;
+    text-align: center;
+
+    .empty-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      margin-bottom: 2px;
+      border-radius: 50%;
+      background: var(--main-50);
+      color: var(--main-600);
+    }
+
+    h3 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--gray-800);
+    }
+
+    .empty-desc {
+      max-width: 460px;
+      margin: 0;
+      color: var(--gray-600);
+      font-size: 13px;
+      line-height: 1.8;
+    }
 
     .empty-actions {
       display: flex;
       gap: 8px;
+      margin-top: 6px;
     }
 
     .empty-note {
-      max-width: 420px;
+      max-width: 460px;
       margin: 0;
       color: var(--gray-500);
       font-size: 12px;
@@ -465,3 +502,7 @@ watch(
   }
 }
 </style>
+
+<!-- 公共配方（page-head / btn / card）在 factory-core/factory-ui.less：本页模板用了 .ewp、.page-head、
+     .btn 等类名，缺这份就退化成浏览器默认按钮（暗色下尤其明显） -->
+<style lang="less" src="../components/factory-core/factory-ui.less"></style>
