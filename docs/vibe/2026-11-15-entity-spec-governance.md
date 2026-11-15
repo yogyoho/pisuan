@@ -61,7 +61,7 @@
 - [x] dry-run 通过后在 api 容器 `--apply` 执行
 - [x] 复审 `audit_entity_spec.py` 归零（除 48 个历史悬空头）
 - [x] UI 抽查（实体构建页，admin 本地登录）
-- [ ] 提交 + 回移 pisuan-custom + wolf 台账
+- [x] 提交 + 回移 pisuan-custom + wolf 台账
 
 ## 执行记录与修正（2026-11-16 落库）
 
