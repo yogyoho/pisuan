@@ -257,6 +257,10 @@ const CLASSIFY_TYPE_MAP = {
 const PROSE_TYPES = ['prose', 'parameter', 'narrative']
 const isProseType = (ct) => PROSE_TYPES.includes(ct)
 
+// 原文块：内容为空时给出明确占位，避免只留一个看不出所以然的空灰框
+const originalText = computed(() => selectedParagraph.value?.content || '')
+const hasOriginalText = computed(() => Boolean(originalText.value.trim()))
+
 // 类型筛选组：排除 legacy parameter/narrative（spec-W1 合并后分类器只产 prose，
 // 新任务选这两项恒空；旧任务存量值仅经 CLASSIFY_TYPE_MAP 徽标兼容显示，不再进筛选）
 const FILTERABLE_CLASSIFY_TYPES = Object.fromEntries(
@@ -1738,11 +1742,14 @@ watch(
                 v-else-if="isProseType(selectedParagraph.classify_type)"
                 class="detail-section parameter-detail-section"
               >
-                <!-- 原文区域 -->
-                <div class="param-subsection">
+                <!-- 原文区域（按内容高度展开，空内容显示占位） -->
+                <div class="param-subsection original-subsection">
                   <div class="detail-label" style="margin-bottom: 4px">原文</div>
-                  <div class="detail-text-block param-text-block">
-                    {{ selectedParagraph.content }}
+                  <div
+                    class="detail-text-block param-text-block"
+                    :class="{ 'is-empty': !hasOriginalText }"
+                  >
+                    {{ hasOriginalText ? originalText : '（原文为空）' }}
                   </div>
                 </div>
                 <template v-if="selectedParagraph.template?.generalized">
@@ -2836,7 +2843,7 @@ watch(
   min-height: 0;
 }
 
-// parameter 类型三等分布局
+// parameter 类型详情纵向分布：原文按内容高度，泛化模板/Slot 平分剩余空间
 .parameter-detail-section {
   gap: 0;
   .param-subsection {
@@ -2850,6 +2857,16 @@ watch(
     flex: 1;
     max-height: none;
     overflow-y: auto;
+  }
+  .param-subsection.original-subsection {
+    flex: 0 0 auto;
+    .param-text-block {
+      flex: none;
+      max-height: 120px;
+    }
+  }
+  .param-text-block.is-empty {
+    color: var(--gray-400);
   }
   .param-slot-list {
     flex: 1;
