@@ -6,10 +6,8 @@ import os
 from contextlib import asynccontextmanager
 
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from psycopg_pool import AsyncConnectionPool
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from yuxi.config import get_int_env
+from yuxi.services.domain_factory_region import attribution_scope_key, normalize_attribution
 from yuxi.storage.postgres.models_business import (
     AGENT_RUN_SHAPE_CONSTRAINT_NAME,
     AGENT_RUN_SHAPE_CONSTRAINT_SQL,
@@ -19,9 +17,17 @@ from yuxi.storage.postgres.models_business import (
     UNVIEWED_RUN_MARKER,
 )
 from yuxi.storage.postgres.models_business import Base as BusinessBase
-from yuxi.storage.postgres.models_knowledge import Base as KnowledgeBase
+from yuxi.storage.postgres.models_domain_entity import (
+    DEFAULT_ENTITY_CATEGORIES,
+    DomainEntityCategory,
+)
+from yuxi.storage.postgres.models_domain_entity import (
+    Base as DomainEntityBase,
+)
 from yuxi.storage.postgres.models_domain_factory import (
-    Base as DomainFactoryBase,
+    _LEXICON_BLOCKLIST_SEED,
+    DomainFactoryKnowledgeBaseAttribution,
+    EiaCorpusProcessLog,
     EiaDatasetSwitch,
     EiaEntityAddition,
     EiaFormulaOverride,
@@ -31,26 +37,22 @@ from yuxi.storage.postgres.models_domain_factory import (
     EiaLibraryFolder,
     EiaLimitExtractRow,
     EiaLimitTableRegistry,
-    EiaCorpusProcessLog,
     EiaMetaAnnotation,
     EiaParadigmDraft,
     EiaStageFieldEdit,
     EiaStandardLimitRow,
     EiaStandardReview,
-    DomainFactoryKnowledgeBaseAttribution,
-    _LEXICON_BLOCKLIST_SEED,
 )
-from yuxi.services.domain_factory_region import attribution_scope_key, normalize_attribution
-from yuxi.storage.postgres.models_domain_entity import (
-    DEFAULT_ENTITY_CATEGORIES,
-    DomainEntityCategory,
+from yuxi.storage.postgres.models_domain_factory import (
+    Base as DomainFactoryBase,
 )
-from yuxi.storage.postgres.models_domain_entity import (
-    Base as DomainEntityBase,
-)
+from yuxi.storage.postgres.models_knowledge import Base as KnowledgeBase
 from yuxi.utils import logger
 from yuxi.utils.datetime_utils import utc_now_naive
 from yuxi.utils.singleton import SingletonMeta
+from psycopg_pool import AsyncConnectionPool
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 AGENT_RUN_TERMINAL_STATUS_SQL = ", ".join(f"'{status}'" for status in AGENT_RUN_TERMINAL_STATUSES)
 # [pisuan-custom] v10：环评数值护栏词表两表（eia_lexicon_entries / eia_dataset_switches）；
@@ -377,6 +379,7 @@ class PostgresManager(metaclass=SingletonMeta):
         self.async_engine = None
         self.AsyncSession = None
         self.langgraph_pool = None
+        self._langgraph_db_url: str | None = None
         self.langgraph_checkpointer = None
         self._langgraph_checkpointer_setup = False
         self._initialized = False
@@ -443,16 +446,10 @@ class PostgresManager(metaclass=SingletonMeta):
             # ⚠️ 注意：psycopg 不认识 "+asyncpg" 这样的 SQLAlchemy 方言标识。
             # 如果你的 db_url 是 "postgresql+asyncpg://user:pwd@host/db"，
             # 需要把它清洗成标准的 "postgresql://user:pwd@host/db"
-            langgraph_db_url = db_url.replace("+asyncpg", "").replace("+psycopg", "")
-
-            # 创建 LangGraph 专属连接池
-            self.langgraph_pool = AsyncConnectionPool(
-                conninfo=langgraph_db_url,
-                max_size=get_int_env("LANGGRAPH_POSTGRES_POOL_SIZE", 10),
-                timeout=get_int_env("LANGGRAPH_POSTGRES_POOL_TIMEOUT_SECONDS", 30),
-                kwargs={"autocommit": True},  # LangGraph Checkpoint 强依赖 autocommit
-                check=AsyncConnectionPool.check_connection,
-            )
+            # 池本身惰性创建（见 get_langgraph_checkpointer）：异步池绑定创建时的
+            # 事件循环，而 initialize() 常在无运行循环的脚本/启动路径被调用，
+            # 急切建池会留下空转后台连接，偶发拖死整个进程。
+            self._langgraph_db_url = db_url.replace("+asyncpg", "").replace("+psycopg", "")
 
             self._initialized = True
             logger.info("PostgreSQL manager initialized for knowledge base")
@@ -469,7 +466,14 @@ class PostgresManager(metaclass=SingletonMeta):
         """为本次构图创建独立 saver，共享有界连接池而不共享其实例锁。"""
         self._check_initialized()
         if self.langgraph_pool is None:
-            raise RuntimeError("PostgreSQL LangGraph connection pool is not initialized.")
+            # 惰性创建：调用方处于运行中的事件循环内，后台连接能正确绑定
+            self.langgraph_pool = AsyncConnectionPool(
+                conninfo=self._langgraph_db_url,
+                max_size=get_int_env("LANGGRAPH_POSTGRES_POOL_SIZE", 10),
+                timeout=get_int_env("LANGGRAPH_POSTGRES_POOL_TIMEOUT_SECONDS", 30),
+                kwargs={"autocommit": True},  # LangGraph Checkpoint 强依赖 autocommit
+                check=AsyncConnectionPool.check_connection,
+            )
         return AsyncPostgresSaver(self.langgraph_pool)
 
     async def setup_langgraph_checkpointer(self) -> AsyncPostgresSaver:
@@ -2479,6 +2483,7 @@ class PostgresManager(metaclass=SingletonMeta):
         self.async_engine = None
         self.AsyncSession = None
         self.langgraph_pool = None
+        self._langgraph_db_url = None
         self.langgraph_checkpointer = None
         self._langgraph_checkpointer_setup = False
         self._initialized = False
