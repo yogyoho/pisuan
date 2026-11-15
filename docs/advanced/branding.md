@@ -56,7 +56,7 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml \
   up -d --build --force-recreate api worker
 ```
 
-如果使用仓库之外的品牌文件，需要在 Compose 覆盖配置中把它只读挂载到 API 容器，并让 `YUXI_BRAND_FILE_PATH` 指向容器内路径；修改该环境变量后同样要重新创建容器。页面会通过公开的 `/api/system/info` 读取站点信息，版本占位符 `{{YUXI_VERSION}}` 由 API 替换为当前版本。
+如果使用仓库之外的品牌文件，需要在 Compose 覆盖配置中把它只读挂载到 API 容器，并让 `PISUAN_BRAND_FILE_PATH` 指向容器内路径；修改该环境变量后同样要重新创建容器。页面会通过公开的 `/api/system/info` 读取站点信息，版本占位符 <span v-pre>`{{PISUAN_VERSION}}`</span> 由 API 替换为当前版本。
 
 ## 登录协议
 
@@ -67,7 +67,7 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml \
 - `web/public/protocols/user-agreement.template.html`
 - `web/public/protocols/privacy-policy.template.html`
 
-可以直接替换模板内容和其中的 `{{ORG_NAME}}`、`{{PRODUCT_NAME}}`、`{{EFFECTIVE_DATE}}` 等占位符，也可以把配置指向自定义的站内或外部页面。正式上线前请让法务审核协议文本。
+可以直接替换模板内容和其中的 <span v-pre>`{{ORG_NAME}}`</span>、<span v-pre>`{{PRODUCT_NAME}}`</span>、<span v-pre>`{{EFFECTIVE_DATE}}`</span> 等占位符，也可以把配置指向自定义的站内或外部页面。正式上线前请让法务审核协议文本。
 
 ## 修改主题样式
 

@@ -133,7 +133,7 @@ domain × report_type = 独立隔离的模板空间
 - **只对 `classify_type == "parameter"` 的段落调用 LLM**，其他类型跳过
 - 调用 `generalize_paragraphs()` → `_generalize_text()` 进行段落级泛化
 - 每段落产出：
-  - `generalized`：泛化后模板文本（含 `{{slot_name}}` 和 `[叙述标记]`）
+  - `generalized`：泛化后模板文本（含 <span v-pre>`{{slot_name}}`</span> 和 `[叙述标记]`）
   - `slots`：slot 数组（≤5 个/段落），每个含 name/type/entity_ref/value/unit/vocabulary
   - `metadata`：章节标签等元信息
   - `quality_score`：模板质量评分（0~1）
