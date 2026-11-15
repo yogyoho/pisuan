@@ -12223,5 +12223,26 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-15T09:40:00+08:00"
+  },
+  {
+    "id": "bug-4275",
+    "timestamp": "2026-11-15T12:20:00+08:00",
+    "error_message": "ETL 清洗工作台里表格显示区域太小（固定 220px，一屏两行），需要纵向充满并支持全屏最大化",
+    "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+    "root_cause": "表格详情面板把高度写死为 tableDetailHeight=220px 并靠拖拽把手调整；详情卡固定 560px 时其余空间被空白占用，表格无法随卡片伸展",
+    "fix": "表格段落（非 JSON 编辑态）详情卡改为 overflow:hidden，.table-detail-section/.table-detail-panel/.table-detail-body 逐层 flex 占满剩余高度；删除拖拽手柄及其状态；表头加全屏按钮，面板 Teleport 到 body 铺满视口，遮罩/按钮退出，切段落自动退出",
+    "tags": [
+      "frontend",
+      "etl-workbench",
+      "table",
+      "layout",
+      "fullscreen",
+      "domain-factory"
+    ],
+    "related_bugs": [
+      "bug-4274"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-15T12:20:00+08:00"
   }
 ]
