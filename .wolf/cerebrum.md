@@ -212,6 +212,15 @@
 - (2026-11-02) 本仓 web 首跑 `pnpm run format`（prettier）会全 src/ 产出行尾状态噪声（git diff 空、status 数百 M）+ 少量格式 churn——churn 文件勿混入功能提交，eol 噪声文件留工作树待用户裁决全量格式化 chore。
 - (2026-11-02) meta 流测试 test_meta_full_flow 在 HEAD 即红（bug-4196 预存在漂移）：跑 eia 流测试先看此基线，勿误归因新改动。
 
+### vitepress 1.6 文档站（2026-11-15，docs/ 构建修复实战）
+
+- md 会被 vitepress 当 Vue SFC 模板编译：`v-pre` 只加在围栏代码块（shiki transformer）和 `::: v-pre` 容器，**行内代码不保护**——行内代码/正文里的 `{{…}}` 都会进插值编译。占位符写法（`{{REF}}`、`{{PISUAN_VERSION}}`、`{{ record.x }}`）必须包 `<span v-pre>`（渲染外观不变）。
+- 两类雷、两层炸点：编译期炸（`{{FIG:图名}}` 冒号报 type annotation、裸 `<stage>` 标签报 missing end tag）→ md-scan.cjs 能抓；**编译干净但 SSR 运行时炸**（合法 JS 的 `{{ record.x }}` 抛 TypeError 致页面残缺、裸标识符渲染成空串）→ 只能靠 vitepress build 日志里 grep TypeError 抓，md-scan 抓不到。docs 改动后两个检查都要跑。
+- 工具：`.backport-tmp/md-scan.cjs`（node md-scan.cjs [docsDir]，可传 custom 路径扫对方仓）、`.backport-tmp/fix-vitepress-md.py`（v-pre 包裹 + 裸标签反引号化，幂等；注意其 wrap_bare_tags 在已破损行上会产出双反引号误伤，跑完必须 re-scan + 检查）。
+- dev 模式要点：vite 只绑 `[::1]`，curl/脚本用 `localhost` 别用 `127.0.0.1`；访问不存在的路由会返回 HTML shell（页面 JS 会报 module MIME 错），是 dev 的 404 流程不是内容缺陷；偶发冷启动 console 404 = 模块加载竞态 → router 自动 fetch `hashmap.json` 恢复（该文件只在 build 产物存在）→ 重试自愈，良性；dev 下 playwright 别用 networkidle（HMR ws + 按需编译挂住），用 load + 固定等待。
+- `corepack pnpm` 代替 pnpm；`pnpm run preview -- --port` 参数会被吞，直接 `node <vpstore>/vitepress/bin/vitepress.js preview --port N`；构建验证看 `exit=$?` + grep TypeError，别只看 "build complete"。
+- `docs/.vitepress/config.mts` 的 ignoreDeadLinks 已含 `/localhost/` 与 `/\/vibe\//`（vibe 被 srcExclude，指向 vibe 原型的相对链接是预期死链）。
+
 ## Do-Not-Repeat
 - [2026-11-06] 后端 Python 改动的「热重载」在 localized api 容器不成立：uvicorn --reload 的 watchfiles 用 inotify，收不到 Windows 侧 bind mount 写入事件（sync-dev 完成提示「容器热重载即会生效」只对前端 Vite 轮询成立）——sync-dev 后须 docker restart pisuan-localized-api-1 再验证，否则单测绿了实栈仍旧代码（bug-4218 验证时踩中：容器文件已含修复、PUT 仍 500 旧报错）。
 
@@ -2986,3 +2995,20 @@
 
 - `backport.py` 的 `START` 语义是「最后一个已回迁的 localized 提交（不含）」，必须填那一笔本身，不能填更早的 `chore(wolf)`，否则范围把已回迁的语义提交再包一次（本次 START 由 755ff87af 修正为 0c15a5907 后才只对应 1 笔）。
 - 用「HEAD blob + 字符串替换」构造提交时，替换串里的中文标点容易丢：本次把 `乐观锁。` 误写成 `乐观锁.`，且只有单字符差异，diff 里极易漏看。替换后必须 `git show HEAD:<path>` 逐字复核锚点串，或直接比对含锚点的那一行输出。
+
+## Key Learnings + DNR（2026-11-16 实体规范存量治理落库批追加）
+
+### Key Learnings
+- `update_entity` 每次保存自动触发 `_remap_waiting_review_tasks`（步骤1 按名归一点号引用 / 步骤2 静态表回填空槽 / 步骤3 按名+上下文绑空槽）。治理脚本必须「先更新、后清引用」：trash 实体未删除前步骤2 的 entity_index 过滤放行，先清会被立即回填（ping-pong）；delete_entity 只软删不触发 remap，所以 trash 后清+重映射是安全的。
+- 学习模板插槽**不在**任何自动归一覆盖面（remap 只处理待审任务 source_paragraphs）；批量改写用新方法 `DomainFactoryRepository.rewrite_learned_template_slot_refs(ref_map)`。
+- `list_usage_learned_templates / list_usage_pending_tasks / list_usage_report_pps` 三个用量查询在 **DomainEntityRepository**（不在 DomainFactoryRepository）。
+- SQLAlchemy 纯 JSON 列原地 mutate 不触发变更检测，必须整体换新对象（`template.slots = new_slots`）才落库。
+- 容器内无 ruff：宿主机 `cd backend && uv run ruff format/check <files>`。**ruff format 传目录会重排别的任务的 tracked 脚本**（governance 目录混有多任务脚本）——只传本任务文件，误碰用 `git checkout --` 还原。
+- psycopg AsyncConnectionPool 必须在运行中的事件循环里创建；`initialize()`（同步上下文）急切建池会让 docker-exec 脚本进程偶发 pool-1 空转卡死。已惰性化到 `get_langgraph_checkpointer()`。
+- trash 终检失败时先查「谁在回填」再重跑：本次 ping-pong 根因是顺序而非过滤缺失。
+
+### Do-Not-Repeat
+- 治理映射里 DELETES 不得包含 RENAMES 的目标键（重跑会误删幸存属性）——rebuild_properties 已内置 protected 集防御，但新增映射时仍要先自查键交集。
+- HINT_REWRITES 替换文本必须自查 ≤30 字（上版替换文本自身 36 字）。
+- 治理脚本 trash 步骤必须容忍「已在回收站」（ValueError 跳过 + 预检 TRASHED_OK 豁免），否则重跑必炸。
+- partial-stage 混合 WIP 文件（domain_factory_service.py 同时含多任务改动）用 `git diff > patch → 过滤 hunk → git apply --cached`，不要 `git add` 整文件。

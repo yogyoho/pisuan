@@ -12303,5 +12303,145 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-15T21:48:00+08:00"
+  },
+  {
+    "id": "bug-4279",
+    "timestamp": "2026-11-15T22:49:00+08:00",
+    "error_message": "cc-switch 切换 deepseek→glm-5.3-flash 后 codex TUI 调用报错（stream disconnected / 401 key invalid）",
+    "file": "C:/Users/Lenovo/.codex (app-server-daemon)",
+    "root_cause": "常驻 app-server-daemon (pid:10492, 11-14 13:37 启动) 的 provider 客户端 base_url+ApiKey 在启动时读入内存；cc-switch 22:30 只重写 config.toml/auth.json，daemon 会话仅重读 model 名，请求仍打 https://api.deepseek.com/responses 用已失效旧 key ****6a78 → 401/550，重试 5/5 烧完报 stream disconnected",
+    "fix": "codex app-server daemon restart（10492→16756），TUI 退出重开；验证：新进程 codex exec 冒烟 OK + doctor app_server ok",
+    "tags": [
+      "codex",
+      "cc-switch",
+      "daemon",
+      "auth-cache",
+      "base_url-stale",
+      "401",
+      "stream-disconnected"
+    ],
+    "related_bugs": [],
+    "occurrences": 2,
+    "last_seen": "2026-11-15"
+  },
+  {
+    "id": "bug-4280",
+    "timestamp": "2026-11-15",
+    "error_message": "vitepress 是否能够运行起来 → docs/ pnpm build 直接失败（Vue 模板编译错误），且部分页面 SSR 渲染 TypeError / 占位符渲染为空",
+    "file": "docs/.vitepress/config.mts + docs/develop-guides/changelog.md + docs/superpowers/** + docs/advanced/branding.md 等 21 个 md",
+    "root_cause": "vitepress 1.6 把 md 当 Vue SFC 模板编译：① v-pre 只加在围栏代码块（shiki transformer）和 ::: v-pre 容器上，行内代码不保护，`{{…}}` 都会进插值编译；② html:true 放行 CommonMark 合法裸标签（<stage>/<stem>），Vue 当未闭合元素；③ 合法 JS 语法的 {{…}}（{{ record.* }}、裸标识符 {{REF}}/{{PISUAN_VERSION}}）编译期无感，SSR 求值抛 TypeError 或渲染成空串；④ vibe/ 被 srcExclude 后指向它的相对链接判死链",
+    "fix": "编译期炸的 9 文件：含 {{ 的行内代码包 <span v-pre>、裸标签反引号化、config.mts ignoreDeadLinks 增补 /\\/vibe\\//；编译干净但 SSR 炸/渲染空的 11 文件补包 <span v-pre>。两仓 build exit 0 + 0 TypeError + 真实浏览器零控制台报错。工具：.backport-tmp/md-scan.cjs（编译期扫描，277/268 文件）、.backport-tmp/fix-vitepress-md.py",
+    "tags": [
+      "vitepress",
+      "docs",
+      "vue-template",
+      "v-pre",
+      "ssr",
+      "markdown"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-15"
+  },
+  {
+    "id": "bug-4281",
+    "timestamp": "2026-11-16",
+    "error_message": "docker exec 脚本偶发卡死：'error connecting in pool-1:' 空错误 + 180s/300s 超时（asyncio.run 脚本进程）",
+    "file": "backend/package/pisuan/storage/postgres/manager.py",
+    "root_cause": "initialize() 在无运行事件循环的同步上下文急切创建 psycopg AsyncConnectionPool，后台连接绑定不到 loop，偶发拖死整个脚本进程（api 服务进程因常驻 loop 不受影响）",
+    "fix": "池惰性创建：initialize() 只存 _langgraph_db_url，get_langgraph_checkpointer() 首次调用（处于运行 loop 内）时才建 AsyncConnectionPool；close() 复位 url",
+    "tags": [
+      "psycopg",
+      "asyncio",
+      "connection-pool",
+      "langgraph",
+      "hang"
+    ],
+    "related_bugs": [],
+    "occurrences": 3,
+    "last_seen": "2026-11-16"
+  },
+  {
+    "id": "bug-4282",
+    "timestamp": "2026-11-16",
+    "error_message": "repair_entity_spec 重跑后 soil_erosion 次要侵蚀面积占比 / topography 最大相对高差 两个幸存属性从 DB 消失",
+    "file": "backend/scripts/governance/repair_entity_spec.py",
+    "root_cause": "DELETES 里的旧英文孪生键同时是 RENAMES 的目标键：run1 改名把中文幸存属性挪到英文键，run2 的删除通道按旧键清单误删幸存者（幂等映射自相矛盾）",
+    "fix": "rebuild_properties 计算 protected 集（改名目标且源键已不在）从 effective_deletes 排除；NEW_PROPS 按最终形态自愈补回两属性；by_key 预扩展 NEW_PROPS 键",
+    "tags": [
+      "idempotency",
+      "governance-script",
+      "rename-delete-conflict"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-16"
+  },
+  {
+    "id": "bug-4283",
+    "timestamp": "2026-11-16",
+    "error_message": "trash 终检反复失败：清空的 project_main/environmental_element 引用在实体更新阶段被回填（ping-pong）",
+    "file": "backend/scripts/governance/repair_entity_spec.py",
+    "root_cause": "引用清理先于逐实体更新执行；每次 update_entity 触发 _remap_waiting_review_tasks 步骤2按静态表回填空槽，而 trash 实体当时仍是活跃 DB 实体，entity_index 过滤放行",
+    "fix": "脚本重排为 更新→清引用→终检→trash→重绑定→复核；service 步骤2 增加 new_ref 头部必须存在于 entity_index 的过滤（domain_factory_service.py:6732）",
+    "tags": [
+      "remap",
+      "slot-ref",
+      "ordering",
+      "static-mapper"
+    ],
+    "related_bugs": [
+      "bug-4284"
+    ],
+    "occurrences": 3,
+    "last_seen": "2026-11-16"
+  },
+  {
+    "id": "bug-4284",
+    "timestamp": "2026-11-16",
+    "error_message": "AttributeError: 'DomainFactoryRepository' object has no attribute 'list_usage_learned_templates'",
+    "file": "backend/scripts/governance/repair_entity_spec.py",
+    "root_cause": "list_usage_learned_templates / list_usage_pending_tasks / list_usage_report_pps 三个用量查询在 DomainEntityRepository 上，scan_trash_refs 误用 DomainFactoryRepository",
+    "fix": "scan_trash_refs 改用 DomainEntityRepository + 从 domain_factory_repository 导入 GENERAL_DOMAIN_CODE",
+    "tags": [
+      "attributeerror",
+      "repository-boundary"
+    ],
+    "related_bugs": [],
+    "occurrences": 2,
+    "last_seen": "2026-11-16"
+  },
+  {
+    "id": "bug-4285",
+    "timestamp": "2026-11-16",
+    "error_message": "审计残留 1 个中文后缀引用 groundwater_quality.最大值数值（211 个学习模板），重映射机制从未归一它",
+    "file": "backend/package/pisuan/repositories/domain_factory_repository.py",
+    "root_cause": "_remap_waiting_review_tasks 只处理待审任务；已学习模板插槽不在任何自动归一覆盖面",
+    "fix": "新增 DomainFactoryRepository.rewrite_learned_template_slot_refs（JSON 列整体换新对象触发 ORM 变更检测），治理脚本 trash 前调用，211 模板归一",
+    "tags": [
+      "learned-template",
+      "slot-ref",
+      "json-column",
+      "orm-mutation-detection"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-16"
+  },
+  {
+    "id": "bug-4286",
+    "timestamp": "2026-11-16",
+    "error_message": "P9 修复后 environmental_quality_baseline.monitor_factors 仍 36 字超限——重写文本自身超长",
+    "file": "backend/scripts/governance/repair_entity_spec.py",
+    "root_cause": "HINT_REWRITES 替换文本「例：[PM10, PM2.5, SO2] 或 [pH, COD, 氨氮]」本身 36 字，违反 30 字阈值（写映射时未对替换文本自查）",
+    "fix": "替换文本缩短为「例：PM10、SO2、pH、COD、氨氮」（20 字）",
+    "tags": [
+      "hint-length",
+      "self-violation",
+      "governance-script"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-16"
   }
 ]
