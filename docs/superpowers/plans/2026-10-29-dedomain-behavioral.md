@@ -551,7 +551,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 - [ ] **Step 3: DataSourceDashboard template 摘除**
 
 - 删领域筛选卡整块 `<div class="domain-card">…</div>`（:512-535，含内部新建领域按钮）。
-- 删 pending 表「领域」列与 history 表「领域」列（列定义 :602 与 :712 的 `<span>{{ record.domain_label }}</span>` 单元格及对应 column 配置）。
+- 删 pending 表「领域」列与 history 表「领域」列（列定义 :602 与 :712 的 <span v-pre>`<span>{{ record.domain_label }}</span>`</span> 单元格及对应 column 配置）。
 - 上传弹窗删「行业领域」表单项（:762-766）。
 
 - [ ] **Step 4: 样式清理**

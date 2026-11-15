@@ -111,7 +111,7 @@ O6/D2 时钟：写手侧 source 调用仍为 0（2026-10-05 实测）——模�
 约束重申（改模型/数据面时适用）：
 - manager.py 上游共享 → 模型变更走 **additive 白名单**，改前 git 判定出处（spec §8.2）
 - 工具层埋点改动 → tools.py 上游共享层先 git 判定出处（spec §9）
-- 写手侧区域数值红线：只经 ingest 表单 → `{{TABLE}}` 渲染（spec §8.3）
+- 写手侧区域数值红线：只经 ingest 表单 → <span v-pre>`{{TABLE}}`</span> 渲染（spec §8.3）
 
 ## 6. 关联
 

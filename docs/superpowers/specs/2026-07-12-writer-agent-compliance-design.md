@@ -1,6 +1,6 @@
 # 写作侧 Agent 合规性（P0）— design
 
-> 子项目 2（写作侧确定性骨架）的收尾。骨架（report 3 张表 / `{{REF}}` resolver / `assemble_report` / chapter-writer 子 agent）逐工具已验证可用，但 LLM 在真实运行中**绕过了 report-DB 骨干**。本 spec 解决"agent 有工具却走捷径"的合规性问题。承接 [2026-07-11-writing-backbone-design.md](./2026-07-11-writing-backbone-design.md)。
+> 子项目 2（写作侧确定性骨架）的收尾。骨架（report 3 张表 / <span v-pre>`{{REF}}`</span> resolver / `assemble_report` / chapter-writer 子 agent）逐工具已验证可用，但 LLM 在真实运行中**绕过了 report-DB 骨干**。本 spec 解决"agent 有工具却走捷径"的合规性问题。承接 [2026-07-11-writing-backbone-design.md](./2026-07-11-writing-backbone-design.md)。
 
 ## 1. 背景与动机（取证）
 

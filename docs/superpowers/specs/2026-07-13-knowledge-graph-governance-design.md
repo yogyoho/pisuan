@@ -241,10 +241,10 @@ ChapterTemplate 新增 `content_contract` 属性:
 1. 标准引用完整性(必引导则)
 2. 标准编号格式(GB/HJ + 版本)
 3. 必填要素覆盖(key_elements)
-4. 数值占位符残留({{MISSING}}/[XX])
+4. 数值占位符残留(<span v-pre>{{MISSING}}</span>/[XX])
 5. 禁止用语检测(forbidden_phrases)
 6. 章节字数下限(min_word_count)
-7. 交叉引用完整性({{REF}} 解析)
+7. 交叉引用完整性(<span v-pre>{{REF}}</span> 解析)
 8. 表格编号连续性
 
 compliance-checker 技能调用此脚本产出结构化报告。
