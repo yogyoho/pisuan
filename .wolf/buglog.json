@@ -12204,5 +12204,24 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-15T01:38:00.000Z"
+  },
+  {
+    "id": "bug-4274",
+    "timestamp": "2026-11-15T09:40:00+08:00",
+    "error_message": "初始化后未选实体时领域实体构建器主体区域空白；页头与空态按钮呈浏览器默认样式（暗色下白底白字）",
+    "file": "web/src/views/DomainEntityBuilderView.vue",
+    "root_cause": "两个叠加原因：(1) 空态 .empty-state 用 height:100% 居中，而 .chrome-canvas 高度随左侧 83 个树节点内容增长（页面 2561px），提示被居中到首屏之外；(2) 本页模板用了 .ewp/.page-head/.btn 配方类名，但没有像其它通用域页面那样引入 factory-core/factory-ui.less，整套配方未生效",
+    "fix": "空态改为图标+标题+说明+操作（min-height:420px 顶部对齐，不再 height:100%）；补 <style lang=\"less\" src=\"../components/factory-core/factory-ui.less\"> 使 page-head/btn 配方生效",
+    "tags": [
+      "frontend",
+      "empty-state",
+      "css",
+      "factory-ui",
+      "dark-mode",
+      "domain-entity-builder"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-15T09:40:00+08:00"
   }
 ]

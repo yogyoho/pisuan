@@ -2942,3 +2942,13 @@
 - **不要在删除路径上直接 `session.delete`**：对外删除一律 `soft_delete`，`purge` 必须是显式的第二个动作且只接受回收站行；脚本/测试的收尾清理要“先软删再彻底删除”，否则回收站同键行会挡住后续创建。
 - **不要给 `get_by_key` / `get_by_id_or_key` 默认 `include_deleted=True`**：默认必须是活跃视图，回收站语义只在回收站端点、restore/purge 与键占位检查里显式打开。
 - **不要把 409 冲突做成静默 force**：冲突弹窗必须由人选择“覆盖保存 / 重新加载”，`force` 只能来自用户点击。
+
+## Key Learnings + DNR（2026-11-15 EtlWorkbench 并发编辑）
+
+- **[DNR] 同一文件可能被用户另一会话并行改着**：本次 EtlWorkbench.vue 工作时工作区里同时出现了 figure-preview 相关改动（`selectedFigureImages`/`loadFigurePreviews`/`userStore` 导入/模板与样式），不是本会话所写。
+  - 处理方式：从 `git show HEAD:path` 取基线，用脚本把**自己的**替换套上去，`git hash-object -w` + `git update-index --cacheinfo` 暂存该 blob 后提交，工作区里的他人改动保持未提交。
+  - 绝不要对这个文件 `git add` 整路径：会把他人 WIP 一起提交。
+  - Write/Edit 报「file modified on disk since last read」就是该信号，先 `git diff` 看清哪些 hunk 不属于自己。
+
+- Python 在 Windows 写文件：`Path.write_text` 会把 \n 翻成 \r\n，构造 git blob 时必须 `open(..., newline="\n")` 写，否则整个文件 diff。
+

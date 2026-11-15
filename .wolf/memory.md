@@ -9462,3 +9462,6 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 08:52 | 左侧实体树栏宽度 340px → 280px（右栏由 820 变 880） | web/src/components/domain-factory/entity/EntityTree.vue | 浏览器实测 leftWidth=280 / rightWidth=880，83 个树节点零裁切、零行溢出、零控制台报错；prettier/eslint/vite build 通过 | ~1k |
 | 09:02 | 基础元数据并排 + 左栏收窄提交并回迁 custom | localized 238d80d2 → custom 1f40cc9c | EntityEditor/EntityTree forward 等价 2/2（.wolf 台账按规则不回迁），均未推送 | ~1k |
 | 09:08 | 推送两条分支 | localized → github/pisuan-localized (4acf4433f)、custom → origin/pisuan-custom (1f40cc9c9) | 均 fast-forward，推送后两侧与远端同步（ahead 0） | ~1k |
+| 09:40 | 实体构建器空态改图标+标题+说明，并补 factory-ui.less 配方（page-head/btn 此前完全未生效，暗色按钮白底白字）；空态去 height:100% 改 min-height:420px，避免被自适应画布居中到首屏外 | web/src/views/DomainEntityBuilderView.vue、.wolf/buglog.json(bug-4274) | 浅色/深色各截图验证：空态盒 top=139 全在首屏内、图标/说明/三按钮齐备、控制台零报错；选中实体后编辑区与属性表滚动无回归；prettier/eslint/vite build 通过 | ~6k |
+| 10:35 | 人工复核页（EtlWorkbench）空态：图标徽标+标题+说明（任务来源/三步流程）+「去数据加工选择任务」主按钮；样式对齐空态配方（min-height 420、20/24 页边距、描边），移除无用 Inbox 导入 | web/src/components/domain-factory/EtlWorkbench.vue | 浅色/深色空态均在首屏、控制台零报错；CTA 落到 /domain-factory/general/data-sources；prettier/eslint 通过 | ~5k |
+| 10:40 | 人工复核空态提交并回迁 custom（该文件同会话被并行改动过 figure-preview，提交用 hash-object 构造仅含本改动的 blob，未带入他人 WIP） | localized bec6f6d90 → custom f3003e5cb | 1 文件 forward 等价 1/1；他人 WIP 仍在 localized 工作区未提交 | ~3k |
