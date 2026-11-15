@@ -9460,3 +9460,4 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 08:30 | 属性表横向滚动条提交并回迁 custom | localized b34fe6eb → custom 940c12e3 | PropertyTable.vue forward 等价 1/1（.wolf 台账按规则不回迁），均未推送 | ~1k |
 | 08:41 | 基础元数据：值类型/单位/列表型实体合并为同一行（原三行 → 三个 span=8 列，勾选框补「列表型实体」标签） | web/src/components/domain-factory/entity/EntityEditor.vue | 浏览器实测三项 offsetTop 均为 320（同一行）、零控制台报错；prettier/eslint/vite build 通过 | ~1k |
 | 08:52 | 左侧实体树栏宽度 340px → 280px（右栏由 820 变 880） | web/src/components/domain-factory/entity/EntityTree.vue | 浏览器实测 leftWidth=280 / rightWidth=880，83 个树节点零裁切、零行溢出、零控制台报错；prettier/eslint/vite build 通过 | ~1k |
+| 09:02 | 基础元数据并排 + 左栏收窄提交并回迁 custom | localized 238d80d2 → custom 1f40cc9c | EntityEditor/EntityTree forward 等价 2/2（.wolf 台账按规则不回迁），均未推送 | ~1k |
