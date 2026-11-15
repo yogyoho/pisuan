@@ -2967,3 +2967,22 @@
 - **空内容必须给显式占位**：内容为空与「元素没渲染」在视觉上都是空白，用户无法区分。统一模式：`computed` 取文本 + `hasXxx` 判空 → 模板三元表达式给「（原文为空）」+ 灰色 token（`--gray-400`）+ `is-empty` 类，便于以后按态加样式。
 - **验证「按内容高度」的量化判据**：Playwright 量 `blockH` 与 `scrollHeight`——内容够短时 `scrollH ≈ blockH` 且 `blockH` 远小于分区高（76/74、37/35）；内容超长时 `blockH` 恰好等于 cap（120）且 `scrollH` 更大（170）。三种形态（长/短/空）各测一遍即可覆盖。
 - 选中态测「最短/最长段落」时，必须先按分类过滤（`.ant-radio-button-wrapper` 选「段落」）再取下标，否则会点到标题段落，走 fallback 分支导致 `.parameter-detail-section` 取不到（全部量到 0）。
+
+## Key Learnings（2026-11-15 领域实体库现状）
+
+- **没有正式《实体构建规范》**。可执行的只有 `DomainEntityService` 的硬校验（key 非空≤64/不含空白与点号、7 种 value_type、实体内 key 唯一、entity_key 全局唯一、category 命中字典）；提取 prompt 的 9 条规则只约束"构建器 AI 提取"一条链路，手工建库/导入都不经过。`validate_key` 不拦中文，所以中文 key 能合法入库。
+- 实体库现状（2026-11-15，71 实体/592 属性）：55 个 UUID 实体来自上游 konw `entity_meta.json` 迁移，遗留 `Numeric`(161)/`Date`(1) 未归一；`_convert_db_entities_to_variables` 会把它们 lower 成 `data_type: numeric`，与系统类型词表 `string|number|boolean|date` 不一致。
+- **Entity 与 Property 的类型语义**：`String` 实体应是标量实例（可被无点号 entity_ref 引用，graph_builder 记为 `entity.*`）；`Object` 才带属性表。库里有 13 个 String 实体带属性表、18 个 String 实体无属性（实为枚举值域被建成实体）。
+- 数据获取：容器内 psql 的 stdout 行在当前工具链里会被吞（只剩 "(1 row)"），改用浏览器会话 `fetch('/api/domain-entity-builder/export', {Authorization: Bearer <localStorage.user_token>})` 最省事，且不打印 token。
+
+## Key Learnings（2026-11-15 实体构建规范页内化）
+
+- 面向页面里的说明文档，用「单一来源 markdown + Vite `?raw` 引入」而不是在组件里写死文本：`web/src/assets/docs/*.md` 直接 `import specContent from '@/assets/docs/xxx.md?raw'`，页面用 `MarkdownPreview`（props: content/compact/bordered/codeCopy，随 themeStore 明暗切换）渲染。改文档即改页面，无需碰组件。
+- ant-design-vue 弹窗内的滚动不能用本组件 `<style scoped>` 控制：modal 内容经 teleport 渲染，scoped 属性到不了 `.ant-modal-body`。用 `:body-style="{ maxHeight: '72vh', overflowY: 'auto' }"` 内联，稳妥且不用 `:deep`。
+- 弹窗自带 title 时，markdown 正文不要再写同名 H1（会出现标题重复两行）；文档的「标题」交给弹窗 title + 文件名。
+- 用户明确要求的路径是「先出规范、再给入口」：规范要能被消费（页面按钮渲染）才算落地，只写 docs 文档等于没交付。
+
+## Do-Not-Repeat（2026-11-15）
+
+- `backport.py` 的 `START` 语义是「最后一个已回迁的 localized 提交（不含）」，必须填那一笔本身，不能填更早的 `chore(wolf)`，否则范围把已回迁的语义提交再包一次（本次 START 由 755ff87af 修正为 0c15a5907 后才只对应 1 笔）。
+- 用「HEAD blob + 字符串替换」构造提交时，替换串里的中文标点容易丢：本次把 `乐观锁。` 误写成 `乐观锁.`，且只有单字符差异，diff 里极易漏看。替换后必须 `git show HEAD:<path>` 逐字复核锚点串，或直接比对含锚点的那一行输出。

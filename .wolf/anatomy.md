@@ -556,6 +556,11 @@
 ## web/src/assets/css/
 
 
+## web/src/assets/docs/
+
+- `entity-construction-spec.md` — 实体对象构建规范的唯一来源（Vite `?raw` 引入，页面「构建规范」弹窗直接渲染）：实体/属性/值域定义、建实体四条判据与本库反例、key/name_cn/synonyms 命名、实体级与属性级字段口径（Object vs String、单位、枚举、必填、提取提示、遗留别名禁用）、六分类归属、引用与变更、提交前 10 项检查清单 (~120 行)
+
+
 ## web/src/components/
 
 
@@ -607,7 +612,7 @@
 
 ## web/src/views/
 
-- `DomainEntityBuilderView.vue` — 领域实体构建器页面（编排层）：`useEntitySchemas` + EntityTree + EntityEditor + CategoryManager，统一脏状态确认（切树/新建/克隆/导入/`onBeforeRouteLeave`/`beforeunload`）、`?entity_key=` 深链、空态三入口、导入/克隆/分类管理弹窗、删除影响面确认（`confirmDelete`：先 `fetchUsage` 列四类引用，失败即取消；编辑器与树两个入口共用）；页头次操作依次为 分类管理 / 回收站（带 trash_total 计数）/ 导出 / 导入 / AI 提取；删除确认口径为「移入回收站，可恢复」 (~390 行)
+- `DomainEntityBuilderView.vue` — 领域实体构建器页面（编排层）：`useEntitySchemas` + EntityTree + EntityEditor + CategoryManager，统一脏状态确认（切树/新建/克隆/导入/`onBeforeRouteLeave`/`beforeunload`）、`?entity_key=` 深链、空态三入口、导入/克隆/分类管理弹窗、删除影响面确认（`confirmDelete`：先 `fetchUsage` 列四类引用，失败即取消；编辑器与树两个入口共用）；页头次操作依次为 构建规范（弹窗渲染 `entity-construction-spec.md`）/ 分类管理 / 回收站（带 trash_total 计数）/ 导出 / 导入 / AI 提取；删除确认口径为「移入回收站，可恢复」 (~390 行)
 
 
 ## web/test/unit/

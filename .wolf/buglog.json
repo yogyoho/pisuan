@@ -12284,5 +12284,24 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-11-15T20:05:00+08:00"
+  },
+  {
+    "id": "bug-4278",
+    "timestamp": "2026-11-15T21:48:00+08:00",
+    "error_message": "docker ps / docker exec 返回 500 Internal Server Error（API v1.54）；随后 Playwright 登录页面所有 /api/* 502，?entity_key= 深链跳回 /login",
+    "file": "docker(运行栈，无代码改动)",
+    "root_cause": "api-1 容器内 uvicorn 热重载的 watchfiles 守护进程抛 WatchfilesRustInternalError: Cannot allocate memory (os error 12)，进程崩溃后容器重启，期间 vite dev proxy 拿不到上游 → 502；Docker Desktop 引擎同时短暂异常导致 CLI 500",
+    "fix": "不改代码：等 api-1 重新 healthy（docker inspect --format '{{.State.Health.Status}}' 轮询）后重跑 E2E 即通过；CLI 500 为瞬态，重试即可",
+    "tags": [
+      "docker",
+      "watchfiles",
+      "oom",
+      "hot-reload",
+      "502",
+      "playwright"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-15T21:48:00+08:00"
   }
 ]
