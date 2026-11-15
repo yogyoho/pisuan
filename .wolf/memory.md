@@ -9457,3 +9457,4 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 01:41 | 软删批次验证期修的三处：迁移器未跑导致 api 启动崩+reload 子进程 defunct；克隆断言写错源（回收站键占位针对目标键）；撤销条保存后残留（watch properties 引用而非 entityKey） | manager.py、test_domain_entity_builder_api.py、PropertyTable.vue | bug-4271/4272/4273，E2E 复跑 19/19 | ~3k |
 | 01:52 | 软删批次提交并回迁 custom | localized 18e35379d → custom 236bd9f8b | 24 个适用文件 forward 等价 24/24（.wolf/ 与 docs/superpowers/ 按规则不回迁），均未推送 | ~2k |
 | 08:22 | 属性结构定义表加横向滚动条（列宽合计 1210 → :scroll） | web/src/components/domain-factory/entity/PropertyTable.vue | 浏览器实测 scroller=ant-table-content、scrollWidth 1210 / clientWidth 720、滚到最右「操作」列可见、零控制台报错；prettier --check / eslint / vite build 通过 | ~1k |
+| 08:30 | 属性表横向滚动条提交并回迁 custom | localized b34fe6eb → custom 940c12e3 | PropertyTable.vue forward 等价 1/1（.wolf 台账按规则不回迁），均未推送 | ~1k |
