@@ -8,6 +8,8 @@ import {
   ChevronUp,
   ClipboardList,
   FileText,
+  Maximize2,
+  Minimize2,
   X
 } from '@lucide/vue'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
@@ -45,8 +47,7 @@ const chapterNavCollapsed = ref(false)
 const tableDetailExpanded = ref(true)
 const tableSchemaExpanded = ref(false)
 const tableStructRowsExpanded = ref(false)
-const tableDetailHeight = ref(220) // 原始表格区域可调整高度
-const isResizingTableDetail = ref(false)
+const tableFullscreen = ref(false) // 原始表格全屏浮层
 
 // ========== 未识别实体相关 ==========
 const unrecognizedEntities = ref([])
@@ -642,27 +643,19 @@ const handleParagraphClick = (para) => {
   tableDetailExpanded.value = true
   tableSchemaExpanded.value = false
   tableStructRowsExpanded.value = false
+  tableFullscreen.value = false
 }
 
-// ========== 原始表格区域拖拽调整高度 ==========
-const onTableDetailResizeStart = (e) => {
-  e.preventDefault()
-  isResizingTableDetail.value = true
-  const startY = e.clientY
-  const startHeight = tableDetailHeight.value
-  const onMove = (ev) => {
-    if (!isResizingTableDetail.value) return
-    const delta = ev.clientY - startY
-    tableDetailHeight.value = Math.max(100, startHeight + delta)
-  }
-  const onUp = () => {
-    isResizingTableDetail.value = false
-    document.removeEventListener('mousemove', onMove)
-    document.removeEventListener('mouseup', onUp)
-  }
-  document.addEventListener('mousemove', onMove)
-  document.addEventListener('mouseup', onUp)
+// ========== 原始表格全屏浏览 ==========
+// 表格本身已纵向占满详情卡剩余高度，全屏只是把同一块面板 Teleport 到 body 铺满视口
+const toggleTableFullscreen = () => {
+  tableFullscreen.value = !tableFullscreen.value
 }
+
+// 表格段落（非 JSON 编辑态）让详情卡改为「表格占满剩余高度」
+const isTableParagraph = computed(
+  () => selectedParagraph.value?.classify_type === 'table' && !detailEditMode.value
+)
 
 const handleToggleEditMode = async (checked) => {
   if (!checked) {
@@ -1331,7 +1324,11 @@ watch(
 
           <!-- 右栏: 类型化详情面板 -->
           <a-col :span="12">
-            <a-card size="small" class="detail-panel-card">
+            <a-card
+              size="small"
+              class="detail-panel-card"
+              :class="{ 'is-table-card': isTableParagraph }"
+            >
               <template #title>
                 <a-space :size="8" align="center">
                   <span style="font-size: 13px">结构化详情</span>
@@ -1480,45 +1477,77 @@ watch(
               </div>
 
               <!-- table 类型 -->
-              <div v-else-if="selectedParagraph.classify_type === 'table'" class="detail-section">
-                <!-- Panel 1: 原始表格 (可拖拽调整高度) -->
-                <div class="collapse-panel">
-                  <div class="collapse-header" @click="tableDetailExpanded = !tableDetailExpanded">
-                    <span class="collapse-title">原始表格</span>
-                    <ChevronUp v-if="tableDetailExpanded" :size="10" />
-                    <ChevronDown v-else :size="10" />
-                  </div>
+              <div
+                v-else-if="selectedParagraph.classify_type === 'table'"
+                class="detail-section table-detail-section"
+              >
+                <!-- Panel 1: 原始表格（占满卡片剩余高度，可弹出全屏） -->
+                <Teleport to="body" :disabled="!tableFullscreen">
                   <div
-                    v-show="tableDetailExpanded"
-                    class="collapse-body table-detail-body"
-                    :style="{ height: tableDetailHeight + 'px' }"
+                    v-if="tableFullscreen"
+                    class="table-fullscreen-mask"
+                    @click="toggleTableFullscreen"
+                  />
+                  <div
+                    class="collapse-panel table-detail-panel"
+                    :class="{ 'is-fullscreen': tableFullscreen }"
                   >
-                    <div class="table-detail-content">
-                      <div
-                        v-if="isHtmlTable(selectedParagraph.content)"
-                        v-html="selectedParagraph.content"
-                        class="html-table-container"
-                      ></div>
-                      <div
-                        v-else-if="selectedTableBlock?.rows?.length"
-                        class="html-table-container"
-                      >
-                        <a-table
-                          :data-source="tableBlockRows"
-                          :columns="tableBlockColumns"
-                          :pagination="false"
+                    <div
+                      class="collapse-header"
+                      @click="!tableFullscreen && (tableDetailExpanded = !tableDetailExpanded)"
+                    >
+                      <span class="collapse-title">
+                        原始表格
+                        <span v-if="tableBlockRows.length" class="collapse-meta"
+                          >{{ tableBlockRows.length }} 行</span
+                        >
+                      </span>
+                      <a-space :size="2">
+                        <a-button
+                          type="text"
                           size="small"
-                          bordered
-                          class="structural-rows-table"
-                        />
-                      </div>
-                      <div v-else class="detail-text-block">{{ selectedParagraph.content }}</div>
+                          class="table-fullscreen-btn"
+                          :title="tableFullscreen ? '退出全屏' : '全屏查看表格'"
+                          @click.stop="toggleTableFullscreen"
+                        >
+                          <Minimize2 v-if="tableFullscreen" :size="12" />
+                          <Maximize2 v-else :size="12" />
+                          <span class="table-fullscreen-btn-text">{{
+                            tableFullscreen ? '退出全屏' : '全屏'
+                          }}</span>
+                        </a-button>
+                        <ChevronUp v-if="tableDetailExpanded" :size="10" />
+                        <ChevronDown v-else :size="10" />
+                      </a-space>
                     </div>
-                    <div class="table-detail-resize-handle" @mousedown="onTableDetailResizeStart">
-                      <div class="resize-grip" />
+                    <div
+                      v-show="tableDetailExpanded || tableFullscreen"
+                      class="collapse-body table-detail-body"
+                    >
+                      <div class="table-detail-content">
+                        <div
+                          v-if="isHtmlTable(selectedParagraph.content)"
+                          v-html="selectedParagraph.content"
+                          class="html-table-container"
+                        ></div>
+                        <div
+                          v-else-if="selectedTableBlock?.rows?.length"
+                          class="html-table-container"
+                        >
+                          <a-table
+                            :data-source="tableBlockRows"
+                            :columns="tableBlockColumns"
+                            :pagination="false"
+                            size="small"
+                            bordered
+                            class="structural-rows-table"
+                          />
+                        </div>
+                        <div v-else class="detail-text-block">{{ selectedParagraph.content }}</div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </Teleport>
 
                 <a-divider style="margin: 6px 0" />
 
@@ -3365,9 +3394,27 @@ mark {
   }
 }
 
-// 原始表格可拖拽区域
+// 表格段落：详情卡不再整卡滚动，改由表格占满剩余高度（列头下方即表格体）
+.detail-panel-card.is-table-card :deep(.ant-card-body) {
+  overflow: hidden;
+}
+.table-detail-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.table-detail-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .table-detail-body {
   position: relative;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -3377,27 +3424,47 @@ mark {
     min-height: 0;
   }
 }
-.table-detail-resize-handle {
-  height: 6px;
-  cursor: ns-resize;
+
+.table-fullscreen-btn {
+  padding: 0 2px;
+  height: 20px;
+  color: var(--gray-500);
+  &:hover {
+    color: var(--main-color);
+  }
+  .table-fullscreen-btn-text {
+    margin-left: 4px;
+    font-size: 12px;
+    font-weight: 400;
+  }
+}
+.table-fullscreen-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  background: rgba(0, 0, 0, 0.45);
+}
+// 全屏：同一块面板铺满视口（Teleport 到 body，脱离卡片的滚动与裁剪）
+.collapse-panel.is-fullscreen {
+  position: fixed;
+  inset: 3vh 3vw;
+  z-index: 1051;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 2px;
-  &:hover,
-  &:active {
-    background: rgba(var(--main-color-rgb), 0.08);
+  flex-direction: column;
+  padding: 10px 14px 14px;
+  background: var(--gray-0);
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  .collapse-header {
+    font-size: 13px;
+    background: transparent;
+    &:hover {
+      background: transparent;
+    }
   }
-  .resize-grip {
-    width: 32px;
-    height: 3px;
-    border-radius: 2px;
-    background: var(--gray-300);
-    transition: background 0.15s;
-  }
-  &:hover .resize-grip {
-    background: var(--main-color); /* [pisuan-custom] 原 var(--blue-400, #4096ff) 未定义变量 */
+  .table-detail-body {
+    padding-top: 8px;
   }
 }
 </style>
