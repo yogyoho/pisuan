@@ -17,17 +17,20 @@ const props = defineProps({
 const PROPERTY_VALUE_TYPES = ['String', 'Integer', 'Float', 'Boolean', 'Enum']
 
 const propertyColumns = [
-  { title: '属性键', dataIndex: 'key', key: 'key' },
-  { title: '中文名称', dataIndex: 'name_cn', key: 'name_cn' },
-  { title: '类型', dataIndex: 'value_type', key: 'value_type' },
-  { title: '单位', dataIndex: 'unit', key: 'unit' },
-  { title: '必填', dataIndex: 'required', key: 'required' },
-  { title: '枚举选项', dataIndex: 'enum_options', key: 'enum_options' },
-  { title: '提取提示词', dataIndex: 'extraction_hint', key: 'extraction_hint' },
+  { title: '属性键', dataIndex: 'key', key: 'key', width: 120 },
+  { title: '中文名称', dataIndex: 'name_cn', key: 'name_cn', width: 140 },
+  { title: '类型', dataIndex: 'value_type', key: 'value_type', width: 90 },
+  { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
+  { title: '必填', dataIndex: 'required', key: 'required', width: 80 },
+  { title: '枚举选项', dataIndex: 'enum_options', key: 'enum_options', width: 160 },
+  { title: '提取提示词', dataIndex: 'extraction_hint', key: 'extraction_hint', width: 220 },
   { title: '泛化 prompt', key: 'prompt', width: 110 },
   { title: '引用', key: 'usage', width: 90 },
   { title: '操作', key: 'actions', width: 120 }
 ]
+
+// 列多且每列都有最小可读宽度：右栏放不下时横向滚动，而不是把中文挤成两行
+const TABLE_SCROLL_X = 1210
 
 const isPromptCovered = (record) =>
   Boolean(props.promptCoverage?.coveredRefs?.has(`${props.entityKey}.${record.key}`))
@@ -209,7 +212,13 @@ const handleSaveProperty = () => {
       <span>已从草稿中移除属性「{{ lastRemoved.name }}」，保存前可找回</span>
       <a-button type="link" size="small" @click="undoRemoveProperty">撤销</a-button>
     </div>
-    <a-table :columns="propertyColumns" :data-source="properties" :pagination="false" size="small">
+    <a-table
+      :columns="propertyColumns"
+      :data-source="properties"
+      :pagination="false"
+      :scroll="{ x: TABLE_SCROLL_X }"
+      size="small"
+    >
       <template #bodyCell="{ column, record, index }">
         <template v-if="column.key === 'actions'">
           <a-space>
