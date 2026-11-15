@@ -63,19 +63,14 @@ const emit = defineEmits(['save', 'cancel', 'clone', 'view-json', 'delete'])
               </a-select>
             </a-form-item>
           </a-col>
-        </a-row>
-
-        <a-row :gutter="16">
-          <a-col :span="12">
+          <a-col :span="8">
             <a-form-item label="单位">
               <a-input v-model:value="entity.unit" placeholder="Mt/a、万吨/年" />
             </a-form-item>
           </a-col>
-          <a-col :span="12">
-            <a-form-item>
-              <a-checkbox v-model:checked="entity.is_list_type">
-                列表型实体（一份报告可能有多个）
-              </a-checkbox>
+          <a-col :span="8">
+            <a-form-item label="列表型实体">
+              <a-checkbox v-model:checked="entity.is_list_type">一份报告可能有多个</a-checkbox>
             </a-form-item>
           </a-col>
         </a-row>
