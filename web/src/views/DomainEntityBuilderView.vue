@@ -2,7 +2,20 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
-import { Bot, Box, Download, FileText, Inbox, Layers, Plus, Trash2, Upload } from '@lucide/vue'
+import {
+  BookOpen,
+  Bot,
+  Box,
+  Download,
+  FileText,
+  Inbox,
+  Layers,
+  Plus,
+  Trash2,
+  Upload
+} from '@lucide/vue'
+import MarkdownPreview from '@/components/common/MarkdownPreview.vue'
+import specContent from '@/assets/docs/entity-construction-spec.md?raw'
 import { useEntitySchemas } from '@/composables/useEntitySchemas'
 import CategoryManager from '@/components/domain-factory/entity/CategoryManager.vue'
 import EntityEditor from '@/components/domain-factory/entity/EntityEditor.vue'
@@ -65,6 +78,7 @@ const cloneNewName = ref('')
 const extractVisible = ref(false)
 const categoryManagerVisible = ref(false)
 const trashDrawerVisible = ref(false)
+const specVisible = ref(false)
 const pendingEntityKey = ref(null)
 
 // ---- 脏状态守卫：切换实体/新建/克隆/导入/离开页面统一先确认 ----
@@ -284,6 +298,9 @@ watch(
         <div class="ph-sub">管理通用域层级分类体系和实体 Schema 定义，统一实体归属与提取口径</div>
       </div>
       <div class="ph-actions">
+        <button class="btn btn-sec" @click="specVisible = true">
+          <BookOpen :size="14" /> 构建规范
+        </button>
         <button class="btn btn-sec" @click="categoryManagerVisible = true">
           <Layers :size="14" /> 分类管理
         </button>
@@ -395,6 +412,17 @@ watch(
           <a-input v-model:value="cloneNewName" placeholder="例如：敏感目标村庄（V2）" />
         </a-form-item>
       </a-form>
+    </a-modal>
+
+    <!-- 实体对象构建规范（内容源：web/src/assets/docs/entity-construction-spec.md） -->
+    <a-modal
+      v-model:open="specVisible"
+      title="实体对象构建规范"
+      width="880px"
+      :footer="null"
+      :body-style="{ maxHeight: '72vh', overflowY: 'auto' }"
+    >
+      <MarkdownPreview :content="specContent" bordered />
     </a-modal>
 
     <EntityJsonModal
