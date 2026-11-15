@@ -43,7 +43,7 @@ v2 基于对《2横城矿区总体规划（修编）环评报告书（报批版�
 - 总字数: ~30 万字, 3533 段落, 192 表格
 - 编号体系: `表X.Y-Z` (章-节-序号), 共约 290 个带编号表格
 - 层级深度: 最多 5 级 (章→节→小节→细目→五级标题)
-- 交叉引用格式: `{{REF:chXX/表X-Y}}` 占位符
+- 交叉引用格式: <span v-pre>`{{REF:chXX/表X-Y}}`</span> 占位符
 
 ## 3. Agent 架构: 1 组长 + 3 专业 Writer
 
@@ -148,7 +148,7 @@ AgentRepository.ensure_prediction_writer_subagent()
 | `done` | 终稿锁定 | 可装配 |
 | `skipped` | 用户明确跳过该章 | — |
 
-### 4.3 {{MISSING}} 占位符机制
+### 4.3 <span v-pre>{{MISSING}}</span> 占位符机制
 
 ```
 正文中:
@@ -181,7 +181,7 @@ PPS 中:
 2. KB 返回匹配章节 → 结构化比对: 哪些段落/公式/表格可复用
 3. 保留: 章节目号、公式框架、表格结构、分析方法
 4. 替换: 矿区名称、产能数据、监测值、地理坐标等 PPS 差异项
-5. 差异部分 → `{{CUSTOM:需专项编写的内容}}` 占位，后续安排
+5. 差异部分 → <span v-pre>`{{CUSTOM:需专项编写的内容}}`</span> 占位，后续安排
 
 **触发条件**: writer 获取大纲后先尝试 `query_kb`，命中率 > 70% 则走整章复用流程。
 
@@ -393,7 +393,7 @@ ETL:  PDF/docx → 按标准编号切分 → 提取关键段落 → 标注适用
 
 ### Phase 3: 长项目支持 (P1)
 - 章节状态扩展 (pending_data / review)
-- {{MISSING}} 占位符自动检测
+- <span v-pre>{{MISSING}}</span> 占位符自动检测
 - 组长 checkpoint 输出
 
 ### Phase 4: 审批流 (P1)
@@ -407,7 +407,7 @@ ETL:  PDF/docx → 按标准编号切分 → 提取关键段落 → 标注适用
 
 ### Phase 6: 三层模板 (P2)
 - 整章复用 KB 搜索策略
-- {{CUSTOM}} 差异标注
+- <span v-pre>{{CUSTOM}}</span> 差异标注
 
 ## 10. 不变量 (设计约束)
 
@@ -415,5 +415,5 @@ ETL:  PDF/docx → 按标准编号切分 → 提取关键段落 → 标注适用
 2. 所有章节正文经 `save_chapter` 写入，不直接操作文件系统
 3. PPS 参数经 `set_pps_param` 写入，不手维护 markdown
 4. 数值必须有来源 (监测报告/法规/KB)，不得编造
-5. 章间引用统一用 `{{REF:...}}`，跨 writer 交叉引用无需即时解析
+5. 章间引用统一用 <span v-pre>`{{REF:...}}`</span>，跨 writer 交叉引用无需即时解析
 6. 最终交付经 `assemble_report` + `present_artifacts`

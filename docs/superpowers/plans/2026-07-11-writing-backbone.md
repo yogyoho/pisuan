@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 把写作侧 PPS / 章节注册表 / `{{REF}}` / 装配从"LLM 自觉维护 markdown"升级为 DB 持久化 + 确定性装配 + 子 agent 编排,支撑环评报告跨会话点状写作。
+**Goal:** 把写作侧 PPS / 章节注册表 / <span v-pre>`{{REF}}`</span> / 装配从"LLM 自觉维护 markdown"升级为 DB 持久化 + 确定性装配 + 子 agent 编排,支撑环评报告跨会话点状写作。
 
-**Architecture:** 3 张新表(reports / report_chapters / report_pps)+ 5 个 buildin 工具(create_report / get_report / set_pps_param / save_chapter / assemble_report)+ 纯代码 `{{REF}}` resolver(assemble 时扫 content 现算)+ chapter-writer 子 agent(coal-eia-writer 升级为编排者,每章派临时实例)。Phase A(任务 1-5)= 后端确定性核心,可独立交付;Phase B(任务 6-8)= agent 编排。
+**Architecture:** 3 张新表(reports / report_chapters / report_pps)+ 5 个 buildin 工具(create_report / get_report / set_pps_param / save_chapter / assemble_report)+ 纯代码 <span v-pre>`{{REF}}`</span> resolver(assemble 时扫 content 现算)+ chapter-writer 子 agent(coal-eia-writer 升级为编排者,每章派临时实例)。Phase A(任务 1-5)= 后端确定性核心,可独立交付;Phase B(任务 6-8)= agent 编排。
 
 **Tech Stack:** Python 3.13 / SQLAlchemy 异步 / FastAPI / LangChain `@tool` + `ToolRuntime` / 子 agent 机制(`ensure_*_subagent` + `subagent_start`/`task`)/ Pytest。
 
@@ -15,7 +15,7 @@
 - 改文件后 `make format`(`python -m ruff format` + `ruff check`);测试在容器跑:`docker exec api-dev pytest /app/test/unit/<path> -v`。
 - **Surgical**:`domain_factory_service.py` / `tools.py` 等大文件只改目标段,不整文件 reformat(改后 `git diff --cached --stat` 自检)。
 - **复用优先**:桥(子项目1)的 `get_chapter_outline` / `get_templates` / `domain_factory_outlines` / `entity_bindings`;既有 `present_artifacts` / `subagent_start` / `task` / `ensure_*_subagent`。
-- 命名:报告主句柄是 `report_id`(跨会话);`{{REF}}` 位置编号 `{{REF:chXX/表X-Y}}`;PPS 的 `entity_key` 链桥 `entity_bindings`。
+- 命名:报告主句柄是 `report_id`(跨会话);<span v-pre>`{{REF}}`</span> 位置编号 <span v-pre>`{{REF:chXX/表X-Y}}`</span>;PPS 的 `entity_key` 链桥 `entity_bindings`。
 - **前置依赖**:子项目 1(桥)已完成(commit `38a86def` 及之前);子 agent 机制已有。
 
 ---
@@ -27,7 +27,7 @@
 | `backend/package/yuxi/storage/postgres/models_domain_factory.py` | 3 个新模型 `DomainFactoryReport`/`ReportChapter`/`ReportPps` | 改 | 1 |
 | `backend/package/yuxi/storage/postgres/manager.py` | 3 张表 DDL | 改 | 1 |
 | `backend/package/yuxi/repositories/domain_factory_repository.py` | report/chapter/pps CRUD | 改 | 1 |
-| `backend/package/yuxi/services/ref_resolver.py` | `{{REF}}` resolver(纯代码) | 建 | 4 |
+| `backend/package/yuxi/services/ref_resolver.py` | <span v-pre>`{{REF}}`</span> resolver(纯代码) | 建 | 4 |
 | `backend/package/yuxi/agents/toolkits/buildin/tools.py` | 5 个新 `@tool` | 改 | 2,3,5 |
 | `backend/package/yuxi/repositories/agent_repository.py` | `ensure_chapter_writer_subagent` | 改 | 6 |
 | `backend/server/utils/lifespan.py` | 启动注册 chapter-writer | 改 | 6 |
@@ -480,7 +480,7 @@ git commit -m "feat(writing-backbone): save_chapter 工具(懒建 + outline 序 
 
 ---
 
-## Task 4: `{{REF}}` resolver(纯代码)
+## Task 4: <span v-pre>`{{REF}}`</span> resolver(纯代码)
 
 **Files:**
 - Create: `backend/package/yuxi/services/ref_resolver.py`
@@ -752,7 +752,7 @@ git commit -m "feat(writing-backbone): 注册 chapter-writer 子 agent(预装报
 
 **说明**:纯 prompt + 依赖编辑,无单测;验证 = 依赖可达 + 无残留"自觉维护 PPS.md/registry.md"指令。
 
-- [ ] **Step 1: 改写 SKILL.md 工作流**(替换原 PPS.md/registry.md/{{REF}} 手维护段为新工具流程)
+- [ ] **Step 1: 改写 SKILL.md 工作流**(替换原 PPS.md/registry.md/<span v-pre>{{REF}}</span> 手维护段为新工具流程)
 
 新工作流骨架(替换 SKILL.md 的"第三步 PPS"~"第五步 装配"段):
 

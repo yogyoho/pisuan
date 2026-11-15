@@ -494,7 +494,7 @@ grep -c PISUAN_ .env
 ```bash
 cd /c/workspace/pisuan-localized && docker compose up -d
 ```
-预期：与旧栈相同的镜像层缓存命中，构建快速；一次性容器 `pisuan-localized-storage-migrator-1` ExitCode 0（`docker inspect --format '{{.State.ExitCode}}' pisuan-localized-storage-migrator-1` 输出 `0`）。全新 postgres 卷上 migrator 以新表名 `pisuan_schema_migrations` 完成 schema v8 初始化。旧栈 10 个容器不受影响。
+预期：与旧栈相同的镜像层缓存命中，构建快速；一次性容器 `pisuan-localized-storage-migrator-1` ExitCode 0（<span v-pre>`docker inspect --format '{{.State.ExitCode}}' pisuan-localized-storage-migrator-1`</span> 输出 `0`）。全新 postgres 卷上 migrator 以新表名 `pisuan_schema_migrations` 完成 schema v8 初始化。旧栈 10 个容器不受影响。
 
 - [ ] **Step 3: api 就绪探针**
 

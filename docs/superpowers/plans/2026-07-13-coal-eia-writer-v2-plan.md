@@ -20,8 +20,8 @@
 | `backend/package/yuxi/agents/skills/buildin/regulation-writer/SKILL.md` | 新建 | 法规标准 writer 提示词 |
 | `backend/package/yuxi/agents/skills/buildin/data-survey-writer/SKILL.md` | 新建 | 数据与现状 writer 提示词 |
 | `backend/package/yuxi/agents/skills/buildin/prediction-writer/SKILL.md` | 新建 | 预测与论证 writer 提示词 |
-| `backend/package/yuxi/agents/toolkits/buildin/tools.py` | 修改 | save_chapter 状态扩展 + 3 个计算工具 + {{MISSING}} resolver |
-| `backend/package/yuxi/services/ref_resolver.py` | 修改 | 扩展 resolve_refs 支持 {{MISSING}} |
+| `backend/package/yuxi/agents/toolkits/buildin/tools.py` | 修改 | save_chapter 状态扩展 + 3 个计算工具 + <span v-pre>{{MISSING}}</span> resolver |
+| `backend/package/yuxi/services/ref_resolver.py` | 修改 | 扩展 resolve_refs 支持 <span v-pre>{{MISSING}}</span> |
 | `backend/package/yuxi/agents/skills/buildin/__init__.py` | 修改 | 更新 coal-eia-writer 的 skill_dependencies |
 
 ---
@@ -320,7 +320,7 @@ get_templates(canonical_chapter_key)
 ```
 ✅ [canonical_chapter_key] 已完成
   - 引用标准: [N] 项
-  - 待补参数: [列出 {{MISSING}} 项]
+  - 待补参数: [列出 <span v-pre>{{MISSING}}</span> 项]
   - 审批请求: [关键决策点]
 ```
 ```
@@ -377,8 +377,8 @@ description: "数据与现状子 agent，负责环评报告数据密集型章节
 本章数据需求:
 ├─ 地形地貌: 已有 (PPS: 矿区地理坐标)
 ├─ 气象数据: 已有 (PPS: 气象参数)
-├─ 大气监测 PM10: {{MISSING:大气监测PM10_2023}}
-├─ 大气监测 SO₂: {{MISSING:大气监测SO2_2023}}
+├─ 大气监测 PM10: <span v-pre>{{MISSING:大气监测PM10_2023}}</span>
+├─ 大气监测 SO₂: <span v-pre>{{MISSING:大气监测SO2_2023}}</span>
 └─ 地表水监测: KB 可查 → 填入
 ```
 
@@ -407,7 +407,7 @@ save_chapter(report_id, canonical_chapter_key, content_md, status="review")
 ```
 ✅ [canonical_chapter_key] 已完成
   - 数据项: [总计N] / [已有M] / [缺失K]
-  - 缺失清单: [列出 {{MISSING}} 项及说明]
+  - 缺失清单: [列出 <span v-pre>{{MISSING}}</span> 项及说明]
   - 监测数据来源: [PPS/KB/用户附件]
 ```
 ```
@@ -504,7 +504,7 @@ save_chapter(report_id, canonical_chapter_key, content_md, status="review")
 ✅ [canonical_chapter_key] 已完成
   - 使用工具: [列出调用的计算工具]
   - 关键结论: [1-2 句摘要]
-  - 待补参数: [列出 {{MISSING}} 项]
+  - 待补参数: [列出 <span v-pre>{{MISSING}}</span> 项]
 ```
 ```
 
@@ -942,17 +942,17 @@ git commit -m "feat(state): save_chapter 状态扩展 pending_data/review"
 
 ---
 
-### Task 13: {{MISSING}} 占位符解析
+### Task 13: <span v-pre>{{MISSING}}</span> 占位符解析
 
 **Files:**
 - Modify: `backend/package/yuxi/services/ref_resolver.py`
 - Modify: `backend/package/yuxi/agents/toolkits/buildin/tools.py` (assemble_report)
 
-**Purpose:** 扩展 `resolve_refs` 函数和 `assemble_report` 工具，支持检测和报告 {{MISSING:...}} 占位符。
+**Purpose:** 扩展 `resolve_refs` 函数和 `assemble_report` 工具，支持检测和报告 <span v-pre>{{MISSING:...}}</span> 占位符。
 
 - [ ] **Step 1: 扩展 ref_resolver.py**
 
-在 `resolve_refs` 函数末尾（return 之前）添加 {{MISSING}} 检测：
+在 `resolve_refs` 函数末尾（return 之前）添加 <span v-pre>{{MISSING}}</span> 检测：
 
 ```python
 _MISSING_RE = re.compile(r"\{\{MISSING:([^}]+)\}\}")
@@ -1096,7 +1096,7 @@ print('lookup_subsidence_params:', lookup_subsidence_params.name)
 "
 ```
 
-- [ ] **Step 4: 验证 {{MISSING}} 解析**
+- [ ] **Step 4: 验证 <span v-pre>{{MISSING}}</span> 解析**
 
 ```bash
 docker exec api-dev python -c "
