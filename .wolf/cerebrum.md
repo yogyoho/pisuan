@@ -3012,3 +3012,8 @@
 - HINT_REWRITES 替换文本必须自查 ≤30 字（上版替换文本自身 36 字）。
 - 治理脚本 trash 步骤必须容忍「已在回收站」（ValueError 跳过 + 预检 TRASHED_OK 豁免），否则重跑必炸。
 - partial-stage 混合 WIP 文件（domain_factory_service.py 同时含多任务改动）用 `git diff > patch → 过滤 hunk → git apply --cached`，不要 `git add` 整文件。
+
+## Do-Not-Repeat（2026-11-16 回移重放事故追加）
+
+- **backport apply 后必须推进 START**：忘了推进会让下次运行重放旧区间——已回移提交被二次回移成重复提交，且重放时 c_old 行数与 localized 父版本错位 Δ 行即触发 build_new_text 整文件漂移分支，把 equal 行本应保留的 custom 侧写法整批覆盖。backport.py 现已在 apply 成功且无 problems 时自动推进 START；手工改 START 时用 `git rev-list --reverse START..HEAD` 预检区间。
+- **backport 重放失败样式识别**：`git commit -q` 无可提交内容时静默 exit 1（stderr 空），脚本以"提交失败"中断——这不是 git 故障，是"重放内容==HEAD"的信号，应立即怀疑 START 指针而非重试。

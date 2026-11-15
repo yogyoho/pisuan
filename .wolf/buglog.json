@@ -12443,5 +12443,23 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-16"
+  },
+  {
+    "id": "bug-4287",
+    "timestamp": "2026-11-16",
+    "error_message": "backport --apply 重跑旧区间：已回移提交 aba1b9a4a 被再次回移成重复提交，changelog 34 行 custom 侧写法被整文件漂移覆盖；随后 705ec7517 因内容相同无可提交而静默失败中断",
+    "file": ".backport-tmp/backport.py",
+    "root_cause": "上批 apply 成功后未把 START 推进到最后已回移提交（28217df20），下次运行 rev-list 旧区间重放；重放时 c_old=run1 产物行数与 localized 父版本错位 Δ 行，触发 build_new_text 行数漂移分支→整文件直写 localized 原文，丢失 equal 行本应保留的 custom 侧内容",
+    "fix": "git reset --mixed 20966546d 回滚重复提交并 checkout 恢复 changelog/vibe 工作树；START=28217df20 后 dry-run 确认区间只剩 88d281a8a；backport.py apply 成功且无 problems 时自动推进 START（防复发）",
+    "tags": [
+      "backport",
+      "start-pointer",
+      "drift",
+      "duplicate-commit",
+      "idempotency"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-16"
   }
 ]
