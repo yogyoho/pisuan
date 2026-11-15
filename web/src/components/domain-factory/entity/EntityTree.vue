@@ -144,7 +144,7 @@ const handleDelete = (entityId) => emit('delete', entityId)
 
 <style scoped lang="less">
 .left-panel {
-  width: 340px;
+  width: 280px;
   background: var(--gray-0);
   border-radius: 8px;
   border: 1px solid var(--gray-150);
