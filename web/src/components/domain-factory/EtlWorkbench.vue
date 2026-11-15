@@ -8,7 +8,6 @@ import {
   ChevronUp,
   ClipboardList,
   FileText,
-  Inbox,
   X
 } from '@lucide/vue'
 import { domainFactoryApi } from '@/apis/domain_factory_api'
@@ -1050,8 +1049,16 @@ watch(
     <a-spin size="large" tip="加载任务详情..." />
   </div>
   <div v-else-if="!taskDetail" class="empty-state">
-    <Inbox :size="40" :stroke-width="1.2" class="empty-state-icon" />
-    <span>请选择一个待校验的任务</span>
+    <!-- 未选任务时说明任务从哪来、进来做什么、下一步去哪，而不是只剩一行灰字 -->
+    <div class="empty-icon"><ClipboardList :size="22" /></div>
+    <h3>请选择一个待校验的任务</h3>
+    <p class="empty-desc">
+      复核任务来自「数据加工」页上传并解析的报告。在任务列表找到「待校验」的任务、点行尾「校验」进入本页，按
+      解析校对 → 实体确认 → 提交入库 三步完成一份报告的清洗。
+    </p>
+    <a-button type="primary" @click="emit('navigate-to-data-sources')">
+      去「数据加工」选择任务
+    </a-button>
   </div>
   <div v-else class="ewp etl-workbench">
     <!-- ========== Header: 标题 + 步骤导航 + 状态栏 ========== -->
@@ -1110,7 +1117,11 @@ watch(
             <span class="classify-filter-label">类型筛选:</span>
             <a-radio-group v-model:value="classifyFilter" size="small" button-style="solid">
               <a-radio-button :value="null">全部</a-radio-button>
-              <a-radio-button v-for="(info, key) in FILTERABLE_CLASSIFY_TYPES" :key="key" :value="key">
+              <a-radio-button
+                v-for="(info, key) in FILTERABLE_CLASSIFY_TYPES"
+                :key="key"
+                :value="key"
+              >
                 {{ info.label }} <span class="classify-count">{{ classifyStats[key] || 0 }}</span>
               </a-radio-button>
             </a-radio-group>
@@ -2324,14 +2335,44 @@ watch(
   background: var(--gray-0);
   border-radius: 12px;
 }
+
 .empty-state {
   flex-direction: column;
-  gap: 12px;
-  color: var(--gray-500);
-  font-size: 13px;
-}
-.empty-state-icon {
-  color: var(--gray-300, #c0c4cc);
+  gap: 10px;
+  height: auto;
+  min-height: 420px;
+  // 与 .ewp 页边距对齐：画布零内边距由各屏根节点自持
+  margin: 20px 24px 40px;
+  padding: 56px 24px;
+  border: 1px solid var(--gray-200);
+  text-align: center;
+
+  .empty-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 2px;
+    border-radius: 50%;
+    background: var(--main-50);
+    color: var(--main-600);
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--gray-800);
+  }
+
+  .empty-desc {
+    max-width: 480px;
+    margin: 0;
+    color: var(--gray-600);
+    font-size: 13px;
+    line-height: 1.8;
+  }
 }
 
 .workbench-header {
