@@ -4,11 +4,14 @@ from typing import Any
 
 from sqlalchemy import func, select, text, update
 
+from pisuan.services.domain_factory_region import (
+    attribution_scope_key,
+    normalize_attribution,
+)
 from pisuan.storage.postgres.manager import pg_manager
 from pisuan.storage.postgres.models_domain_factory import (
     DomainFactoryDomain,
     DomainFactoryKnowledgeBaseAttribution,
-    DomainFactoryTask,
     DomainFactoryLearnedTemplate,
     DomainFactoryOutline,
     DomainFactoryPromptConfig,
@@ -16,14 +19,11 @@ from pisuan.storage.postgres.models_domain_factory import (
     DomainFactoryReport,
     DomainFactoryReportChapter,
     DomainFactoryReportPps,
+    DomainFactoryTask,
     DomainFactoryToolUsage,
 )
 from pisuan.utils import hashstr, normalize_chapter_key
 from pisuan.utils.datetime_utils import utc_now_naive
-from pisuan.services.domain_factory_region import (
-    attribution_scope_key,
-    normalize_attribution,
-)
 
 # 去领域化（2026-10-29）：通用域唯一常量。领域维度废弃后，所有写入与查询固定使用此值；
 # domains 表冻结保留（历史外键兼容），不再暴露增删改接口。
@@ -441,8 +441,7 @@ class DomainFactoryRepository:
                 .distinct()
             )
             attributions = {
-                normalize_attribution(row.region_key, row.scope or "project", row.project_name)
-                for row in rows
+                normalize_attribution(row.region_key, row.scope or "project", row.project_name) for row in rows
             }
         if binding is not None:
             binding_tuple = normalize_attribution(binding.region_key, binding.scope, binding.project_name)
@@ -487,8 +486,16 @@ class DomainFactoryRepository:
         """返回一库一归属诊断列表；任务已删除的绑定标记 retained，防止误判为可复用。"""
         async with pg_manager.get_async_session_context() as session:
             bindings = (
-                await session.execute(select(DomainFactoryKnowledgeBaseAttribution).order_by(DomainFactoryKnowledgeBaseAttribution.kb_id))
-            ).scalars().all()
+                (
+                    await session.execute(
+                        select(DomainFactoryKnowledgeBaseAttribution).order_by(
+                            DomainFactoryKnowledgeBaseAttribution.kb_id
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
             task_rows = (
                 await session.execute(
                     select(
@@ -599,9 +606,7 @@ class DomainFactoryRepository:
         """一个知识库只允许写入一种归属；用 advisory lock 串行化并发首写。"""
         await session.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"domain-factory-kb:{kb_id}"))))
         binding_result = await session.execute(
-            select(DomainFactoryKnowledgeBaseAttribution).where(
-                DomainFactoryKnowledgeBaseAttribution.kb_id == kb_id
-            )
+            select(DomainFactoryKnowledgeBaseAttribution).where(DomainFactoryKnowledgeBaseAttribution.kb_id == kb_id)
         )
         binding = binding_result.scalar_one_or_none()
         current = normalize_attribution(region_key, scope or "project", project_name)
@@ -864,9 +869,7 @@ class DomainFactoryRepository:
             row = result.scalar_one_or_none()
             return row.to_dict() if row else None
 
-    async def list_chapter_keys(
-        self, domain_code, report_type_code, *, attribution: str | None = None
-    ) -> list[str]:
+    async def list_chapter_keys(self, domain_code, report_type_code, *, attribution: str | None = None) -> list[str]:
         from pisuan.storage.postgres.models_domain_factory import DomainFactoryOutline
 
         async with pg_manager.get_async_session_context() as session:
@@ -888,8 +891,9 @@ class DomainFactoryRepository:
         *,
         attribution: str = "",
     ) -> int:
-        from pisuan.storage.postgres.models_domain_factory import DomainFactoryLearnedTemplate
         from sqlalchemy import update
+
+        from pisuan.storage.postgres.models_domain_factory import DomainFactoryLearnedTemplate
 
         if not chapter_identifiers:
             return 0
@@ -1345,6 +1349,32 @@ class DomainFactoryRepository:
                 .where(DomainFactoryLearnedTemplate.id == template_id)
                 .values(scope=scope, extra_meta=extra_meta, updated_at=utc_now_naive())
             )
+
+    async def rewrite_learned_template_slot_refs(self, ref_map: dict[str, str]) -> int:
+        """按映射批量改写学习模板插槽引用（存量治理：中文后缀/旧键归一为新键）。
+        学习模板不参与 _remap_waiting_review_tasks 的自动归一，需显式改写。
+        ref_map: {旧完整 ref: 新完整 ref}；返回改写的模板数。"""
+        if not ref_map:
+            return 0
+        rewritten = 0
+        async with pg_manager.get_async_session_context() as session:
+            result = await session.execute(select(DomainFactoryLearnedTemplate))
+            for template in result.scalars():
+                slots = template.slots or []
+                new_slots = []
+                changed = False
+                for slot in slots:
+                    ref = str((slot or {}).get("entity_ref") or "")
+                    if ref in ref_map:
+                        slot = {**slot, "entity_ref": ref_map[ref]}
+                        changed = True
+                    new_slots.append(slot)
+                if changed:
+                    # JSON 列需整体换新对象才能被 ORM 判定变更
+                    template.slots = new_slots
+                    template.updated_at = utc_now_naive()
+                    rewritten += 1
+        return rewritten
 
     async def get_task_scopes(self, task_ids: list[str]) -> dict[str, str | None]:
         if not task_ids:

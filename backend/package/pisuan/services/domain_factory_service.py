@@ -6721,7 +6721,9 @@ class DomainFactoryService:
                         break
                     old_ref = raw_slots[i].get("entity_ref", "")
                     new_ref = mapped.get("entity_ref", "")
-                    if new_ref and not old_ref:
+                    # 静态表引用必须以活跃 DB 实体为准：实体库已删除/未落库的
+                    # 静态类型（如规范反例标量）不再回填，留空交步骤 3 按属性绑定
+                    if new_ref and not old_ref and new_ref.partition(".")[0] in entity_index:
                         raw_slots[i]["entity_ref"] = new_ref
                         changed = True
 
