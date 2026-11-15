@@ -12244,5 +12244,45 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-11-15T12:20:00+08:00"
+  },
+  {
+    "id": "bug-4276",
+    "timestamp": "2026-11-15T19:40:00+08:00",
+    "error_message": "用户反馈：ETL 清洗工作台「结构化详情」中，段落类型（prose）的「原文」区域空白，截图显示原文标签下无任何灰框与文字",
+    "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+    "root_cause": "未复现。代码层面 prose 分支的原文块无条件渲染（1820-1824 行），DB 中该任务全部 58 个 prose 段落 content 均非空；对截图逐像素扫描（x530-1265, y120-230）仅 255,255,255 纯白，无背景 250/边框 236 像素，说明原文块整体未被绘制而非内容为空；实测 content 为空/undefined 时灰框仍照常绘制（prose-empty.png）。当前运行栈用同一任务同一段落 p9（content 113 字）在 1285x726 / dpr1.5 / headed GPU / 窄屏 1100 像素四种条件下均正常绘制",
+    "fix": "暂未改代码；判定为客户端状态异常（旧页面半更新 HMR / 合成层未重绘）而非渲染逻辑缺陷，待用户硬刷新后确认",
+    "tags": [
+      "domain-factory",
+      "etl-workbench",
+      "prose",
+      "not-reproduced",
+      "paint"
+    ],
+    "related_bugs": [
+      "bug-4275"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-15T19:40:00+08:00"
+  },
+  {
+    "id": "bug-4277",
+    "timestamp": "2026-11-15T20:05:00+08:00",
+    "error_message": "prose 详情「原文」块 flex:1 撑满三等分区：短段落（7 字）显示成 327px 高的大灰空框，内容缺失时更看不出所以然",
+    "file": "web/src/components/domain-factory/EtlWorkbench.vue",
+    "root_cause": ".param-text-block 被设为 flex:1，且在 .param-subsection（flex:1）内无 max-height 约束，内容再短也被拉伸到分区高度；同时原文块没有空内容占位，空白时与「未渲染」无法区分",
+    "fix": "原文子区改 .original-subsection { flex:0 0 auto }，文本块 flex:none + max-height:120px 超出滚动；新增 originalText/hasOriginalText 计算属性，内容为空时渲染灰色「（原文为空）」并加 is-empty 标记（--gray-400）",
+    "tags": [
+      "domain-factory",
+      "etl-workbench",
+      "prose",
+      "layout",
+      "placeholder"
+    ],
+    "related_bugs": [
+      "bug-4276"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-15T20:05:00+08:00"
   }
 ]

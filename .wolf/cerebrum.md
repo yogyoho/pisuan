@@ -2952,3 +2952,18 @@
 
 - Python 在 Windows 写文件：`Path.write_text` 会把 \n 翻成 \r\n，构造 git blob 时必须 `open(..., newline="\n")` 写，否则整个文件 diff。
 
+
+## Key Learnings + DNR（2026-11-15 段落详情「原文空白」排查）
+
+- ETL 详情卡 prose 分支（EtlWorkbench.vue 1813-1930）结构：`.parameter-detail-section` 三个 `.param-subsection{flex:1;min-height:0;overflow:hidden}`，原文块 `.detail-text-block.param-text-block{flex:1;max-height:none;overflow-y:auto}`。原文块**无条件渲染**，没有 `v-if`；数据来自 `selectedParagraph.content`（列表同一对象，`filteredParagraphs` 不过滤克隆）。
+- 内容为空 **不等于** 看不见：实测把 content 置空/删除，仍会画出约 69px 的灰色空框（bg rgb(250,250,250) + 边框 rgb(236,236,238)）。所以「原文空白」不是数据为空能解释的。
+- 像素取证的判别力：用 System.Drawing（Windows PowerShell 5.1 自带）逐像素扫截图区域，能直接判定「元素是否被绘制」——用户截图中原文区域仅 255,255,255 纯白（无 250 底色、无 236 边框），说明整块 DOM 未绘制；同区域在本地复现截图里是 250 底色+边框。
+- 复现维度要齐：headless/有头 GPU、dpr 1/1.5、宽 1285/窄 1100、卡片体是否溢出——本次四种组合 + 全部 58 个 prose 段落都正常，可判定为客户端态异常（旧页面 HMR 半更新/合成层未重绘），先让用户 Ctrl+Shift+R 再确认。
+- DNR：不要用「加防御性兜底」来掩盖此类无法定位的问题：先给证据（像素/几何/DOM），再给可验证的下一步；用户只要求「查证原因」时不要顺手改代码。
+
+## Key Learnings（2026-11-15 详情卡「按内容高度」布局配方）
+
+- **flex 填充块要区分「显示区」与「内容区」**：`.param-text-block{flex:1}` 让原文块随分区高度拉伸，短内容会变成大片空灰框（实测 7 字段落块高 327px）。正确做法：外层子区 `flex:0 0 auto`，块本身 `flex:none` + `max-height`（本处 120px）+ `overflow-y:auto`，多余空间交给后续分区吸收。
+- **空内容必须给显式占位**：内容为空与「元素没渲染」在视觉上都是空白，用户无法区分。统一模式：`computed` 取文本 + `hasXxx` 判空 → 模板三元表达式给「（原文为空）」+ 灰色 token（`--gray-400`）+ `is-empty` 类，便于以后按态加样式。
+- **验证「按内容高度」的量化判据**：Playwright 量 `blockH` 与 `scrollHeight`——内容够短时 `scrollH ≈ blockH` 且 `blockH` 远小于分区高（76/74、37/35）；内容超长时 `blockH` 恰好等于 cap（120）且 `scrollH` 更大（170）。三种形态（长/短/空）各测一遍即可覆盖。
+- 选中态测「最短/最长段落」时，必须先按分类过滤（`.ant-radio-button-wrapper` 选「段落」）再取下标，否则会点到标题段落，走 fallback 分支导致 `.parameter-detail-section` 取不到（全部量到 0）。
