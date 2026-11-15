@@ -311,10 +311,10 @@ def test_promote_headings():
 """prepare_corpus.py — 样例语料 docx → bank_compile 输入格式（spec §五 解析边界）。
 
 输入：<语料目录>/*.docx（41 份真实环评报告书，C:\\项目管理\\样例文件）
-输出：<workdir>/<report_id>/source.md（UTF-8、节号标题 ##/###/#### 化、GFM 表格）
-      + <workdir>/manifest.json 草稿（report_id/stage/mineral/file_name——stage 人工过目后定稿）
+输出：`<workdir>`/`<report_id>`/source.md（UTF-8、节号标题 ##/###/#### 化、GFM 表格）
+      + `<workdir>`/manifest.json 草稿（report_id/stage/mineral/file_name——stage 人工过目后定稿）
 用法：
-  python -X utf8 prepare_corpus.py --corpus-dir <语料目录> --workdir <输出目录> [--census <census.json>]
+  python -X utf8 prepare_corpus.py --corpus-dir <语料目录> --workdir <输出目录> [--census `<census.json>`]
 边界：
   - 节号标题：正文行 "数字(.数字)* + 空白 + 题名"（census 实测 679 标题仅 81 个有 style 标记）
   - 目录页剔除：「节号+题+尾随页码」行连续 ≥3 判为目录区段整段剔除
@@ -477,7 +477,7 @@ Expected: `PREPARED: 40±2 report(s)`（跳过份在 stderr 有理由）；与 c
 
 ## Task 5: bank_compile 现有管线跑通（切片+SL3 池+per 矿种基线）
 
-**Files:** 产物进 `<SKILL>/references/`（samples_bank/、samples/、depth_targets/<stage>/<mineral>.json）
+**Files:** 产物进 `<SKILL>/references/`（samples_bank/、samples/、depth_targets/`<stage>`/`<mineral>`.json）
 
 - [ ] **Step 1: 跑编译**
 
@@ -532,7 +532,7 @@ def test_aggregate_median_across_minerals(tmp_path):
 
 ```python
 def _aggregate_depth_targets(refs: Path, stage: str, generated: str) -> None:
-    """per 矿种基线 → depth_targets/<stage>.json（门形状 chapters.{ch}.floor_chars）。
+    """per 矿种基线 → depth_targets/`<stage>`.json（门形状 chapters.{ch}.floor_chars）。
 
     floor_chars = 组间 median(median_eff × coefficient)——「基线」取组间中位，
     单章缺失矿种不参与该章统计；产物形状与手维版兼容（门零改动）。"""
@@ -757,7 +757,7 @@ def build_section_expectations(seg_infos, forms_label_map: dict, stage: str, gen
     """节级数值-口径清单（spec §4.2）。seg_infos: [{rid, chapter, sec, title, text}]。
 
     field 归并：语境名词精确匹配 forms_label_map（bank_compile main 由 stage json forms
-    fields label → "<族>.<name>" 构建传入）；未命中进 unmapped 池（spec：不静默丢弃）。
+    fields label → "<族>.`<name>`" 构建传入）；未命中进 unmapped 池（spec：不静默丢弃）。
     tier：required ≥0.6 / optional 0.2-0.6 / contextual <0.2（按「节出现次数/该节切片数」）。"""
     from collections import defaultdict
     sec_hits: dict[tuple, dict[str, list]] = defaultdict(lambda: defaultdict(list))
@@ -834,7 +834,7 @@ main 里（forms_catalog 编译后）：
 
 **范围**：validate_section 链路的六类门（形状/节题/深度/槽位/残留/摆位）+ assemble 的落号合并——参数化正反用例，覆盖「三轮人修缺陷类」的机器可验形态。签名以 `scripts/build_output.py` 现状为准（写测试前先 `grep -n "^def _validate\|^def validate_section" scripts/build_output.py` 对齐实际函数名与参数，fixture 构造沿用 `test_build_output_bug394.py` 的 `_mk_stage` 模式）。
 
-- [ ] **Step 1: 测试骨架**（用例组：`test_gate_shape_fail` 竖线枚举裂表 FAIL / `test_gate_slot_residue` `{{SLOT:` 残留 FAIL / `test_gate_table_placement` 摆位四例（句中嵌 FAIL×3 形态 + 独立行 PASS）/ `test_gate_caption_merge` 写手表题行合并（已有 bug394 覆盖，此处补「隔空行不合并」反例）/ `test_gate_depth_floor` 章深地板（低于 floor_chars FAIL、达标 PASS）/ `test_gate_section_title` 节题错序 FAIL）
+- [ ] **Step 1: 测试骨架**（用例组：`test_gate_shape_fail` 竖线枚举裂表 FAIL / `test_gate_slot_residue` <span v-pre>`{{SLOT:`</span> 残留 FAIL / `test_gate_table_placement` 摆位四例（句中嵌 FAIL×3 形态 + 独立行 PASS）/ `test_gate_caption_merge` 写手表题行合并（已有 bug394 覆盖，此处补「隔空行不合并」反例）/ `test_gate_depth_floor` 章深地板（低于 floor_chars FAIL、达标 PASS）/ `test_gate_section_title` 节题错序 FAIL）
 - [ ] **Step 2: 容器内跑全部测试**
 
 Run: `docker cp <SKILL>/scripts/tests pisuan-localized-api-1:/tmp/gatetests && docker exec -w /tmp/gatetests pisuan-localized-api-1 sh -c "cp /app/skill-sources/<挂点>/coal-eia-writer/scripts/*.py . && python -m pytest . -v"`

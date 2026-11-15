@@ -30,7 +30,10 @@ export default defineConfig({
     ['meta', { name: 'twitter:image', content: 'https://xerrors.oss-cn-shanghai.aliyuncs.com/github/pisuan/docs/home/pisuan-web-og-1200x630-v1.0.0.png' }]
   ],
   ignoreDeadLinks: [
-    /localhost/
+    /localhost/,
+    // vibe/ 是开发者内部目录（srcExclude 排除出站点），正式文档里指向 vibe
+    // 原型/设计稿的相对链接在发布物上是预期内的「死链」，不做构建失败
+    /\/vibe\//
   ],
   markdown: {
     config: (md) => {

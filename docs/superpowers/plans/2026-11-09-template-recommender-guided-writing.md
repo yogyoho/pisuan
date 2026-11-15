@@ -405,8 +405,8 @@ Expected: 能指认 ①`/app/package` 挂载源（应为 `C:\workspace\pisuan-lo
 对两个改动的技能目录各核对（宿主侧 PowerShell Get-FileHash 或 bash md5sum 均可）：
 
 ```bash
-md5sum backend/package/pisuan/agents/skills/buildin/template-recommender/SKILL.md <shared>/template-recommender/SKILL.md <proj>/template-recommender/SKILL.md
-md5sum backend/package/pisuan/agents/skills/buildin/slot-filler/SKILL.md <shared>/slot-filler/SKILL.md <proj>/slot-filler/SKILL.md
+md5sum backend/package/pisuan/agents/skills/buildin/template-recommender/SKILL.md `<shared>`/template-recommender/SKILL.md `<proj>`/template-recommender/SKILL.md
+md5sum backend/package/pisuan/agents/skills/buildin/slot-filler/SKILL.md `<shared>`/slot-filler/SKILL.md `<proj>`/slot-filler/SKILL.md
 ```
 
 Expected: template-recommender/SKILL.md 三面一致。slot-filler 若 shared 一致而投影滞后 → Step 5；三面一致则跳过 Step 5。
@@ -414,8 +414,8 @@ Expected: template-recommender/SKILL.md 三面一致。slot-filler 若 shared �
 - [ ] **Step 5: 投影卷手动同步（仅当 Step 4 发现滞后）**
 
 ```bash
-cp <shared>/template-recommender/SKILL.md <proj>/template-recommender/SKILL.md
-cp <shared>/slot-filler/SKILL.md <proj>/slot-filler/SKILL.md
+cp `<shared>`/template-recommender/SKILL.md `<proj>`/template-recommender/SKILL.md
+cp `<shared>`/slot-filler/SKILL.md `<proj>`/slot-filler/SKILL.md
 # 重跑 Step 4 核对归一
 ```
 
@@ -476,7 +476,7 @@ Expected: 智能体读档案呈进度摘要并问「继续下一节 / 复查某�
 
 - [ ] **Step 1: changelog 验证句回填实测结果（新提交，不 amend）**
 
-把 Task 4 条目中「验证：…」一句替换为实测实际结果（如「运行栈 reseed 落栈三面 md5 归一；四卡流 E2E 实测通过（含换节/换模板/跨会话恢复）；发现并修复 <N> 处措辞问题（bug-NNN…）」）：
+把 Task 4 条目中「验证：…」一句替换为实测实际结果（如「运行栈 reseed 落栈三面 md5 归一；四卡流 E2E 实测通过（含换节/换模板/跨会话恢复）；发现并修复 `<N>` 处措辞问题（bug-NNN…）」）：
 
 ```bash
 git add docs/develop-guides/changelog.md
