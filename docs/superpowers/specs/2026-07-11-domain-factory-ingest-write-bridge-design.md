@@ -16,7 +16,7 @@
 |---|---|
 | **本版（Tier 1，开发）** | 单报告章节大纲产出（OutlineProducer）+ 结构化模板工具（`get_templates`）+ 大纲工具（`get_chapter_outline`）+ 4 个消费 skill 改指向新工具 |
 | **设计但开发后置** | 多报告聚合（`content_contract` / `rigidity` / 合并语义 / LLM 散文 lazy 刷新） |
-| **不在本子项目** | 写作侧确定性骨架（PPS/章节注册表/{{REF}} 解析，子项目 2）；合规数值规则引擎（子项目 3）；成稿 docx/pdf 导出（子项目 4）；headers/routing_config 的物理删除（可能影响 ETL 内部） |
+| **不在本子项目** | 写作侧确定性骨架（PPS/章节注册表/<span v-pre>{{REF}}</span> 解析，子项目 2）；合规数值规则引擎（子项目 3）；成稿 docx/pdf 导出（子项目 4）；headers/routing_config 的物理删除（可能影响 ETL 内部） |
 
 ## 3. 核心决策
 

@@ -933,7 +933,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
               <th class="r" style="width: 18%; padding-right: 20px">操作</th>
 ```
 
-首列单元格 hunk（原 `<td class="mono">{{ record.report_id }}</td>` 替换）：
+首列单元格 hunk（原 <span v-pre>`<td class="mono">{{ record.report_id }}</td>`</span> 替换）：
 
 ```html
               <td>

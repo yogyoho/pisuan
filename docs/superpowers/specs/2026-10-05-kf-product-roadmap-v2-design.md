@@ -196,7 +196,7 @@
 
 1. 样例实体是 **24 矿**不是 22（_index.json samples=24）
 2. manager.py 上游共享 → scope 列等模型变更走 **additive 白名单**，改前 git 判定出处，附先例提交
-3. eia-section-writer 无 query_kb（沙箱 DB-only）→ 区域数据由**编排者主路径**取数并注入派工契约；SKILL.md 豁免需加红线 6（区域数值只经 ingest 表单→{{TABLE}} 渲染）+ source 枚举映射（regional→analog_mine+analog_source）
+3. eia-section-writer 无 query_kb（沙箱 DB-only）→ 区域数据由**编排者主路径**取数并注入派工契约；SKILL.md 豁免需加红线 6（区域数值只经 ingest 表单→<span v-pre>{{TABLE}}</span> 渲染）+ source 枚举映射（regional→analog_mine+analog_source）
 4. 措施消费面向 = ch9/ch10（非 7.x）；payload 字段名 zoning
 
 ## 9. Q4 整合 8 项拍板（随本 spec 一并确认）

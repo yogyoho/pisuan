@@ -12,7 +12,7 @@ W0 E2E 冒烟（2026-10-05）实证：**学习模板永远匹配不中**，`matc
 
 ## 2. 数据事实（设计输入，全部实测/实读）
 
-- 学习模板 `chapter` = 带编号的真实历史标题（如 "6.3.1.1 建设期水环境影响分析"，运行库 211 行全为 coal）；`generalized` = 泛化**正文**（`{{数值}}` 占位），不是标题泛化式 → 由 generalized 生成 regex 的路线对学习模板无意义，匹配必须锚定 `chapter`。
+- 学习模板 `chapter` = 带编号的真实历史标题（如 "6.3.1.1 建设期水环境影响分析"，运行库 211 行全为 coal）；`generalized` = 泛化**正文**（<span v-pre>`{{数值}}`</span> 占位），不是标题泛化式 → 由 generalized 生成 regex 的路线对学习模板无意义，匹配必须锚定 `chapter`。
 - ETL 被匹配的 title 同形态（如 "5地表沉陷对建构筑物和水体影响预测评价"，编号无点无空格）。
 - matcher 的 fallback 分支：`fallback_keywords` 任一子串命中即 matched（置信度 0.6，**不过阈值闸**）；strategy 非 `regex_anchor` 或无 regex 时自动走此路 → **现有 matcher 代码零改动即可承载**。
 - `TemplateLibrary` 加载机制：`TEMPLATES_DIR` 递归 rglob 所有 json（跳过 `routing_*`），**目录名不参与加载**；领域过滤只认模板 JSON 的 `domain` 字段与 `context.domain` 严格相等（`get_templates_by_domain` / `match()`）。
