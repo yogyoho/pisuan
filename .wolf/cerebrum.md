@@ -3028,3 +3028,21 @@
 
 - coal-eia-writer 语料资产盘点结论：`references/samples_bank/` 33 份报告 512 章节切片（35.4MB md，带标题层级）；`references/stages/` 仅有 planning_eia（33 表单族/139 字段）+ post_eia（25/12），**project_eia 与 tracking（主体报告类型）的 stages 文件缺失**；`sample_entities/` 是专名泄漏登记（停用词表），不是领域实体。
 - stages 字段 `{name,label,type,required}` 与实体属性同构；Route A 实测 226 字段仅 19 被现有 52 实体覆盖，41 实体零字段锚定——Route B 语料普查是主要增量来源，缺口分组在 `/tmp/route-a.json`。
+
+## Key Learnings（2026-11-16 Route B 执行补充）
+
+- 容器内脚本直调 LLM 的标准姿势：`from pisuan.models.chat import load_chat_model; m = load_chat_model("provider:model"); await m.ainvoke([("system",...),("human",...)])`——provider 注册表在 DB，pg_manager.initialize() 先行。
+- provider 注册表现状：agnes hub（openai2）免费档配额**按模型独立**——3.0-flash 429（"free users...Token Plan"）后 2.5-flash 仍可用；deepseek 401（key 失效）；hyllm 两个模型连接失败（端点死）；zai/siliconflow 返回 reasoning 块列表（content 非纯字符串，脚本需兼容解析）。批量任务预留 fallback 模型链。
+- prompt 模板含字面 JSON 花括号时禁用 .format()（bug-4291），用 .replace("{var}", val)。
+- 回移等价性校验必须用 rename_rules.forward_text（处理 YUXI_/Yuxi 大小变体与「yuxi→pisuan 改名层」等保留短语）；朴素 str.replace("yuxi","pisuan") 会在历史 docs 行制造假 DIFF（本会话实测虚惊一场）。
+
+## Do-Not-Repeat（2026-11-16 归纳落库追加）
+
+- **长后台命令会被内存压力回收**：Claude Code 在系统内存紧张时 kill 后台 shell（与命令自身无关）。批量写库类任务优先前台 + 明确 timeout；确需后台时设 `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP=1`。
+- **批量写库必须幂等可续跑**：中断后重跑不能建重复实体/重复属性——apply 前按 key 查库跳过已建，补属性前对照当前属性名跳过已加（本次教训 + 修复见 bug-4293）。
+- **LLM 批量翻译 key 的两个坑**：化学缩写会保留大写（nitrate_N/SVOC）→ 落库后跑键小写化收敛；不同中文词会偷懒翻成同一 key（X基灰分→ash_content）→ 组内去重必须 while 循环加后缀。
+
+## Key Learnings（2026-11-16 实体库规模）
+
+- 通用域实体库 51→293（+242 实体/+6072 属性）后：同名属性歧义项 11→823、L1_AMB 29→241——`_auto_map_slots_to_entity_properties` 的 matches[0] 先到先得在歧义面 800+ 时已不可用，**匹配收紧（同实体才收/唯一才收）是下一步第一优先**。
+- 泛化提示词 `_load_entity_schema_variables(max_items=60)` 按分类序+实体名排序取**前 60 条属性**（全域共享预算，非每实体）——实体库扩容后靠前的实体会独占预算，词表注入需改预算分配。

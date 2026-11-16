@@ -12521,5 +12521,61 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-11-16"
+  },
+  {
+    "id": "bug-4291",
+    "timestamp": "2026-11-16",
+    "error_message": "induce_entities_from_corpus 试点 7/7 全失败：KeyError: '\"objects\"'——SYSTEM_TMPL 里的 JSON 输出示例 {\"objects\":...} 被 .format() 当格式字段解析",
+    "file": "backend/scripts/governance/induce_entities_from_corpus.py",
+    "root_cause": "str.format() 会把模板中所有 {xxx} 当占位符；含字面 JSON 花括号的 prompt 模板不能用 .format() 注入变量",
+    "fix": "改 .replace(\"{anchor}\", anchor)；顺带把检查点跳过逻辑从『文件存在即跳过』改为『status==ok 才跳过』（否则失败检查点会永久跳过该切片）",
+    "tags": [
+      "llm-script",
+      "str-format",
+      "prompt-template",
+      "checkpoint"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-16"
+  },
+  {
+    "id": "bug-4292",
+    "timestamp": "2026-11-16",
+    "error_message": "Route B 聚合把模型返回的字面 \"null\" 字符串当对象 key（121 次混入候选桶），且 existing 桶 56 个 key 超过活跃实体 52——模型幻觉 key 未校验即当现有实体",
+    "file": "backend/scripts/governance/induce_entities_from_corpus.py",
+    "root_cause": "LLM 偶发把 JSON null 写成字符串 \"null\"；str(obj.get('existing')) 不为空即信，未对照活跃实体 key 集合校验",
+    "fix": "merge() 增 clean() 清洗字面 null/none；existing 必须命中 active_keys 集合，否则降级为新对象提案；重聚合后 existing 桶=51/52 活跃实体",
+    "tags": [
+      "llm-output",
+      "data-quality",
+      "aggregation",
+      "route-b"
+    ],
+    "related_bugs": [
+      "bug-4291"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-16"
+  },
+  {
+    "id": "bug-4293",
+    "timestamp": "2026-11-16",
+    "error_message": "归纳落库 14 个实体补属性失败：属性 key `type_name`/`ash_content_2` 重复——build_props 只在新属性组内去重，未对照目标实体既有属性 key",
+    "file": "backend/scripts/governance/apply_corpus_induction.py",
+    "root_cause": "① key 撞目标实体既有属性（normalize_properties 拒绝实体内重复 key）；② 组内去重后缀只加一次 _2，同 key 第三条再撞 ash_content_2",
+    "fix": "apply 改幂等续跑：已存在实体按 key 跳过；补属性前取当前属性，已加属性名跳过、撞既有 key while 循环加 _2；组内去重同改 while",
+    "tags": [
+      "entity-induction",
+      "key-collision",
+      "idempotent",
+      "batch-apply"
+    ],
+    "related_bugs": [
+      "bug-4291",
+      "bug-4292"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-16"
   }
 ]

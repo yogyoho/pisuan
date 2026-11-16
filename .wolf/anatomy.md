@@ -358,6 +358,11 @@
 ## backend/scripts/governance/
 
 - `normalize_property_value_types.py` — 实体属性值类型治理（幂等，默认 dry-run，`--apply` 写库）：把误写成模板 slot 类型的 `parameter` 按 key 归一（以「数值」结尾→Float，其余→String），历史别名交写入路径，未知类型报错交人工；2026-11-15 修掉 8 实体 44 条属性，否则这些实体页面保存必 400、导出无法回导。 (~700 tok)
+- `audit_slot_binding.py` — 插槽→实体属性绑定质量审计（只读）：按 L1 精确/L1 歧义/L2 包含/L3 模糊/ORPHAN/DANGLING/BARE 分级回溯 WAITING_REVIEW 任务与学习模板全部非空 entity_ref，量化 bug-4288（69.9% L3 模糊错绑）；`--out` 全量 JSON。 (~400 tok)
+- `reconcile_corpus_fields.py` — Route A 对账（只读）：coal-eia-writer stages 字段清单→属性候选，两级匹配（精确→包含）与 52 实体对账，输出 covered/gaps（按表单族分组）/零锚定实体三清单；实测 226 字段仅 19 覆盖、41 实体零锚定。 (~400 tok)
+- `trash_entities.py` — 实体批量回收工具（默认 dry-run，`--apply` 落库）：校验 key 状态→统计引用面→备份→软删→学习模板/pps 引用清空→remap→复核残留归零；npp_model_parameters 清理即用此。 (~350 tok)
+- `induce_entities_from_corpus.py` — Route B 语料普查（LLM 逐切片抽取，断点续跑）：project_eia 井工+露天 212 切片→结构感知采样（≤30K 全文，超长取标题大纲+表格行+正文开头）→agnes-3.0-flash 抽「数据对象+属性(name_cn/type/unit/samples)」→逐切片落盘 /tmp/route-b/slices/→聚合 candidates.json（按对象+属性合并计数，对账 db-exact/new-prop/new-object）；`--stride N` 试点抽样、`--merge-only` 仅聚合。 (~450 tok)
+- `apply_corpus_induction.py` — Route B 归纳落库五阶段（幂等可续跑）：`--plan` 同义簇合并（~70 组人工梳理）+现有实体路由（沉陷族→land_subsidence 等）+属性过滤（实体内重复/跨实体同名剔除）→`--translate` LLM 批量 snake_case 键→`--classify` LLM 六分类→`--apply` 走 DomainEntityService 正常编辑流→`--conform` 键小写化/无选项 Enum 降级/超长 hint 截断；51→293 实体落地即此工具。 (~500 tok)
 
 
 ## backend/server/
