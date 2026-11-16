@@ -22,6 +22,8 @@
 
 ### 功能与修复
 
+- feat(domain-factory): 空槽绑定 discover 流批量回填——槽位绑定覆盖 67%。新增 `scripts/governance/discover_bind_backfill.py`：复用 discover 语义（同提示词结构/三类建议/bind 直接应用），突破内建三道闸（≥3 段落置信度 / candidates[:50] / entities[:40]）——全局按插槽名去重 2499 名、50 名/批、全量 293 实体目录（每实体 6 属性）入 prompt，LLM 输出逐批落盘断点续跑。校验链：bind_slot ref 必须真实存在；LLM 幻觉 prop_key 在该实体内唯一包含挽回（+8）；add_property 按属性名精确+唯一包含解析，属性实际已存在则自动转绑定（+106），真新增属性/新实体 1395 条并入 template_metadata.entity_proposals 待人工确认。三轮 LLM（含限流重试与批间缓速）后写回 7 任务：绑定 1476→3049（未绑定 3319→1746），其中语义绑定 ~1153 条（字符串审计呈 L1_AMB/L3/ORPHAN 形态，属 discover 预期，建议 UI 复核）。max_tokens 零改动，全程 agnes-2.5-flash。
+
 - fix(domain-factory): 泛化词表注入预算改实体轮转分配。`_load_entity_schema_variables` 原线性遍历按分类序+实体名取前 60 条属性——实体库扩容到 293 后排序头部实体独占全部名额（词表实际只覆盖 4-5 个实体）；改为轮转分配（第一轮每实体 1 条保证覆盖面，预算未满第二轮各补第 2 条依此往复，required 优先），60 条预算覆盖 60 个实体。新增 `_round_robin_schema_budget` 纯函数与单测（5 用例），max_items=60 token 成本不变。
 
 - fix(domain-factory): 槽位→实体属性自动匹配收紧为确定性两级口径（bug-4288 修复）。`_match_slot_to_property` 原三级匹配（精确先到先得 / 包含无长度限制按 dict 序首个 / ≥2 字交集模糊）改为：唯一精确 → 唯一包含（较短方 ≥3 字且全部候选收敛唯一），歧义一律返回 None 留给人工审核与 LLM discover 流；模糊级删除。新增单测 `test/unit/services/test_slot_entity_matching.py` 锁定语义。配套 `scripts/governance/rebind_slots_strict.py` 存量重绑（备份→按新口径重算→remap，学习模板不动）：4789 条非空绑定 → keep 413 + 10 BARE、correct 842（归纳扩充后大量旧乱绑获得严格正确目标，如 '政策名称' noise_equipment.equipment_name ⇒ planning_compliance.policy_name_2）、clear 3313（'经济增长目标'→river.outlet_longitude 类荒谬绑定全部清除）；复审计 L3 3299→0、L1_AMB 241→0、ORPHAN/DANGLING 清零，剩余 1476 条绑定全部确定性可解释，3319 空槽待人工绑定或 discover 流补齐。泛化期 SlotEntityMapper（精确映射）不受影响。
