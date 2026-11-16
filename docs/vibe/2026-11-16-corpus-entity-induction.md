@@ -29,7 +29,7 @@
 
 - [x] Route A 对账报告产出（覆盖/缺口/零锚定三清单）：226 字段 covered 19 / gaps 207（51 组）/ 零锚定实体 41
 - [x] `npp_model_parameters` trash + 待审任务重映射（用户已批准）：145 条引用清空，复核残留 0
-- [ ] Route B 抽取批次范围经用户确认后启动
+- [x] Route B 抽取批次范围经用户确认后启动（project_eia 井工+露天 212 切片，211 成功）
 - [ ] 归纳词表最终经人工确认后落库（走实体构建器正常编辑流 + discover 确认流）
 
 ## Checklist
@@ -38,4 +38,4 @@
 - [x] 边界对齐（本文"用户决策"节）
 - [x] Route A：`scripts/governance/reconcile_corpus_fields.py` + 对账报告（/tmp/route-a.json）
 - [x] npp_model_parameters trash + remap（7 任务重映射，pps 引用清空，全规则复审仍归零）
-- [ ] Route B 批次范围确认（等用户）
+- [x] Route B 批次范围确认（等用户）→ 用户选定先 project_eia 212 切片
