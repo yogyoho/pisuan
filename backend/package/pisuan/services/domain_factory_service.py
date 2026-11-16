@@ -6692,7 +6692,12 @@ class DomainFactoryService:
                         continue
                     entity_key, _, prop = ref.partition(".")
                     known = entity_index.get(entity_key)
-                    if known is None:  # legacy 静态表引用，交给 SlotEntityMapper
+                    if known is None:
+                        # 点号引用头不在活跃实体库 = 实体已删除/从未落库 → 清空等待重绑。
+                        # legacy 静态表引用是裸键（无点号），已在上面 "." not in ref 跳过；
+                        # 这里 continue 会让已删实体的点号引用永不清除（悬空头累积）。
+                        slot["entity_ref"] = ""
+                        changed = True
                         continue
                     if prop in known["keys"]:
                         continue
