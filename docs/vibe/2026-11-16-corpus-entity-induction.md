@@ -27,8 +27,8 @@
 
 ## 验收标准
 
-- [ ] Route A 对账报告产出（覆盖/缺口/零锚定三清单）
-- [ ] `npp_model_parameters` trash + 待审任务重映射（用户已批准）
+- [x] Route A 对账报告产出（覆盖/缺口/零锚定三清单）：226 字段 covered 19 / gaps 207（51 组）/ 零锚定实体 41
+- [x] `npp_model_parameters` trash + 待审任务重映射（用户已批准）：145 条引用清空，复核残留 0
 - [ ] Route B 抽取批次范围经用户确认后启动
 - [ ] 归纳词表最终经人工确认后落库（走实体构建器正常编辑流 + discover 确认流）
 
@@ -36,6 +36,6 @@
 
 - [x] 资产盘点（references 四类资产 + stages 缺口确认）
 - [x] 边界对齐（本文"用户决策"节）
-- [ ] Route A：`scripts/governance/reconcile_corpus_fields.py` + 对账报告
-- [ ] npp_model_parameters trash + remap
+- [x] Route A：`scripts/governance/reconcile_corpus_fields.py` + 对账报告（/tmp/route-a.json）
+- [x] npp_model_parameters trash + remap（7 任务重映射，pps 引用清空，全规则复审仍归零）
 - [ ] Route B 批次范围确认（等用户）
