@@ -71,6 +71,16 @@ const ownEligibleCount = computed(
   () => properties.value.filter((prop) => prop?.key && (prop.name_cn || '').trim()).length
 )
 
+const coveredEntityCount = computed(() => {
+  const refs = props.promptCoverage?.coveredRefs
+  if (!refs) return 0
+  const prefixes = new Set()
+  for (const ref of refs) {
+    prefixes.add(String(ref).split('.')[0])
+  }
+  return prefixes.size
+})
+
 const propertyModalVisible = ref(false)
 const editingPropertyIndex = ref(-1)
 const editingProperty = ref(emptyProperty())
@@ -202,8 +212,10 @@ const handleSaveProperty = () => {
     <div v-if="promptCoverage" class="prompt-coverage-hint">
       <Info :size="13" />
       <span>
-        泛化抽取按分类管理里的顺序累计前 {{ promptCoverage.limit }} 个属性写进提示词（通用域共
-        {{ promptCoverage.eligible }} 个候选，已覆盖 {{ promptCoverage.covered }} 个）；本实体
+        泛化抽取按「实体轮转」注入前 {{ promptCoverage.limit }} 条属性：实体按分类顺序+名称排序，
+        第一轮每实体 1 条（必填优先），未满再各补第 2 条（通用域共
+        {{ promptCoverage.eligible }} 个候选，已覆盖 {{ promptCoverage.covered }} 个、涉
+        {{ coveredEntityCount }} 个实体）；本实体
         {{ ownCoveredCount }}/{{ ownEligibleCount }}
         进 prompt。未进的属性不会被泛化命中，可在「分类管理」里把本分类前移，或精简候选。
       </span>

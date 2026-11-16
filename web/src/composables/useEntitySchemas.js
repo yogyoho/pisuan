@@ -30,8 +30,10 @@ const compareText = (a, b) => {
 
 /**
  * 泛化 prompt 覆盖测算：与后端 `_load_entity_schema_variables` 同口径——
- * 按分类字典 sort_order（categoryOrder 顺序）→ 实体 name_cn 排序后，累计有 name_cn
- * 的属性取前 PROMPT_PROPERTY_LIMIT 个写进泛化提示词，其余属性 LLM 看不到。
+ * 实体库扩容后预算按「实体轮转」分配：实体按分类字典 sort_order（categoryOrder 顺序）→
+ * name_cn 排序，轮内属性 required 优先；第一轮每实体注入 1 条属性保证覆盖面，
+ * 预算未满则第二轮各补第 2 条，依此往复，共 PROMPT_PROPERTY_LIMIT 条。
+ * 未进的属性不会被泛化命中；排序靠后（分类顺序+名称）的实体要等前面的实体轮完。
  * 字典外分类（categoryOrder 里没有）排到最后，与后端 rank=1e6 一致。
  */
 export const computePromptCoverage = (
@@ -44,23 +46,33 @@ export const computePromptCoverage = (
   const ordered = [...(entities || [])].sort(
     (a, b) => rankOf(a.category) - rankOf(b.category) || compareText(a.name_cn, b.name_cn)
   )
-  const coveredRefs = new Set()
-  const byEntity = {}
-  let covered = 0
+  const perEntity = []
   let eligible = 0
   for (const entity of ordered) {
-    let hit = 0
-    for (const prop of entity.properties || []) {
-      if (!prop?.key || !(prop.name_cn || '').trim()) continue
-      eligible += 1
-      if (covered >= limit) continue
-      coveredRefs.add(`${entity.entity_key}.${prop.key}`)
-      covered += 1
-      hit += 1
-    }
-    byEntity[entity.entity_id] = hit
+    const props = (entity.properties || []).filter((p) => p?.key && (p.name_cn || '').trim())
+    eligible += props.length
+    const sorted = [...props].sort((a, b) => (b.required ? 1 : 0) - (a.required ? 1 : 0))
+    perEntity.push({ entityId: entity.entity_id, refs: sorted.map((p) => `${entity.entity_key}.${p.key}`) })
   }
-  return { limit, covered, eligible, coveredRefs, byEntity }
+  const coveredRefs = new Set()
+  let round = 0
+  while (coveredRefs.size < limit) {
+    let took = false
+    for (const item of perEntity) {
+      if (coveredRefs.size >= limit) break
+      if (round < item.refs.length) {
+        coveredRefs.add(item.refs[round])
+        took = true
+      }
+    }
+    if (!took) break
+    round += 1
+  }
+  const byEntity = {}
+  for (const item of perEntity) {
+    byEntity[item.entityId] = item.refs.filter((r) => coveredRefs.has(r)).length
+  }
+  return { limit, covered: coveredRefs.size, eligible, coveredRefs, byEntity }
 }
 
 export const normalizeValueType = (value) => {

@@ -22,6 +22,8 @@
 
 ### 功能与修复
 
+- fix(web): 实体构建器「泛化 prompt」覆盖测算改实体轮转口径。此前前端复算仍按旧算法（分类序+实体名线性取前 60）——实体库扩容到 293 且后端改轮转分配后，UI 列全部显示「未进」且与实际注入不符；`computePromptCoverage` 改为与后端同构的轮转复算（实体按分类顺序+名称排序、轮内必填优先、逐轮发放预算），覆盖提示文案同步更新（新增注入实体数展示，`PropertyTable.vue` 补 `coveredEntityCount`）；新增单测 `promptCoverageRoundRobin.test.js`（覆盖面/必填优先/limit 小于实体数/字典外分类排序，vite ssrLoadModule 解析 @ 别名 + localStorage 存根）。
+
 - feat(domain-factory): 空槽回填增强轮——实体目录 6→10 属性/实体 + 防幻觉指令（正确属性未展示时用 add_property 而非编造 prop_key），对剩余 443 名清旧重答：幻觉 bind_invalid 222→24，采纳新提案 146 属性跨 37 实体，任务槽位覆盖 90%→94.6%（4338/4584，未绑定 246），残余 pending 111 条留任务 metadata。
 
 - feat(domain-factory): discover 待确认建议采纳 + 二轮回填——槽位绑定覆盖 90%。新增 `scripts/governance/apply_discover_proposals.py`：从回填 LLM 建议全集按同口径校验，add_property 提案去重后并入目标实体（1159 条属性跨 130 实体，走 DomainEntityService 正常编辑流；空名守卫 19、norm 重名 10、目标实体幻觉 84 转 pending）；new_entity 提案按 name_cn 对账活跃实体全部折入（0 新建）；修复 discover_bind_backfill 的 pendings 写回崩溃（ORM 对象误用 .get()，AttributeError 曾被 grep 管道 exit code 掩码——登记 bug-4295）。二轮回填解析新属性后绑定add_resolved 106→1173，写回后绑定 3049→4323（含 211 学习模板），未绑定 1746→472；残余 pending 364 条（真新增属性/实体提案 + 幻觉 ref）留任务 metadata 人工处理。
