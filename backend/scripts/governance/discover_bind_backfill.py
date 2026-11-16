@@ -243,7 +243,8 @@ async def run(apply: bool, model_spec: str) -> None:
     if pendings:
         for row in tasks:
             detail = await DomainFactoryRepository().get_task(row["id"])
-            meta = (detail.get("template_metadata") or {}) if isinstance(detail.get("template_metadata"), dict) else {}
+            d = detail.to_dict() if hasattr(detail, "to_dict") else detail
+            meta = d.get("template_metadata") or {} if isinstance(d, dict) else {}
             old = meta.get("entity_proposals") or []
             await DomainFactoryRepository().update_task(
                 row["id"], {"template_metadata": {**meta, "entity_proposals": old + pendings, "discovery_status": "completed"}}
