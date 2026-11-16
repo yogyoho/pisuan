@@ -3017,3 +3017,14 @@
 
 - **backport apply 后必须推进 START**：忘了推进会让下次运行重放旧区间——已回移提交被二次回移成重复提交，且重放时 c_old 行数与 localized 父版本错位 Δ 行即触发 build_new_text 整文件漂移分支，把 equal 行本应保留的 custom 侧写法整批覆盖。backport.py 现已在 apply 成功且无 problems 时自动推进 START；手工改 START 时用 `git rev-list --reverse START..HEAD` 预检区间。
 - **backport 重放失败样式识别**：`git commit -q` 无可提交内容时静默 exit 1（stderr 空），脚本以"提交失败"中断——这不是 git 故障，是"重放内容==HEAD"的信号，应立即怀疑 START 指针而非重试。
+
+## Do-Not-Repeat（2026-11-16 changelog 提交事故追加）
+
+- **`git commit -- <path>` 提交的是工作树内容，不是暂存区**：pathspec 模式对指定 path 直接取工作树重造 tree entry，构造的 index blob 被完全绕过（bug-4290）。共享脏工作树上，其他会话的未提交改写会替你进提交。**构造 index blob 后必须用临时索引提交**：`GIT_INDEX_FILE=.tmp/xx git read-tree HEAD && GIT_INDEX_FILE=.tmp/xx git update-index --cacheinfo 100644,<blob>,<path> && GIT_INDEX_FILE=.tmp/xx git commit -m ...`（同一 env 下、无 pathspec）。
+- **提交后必须回读提交内容**（`git show HEAD -- <path> | grep '^[+-]'`），不能只看 exit code / --stat 行数——本次 1 insertion+1 deletion 与预期的 2 insertions 不符即是破案线索。
+- **共享树回滚分工**：localized 用 `reset --mixed`（保工作树 WIP），custom 先 `status --porcelain | grep -v '^??'` 确认无 tracked 改动再 `reset --hard`。
+
+## Key Learnings（2026-11-16 Route A 补充）
+
+- coal-eia-writer 语料资产盘点结论：`references/samples_bank/` 33 份报告 512 章节切片（35.4MB md，带标题层级）；`references/stages/` 仅有 planning_eia（33 表单族/139 字段）+ post_eia（25/12），**project_eia 与 tracking（主体报告类型）的 stages 文件缺失**；`sample_entities/` 是专名泄漏登记（停用词表），不是领域实体。
+- stages 字段 `{name,label,type,required}` 与实体属性同构；Route A 实测 226 字段仅 19 被现有 52 实体覆盖，41 实体零字段锚定——Route B 语料普查是主要增量来源，缺口分组在 `/tmp/route-a.json`。

@@ -9481,3 +9481,5 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 00:52 | 治理批次回移字节等价验证 7/7 ALL PASS（forward_text）| .backport-tmp/check-governance-backport.py | 验证通过 |
 | 01:05 | 回移重放事故：START 未推进致重复提交+漂移覆盖，reset 回滚后 START=28217df20 重做 88d281a8a→2397f3378，7/7 ALL PASS；backport.py 加自动推进 START | .backport-tmp/backport.py, pisuan-custom | 修复并防复发 |
 | 01:40 | 插槽绑定质量审计：L3 模糊绑定占 69.9% 且系统性错绑（吸引子效应），模板回流无校验闸口 | backend/scripts/governance/audit_slot_binding.py | 证据落档待方案对齐 |
+| 08:56 | changelog 提交事故（bug-4290）：git commit -- path 取工作树内容致对方 hunk 入两仓、我的条目丢失；回滚 localized 2ef8567df/custom 23ce96f09，改 GIT_INDEX_FILE 临时索引重做 ee6cf9412→custom bee12cedd，字节等价 7/7 ALL PASS | docs/develop-guides/changelog.md, .backport-tmp/* | 已修复+复验 | ~15k |
+| 08:56 | bug-4289 登记（remap 步骤1 known-is-None 盲区，随本批 service 修复）；vibe 文档 4 项 checklist 勾选；cerebrum DNR 3 条 + Key Learnings 2 条 | .wolf/*, docs/vibe/2026-11-16-corpus-entity-induction.md | 台账齐 | ~8k |

@@ -12481,5 +12481,45 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-11-16"
+  },
+  {
+    "id": "bug-4289",
+    "timestamp": "2026-11-16",
+    "error_message": "_remap_waiting_review_tasks 步骤1 对已删实体的点号引用永不清除（known is None 即 continue），trash npp 后 145 条引用残留",
+    "file": "backend/package/pisuan/services/domain_factory_service.py",
+    "root_cause": "步骤1 把『点号引用头不在活跃实体库』误判为 legacy 静态表引用而跳过；静态表引用实为裸键（无点号），早已被 '.' not in ref 过滤，该分支只可能命中已删/未落库实体的点号引用",
+    "fix": "known is None 时改为 slot['entity_ref']='' + changed 标记，等待步骤3 重绑；配套 DomainFactoryRepository.clear_report_pps_entity_keys 批量清空报告 pps entity_key；trash_entities.py 复核残留归零",
+    "tags": [
+      "domain-factory",
+      "remap",
+      "entity-trash",
+      "dangling-ref"
+    ],
+    "related_bugs": [
+      "bug-4281",
+      "bug-4288"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-16"
+  },
+  {
+    "id": "bug-4290",
+    "timestamp": "2026-11-16",
+    "error_message": "git commit -- <path> 提交的是工作树内容而非暂存 blob：共享脏工作树上构造的 index blob 被绕过，把其他会话的未提交改写提交进了两仓（我的条目根本没进）",
+    "file": ".tmp/stage-changelog-induction.py",
+    "root_cause": "pathspec 模式的 git commit 对指定 path 直接取工作树内容重造 tree entry，忽略已暂存内容；并行会话共享工作树时，构造 index blob 再 git commit -- path 必然踩坑",
+    "fix": "回滚两仓错误提交（localized reset --mixed HEAD~1，custom reset --hard HEAD~1）；改用 GIT_INDEX_FILE 临时索引：read-tree HEAD + update-index --cacheinfo 挂入构造 blob + 同一 env 下 git commit（无 pathspec）；重跑 backport 后字节等价 ALL PASS",
+    "tags": [
+      "git",
+      "shared-worktree",
+      "index-blob",
+      "backport",
+      "parallel-sessions"
+    ],
+    "related_bugs": [
+      "bug-4287"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-16"
   }
 ]
