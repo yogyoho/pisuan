@@ -6155,10 +6155,8 @@ class DomainFactoryService:
     async def _auto_map_slots_to_entity_properties(self, paragraphs: list[dict], domain_code: str | None = None) -> int:
         """自动映射 slot name 到 entity.property，填充 entity_ref。
 
-        从 DB 读取所有实体及其 properties 列表，对每个 slot 做三级匹配：
-        1. slot.name 等于 property.name_cn
-        2. slot.name 包含 property.name_cn 或反向
-        3. slot.name 的任意字符在 property.name_cn 中出现
+        从 DB 读取所有实体及其 properties 列表，对每个空槽做两级确定性匹配
+        （唯一精确 → 唯一包含，见 _match_slot_to_property；宁缺勿错）：
 
         匹配成功 → slot.entity_ref = "entity_key.property_key"（属性 key，非 name_cn）
         """
@@ -6220,26 +6218,32 @@ class DomainFactoryService:
     def _match_slot_to_property(
         slot_name: str, prop_index: dict[str, list[tuple[str, str, dict]]]
     ) -> tuple[str, str] | None:
-        """三级匹配：精确 → 包含 → 模糊"""
-        # 1. 精确匹配
-        if slot_name in prop_index:
-            ek, pk, _ = prop_index[slot_name][0]
-            return (ek, pk)
+        """确定性匹配：唯一精确 → 唯一包含；宁缺勿错（bug-4288 收紧）。
 
-        # 2. 包含匹配
-        for prop_name, matches in prop_index.items():
-            if prop_name in slot_name or slot_name in prop_name:
-                ek, pk, _ = matches[0]
+        1. 精确：slot.name 等于某 property.name_cn，且该属性名全库唯一
+        2. 包含：slot.name 与 property.name_cn 互相包含（较短方 ≥3 字），
+           且全部命中收敛到唯一 (entity_key, prop_key)
+
+        歧义（多实体同名 / 包含多候选）一律返回 None，留给人工审核与 LLM discover 流；
+        原第三级「≥2 字交集模糊匹配」已删除——它按 dict 插入序先到先得，
+        是 69.9% 系统性错绑的来源（井田名称→noise_equipment.equipment_name 等）。
+        """
+        # 1. 精确唯一
+        hits = prop_index.get(slot_name)
+        if hits:
+            unique = {(ek, pk) for ek, pk, _ in hits}
+            if len(unique) == 1:
+                ek, pk, _ = hits[0]
                 return (ek, pk)
+            return None  # 精确歧义：≥2 实体拥有同名属性，不猜
 
-        # 3. 关键词交集匹配（至少 2 个汉字重叠）
-        slot_chars = set(slot_name)
+        # 2. 包含唯一（较短方 ≥3 字，剔除“数值”类 2 字噪声）
+        candidates: set[tuple[str, str]] = set()
         for prop_name, matches in prop_index.items():
-            common = slot_chars & set(prop_name)
-            if len(common) >= 2:
-                ek, pk, _ = matches[0]
-                return (ek, pk)
-
+            if (prop_name in slot_name or slot_name in prop_name) and min(len(prop_name), len(slot_name)) >= 3:
+                candidates.update((ek, pk) for ek, pk, _ in matches)
+        if len(candidates) == 1:
+            return next(iter(candidates))
         return None
 
     async def discover_entities_task(self, task_id: str) -> dict[str, Any]:
