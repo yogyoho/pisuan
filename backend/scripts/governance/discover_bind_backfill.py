@@ -59,7 +59,7 @@ def build_prompt(batch: list[dict], catalog: str) -> str:
 {cand}
 
 请输出 JSON 数组，每个元素是以下三种之一：
-1. bind_slot: slot 语义匹配到某实体的已有属性（优先；entity_ref 必须取自上面目录中出现过的 entity_key.prop_key）
+1. bind_slot: slot 语义匹配到某实体的已有属性（优先；entity_ref 必须取自上面目录中出现过的 entity_key.prop_key；若该实体的正确属性未在目录中展示，用 add_property 而不是编造 prop_key）
 {{"suggestion_type":"bind_slot","slot_name":"候选slot名称","entity_ref":"entity_key.prop_key","confidence":0.9}}
 2. add_property: slot 属于某已有实体但目录中没展示对应属性
 {{"suggestion_type":"add_property","target_entity_key":"实体key","slot_name":"候选slot名称","proposed_property":{{"key":"prop_key","name_cn":"属性名","value_type":"number|string","unit":"单位"}},"confidence":0.8}}
@@ -94,9 +94,9 @@ async def run(apply: bool, model_spec: str) -> None:
             if isinstance(p, dict) and p.get("key"):
                 pk_map[str(p["key"])] = str(p.get("name_cn") or "")
         valid_props[ek] = pk_map
-        shown = list(pk_map.items())[:6]
+        shown = list(pk_map.items())[:10]
         prop_text = " ".join(f"{k}({v})" for k, v in shown)
-        rest = f" …共{len(pk_map)}属性" if len(pk_map) > 6 else ""
+        rest = f" …共{len(pk_map)}属性" if len(pk_map) > 10 else ""
         catalog_lines.append(f"- {ek}({e.get('name_cn')})[{e.get('category')}]{(' 属性: ' + prop_text + rest) if prop_text else ''}")
     catalog = "\n".join(catalog_lines)
 

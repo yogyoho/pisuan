@@ -22,6 +22,8 @@
 
 ### 功能与修复
 
+- feat(domain-factory): 空槽回填增强轮——实体目录 6→10 属性/实体 + 防幻觉指令（正确属性未展示时用 add_property 而非编造 prop_key），对剩余 443 名清旧重答：幻觉 bind_invalid 222→24，采纳新提案 146 属性跨 37 实体，任务槽位覆盖 90%→94.6%（4338/4584，未绑定 246），残余 pending 111 条留任务 metadata。
+
 - feat(domain-factory): discover 待确认建议采纳 + 二轮回填——槽位绑定覆盖 90%。新增 `scripts/governance/apply_discover_proposals.py`：从回填 LLM 建议全集按同口径校验，add_property 提案去重后并入目标实体（1159 条属性跨 130 实体，走 DomainEntityService 正常编辑流；空名守卫 19、norm 重名 10、目标实体幻觉 84 转 pending）；new_entity 提案按 name_cn 对账活跃实体全部折入（0 新建）；修复 discover_bind_backfill 的 pendings 写回崩溃（ORM 对象误用 .get()，AttributeError 曾被 grep 管道 exit code 掩码——登记 bug-4295）。二轮回填解析新属性后绑定add_resolved 106→1173，写回后绑定 3049→4323（含 211 学习模板），未绑定 1746→472；残余 pending 364 条（真新增属性/实体提案 + 幻觉 ref）留任务 metadata 人工处理。
 
 - feat(domain-factory): 空槽绑定 discover 流批量回填——槽位绑定覆盖 67%。新增 `scripts/governance/discover_bind_backfill.py`：复用 discover 语义（同提示词结构/三类建议/bind 直接应用），突破内建三道闸（≥3 段落置信度 / candidates[:50] / entities[:40]）——全局按插槽名去重 2499 名、50 名/批、全量 293 实体目录（每实体 6 属性）入 prompt，LLM 输出逐批落盘断点续跑。校验链：bind_slot ref 必须真实存在；LLM 幻觉 prop_key 在该实体内唯一包含挽回（+8）；add_property 按属性名精确+唯一包含解析，属性实际已存在则自动转绑定（+106），真新增属性/新实体 1395 条并入 template_metadata.entity_proposals 待人工确认。三轮 LLM（含限流重试与批间缓速）后写回 7 任务：绑定 1476→3049（未绑定 3319→1746），其中语义绑定 ~1153 条（字符串审计呈 L1_AMB/L3/ORPHAN 形态，属 discover 预期，建议 UI 复核）。max_tokens 零改动，全程 agnes-2.5-flash。
