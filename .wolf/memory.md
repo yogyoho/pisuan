@@ -9480,3 +9480,4 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 00:45 | 修复 langgraph 池急切创建导致的 pool-1 卡死（initialize 惰性化）；修复幂等重跑误删幸存属性（protected 集+NEW_PROPS 自愈）；buglog 追加 bug-4281~4286 | manager.py, repair_entity_spec.py, buglog.json | OK | ~12k |
 | 00:52 | 治理批次回移字节等价验证 7/7 ALL PASS（forward_text）| .backport-tmp/check-governance-backport.py | 验证通过 |
 | 01:05 | 回移重放事故：START 未推进致重复提交+漂移覆盖，reset 回滚后 START=28217df20 重做 88d281a8a→2397f3378，7/7 ALL PASS；backport.py 加自动推进 START | .backport-tmp/backport.py, pisuan-custom | 修复并防复发 |
+| 01:40 | 插槽绑定质量审计：L3 模糊绑定占 69.9% 且系统性错绑（吸引子效应），模板回流无校验闸口 | backend/scripts/governance/audit_slot_binding.py | 证据落档待方案对齐 |

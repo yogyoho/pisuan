@@ -12461,5 +12461,25 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-16"
+  },
+  {
+    "id": "bug-4288",
+    "timestamp": "2026-11-16",
+    "error_message": "插槽→实体自动绑定系统性错绑：4625 条非空绑定中 3230 条（69.9%）由三级匹配的最宽级（≥2 汉字交集）产生，样例如 井田名称→noise_equipment.equipment_name、年蒸发量→climate.precipitation_min、可采煤层厚度→npp_model_parameters.solar_radiation_function",
+    "file": "backend/package/pisuan/services/domain_factory_service.py",
+    "root_cause": "_match_slot_to_property 第 3 级（≥2 字交集）过宽 + matches[0] 先到先得；泛化名称/类型/位置类泛化属性形成吸引子（equipment_name 独吞 617 条）；泛化 prompt 不含实体属性词表（LLM 自由命名插槽）；_save_learned_templates_from_task 回流无 entity_ref 校验",
+    "fix": "待方案对齐：砍 L3、L2 加护栏、L1 歧义用段落关联实体消解、prompt 注入词表、回流闸口校验、存量重绑",
+    "tags": [
+      "slot-binding",
+      "fuzzy-match",
+      "attractor",
+      "template-backflow",
+      "domain-factory"
+    ],
+    "related_bugs": [
+      "bug-4283"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-16"
   }
 ]
