@@ -12468,7 +12468,7 @@
     "error_message": "插槽→实体自动绑定系统性错绑：4625 条非空绑定中 3230 条（69.9%）由三级匹配的最宽级（≥2 汉字交集）产生，样例如 井田名称→noise_equipment.equipment_name、年蒸发量→climate.precipitation_min、可采煤层厚度→npp_model_parameters.solar_radiation_function",
     "file": "backend/package/pisuan/services/domain_factory_service.py",
     "root_cause": "_match_slot_to_property 第 3 级（≥2 字交集）过宽 + matches[0] 先到先得；泛化名称/类型/位置类泛化属性形成吸引子（equipment_name 独吞 617 条）；泛化 prompt 不含实体属性词表（LLM 自由命名插槽）；_save_learned_templates_from_task 回流无 entity_ref 校验",
-    "fix": "待方案对齐：砍 L3、L2 加护栏、L1 歧义用段落关联实体消解、prompt 注入词表、回流闸口校验、存量重绑",
+    "fix": "2026-11-16 已修复：_match_slot_to_property 收紧为唯一精确→唯一包含（较短方≥3字），删除 ≥2 字交集模糊级；rebind_slots_strict.py 存量重绑 keep 413+10/correct 842/clear 3313，复审计 L3 3299→0、L1_AMB 241→0，剩余 1476 条绑定全部确定性可解释",
     "tags": [
       "slot-binding",
       "fuzzy-match",
@@ -12574,6 +12574,40 @@
     "related_bugs": [
       "bug-4291",
       "bug-4292"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-16"
+  },
+  {
+    "id": "bug-4294",
+    "timestamp": "2026-11-16",
+    "error_message": "test_import_extracted_defaults_to_general HEAD 上即失败：KeyError 'rejected'——router 读 result['rejected']（domain_entity_builder_router.py:282）而测试 fake 只返回 {inserted,updated}",
+    "file": "backend/test/unit/routers/test_domain_factory_dedomain_contract.py",
+    "root_cause": "实体构建器批次给 import-extracted 响应加 rejected 字段时未同步更新该测试的 _FakeEntityService；与槽位匹配改动无关（本批 190 通过无相关回归），属既有坏测试另案",
+    "fix": "待修：_FakeEntityService.save_extracted_entities 返回值补 \"rejected\": []",
+    "tags": [
+      "broken-test",
+      "pre-existing",
+      "entity-builder-router"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-16"
+  },
+  {
+    "id": "bug-4295",
+    "timestamp": "2026-11-16",
+    "error_message": "discover_bind_backfill apply 的 1395 条待确认建议从未写入 metadata：DomainFactoryRepository.get_task 返回 ORM 对象没有 .get()，AttributeError 被 grep 管道掩码（管道 exit code=grep 的 0）",
+    "file": "backend/scripts/governance/discover_bind_backfill.py",
+    "root_cause": "① 把 dict 方法用在 ORM 实例上；② docker exec … | grep 的退出码是 grep 的，脚本崩溃被吞，误判 apply 成功",
+    "fix": "detail.to_dict() 后再取 metadata；建议集可从 /tmp/discover-backfill-raw.json 完整重算（无数据损失）；管道调用 docker exec 脚本时必须核对脚本自身的完成输出行而非 exit code",
+    "tags": [
+      "orm-vs-dict",
+      "pipeline-exit-code",
+      "discover-backfill"
+    ],
+    "related_bugs": [
+      "bug-4294"
     ],
     "occurrences": 1,
     "last_seen": "2026-11-16"
