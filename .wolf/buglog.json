@@ -12611,5 +12611,24 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-11-16"
+  },
+  {
+    "id": "bug-4296",
+    "timestamp": "2026-11-17",
+    "error_message": "web 全量单测 397 中 2 个既有失败：modelProviderSaveActions.test.js 语法错误（Identifier 'message' has already been declared）；exprLatex.test.js 读 /backend/... 路径在容器不存在（挂载点为 /app）",
+    "file": "web/test/unit/modelProviderSaveActions.test.js",
+    "root_cause": "前者 7bd90b175 时代引入重复声明未跑全量；后者测试用宿主机相对路径硬编码，容器内必炸——环境依赖型测试",
+    "fix": "另案：① 测试文件改写重复的 message 声明；② 路径改由环境变量/相对仓库根推导。与本次 promptCoverage 改动无关（本批 395/397 通过）",
+    "tags": [
+      "broken-test",
+      "pre-existing",
+      "web-tests",
+      "container-path"
+    ],
+    "related_bugs": [
+      "bug-4294"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-17"
   }
 ]
