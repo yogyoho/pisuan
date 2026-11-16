@@ -1023,6 +1023,20 @@ class DomainFactoryRepository:
             await session.commit()
             return row.to_dict()
 
+    async def clear_report_pps_entity_keys(self, entity_keys: set[str]) -> int:
+        """按实体头批量清空报告 pps 的 entity_key（存量治理：实体回收后引用置空）。"""
+        if not entity_keys:
+            return 0
+        cleared = 0
+        async with pg_manager.get_async_session_context() as session:
+            result = await session.execute(select(DomainFactoryReportPps))
+            for row in result.scalars():
+                if str(row.entity_key or "").strip().partition(".")[0] in entity_keys:
+                    row.entity_key = ""
+                    cleared += 1
+            await session.commit()
+        return cleared
+
     async def upsert_chapter(
         self,
         *,
