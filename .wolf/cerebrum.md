@@ -3046,3 +3046,8 @@
 
 - 通用域实体库 51→293（+242 实体/+6072 属性）后：同名属性歧义项 11→823、L1_AMB 29→241——`_auto_map_slots_to_entity_properties` 的 matches[0] 先到先得在歧义面 800+ 时已不可用，**匹配收紧（同实体才收/唯一才收）是下一步第一优先**。
 - 泛化提示词 `_load_entity_schema_variables(max_items=60)` 按分类序+实体名排序取**前 60 条属性**（全域共享预算，非每实体）——实体库扩容后靠前的实体会独占预算，词表注入需改预算分配。
+
+## Do-Not-Repeat（2026-11-16 词表轮转批次追加）
+
+- **临时索引提交会让真 index 相对 HEAD 过期**：GIT_INDEX_FILE 提交不写回真 index，之后真 index 会把已提交文件视为「待删除」——任何一次无 pathspec 的 `git commit` 都会删掉它们。每次临时索引提交后必须 `git reset --mixed HEAD` 归位真 index（保工作树）。
+- **构造 index blob 时截取函数必须用函数自己的结束标记**（下一个同级 def），用远处标记会把中间两千行一起吞进 OLD（本次 _generalize_fallback vs discover_entities_task 差点酿成大段删除提交，幸在 --cached --stat 复核拦下）。
