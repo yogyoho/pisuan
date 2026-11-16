@@ -363,6 +363,7 @@
 - `trash_entities.py` — 实体批量回收工具（默认 dry-run，`--apply` 落库）：校验 key 状态→统计引用面→备份→软删→学习模板/pps 引用清空→remap→复核残留归零；npp_model_parameters 清理即用此。 (~350 tok)
 - `induce_entities_from_corpus.py` — Route B 语料普查（LLM 逐切片抽取，断点续跑）：project_eia 井工+露天 212 切片→结构感知采样（≤30K 全文，超长取标题大纲+表格行+正文开头）→agnes-3.0-flash 抽「数据对象+属性(name_cn/type/unit/samples)」→逐切片落盘 /tmp/route-b/slices/→聚合 candidates.json（按对象+属性合并计数，对账 db-exact/new-prop/new-object）；`--stride N` 试点抽样、`--merge-only` 仅聚合。 (~450 tok)
 - `apply_corpus_induction.py` — Route B 归纳落库五阶段（幂等可续跑）：`--plan` 同义簇合并（~70 组人工梳理）+现有实体路由（沉陷族→land_subsidence 等）+属性过滤（实体内重复/跨实体同名剔除）→`--translate` LLM 批量 snake_case 键→`--classify` LLM 六分类→`--apply` 走 DomainEntityService 正常编辑流→`--conform` 键小写化/无选项 Enum 降级/超长 hint 截断；51→293 实体落地即此工具。 (~500 tok)
+- `discover_bind_backfill.py` — 空槽绑定 discover 流批量回填（断点续跑）：突破内建三道闸（≥3 段落/candidates[:50]/entities[:40]），全局按槽名去重 50 名/批 + 全量实体目录入 prompt；bind_slot 校验+实体内挽回、add_property 解析转绑定，真新增入 entity_proposals 待确认；槽位绑定 1476→3049。 (~400 tok)
 
 
 ## backend/server/
