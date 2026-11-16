@@ -4068,9 +4068,11 @@ class DomainFactoryService:
         """Phase 4：加载领域实体属性作为泛化 Schema 变量提示。
 
         让泛化 LLM 优先按已有实体属性名提取 slot（自上而下收敛），而非完全自由提取。
-        只取该领域实体的属性（非全量），cap max_items 控制 token 成本。
-        排序按分类字典 sort_order → 实体 name_cn：业务优先级决定谁进 prompt
-        （此前按分类字母序，project_basic 这类主力分类会被整类挤出 60 个之外）。
+        实体库扩容后（293 实体、6000+ 属性）max_items 预算按「实体轮转」分配：
+        第一轮每实体注入 1 条属性保证覆盖面，预算未满则第二轮各补第 2 条，依此往复——
+        避免排序靠前的实体独占全部名额（旧实现线性遍历，project_basic 头部一发吃满 60）。
+        轮内属性排序 required 优先；实体排序按分类字典 sort_order → 实体 name_cn
+        （业务优先级决定谁先进第一轮）。
         返回 _format_schema_variables 所需的 {key, data_type, label, prompt} 格式。
         """
         if not domain_code:
@@ -4090,12 +4092,13 @@ class DomainFactoryService:
         entities.sort(
             key=lambda e: (category_rank.get(e.get("category"), 10**6), e.get("name_cn") or "")
         )
-        variables: list[dict[str, Any]] = []
+        per_entity: list[list[dict[str, Any]]] = []
         for e in entities:
             ek = e.get("entity_key", "")
             ent_name = e.get("name_cn", "") or ek
             props = e.get("properties", []) or []
-            items = props.items() if isinstance(props, dict) else enumerate(props)
+            items = list(props.items()) if isinstance(props, dict) else list(enumerate(props))
+            prop_list: list[tuple[int, dict[str, Any]]] = []
             for pk, pv in items:
                 if not isinstance(pv, dict):
                     continue
@@ -4104,16 +4107,38 @@ class DomainFactoryService:
                 if not name_cn:
                     continue
                 unit = pv.get("unit")
-                variables.append(
-                    {
-                        "key": f"{ek}.{prop_key}" if ek and prop_key else (prop_key or name_cn),
-                        "data_type": pv.get("value_type", ""),
-                        "label": f"{ent_name}.{name_cn}",
-                        "prompt": pv.get("extraction_hint") or (f"单位 {unit}" if unit else ""),
-                    }
+                prop_list.append(
+                    (
+                        0 if pv.get("required") else 1,
+                        {
+                            "key": f"{ek}.{prop_key}" if ek and prop_key else (prop_key or name_cn),
+                            "data_type": pv.get("value_type", ""),
+                            "label": f"{ent_name}.{name_cn}",
+                            "prompt": pv.get("extraction_hint") or (f"单位 {unit}" if unit else ""),
+                        },
+                    )
                 )
+            if prop_list:
+                prop_list.sort(key=lambda t: t[0])
+                per_entity.append([v for _, v in prop_list])
+        return self._round_robin_schema_budget(per_entity, max_items)
+
+    @staticmethod
+    def _round_robin_schema_budget(per_entity: list[list[dict[str, Any]]], max_items: int) -> list[dict[str, Any]]:
+        """按实体轮转取变量：第 n 轮各实体出第 n 条属性，直到 max_items 或耗尽。"""
+        variables: list[dict[str, Any]] = []
+        round_idx = 0
+        while len(variables) < max_items:
+            took = False
+            for lst in per_entity:
                 if len(variables) >= max_items:
-                    return variables
+                    break
+                if round_idx < len(lst):
+                    variables.append(lst[round_idx])
+                    took = True
+            if not took:
+                break
+            round_idx += 1
         return variables
 
     def _generalize_fallback(self, text: str, domain_label: str = "") -> dict[str, Any]:

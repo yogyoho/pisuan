@@ -22,6 +22,8 @@
 
 ### 功能与修复
 
+- fix(domain-factory): 泛化词表注入预算改实体轮转分配。`_load_entity_schema_variables` 原线性遍历按分类序+实体名取前 60 条属性——实体库扩容到 293 后排序头部实体独占全部名额（词表实际只覆盖 4-5 个实体）；改为轮转分配（第一轮每实体 1 条保证覆盖面，预算未满第二轮各补第 2 条依此往复，required 优先），60 条预算覆盖 60 个实体。新增 `_round_robin_schema_budget` 纯函数与单测（5 用例），max_items=60 token 成本不变。
+
 - fix(domain-factory): 槽位→实体属性自动匹配收紧为确定性两级口径（bug-4288 修复）。`_match_slot_to_property` 原三级匹配（精确先到先得 / 包含无长度限制按 dict 序首个 / ≥2 字交集模糊）改为：唯一精确 → 唯一包含（较短方 ≥3 字且全部候选收敛唯一），歧义一律返回 None 留给人工审核与 LLM discover 流；模糊级删除。新增单测 `test/unit/services/test_slot_entity_matching.py` 锁定语义。配套 `scripts/governance/rebind_slots_strict.py` 存量重绑（备份→按新口径重算→remap，学习模板不动）：4789 条非空绑定 → keep 413 + 10 BARE、correct 842（归纳扩充后大量旧乱绑获得严格正确目标，如 '政策名称' noise_equipment.equipment_name ⇒ planning_compliance.policy_name_2）、clear 3313（'经济增长目标'→river.outlet_longitude 类荒谬绑定全部清除）；复审计 L3 3299→0、L1_AMB 241→0、ORPHAN/DANGLING 清零，剩余 1476 条绑定全部确定性可解释，3319 空槽待人工绑定或 discover 流补齐。泛化期 SlotEntityMapper（精确映射）不受影响。
 
 - feat(domain-entity-builder): Route B 归纳词表落库——通用域实体库 51→293 实体。新增 `scripts/governance/apply_corpus_induction.py`（--plan 同义簇合并/现有实体路由/属性过滤 → --translate LLM 批量生成 snake_case 键 → --classify LLM 六分类 → --apply 走 DomainEntityService 正常编辑流 → --conform 键小写化/无选项 Enum 降级/超长 hint 截断，全程幂等可续跑）。落库口径经用户确认：非环评专业，最大保留、仅剔明显提取/划分错误——人工梳理 ~70 组同义拆分簇（清洁生产×5、煤质×9、外排土场×4 等）合并、沉陷预测/变形/损坏 28 个候选整体并入 land_subsidence、new::矸石 并入 solid_waste_gangue、区域污染源并入 air_pollutants；实体内重复 99 + 跨实体同名 129 剔除（控制槽位精确名歧义面）。落地：242 新实体（2317 属性）+ 51 现有实体补 3755 属性，中途后台命令被内存压力终止后幂等续跑收尾（属性 key 撞既有键加 _2 后缀修复 14 个失败）。conform 后规范审计 P1/P5/P9 清零；遗留 P4 数值无单位 203、P8 名称带单位 36 属语料固有（保留不臆造）。注意：同名属性歧义项 11→823（293 实体规模下的必然代价），五层防线第 1 层匹配收紧已升级为硬需求。
