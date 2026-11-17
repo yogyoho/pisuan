@@ -525,7 +525,26 @@ class DomainEntityService:
         normalized["value_type"] = cls.normalize_value_type(normalized.get("value_type", "String"))
         if "options" in normalized and "enum_options" not in normalized:
             normalized["enum_options"] = normalized.pop("options")
+        normalized["synonyms"] = cls.normalize_synonyms(normalized.get("synonyms"), str(normalized.get("name_cn") or ""))
         return normalized
+
+    @staticmethod
+    def normalize_synonyms(raw: Any, own_name_cn: str = "", limit: int = 8) -> list[str]:
+        """属性/实体同义词归一：字符串列表，去空白与重复、剔除与自身 name_cn 相同项，至多 limit 条。"""
+        if not raw:
+            return []
+        if isinstance(raw, str):
+            raw = [raw]
+        own = (own_name_cn or "").strip()
+        out: list[str] = []
+        for item in raw:
+            s = str(item or "").strip()
+            if not s or s == own or s in out:
+                continue
+            out.append(s)
+            if len(out) >= limit:
+                break
+        return out
 
     @classmethod
     def normalize_properties(cls, properties: Any) -> list[dict[str, Any]]:

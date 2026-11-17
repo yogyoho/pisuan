@@ -894,7 +894,7 @@ class DomainFactoryService:
 
                 # Phase 4：注入领域实体属性作为 Schema 变量提示，引导泛化优先匹配已有属性
                 schema_vars = await self._load_entity_schema_variables(domain_code)
-                entity_pool = await self._load_entity_variable_pool(domain_code)
+                entity_pool, entity_synonyms = await self._load_entity_variable_pool(domain_code)
 
                 # [pisuan-custom] 并发运行时可配（基础设置页「知识工厂 ETL」）；
                 # 钳制到 [1, 32]：0 值会让 Semaphore 永久阻塞
@@ -910,6 +910,7 @@ class DomainFactoryService:
                     max_concurrency=etl_max_concurrency,
                     context=context,
                     entity_variable_pool=entity_pool,
+                    entity_synonyms=entity_synonyms,
                 )
                 paragraph_results = gen_output["results"]
                 step_ledger.update(gen_output["stats"])
@@ -3341,6 +3342,7 @@ class DomainFactoryService:
         max_concurrency: int = 2,  # 兜底默认：串行端点安全值；流水线运行时从 domain_factory_llm 配置读取
         context: TaskContext | None = None,
         entity_variable_pool: list[list[dict[str, Any]]] | None = None,
+        entity_synonyms: dict[str, list[str]] | None = None,
     ) -> dict[str, Any]:
         """对分片后的段落逐一进行模板泛化，并产出 StepOutcome 质量台账（[pisuan-custom] ETL P0-1）
 
@@ -3389,7 +3391,7 @@ class DomainFactoryService:
 
         schema_text = self._format_schema_variables(schema_variables)
         # 方案 C：段落相关度注入——命中实体名的属性优先进入该段词表，基线词表补足预算
-        pool_groups = self._build_entity_pool_groups(entity_variable_pool)
+        pool_groups = self._build_entity_pool_groups(entity_variable_pool, entity_synonyms)
         base_schema_lines = schema_text.splitlines()
         semaphore = asyncio.Semaphore(max_concurrency)
 
@@ -4092,14 +4094,17 @@ class DomainFactoryService:
 
     @classmethod
     def _build_entity_pool_groups(
-        cls, entity_variable_pool: list[list[dict[str, Any]]]
+        cls,
+        entity_variable_pool: list[list[dict[str, Any]]],
+        entity_synonyms: dict[str, list[str]] | None = None,
     ) -> list[tuple[str, list[str], set[str]]]:
-        """变量池 → [(实体名, [prompt 行], 实体名去重字符集)]；泛化名进 GENERIC 停用表。
+        """变量池 → [(实体名, [prompt 行], 命名字符集)]；泛化名进 GENERIC 停用表。
 
-        字符集用于段落相关度匹配（方案 C）：实体名字符在段落文本中的覆盖率
-        ≥ CHAR_OVERLAP_THRESHOLD 视为相关，复合实体名（如「生态影响与沉陷」）
-        无需全名逐字出现。
+        字符集 = 实体名 ∪ 实体级 synonyms 字符，用于段落相关度匹配（方案 C）：
+        覆盖率 ≥ CHAR_OVERLAP_THRESHOLD 视为相关——别名让「沉陷」这类短核心词
+        直接命中复合名实体（生态影响与沉陷）。
         """
+        syn_map = entity_synonyms or {}
         groups: list[tuple[str, list[str], set[str]]] = []
         for ent_vars in entity_variable_pool or []:
             if not ent_vars:
@@ -4107,7 +4112,10 @@ class DomainFactoryService:
             name = str(ent_vars[0].get("label") or "").split(".", 1)[0].strip()
             if len(name) < 2 or name in cls.GENERIC_ENTITY_NAMES:
                 continue
-            groups.append((name, [cls._format_schema_variable_line(v) for v in ent_vars], set(name)))
+            chars = set(name)
+            for syn in syn_map.get(name) or []:
+                chars |= set(syn.strip())
+            groups.append((name, [cls._format_schema_variable_line(v) for v in ent_vars], chars))
         return groups
 
     @classmethod
@@ -4151,14 +4159,19 @@ class DomainFactoryService:
         return "\n".join(selected)
 
 
-    async def _load_entity_variable_pool(self, domain_code: str | None) -> list[list[dict[str, Any]]]:
-        """加载全部实体的变量池：外层按分类字典序+实体名排序，内层 required 优先。
+    async def _load_entity_variable_pool(
+        self, domain_code: str | None
+    ) -> tuple[list[list[dict[str, Any]]], dict[str, list[str]]]:
+        """加载全部实体的变量池与实体级同义词表。
 
-        供 generalize_paragraphs 做段落相关度注入（方案 C）：命中的实体属性优先、
-        基线轮转词表补足预算。与 _load_entity_schema_variables 共享同一原料。
+        变量池：外层按分类字典序+实体名排序，内层 required 优先；供
+        generalize_paragraphs 做段落相关度注入（方案 C）。同义词表
+        {实体名: [别名]} 并入相关度字符集——别名让短核心词直接命中复合名实体。
+        属性级 synonyms 并入每条变量的提取提示（「别名 A/B」）。
+        与 _load_entity_schema_variables 共享同一原料。
         """
         if not domain_code:
-            return []
+            return [], {}
         from yuxi.repositories.domain_entity_category_repository import (
             DomainEntityCategoryRepository,
         )
@@ -4170,14 +4183,18 @@ class DomainFactoryService:
             category_rank = await DomainEntityCategoryRepository().rank_map()
         except Exception as e:
             logger.warning(f"[phase4] 加载实体属性失败 {domain_code}: {e}")
-            return []
+            return [], {}
         entities.sort(
             key=lambda e: (category_rank.get(e.get("category"), 10**6), e.get("name_cn") or "")
         )
         per_entity: list[list[dict[str, Any]]] = []
+        entity_synonyms: dict[str, list[str]] = {}
         for e in entities:
             ek = e.get("entity_key", "")
             ent_name = e.get("name_cn", "") or ek
+            ent_syns = [str(s or "").strip() for s in (e.get("synonyms") or []) if str(s or "").strip()]
+            if ent_syns:
+                entity_synonyms[ent_name] = ent_syns[:5]
             props = e.get("properties", []) or []
             items = list(props.items()) if isinstance(props, dict) else list(enumerate(props))
             prop_list: list[tuple[int, dict[str, Any]]] = []
@@ -4189,6 +4206,10 @@ class DomainFactoryService:
                 if not name_cn:
                     continue
                 unit = pv.get("unit")
+                hint = pv.get("extraction_hint") or (f"单位 {unit}" if unit else "")
+                prop_syns = [str(s or "").strip() for s in (pv.get("synonyms") or []) if str(s or "").strip()]
+                if prop_syns:
+                    hint = (f"{hint}；" if hint else "") + "别名 " + "/".join(prop_syns[:3])
                 prop_list.append(
                     (
                         0 if pv.get("required") else 1,
@@ -4196,14 +4217,14 @@ class DomainFactoryService:
                             "key": f"{ek}.{prop_key}" if ek and prop_key else (prop_key or name_cn),
                             "data_type": pv.get("value_type", ""),
                             "label": f"{ent_name}.{name_cn}",
-                            "prompt": pv.get("extraction_hint") or (f"单位 {unit}" if unit else ""),
+                            "prompt": hint,
                         },
                     )
                 )
             if prop_list:
                 prop_list.sort(key=lambda t: t[0])
                 per_entity.append([v for _, v in prop_list])
-        return per_entity
+        return per_entity, entity_synonyms
 
     async def _load_entity_schema_variables(self, domain_code: str | None, max_items: int | None = None) -> list[dict[str, Any]]:
         """Phase 4：加载领域实体属性作为泛化 Schema 变量提示（基线词表）。
@@ -4216,7 +4237,7 @@ class DomainFactoryService:
         （业务优先级决定谁先进第一轮）。
         返回 _format_schema_variables 所需的 {key, data_type, label, prompt} 格式。
         """
-        per_entity = await self._load_entity_variable_pool(domain_code)
+        per_entity, _ = await self._load_entity_variable_pool(domain_code)
         return self._round_robin_schema_budget(per_entity, max_items or self.SCHEMA_VARIABLE_BUDGET)
 
     @staticmethod
@@ -6311,6 +6332,11 @@ class DomainFactoryService:
                     prop_key = str(p.get("key") or "").strip()
                     if name and prop_key:
                         prop_index.setdefault(name, []).append((ek, prop_key, p))
+                        # 同义词索引：与 name_cn 同权参与精确/包含匹配，唯一性门禁不变
+                        for syn in p.get("synonyms") or []:
+                            sname = str(syn or "").strip()
+                            if sname and sname != name:
+                                prop_index.setdefault(sname, []).append((ek, prop_key, p))
 
         if not prop_index:
             return 0
