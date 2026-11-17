@@ -22,6 +22,8 @@
 
 ### 功能与修复
 
+- feat(domain-entity): 属性级 synonyms 字段全链路接入 + 实体归并候选报告（归一化闭环第一步）。`normalize_synonyms` 归一（去空白/去重/剔除与自身同名/上限 8 条），properties JSON 直接纳字段零迁移。四个消费点：① 严格匹配器 prop_index 同时按 name_cn 与 synonyms 建索引（唯一性门禁不变——「行政区域」经别名「行政区」精确命中）；② 词表注入每条变量提取提示追加「别名 A/B」；③ 段落相关度字符集并入实体级 synonyms（别名「沉陷」直接命中复合名「生态影响与沉陷」）；④ discover 回填目录展示别名。审计新规 P10 同实体 synonym=自身名 / P11 synonym=同实体他属性名 / entity_level.prop_syn_hits_other_prop 跨实体歧义。新增归并候选报告 `scripts/governance/report_merge_candidates.py`（只读）：信号1 别名=他名（实测 1 对：solid_waste_gangue 的脏别名「生活垃圾」= domestic_waste，应删别名而非归并）；信号2 同分类属性集重合 ≥0.6（实测 21 对，多对 100%——Route B 同义拆分残留），各附引用面与 canonical 建议。前端：属性表新增同义词列与弹窗 tags 编辑（PropertyTable.vue），泛化 tooltip 文案随轮转口径更新。单测 7 用例（test_prop_synonyms.py）。
+
 - feat(domain-factory): 泛化词表按段落相关度注入（方案 C）。实体库 293 规模下均匀轮转对单段落错位——沉陷章节应看到沉陷属性而非全库广度采样。实现：`_load_entity_variable_pool` 拆出全量变量池（外层分类序+实体名、内层必填优先），`generalize_paragraphs` 新增可选 `entity_variable_pool`，逐段按「实体名字符命中」选相关实体（绝对命中 ≥2 字且覆盖率 ≥0.34；主排序命中数、辅排序覆盖率；泛化实体名停用表剔除「数据/参数」类；TOP-12 实体 × 至多 6 条优先注入），基线轮转词表补足至预算 200。实测四类章节词表头部即本章实体（地下水/声环境/矸石全中，沉陷章核心实体入 TOP-12）；预算不变，池加载每任务 1 次额外查询，pool 缺省时行为与 B 一致。相关度评分三轮迭代：全名子串（复合名「生态影响与沉陷」漏检）→2-gram（「预测」泛化片段噪声）→字符覆盖+命中数主排序。配套 `_compose_para_schema_lines`/`_build_entity_pool_groups` 纯函数 + 单测 7 用例。
 
 - feat(domain-factory): 泛化词表预算 60→200（方案 B）。60 名额在 293 实体下只覆盖 1/5 库容，插槽命名引导面过窄；上调后轮转分配覆盖前 200 个实体（实测 200/200），长尾实体属性获得命名引导。前后端口径同步：`_load_entity_schema_variables` 默认参数与前端 `PROMPT_PROPERTY_LIMIT` 一致上调，覆盖提示文案随动。代价：逐段 prompt 词表段 +5~6K token（泛化调用成本约 +30-60%），后续由方案 C（按段落相关度注入）收敛。

@@ -24,13 +24,14 @@ const propertyColumns = [
   { title: '必填', dataIndex: 'required', key: 'required', width: 80 },
   { title: '枚举选项', dataIndex: 'enum_options', key: 'enum_options', width: 160 },
   { title: '提取提示词', dataIndex: 'extraction_hint', key: 'extraction_hint', width: 220 },
+  { title: '同义词', dataIndex: 'synonyms', key: 'synonyms', width: 130 },
   { title: '泛化 prompt', key: 'prompt', width: 110 },
   { title: '引用', key: 'usage', width: 90 },
   { title: '操作', key: 'actions', width: 120 }
 ]
 
 // 列多且每列都有最小可读宽度：右栏放不下时横向滚动，而不是把中文挤成两行
-const TABLE_SCROLL_X = 1210
+const TABLE_SCROLL_X = 1340
 
 const isPromptCovered = (record) =>
   Boolean(props.promptCoverage?.coveredRefs?.has(`${props.entityKey}.${record.key}`))
@@ -96,7 +97,8 @@ function emptyProperty() {
     min_value: null,
     max_value: null,
     description: '',
-    extraction_hint: ''
+    extraction_hint: '',
+    synonyms: []
   }
 }
 
@@ -110,6 +112,7 @@ const handleEditProperty = (index) => {
   editingPropertyIndex.value = index
   editingProperty.value = JSON.parse(JSON.stringify(properties.value[index]))
   editingProperty.value.enum_options = editingProperty.value.enum_options || []
+  editingProperty.value.synonyms = editingProperty.value.synonyms || []
   propertyModalVisible.value = true
 }
 
@@ -183,7 +186,8 @@ const handleSaveProperty = () => {
       min_value: editingProperty.value.min_value || null,
       max_value: editingProperty.value.max_value || null,
       description: editingProperty.value.description || '',
-      extraction_hint: editingProperty.value.extraction_hint || ''
+      extraction_hint: editingProperty.value.extraction_hint || '',
+      synonyms: (editingProperty.value.synonyms || []).map((s) => String(s).trim()).filter(Boolean)
     }
     const index = editingPropertyIndex.value
     const previous = index >= 0 ? properties.value[index] : null
@@ -263,12 +267,18 @@ const handleSaveProperty = () => {
           </a-tooltip>
           <span v-else class="muted">-</span>
         </template>
+        <template v-else-if="column.key === 'synonyms'">
+          <a-tooltip v-if="record.synonyms?.length" :title="record.synonyms.join('、')">
+            <span class="hint-cell">{{ record.synonyms.join('、') }}</span>
+          </a-tooltip>
+          <span v-else class="muted">-</span>
+        </template>
         <template v-else-if="column.key === 'prompt'">
           <a-tooltip
             :title="
               isPromptCovered(record)
-                ? '按「分类顺序 + 实体名称」排序后位于前 60 个属性内，会进入泛化抽取提示词'
-                : '按「分类顺序 + 实体名称」排序后在第 60 个之外，泛化抽取看不到该属性'
+                ? '按实体轮转预算（200 条，覆盖前 200 个实体各 1 条必填属性）会进入泛化抽取提示词'
+                : '在轮转预算之外，泛化抽取看不到该属性；可在「分类管理」里把本分类前移'
             "
           >
             <a-tag :color="isPromptCovered(record) ? 'blue' : 'default'">{{
@@ -325,6 +335,15 @@ const handleSaveProperty = () => {
             </a-form-item>
           </a-col>
         </a-row>
+        <a-form-item label="同义词">
+          <a-select
+            v-model:value="editingProperty.synonyms"
+            mode="tags"
+            placeholder="语义相同的其他叫法（如「行政区」的别名：行政区域），按回车添加；参与插槽自动绑定与泛化词表"
+            :token-separators="[',', '，']"
+            style="width: 100%"
+          />
+        </a-form-item>
         <a-form-item>
           <a-checkbox v-model:checked="editingProperty.required">必填</a-checkbox>
         </a-form-item>

@@ -27,7 +27,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="repla
 
 
 def build_prop_index(entities: list[dict]) -> dict[str, list[tuple[str, str]]]:
-    """与 _auto_map_slots_to_entity_properties 同源：{name_cn: [(entity_key, prop_key), ...]}"""
+    """与 _auto_map_slots_to_entity_properties 同源：{name_cn/同义词: [(entity_key, prop_key), ...]}"""
     prop_index: dict[str, list[tuple[str, str]]] = {}
     for e in entities:
         ek = str(e.get("entity_key") or "")
@@ -40,6 +40,10 @@ def build_prop_index(entities: list[dict]) -> dict[str, list[tuple[str, str]]]:
             pk = str(p.get("key") or "").strip()
             if name and pk:
                 prop_index.setdefault(name, []).append((ek, pk))
+                for syn in p.get("synonyms") or []:
+                    syn = str(syn or "").strip()
+                    if syn and syn != name:
+                        prop_index.setdefault(syn, []).append((ek, pk))
     return prop_index
 
 

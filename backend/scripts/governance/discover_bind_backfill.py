@@ -97,7 +97,11 @@ async def run(apply: bool, model_spec: str) -> None:
         shown = list(pk_map.items())[:10]
         prop_text = " ".join(f"{k}({v})" for k, v in shown)
         rest = f" …共{len(pk_map)}属性" if len(pk_map) > 10 else ""
-        catalog_lines.append(f"- {ek}({e.get('name_cn')})[{e.get('category')}]{(' 属性: ' + prop_text + rest) if prop_text else ''}")
+        syns = [str(s or "").strip() for s in (e.get("synonyms") or []) if str(s or "").strip()]
+        syn_text = f" 别名: {'/'.join(syns[:3])}" if syns else ""
+        catalog_lines.append(
+            f"- {ek}({e.get('name_cn')})[{e.get('category')}]{syn_text}{(' 属性: ' + prop_text + rest) if prop_text else ''}"
+        )
     catalog = "\n".join(catalog_lines)
 
     # 收集全部空槽（全局按名去重）

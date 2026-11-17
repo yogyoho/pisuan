@@ -83,6 +83,14 @@ def audit_entity(entity: dict, categories: set[str]) -> dict:
             issues["P9_hint_too_long"].append(f"{pkey}:{len(hint)}字")
         if pname.endswith("单位"):
             issues["P8_unit_split_prop"].append(f"{pkey}({pname})")
+        for syn in prop.get("synonyms") or []:
+            syn = str(syn or "").strip()
+            if not syn:
+                continue
+            if syn == pname:
+                issues["P10_prop_syn_eq_name"].append(f"{pkey}:{syn}")
+            elif syn in seen_names:
+                issues["P11_prop_syn_dup_in_entity"].append(f"{pkey}:{syn}≡{seen_names[syn]}({pname})")
     return issues
 
 
@@ -123,6 +131,7 @@ async def run(out_path: str | None) -> None:
     # ---- 逐实体规则 ----
     synonyms_owner: dict[str, str] = {}
     name_owner: dict[str, str] = {}
+    prop_name_owner: dict[str, str] = {}  # 全局属性名 → ek.pkey（属性同义词跨实体歧义检测）
     for entity in entities:
         key = entity["entity_key"]
         issues = audit_entity(entity, categories)
@@ -145,6 +154,18 @@ async def run(out_path: str | None) -> None:
                 report["entity_level"]["synonym_hits_other_name"].append(
                     f"{syn}: 实体名={name_owner[syn]}, 别名于={key}"
                 )
+        for prop in entity.get("properties") or []:
+            if not isinstance(prop, dict):
+                continue
+            pname = str(prop.get("name_cn") or "").strip()
+            if pname and f"{key}.{prop.get('key')}" and pname not in prop_name_owner:
+                prop_name_owner[pname] = f"{key}.{prop.get('key')}"
+            for syn in prop.get("synonyms") or []:
+                syn = str(syn or "").strip()
+                if syn and syn in prop_name_owner and not prop_name_owner[syn].startswith(f"{key}."):
+                    report["entity_level"]["prop_syn_hits_other_prop"].append(
+                        f"{key}.{prop.get('key')}:{syn} ≡ {prop_name_owner[syn]}"
+                    )
 
     # ---- 属性集大幅重合（重复实体探测，阈值 0.6）----
     by_cat: dict[str, list[dict]] = defaultdict(list)
@@ -229,7 +250,7 @@ async def run(out_path: str | None) -> None:
         total = sum(len(v) for v in violations[rule].values())
         print(f"  {rule}: {n} 实体 / {total} 处")
     el = report["entity_level"]
-    for rule in ("name_dup", "synonym_conflict", "synonym_hits_other_name", "prop_set_overlap"):
+    for rule in ("name_dup", "synonym_conflict", "synonym_hits_other_name", "prop_syn_hits_other_prop", "prop_set_overlap"):
         print(f"  {rule}: {len(el[rule])}")
     print(f"  prop_type_inconsistent_by_name: {len(inconsistent)}")
     refs = report["references"]

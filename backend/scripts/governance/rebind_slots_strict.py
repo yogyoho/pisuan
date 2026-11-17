@@ -45,6 +45,10 @@ async def run(apply: bool) -> None:
                 prop_index.setdefault(str(p["name_cn"]).strip(), []).append(
                     (e["entity_key"], str(p["key"]), p)
                 )
+                for syn in p.get("synonyms") or []:
+                    syn = str(syn or "").strip()
+                    if syn and syn != str(p["name_cn"]).strip():
+                        prop_index.setdefault(syn, []).append((e["entity_key"], str(p["key"]), p))
 
     repo = DomainFactoryRepository()
     tasks = await DomainEntityRepository().list_usage_pending_tasks(GENERAL_DOMAIN_CODE)
