@@ -22,6 +22,8 @@
 
 ### 功能与修复
 
+- feat(domain-factory): 泛化词表按段落相关度注入（方案 C）。实体库 293 规模下均匀轮转对单段落错位——沉陷章节应看到沉陷属性而非全库广度采样。实现：`_load_entity_variable_pool` 拆出全量变量池（外层分类序+实体名、内层必填优先），`generalize_paragraphs` 新增可选 `entity_variable_pool`，逐段按「实体名字符命中」选相关实体（绝对命中 ≥2 字且覆盖率 ≥0.34；主排序命中数、辅排序覆盖率；泛化实体名停用表剔除「数据/参数」类；TOP-12 实体 × 至多 6 条优先注入），基线轮转词表补足至预算 200。实测四类章节词表头部即本章实体（地下水/声环境/矸石全中，沉陷章核心实体入 TOP-12）；预算不变，池加载每任务 1 次额外查询，pool 缺省时行为与 B 一致。相关度评分三轮迭代：全名子串（复合名「生态影响与沉陷」漏检）→2-gram（「预测」泛化片段噪声）→字符覆盖+命中数主排序。配套 `_compose_para_schema_lines`/`_build_entity_pool_groups` 纯函数 + 单测 7 用例。
+
 - feat(domain-factory): 泛化词表预算 60→200（方案 B）。60 名额在 293 实体下只覆盖 1/5 库容，插槽命名引导面过窄；上调后轮转分配覆盖前 200 个实体（实测 200/200），长尾实体属性获得命名引导。前后端口径同步：`_load_entity_schema_variables` 默认参数与前端 `PROMPT_PROPERTY_LIMIT` 一致上调，覆盖提示文案随动。代价：逐段 prompt 词表段 +5~6K token（泛化调用成本约 +30-60%），后续由方案 C（按段落相关度注入）收敛。
 
 - fix(web): 实体构建器「泛化 prompt」覆盖测算改实体轮转口径。此前前端复算仍按旧算法（分类序+实体名线性取前 60）——实体库扩容到 293 且后端改轮转分配后，UI 列全部显示「未进」且与实际注入不符；`computePromptCoverage` 改为与后端同构的轮转复算（实体按分类顺序+名称排序、轮内必填优先、逐轮发放预算），覆盖提示文案同步更新（新增注入实体数展示，`PropertyTable.vue` 补 `coveredEntityCount`）；新增单测 `promptCoverageRoundRobin.test.js`（覆盖面/必填优先/limit 小于实体数/字典外分类排序，vite ssrLoadModule 解析 @ 别名 + localStorage 存根）。

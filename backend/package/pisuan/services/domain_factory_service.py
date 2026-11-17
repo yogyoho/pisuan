@@ -154,6 +154,13 @@ class DomainTaskDTO:
 class DomainFactoryService:
     """领域知识工厂服务 - 核心业务逻辑"""
 
+    # 泛化词表预算：逐段 prompt 的 Schema 变量条数上限（前后端 PROMPT_PROPERTY_LIMIT 同口径）
+    SCHEMA_VARIABLE_BUDGET = 200
+    # 段落相关度匹配时跳过的泛化实体名（避免「数据/参数」类名字全文命中造成词表被噪声实体占满）
+    GENERIC_ENTITY_NAMES = {"数据", "参数", "信息", "情况", "指标", "要求", "标准", "结果", "内容", "名称", "类型", "方案", "措施"}
+    # 实体名字符覆盖率阈值：名字的去重字符 ≥34% 出现在段落文本中视为相关
+    CHAR_OVERLAP_THRESHOLD = 0.34
+
     # 类级别共享状态：章节提取任务缓存 (task_id -> task_state)
     _extract_tasks: dict[str, dict[str, Any]] = {}
 
@@ -887,6 +894,7 @@ class DomainFactoryService:
 
                 # Phase 4：注入领域实体属性作为 Schema 变量提示，引导泛化优先匹配已有属性
                 schema_vars = await self._load_entity_schema_variables(domain_code)
+                entity_pool = await self._load_entity_variable_pool(domain_code)
 
                 # [pisuan-custom] 并发运行时可配（基础设置页「知识工厂 ETL」）；
                 # 钳制到 [1, 32]：0 值会让 Semaphore 永久阻塞
@@ -901,6 +909,7 @@ class DomainFactoryService:
                     domain_label=domain_label,
                     max_concurrency=etl_max_concurrency,
                     context=context,
+                    entity_variable_pool=entity_pool,
                 )
                 paragraph_results = gen_output["results"]
                 step_ledger.update(gen_output["stats"])
@@ -3331,6 +3340,7 @@ class DomainFactoryService:
         domain_label: str = "通用",
         max_concurrency: int = 2,  # 兜底默认：串行端点安全值；流水线运行时从 domain_factory_llm 配置读取
         context: TaskContext | None = None,
+        entity_variable_pool: list[list[dict[str, Any]]] | None = None,
     ) -> dict[str, Any]:
         """对分片后的段落逐一进行模板泛化，并产出 StepOutcome 质量台账（[pisuan-custom] ETL P0-1）
 
@@ -3378,6 +3388,9 @@ class DomainFactoryService:
             return {"results": results, "stats": stats}
 
         schema_text = self._format_schema_variables(schema_variables)
+        # 方案 C：段落相关度注入——命中实体名的属性优先进入该段词表，基线词表补足预算
+        pool_groups = self._build_entity_pool_groups(entity_variable_pool)
+        base_schema_lines = schema_text.splitlines()
         semaphore = asyncio.Semaphore(max_concurrency)
 
         # 预加载 prompt 模板（一次 DB 查询，避免每个段落都查）
@@ -3460,13 +3473,22 @@ class DomainFactoryService:
             )
             if input_truncated:
                 logger.info(f"泛化输入超长丢尾: 段落 {para_id} {len(text)}→{len(generalize_input)} 字符")
-            # 根据段落类型构建不同的 Prompt
+            # 根据段落类型构建不同的 Prompt（相关度词表：命中实体属性优先，基线补足）
+            if pool_groups:
+                para_schema_text = self._compose_para_schema_lines(
+                    f"{chapter_hint}\n{text[:1000]}",
+                    pool_groups,
+                    base_schema_lines,
+                    self.SCHEMA_VARIABLE_BUDGET,
+                )
+            else:
+                para_schema_text = schema_text
             if is_table and table_format == "markdown":
                 # Markdown 表格类型的段落
                 # bug-4227：表格泛化不套用域自定义模板（builder 文档语义：表格直接返回结构化信息）
                 prompt = self._build_table_generalize_prompt(
                     generalize_input,
-                    schema_text,
+                    para_schema_text,
                     chapter_hint,
                     domain_label,
                 )
@@ -3474,7 +3496,7 @@ class DomainFactoryService:
                 # 普通文本段落
                 prompt = self._build_text_generalize_prompt(
                     generalize_input,
-                    schema_text,
+                    para_schema_text,
                     chapter_hint,
                     domain_label,
                     prompt_template=template_prompt,
@@ -4057,23 +4079,83 @@ class DomainFactoryService:
         """格式化实体变量为提示词文本"""
         lines = []
         for item in variables:
-            key = item.get("key", "").strip()
-            dtype = item.get("data_type", "")
-            label = item.get("label", "") or key
-            prompt = item.get("prompt", "")
-            lines.append(f"- {key} ({dtype}): {label}；提取提示：{prompt}")
+            lines.append(self._format_schema_variable_line(item))
         return "\n".join(lines) if lines else "无特定 Schema 变量，请根据文本内容自动识别"
 
-    async def _load_entity_schema_variables(self, domain_code: str | None, max_items: int = 200) -> list[dict[str, Any]]:
-        """Phase 4：加载领域实体属性作为泛化 Schema 变量提示。
+    @staticmethod
+    def _format_schema_variable_line(item: dict[str, Any]) -> str:
+        key = str(item.get("key") or "").strip()
+        dtype = str(item.get("data_type") or "")
+        label = str(item.get("label") or "") or key
+        prompt = str(item.get("prompt") or "")
+        return f"- {key} ({dtype}): {label}；提取提示：{prompt}"
 
-        让泛化 LLM 优先按已有实体属性名提取 slot（自上而下收敛），而非完全自由提取。
-        实体库扩容后（293 实体、7000+ 属性）max_items 预算（默认 200，控制 token 成本）按「实体轮转」分配：
-        第一轮每实体注入 1 条属性保证覆盖面，预算未满则第二轮各补第 2 条，依此往复——
-        避免排序靠前的实体独占全部名额（旧实现线性遍历，project_basic 头部一发吃满 60）。
-        轮内属性排序 required 优先；实体排序按分类字典 sort_order → 实体 name_cn
-        （业务优先级决定谁先进第一轮）。
-        返回 _format_schema_variables 所需的 {key, data_type, label, prompt} 格式。
+    @classmethod
+    def _build_entity_pool_groups(
+        cls, entity_variable_pool: list[list[dict[str, Any]]]
+    ) -> list[tuple[str, list[str], set[str]]]:
+        """变量池 → [(实体名, [prompt 行], 实体名去重字符集)]；泛化名进 GENERIC 停用表。
+
+        字符集用于段落相关度匹配（方案 C）：实体名字符在段落文本中的覆盖率
+        ≥ CHAR_OVERLAP_THRESHOLD 视为相关，复合实体名（如「生态影响与沉陷」）
+        无需全名逐字出现。
+        """
+        groups: list[tuple[str, list[str], set[str]]] = []
+        for ent_vars in entity_variable_pool or []:
+            if not ent_vars:
+                continue
+            name = str(ent_vars[0].get("label") or "").split(".", 1)[0].strip()
+            if len(name) < 2 or name in cls.GENERIC_ENTITY_NAMES:
+                continue
+            groups.append((name, [cls._format_schema_variable_line(v) for v in ent_vars], set(name)))
+        return groups
+
+    @classmethod
+    def _compose_para_schema_lines(
+        cls,
+        match_text: str,
+        pool_groups: list[tuple[str, list[str], set[str]]],
+        base_lines: list[str],
+        limit: int,
+    ) -> str:
+        """段落相关度词表（方案 C）：命中 ≥2 个实体名字符且覆盖率 ≥ 阈值的实体优先
+        （主排序命中数降序、辅排序覆盖率降序、每实体至多 6 条），基线轮转词表补足预算；
+        总条数不超过 limit。"""
+        text_chars = set(match_text)
+        scored = []
+        for name, lines, chars in pool_groups:
+            hits = len(chars & text_chars)
+            # 主排序：命中字符数（长复合名命中学多更相关）；辅排序：覆盖率（短名不靠一字命中上位）
+            if hits >= 2 and hits / len(chars) >= cls.CHAR_OVERLAP_THRESHOLD:
+                scored.append((hits, hits / len(chars), name, lines))
+        scored.sort(key=lambda t: (-t[0], -t[1], t[2]))
+        selected: list[str] = []
+        seen: set[str] = set()
+
+        def _push(line: str) -> bool:
+            """返回是否已达预算上限。"""
+            if line not in seen:
+                seen.add(line)
+                selected.append(line)
+            return len(selected) >= limit
+
+        for _, _, _, lines in scored[:12]:
+            for line in lines[:6]:
+                if _push(line):
+                    return "\n".join(selected)
+        for line in base_lines:
+            if _push(line):
+                break
+        if not selected:
+            return "无特定 Schema 变量，请根据文本内容自动识别"
+        return "\n".join(selected)
+
+
+    async def _load_entity_variable_pool(self, domain_code: str | None) -> list[list[dict[str, Any]]]:
+        """加载全部实体的变量池：外层按分类字典序+实体名排序，内层 required 优先。
+
+        供 generalize_paragraphs 做段落相关度注入（方案 C）：命中的实体属性优先、
+        基线轮转词表补足预算。与 _load_entity_schema_variables 共享同一原料。
         """
         if not domain_code:
             return []
@@ -4121,7 +4203,21 @@ class DomainFactoryService:
             if prop_list:
                 prop_list.sort(key=lambda t: t[0])
                 per_entity.append([v for _, v in prop_list])
-        return self._round_robin_schema_budget(per_entity, max_items)
+        return per_entity
+
+    async def _load_entity_schema_variables(self, domain_code: str | None, max_items: int | None = None) -> list[dict[str, Any]]:
+        """Phase 4：加载领域实体属性作为泛化 Schema 变量提示（基线词表）。
+
+        让泛化 LLM 优先按已有实体属性名提取 slot（自上而下收敛），而非完全自由提取。
+        实体库扩容后（293 实体、7000+ 属性）max_items 预算（默认 200，控制 token 成本）按「实体轮转」分配：
+        第一轮每实体注入 1 条属性保证覆盖面，预算未满则第二轮各补第 2 条，依此往复——
+        避免排序靠前的实体独占全部名额（旧实现线性遍历，project_basic 头部一发吃满 60）。
+        轮内属性排序 required 优先；实体排序按分类字典 sort_order → 实体 name_cn
+        （业务优先级决定谁先进第一轮）。
+        返回 _format_schema_variables 所需的 {key, data_type, label, prompt} 格式。
+        """
+        per_entity = await self._load_entity_variable_pool(domain_code)
+        return self._round_robin_schema_budget(per_entity, max_items or self.SCHEMA_VARIABLE_BUDGET)
 
     @staticmethod
     def _round_robin_schema_budget(per_entity: list[list[dict[str, Any]]], max_items: int) -> list[dict[str, Any]]:
