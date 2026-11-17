@@ -22,6 +22,8 @@
 
 ### 功能与修复
 
+- feat(domain-factory): 泛化词表预算 60→200（方案 B）。60 名额在 293 实体下只覆盖 1/5 库容，插槽命名引导面过窄；上调后轮转分配覆盖前 200 个实体（实测 200/200），长尾实体属性获得命名引导。前后端口径同步：`_load_entity_schema_variables` 默认参数与前端 `PROMPT_PROPERTY_LIMIT` 一致上调，覆盖提示文案随动。代价：逐段 prompt 词表段 +5~6K token（泛化调用成本约 +30-60%），后续由方案 C（按段落相关度注入）收敛。
+
 - fix(web): 实体构建器「泛化 prompt」覆盖测算改实体轮转口径。此前前端复算仍按旧算法（分类序+实体名线性取前 60）——实体库扩容到 293 且后端改轮转分配后，UI 列全部显示「未进」且与实际注入不符；`computePromptCoverage` 改为与后端同构的轮转复算（实体按分类顺序+名称排序、轮内必填优先、逐轮发放预算），覆盖提示文案同步更新（新增注入实体数展示，`PropertyTable.vue` 补 `coveredEntityCount`）；新增单测 `promptCoverageRoundRobin.test.js`（覆盖面/必填优先/limit 小于实体数/字典外分类排序，vite ssrLoadModule 解析 @ 别名 + localStorage 存根）。
 
 - feat(domain-factory): 空槽回填增强轮——实体目录 6→10 属性/实体 + 防幻觉指令（正确属性未展示时用 add_property 而非编造 prop_key），对剩余 443 名清旧重答：幻觉 bind_invalid 222→24，采纳新提案 146 属性跨 37 实体，任务槽位覆盖 90%→94.6%（4338/4584，未绑定 246），残余 pending 111 条留任务 metadata。

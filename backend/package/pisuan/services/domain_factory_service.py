@@ -4064,11 +4064,11 @@ class DomainFactoryService:
             lines.append(f"- {key} ({dtype}): {label}；提取提示：{prompt}")
         return "\n".join(lines) if lines else "无特定 Schema 变量，请根据文本内容自动识别"
 
-    async def _load_entity_schema_variables(self, domain_code: str | None, max_items: int = 60) -> list[dict[str, Any]]:
+    async def _load_entity_schema_variables(self, domain_code: str | None, max_items: int = 200) -> list[dict[str, Any]]:
         """Phase 4：加载领域实体属性作为泛化 Schema 变量提示。
 
         让泛化 LLM 优先按已有实体属性名提取 slot（自上而下收敛），而非完全自由提取。
-        实体库扩容后（293 实体、6000+ 属性）max_items 预算按「实体轮转」分配：
+        实体库扩容后（293 实体、7000+ 属性）max_items 预算（默认 200，控制 token 成本）按「实体轮转」分配：
         第一轮每实体注入 1 条属性保证覆盖面，预算未满则第二轮各补第 2 条，依此往复——
         避免排序靠前的实体独占全部名额（旧实现线性遍历，project_basic 头部一发吃满 60）。
         轮内属性排序 required 优先；实体排序按分类字典 sort_order → 实体 name_cn
