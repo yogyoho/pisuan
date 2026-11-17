@@ -240,6 +240,19 @@ async def test_schema_variables_follow_category_sort_order(monkeypatch):
     monkeypatch.setattr(entity_repo_module, "DomainEntityRepository", _Repo)
     monkeypatch.setattr(category_repo_module, "DomainEntityCategoryRepository", _CategoryRepo)
 
-    variables = await DomainFactoryService._load_entity_schema_variables(SimpleNamespace(), "general", max_items=2)
-    # 只取前 2 个：project_basic 的 a1/a2 全部命中，natural_env 被挤出
-    assert [item["key"] for item in variables] == ["a_entity.a1", "a_entity.a2"]
+    variables = await DomainFactoryService._load_entity_schema_variables(
+        SimpleNamespace(
+            # SimpleNamespace 实例属性不绑定 self：以 lambda 显式补 None self（方法只用延迟导入，不读 self）
+            _load_entity_variable_pool=lambda domain_code: DomainFactoryService._load_entity_variable_pool(
+                None, domain_code
+            ),
+            _round_robin_schema_budget=lambda per_entity, max_items: DomainFactoryService._round_robin_schema_budget(
+                per_entity, max_items
+            ),
+        ),
+        "general",
+        max_items=2,
+    )
+    # 轮转口径（bug-4288 后的广度优先预算）：max_items=2 时每实体 1 条——
+    # project_basic 的 a1 先入，natural_env 的 b1 随轮转进入；不再让单实体独占名额
+    assert [item["key"] for item in variables] == ["a_entity.a1", "b_entity.b1"]

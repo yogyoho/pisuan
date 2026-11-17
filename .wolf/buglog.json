@@ -12630,5 +12630,39 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-11-17"
+  },
+  {
+    "id": "bug-4297",
+    "timestamp": "2026-11-17",
+    "error_message": "轮转分配批次漏跑 test_domain_entity_categories 全量回归：test_schema_variables_follow_category_sort_order 仍断言旧线性口径（a1,a2）",
+    "file": "backend/test/unit/services/test_domain_entity_categories.py",
+    "root_cause": "算法契约变更（线性→轮转）时只跑了自己新建的测试文件，未全量回归 services 目录；本次改相关度注入拆池方法时才被该测试的 SimpleNamespace 桩连环暴露",
+    "fix": "断言更新为轮转契约（a1,b1 广度优先）；桩补 _load_entity_variable_pool/_round_robin_schema_budget（SimpleNamespace 实例属性不绑定 self，实例方法需 lambda 显式补 None，staticmethod 直接透传）",
+    "tags": [
+      "missed-regression",
+      "algorithm-contract",
+      "test-stub"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-17"
+  },
+  {
+    "id": "bug-4298",
+    "timestamp": "2026-11-17",
+    "error_message": "test_eia_lexicon_mapping::test_export_overrides_skips_unmapped 失败：tmp_path 下 curated_lexicon.json 未生成（词表导出物化 1 条但文件缺失）",
+    "file": "backend/test/unit/services/test_eia_lexicon_mapping.py",
+    "root_cause": "词表导出链与测试断言的产物路径不一致/时序问题，属既有失败——词表模块本会话未改动（另案排查）",
+    "fix": "另案：核对导出物化目标路径与测试 tmp_path 断言路径",
+    "tags": [
+      "pre-existing",
+      "lexicon-export",
+      "env-dependent"
+    ],
+    "related_bugs": [
+      "bug-4296"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-17"
   }
 ]
