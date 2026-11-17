@@ -19,7 +19,7 @@ export const VALUE_TYPE_OPTIONS = [
 ]
 
 // 泛化 prompt 的属性上限，与后端 `_load_entity_schema_variables(max_items=60)` 同口径
-export const PROMPT_PROPERTY_LIMIT = 60
+export const PROMPT_PROPERTY_LIMIT = 200
 
 // 按码点比较：中文名排序与后端 Python `name_cn` 排序同口径
 const compareText = (a, b) => {
@@ -32,7 +32,7 @@ const compareText = (a, b) => {
  * 泛化 prompt 覆盖测算：与后端 `_load_entity_schema_variables` 同口径——
  * 实体库扩容后预算按「实体轮转」分配：实体按分类字典 sort_order（categoryOrder 顺序）→
  * name_cn 排序，轮内属性 required 优先；第一轮每实体注入 1 条属性保证覆盖面，
- * 预算未满则第二轮各补第 2 条，依此往复，共 PROMPT_PROPERTY_LIMIT 条。
+ * 预算未满则第二轮各补第 2 条，依此往复，共 PROMPT_PROPERTY_LIMIT（默认 200）条。
  * 未进的属性不会被泛化命中；排序靠后（分类顺序+名称）的实体要等前面的实体轮完。
  * 字典外分类（categoryOrder 里没有）排到最后，与后端 rank=1e6 一致。
  */
