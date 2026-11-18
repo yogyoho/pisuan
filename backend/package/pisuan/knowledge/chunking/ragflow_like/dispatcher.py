@@ -1,9 +1,36 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from pisuan.knowledge.chunking.ragflow_like.parsers import book, general, laws, qa, semantic, separator, table
 from pisuan.knowledge.chunking.ragflow_like.presets import map_to_internal_parser_id, normalize_chunk_preset_id
+
+# 表格型文档自动检测：表格字符占比 ≥30% 且用户未显式指定预设时，自动切 table 预设
+TABLE_RATIO_THRESHOLD = 0.3
+_TABLE_BLOCK_RE_GLOBAL = re.compile(r"<table\b[^>]*>.*?</table\s*>", re.IGNORECASE | re.DOTALL)
+
+
+def auto_select_table_preset(markdown_content: str, params: dict[str, Any] | None) -> dict[str, Any]:
+    """解析产物表格占比高时自动切换 table 预设（表格原子分块）。
+
+    规则：表格字符占比 ≥ TABLE_RATIO_THRESHOLD 且 ≥1 个 <table> 块，
+    且用户未显式指定预设（params 无 chunk_preset_id）且未曾自动切换过（无 chunk_preset_auto）。
+    触发时设置 chunk_preset_id="table" 与 chunk_preset_auto="table"（幂等标记）。
+    """
+    params = dict(params or {})
+    if params.get("chunk_preset_id") or params.get("chunk_preset_auto"):
+        return params
+    if not markdown_content:
+        return params
+    tables = _TABLE_BLOCK_RE_GLOBAL.findall(markdown_content)
+    if not tables:
+        return params
+    table_chars = sum(len(x) for x in tables)
+    if table_chars / max(len(markdown_content), 1) >= TABLE_RATIO_THRESHOLD:
+        params["chunk_preset_id"] = "table"
+        params["chunk_preset_auto"] = "table"
+    return params
 
 
 def _build_chunk_records(
