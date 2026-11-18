@@ -479,6 +479,23 @@ class DomainEntityService:
             raise ValueError(f"实体 {identifier} 不存在")
         if entity.deleted_at is None:
             raise ValueError(f"实体 {identifier} 不在回收站中")
+        # 归并守卫：若该实体曾被归并（其中文名已沉淀为某活跃实体的别名），
+        # 直接恢复会造回重复实体——要求工程师先移除别名再恢复。
+        d = entity.to_dict()
+        name = re.sub(r"\s+", "", str(d.get("name_cn") or ""))
+        if name:
+            active = await self.repo.list_all(domain_code=d.get("domain_code"))
+            merged_into = []
+            for a in active:
+                a_d = a.to_dict() if hasattr(a, "to_dict") else a
+                if any(re.sub(r"\s+", "", str(s or "")) == name for s in (a_d.get("synonyms") or [])):
+                    merged_into.append(a_d.get("entity_key"))
+            if merged_into:
+                raise ValueError(
+                    f"该实体已被归并：中文名「{d.get('name_cn')}」是活跃实体 "
+                    f"{'、'.join(merged_into)} 的别名。若确需恢复，请先在上述实体的同义词中移除「{d.get('name_cn')}」，"
+                    f"再回到回收站恢复。"
+                )
         await self.repo.restore(entity.entity_id)
         return (await self.repo.get_by_id(entity.entity_id)).to_dict()
 
