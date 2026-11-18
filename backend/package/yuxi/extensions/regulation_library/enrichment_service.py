@@ -699,14 +699,19 @@ async def enrich_regulation_file(
     all_indicators: list[dict] = []
     all_taxonomy_rows: list[dict] = []
     role_memo: dict[str, str] = {}  # unit_no -> role；续表（表N（续））按主表序号继承角色，不重复走 LLM
+    last_known_role = None  # 无编号表（表?）继承前一张已判别表的角色（同一文档内的续片）
     for chunk_id, unit_no, title, content in table_chunks:
         role = classify_table_role_by_title(title)
         if role is None and unit_no:
             base = _CONTINUATION_RE.sub("", unit_no).strip()
             if base != unit_no:
                 role = role_memo.get(base)
+        if role is None and unit_no.endswith("?") and last_known_role:
+            role = last_known_role  # 表? 为前表的无标题续片
         if role is None:
             role = await role_classifier.classify(doc_code, unit_no, title, content)
+        if role != "other":
+            last_known_role = role
         role_memo[unit_no] = role
         role_counts[role] += 1
         unit_tag: dict[str, Any] = {"table_role": role}
