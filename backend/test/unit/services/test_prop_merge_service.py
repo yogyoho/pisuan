@@ -9,8 +9,12 @@ import pytest
 from pisuan.services.domain_entity_service import DomainEntityService
 
 
-def ent(key, name, props, synonyms=None, domain_code="general"):
+def ent(key, name, props, synonyms=None, domain_code="general", deleted_at=None):
     return SimpleNamespace(
+        entity_id=f"id-{key}",
+        entity_key=key,
+        name_cn=name,
+        deleted_at=deleted_at,
         to_dict=lambda: {
             "entity_id": f"id-{key}",
             "entity_key": key,
@@ -19,6 +23,7 @@ def ent(key, name, props, synonyms=None, domain_code="general"):
             "synonyms": list(synonyms or []),
             "properties": [dict(p) for p in props],
             "updated_at": "2026-11-18T00:00:00",
+            "deleted_at": deleted_at,
         }
     )
 
@@ -88,20 +93,39 @@ def service(monkeypatch):
     return svc
 
 
-def _patch_common(monkeypatch, svc, entities, tasks, learned, pps_rows, calls):
+def _patch_common(monkeypatch, svc, entities, tasks, learned, pps_rows, calls, trashed=None):
     from pisuan.repositories import domain_factory_repository as factory_module
     from pisuan.storage.postgres import manager as manager_module
 
     class FakeRepo:
-        async def get_by_id_or_key(self, key):
-            for e in entities:
-                if e.to_dict()["entity_key"] == key or e.to_dict()["entity_id"] == key:
+        trashed: list = []
+
+        async def get_by_id_or_key(self, key, include_deleted=False):
+            pool = list(entities) + list(self.trashed)
+            for e in pool:
+                d = e.to_dict()
+                if d["entity_key"] == key or d["entity_id"] == key:
+                    if not include_deleted and d in [x.to_dict() for x in self.trashed]:
+                        return None
                     return e
             return None
+
+        async def list_all(self, domain_code=None, category=None):
+            return list(entities)
 
         async def soft_delete(self, entity_id):
             calls.setdefault("deleted", []).append(entity_id)
             return True
+
+        async def restore(self, entity_id):
+            calls.setdefault("restored", []).append(entity_id)
+            return True
+
+        async def get_by_id(self, entity_id):
+            for e in list(entities) + list(self.trashed):
+                if e.to_dict()["entity_id"] == entity_id:
+                    return e
+            return None
 
     fake_factory = FakeFactoryRepo(tasks, learned)
 
@@ -124,13 +148,16 @@ def _patch_common(monkeypatch, svc, entities, tasks, learned, pps_rows, calls):
         yield FakeSession(pps_rows)
 
     monkeypatch.setattr(manager_module.pg_manager, "get_async_session_context", fake_ctx)
-    svc.repo = FakeRepo()
+    fake_repo = FakeRepo()
+    fake_repo.trashed = list(trashed or [])
+    fake_repo.rewritten = None
+    svc.repo = fake_repo
     svc.update_entity = fake_update.__get__(svc, type(svc)) if False else (
         lambda identifier, payload, expected_updated_at=None, force=False: fake_update(svc, identifier, payload)
     )
     svc.delete_entity = lambda identifier: fake_delete(svc, identifier)
     svc._remap_waiting_review_tasks = lambda: fake_remap(None)
-    return fake_factory
+    return fake_factory, fake_repo
 
 
 def test_merge_entity_into_rewrites_and_merges(monkeypatch):
@@ -143,7 +170,7 @@ def test_merge_entity_into_rewrites_and_merges(monkeypatch):
     learned = [{"id": "l1", "slots": [slot("src.uniq")]}]
     pps = [FakePps("src.uniq"), FakePps("tgt.keep")]
     calls = {}
-    fake_factory = _patch_common(monkeypatch, svc, entities, tasks, learned, pps, calls)
+    fake_factory, fake_repo = _patch_common(monkeypatch, svc, entities, tasks, learned, pps, calls)
 
     result = asyncio.run(svc.merge_entity_into("src", "tgt"))
 
@@ -201,6 +228,30 @@ def test_merge_property_into_deposits_synonyms(monkeypatch):
     assert tasks[0]["source_paragraphs"][0]["template"]["slots"][0]["entity_ref"] == "demo.new_key"
     assert pps[0].entity_key == "demo.new_key"
     assert result["tasks_touched"] == 1 and result["pps_rewritten"] == 1
+
+
+def test_restore_blocked_when_merged(monkeypatch):
+    svc = DomainEntityService()
+    tgt = ent("tgt", "目标实体", [{"key": "keep", "name_cn": "重复属性"}], synonyms=["源实体"])
+    trashed_src = ent("src", "源实体", [{"key": "dup", "name_cn": "重复属性"}], deleted_at="2026-11-18T00:00:00")
+    calls = {}
+    _, fake_repo = _patch_common(monkeypatch, svc, [tgt], [], [], [], calls, trashed=[trashed_src])
+
+    with pytest.raises(ValueError, match="已被归并"):
+        asyncio.run(svc.restore_entity("src"))
+    assert calls.get("restored") is None
+
+
+def test_restore_passes_without_merge_signature(monkeypatch):
+    svc = DomainEntityService()
+    tgt = ent("tgt", "目标实体", [{"key": "keep", "name_cn": "重复属性"}])
+    trashed_x = ent("xx", "无关实体", [{"key": "k", "name_cn": "别的属性"}], deleted_at="2026-11-18T00:00:00")
+    calls = {}
+    _, fake_repo = _patch_common(monkeypatch, svc, [tgt], [], [], [], calls, trashed=[trashed_x])
+
+    result = asyncio.run(svc.restore_entity("xx"))
+    assert calls.get("restored") == ["id-xx"]
+    assert result["entity_key"] == "xx"
 
 
 def test_merge_property_into_validations(monkeypatch):
