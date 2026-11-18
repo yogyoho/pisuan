@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import uuid
+from collections import Counter
 from typing import Any
 
 from sqlalchemy import select
@@ -21,8 +22,10 @@ from pisuan.extensions.regulation_library.table_splitter import split_table_unit
 from pisuan.extensions.regulation_library.unit_parser import parse_chunk_unit
 from pisuan.services.eia_data_service import _SKILL_ROOT
 from pisuan.services.eia_limit_extract_core import norm_code
+from pisuan.config.options import invalidate_option_cache, system_options, update_option_value
 from pisuan.storage.postgres.manager import pg_manager
 from pisuan.storage.postgres.models_knowledge import KnowledgeChunk
+from pisuan.storage.postgres.models_knowledge import KnowledgeFile
 from pisuan.utils import logger
 from pisuan.utils.datetime_utils import format_utc_datetime
 
@@ -30,6 +33,10 @@ _ALL_ROLES = ("limit", "method", "criteria", "param", "other")
 _CONTINUATION_RE = re.compile(r"[（(]续[)）]\s*$")  # 续表 unit_no 后缀（表N（续）），半/全角括号兼容
 _MANUAL_MAX_ROWS = 500  # 手工单次录入行数上限（防误传超大载荷）
 _MANUAL_UNIT_NO = "手录"  # 手工行统一表单元号
+_DOC_CODE_RE = re.compile(
+    r"(?:GB/T|GBT|GB|HJ|DB\d{1,2}|CJ|SL|NY)\s*\d{3,5}(?:\.\d+)?(?:\s*[-—–]\s*\d{4})?",
+    re.IGNORECASE,
+)
 
 # enrich 幂等删旧：仅清自身候选行——expert 权威行对重跑免疫（P1 合流，spec §5）
 ENRICH_DELETE_SQL = "DELETE FROM standard_indicators WHERE doc_code = :code AND source = 'enrich'"
@@ -37,6 +44,554 @@ ENRICH_DELETE_SQL = "DELETE FROM standard_indicators WHERE doc_code = :code AND 
 
 class StandardConflictError(Exception):
     """standard_indicators 写冲突（手工行挡道 / doc_code 已存在 / 非手工行），路由映射 409。"""
+
+
+class EnrichRunInProgressError(Exception):
+    """同一标准的规范加工任务仍在进行中，路由映射 409。"""
+
+
+def _suggest_doc_code(filename: str, tag_codes: list[str]) -> str:
+    """优先取富化 chunk 中的 doc_code；未加工文件从标准文件名解析标准号。"""
+    counts = Counter(code.strip() for code in tag_codes if str(code or "").strip())
+    if counts:
+        return counts.most_common(1)[0][0]
+    normalized = (filename or "").replace("－", "-").replace("—", "-").replace("／", "/").upper()
+    match = _DOC_CODE_RE.search(normalized)
+    if not match:
+        return ""
+    return re.sub(r"\s+", "", match.group(1)) if match.groups() else re.sub(r"\s+", "", match.group(0))
+
+
+def _build_regulation_document_items(
+    files: list[Any],
+    chunks: list[Any],
+    indicator_rows: list[Any],
+) -> list[dict[str, Any]]:
+    """把文件、chunk 富化 tags、指标聚合组装为文档工作台行；纯函数便于测试。"""
+    chunks_by_file: dict[str, list[Any]] = {}
+    for chunk in chunks:
+        chunks_by_file.setdefault(chunk.file_id, []).append(chunk)
+
+    indicators_by_file: dict[str, dict[str, int]] = {}
+    for row in indicator_rows:
+        indicators_by_file[str(row.file_id)] = {
+            "total": int(row.total or 0),
+            "expert": int(row.expert or 0),
+            "reviewed": int(row.reviewed or 0),
+            "candidate": int(row.candidate or 0),
+            "doc_codes": int(row.doc_codes or 0),
+        }
+
+    items: list[dict[str, Any]] = []
+    for file in files:
+        file_chunks = chunks_by_file.get(file.file_id, [])
+        doc_codes: Counter[str] = Counter()
+        table_roles: Counter[str] = Counter()
+        unit_keys: set[tuple[str, str]] = set()
+        table_keys: set[tuple[str, str]] = set()
+        tagged_chunk_count = 0
+        for chunk in file_chunks:
+            tags = chunk.tags or {}
+            code = str(tags.get("doc_code") or "").strip()
+            if not code:
+                continue
+            tagged_chunk_count += 1
+            doc_codes[code] += 1
+            unit_no = str(tags.get("unit_no") or "").strip()
+            if tags.get("unit_type") == "table" and unit_no:
+                table_keys.add((code, unit_no))
+                table_roles[str(tags.get("table_role") or "unclassified")] += 1
+            if unit_no:
+                unit_keys.add((code, unit_no))
+            for unit in tags.get("table_units") or []:
+                if not isinstance(unit, dict):
+                    continue
+                child_no = str(unit.get("unit_no") or "").strip()
+                if not child_no:
+                    continue
+                unit_keys.add((code, child_no))
+                if unit.get("unit_type") == "table":
+                    table_keys.add((code, child_no))
+                    table_roles[str(unit.get("table_role") or "unclassified")] += 1
+
+        stats = indicators_by_file.get(
+            file.file_id,
+            {"total": 0, "expert": 0, "reviewed": 0, "candidate": 0, "doc_codes": 0},
+        )
+        has_chunks = bool(file_chunks) or int(file.chunk_count or 0) > 0
+        enriched = tagged_chunk_count > 0 or stats["total"] > 0
+        if not has_chunks:
+            status = "empty"
+        elif enriched:
+            status = "enriched"
+        else:
+            status = "indexed"
+        suggested_code = _suggest_doc_code(file.filename or "", list(doc_codes.elements()))
+        suggested_name = re.sub(r"\.(pdf|docx?|md)$", "", file.filename or "", flags=re.IGNORECASE)
+        suggested_name = re.sub(r"^\s*《?|\》?\s*$", "", suggested_name).strip()
+        suggested_name = re.sub(
+            r"\s*(GB/T|GBT|GB|HJ|DB\d{0,2}|CJ|SL|NY)\s*\d{3,5}(?:\.\d+)?(?:\s*[-—–]\s*\d{4})?.*$",
+            "",
+            suggested_name,
+            flags=re.IGNORECASE,
+        ).strip("《》（）() -—–")
+
+        items.append(
+            {
+                "file_id": file.file_id,
+                "kb_id": file.kb_id,
+                "filename": file.filename,
+                "status": file.status,
+                "process_status": status,
+                "chunk_count": int(file.chunk_count or 0),
+                "file_size": int(file.file_size or 0),
+                "updated_at": file.updated_at.isoformat() if file.updated_at else None,
+                "doc_codes": sorted(doc_codes),
+                "suggested_doc_code": suggested_code,
+                "suggested_doc_name": suggested_name,
+                "processed_chunk_count": tagged_chunk_count,
+                "unit_count": len(unit_keys),
+                "table_count": len(table_keys),
+                "table_roles": dict(table_roles),
+                "indicators": stats,
+            }
+        )
+    return items
+
+
+async def list_regulation_documents(
+    kb_id: str,
+    *,
+    keyword: str | None = None,
+    process_status: str | None = None,
+    run_status: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict[str, Any]:
+    """列出规范知识库中的文件及其加工/指标状态，供页面工作台消费。"""
+    await ensure_schema()
+    page = max(1, page)
+    page_size = min(max(1, page_size), 100)
+    async with pg_manager.get_async_session_context() as session:
+        file_result = await session.execute(
+            select(KnowledgeFile)
+            .where(KnowledgeFile.kb_id == kb_id, KnowledgeFile.is_folder.is_(False))
+            .order_by(KnowledgeFile.filename)
+        )
+        files = file_result.scalars().all()
+        chunk_result = await session.execute(
+            select(
+                KnowledgeChunk.file_id,
+                KnowledgeChunk.tags,
+                KnowledgeChunk.updated_at,
+            ).where(KnowledgeChunk.kb_id == kb_id)
+        )
+
+        class _ChunkRow:
+            def __init__(self, file_id: str, tags: Any):
+                self.file_id = file_id
+                self.tags = tags
+
+        chunks = [_ChunkRow(row.file_id, row.tags) for row in chunk_result.all()]
+        indicator_result = await session.execute(
+            sql_text(
+                """
+                SELECT kc.file_id,
+                       count(si.id) AS total,
+                       count(si.id) FILTER (WHERE si.source = 'expert') AS expert,
+                       count(si.id) FILTER (WHERE si.source = 'enrich' AND si.verified_at IS NOT NULL) AS reviewed,
+                       count(si.id) FILTER (WHERE si.source = 'enrich' AND si.verified_at IS NULL) AS candidate,
+                       count(DISTINCT si.doc_code) AS doc_codes
+                  FROM standard_indicators si
+                  JOIN knowledge_chunks kc ON kc.chunk_id = si.chunk_id
+                 WHERE kc.kb_id = :kb_id
+                 GROUP BY kc.file_id
+                """
+            ),
+            {"kb_id": kb_id},
+        )
+        indicator_rows = indicator_result.all()
+
+        run_rows = (
+            await session.execute(
+                sql_text(
+                    """
+                    SELECT DISTINCT ON (file_id)
+                           run_id, file_id, status, started_by, started_at, finished_at,
+                           error_message, result
+                      FROM regulation_enrich_runs
+                     WHERE kb_id = :kb_id
+                     ORDER BY file_id, started_at DESC, id DESC
+                    """
+                ),
+                {"kb_id": kb_id},
+            )
+        ).mappings()
+        run_counts = (
+            await session.execute(
+                sql_text(
+                    """
+                    SELECT file_id,
+                           count(*) AS total,
+                           count(*) FILTER (WHERE status = 'conflict') AS conflicts,
+                           count(*) FILTER (WHERE status = 'failed') AS failed,
+                           count(*) FILTER (WHERE status = 'pending') AS running
+                      FROM regulation_enrich_runs
+                     WHERE kb_id = :kb_id
+                     GROUP BY file_id
+                    """
+                ),
+                {"kb_id": kb_id},
+            )
+        ).all()
+
+    latest_runs = {str(row.file_id): dict(row) for row in run_rows}
+    run_stats = {
+        str(row.file_id): {
+            "total": int(row.total or 0),
+            "conflicts": int(row.conflicts or 0),
+            "failed": int(row.failed or 0),
+            "running": int(row.running or 0),
+        }
+        for row in run_counts
+    }
+
+    items = _build_regulation_document_items(files, chunks, indicator_rows)
+    for item in items:
+        run = latest_runs.get(item["file_id"])
+        stats = run_stats.get(item["file_id"], {"total": 0, "conflicts": 0, "failed": 0, "running": 0})
+        item["last_run_id"] = run["run_id"] if run else None
+        item["last_run_status"] = run["status"] if run else "none"
+        item["last_run_started_at"] = run["started_at"].isoformat() if run and run["started_at"] else None
+        item["last_run_finished_at"] = run["finished_at"].isoformat() if run and run["finished_at"] else None
+        item["last_run_error"] = run["error_message"] if run else None
+        item["run_count"] = stats["total"]
+        item["conflict_count"] = stats["conflicts"]
+        item["failed_count"] = stats["failed"]
+        item["processing"] = stats["running"] > 0
+        item["run_status"] = (
+            "running" if stats["running"] else run["status"] if run else "not_run"
+        )
+        item["status_reason"] = run["error_message"] if run and run["status"] in {"failed", "conflict"} else ""
+    summary = {
+        "documents": len(items),
+        "enriched": sum(1 for item in items if item["process_status"] == "enriched"),
+        "indexed": sum(1 for item in items if item["process_status"] == "indexed"),
+        "empty": sum(1 for item in items if item["process_status"] == "empty"),
+        "indicators": sum(item["indicators"]["total"] for item in items),
+        "verified": sum(item["indicators"]["expert"] + item["indicators"]["reviewed"] for item in items),
+        "process_status_counts": {
+            "enriched": sum(1 for item in items if item["process_status"] == "enriched"),
+            "indexed": sum(1 for item in items if item["process_status"] == "indexed"),
+            "empty": sum(1 for item in items if item["process_status"] == "empty"),
+        },
+        "run_status_counts": {
+            "not_run": sum(1 for item in items if item["run_status"] == "not_run"),
+            "running": sum(1 for item in items if item["run_status"] == "running"),
+            "success": sum(1 for item in items if item["run_status"] == "success"),
+            "failed": sum(1 for item in items if item["run_status"] == "failed"),
+            "conflict": sum(1 for item in items if item["run_status"] == "conflict"),
+        },
+    }
+    if keyword:
+        keyword_value = keyword.strip().lower()
+        items = [
+            item
+            for item in items
+            if keyword_value in " ".join([item["filename"], item["suggested_doc_code"], *item["doc_codes"]]).lower()
+        ]
+    if process_status:
+        items = [item for item in items if item["process_status"] == process_status]
+    if run_status:
+        items = [item for item in items if item["run_status"] == run_status]
+    total = len(items)
+    start = (page - 1) * page_size
+    return {
+        "kb_id": kb_id,
+        "items": items[start : start + page_size],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "summary": summary,
+    }
+
+
+async def get_bound_kb_id() -> str:
+    """返回当前部署绑定的标准规范库知识库 ID；空串表示未绑定。"""
+    config = await system_options.get()
+    return str(config.get("regulation_library_kb_id") or "").strip()
+
+
+async def bind_kb(kb_id: str, operator: str | None) -> str:
+    """手动绑定当前部署的标准规范库；必须为已索引知识库，写后失效配置缓存。"""
+    from pisuan.knowledge.runtime import knowledge_base
+
+    kb_id = str(kb_id or "").strip()
+    if not kb_id:
+        raise ValueError("kb_id 不能为空")
+    if await knowledge_base.get_database_info(kb_id) is None:
+        raise ValueError(f"绑定的知识库不存在: {kb_id}")
+    async with pg_manager.get_async_session_context() as session:
+        await update_option_value(
+            session,
+            system_options.key,
+            {"regulation_library_kb_id": kb_id},
+            operator or "",
+        )
+        await session.commit()
+    await invalidate_option_cache(system_options.key)
+    return kb_id
+
+
+async def start_enrich_run(
+    kb_id: str,
+    file_id: str,
+    doc_code: str,
+    doc_name: str,
+    doc_type: str,
+    operator: str | None,
+) -> str:
+    """创建一次规范加工的 pending 记录，返回 run_id。"""
+    await ensure_schema()
+    run_id = uuid.uuid4().hex
+    async with pg_manager.get_async_session_context() as session:
+        await session.execute(
+            sql_text("SELECT pg_advisory_xact_lock(hashtext(:lock_key))"),
+            {"lock_key": f"regulation-enrich:{kb_id}:{doc_code}"},
+        )
+        await session.execute(
+            sql_text(
+                """
+                UPDATE regulation_enrich_runs
+                   SET status = 'failed',
+                       finished_at = now(),
+                       error_message = '加工进程中断或超过 30 分钟未收敛',
+                       updated_at = now()
+                 WHERE kb_id = :kb_id
+                   AND doc_code = :doc_code
+                   AND status = 'pending'
+                   AND started_at < now() - interval '30 minutes'
+                """
+            ),
+            {"kb_id": kb_id, "doc_code": doc_code},
+        )
+        active_run = await session.execute(
+            sql_text(
+                """
+                SELECT run_id
+                  FROM regulation_enrich_runs
+                 WHERE kb_id = :kb_id
+                   AND doc_code = :doc_code
+                   AND status = 'pending'
+                 LIMIT 1
+                """
+            ),
+            {"kb_id": kb_id, "doc_code": doc_code},
+        )
+        if active_run.scalar_one_or_none() is not None:
+            raise EnrichRunInProgressError(f"{doc_code} 正在加工中，请等待当前任务完成")
+        await session.execute(
+            sql_text(
+                """
+                INSERT INTO regulation_enrich_runs
+                    (run_id, kb_id, file_id, doc_code, doc_name, doc_type,
+                     status, started_by, started_at)
+                VALUES
+                    (:run_id, :kb_id, :file_id, :doc_code, :doc_name, :doc_type,
+                     'pending', :started_by, now())
+                """
+            ),
+            {
+                "run_id": run_id,
+                "kb_id": kb_id,
+                "file_id": file_id,
+                "doc_code": doc_code,
+                "doc_name": doc_name,
+                "doc_type": doc_type,
+                "started_by": operator,
+            },
+        )
+        await session.commit()
+    return run_id
+
+
+async def finish_enrich_run(
+    run_id: str,
+    status: str,
+    *,
+    error_message: str | None = None,
+    result: dict[str, Any] | None = None,
+) -> None:
+    """收敛一次规范加工记录；result 仅保存统计与图谱写入结果。"""
+    async with pg_manager.get_async_session_context() as session:
+        await session.execute(
+            sql_text(
+                """
+                UPDATE regulation_enrich_runs
+                   SET status = :status,
+                       finished_at = now(),
+                       error_message = :error_message,
+                       result = CAST(:result AS JSONB),
+                       updated_at = now()
+                 WHERE run_id = :run_id
+                """
+            ),
+            {
+                "run_id": run_id,
+                "status": status,
+                "error_message": error_message,
+                "result": json.dumps(result, ensure_ascii=False) if result is not None else None,
+            },
+        )
+        await session.commit()
+
+
+async def get_regulation_document_detail(kb_id: str, file_id: str) -> dict[str, Any]:
+    """返回单份规范的 chunk 结构、表格分类、指标预览和加工运行历史。"""
+    await ensure_schema()
+    async with pg_manager.get_async_session_context() as session:
+        file = (
+            await session.execute(
+                select(KnowledgeFile).where(
+                    KnowledgeFile.kb_id == kb_id,
+                    KnowledgeFile.file_id == file_id,
+                    KnowledgeFile.is_folder.is_(False),
+                )
+            )
+        ).scalar_one_or_none()
+        if file is None:
+            return {}
+
+        chunks = (
+            await session.execute(
+                select(KnowledgeChunk)
+                .where(KnowledgeChunk.kb_id == kb_id, KnowledgeChunk.file_id == file_id)
+                .order_by(KnowledgeChunk.chunk_index)
+            )
+        ).scalars().all()
+        runs = (
+            await session.execute(
+                sql_text(
+                    """
+                    SELECT run_id, status, started_by, started_at, finished_at,
+                           error_message, result
+                      FROM regulation_enrich_runs
+                     WHERE kb_id = :kb_id AND file_id = :file_id
+                     ORDER BY started_at DESC, id DESC
+                    """
+                ),
+                {"kb_id": kb_id, "file_id": file_id},
+            )
+        ).mappings().all()
+
+    doc_codes: set[str] = set()
+    units: list[dict[str, Any]] = []
+    table_roles: dict[str, int] = {}
+    for chunk in chunks:
+        tags = chunk.tags or {}
+        code = str(tags.get("doc_code") or "").strip()
+        if not code:
+            continue
+        doc_codes.add(code)
+        if tags.get("unit_no"):
+            units.append(
+                {
+                    "chunk_id": chunk.chunk_id,
+                    "chunk_index": chunk.chunk_index,
+                    "doc_code": code,
+                    "unit_no": str(tags.get("unit_no") or ""),
+                    "unit_type": str(tags.get("unit_type") or "other"),
+                    "parent_unit": tags.get("parent_unit"),
+                    "title": tags.get("title") or "",
+                    "table_role": tags.get("table_role"),
+                }
+            )
+            # 单表 chunk 的角色是标量键（table 预设产出的整表块均为单表）——
+            # 此前只数多表 chunk 的 table_units 清单，单表 chunk 角色从不进计数
+            if tags.get("unit_type") == "table":
+                role = str(tags.get("table_role") or "unclassified")
+                table_roles[role] = table_roles.get(role, 0) + 1
+        for unit in tags.get("table_units") or []:
+            if not isinstance(unit, dict):
+                continue
+            code_unit = str(unit.get("unit_no") or "").strip()
+            if not code_unit:
+                continue
+            units.append(
+                {
+                    "chunk_id": chunk.chunk_id,
+                    "chunk_index": chunk.chunk_index,
+                    "doc_code": code,
+                    "unit_no": code_unit,
+                    "unit_type": str(unit.get("unit_type") or "table"),
+                    "parent_unit": unit.get("parent_unit"),
+                    "title": unit.get("title") or "",
+                    "table_role": unit.get("table_role"),
+                }
+            )
+            role = str(unit.get("table_role") or "unclassified")
+            table_roles[role] = table_roles.get(role, 0) + 1
+
+    codes = sorted(doc_codes)
+    indicators: list[dict[str, Any]] = []
+    if codes:
+        placeholders = ", ".join(f":code_{i}" for i in range(len(codes)))
+        params = {f"code_{i}": code for i, code in enumerate(codes)}
+        rows = (
+            await session.execute(
+                sql_text(
+                    f"""
+                    SELECT id, doc_code, unit_no, pollutant, metric, limit_value, unit,
+                           condition, category, period, source, verified_at, verified_by
+                      FROM standard_indicators
+                     WHERE doc_code IN ({placeholders})
+                     ORDER BY unit_no, pollutant, metric
+                    """
+                ),
+                params,
+            )
+        ).mappings()
+        for row in rows:
+            item = dict(row)
+            item["verified_at"] = format_utc_datetime(item.get("verified_at"))
+            item["layer"] = _layer_of(item.get("source") or "", item.get("verified_at"))
+            indicators.append(item)
+
+    run_items = []
+    latest_result = None
+    for run in runs:
+        raw_result = run.get("result")
+        run_items.append(
+            {
+                "run_id": run["run_id"],
+                "status": run["status"],
+                "started_by": run["started_by"],
+                "started_at": run["started_at"].isoformat() if run["started_at"] else None,
+                "finished_at": run["finished_at"].isoformat() if run["finished_at"] else None,
+                "error_message": run["error_message"],
+                "result": raw_result,
+            }
+        )
+        if latest_result is None:
+            latest_result = raw_result
+
+    return {
+        "file": {
+            "file_id": file.file_id,
+            "kb_id": file.kb_id,
+            "filename": file.filename,
+            "status": file.status,
+            "chunk_count": int(file.chunk_count or 0),
+            "updated_at": file.updated_at.isoformat() if file.updated_at else None,
+        },
+        "doc_codes": codes,
+        "units": units,
+        "table_roles": table_roles,
+        "indicators": indicators,
+        "runs": run_items,
+        "latest_run": run_items[0] if run_items else None,
+        "latest_result": latest_result,
+    }
 
 
 async def enrich_regulation_file(
