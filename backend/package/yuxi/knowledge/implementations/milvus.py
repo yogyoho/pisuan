@@ -23,7 +23,7 @@ from pymilvus import (
 
 from yuxi.config.options import system_options
 from yuxi.knowledge.base import FileStatus, KnowledgeBase
-from yuxi.knowledge.chunking.ragflow_like.dispatcher import chunk_markdown
+from yuxi.knowledge.chunking.ragflow_like.dispatcher import auto_select_table_preset, chunk_markdown
 from yuxi.knowledge.chunking.ragflow_like.nlp import count_tokens
 from yuxi.knowledge.read_models import KnowledgeBaseConfig
 from yuxi.knowledge.utils.kb_utils import resolve_processing_params
@@ -519,7 +519,12 @@ class MilvusKB(KnowledgeBase):
         return await asyncio.to_thread(load_existing_collection)
 
     def _split_text_into_chunks(self, text: str, file_id: str, filename: str, params: dict) -> list[dict]:
-        """将文本分割成块"""
+        """将文本分割成块（表格型文档自动检测：占比高且未显式指定预设时切 table 预设）"""
+        params = auto_select_table_preset(text, params)
+        if params.get("chunk_preset_auto"):
+            import logging
+
+            logging.getLogger(__name__).info(f"[auto-table] {filename}: 表格占比达阈值，自动切换 table 预设")
         return chunk_markdown(text, file_id, filename, params)
 
     def _calculate_chunk_stats(self, chunks: list[dict]) -> dict[str, int]:

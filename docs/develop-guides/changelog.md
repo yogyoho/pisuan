@@ -22,6 +22,8 @@
 
 ### 功能与修复
 
+- feat(knowledge): 表格型文档自动检测切换 table 分片预设 + 标准规范库批量重入库。问题：表格型国标（如《土地利用现状分类》GB/T 21010-2017，解析 markdown 表格占比 83%、9 个 <table> 完整）在 semantic 预设下被 token 切分拦腰打碎，下游提取不到完整表格指标。修复：dispatcher 新增 `auto_select_table_preset`（表格字符占比 ≥30% 且 ≥1 个 <table> 块、用户未显式指定预设、未自动切换过 → 自动切 table 预设，幂等标记 chunk_preset_auto），milvus 与 lightrag 两个实现的分片入口接入；实测同文档 semantic 39 chunk 零整表 vs table 16 chunk 含 9 个整表块（表1 1701 字完整含水浇地/旱地/含义列，续表自动带标题）。批量：`switch_table_preset_kb44.py` 对环评引用标准规范库（kb_yn2req38m2）表格占比 ≥30% 的18 个文件切换预设并重新入库（可续跑：跳过已完成），叙述型 12 个保持 semantic 不动；扫描工具可复算各文件表格占比。单测 4 用例（阈值/显式优先/幂等）。运维教训：API 容器中途被宿主内存压力重启过一次，批处理脚本需自带可续跑能力（本批已内置）。
+
 - feat(domain-entity): 实体变更后归一化全集自动同步 Gitea。新建 `normalization_inventory_sync`：create/update/delete/restore 四个变更点触发（归并/属性归并内部走 update_entity 自动覆盖），防抖 20 秒合并连续操作，后台依次跑 聚类校验→归并候选→全集导出→Gitea 发布 四段链（逐步超时 600s）。失败隔离：链上任何失败只告警不影响实体保存，下次变更自动重试；PYTEST 环境自动禁用（单测 4 用例：防抖合并/失败隔离/PYTEST 禁用/启用判断）。手动触发口：`scripts/governance/sync_normalization_inventory.py`（同一四段链）。工程师侧 gitea 全集清单从此跟随实体编辑自动保持最新。
 
 - feat(domain-entity): 归并恢复守卫 + 候选语料出处 + 全集清单 Gitea 发布。① restore_entity 归并守卫：回收站恢复时检测中文名是否已沉淀为活跃实体别名（= 曾被归并），命中则 400 引导先移除别名再恢复，防止误恢复造回重复实体（守卫兼容 ORM/SimpleNamespace 双形态——单测抓出过 .get 直调炸 ORM 的缺陷）；② export_normalization_inventory 归一候选成员附语料出处（Route B project_eia 211 切片池精确匹配，标注切片数与报告/章节；planning/tracking 未入池，无出处≠无依据）；③ publish_inventory_to_gitea.py：全集清单自动发布到 Gitea refsadmin/normalization-inventory（仓库自动创建、内容 API 带 sha 更新），工程师经 http://gitea:3000/refsadmin/normalization-inventory 查看确认并追溯历史版本。合并/归并功能补单测 6 用例（fake repo/session：实体归并改写、属性归并沉淀、校验分支、恢复守卫）。

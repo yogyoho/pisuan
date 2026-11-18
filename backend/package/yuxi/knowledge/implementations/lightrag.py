@@ -13,7 +13,7 @@ from pymilvus import connections, utility
 
 from yuxi import config
 from yuxi.knowledge.base import FileStatus, KnowledgeBase
-from yuxi.knowledge.chunking.ragflow_like.dispatcher import chunk_markdown
+from yuxi.knowledge.chunking.ragflow_like.dispatcher import auto_select_table_preset, chunk_markdown
 from yuxi.knowledge.chunking.ragflow_like.presets import resolve_chunk_processing_params
 from yuxi.models.embed import get_embedding_model_info_by_id
 from yuxi.plugins.parser.unified import Parser
@@ -379,7 +379,9 @@ class LightRagKB(KnowledgeBase):
                 self.files_meta[file_id]["processing_params"] = params
                 await self._save_metadata()
 
-                chunks = chunk_markdown(markdown_content, file_id, filename, params)
+                chunks = chunk_markdown(
+                    markdown_content, file_id, filename, auto_select_table_preset(markdown_content, params)
+                )
                 chunk_input, split_by_character, split_by_character_only = self._prepare_lightrag_insert_payload(chunks)
                 if not chunk_input:
                     chunk_input = markdown_content
@@ -863,7 +865,9 @@ class LightRagKB(KnowledgeBase):
                     markdown_content_lines = markdown_content[:100].replace("\n", " ")
                     logger.info(f"Markdown content: {markdown_content_lines}...")
                     filename = file_meta.get("filename") or file_id
-                    chunks = chunk_markdown(markdown_content, file_id, filename, resolved_params)
+                    chunks = chunk_markdown(
+                        markdown_content, file_id, filename, auto_select_table_preset(markdown_content, resolved_params)
+                    )
                     chunk_input, split_by_character, split_by_character_only = self._prepare_lightrag_insert_payload(
                         chunks
                     )
