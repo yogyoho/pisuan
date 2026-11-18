@@ -59,6 +59,7 @@ const {
   fetchUsage,
   cloneEntity,
   mergeEntityInto,
+  syncAfterPropertyMerge,
   exportConfig,
   previewImport,
   importConfig
@@ -416,6 +417,7 @@ watch(
           @view-json="handleViewJson"
           @delete="handleDelete"
           @merge="handleMerge"
+          @merged="syncAfterPropertyMerge"
         />
       </div>
     </div>

@@ -18,7 +18,7 @@ defineProps({
   saving: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['save', 'cancel', 'clone', 'view-json', 'delete', 'merge'])
+const emit = defineEmits(['save', 'cancel', 'clone', 'view-json', 'delete', 'merge', 'merged'])
 </script>
 
 <template>
@@ -100,6 +100,7 @@ const emit = defineEmits(['save', 'cancel', 'clone', 'view-json', 'delete', 'mer
       :entity-key="entity.entity_key"
       :prompt-coverage="promptCoverage"
       :usage="usage"
+      @merged="(fresh) => emit('merged', fresh)"
     />
 
     <RelationRuleEditor v-model:rules="entity.relation_rules" :entity-keys="entityKeys" />

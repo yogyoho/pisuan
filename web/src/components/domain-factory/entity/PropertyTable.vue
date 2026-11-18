@@ -7,6 +7,8 @@ import { domainEntityBuilderApi } from '@/apis/domain_entity_builder_api.js'
 // 属性数组由父级实体草稿持有：本组件只做增删改，不重新赋值整个数组
 const properties = defineModel('properties', { type: Array, default: () => [] })
 
+const emit = defineEmits(['merged'])
+
 const props = defineProps({
   entityKey: { type: String, default: '' },
   // 泛化 prompt 覆盖测算（composable 的 promptCoverage）
@@ -160,18 +162,11 @@ const confirmMergeProperty = async () => {
   if (mergeSubmitting.value) return
   mergeSubmitting.value = true
   try {
-    await domainEntityBuilderApi.mergeProperty(props.entityKey, source.record.key, mergeTargetKey.value)
-    const target = properties.value.find((p) => p?.key === mergeTargetKey.value)
-    if (target) {
-      const syns = target.synonyms || []
-      const deposit = [source.record.name_cn, ...(source.record.synonyms || [])]
-        .map((s) => String(s || '').trim())
-        .filter((s) => s && !syns.includes(s))
-      target.synonyms = [...syns, ...deposit]
-    }
+    const res = await domainEntityBuilderApi.mergePropertyInto(props.entityKey, source.record.key, mergeTargetKey.value)
     properties.value.splice(source.index, 1)
     message.success('属性已归并：引用已改写，原属性名沉淀为同义词')
     mergeModalVisible.value = false
+    emit('merged', res?.data?.entity_state || null)
   } catch (e) {
     console.error('属性归并失败', e)
     message.error(e?.response?.data?.detail?.message || e?.response?.data?.detail || e?.message || '属性归并失败')

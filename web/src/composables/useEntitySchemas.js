@@ -505,6 +505,13 @@ export function useEntitySchemas() {
     }
   }
 
+  // 属性归并后的乐观锁同步：采纳服务端 properties/updated_at，其余待存编辑保留
+  const syncAfterPropertyMerge = (freshEntity) => {
+    if (!freshEntity || !draft.value) return
+    draft.value.properties = freshEntity.properties || []
+    if (freshEntity.updated_at) draft.value.updated_at = freshEntity.updated_at
+  }
+
   const mergeEntityInto = async (sourceEntityId, targetEntityId) => {
     try {
       const res = await domainEntityBuilderApi.mergeEntityInto(sourceEntityId, targetEntityId)
@@ -668,6 +675,7 @@ export function useEntitySchemas() {
     removeEntity,
     cloneEntity,
     mergeEntityInto,
+    syncAfterPropertyMerge,
     exportConfig,
     previewImport,
     importConfig,
