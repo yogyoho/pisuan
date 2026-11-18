@@ -22,6 +22,8 @@
 
 ### 功能与修复
 
+- feat(domain-entity): 归并恢复守卫 + 候选语料出处 + 全集清单 Gitea 发布。① restore_entity 归并守卫：回收站恢复时检测中文名是否已沉淀为活跃实体别名（= 曾被归并），命中则 400 引导先移除别名再恢复，防止误恢复造回重复实体（守卫兼容 ORM/SimpleNamespace 双形态——单测抓出过 .get 直调炸 ORM 的缺陷）；② export_normalization_inventory 归一候选成员附语料出处（Route B project_eia 211 切片池精确匹配，标注切片数与报告/章节；planning/tracking 未入池，无出处≠无依据）；③ publish_inventory_to_gitea.py：全集清单自动发布到 Gitea refsadmin/normalization-inventory（仓库自动创建、内容 API 带 sha 更新），工程师经 http://gitea:3000/refsadmin/normalization-inventory 查看确认并追溯历史版本。合并/归并功能补单测 6 用例（fake repo/session：实体归并改写、属性归并沉淀、校验分支、恢复守卫）。
+
 - feat(domain-entity): 实体合并/属性归一 UI 操作功能（环评工程师归一化确认的界面执行入口）。后端 `DomainEntityService.merge_entity_into`（实体整体并入：待审任务槽位/学习模板/pps 引用改写 `{源}.x→{目标}.x` + 裸键→目标键、属性按 name_cn 并集追加（key 冲突 _m 后缀）、源实体中文名沉淀为目标别名、源实体软删进回收站、remap）与 `merge_property_into`（实体内属性归并：引用改写+删除源属性+名称与 synonyms 沉淀到目标+remap）；路由新增 POST entities/{id}/merge-into 与 entities/{id}/merge-property。前端：实体编辑器「合并到…」按钮 + 归并弹窗（选目标实体，含影响说明，归并后当前实体进回收站可恢复）；属性表行级「合并」按钮 + 弹窗（选同实体目标属性），合并后本地清单同步移除、目标属性同义词即时更新。归一化候选全集（205 组/423 条 + 实体 22 对）已导出`export_normalization_inventory.py`，工程师在 UI 逐条执行即可。
 
 - feat(domain-entity): 归一化校验/合并/全集导出工具三件套。`audit_normalization.py`：属性名形态（括号备注 285/内嵌单位 21/字母数字开头 231/名=键 4）与跨实体同义属性名聚类（856 组，泛词桥接停用 + 内聚性过滤——组内共享 ≥2 字非泛词片段才成族，杜绝传递闭包杂烩）；`report_merge_candidates.py`：实体归并候选（别名=他名 1 对 + 同分类属性重合 ≥0.6 的 21 对，附引用面与 canonical 建议）；`apply_prop_merge.py`：属性归并执行（引用改写：任务槽位/学习模板/pps → 删重复属性 → 规范属性挂synonym → remap → 残留复核非 0 即失败，全程备份）。应用占地族（用户确认）：land_occupation 三重同义属性（主要占地类型/项目占地类型 → 占地类型）合并 + engineering_basic_info 合并 + engineering_site_scheme 改名，0 引用残留。`export_normalization_inventory.py`：归一化全集清单导出（293 实体/7870 属性/6113 去重名 + 属性候选 205 组 + 实体候选 22 对 + 形态问题，md + JSON），交付环评工程师人工确认，其余候选不自动归一。
