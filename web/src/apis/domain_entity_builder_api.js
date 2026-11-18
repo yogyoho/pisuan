@@ -86,6 +86,20 @@ export const domainEntityBuilderApi = {
       name_cn: nameCn
     })
   },
+  // 归并：source 实体整体并入 target（引用改写+属性并集+synonym 沉淀+source 软删）
+  mergeEntityInto: (sourceEntityId, targetEntityId) => {
+    return apiAdminPost(`/api/domain-entity-builder/entities/${sourceEntityId}/merge-into`, {
+      target: targetEntityId
+    })
+  },
+
+  // 归并：实体内 source 属性并入 target（引用改写+删除 source+name/synonyms 沉淀）
+  mergeProperty: (entityId, sourceKey, targetKey) => {
+    return apiAdminPost(`/api/domain-entity-builder/entities/${entityId}/merge-property`, {
+      source_key: sourceKey,
+      target_key: targetKey
+    })
+  },
 
   exportConfig: (domainCode = null) => {
     const query = buildQuery(domainCode ? { domain_code: domainCode } : {})

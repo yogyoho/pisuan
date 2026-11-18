@@ -18,7 +18,7 @@ defineProps({
   saving: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['save', 'cancel', 'clone', 'view-json', 'delete'])
+const emit = defineEmits(['save', 'cancel', 'clone', 'view-json', 'delete', 'merge'])
 </script>
 
 <template>
@@ -123,6 +123,9 @@ const emit = defineEmits(['save', 'cancel', 'clone', 'view-json', 'delete'])
         <a-button v-if="entity.entity_id" type="default" @click="emit('view-json')">
           <template #icon><FileText :size="14" /></template>
           查看JSON
+        </a-button>
+        <a-button v-if="entity.entity_id" type="default" danger @click="emit('merge')">
+          合并到…
         </a-button>
         <a-button v-if="entity.entity_id" type="primary" danger @click="emit('delete')">
           删除

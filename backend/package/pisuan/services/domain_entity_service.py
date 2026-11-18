@@ -267,6 +267,207 @@ class DomainEntityService:
             raise ValueError(f"实体 {identifier} 不存在")
         return await self.repo.soft_delete(entity.entity_id)
 
+    async def merge_entity_into(self, source_key: str, target_key: str) -> dict[str, Any]:
+        """实体归并（环评工程师 UI 操作）：source 整体并入 target。
+
+        流程：引用改写（待审任务槽位 / 学习模板 / pps，`{sk}.x → {tk}.x`，裸键同理）
+        → 属性并集（name_cn 归一后不在 target 的追加，key 冲突加 _m 后缀）
+        → target synonyms 沉淀 source 的 name_cn
+        → source 软删（回收站可恢复）→ remap。
+        """
+        if str(source_key).strip() == str(target_key).strip():
+            raise ValueError("源实体与目标实体相同")
+        src = await self.repo.get_by_id_or_key(source_key)
+        tgt = await self.repo.get_by_id_or_key(target_key)
+        if not src or not tgt:
+            raise ValueError("源实体或目标实体不存在")
+        src_d, tgt_d = src.to_dict(), tgt.to_dict()
+        sk, tk = str(src_d["entity_key"]), str(tgt_d["entity_key"])
+        if sk == tk:
+            raise ValueError("源实体与目标实体相同")
+        if (src_d.get("domain_code") or "") != (tgt_d.get("domain_code") or ""):
+            raise ValueError("跨域实体不允许合并")
+
+        from sqlalchemy import select
+
+        from pisuan.repositories.domain_factory_repository import DomainFactoryRepository
+        from pisuan.storage.postgres.manager import pg_manager
+        from pisuan.storage.postgres.models_domain_factory import DomainFactoryReportPps
+
+        factory_repo = DomainFactoryRepository()
+
+        def rewrite_ref(ref: str) -> str | None:
+            ref = str(ref or "")
+            if ref == sk:
+                return tk
+            if ref.startswith(f"{sk}."):
+                return f"{tk}.{ref.partition('.')[2]}"
+            return None
+
+        # 1) 待审任务槽位引用改写
+        n_tasks = 0
+        for row in await factory_repo.list_usage_pending_tasks(GENERAL_DOMAIN_CODE):
+            paragraphs = row.get("source_paragraphs") or []
+            touched = False
+            for para in paragraphs:
+                t = para.get("template") if isinstance(para, dict) else None
+                if not isinstance(t, dict):
+                    continue
+                for s in t.get("slots") or []:
+                    if not (isinstance(s, dict) and s.get("entity_ref")):
+                        continue
+                    new_ref = rewrite_ref(s["entity_ref"])
+                    if new_ref is not None:
+                        s["entity_ref"] = new_ref
+                        touched = True
+            if touched:
+                await factory_repo.update_task(row["id"], {"source_paragraphs": paragraphs})
+                n_tasks += 1
+
+        # 2) 学习模板引用改写
+        learned_map: dict[str, str] = {}
+        for row in await factory_repo.list_usage_learned_templates(GENERAL_DOMAIN_CODE):
+            for s in row.get("slots") or []:
+                if isinstance(s, dict) and s.get("entity_ref"):
+                    new_ref = rewrite_ref(s["entity_ref"])
+                    if new_ref is not None:
+                        learned_map[str(s["entity_ref"])] = new_ref
+        n_learned = await factory_repo.rewrite_learned_template_slot_refs(learned_map) if learned_map else 0
+
+        # 3) pps 引用改写
+        n_pps = 0
+        async with pg_manager.get_async_session_context() as session:
+            rows = (await session.execute(select(DomainFactoryReportPps))).scalars().all()
+            for row in rows:
+                new_ref = rewrite_ref(row.entity_key)
+                if new_ref is not None:
+                    row.entity_key = new_ref
+                    n_pps += 1
+            await session.commit()
+
+        # 4) 属性并集
+        tgt_props = [p for p in tgt_d.get("properties") or [] if isinstance(p, dict)]
+        tgt_names = {re.sub(r"\s+", "", str(p.get("name_cn") or "")) for p in tgt_props}
+        tgt_keys = {str(p.get("key") or "").casefold() for p in tgt_props}
+        moved = 0
+        for p in src_d.get("properties") or []:
+            if not isinstance(p, dict):
+                continue
+            pname = str(p.get("name_cn") or "").strip()
+            if not pname or re.sub(r"\s+", "", pname) in tgt_names:
+                continue
+            newp = dict(p)
+            k = str(newp.get("key") or "").strip() or "f_merged"
+            while k.casefold() in tgt_keys:
+                k = k + "_m"
+            tgt_keys.add(k.casefold())
+            newp["key"] = k
+            tgt_props.append(newp)
+            moved += 1
+
+        # 5) synonym 沉淀 + 保存 target
+        src_name = str(src_d.get("name_cn") or "").strip()
+        syns = [str(s or "").strip() for s in (tgt_d.get("synonyms") or []) if str(s or "").strip()]
+        if src_name and src_name not in syns:
+            syns.append(src_name)
+        await self.update_entity(tk, {"properties": tgt_props, "synonyms": syns}, force=True)
+
+        # 6) source 软删 + remap
+        await self.delete_entity(sk)
+        n_remap = await self._remap_waiting_review_tasks()
+        return {
+            "source": sk,
+            "target": tk,
+            "moved_props": moved,
+            "tasks_touched": n_tasks,
+            "learned_rewritten": n_learned,
+            "pps_rewritten": n_pps,
+            "remapped": n_remap,
+            "synonyms": syns,
+        }
+
+    async def merge_property_into(self, entity_key: str, source_key: str, target_key: str) -> dict[str, Any]:
+        """实体内属性归并（环评工程师 UI 操作）：source 属性并入 target 同实体属性。
+
+        引用改写（`{ek}.{source_key} → {ek}.{target_key}`）→ 删除 source 属性
+        → target synonyms 沉淀 source 的 name_cn 与 synonyms → remap。
+        """
+        if str(source_key).strip() == str(target_key).strip():
+            raise ValueError("源属性与目标属性相同")
+        ent = await self.repo.get_by_id_or_key(entity_key)
+        if not ent:
+            raise ValueError(f"实体 {entity_key} 不存在")
+        d = ent.to_dict()
+        props = [p for p in d.get("properties") or [] if isinstance(p, dict)]
+        src = next((p for p in props if p.get("key") == source_key), None)
+        tgt = next((p for p in props if p.get("key") == target_key), None)
+        if src is None or tgt is None:
+            raise ValueError("源属性或目标属性不存在")
+
+        from pisuan.repositories.domain_factory_repository import DomainFactoryRepository
+
+        ek = str(d["entity_key"])
+        old_ref, new_ref = f"{ek}.{source_key}", f"{ek}.{target_key}"
+        factory_repo = DomainFactoryRepository()
+
+        n_tasks = 0
+        for row in await factory_repo.list_usage_pending_tasks(GENERAL_DOMAIN_CODE):
+            paragraphs = row.get("source_paragraphs") or []
+            touched = False
+            for para in paragraphs:
+                t = para.get("template") if isinstance(para, dict) else None
+                if not isinstance(t, dict):
+                    continue
+                for s in t.get("slots") or []:
+                    if isinstance(s, dict) and s.get("entity_ref") == old_ref:
+                        s["entity_ref"] = new_ref
+                        touched = True
+            if touched:
+                await factory_repo.update_task(row["id"], {"source_paragraphs": paragraphs})
+                n_tasks += 1
+
+        learned_map = {old_ref: new_ref}
+        n_learned = await factory_repo.rewrite_learned_template_slot_refs(learned_map)
+
+        from sqlalchemy import select
+
+        from pisuan.storage.postgres.manager import pg_manager
+        from pisuan.storage.postgres.models_domain_factory import DomainFactoryReportPps
+
+        n_pps = 0
+        async with pg_manager.get_async_session_context() as session:
+            rows = (await session.execute(select(DomainFactoryReportPps))).scalars().all()
+            for row in rows:
+                if str(row.entity_key or "") == old_ref:
+                    row.entity_key = new_ref
+                    n_pps += 1
+            await session.commit()
+
+        new_props = [p for p in props if p.get("key") != source_key]
+        for p in new_props:
+            if p.get("key") == target_key:
+                syns = list(p.get("synonyms") or [])
+                sname = str(src.get("name_cn") or "").strip()
+                if sname and sname not in syns:
+                    syns.append(sname)
+                for s in src.get("synonyms") or []:
+                    s = str(s or "").strip()
+                    if s and s not in syns:
+                        syns.append(s)
+                p["synonyms"] = syns
+        await self.update_entity(entity_key, {"properties": new_props}, force=True)
+        n_remap = await self._remap_waiting_review_tasks()
+        return {
+            "entity": ek,
+            "source": source_key,
+            "target": target_key,
+            "tasks_touched": n_tasks,
+            "learned_rewritten": n_learned,
+            "pps_rewritten": n_pps,
+            "remapped": n_remap,
+        }
+
+
     async def list_trash(self, domain_code: str | None = None) -> dict[str, Any]:
         entities = await self.repo.list_deleted(domain_code)
         return {"entities": entities, "total": len(entities)}

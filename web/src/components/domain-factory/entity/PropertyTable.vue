@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { Info, Plus } from '@lucide/vue'
+import { domainEntityBuilderApi } from '@/apis/domain_entity_builder_api.js'
 
 // 属性数组由父级实体草稿持有：本组件只做增删改，不重新赋值整个数组
 const properties = defineModel('properties', { type: Array, default: () => [] })
@@ -27,11 +28,11 @@ const propertyColumns = [
   { title: '同义词', dataIndex: 'synonyms', key: 'synonyms', width: 130 },
   { title: '泛化 prompt', key: 'prompt', width: 110 },
   { title: '引用', key: 'usage', width: 90 },
-  { title: '操作', key: 'actions', width: 120 }
+  { title: '操作', key: 'actions', width: 158 }
 ]
 
 // 列多且每列都有最小可读宽度：右栏放不下时横向滚动，而不是把中文挤成两行
-const TABLE_SCROLL_X = 1340
+const TABLE_SCROLL_X = 1378
 
 const isPromptCovered = (record) =>
   Boolean(props.promptCoverage?.coveredRefs?.has(`${props.entityKey}.${record.key}`))
@@ -135,6 +136,50 @@ const undoRemoveProperty = () => {
   lastRemoved.value = null
 }
 
+// 属性归并：把语义重复的属性并入同实体的另一个属性（引用改写+原名沉淀同义词）
+const mergeModalVisible = ref(false)
+const mergeSource = ref(null)
+const mergeTargetKey = ref('')
+const mergeSubmitting = ref(false)
+
+const openMergeModal = (record, index) => {
+  mergeSource.value = { record, index }
+  mergeTargetKey.value = ''
+  mergeModalVisible.value = true
+}
+
+const mergeTargetOptions = computed(() =>
+  properties.value
+    .filter((p) => p?.key && p.key !== mergeSource.value?.record?.key)
+    .map((p) => ({ value: p.key, label: `${p.name_cn || p.key}（${p.key}）` }))
+)
+
+const confirmMergeProperty = async () => {
+  const source = mergeSource.value
+  if (!source || !mergeTargetKey.value) return
+  if (mergeSubmitting.value) return
+  mergeSubmitting.value = true
+  try {
+    await domainEntityBuilderApi.mergeProperty(props.entityKey, source.record.key, mergeTargetKey.value)
+    const target = properties.value.find((p) => p?.key === mergeTargetKey.value)
+    if (target) {
+      const syns = target.synonyms || []
+      const deposit = [source.record.name_cn, ...(source.record.synonyms || [])]
+        .map((s) => String(s || '').trim())
+        .filter((s) => s && !syns.includes(s))
+      target.synonyms = [...syns, ...deposit]
+    }
+    properties.value.splice(source.index, 1)
+    message.success('属性已归并：引用已改写，原属性名沉淀为同义词')
+    mergeModalVisible.value = false
+  } catch (e) {
+    console.error('属性归并失败', e)
+    message.error(e?.response?.data?.detail?.message || e?.response?.data?.detail || e?.message || '属性归并失败')
+  } finally {
+    mergeSubmitting.value = false
+  }
+}
+
 watch([() => props.entityKey, properties], () => {
   lastRemoved.value = null
 })
@@ -224,6 +269,27 @@ const handleSaveProperty = () => {
         进 prompt。未进的属性不会被泛化命中，可在「分类管理」里把本分类前移，或精简候选。
       </span>
     </div>
+    <a-modal
+      v-model:open="mergeModalVisible"
+      title="合并属性（归一到目标属性）"
+      :confirm-loading="mergeSubmitting"
+      ok-text="确认合并"
+      cancel-text="取消"
+      @ok="confirmMergeProperty"
+    >
+      <p v-if="mergeSource" style="margin-bottom: 12px">
+        源属性：<b>{{ mergeSource.record.name_cn }}</b>（{{ mergeSource.record.key }}）
+      </p>
+      <a-select
+        v-model:value="mergeTargetKey"
+        style="width: 100%"
+        placeholder="选择要并入的目标属性"
+        :options="mergeTargetOptions"
+      />
+      <p style="margin-top: 12px; font-size: 12px; color: #999">
+        合并后源属性被删除，其引用自动改写到目标属性，原属性名沉淀为目标的同义词。
+      </p>
+    </a-modal>
     <div v-if="lastRemoved" class="undo-bar">
       <span>已从草稿中移除属性「{{ lastRemoved.name }}」，保存前可找回</span>
       <a-button type="link" size="small" @click="undoRemoveProperty">撤销</a-button>
@@ -239,6 +305,7 @@ const handleSaveProperty = () => {
         <template v-if="column.key === 'actions'">
           <a-space>
             <a-button type="link" size="small" @click="handleEditProperty(index)">编辑</a-button>
+            <a-button type="link" size="small" @click="openMergeModal(record, index)">合并</a-button>
             <a-button
               type="link"
               size="small"
