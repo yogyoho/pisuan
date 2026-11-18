@@ -505,6 +505,23 @@ export function useEntitySchemas() {
     }
   }
 
+  const mergeEntityInto = async (sourceEntityId, targetEntityId) => {
+    try {
+      const res = await domainEntityBuilderApi.mergeEntityInto(sourceEntityId, targetEntityId)
+      const data = res?.data || {}
+      message.success(
+        `归并完成：属性并入 ${data.moved_props || 0} 条；引用改写 任务 ${data.tasks_touched || 0}/模板 ${data.learned_rewritten || 0}/pps ${data.pps_rewritten || 0}`
+      )
+      if (selectedEntity.value?.entity_id === sourceEntityId) clearSelection()
+      await load({ preserveDraft: true })
+      return true
+    } catch (e) {
+      console.error('实体归并失败', e)
+      message.error(e?.message || '实体归并失败')
+      return false
+    }
+  }
+
   const cloneEntity = async (newKey, newName) => {
     if (!newKey || !newName) {
       message.error('请填写新实体键和名称')
@@ -650,6 +667,7 @@ export function useEntitySchemas() {
     save,
     removeEntity,
     cloneEntity,
+    mergeEntityInto,
     exportConfig,
     previewImport,
     importConfig,

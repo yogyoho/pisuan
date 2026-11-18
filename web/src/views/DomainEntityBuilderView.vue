@@ -58,6 +58,7 @@ const {
   removeEntity,
   fetchUsage,
   cloneEntity,
+  mergeEntityInto,
   exportConfig,
   previewImport,
   importConfig
@@ -80,6 +81,9 @@ const categoryManagerVisible = ref(false)
 const trashDrawerVisible = ref(false)
 const specVisible = ref(false)
 const pendingEntityKey = ref(null)
+const mergeModalVisible = ref(false)
+const mergeTargetKey = ref(null)
+const mergeSubmitting = ref(false)
 
 // ---- 脏状态守卫：切换实体/新建/克隆/导入/离开页面统一先确认 ----
 const confirmDiscard = () =>
@@ -180,6 +184,36 @@ const handleClone = async () => {
 
 const handleConfirmClone = async () => {
   if (await cloneEntity(cloneNewKey.value, cloneNewName.value)) cloneModalVisible.value = false
+}
+
+// 实体归并：当前实体整体并入目标实体（引用改写+属性并集+别名沉淀+当前实体进回收站）
+const handleMerge = async () => {
+  if (!draft.value) {
+    message.warning('请先选择一个实体')
+    return
+  }
+  if (!(await confirmDiscard())) return
+  mergeTargetKey.value = null
+  mergeModalVisible.value = true
+}
+
+const mergeTargetOptions = computed(() =>
+  schemas.value
+    .filter((item) => item.entity_id !== draft.value?.entity_id)
+    .map((item) => ({ value: item.entity_key, label: `${item.name_cn || item.entity_key}（${item.entity_key}）` }))
+)
+
+const handleConfirmMerge = async () => {
+  if (!mergeTargetKey.value) {
+    message.warning('请选择目标实体')
+    return
+  }
+  mergeSubmitting.value = true
+  try {
+    if (await mergeEntityInto(draft.value.entity_id, mergeTargetKey.value)) mergeModalVisible.value = false
+  } finally {
+    mergeSubmitting.value = false
+  }
 }
 
 const handleViewJson = () => {
@@ -381,6 +415,7 @@ watch(
           @clone="handleClone"
           @view-json="handleViewJson"
           @delete="handleDelete"
+          @merge="handleMerge"
         />
       </div>
     </div>
@@ -400,6 +435,30 @@ watch(
           不参与导入）
         </p>
       </a-upload-dragger>
+    </a-modal>
+
+    <!-- 实体归并弹窗 -->
+    <a-modal
+      v-model:open="mergeModalVisible"
+      title="合并实体（归并到目标实体）"
+      :confirm-loading="mergeSubmitting"
+      ok-text="确认归并"
+      cancel-text="取消"
+      @ok="handleConfirmMerge"
+    >
+      <p style="margin-bottom: 12px">
+        把当前实体「<b>{{ draft?.name_cn }}</b>」（{{ draft?.entity_key }}）整体并入：
+      </p>
+      <a-select
+        v-model:value="mergeTargetKey"
+        style="width: 100%"
+        show-search
+        placeholder="选择目标实体"
+        :options="mergeTargetOptions"
+      />
+      <p style="margin-top: 12px; font-size: 12px; color: #999">
+        归并后：未重复的属性并入目标；本实体的槽位/报告参数引用改写到目标；中文名沉淀为目标的别名；本实体进入回收站（可恢复）。
+      </p>
     </a-modal>
 
     <!-- 克隆弹窗 -->

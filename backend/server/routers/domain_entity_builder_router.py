@@ -266,6 +266,53 @@ async def clone_entity(
         raise HTTPException(status_code=500, detail=f"克隆实体失败: {e}")
 
 
+@domain_entity_builder.post("/entities/{identifier}/merge-into")
+async def merge_entity_into(
+    identifier: str,
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """实体归并：把 identifier 实体整体并入 target（引用改写 + 属性并集 + synonym 沉淀 + 软删）"""
+    try:
+        target = str(payload.get("target") or "").strip()
+        if not target:
+            raise HTTPException(status_code=400, detail="target 不能为空")
+        service = get_entity_service()
+        result = await service.merge_entity_into(identifier, target)
+        return {"success": True, "message": "实体归并完成", "data": result}
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to merge entity {identifier}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"实体归并失败: {e}")
+
+
+@domain_entity_builder.post("/entities/{identifier}/merge-property")
+async def merge_property(
+    identifier: str,
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """实体内属性归并：source 属性并入 target（引用改写 + 删除 source + synonym 沉淀）"""
+    try:
+        source_key = str(payload.get("source_key") or "").strip()
+        target_key = str(payload.get("target_key") or "").strip()
+        if not source_key or not target_key:
+            raise HTTPException(status_code=400, detail="source_key 和 target_key 不能为空")
+        service = get_entity_service()
+        result = await service.merge_property_into(identifier, source_key, target_key)
+        return {"success": True, "message": "属性归并完成", "data": result}
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to merge property {identifier}.{source_key}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"属性归并失败: {e}")
+
+
 @domain_entity_builder.post("/entities/import-extracted")
 async def import_extracted_entities(
     payload: dict[str, Any] = Body(...),
