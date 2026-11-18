@@ -10,6 +10,7 @@ from yuxi.repositories.domain_entity_category_repository import DomainEntityCate
 from yuxi.repositories.domain_entity_repository import DomainEntityRepository
 from yuxi.repositories.domain_factory_repository import GENERAL_DOMAIN_CODE
 from yuxi.utils import logger
+from yuxi.services.normalization_inventory_sync import schedule_sync
 from yuxi.utils.datetime_utils import format_utc_datetime, utc_now_naive
 
 VALID_VALUE_TYPES = ("String", "Integer", "Float", "Boolean", "Enum", "Object", "List")
@@ -228,6 +229,7 @@ class DomainEntityService:
         data["properties"] = self.normalize_properties(data.get("properties") or [])
 
         entity = await self.repo.create(data)
+        schedule_sync()
         return entity.to_dict()
 
     async def update_entity(
@@ -258,6 +260,7 @@ class DomainEntityService:
         remapped = await self._remap_waiting_review_tasks()
         if remapped:
             logger.info(f"实体 {identifier} 更新后重映射 {remapped} 个待审核任务")
+        schedule_sync()
         return updated.to_dict()
 
     async def delete_entity(self, identifier: str) -> bool:
@@ -265,7 +268,9 @@ class DomainEntityService:
         entity = await self.repo.get_by_id_or_key(identifier)
         if not entity:
             raise ValueError(f"实体 {identifier} 不存在")
-        return await self.repo.soft_delete(entity.entity_id)
+        result = await self.repo.soft_delete(entity.entity_id)
+        schedule_sync()
+        return result
 
     async def merge_entity_into(self, source_key: str, target_key: str) -> dict[str, Any]:
         """实体归并（环评工程师 UI 操作）：source 整体并入 target。
@@ -497,6 +502,7 @@ class DomainEntityService:
                     f"再回到回收站恢复。"
                 )
         await self.repo.restore(entity.entity_id)
+        schedule_sync()
         return (await self.repo.get_by_id(entity.entity_id)).to_dict()
 
     async def purge_entity(self, identifier: str) -> bool:
