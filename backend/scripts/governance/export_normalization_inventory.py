@@ -52,6 +52,27 @@ async def run() -> None:
         if ek:
             pps_refs[ek.partition(".")[0]] += 1
 
+    # 语料出处：Route B 原始切片（project_eia 211 片）按属性名精确匹配。
+    # 规划/验收/追踪阶段切片不在池内，出处覆盖是子集——md 中有说明。
+    corpus_sources: dict[str, set[str]] = defaultdict(set)
+    slices_dir = Path("/tmp/route-b/slices")
+    if slices_dir.is_dir():
+        for f in slices_dir.glob("*.json"):
+            try:
+                d = json.loads(f.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            rel = str(d.get("rel") or "")
+            m = re.search(r"__([0-9]+)\.md$", rel)
+            chapter = f"ch{m.group(1)}" if m else ""
+            report = rel.split("/")[-1].split("__")[0]
+            where = f"{report}/{chapter}" if chapter else report
+            for obj in d.get("objects") or []:
+                for pr in obj.get("properties") or []:
+                    nm = norm(pr.get("name_cn") or "")
+                    if nm:
+                        corpus_sources[nm].add(where)
+
     # 候选来源（存在才并入；不存在则该节标注未生成）
     prop_cand = json.loads(Path("/tmp/normalization-report.json").read_text(encoding="utf-8")) if Path(
         "/tmp/normalization-report.json"
@@ -132,8 +153,15 @@ async def run() -> None:
     lines.append("## 三、属性归一化候选（内聚同族，环评师逐组确认）")
     lines.append("")
     proposals = prop_cand.get("proposals") or []
+    # 语料出处挂到成员（norm 精确匹配 Route B 切片属性名）
+    for pr in proposals:
+        for m in pr["members"]:
+            src = sorted(corpus_sources.get(norm(m["from"]), set()))
+            m["sources"] = src[:6]
+            m["n_sources"] = len(src)
     lines.append(f"共 {len(proposals)} 组。每组：规范名（组内最高频）← 变体；确认合并的组标「合并」，")
     lines.append("不确认的组保持原样。合并动作 = 变体改名 + 原名挂 synonym + 引用改写（引用不悬空）。")
+    lines.append("成员行附语料出处（Route B project_eia 211 切片池内精确匹配；planning/tracking 未入池，无出处≠无依据）。")
     lines.append("")
     for idx, pr in enumerate(proposals, 1):
         lines.append(f"### 候选 {idx}：规范名「{pr['canonical']}」（{pr.get('type')}，{pr['n_entities']} 实体/{pr['n_props']} 条）")
@@ -143,7 +171,10 @@ async def run() -> None:
         lines.append("成员：")
         for m in pr["members"]:
             mark = "N（同实体已有规范名，跳过）" if m["action"] == "skip" else " "
-            lines.append(f"- [{mark}] `{m['ref']}`：{m['from']} → {m['to']}")
+            src_note = ""
+            if m.get("n_sources"):
+                src_note = f"  语料出处（{m['n_sources']} 切片，project_eia 池）: {'、'.join(m['sources'])}"
+            lines.append(f"- [{mark}] `{m['ref']}`：{m['from']} → {m['to']}{src_note}")
         lines.append("- [ ] 本组确认合并：Y/N")
         lines.append("")
 
