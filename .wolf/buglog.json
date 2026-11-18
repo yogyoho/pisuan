@@ -12664,5 +12664,24 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-11-17"
+  },
+  {
+    "id": "bug-4299",
+    "timestamp": "2026-11-18",
+    "error_message": "docker cp 误将 regulation_library/router.py 覆盖到挂载路径 /app/server/routers/domain_entity_builder_router.py——/app 是宿主机 backend 的 bind mount，宿主机文件被连带覆盖，合并端点内容丢失",
+    "file": "backend/server/routers/domain_entity_builder_router.py",
+    "root_cause": "docker cp 目标路径写错 + 对 bind mount 无感知：容器内 /app 路径即宿主机 backend 目录，cp 即写宿主文件；且覆盖后恢复命令又把已污染的宿主文件拷回（二次无效）",
+    "fix": "git checkout HEAD 恢复宿主文件（合并端点在 0b1ad2f4b 提交里），再 docker cp 正确内容到容器；教训：向挂载容器 docker cp 必须先核对目标路径与宿主路径一一对应，覆盖前 git status 确认可恢复",
+    "tags": [
+      "docker-cp",
+      "bind-mount",
+      "file-clobber",
+      "recovery"
+    ],
+    "related_bugs": [
+      "bug-4290"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-18"
   }
 ]
