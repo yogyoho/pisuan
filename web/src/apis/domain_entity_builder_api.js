@@ -93,8 +93,8 @@ export const domainEntityBuilderApi = {
     })
   },
 
-  // 归并：实体内 source 属性并入 target（引用改写+删除 source+name/synonyms 沉淀）
-  mergeProperty: (entityId, sourceKey, targetKey) => {
+  // 归并：实体内 source 属性并入 target（引用改写+删除 source+name/synonyms 沉淀；返回 entity_state 供前端同步乐观锁版本）
+  mergePropertyInto: (entityId, sourceKey, targetKey) => {
     return apiAdminPost(`/api/domain-entity-builder/entities/${entityId}/merge-property`, {
       source_key: sourceKey,
       target_key: targetKey

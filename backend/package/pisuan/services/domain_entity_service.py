@@ -455,12 +455,13 @@ class DomainEntityService:
                     if s and s not in syns:
                         syns.append(s)
                 p["synonyms"] = syns
-        await self.update_entity(entity_key, {"properties": new_props}, force=True)
+        fresh = await self.update_entity(entity_key, {"properties": new_props}, force=True)
         n_remap = await self._remap_waiting_review_tasks()
         return {
             "entity": ek,
             "source": source_key,
             "target": target_key,
+            "entity_state": fresh,
             "tasks_touched": n_tasks,
             "learned_rewritten": n_learned,
             "pps_rewritten": n_pps,
