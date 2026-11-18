@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 from pisuan.extensions.regulation_library.structured_channel import call_structured
 from pisuan.utils import logger
 
-TableRole = Literal["limit", "method", "criteria", "param", "other"]
+TableRole = Literal["limit", "method", "criteria", "param", "taxonomy", "other"]
 
 # 快路径规则：按工单顺序先到先得（limit 优先与真实标准表相符：限值表常附测定方法列）
 _TITLE_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
@@ -26,6 +26,7 @@ _TITLE_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("method", ("分析方法", "测定方法", "检出")),
     ("criteria", ("判据", "等级", "分级")),
     ("param", ("参数", "系数")),
+    ("taxonomy", ("现状分类", "分类与编码", "分类代码", "类别编码")),
 )
 
 _EXCERPT_CAP = 1500
@@ -42,6 +43,8 @@ _PROMPT = """你是标准规范库的表类型判别器。判断标准文档《{
 - method（方法表）：分析/测定方法及检出限，因子→方法名→方法标准号。
 - criteria（判据表）：评价等级/级别划分判据。
 - param（参数表）：工艺/计算参数或系数。
+- taxonomy（分类编码表）：每行可归约为 {类别代码, 名称, 含义/定义}，用于地类/物种/类别等
+  字典查询（如土地利用现状分类的 01 耕地 / 011 水浇地），不含限值判定。
 - other：以上都不是或无法确定。
 
 反信号：数值列语义为检出浓度/回收率/效率/系数，或标题含采样/布点/分析方法的，不是 limit。

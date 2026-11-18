@@ -14,6 +14,7 @@ from sqlalchemy import text as sql_text
 from pisuan.extensions.regulation_library import indicator_extractor
 from pisuan.extensions.regulation_library.graph_writer import RegulationGraphWriter
 from pisuan.extensions.regulation_library.models import ensure_schema
+from pisuan.extensions.regulation_library.taxonomy_extractor import extract_taxonomy_rows, row_id
 from pisuan.extensions.regulation_library.table_role_classifier import (
     TableRoleClassifier,
     classify_table_role_by_title,
@@ -29,7 +30,7 @@ from pisuan.storage.postgres.models_knowledge import KnowledgeFile
 from pisuan.utils import logger
 from pisuan.utils.datetime_utils import format_utc_datetime
 
-_ALL_ROLES = ("limit", "method", "criteria", "param", "other")
+_ALL_ROLES = ("limit", "method", "criteria", "param", "taxonomy", "other")
 _CONTINUATION_RE = re.compile(r"[（(]续[)）]\s*$")  # 续表 unit_no 后缀（表N（续）），半/全角括号兼容
 _MANUAL_MAX_ROWS = 500  # 手工单次录入行数上限（防误传超大载荷）
 _MANUAL_UNIT_NO = "手录"  # 手工行统一表单元号
@@ -696,6 +697,7 @@ async def enrich_regulation_file(
     tag_updates: dict[str, dict[str, Any]] = {}  # 单表 chunk_id -> 追加 tags（所有表格都带 table_role）
     unit_tags_by_chunk: dict[str, list[dict[str, Any]]] = {}  # 多表 chunk_id -> table_units 清单
     all_indicators: list[dict] = []
+    all_taxonomy_rows: list[dict] = []
     role_memo: dict[str, str] = {}  # unit_no -> role；续表（表N（续））按主表序号继承角色，不重复走 LLM
     for chunk_id, unit_no, title, content in table_chunks:
         role = classify_table_role_by_title(title)
@@ -714,6 +716,12 @@ async def enrich_regulation_file(
                 r["unit_no"] = unit_no
                 r["chunk_id"] = chunk_id
             all_indicators.extend(rows)
+        elif role == "taxonomy":
+            tax_rows = extract_taxonomy_rows(content)
+            for r in tax_rows:
+                r["unit_no"] = unit_no
+                r["chunk_id"] = chunk_id
+            all_taxonomy_rows.extend(tax_rows)
         elif role == "method":
             unit_tag["method_map"] = await indicator_extractor.extract_method_mappings(doc_code, unit_no, content)
         if chunk_id in multi_table_chunk_ids:
@@ -766,6 +774,32 @@ async def enrich_regulation_file(
                     },
                 )
 
+    if all_taxonomy_rows:
+        async with pg_manager.get_async_session_context() as session:
+            # 幂等：按 (doc_code, code) upsert，续表/重跑覆盖不重复
+            for r in all_taxonomy_rows:
+                await session.execute(
+                    sql_text(
+                        "INSERT INTO eia_taxonomy_rows "
+                        "(id, doc_code, unit_no, chunk_id, code, name, meaning, parent_code) "
+                        "VALUES (:id, :doc, :uno, :cid, :code, :name, :meaning, :pcode) "
+                        "ON CONFLICT (doc_code, code) DO UPDATE SET "
+                        "name = EXCLUDED.name, meaning = EXCLUDED.meaning, "
+                        "unit_no = EXCLUDED.unit_no, chunk_id = EXCLUDED.chunk_id, "
+                        "parent_code = EXCLUDED.parent_code"
+                    ),
+                    {
+                        "id": row_id(doc_code, r["code"]),
+                        "doc": doc_code,
+                        "uno": r.get("unit_no"),
+                        "cid": r.get("chunk_id"),
+                        "code": r["code"],
+                        "name": r.get("name") or "",
+                        "meaning": r.get("meaning") or "",
+                        "pcode": r.get("parent_code") or "",
+                    },
+                )
+
     # 4. 确定性建图
     writer = RegulationGraphWriter()
     try:
@@ -778,6 +812,7 @@ async def enrich_regulation_file(
         "units": len(units),
         "tables": len(table_chunks),
         "indicators": len(all_indicators),
+        "taxonomy_rows": len(all_taxonomy_rows),
         "table_roles": role_counts,
         "graph": graph_stats,
     }

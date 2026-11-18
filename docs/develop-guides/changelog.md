@@ -22,6 +22,8 @@
 
 ### 功能与修复
 
+- feat(regulation-library): 分类编码表（taxonomy）结构化——判别器新角色/拆行入库/查表校验端点。判别器新增 taxonomy 角色（标题快路径「现状分类/分类与编码/分类代码/类别编码」+ LLM 类型定义「每行归约为 {类别代码, 名称, 含义}」）；新模块 `taxonomy_extractor.py`：正则取行取格 + rowspan占位网格展开（rowspan 的父级编码自然延续到二级类行，行取最后一个编码=最具体类别，parent 取前缀），零新依赖；`enrich_regulation_file` taxonomy 分支拆行 upsert 入新表 eia_taxonomy_rows（(doc_code, code) 唯一，续表/重跑覆盖不重复）；路由 GET /regulation-library/taxonomy/rows（按 doc_code/q 代码与名称/含义子串查询，供写作链路查表校验地类代码）。实测 GB/T 21010-2017：71 行入库（12 一级类 + 59 二级类，parent 归属全对；标准全量 73 二级类，差额为解析层个别跨页行缺失——另案核查解析质量），0102 水浇地查询返回正确含义。表格分类卡片显示修复（单表 chunk 标量标签计数，47fa89080）后 9 张表 table_role=other/taxonomy 浮出。
+
 - feat(knowledge): 表格型文档自动检测切换 table 分片预设 + 标准规范库批量重入库。问题：表格型国标（如《土地利用现状分类》GB/T 21010-2017，解析 markdown 表格占比 83%、9 个 <table> 完整）在 semantic 预设下被 token 切分拦腰打碎，下游提取不到完整表格指标。修复：dispatcher 新增 `auto_select_table_preset`（表格字符占比 ≥30% 且 ≥1 个 <table> 块、用户未显式指定预设、未自动切换过 → 自动切 table 预设，幂等标记 chunk_preset_auto），milvus 与 lightrag 两个实现的分片入口接入；实测同文档 semantic 39 chunk 零整表 vs table 16 chunk 含 9 个整表块（表1 1701 字完整含水浇地/旱地/含义列，续表自动带标题）。批量：`switch_table_preset_kb44.py` 对环评引用标准规范库（kb_yn2req38m2）表格占比 ≥30% 的18 个文件切换预设并重新入库（可续跑：跳过已完成），叙述型 12 个保持 semantic 不动；扫描工具可复算各文件表格占比。单测 4 用例（阈值/显式优先/幂等）。运维教训：API 容器中途被宿主内存压力重启过一次，批处理脚本需自带可续跑能力（本批已内置）。
 
 - feat(domain-entity): 实体变更后归一化全集自动同步 Gitea。新建 `normalization_inventory_sync`：create/update/delete/restore 四个变更点触发（归并/属性归并内部走 update_entity 自动覆盖），防抖 20 秒合并连续操作，后台依次跑 聚类校验→归并候选→全集导出→Gitea 发布 四段链（逐步超时 600s）。失败隔离：链上任何失败只告警不影响实体保存，下次变更自动重试；PYTEST 环境自动禁用（单测 4 用例：防抖合并/失败隔离/PYTEST 禁用/启用判断）。手动触发口：`scripts/governance/sync_normalization_inventory.py`（同一四段链）。工程师侧 gitea 全集清单从此跟随实体编辑自动保持最新。

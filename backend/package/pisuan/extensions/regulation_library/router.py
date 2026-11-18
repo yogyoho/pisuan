@@ -5,7 +5,7 @@ from __future__ import annotations
 import traceback
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
 
 from server.utils.auth_middleware import get_admin_user
 from pisuan.extensions.regulation_library import enrichment_service
@@ -13,6 +13,76 @@ from pisuan.storage.postgres.models_business import User
 from pisuan.utils import logger
 
 regulation_library = APIRouter(prefix="/regulation-library", tags=["Regulation Library"])
+
+
+@regulation_library.get("/documents")
+async def list_documents(
+    kb_id: str | None = Query(None, description="标准规范库知识库 ID；省略时读取全局绑定"),
+    keyword: str | None = Query(None),
+    process_status: str | None = Query(None),
+    run_status: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """列出规范文档、加工状态与指标分层统计。"""
+    bound_kb_id = await enrichment_service.get_bound_kb_id()
+    if kb_id and kb_id != bound_kb_id:
+        raise HTTPException(status_code=400, detail="kb_id 与当前部署绑定的标准规范库不一致")
+    try:
+        resolved_kb_id = bound_kb_id
+        if not resolved_kb_id:
+            return {
+                "kb_id": "",
+                "bound": False,
+                "items": [],
+                "total": 0,
+                "page": page,
+                "page_size": page_size,
+                "summary": {
+                    "documents": 0,
+                    "enriched": 0,
+                    "indexed": 0,
+                    "empty": 0,
+                    "indicators": 0,
+                    "verified": 0,
+                    "process_status_counts": {},
+                    "run_status_counts": {},
+                },
+            }
+        return await enrichment_service.list_regulation_documents(
+            resolved_kb_id,
+            keyword=keyword,
+            process_status=process_status,
+            run_status=run_status,
+            page=page,
+            page_size=page_size,
+        )
+    except Exception as e:
+        logger.error(f"规范文档列表查询失败: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"规范文档列表查询失败: {str(e)}")
+
+
+@regulation_library.get("/kb/binding")
+async def get_binding(current_user: User = Depends(get_admin_user)) -> dict[str, Any]:
+    """读取当前部署绑定的标准规范库。"""
+    return {"kb_id": await enrichment_service.get_bound_kb_id()}
+
+
+@regulation_library.post("/kb/bind")
+async def bind_knowledge_base(
+    payload: dict[str, Any] = Body(...),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """手动绑定当前部署的标准规范库。"""
+    try:
+        kb_id = await enrichment_service.bind_kb(payload.get("kb_id") or "", current_user.username)
+        return {"success": True, "kb_id": kb_id}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"规范库绑定失败: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"规范库绑定失败: {str(e)}")
 
 
 @regulation_library.post("/enrich")
@@ -29,17 +99,98 @@ async def enrich_file(
         doc_type = payload.get("doc_type", "technical_standard")
         if not kb_id or not file_id or not doc_code:
             raise HTTPException(status_code=400, detail="kb_id/file_id/doc_code 必填")
-        result = await enrichment_service.enrich_regulation_file(kb_id, file_id, doc_code, doc_name, doc_type)
+        bound_kb_id = await enrichment_service.get_bound_kb_id()
+        if kb_id != bound_kb_id:
+            raise HTTPException(status_code=400, detail="kb_id 与当前部署绑定的标准规范库不一致")
+        run_id = await enrichment_service.start_enrich_run(
+            kb_id,
+            file_id,
+            doc_code,
+            doc_name,
+            doc_type,
+            current_user.username,
+        )
+        try:
+            result = await enrichment_service.enrich_regulation_file(kb_id, file_id, doc_code, doc_name, doc_type)
+        except enrichment_service.StandardConflictError as e:
+            await enrichment_service.finish_enrich_run(run_id, "conflict", error_message=str(e))
+            raise
+        except Exception as e:
+            await enrichment_service.finish_enrich_run(run_id, "failed", error_message=str(e))
+            raise
         if "error" in result:
-            raise HTTPException(status_code=400, detail=result["error"])
+            error = str(result["error"])
+            await enrichment_service.finish_enrich_run(run_id, "failed", error_message=error)
+            raise HTTPException(status_code=400, detail=error)
+        await enrichment_service.finish_enrich_run(run_id, "success", result=result)
         return {"success": True, "result": result}
     except HTTPException:
         raise
     except enrichment_service.StandardConflictError as e:
         raise HTTPException(status_code=409, detail=str(e))
+    except enrichment_service.EnrichRunInProgressError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except Exception as e:
         logger.error(f"规范富化失败: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"富化失败: {str(e)}")
+
+
+@regulation_library.get("/documents/{file_id}/detail")
+async def get_document_detail(
+    kb_id: str = Query(..., description="标准规范库知识库 ID"),
+    file_id: str = Path(..., description="规范文档文件 ID"),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """返回单份规范的结构单元、表格分类、指标预览与运行历史。"""
+    try:
+        bound_kb_id = await enrichment_service.get_bound_kb_id()
+        if kb_id != bound_kb_id:
+            raise HTTPException(status_code=400, detail="kb_id 与当前部署绑定的标准规范库不一致")
+        result = await enrichment_service.get_regulation_document_detail(kb_id, file_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="规范文档不存在")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"规范文档详情查询失败: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"规范文档详情查询失败: {str(e)}")
+
+
+@regulation_library.get("/taxonomy/rows")
+async def list_taxonomy_rows(
+    kb_id: str = Query(...),
+    doc_code: str | None = Query(None),
+    q: str | None = Query(None, description="按代码或名称精确/子串匹配"),
+    current_user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    """分类编码表行查询：写作链路查表校验（如地类代码 011 → 水浇地）"""
+    try:
+        await enrichment_service.ensure_schema()
+        from sqlalchemy import text
+
+        from pisuan.storage.postgres.manager import pg_manager
+
+        conditions = ["1=1"]
+        params: dict[str, Any] = {}
+        if doc_code:
+            conditions.append("doc_code = :doc_code")
+            params["doc_code"] = doc_code
+        if q:
+            conditions.append("(code = :q OR name ILIKE :q_like OR meaning ILIKE :q_like)")
+            params["q"] = q
+            params["q_like"] = f"%{q}%"
+        where = " AND ".join(conditions)
+        sql = (
+            f"SELECT code, name, meaning, parent_code, doc_code, unit_no FROM eia_taxonomy_rows "
+            f"WHERE {where} ORDER BY code LIMIT 500"
+        )
+        async with pg_manager.get_async_session_context() as session:
+            rows = (await session.execute(text(sql), params)).mappings().all()
+        return {"items": [dict(r) for r in rows], "total": len(rows)}
+    except Exception as e:
+        logger.error(f"分类表查询失败: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"查询失败: {str(e)}")
 
 
 @regulation_library.get("/indicators")
