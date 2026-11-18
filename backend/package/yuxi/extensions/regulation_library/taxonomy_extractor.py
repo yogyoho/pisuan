@@ -82,25 +82,32 @@ def extract_taxonomy_rows(table_html: str) -> list[dict[str, Any]]:
         codes = [c for c in cells if _CODE_RE.match(c)]
         if not codes:
             continue  # 表头行 / 无编码残片
-        # 取最后一个编码 = 本行最具体的类别（rowspan 展开后父级编码会复制到二级类行）
-        code = codes[-1]
-        idx = len(cells) - 1 - cells[::-1].index(code)
-        rest = [c for c in cells[idx + 1 :] if c and c not in _HEADER_WORDS]
-        if not rest:
-            continue
-        name = rest[0]
-        meaning = rest[-1] if len(rest) > 1 else ""
-        if code in seen:
-            continue
-        seen.add(code)
-        rows.append(
-            {
-                "code": code,
-                "name": name,
-                "meaning": meaning,
-                "parent_code": code[:2] if len(code) > 2 else "",
-            }
-        )
+        # 行内每个编码各产出一条：rowspan 展开后，父级（一级类）与子级（二级类）同处一行网格。
+        # 最深编码：name=紧邻后格、meaning=末格；父级编码：name=紧邻后格、meaning 留空
+        #（该行含义列属于最深子级，父级含义不可归因）。
+        deepest = codes[-1]
+        for code in codes:
+            if code in seen:
+                continue
+            idx = len(cells) - 1 - cells[::-1].index(code)
+            after = [c for c in cells[idx + 1 :] if c and c not in _HEADER_WORDS]
+            if not after:
+                continue
+            if code == deepest:
+                name = after[0]
+                meaning = after[-1] if len(after) > 1 else ""
+            else:
+                name = cells[idx + 1] if idx + 1 < len(cells) else ""
+                meaning = ""
+            seen.add(code)
+            rows.append(
+                {
+                    "code": code,
+                    "name": name,
+                    "meaning": meaning,
+                    "parent_code": code[:2] if len(code) > 2 else "",
+                }
+            )
     return rows
 
 
