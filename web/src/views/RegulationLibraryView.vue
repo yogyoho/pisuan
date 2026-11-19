@@ -180,13 +180,14 @@ const closeDetail = () => {
   }
 }
 
-const loadPdfPreview = async (record) => {
+const loadPdfPreview = async () => {
   pdfUrl.value = ''
   pdfError.value = ''
-  if (detail.value?.file?.file_type !== 'pdf') return
+  const file = detail.value?.file
+  if (!file || file.file_type !== 'pdf') return
   pdfLoading.value = true
   try {
-    const res = await regulationApi.getPdfResponse(record.kb_id, record.file_id)
+    const res = await regulationApi.getPdfResponse(file.kb_id, file.file_id)
     const blob = await res.blob()
     if (blob.type && !blob.type.includes('pdf')) throw new Error('响应不是 PDF')
     pdfUrl.value = URL.createObjectURL(blob)
@@ -205,9 +206,9 @@ const openDetail = async (record) => {
   taxonomyRows.value = []
   taxonomyQuery.value = ''
   loadTaxonomyRows(record)
-  loadPdfPreview(record)
   try {
     detail.value = await regulationApi.getDocumentDetail(record.kb_id, record.file_id)
+    await loadPdfPreview()
   } catch (e) {
     message.error('加载加工详情失败: ' + (e.message || '未知错误'))
   } finally {

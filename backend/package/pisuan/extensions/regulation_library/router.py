@@ -216,8 +216,9 @@ async def list_taxonomy_rows(
 
         from pisuan.storage.postgres.manager import pg_manager
 
-        conditions = ["kb_id = :kb_id"]
-        params: dict[str, Any] = {"kb_id": kb_id}
+        # eia_taxonomy_rows 无 kb_id 列（doc_code 即作用域键，跨库唯一）；kb_id 参数仅作 API 兼容保留
+        conditions = ["1=1"]
+        params: dict[str, Any] = {}
         if doc_code:
             conditions.append("doc_code = :doc_code")
             params["doc_code"] = doc_code
