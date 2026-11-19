@@ -1,7 +1,7 @@
 /**
  * 标准规范库 API (pisuan 扩展)
  */
-import { apiAdminGet, apiAdminPost } from '@/apis/base'
+import { apiAdminGet, apiAdminPost, apiGet } from '@/apis/base'
 
 export const regulationApi = {
   getBinding: () => apiAdminGet('/api/regulation-library/kb/binding'),
@@ -22,6 +22,10 @@ export const regulationApi = {
     ),
 
   enrichFile: (payload) => apiAdminPost('/api/regulation-library/enrich', payload),
+
+  /** 原文 PDF 代理流（返回 Response，blob 供 iframe 预览） */
+  getPdfResponse: (kbId, fileId) =>
+    apiGet(`/api/regulation-library/files/${encodeURIComponent(fileId)}/pdf?kb_id=${encodeURIComponent(kbId)}`, {}, true, 'blob'),
 
   listIndicators: (params = {}) => {
     const qs = new URLSearchParams(

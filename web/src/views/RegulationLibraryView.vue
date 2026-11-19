@@ -168,6 +168,35 @@ const formatTime = (value) => {
   return new Date(value).toLocaleString('zh-CN', { hour12: false })
 }
 
+const pdfUrl = ref('')
+const pdfLoading = ref(false)
+const pdfError = ref('')
+
+const closeDetail = () => {
+  detailOpen.value = false
+  if (pdfUrl.value) {
+    URL.revokeObjectURL(pdfUrl.value)
+    pdfUrl.value = ''
+  }
+}
+
+const loadPdfPreview = async (record) => {
+  pdfUrl.value = ''
+  pdfError.value = ''
+  if (detail.value?.file?.file_type !== 'pdf') return
+  pdfLoading.value = true
+  try {
+    const res = await regulationApi.getPdfResponse(record.kb_id, record.file_id)
+    const blob = await res.blob()
+    if (blob.type && !blob.type.includes('pdf')) throw new Error('响应不是 PDF')
+    pdfUrl.value = URL.createObjectURL(blob)
+  } catch (e) {
+    pdfError.value = e?.message || '原文加载失败'
+  } finally {
+    pdfLoading.value = false
+  }
+}
+
 const openDetail = async (record) => {
   detailOpen.value = true
   detailLoading.value = true
@@ -176,6 +205,7 @@ const openDetail = async (record) => {
   taxonomyRows.value = []
   taxonomyQuery.value = ''
   loadTaxonomyRows(record)
+  loadPdfPreview(record)
   try {
     detail.value = await regulationApi.getDocumentDetail(record.kb_id, record.file_id)
   } catch (e) {
@@ -603,12 +633,27 @@ onMounted(async () => {
     <a-modal
       :open="detailOpen"
       :title="detail?.file?.filename || '加工详情'"
-      width="920px"
+      width="1560px"
       :footer="null"
-      @cancel="detailOpen = false"
+      @cancel="closeDetail"
     >
       <a-spin :spinning="detailLoading">
         <template v-if="detail">
+          <div class="detail-body">
+            <div class="pdf-pane">
+              <div class="pdf-pane-head">原文预览</div>
+              <div v-if="pdfLoading" class="pdf-placeholder">加载原文中…</div>
+              <div v-else-if="pdfError" class="pdf-placeholder pdf-error">{{ pdfError }}</div>
+              <iframe
+                v-else-if="pdfUrl"
+                :src="pdfUrl"
+                class="pdf-frame"
+                title="原文 PDF 预览"
+              ></iframe>
+              <div v-else class="pdf-placeholder">本文件无 PDF 原文</div>
+            </div>
+
+            <div class="detail-main">
           <div class="meta-ident">
             <span class="name">{{ detail.doc_codes[0] || '未编号' }}</span>
             <span
@@ -784,6 +829,8 @@ onMounted(async () => {
               <a-empty v-if="!detail.runs.length" description="暂无持久化运行记录" />
             </a-tab-pane>
           </a-tabs>
+            </div>
+          </div>
         </template>
         <a-empty v-else-if="!detailLoading" description="详情加载失败" />
       </a-spin>
@@ -1188,6 +1235,28 @@ onMounted(async () => {
 .meaning-cell.open {
   display: block; -webkit-line-clamp: unset; overflow: visible;
   color: inherit;
+}
+
+
+/* 详情弹窗：左 PDF 预览 / 右结构化内容 */
+.detail-body { display: flex; gap: 14px; align-items: stretch; }
+.pdf-pane { flex: 0 0 46%; min-width: 430px; display: flex; flex-direction: column; }
+.pdf-pane-head {
+  font-size: 12.5px; color: #6d7286; font-weight: 600;
+  margin-bottom: 6px; letter-spacing: 0.02em;
+}
+.pdf-frame { width: 100%; height: 74vh; border: 1px solid rgba(22, 22, 51, 0.18); border-radius: 8px; background: #525659; }
+.pdf-placeholder {
+  height: 74vh; display: flex; align-items: center; justify-content: center;
+  border: 1px dashed rgba(22, 22, 51, 0.18); border-radius: 8px;
+  color: #6d7286; font-size: 13px;
+}
+.pdf-placeholder.pdf-error { color: #b42318; }
+.detail-main { flex: 1 1 0; min-width: 0; overflow-y: auto; max-height: 78vh; padding-right: 4px; }
+@media (max-width: 1100px) {
+  .detail-body { flex-direction: column; }
+  .pdf-pane { min-width: 0; }
+  .pdf-frame, .pdf-placeholder { height: 52vh; }
 }
 
 </style>
