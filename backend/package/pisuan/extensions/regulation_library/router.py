@@ -6,9 +6,12 @@ import traceback
 from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
+from fastapi.responses import Response
 
 from server.utils.auth_middleware import get_admin_user
 from pisuan.extensions.regulation_library import enrichment_service
+from pisuan.extensions.regulation_library.models import ensure_schema
+from pisuan.storage.postgres.models_knowledge import KnowledgeFile
 from pisuan.storage.postgres.models_business import User
 from pisuan.utils import logger
 
@@ -157,6 +160,48 @@ async def get_document_detail(
         raise HTTPException(status_code=500, detail=f"规范文档详情查询失败: {str(e)}")
 
 
+@regulation_library.get("/files/{file_id}/pdf")
+async def get_file_pdf(
+    file_id: str,
+    kb_id: str = Query(...),
+    current_user: User = Depends(get_admin_user),
+) -> Response:
+    """原文 PDF 代理流：从 MinIO 读取原始 PDF 供详情弹窗 iframe 预览（带管理端鉴权）"""
+    try:
+        await ensure_schema()
+        from sqlalchemy import select
+
+        from pisuan.storage.minio import get_minio_client
+        from pisuan.storage.postgres.manager import pg_manager
+
+        async with pg_manager.get_async_session_context() as session:
+            file = (
+                await session.execute(
+                    select(KnowledgeFile).where(
+                        KnowledgeFile.kb_id == kb_id,
+                        KnowledgeFile.file_id == file_id,
+                        KnowledgeFile.is_folder.is_(False),
+                    )
+                )
+            ).scalar_one_or_none()
+        if file is None:
+            raise HTTPException(status_code=404, detail=f"文件 {file_id} 不存在")
+        key = (file.path or "").split("/knowledgebases/", 1)[-1]
+        if not key or key == (file.path or ""):
+            raise HTTPException(status_code=404, detail="文件无 MinIO 存储路径")
+        data = await get_minio_client().adownload_file("knowledgebases", key)
+        return Response(
+            content=data,
+            media_type="application/pdf",
+            headers={"Content-Disposition": "inline"},
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"PDF 预览读取失败: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"PDF 预览读取失败: {str(e)}")
+
+
 @regulation_library.get("/taxonomy/rows")
 async def list_taxonomy_rows(
     kb_id: str = Query(...),
@@ -171,8 +216,8 @@ async def list_taxonomy_rows(
 
         from pisuan.storage.postgres.manager import pg_manager
 
-        conditions = ["1=1"]
-        params: dict[str, Any] = {}
+        conditions = ["kb_id = :kb_id"]
+        params: dict[str, Any] = {"kb_id": kb_id}
         if doc_code:
             conditions.append("doc_code = :doc_code")
             params["doc_code"] = doc_code

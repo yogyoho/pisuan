@@ -22,6 +22,8 @@
 
 ### 功能与修复
 
+- feat(regulation-library): 加工详情弹窗加宽（920→1560px）+ 左侧原文 PDF 预览栏。后端 GET /files/{file_id}/pdf 代理端点：从 MinIO 读取原始 PDF 流式返回（application/pdf、管理端鉴权、Content-Disposition inline；iframe 无法携带 Authorization 头，故走代理流而非 MinIO 预签名直链——预签名 host 为容器内网名，浏览器不可达）。前端：apiGet blob 拉取 → object URL 喂 iframe（弹窗关闭时 revoke）；左栏原文预览 / 右栏结构化内容分栏布局，窄屏自动纵向堆叠；非 PDF 文件显示占位。验证：端到端 200 / application/pdf / 827KB（%PDF-1.7 magic），未鉴权 401。
+
 - feat(regulation-library): 规范库加工详情弹窗新增「分类表」查看 tab。读取 /taxonomy/rows 结构化行，按代码排序渲染 代码/名称/上级代码/含义 四列，支持按代码或名称子串即时过滤；随详情弹窗打开自动加载（非分类学表为空属正常）。api client 增 `listTaxonomyRows`。
 
 - feat(regulation-library): 分类编码表（taxonomy）结构化——判别器新角色/拆行入库/查表校验端点。判别器新增 taxonomy 角色（标题快路径「现状分类/分类与编码/分类代码/类别编码」+ LLM 类型定义「每行归约为 {类别代码, 名称, 含义}」）；新模块 `taxonomy_extractor.py`：正则取行取格 + rowspan占位网格展开（rowspan 的父级编码自然延续到二级类行，行取最后一个编码=最具体类别，parent 取前缀），零新依赖；`enrich_regulation_file` taxonomy 分支拆行 upsert 入新表 eia_taxonomy_rows（(doc_code, code) 唯一，续表/重跑覆盖不重复）；路由 GET /regulation-library/taxonomy/rows（按 doc_code/q 代码与名称/含义子串查询，供写作链路查表校验地类代码）。实测 GB/T 21010-2017：71 行入库（12 一级类 + 59 二级类，parent 归属全对；标准全量 73 二级类，差额为解析层个别跨页行缺失——另案核查解析质量），0102 水浇地查询返回正确含义。表格分类卡片显示修复（单表 chunk 标量标签计数，47fa89080）后 9 张表 table_role=other/taxonomy 浮出。
