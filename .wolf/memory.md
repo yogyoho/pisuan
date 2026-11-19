@@ -9504,3 +9504,4 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 23:59 | taxonomy 结构化落地（用户批准 B 三步）：判别器 taxonomy 角色（标题快路径）+ taxonomy_extractor（rowspan 网格展开，行取最具体编码）+ eia_taxonomy_rows upsert + GET /taxonomy/rows；GB/T 21010 实测 71 行入库（12 一级+59 二级，parent 全对），0102 水浇地查询正确；注意：15034cac7 混入另一会话未提交的 regulation 路由扩展（list_documents 等运行中端点首次入库，功能无损，已台账披露） | regulation_library 多文件 | 完成+验证 | ~20k |
 | 00:03 | 续表继承修复（表? 无编号续片继承前表角色）：taxonomy_rows 71→83，73 二级类全覆盖=标准全量；worker 重启同步；63a64ae0f→custom 19d044ca6 EQUAL | enrichment_service.py | 完成+验证 | ~8k |
 | 00:13 | 行抽取改多编码产出（一级类行不再丢失）：GB/T 21010 全量 85 行入库（12 一级+73 二级，10/12 两个跨页一级类名称补齐）；父级 meaning 留空防误承子级含义；30b38b7bd→custom befe71ba8 EQUAL | taxonomy_extractor.py | 完成+验证 | ~10k |
+| 09:45 | 分类表 tab 提交（8c8c11d83→custom 88a30cedc，EQUAL）披露：RegulationLibraryView.vue（1108 行）与 regulation_api.js 系另一会话在途未跟踪文件，git add 全量带入提交——运行中规范库加工页面的 UI 首次入库（含我的 tab），功能无损；后续该会话续作将落在本提交之上 | web 2 文件 | 完成 | ~5k |
