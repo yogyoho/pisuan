@@ -9506,3 +9506,4 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 00:13 | 行抽取改多编码产出（一级类行不再丢失）：GB/T 21010 全量 85 行入库（12 一级+73 二级，10/12 两个跨页一级类名称补齐）；父级 meaning 留空防误承子级含义；30b38b7bd→custom befe71ba8 EQUAL | taxonomy_extractor.py | 完成+验证 | ~10k |
 | 09:45 | 分类表 tab 提交（8c8c11d83→custom 88a30cedc，EQUAL）披露：RegulationLibraryView.vue（1108 行）与 regulation_api.js 系另一会话在途未跟踪文件，git add 全量带入提交——运行中规范库加工页面的 UI 首次入库（含我的 tab），功能无损；后续该会话续作将落在本提交之上 | web 2 文件 | 完成 | ~5k |
 | 19:09 | 分类表 tab 按高保真原型升级（用户确认原型后执行）：双分组（限值表带核验层 + 分类编码表可展开含义）、一级类强调条、行点击展开全文；lint/build/test 全绿（既有 2 失败不变）；1b14d90b2→custom 2d5c977ab EQUAL；web dev 容器热重载即时生效，工程师刷新页面即可见 | RegulationLibraryView.vue | 完成 | ~10k |
+| 20:20 | 删除表格分类 tab（用户确认冗余）：角色计数已由结构化表格分组头承载；other/未分类张数移入结构化表格说明行；指标卡改「表格 N+已拆行 N」；孤儿样式清理；aec9eaeb1→custom 27a8c281f EQUAL | RegulationLibraryView.vue | 完成 | ~8k |
