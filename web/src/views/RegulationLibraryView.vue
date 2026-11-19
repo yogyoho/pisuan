@@ -199,6 +199,17 @@ const taxonomyRowsFiltered = computed(() => {
   )
 })
 
+const tableUnitCount = computed(
+  () => detail.value?.units?.filter((u) => u.unit_type === 'table').length ?? 0
+)
+const structuredRowCount = computed(
+  () => taxonomyRows.value.length + (detail.value?.indicators?.length ?? 0)
+)
+const unclassifiedTableCount = computed(() => {
+  const roles = detail.value?.table_roles || {}
+  return (roles.other || 0) + (roles.unclassified || 0)
+})
+
 // 一级类行（代码 2 位）加强调条；点击行展开/收起完整含义
 const expandedCodes = reactive(new Set())
 const isLevelOne = (row) => (row.code || '').length === 2
@@ -613,7 +624,8 @@ onMounted(async () => {
 
           <div class="detail-metrics">
             <div><small>结构单元</small><b>{{ detail.units.length }}</b></div>
-            <div><small>表格分类</small><b>{{ Object.keys(detail.table_roles).length }}</b></div>
+            <div><small>表格</small><b>{{ tableUnitCount }}</b></div>
+            <div><small>已拆行</small><b>{{ structuredRowCount }}</b></div>
             <div><small>指标</small><b>{{ detail.indicators.length }}</b></div>
             <div><small>运行次数</small><b>{{ detail.runs.length }}</b></div>
           </div>
@@ -644,14 +656,6 @@ onMounted(async () => {
                   </tbody>
                 </table>
               </div>
-            </a-tab-pane>
-            <a-tab-pane key="roles" tab="表格分类">
-              <div v-if="Object.keys(detail.table_roles).length" class="role-grid">
-                <div v-for="(count, role) in detail.table_roles" :key="role" class="role-card">
-                  <span>{{ role }}</span><b>{{ count }}</b>
-                </div>
-              </div>
-              <a-empty v-else description="本次未识别到可分类表格" />
             </a-tab-pane>
             <a-tab-pane key="indicators" tab="指标预览">
               <div v-if="detail.indicators.length" class="detail-scroll">
@@ -758,6 +762,9 @@ onMounted(async () => {
                   </table>
                 </div>
                 <div v-else class="group-empty">本文档未结构化出分类编码表（非分类学表或未加工）。</div>
+                <div v-if="unclassifiedTableCount" class="group-empty" style="margin-top: 10px">
+                  另有 <b>{{ unclassifiedTableCount }}</b> 张 other / 未分类表：仅检索不结构化（清单见「结构单元」tab）。
+                </div>
               </div>
             </a-tab-pane>
             <a-tab-pane key="runs" tab="运行记录">
@@ -1019,20 +1026,7 @@ onMounted(async () => {
   white-space: nowrap;
 }
 
-.role-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 10px;
-}
 
-.role-card {
-  display: flex;
-  justify-content: space-between;
-  padding: 9px 12px;
-  border: 1px solid var(--gray-200);
-  border-radius: 6px;
-  font-size: 13px;
-}
 
 .run-list {
   display: flex;
