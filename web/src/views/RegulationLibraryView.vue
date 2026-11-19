@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import { CircleHelp, Info, RefreshCw, ShieldCheck } from '@lucide/vue'
 import { regulationApi } from '@/extensions/regulation-library/regulation_api'
@@ -198,6 +198,14 @@ const taxonomyRowsFiltered = computed(() => {
       (row.meaning || '').toLowerCase().includes(q)
   )
 })
+
+// 一级类行（代码 2 位）加强调条；点击行展开/收起完整含义
+const expandedCodes = reactive(new Set())
+const isLevelOne = (row) => (row.code || '').length === 2
+const toggleMeaning = (code) => {
+  if (expandedCodes.has(code)) expandedCodes.delete(code)
+  else expandedCodes.add(code)
+}
 
 const loadTaxonomyRows = async (record) => {
   const docCode = record.doc_codes?.[0]
@@ -669,36 +677,88 @@ onMounted(async () => {
               </div>
               <a-empty v-else description="未抽取到指标行" />
             </a-tab-pane>
-            <a-tab-pane key="taxonomy" tab="分类表">
+            <a-tab-pane key="taxonomy" tab="结构化表格">
               <div style="margin-bottom: 12px">
                 <a-input-search
                   v-model:value="taxonomyQuery"
-                  placeholder="按代码或名称搜索（如 0102 / 水浇地）"
-                  style="max-width: 320px"
+                  placeholder="按代码 / 名称 / 含义搜索（如 0102 或 水浇地）"
+                  style="max-width: 360px"
                   allow-clear
                 />
               </div>
-              <div v-if="taxonomyRowsFiltered.length" class="detail-scroll">
-                <table class="tbl detail-table">
-                  <thead>
-                    <tr>
-                      <th style="width: 90px">类别代码</th>
-                      <th style="width: 180px">名称</th>
-                      <th style="width: 90px">上级代码</th>
-                      <th>含义</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="row in taxonomyRowsFiltered" :key="row.code">
-                      <td class="mono">{{ row.code }}</td>
-                      <td>{{ row.name || '—' }}</td>
-                      <td class="mono muted">{{ row.parent_code || '—' }}</td>
-                      <td class="muted">{{ row.meaning || '—' }}</td>
-                    </tr>
-                  </tbody>
-                </table>
+
+              <div class="group">
+                <div class="group-head">
+                  <span class="g-name">限值表</span>
+                  <span class="role-chip">limit</span>
+                  <span class="g-n">{{ detail.indicators.length }} 行</span>
+                </div>
+                <div v-if="detail.indicators.length" class="detail-scroll">
+                  <table class="tbl detail-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 140px">污染物 / 因子</th>
+                        <th>指标</th>
+                        <th class="r" style="width: 110px">限值</th>
+                        <th style="width: 70px">单位</th>
+                        <th>条件</th>
+                        <th style="width: 80px">层级</th>
+                        <th style="width: 80px">来源表</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="item in detail.indicators" :key="item.id">
+                        <td>{{ item.pollutant }}</td>
+                        <td>{{ item.metric }}</td>
+                        <td class="r val">{{ item.limit_value }}</td>
+                        <td>{{ item.unit }}</td>
+                        <td>{{ item.condition || item.category || item.period || '—' }}</td>
+                        <td><span class="pill pill-sm" :class="`pill-${item.layer === 'authority' ? 'ok' : item.layer === 'reviewed' ? 'main' : 'gray'}`">{{ item.layer }}</span></td>
+                        <td class="mono">{{ item.unit_no }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div v-else class="group-empty">本文档无限值行。限值类表格拆行后在此按 因子 / 限值 / 单位 / 条件 展示并带专家核验层标记。</div>
               </div>
-              <a-empty v-else description="本文档未结构化出分类编码表（非分类学表或未加工）" />
+
+              <div class="group">
+                <div class="group-head">
+                  <span class="g-name">分类编码表</span>
+                  <span class="role-chip">taxonomy</span>
+                  <span class="g-n">{{ taxonomyRowsFiltered.length }} 行（去重后共 {{ taxonomyRows.length }}）</span>
+                </div>
+                <div v-if="taxonomyRowsFiltered.length" class="detail-scroll">
+                  <table class="tbl detail-table tax-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 90px">类别代码</th>
+                        <th style="width: 180px">名称</th>
+                        <th style="width: 90px">上级</th>
+                        <th style="width: 100px">来源表</th>
+                        <th>含义（点击行展开全文）</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr
+                        v-for="row in taxonomyRowsFiltered"
+                        :key="row.code"
+                        :class="{ 'lv1-row': isLevelOne(row) }"
+                        @click="toggleMeaning(row.code)"
+                      >
+                        <td class="mono lv-code">{{ row.code }}</td>
+                        <td class="lv-name">{{ row.name || '—' }}</td>
+                        <td class="mono muted">{{ row.parent_code || '—' }}</td>
+                        <td class="mono muted">{{ row.unit_no || '—' }}</td>
+                        <td class="muted">
+                          <div class="meaning-cell" :class="{ open: expandedCodes.has(row.code) }">{{ row.meaning || '—' }}</div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div v-else class="group-empty">本文档未结构化出分类编码表（非分类学表或未加工）。</div>
+              </div>
             </a-tab-pane>
             <a-tab-pane key="runs" tab="运行记录">
               <div class="run-list">
@@ -1105,4 +1165,35 @@ onMounted(async () => {
 </style>
 
 
-<style lang="less" src="../components/factory-core/factory-ui.less"></style>
+<style lang="less" src="../components/factory-core/factory-ui.less">
+/* 结构化表格分组（限值表 / 分类编码表） */
+.group { margin-bottom: 20px; }
+.group-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.group-head .g-name { font-weight: 600; font-size: 13.5px; }
+.role-chip {
+  font-size: 11.5px; font-family: ui-monospace, Consolas, monospace;
+  background: rgba(91, 91, 214, 0.08); border: 1px solid rgba(91, 91, 214, 0.25);
+  border-radius: 4px; padding: 0 6px; color: #4645c8;
+}
+.group-head .g-n { color: #9aa0b4; font-size: 12px; font-variant-numeric: tabular-nums; }
+.group-empty {
+  border: 1px dashed rgba(22, 22, 51, 0.18); border-radius: 8px;
+  padding: 12px 16px; color: #6d7286; font-size: 13px;
+  background: rgba(0, 0, 0, 0.02);
+}
+.tax-table tbody tr { cursor: pointer; }
+.tax-table tbody tr.lv1-row td { background: rgba(91, 91, 214, 0.05); }
+.tax-table tbody tr.lv1-row td:first-child { border-left: 3px solid #5b5bd6; }
+.tax-table .lv-code { font-weight: 600; }
+.tax-table .lv-name { font-weight: 550; }
+.meaning-cell {
+  color: #6d7286;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.meaning-cell.open {
+  display: block; -webkit-line-clamp: unset; overflow: visible;
+  color: inherit;
+}
+
+</style>
