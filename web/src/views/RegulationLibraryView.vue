@@ -230,6 +230,15 @@ const taxonomyRowsFiltered = computed(() => {
   )
 })
 
+const indicatorLayerCounts = computed(() => {
+  const c = { expert: 0, reviewed: 0, candidate: 0 }
+  for (const item of detail.value?.indicators || []) {
+    const layer = String(item.layer || 'candidate')
+    if (layer in c) c[layer] += 1
+  }
+  return c
+})
+
 const tableUnitCount = computed(
   () => detail.value?.units?.filter((u) => u.unit_type === 'table').length ?? 0
 )
@@ -672,7 +681,8 @@ onMounted(async () => {
             <div><small>结构单元</small><b>{{ detail.units.length }}</b></div>
             <div><small>表格</small><b>{{ tableUnitCount }}</b></div>
             <div><small>已拆行</small><b>{{ structuredRowCount }}</b></div>
-            <div><small>指标</small><b>{{ detail.indicators.length }}</b></div>
+            <div><small>限值行</small><b>{{ detail.indicators.length }}</b></div>
+            <div><small>分类行</small><b>{{ taxonomyRows.length }}</b></div>
             <div><small>运行次数</small><b>{{ detail.runs.length }}</b></div>
           </div>
 
@@ -703,30 +713,6 @@ onMounted(async () => {
                 </table>
               </div>
             </a-tab-pane>
-            <a-tab-pane key="indicators" tab="指标预览">
-              <div v-if="detail.indicators.length" class="detail-scroll">
-                <table class="tbl">
-                  <thead>
-                    <tr>
-                      <th>层级</th><th>表/条款</th><th>污染物</th><th>指标</th>
-                      <th class="r">限值</th><th>单位</th><th>条件</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="item in detail.indicators" :key="item.id">
-                      <td><span class="pill pill-sm" :class="`pill-${item.layer === 'authority' ? 'ok' : item.layer === 'reviewed' ? 'main' : 'gray'}`">{{ item.layer }}</span></td>
-                      <td class="mono">{{ item.unit_no }}</td>
-                      <td>{{ item.pollutant }}</td>
-                      <td>{{ item.metric }}</td>
-                      <td class="r val">{{ item.limit_value }}</td>
-                      <td>{{ item.unit }}</td>
-                      <td>{{ item.condition || item.category || item.period || '—' }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <a-empty v-else description="未抽取到指标行" />
-            </a-tab-pane>
             <a-tab-pane key="taxonomy" tab="结构化表格">
               <div style="margin-bottom: 12px">
                 <a-input-search
@@ -742,6 +728,7 @@ onMounted(async () => {
                   <span class="g-name">限值表</span>
                   <span class="role-chip">limit</span>
                   <span class="g-n">{{ detail.indicators.length }} 行</span>
+                  <span class="g-n">核验: expert {{ indicatorLayerCounts.expert }} / reviewed {{ indicatorLayerCounts.reviewed }} / candidate {{ indicatorLayerCounts.candidate }}</span>
                 </div>
                 <div v-if="detail.indicators.length" class="detail-scroll">
                   <table class="tbl detail-table">
