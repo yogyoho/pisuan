@@ -9509,3 +9509,4 @@ P2 四件全交付：stages forms 口径字段编辑（v15 迁移四触点 + 文
 | 20:20 | 删除表格分类 tab（用户确认冗余）：角色计数已由结构化表格分组头承载；other/未分类张数移入结构化表格说明行；指标卡改「表格 N+已拆行 N」；孤儿样式清理；aec9eaeb1→custom 27a8c281f EQUAL | RegulationLibraryView.vue | 完成 | ~8k |
 | 21:06 | 详情弹窗加宽 920→1560 + 左侧原文 PDF 预览（用户指令）：后端 /files/{id}/pdf 代理流端点（MinIO adownload，鉴权保留，避免预签名内网 host 不可达）+ 前端 blob URL iframe（关闭 revoke）；端到端 200/827KB/%PDF-1.7 验证；0d117bc3d→custom 11e955965 EQUAL，双分支已推 | router.py, regulation_api.js, RegulationLibraryView.vue | 完成+验证+推送 | ~12k |
 | 11:55 | PDF 预览时序修复（浏览器实测发现：PDF 预览时序缺陷导致永不加载——loadPdfPreview 先于 detail 请求读 file_type，恒 null 提前返回）：改 detail 就绪后加载；用户浏览器验证左右分栏 + 85 行分类表渲染成功；289ca8733→custom 94d9d7ece EQUAL，已推送 | RegulationLibraryView.vue | 完成+验证+推送 | ~8k |
+| 12:13 | 指标卡 5 列一行排开（用户反馈第 5 张折行）：grid 4→5 列 + 紧凑化（16px 数字/8px 间距）；浏览器实测 5 卡等宽 120px 一行；6a5dcdee7→custom 480900414 EQUAL 已推送 | RegulationLibraryView.vue | 完成+验证+推送 | ~5k |
