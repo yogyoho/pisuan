@@ -980,12 +980,12 @@ onMounted(async () => {
 
 .detail-metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
   margin: 12px 0;
 
   > div {
-    padding: 8px 10px;
+    padding: 6px 8px;
     border: 1px solid var(--gray-200);
     border-radius: 6px;
 
@@ -996,7 +996,7 @@ onMounted(async () => {
     }
 
     b {
-      font-size: 18px;
+      font-size: 16px;
     }
   }
 }
