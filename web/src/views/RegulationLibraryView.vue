@@ -1204,10 +1204,7 @@ onMounted(async () => {
   font-size: 12px;
   color: var(--color-text-tertiary);
 }
-</style>
 
-
-<style lang="less" src="../components/factory-core/factory-ui.less">
 /* 结构化表格分组（限值表 / 分类编码表） */
 .group { margin-bottom: 20px; }
 .group-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
@@ -1227,6 +1224,7 @@ onMounted(async () => {
 .tax-table tbody tr.lv1-row td { background: rgba(91, 91, 214, 0.05); }
 .tax-table tbody tr.lv1-row td:first-child { border-left: 3px solid #5b5bd6; }
 .tax-table .lv-code { font-weight: 600; }
+
 .tax-table .lv-name { font-weight: 550; }
 .meaning-cell {
   color: #6d7286;
@@ -1259,5 +1257,10 @@ onMounted(async () => {
   .pdf-pane { min-width: 0; }
   .pdf-frame, .pdf-placeholder { height: 52vh; }
 }
-
 </style>
+
+
+<style lang="less" src="../components/factory-core/factory-ui.less">
+</style>
+
+
